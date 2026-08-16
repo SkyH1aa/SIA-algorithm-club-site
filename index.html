@@ -377,6 +377,28 @@
 
       .join-section, .gomoku-section { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 0.48fr); align-items: center; gap: 28px; }
       .join-card { min-height: 230px; }
+      .qr-box {
+        margin-top: 18px;
+        padding: 12px;
+        border: 1px solid rgba(0, 229, 255, 0.28);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 0 30px rgba(0, 229, 255, 0.16);
+      }
+      .qr-box img {
+        display: block;
+        width: 100%;
+        max-width: 260px;
+        margin: 0 auto;
+        border-radius: 8px;
+      }
+      .qr-tip {
+        margin: 10px 0 0;
+        color: var(--cyan);
+        font-size: 14px;
+        font-weight: 800;
+        text-align: center;
+      }
       .join-list { display: grid; gap: 10px; margin-top: 18px; }
       .join-list span {
         display: block;
@@ -555,7 +577,15 @@
             <span>内容组：整理成员资料、活动记录、项目说明和招新材料。</span>
           </div>
         </div>
-        <div class="join-card"><span class="icon">GO</span><h3>立即加入</h3><p>以算法之名，聚同道之人。第一阶段先把官网建设好，让每一次训练、每一个项目、每位成员都有可以展示的位置。</p></div>
+        <div class="join-card">
+          <span class="icon">GO</span>
+          <h3>立即加入</h3>
+          <p>扫描二维码添加负责人微信，备注“算法社”，获取招新信息和加入方式。</p>
+          <div class="qr-box">
+            <img src="public/assets/wechat-qrcode.jpg" alt="算法社负责人微信二维码" />
+            <p class="qr-tip">扫码添加微信，加入算法社</p>
+          </div>
+        </div>
       </section>
 
       <section id="gomoku" class="section-block gomoku-section">
