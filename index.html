@@ -3,29 +3,67 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>算法社官网</title>
+    <title>算法社 · Algorithm Club</title>
     <style>
       :root {
-        font-family: "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        color: #172033;
-        background: #f6f7fb;
-        --brand: #6054e8;
-        --brand-dark: #342a9f;
-        --accent: #0f9f95;
-        --ink: #172033;
-        --muted: #647086;
-        --line: #dce0ea;
-        --panel: #ffffff;
-        --soft: #eef0fb;
-        --soft-accent: #e9f7f5;
-        --shadow: 0 20px 60px rgba(31, 37, 71, 0.08);
+        font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #f6fbff;
+        background: #020409;
+        --bg: #020409;
+        --cyan: #00e5ff;
+        --violet: #7c4dff;
+        --pink: #ff5fc8;
+        --gold: #ffd166;
+        --white: #f6fbff;
+        --text: #c8d4e2;
+        --muted: #8fa3b8;
+        --line: rgba(115, 221, 255, 0.2);
+        --panel: rgba(8, 13, 30, 0.78);
+        --shadow: 0 24px 90px rgba(0, 229, 255, 0.11);
       }
 
       * { box-sizing: border-box; }
       html { scroll-behavior: smooth; }
-      body { margin: 0; min-width: 320px; min-height: 100vh; }
+      body {
+        margin: 0;
+        min-width: 320px;
+        min-height: 100vh;
+        color: var(--white);
+        background:
+          radial-gradient(ellipse 70% 50% at 16% 6%, rgba(0, 229, 255, 0.15), transparent 62%),
+          radial-gradient(ellipse 64% 46% at 88% 8%, rgba(124, 77, 255, 0.22), transparent 66%),
+          radial-gradient(ellipse 90% 60% at 50% 112%, rgba(21, 42, 130, 0.45), transparent 70%),
+          linear-gradient(180deg, #020409 0%, #050917 48%, #020409 100%);
+        overflow-x: hidden;
+      }
+
+      body::before,
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: -1;
+      }
+      body::before {
+        background-image:
+          linear-gradient(rgba(0, 229, 255, 0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 229, 255, 0.045) 1px, transparent 1px),
+          repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.018) 0, rgba(255, 255, 255, 0.018) 1px, transparent 1px, transparent 5px);
+        background-size: 86px 86px, 86px 86px, 100% 5px;
+        mask-image: radial-gradient(ellipse 120% 120% at 50% 20%, #000 0%, transparent 92%);
+      }
+      body::after {
+        background:
+          linear-gradient(108deg, transparent 0%, rgba(0, 229, 255, 0.055) 30%, rgba(124, 77, 255, 0.04) 54%, transparent 78%),
+          linear-gradient(252deg, transparent 0%, rgba(124, 77, 255, 0.05) 24%, rgba(255, 95, 200, 0.035) 58%, transparent 86%);
+        opacity: 0.76;
+      }
+
       a { color: inherit; text-decoration: none; }
       button { font: inherit; }
+      h1, h2, h3, p { margin-top: 0; }
+      p { color: var(--text); font-size: 16px; line-height: 1.8; }
 
       .topbar {
         position: sticky;
@@ -36,115 +74,416 @@
         justify-content: space-between;
         gap: 24px;
         padding: 14px clamp(18px, 5vw, 72px);
-        border-bottom: 1px solid rgba(220, 224, 234, 0.86);
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(16px);
+        border-bottom: 1px solid var(--line);
+        background: rgba(2, 4, 12, 0.76);
+        backdrop-filter: blur(18px);
       }
 
-      .brand { display: inline-flex; align-items: center; gap: 10px; min-width: max-content; }
+      .brand { display: inline-flex; align-items: center; gap: 12px; min-width: max-content; }
       .brand-mark {
+        position: relative;
         display: grid;
-        width: 38px;
-        height: 38px;
+        width: 42px;
+        height: 42px;
         place-items: center;
+        border: 1px solid rgba(0, 229, 255, 0.55);
         border-radius: 8px;
-        background: var(--brand);
-        color: #fff;
-        font-weight: 800;
+        background: linear-gradient(135deg, rgba(0, 229, 255, 0.18), rgba(124, 77, 255, 0.22));
+        color: var(--cyan);
+        font-weight: 900;
+        box-shadow: 0 0 28px rgba(0, 229, 255, 0.22), inset 0 0 24px rgba(124, 77, 255, 0.18);
+      }
+      .brand-mark::after {
+        content: "";
+        position: absolute;
+        inset: -6px;
+        border: 1px solid rgba(0, 229, 255, 0.14);
+        border-radius: 12px;
       }
       .brand strong, .brand small { display: block; }
-      .brand strong { font-size: 16px; line-height: 20px; }
-      .brand small { color: var(--muted); font-size: 12px; line-height: 16px; }
+      .brand strong { font-size: 16px; line-height: 20px; letter-spacing: 0.5px; }
+      .brand small { color: var(--muted); font-size: 12px; line-height: 16px; text-transform: uppercase; }
 
       .nav { display: flex; align-items: center; gap: 6px; }
-      .nav a { padding: 8px 12px; border-radius: 8px; color: var(--muted); font-size: 14px; line-height: 20px; }
-      .nav a:hover { background: var(--soft); color: var(--brand-dark); }
-      .menu-button { display: none; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
+      .nav a {
+        padding: 8px 12px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 20px;
+      }
+      .nav a:hover {
+        border-color: rgba(0, 229, 255, 0.26);
+        background: rgba(0, 229, 255, 0.07);
+        color: var(--cyan);
+      }
+      .menu-button {
+        display: none;
+        width: 40px;
+        height: 40px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(8, 13, 30, 0.9);
+        color: var(--cyan);
+      }
 
       main { padding: 0 clamp(18px, 5vw, 72px) 36px; }
-      .section-block { max-width: 1180px; margin: 0 auto; padding: 72px 0; }
-      .hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.72fr); align-items: center; gap: clamp(28px, 5vw, 72px); min-height: calc(100vh - 68px); }
-      .eyebrow { margin: 0 0 12px; color: var(--brand); font-size: 13px; font-weight: 700; letter-spacing: 0; }
-      h1, h2, h3, p { margin-top: 0; }
-      h1 { margin-bottom: 18px; max-width: 720px; font-size: clamp(40px, 7vw, 72px); line-height: 1.04; letter-spacing: 0; }
-      h2 { margin-bottom: 12px; font-size: clamp(28px, 4vw, 42px); line-height: 1.15; letter-spacing: 0; }
-      h3 { margin-bottom: 8px; font-size: 18px; line-height: 26px; }
-      p { color: var(--muted); font-size: 16px; line-height: 28px; }
-      .hero-text { max-width: 660px; margin-bottom: 28px; font-size: 18px; line-height: 32px; }
-      .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
-      .primary-action, .secondary-action { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; padding: 10px 16px; font-weight: 700; }
-      .primary-action { background: var(--brand); color: #fff; }
-      .secondary-action { border: 1px solid var(--line); background: #fff; color: var(--ink); }
+      .section-block { max-width: 1180px; margin: 0 auto; padding: 78px 0; }
 
-      .hero-panel { display: grid; gap: 12px; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow); }
-      .panel-row { display: flex; align-items: center; gap: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
-      .panel-row.focus { border-color: rgba(96, 84, 232, 0.45); background: var(--soft); }
-      .icon { flex: 0 0 auto; color: var(--brand); font-size: 22px; }
+      .hero {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.78fr);
+        align-items: center;
+        gap: clamp(30px, 5vw, 76px);
+        min-height: calc(100vh - 72px);
+      }
+      .hero::before {
+        content: "";
+        position: absolute;
+        width: min(52vw, 560px);
+        aspect-ratio: 1;
+        right: 3%;
+        top: 50%;
+        transform: translateY(-50%);
+        border-radius: 50%;
+        border: 1px solid rgba(0, 229, 255, 0.18);
+        background:
+          linear-gradient(rgba(0, 229, 255, 0.12), rgba(0, 229, 255, 0.12)) center / 100% 1px no-repeat,
+          linear-gradient(90deg, rgba(0, 229, 255, 0.12), rgba(0, 229, 255, 0.12)) center / 1px 100% no-repeat,
+          repeating-conic-gradient(from 12deg, rgba(0, 229, 255, 0.14) 0deg 2deg, transparent 2deg 12deg);
+        mask-image: radial-gradient(circle, transparent 0 46%, #000 47% 100%);
+        opacity: 0.72;
+        pointer-events: none;
+      }
+
+      .eyebrow {
+        margin: 0 0 14px;
+        color: var(--cyan);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin-bottom: 20px;
+        max-width: 760px;
+        font-size: clamp(44px, 8vw, 92px);
+        line-height: 0.96;
+        letter-spacing: 0;
+      }
+      .title-glow {
+        display: block;
+        color: var(--white);
+        text-shadow: 0 0 24px rgba(0, 229, 255, 0.45), 0 0 56px rgba(124, 77, 255, 0.34);
+      }
+      .title-sub {
+        display: block;
+        margin-top: 10px;
+        color: transparent;
+        -webkit-text-stroke: 1px rgba(0, 229, 255, 0.78);
+        text-shadow: none;
+      }
+      h2 { margin-bottom: 12px; font-size: clamp(28px, 4vw, 46px); line-height: 1.12; letter-spacing: 0; }
+      h3 { margin-bottom: 8px; font-size: 18px; line-height: 26px; }
+      .hero-text { max-width: 680px; margin-bottom: 26px; font-size: 18px; line-height: 1.85; }
+
+      .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+      .primary-action, .secondary-action {
+        display: inline-flex;
+        min-height: 46px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border-radius: 8px;
+        padding: 11px 16px;
+        font-weight: 800;
+      }
+      .primary-action {
+        border: 1px solid rgba(0, 229, 255, 0.56);
+        background: linear-gradient(135deg, rgba(0, 229, 255, 0.92), rgba(124, 77, 255, 0.9));
+        color: #020409;
+        box-shadow: 0 0 28px rgba(0, 229, 255, 0.24);
+      }
+      .secondary-action {
+        border: 1px solid rgba(0, 229, 255, 0.26);
+        background: rgba(8, 13, 30, 0.72);
+        color: var(--white);
+      }
+
+      .hero-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 28px;
+        max-width: 680px;
+      }
+      .stat {
+        min-height: 82px;
+        padding: 14px;
+        border: 1px solid rgba(0, 229, 255, 0.2);
+        border-radius: 8px;
+        background: rgba(8, 13, 30, 0.62);
+      }
+      .stat strong { display: block; color: var(--cyan); font-size: 24px; line-height: 1.1; }
+      .stat span { display: block; margin-top: 6px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+      .hero-panel {
+        position: relative;
+        display: grid;
+        gap: 14px;
+        padding: 18px;
+        border: 1px solid rgba(0, 229, 255, 0.24);
+        border-radius: 12px;
+        background: linear-gradient(180deg, rgba(8, 13, 30, 0.86), rgba(5, 9, 23, 0.72));
+        box-shadow: var(--shadow), inset 0 0 36px rgba(0, 229, 255, 0.055);
+        overflow: hidden;
+      }
+      .hero-panel::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(0, 229, 255, 0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 229, 255, 0.045) 1px, transparent 1px);
+        background-size: 28px 28px;
+        pointer-events: none;
+      }
+      .panel-row {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 15px;
+        border: 1px solid rgba(143, 163, 184, 0.2);
+        border-radius: 8px;
+        background: rgba(2, 4, 12, 0.54);
+      }
+      .panel-row.focus { border-color: rgba(0, 229, 255, 0.52); background: rgba(0, 229, 255, 0.08); }
+      .icon {
+        display: grid;
+        flex: 0 0 auto;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border: 1px solid rgba(0, 229, 255, 0.32);
+        border-radius: 8px;
+        color: var(--cyan);
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 15px;
+      }
       .panel-row strong, .panel-row span { display: block; }
       .panel-row span { margin-top: 2px; color: var(--muted); font-size: 14px; line-height: 20px; }
 
-      .section-heading { max-width: 760px; margin-bottom: 28px; }
+      .section-heading { max-width: 780px; margin-bottom: 30px; }
+      .section-heading p { margin-bottom: 0; }
       .inline-heading { display: flex; max-width: none; align-items: flex-end; justify-content: space-between; gap: 18px; }
-      .data-note { flex: 0 0 auto; padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+      .data-note {
+        flex: 0 0 auto;
+        padding: 7px 10px;
+        border: 1px solid rgba(0, 229, 255, 0.22);
+        border-radius: 999px;
+        background: rgba(0, 229, 255, 0.06);
+        color: var(--cyan);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
 
-      .direction-grid, .project-grid, .member-grid { display: grid; gap: 18px; }
-      .direction-grid, .project-grid, .member-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .info-card, .project-card, .member-card, .join-card { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: 0 10px 34px rgba(31, 37, 71, 0.05); }
+      .direction-grid, .project-grid, .member-grid { display: grid; gap: 18px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .info-card, .project-card, .member-card, .join-card, .timeline-item {
+        position: relative;
+        border: 1px solid rgba(0, 229, 255, 0.18);
+        border-radius: 10px;
+        background: linear-gradient(180deg, rgba(8, 13, 30, 0.82), rgba(4, 8, 20, 0.66));
+        box-shadow: 0 14px 48px rgba(0, 0, 0, 0.22), inset 0 0 24px rgba(0, 229, 255, 0.035);
+      }
       .info-card, .project-card, .join-card { padding: 22px; }
-      .info-card .icon, .join-card .icon { display: block; margin-bottom: 14px; }
-      .info-card p, .project-card p, .join-card p { margin-bottom: 0; font-size: 15px; line-height: 25px; }
-      .member-card { display: flex; gap: 14px; min-height: 210px; padding: 18px; }
-      .avatar { display: grid; flex: 0 0 auto; width: 48px; height: 48px; place-items: center; border-radius: 12px; background: var(--soft); color: var(--brand-dark); font-weight: 800; }
-      .member-card p { margin-bottom: 12px; font-size: 14px; line-height: 24px; }
-      .member-meta { color: var(--brand-dark); font-weight: 700; }
-      .tag, .status-pill { display: inline-flex; width: fit-content; align-items: center; border-radius: 999px; font-size: 12px; line-height: 18px; }
-      .tag { padding: 5px 9px; background: var(--soft-accent); color: #08766f; }
-      .status-pill { padding: 4px 9px; background: var(--soft); color: var(--brand-dark); font-weight: 700; }
+      .info-card { overflow: hidden; }
+      .info-card::after, .project-card::after, .member-card::after, .timeline-item::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 18px;
+        width: 42px;
+        height: 2px;
+        background: var(--cyan);
+        box-shadow: 0 0 18px rgba(0, 229, 255, 0.65);
+      }
+      .info-card .icon, .join-card .icon { margin-bottom: 14px; }
+      .info-card p, .project-card p, .join-card p { margin-bottom: 0; font-size: 15px; line-height: 1.75; }
 
-      .muted-band { max-width: none; margin: 0 calc(clamp(18px, 5vw, 72px) * -1); padding: 72px clamp(18px, 5vw, 72px); background: #eef0f7; }
+      .muted-band {
+        position: relative;
+        max-width: none;
+        margin: 0 calc(clamp(18px, 5vw, 72px) * -1);
+        padding: 78px clamp(18px, 5vw, 72px);
+        border-top: 1px solid rgba(0, 229, 255, 0.12);
+        border-bottom: 1px solid rgba(0, 229, 255, 0.12);
+        background:
+          linear-gradient(90deg, rgba(0, 229, 255, 0.04), transparent 34%, rgba(124, 77, 255, 0.045)),
+          rgba(2, 5, 15, 0.58);
+      }
       .muted-band > * { max-width: 1180px; margin-left: auto; margin-right: auto; }
-      .project-topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; color: var(--muted); font-size: 13px; }
-      .timeline { display: grid; gap: 14px; }
-      .timeline-item { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 20px; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
-      .timeline-date { color: var(--brand-dark); font-weight: 800; }
-      .timeline-item p { margin-bottom: 0; }
-      .join-section, .gomoku-section { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 0.48fr); align-items: center; gap: 28px; }
-      .join-card { min-height: 210px; }
-      .gomoku-section { border-top: 1px solid var(--line); }
-      .step-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
-      .step-list span { padding: 8px 10px; border-radius: 999px; background: var(--soft); color: var(--brand-dark); font-size: 13px; font-weight: 700; }
-      .board-preview { display: grid; grid-template-columns: repeat(9, 1fr); aspect-ratio: 1; width: min(100%, 340px); justify-self: center; border: 2px solid #6f532f; border-radius: 8px; background: #d9ad72; overflow: hidden; }
-      .preview-cell { position: relative; border-right: 1px solid rgba(80, 55, 25, 0.56); border-bottom: 1px solid rgba(80, 55, 25, 0.56); }
-      .preview-cell.black::after, .preview-cell.white::after { content: ""; position: absolute; inset: 18%; border-radius: 999px; }
-      .preview-cell.black::after { background: #111827; }
-      .preview-cell.white::after { border: 1px solid rgba(17, 24, 39, 0.35); background: #fff; }
-      .footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 24px clamp(18px, 5vw, 72px); border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
 
-      @media (max-width: 900px) {
+      .member-card {
+        display: flex;
+        gap: 14px;
+        min-height: 220px;
+        padding: 18px;
+        overflow: hidden;
+      }
+      .avatar {
+        display: grid;
+        flex: 0 0 auto;
+        width: 52px;
+        height: 52px;
+        place-items: center;
+        border: 1px solid rgba(0, 229, 255, 0.36);
+        border-radius: 12px;
+        background: rgba(0, 229, 255, 0.08);
+        color: var(--cyan);
+        font-weight: 900;
+        box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.08);
+      }
+      .member-card p { margin-bottom: 12px; font-size: 14px; line-height: 1.72; }
+      .member-meta { color: var(--cyan); font-weight: 800; }
+      .tag, .status-pill {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        border-radius: 999px;
+        font-size: 12px;
+        line-height: 18px;
+      }
+      .tag { padding: 5px 9px; border: 1px solid rgba(0, 229, 255, 0.24); background: rgba(0, 229, 255, 0.07); color: var(--cyan); }
+      .status-pill { padding: 4px 9px; background: rgba(124, 77, 255, 0.16); color: #dcd5ff; font-weight: 800; }
+
+      .project-card { min-height: 228px; overflow: hidden; }
+      .project-topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; color: var(--muted); font-size: 13px; }
+      .project-card h3 { font-size: 22px; }
+      .project-card:first-child h3 { color: var(--cyan); text-shadow: 0 0 20px rgba(0, 229, 255, 0.3); }
+
+      .timeline { display: grid; gap: 14px; }
+      .timeline-item {
+        display: grid;
+        grid-template-columns: 170px minmax(0, 1fr);
+        gap: 20px;
+        padding: 20px;
+        overflow: hidden;
+      }
+      .timeline-date { color: var(--cyan); font-weight: 900; font-family: Consolas, "Courier New", monospace; }
+      .timeline-item p { margin-bottom: 0; }
+
+      .join-section, .gomoku-section { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 0.48fr); align-items: center; gap: 28px; }
+      .join-card { min-height: 230px; }
+      .join-list { display: grid; gap: 10px; margin-top: 18px; }
+      .join-list span {
+        display: block;
+        padding: 10px 12px;
+        border: 1px solid rgba(0, 229, 255, 0.18);
+        border-radius: 8px;
+        background: rgba(2, 4, 12, 0.42);
+        color: var(--text);
+        line-height: 1.55;
+      }
+
+      .gomoku-section { border-top: 1px solid rgba(0, 229, 255, 0.15); }
+      .step-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+      .step-list span {
+        padding: 8px 10px;
+        border: 1px solid rgba(0, 229, 255, 0.22);
+        border-radius: 999px;
+        background: rgba(0, 229, 255, 0.06);
+        color: var(--cyan);
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .board-shell {
+        position: relative;
+        justify-self: center;
+        width: min(100%, 360px);
+        padding: 18px;
+        border: 1px solid rgba(0, 229, 255, 0.22);
+        border-radius: 12px;
+        background: rgba(8, 13, 30, 0.72);
+        box-shadow: var(--shadow);
+      }
+      .board-shell::before {
+        content: "GOMOKU AI BATTLE SYSTEM";
+        display: block;
+        margin-bottom: 12px;
+        color: var(--muted);
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 12px;
+        letter-spacing: 0;
+      }
+      .board-preview {
+        display: grid;
+        grid-template-columns: repeat(9, 1fr);
+        aspect-ratio: 1;
+        width: 100%;
+        border: 1px solid rgba(0, 229, 255, 0.34);
+        border-radius: 8px;
+        background: linear-gradient(rgba(0, 229, 255, 0.07), rgba(0, 229, 255, 0.07)), #06111e;
+        overflow: hidden;
+      }
+      .preview-cell { position: relative; border-right: 1px solid rgba(0, 229, 255, 0.15); border-bottom: 1px solid rgba(0, 229, 255, 0.15); }
+      .preview-cell.black::after, .preview-cell.white::after { content: ""; position: absolute; inset: 18%; border-radius: 999px; }
+      .preview-cell.black::after { background: #020409; border: 1px solid rgba(0, 229, 255, 0.28); box-shadow: 0 0 16px rgba(0, 229, 255, 0.28); }
+      .preview-cell.white::after { background: var(--cyan); box-shadow: 0 0 18px rgba(0, 229, 255, 0.52); }
+
+      .footer {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 24px clamp(18px, 5vw, 72px);
+        border-top: 1px solid rgba(0, 229, 255, 0.16);
+        color: var(--muted);
+        font-size: 14px;
+        background: rgba(2, 4, 12, 0.84);
+      }
+
+      @media (max-width: 980px) {
         .hero, .join-section, .gomoku-section { grid-template-columns: 1fr; }
+        .hero { min-height: auto; padding-top: 58px; }
+        .hero::before { right: 50%; top: 54%; transform: translate(50%, -50%); width: min(86vw, 520px); opacity: 0.38; }
         .direction-grid, .project-grid, .member-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .hero { min-height: auto; padding-top: 56px; }
       }
       @media (max-width: 720px) {
         .menu-button { display: inline-flex; align-items: center; justify-content: center; }
-        .nav { position: absolute; top: 68px; right: 18px; left: 18px; display: none; flex-direction: column; align-items: stretch; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: var(--shadow); }
+        .nav {
+          position: absolute;
+          top: 72px;
+          right: 18px;
+          left: 18px;
+          display: none;
+          flex-direction: column;
+          align-items: stretch;
+          padding: 10px;
+          border: 1px solid rgba(0, 229, 255, 0.22);
+          border-radius: 12px;
+          background: rgba(4, 8, 20, 0.96);
+          box-shadow: var(--shadow);
+        }
         .nav.open { display: flex; }
         .nav a { padding: 11px 12px; }
         main { padding-left: 18px; padding-right: 18px; }
-        .section-block, .muted-band { padding-top: 52px; padding-bottom: 52px; }
-        .direction-grid, .project-grid, .member-grid { grid-template-columns: 1fr; }
+        .section-block, .muted-band { padding-top: 56px; padding-bottom: 56px; }
+        .direction-grid, .project-grid, .member-grid, .hero-stats { grid-template-columns: 1fr; }
         .inline-heading { display: block; }
-        .data-note { display: inline-block; margin-top: 6px; }
+        .data-note { display: inline-block; margin-top: 8px; }
         .timeline-item { grid-template-columns: 1fr; gap: 8px; }
         .member-card { min-height: auto; }
-        h1 { font-size: 42px; }
+        h1 { font-size: 46px; }
       }
     </style>
   </head>
   <body>
     <header class="topbar">
       <a class="brand" href="#home">
-        <span class="brand-mark">A</span>
+        <span class="brand-mark">S</span>
         <span><strong>算法社</strong><small>Algorithm Club</small></span>
       </a>
       <button class="menu-button" type="button" id="menuButton" aria-label="打开导航">☰</button>
@@ -161,66 +500,76 @@
     <main>
       <section id="home" class="hero section-block">
         <div class="hero-copy">
-          <p class="eyebrow">高中算法社第一阶段官网</p>
-          <h1>用代码理解算法，用项目连接社团。</h1>
-          <p class="hero-text">这里会展示社团介绍、成员方向、活动安排和长期项目。第一阶段先做静态官网，第二阶段再接入 AI 五子棋、排行榜和免费数据库。</p>
+          <p class="eyebrow">算法 · 研究 · 创新</p>
+          <h1><span class="title-glow">算法社</span><span class="title-sub">Algorithm Club</span></h1>
+          <p class="hero-text">致力于算法研究与编程实践，涵盖人工智能、数据结构、竞赛算法和工程项目。从零基础入门到 AI 五子棋研发，这里把训练、竞赛和作品展示连接起来。</p>
           <div class="hero-actions">
-            <a class="primary-action" href="#members">查看成员 →</a>
-            <a class="secondary-action" href="#gomoku">五子棋计划</a>
+            <a class="primary-action" href="#join">立即加入</a>
+            <a class="secondary-action" href="#gomoku">查看 AI 五子棋计划</a>
+          </div>
+          <div class="hero-stats" aria-label="社团亮点">
+            <div class="stat"><strong>8 代</strong><span>五子棋 AI 迭代路线</span></div>
+            <div class="stat"><strong>3 组</strong><span>算法、前端、后端预备方向</span></div>
+            <div class="stat"><strong>0 元</strong><span>GitHub Pages 静态部署成本</span></div>
           </div>
         </div>
         <div class="hero-panel" aria-label="官网阶段规划">
-          <div class="panel-row focus"><span class="icon">✦</span><div><strong>第一阶段</strong><span>官网展示 + JSON 数据维护</span></div></div>
-          <div class="panel-row"><span class="icon">⌘</span><div><strong>第二阶段</strong><span>接入 AI 五子棋和排行榜</span></div></div>
-          <div class="panel-row"><span class="icon">▣</span><div><strong>第三阶段</strong><span>免费数据库 + 简易后台</span></div></div>
+          <div class="panel-row focus"><span class="icon">01</span><div><strong>第一阶段</strong><span>科技风官网 + 成员 / 项目 / 活动展示</span></div></div>
+          <div class="panel-row"><span class="icon">02</span><div><strong>第二阶段</strong><span>接入 AI 五子棋、人机对战和排行榜</span></div></div>
+          <div class="panel-row"><span class="icon">03</span><div><strong>第三阶段</strong><span>免费数据库 + 简易后台 + 社团内容系统</span></div></div>
         </div>
       </section>
 
       <section class="section-block direction-section">
-        <div class="section-heading"><p class="eyebrow">社团方向</p><h2>从算法训练到真实项目</h2></div>
+        <div class="section-heading"><p class="eyebrow">FROM ZERO TO AI</p><h2>从算法训练到真实项目</h2><p>官网风格沿用招新海报的深空科技感，同时把社团方向拆成可以长期运营的项目模块。</p></div>
         <div class="direction-grid">
-          <article class="info-card"><span class="icon">◎</span><h3>算法竞赛</h3><p>训练搜索、图论、动态规划、数据结构等基础能力。</p></article>
-          <article class="info-card"><span class="icon">◇</span><h3>AI 博弈</h3><p>以五子棋为起点，探索评估函数、搜索和对战策略。</p></article>
-          <article class="info-card"><span class="icon">{ }</span><h3>工程实践</h3><p>用网页、数据和部署把算法项目做成可访问的作品。</p></article>
+          <article class="info-card"><span class="icon">CP</span><h3>竞赛算法</h3><p>系统训练搜索、图论、动态规划、数据结构等核心能力，为校内训练和各类竞赛打基础。</p></article>
+          <article class="info-card"><span class="icon">AI</span><h3>AI 博弈</h3><p>以五子棋为起点，理解评估函数、Minimax 搜索、Alpha-Beta 剪枝和棋型识别。</p></article>
+          <article class="info-card"><span class="icon">WEB</span><h3>工程实践</h3><p>把算法作品做成可访问网页，沉淀成员展示、活动记录、项目文档和后续排行榜。</p></article>
         </div>
       </section>
 
       <section id="members" class="section-block">
-        <div class="section-heading inline-heading"><div><p class="eyebrow">成员展示</p><h2>成员数据来自 JSON 文件</h2></div><span class="data-note">public/data/members.json</span></div>
+        <div class="section-heading inline-heading"><div><p class="eyebrow">CLUB MEMBERS</p><h2>成员展示</h2><p>成员资料仍由 JSON 文件维护，后续可以升级为数据库和后台。</p></div><span class="data-note">public/data/members.json</span></div>
         <div class="member-grid" id="memberGrid"></div>
       </section>
 
       <section id="projects" class="section-block muted-band">
-        <div class="section-heading"><p class="eyebrow">项目展示</p><h2>长期项目先占位，后续逐步上线</h2></div>
+        <div class="section-heading"><p class="eyebrow">PROJECT LAB</p><h2>项目展示</h2><p>第一阶段先完成展示和入口，第二阶段再把已有五子棋 HTML 改造成可长期维护的对战页面。</p></div>
         <div class="project-grid" id="projectGrid"></div>
       </section>
 
       <section id="activities" class="section-block">
-        <div class="section-heading"><p class="eyebrow">活动安排</p><h2>训练、招新和挑战赛</h2></div>
+        <div class="section-heading"><p class="eyebrow">CLUB TIMELINE</p><h2>活动安排</h2><p>用时间线展示招新、训练和挑战赛，让官网成为社团对外展示窗口。</p></div>
         <div class="timeline" id="activityList"></div>
       </section>
 
       <section id="join" class="section-block join-section">
         <div>
-          <p class="eyebrow">加入我们</p>
-          <h2>适合对算法、AI 或网页开发感兴趣的同学</h2>
-          <p>第一阶段官网内容可以先由负责人维护 JSON 文件。等网站稳定后，再接入免费数据库和简易后台，让非技术成员也能维护成员资料和活动信息。</p>
+          <p class="eyebrow">JOIN US</p>
+          <h2>无论你是零基础新手，还是竞赛选手，都能找到自己的舞台</h2>
+          <p>加入算法社，你可以完成代码能力的质的飞跃，接触更前沿的代码架构与 AI 模型，也可以参与官网、五子棋平台和算法可视化等长期项目。</p>
+          <div class="join-list">
+            <span>算法组：训练竞赛算法，负责题单、讲解和训练路线。</span>
+            <span>前端组：维护官网视觉、交互页面和算法可视化展示。</span>
+            <span>内容组：整理成员资料、活动记录、项目说明和招新材料。</span>
+          </div>
         </div>
-        <div class="join-card"><span class="icon">☷</span><h3>建议分组</h3><p>算法组、前端组、内容组、后端预备组。第一阶段重点让前端组和内容组先跑起来。</p></div>
+        <div class="join-card"><span class="icon">GO</span><h3>立即加入</h3><p>以算法之名，聚同道之人。第一阶段先把官网建设好，让每一次训练、每一个项目、每位成员都有可以展示的位置。</p></div>
       </section>
 
       <section id="gomoku" class="section-block gomoku-section">
         <div class="gomoku-copy">
-          <p class="eyebrow">五子棋平台</p>
-          <h2>第二阶段接入现有 AI 五子棋</h2>
-          <p>当前官网先保留入口。下一阶段可以把你上传的五子棋 HTML 改造成独立页面，之后再加入昵称提交、胜负记录和排行榜。</p>
-          <div class="step-list"><span>1. 接入棋盘</span><span>2. 记录胜负</span><span>3. 保存昵称</span><span>4. 展示排行</span></div>
+          <p class="eyebrow">GOMOKU AI BATTLE SYSTEM</p>
+          <h2>AI 五子棋将作为第一个对战平台功能</h2>
+          <p>海报中的核心项目会在第二阶段接入官网：从随机落子、贪心、棋型识别，到 Minimax 搜索、Alpha-Beta 剪枝和置换表优化，完整展示 AI 研发过程。</p>
+          <div class="step-list"><span>随机落子</span><span>贪心策略</span><span>棋型识别</span><span>Minimax</span><span>Alpha-Beta</span><span>排行榜</span></div>
         </div>
-        <div class="board-preview" id="boardPreview" aria-label="五子棋预览"></div>
+        <div class="board-shell"><div class="board-preview" id="boardPreview" aria-label="五子棋预览"></div></div>
       </section>
     </main>
 
-    <footer class="footer"><span>算法社官网第一阶段</span><span>静态托管 · JSON 数据 · 零服务器成本</span></footer>
+    <footer class="footer"><span>算法社 · Algorithm Club</span><span>静态托管 · JSON 数据 · AI 五子棋预告入口</span></footer>
 
     <script>
       const fallbackMembers = [
@@ -287,8 +636,8 @@
       }
 
       function renderBoard() {
-        const black = [21, 31, 41, 51];
-        const white = [23, 32, 40, 49];
+        const black = [21, 31, 41, 51, 52];
+        const white = [23, 32, 40, 49, 58];
         const cells = Array.from({ length: 81 }, (_, index) => {
           const cell = index + 1;
           const cls = black.includes(cell) ? 'preview-cell black' : white.includes(cell) ? 'preview-cell white' : 'preview-cell';
