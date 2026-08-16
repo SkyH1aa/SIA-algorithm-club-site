@@ -334,17 +334,29 @@
         overflow: hidden;
       }
       .avatar {
-        display: grid;
         flex: 0 0 auto;
-        width: 52px;
-        height: 52px;
-        place-items: center;
+        width: 76px;
+        height: 76px;
         border: 1px solid rgba(0, 229, 255, 0.36);
         border-radius: 12px;
         background: rgba(0, 229, 255, 0.08);
+        box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.08);
+        overflow: hidden;
+      }
+      .avatar span,
+      .avatar img {
+        display: grid;
+        width: 100%;
+        height: 100%;
+        place-items: center;
+      }
+      .avatar span {
         color: var(--cyan);
         font-weight: 900;
-        box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.08);
+      }
+      .avatar img {
+        object-fit: cover;
+        object-position: center;
       }
       .member-card p { margin-bottom: 12px; font-size: 14px; line-height: 1.72; }
       .member-meta { color: var(--cyan); font-weight: 800; }
@@ -591,9 +603,10 @@
       <section id="gomoku" class="section-block gomoku-section">
         <div class="gomoku-copy">
           <p class="eyebrow">GOMOKU AI BATTLE SYSTEM</p>
-          <h2>AI 五子棋将作为第一个对战平台功能</h2>
-          <p>海报中的核心项目会在第二阶段接入官网：从随机落子、贪心、棋型识别，到 Minimax 搜索、Alpha-Beta 剪枝和置换表优化，完整展示 AI 研发过程。</p>
-          <div class="step-list"><span>随机落子</span><span>贪心策略</span><span>棋型识别</span><span>Minimax</span><span>Alpha-Beta</span><span>排行榜</span></div>
+          <h2>AI 五子棋挑战平台已接入</h2>
+          <p>使用陈海铭开发的浏览器端 AI 五子棋模型，支持用户昵称、人机挑战、胜负记录和 Supabase 排行榜展示。</p>
+          <div class="step-list"><span>棋型识别</span><span>Minimax</span><span>Alpha-Beta</span><span>人机挑战</span><span>成绩保存</span><span>排行榜</span></div>
+          <a class="primary-action" href="public/gomoku.html">开始挑战 AI 五子棋 →</a>
         </div>
         <div class="board-shell"><div class="board-preview" id="boardPreview" aria-label="五子棋预览"></div></div>
       </section>
@@ -603,7 +616,7 @@
 
     <script>
       const fallbackMembers = [
-        { name: '示例成员 A', grade: '高一', group: '算法组', direction: '图论 / 搜索', intro: '喜欢研究最短路、搜索和博弈算法，正在参与 AI 五子棋项目。', avatar: 'A' },
+        { name: '陈海铭', grade: 'A1C5-社长', group: '', direction: 'Windows 软件管控工具 / AI 五子棋', intro: 'Windows 软件管控工具 APPMonitor开发者& 五子棋AI模型创建者', avatar: '陈', avatarImage: 'public/assets/member-a1c5.jpg' },
         { name: '示例成员 B', grade: '高二', group: '前端组', direction: '网页开发 / 可视化', intro: '负责官网页面、算法可视化演示和项目展示体验。', avatar: 'B' },
         { name: '示例成员 C', grade: '高一', group: '后端组', direction: '接口 / 数据管理', intro: '计划负责后续排行榜、成员后台和训练数据统计。', avatar: 'C' }
       ];
@@ -633,17 +646,23 @@
       }
 
       function renderMembers(members) {
-        document.getElementById('memberGrid').innerHTML = members.map(member => `
+        document.getElementById('memberGrid').innerHTML = members.map(member => {
+          const avatarContent = member.avatarImage
+            ? `<img src="${escapeHtml(member.avatarImage)}" alt="${escapeHtml(member.name)}头像" />`
+            : `<span>${escapeHtml(member.avatar || String(member.name || '').slice(0, 1))}</span>`;
+          const gradeGroup = [member.grade, member.group].filter(Boolean).join(' · ');
+          return `
           <article class="member-card">
-            <div class="avatar">${escapeHtml(member.avatar || String(member.name || '').slice(0, 1))}</div>
+            <div class="avatar">${avatarContent}</div>
             <div>
               <h3>${escapeHtml(member.name)}</h3>
-              <p class="member-meta">${escapeHtml(member.grade)} · ${escapeHtml(member.group)}</p>
+              ${gradeGroup ? `<p class="member-meta">${escapeHtml(gradeGroup)}</p>` : ''}
               <p>${escapeHtml(member.intro)}</p>
               <span class="tag">${escapeHtml(member.direction)}</span>
             </div>
           </article>
-        `).join('');
+        `;
+        }).join('');
       }
 
       function renderProjects(projects) {
