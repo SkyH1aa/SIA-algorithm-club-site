@@ -1,0 +1,70 @@
+算法社官网第一阶段使用说明
+
+一、当前文件
+
+1. index.html
+官网主页，包含首页、成员展示、项目展示、活动安排、加入我们、五子棋预告。
+
+2. public/data/members.json
+成员展示数据。
+
+3. public/data/projects.json
+项目展示数据。
+
+4. public/data/activities.json
+活动安排数据。
+
+二、如何本地查看
+
+直接双击 index.html 即可打开页面。
+
+注意：部分浏览器直接打开本地文件时，可能无法读取 public/data 里的 JSON。页面已经内置了示例数据，所以仍然能显示。部署到 GitHub Pages、Cloudflare Pages、Vercel 等静态托管平台后，会正常读取 JSON 文件。
+
+三、如何修改成员数据
+
+打开 public/data/members.json，按下面格式增加或修改成员：
+
+{
+  "name": "成员昵称",
+  "grade": "高一",
+  "group": "算法组",
+  "direction": "图论 / 搜索",
+  "intro": "一句成员简介。",
+  "avatar": "A"
+}
+
+修改后保存文件，再重新部署即可。
+
+四、如何部署
+
+方案 A：GitHub Pages
+1. 新建一个 GitHub 仓库。
+2. 上传 index.html 和 public 文件夹。
+3. 在 Settings - Pages 里选择 main 分支部署。
+4. 获得 github.io 访问链接。
+
+方案 B：Cloudflare Pages
+1. 新建项目并连接 GitHub 仓库。
+2. 构建命令留空。
+3. 输出目录填 / 或留默认根目录。
+4. 部署后获得 pages.dev 访问链接。
+
+方案 C：Vercel
+1. 导入 GitHub 仓库。
+2. Framework 选择 Other。
+3. 构建命令留空。
+4. 输出目录使用根目录。
+
+五、第二阶段建议
+
+1. 把现有五子棋 HTML 接入为 gomoku.html 或嵌入 index.html 的五子棋区域。
+2. 加入对局结束弹窗，让用户输入昵称。
+3. 使用 Supabase、LeanCloud 或 Cloudflare D1 保存排行榜。
+4. 增加 rankings 区域展示昵称、结果、步数、用时和时间。
+
+六、当前限制
+
+1. 当前版本没有后台登录。
+2. 当前版本没有数据库。
+3. 当前版本没有真实五子棋对战，只保留预告入口。
+4. 当前版本不需要服务器，适合第一阶段低成本上线。

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>算法社官网</title>
+    <style>
+      :root {
+        font-family: "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #172033;
+        background: #f6f7fb;
+        --brand: #6054e8;
+        --brand-dark: #342a9f;
+        --accent: #0f9f95;
+        --ink: #172033;
+        --muted: #647086;
+        --line: #dce0ea;
+        --panel: #ffffff;
+        --soft: #eef0fb;
+        --soft-accent: #e9f7f5;
+        --shadow: 0 20px 60px rgba(31, 37, 71, 0.08);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body { margin: 0; min-width: 320px; min-height: 100vh; }
+      a { color: inherit; text-decoration: none; }
+      button { font: inherit; }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 14px clamp(18px, 5vw, 72px);
+        border-bottom: 1px solid rgba(220, 224, 234, 0.86);
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(16px);
+      }
+
+      .brand { display: inline-flex; align-items: center; gap: 10px; min-width: max-content; }
+      .brand-mark {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 8px;
+        background: var(--brand);
+        color: #fff;
+        font-weight: 800;
+      }
+      .brand strong, .brand small { display: block; }
+      .brand strong { font-size: 16px; line-height: 20px; }
+      .brand small { color: var(--muted); font-size: 12px; line-height: 16px; }
+
+      .nav { display: flex; align-items: center; gap: 6px; }
+      .nav a { padding: 8px 12px; border-radius: 8px; color: var(--muted); font-size: 14px; line-height: 20px; }
+      .nav a:hover { background: var(--soft); color: var(--brand-dark); }
+      .menu-button { display: none; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
+
+      main { padding: 0 clamp(18px, 5vw, 72px) 36px; }
+      .section-block { max-width: 1180px; margin: 0 auto; padding: 72px 0; }
+      .hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.72fr); align-items: center; gap: clamp(28px, 5vw, 72px); min-height: calc(100vh - 68px); }
+      .eyebrow { margin: 0 0 12px; color: var(--brand); font-size: 13px; font-weight: 700; letter-spacing: 0; }
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { margin-bottom: 18px; max-width: 720px; font-size: clamp(40px, 7vw, 72px); line-height: 1.04; letter-spacing: 0; }
+      h2 { margin-bottom: 12px; font-size: clamp(28px, 4vw, 42px); line-height: 1.15; letter-spacing: 0; }
+      h3 { margin-bottom: 8px; font-size: 18px; line-height: 26px; }
+      p { color: var(--muted); font-size: 16px; line-height: 28px; }
+      .hero-text { max-width: 660px; margin-bottom: 28px; font-size: 18px; line-height: 32px; }
+      .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+      .primary-action, .secondary-action { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; padding: 10px 16px; font-weight: 700; }
+      .primary-action { background: var(--brand); color: #fff; }
+      .secondary-action { border: 1px solid var(--line); background: #fff; color: var(--ink); }
+
+      .hero-panel { display: grid; gap: 12px; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow); }
+      .panel-row { display: flex; align-items: center; gap: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+      .panel-row.focus { border-color: rgba(96, 84, 232, 0.45); background: var(--soft); }
+      .icon { flex: 0 0 auto; color: var(--brand); font-size: 22px; }
+      .panel-row strong, .panel-row span { display: block; }
+      .panel-row span { margin-top: 2px; color: var(--muted); font-size: 14px; line-height: 20px; }
+
+      .section-heading { max-width: 760px; margin-bottom: 28px; }
+      .inline-heading { display: flex; max-width: none; align-items: flex-end; justify-content: space-between; gap: 18px; }
+      .data-note { flex: 0 0 auto; padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+
+      .direction-grid, .project-grid, .member-grid { display: grid; gap: 18px; }
+      .direction-grid, .project-grid, .member-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .info-card, .project-card, .member-card, .join-card { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: 0 10px 34px rgba(31, 37, 71, 0.05); }
+      .info-card, .project-card, .join-card { padding: 22px; }
+      .info-card .icon, .join-card .icon { display: block; margin-bottom: 14px; }
+      .info-card p, .project-card p, .join-card p { margin-bottom: 0; font-size: 15px; line-height: 25px; }
+      .member-card { display: flex; gap: 14px; min-height: 210px; padding: 18px; }
+      .avatar { display: grid; flex: 0 0 auto; width: 48px; height: 48px; place-items: center; border-radius: 12px; background: var(--soft); color: var(--brand-dark); font-weight: 800; }
+      .member-card p { margin-bottom: 12px; font-size: 14px; line-height: 24px; }
+      .member-meta { color: var(--brand-dark); font-weight: 700; }
+      .tag, .status-pill { display: inline-flex; width: fit-content; align-items: center; border-radius: 999px; font-size: 12px; line-height: 18px; }
+      .tag { padding: 5px 9px; background: var(--soft-accent); color: #08766f; }
+      .status-pill { padding: 4px 9px; background: var(--soft); color: var(--brand-dark); font-weight: 700; }
+
+      .muted-band { max-width: none; margin: 0 calc(clamp(18px, 5vw, 72px) * -1); padding: 72px clamp(18px, 5vw, 72px); background: #eef0f7; }
+      .muted-band > * { max-width: 1180px; margin-left: auto; margin-right: auto; }
+      .project-topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; color: var(--muted); font-size: 13px; }
+      .timeline { display: grid; gap: 14px; }
+      .timeline-item { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 20px; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+      .timeline-date { color: var(--brand-dark); font-weight: 800; }
+      .timeline-item p { margin-bottom: 0; }
+      .join-section, .gomoku-section { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 0.48fr); align-items: center; gap: 28px; }
+      .join-card { min-height: 210px; }
+      .gomoku-section { border-top: 1px solid var(--line); }
+      .step-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+      .step-list span { padding: 8px 10px; border-radius: 999px; background: var(--soft); color: var(--brand-dark); font-size: 13px; font-weight: 700; }
+      .board-preview { display: grid; grid-template-columns: repeat(9, 1fr); aspect-ratio: 1; width: min(100%, 340px); justify-self: center; border: 2px solid #6f532f; border-radius: 8px; background: #d9ad72; overflow: hidden; }
+      .preview-cell { position: relative; border-right: 1px solid rgba(80, 55, 25, 0.56); border-bottom: 1px solid rgba(80, 55, 25, 0.56); }
+      .preview-cell.black::after, .preview-cell.white::after { content: ""; position: absolute; inset: 18%; border-radius: 999px; }
+      .preview-cell.black::after { background: #111827; }
+      .preview-cell.white::after { border: 1px solid rgba(17, 24, 39, 0.35); background: #fff; }
+      .footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 24px clamp(18px, 5vw, 72px); border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+
+      @media (max-width: 900px) {
+        .hero, .join-section, .gomoku-section { grid-template-columns: 1fr; }
+        .direction-grid, .project-grid, .member-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .hero { min-height: auto; padding-top: 56px; }
+      }
+      @media (max-width: 720px) {
+        .menu-button { display: inline-flex; align-items: center; justify-content: center; }
+        .nav { position: absolute; top: 68px; right: 18px; left: 18px; display: none; flex-direction: column; align-items: stretch; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: var(--shadow); }
+        .nav.open { display: flex; }
+        .nav a { padding: 11px 12px; }
+        main { padding-left: 18px; padding-right: 18px; }
+        .section-block, .muted-band { padding-top: 52px; padding-bottom: 52px; }
+        .direction-grid, .project-grid, .member-grid { grid-template-columns: 1fr; }
+        .inline-heading { display: block; }
+        .data-note { display: inline-block; margin-top: 6px; }
+        .timeline-item { grid-template-columns: 1fr; gap: 8px; }
+        .member-card { min-height: auto; }
+        h1 { font-size: 42px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#home">
+        <span class="brand-mark">A</span>
+        <span><strong>算法社</strong><small>Algorithm Club</small></span>
+      </a>
+      <button class="menu-button" type="button" id="menuButton" aria-label="打开导航">☰</button>
+      <nav class="nav" id="nav">
+        <a href="#home">首页</a>
+        <a href="#members">成员</a>
+        <a href="#projects">项目</a>
+        <a href="#activities">活动</a>
+        <a href="#join">加入我们</a>
+        <a href="#gomoku">五子棋</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="home" class="hero section-block">
+        <div class="hero-copy">
+          <p class="eyebrow">高中算法社第一阶段官网</p>
+          <h1>用代码理解算法，用项目连接社团。</h1>
+          <p class="hero-text">这里会展示社团介绍、成员方向、活动安排和长期项目。第一阶段先做静态官网，第二阶段再接入 AI 五子棋、排行榜和免费数据库。</p>
+          <div class="hero-actions">
+            <a class="primary-action" href="#members">查看成员 →</a>
+            <a class="secondary-action" href="#gomoku">五子棋计划</a>
+          </div>
+        </div>
+        <div class="hero-panel" aria-label="官网阶段规划">
+          <div class="panel-row focus"><span class="icon">✦</span><div><strong>第一阶段</strong><span>官网展示 + JSON 数据维护</span></div></div>
+          <div class="panel-row"><span class="icon">⌘</span><div><strong>第二阶段</strong><span>接入 AI 五子棋和排行榜</span></div></div>
+          <div class="panel-row"><span class="icon">▣</span><div><strong>第三阶段</strong><span>免费数据库 + 简易后台</span></div></div>
+        </div>
+      </section>
+
+      <section class="section-block direction-section">
+        <div class="section-heading"><p class="eyebrow">社团方向</p><h2>从算法训练到真实项目</h2></div>
+        <div class="direction-grid">
+          <article class="info-card"><span class="icon">◎</span><h3>算法竞赛</h3><p>训练搜索、图论、动态规划、数据结构等基础能力。</p></article>
+          <article class="info-card"><span class="icon">◇</span><h3>AI 博弈</h3><p>以五子棋为起点，探索评估函数、搜索和对战策略。</p></article>
+          <article class="info-card"><span class="icon">{ }</span><h3>工程实践</h3><p>用网页、数据和部署把算法项目做成可访问的作品。</p></article>
+        </div>
+      </section>
+
+      <section id="members" class="section-block">
+        <div class="section-heading inline-heading"><div><p class="eyebrow">成员展示</p><h2>成员数据来自 JSON 文件</h2></div><span class="data-note">public/data/members.json</span></div>
+        <div class="member-grid" id="memberGrid"></div>
+      </section>
+
+      <section id="projects" class="section-block muted-band">
+        <div class="section-heading"><p class="eyebrow">项目展示</p><h2>长期项目先占位，后续逐步上线</h2></div>
+        <div class="project-grid" id="projectGrid"></div>
+      </section>
+
+      <section id="activities" class="section-block">
+        <div class="section-heading"><p class="eyebrow">活动安排</p><h2>训练、招新和挑战赛</h2></div>
+        <div class="timeline" id="activityList"></div>
+      </section>
+
+      <section id="join" class="section-block join-section">
+        <div>
+          <p class="eyebrow">加入我们</p>
+          <h2>适合对算法、AI 或网页开发感兴趣的同学</h2>
+          <p>第一阶段官网内容可以先由负责人维护 JSON 文件。等网站稳定后，再接入免费数据库和简易后台，让非技术成员也能维护成员资料和活动信息。</p>
+        </div>
+        <div class="join-card"><span class="icon">☷</span><h3>建议分组</h3><p>算法组、前端组、内容组、后端预备组。第一阶段重点让前端组和内容组先跑起来。</p></div>
+      </section>
+
+      <section id="gomoku" class="section-block gomoku-section">
+        <div class="gomoku-copy">
+          <p class="eyebrow">五子棋平台</p>
+          <h2>第二阶段接入现有 AI 五子棋</h2>
+          <p>当前官网先保留入口。下一阶段可以把你上传的五子棋 HTML 改造成独立页面，之后再加入昵称提交、胜负记录和排行榜。</p>
+          <div class="step-list"><span>1. 接入棋盘</span><span>2. 记录胜负</span><span>3. 保存昵称</span><span>4. 展示排行</span></div>
+        </div>
+        <div class="board-preview" id="boardPreview" aria-label="五子棋预览"></div>
+      </section>
+    </main>
+
+    <footer class="footer"><span>算法社官网第一阶段</span><span>静态托管 · JSON 数据 · 零服务器成本</span></footer>
+
+    <script>
+      const fallbackMembers = [
+        { name: '示例成员 A', grade: '高一', group: '算法组', direction: '图论 / 搜索', intro: '喜欢研究最短路、搜索和博弈算法，正在参与 AI 五子棋项目。', avatar: 'A' },
+        { name: '示例成员 B', grade: '高二', group: '前端组', direction: '网页开发 / 可视化', intro: '负责官网页面、算法可视化演示和项目展示体验。', avatar: 'B' },
+        { name: '示例成员 C', grade: '高一', group: '后端组', direction: '接口 / 数据管理', intro: '计划负责后续排行榜、成员后台和训练数据统计。', avatar: 'C' }
+      ];
+      const fallbackProjects = [
+        { name: 'AI 五子棋', status: '第二阶段接入', type: '人机对战', intro: '基于已有五子棋模型，后续接入官网，支持前端对战、昵称提交和排行榜。' },
+        { name: '算法可视化实验室', status: '规划中', type: '教学展示', intro: '把排序、搜索、图论和动态规划做成可交互演示，服务社团教学和招新展示。' },
+        { name: '算法训练平台', status: '未来计划', type: '训练系统', intro: '整理题单、训练路线、社员成长记录，后期再评估是否升级为完整 OJ。' }
+      ];
+      const fallbackActivities = [
+        { title: '社团招新', date: '2026-09', intro: '面向对算法、编程、AI 和网页开发感兴趣的同学开放报名。' },
+        { title: '每周算法训练', date: '每周固定时间', intro: '围绕基础语法、数据结构、搜索、图论和动态规划组织训练。' },
+        { title: 'AI 五子棋挑战赛', date: '第二阶段计划', intro: '官网接入五子棋后，组织人机挑战和排行榜活动。' }
+      ];
+
+      function escapeHtml(value) {
+        return String(value || '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+      }
+
+      async function loadJson(path, fallback) {
+        try {
+          const response = await fetch(path);
+          if (!response.ok) return fallback;
+          return await response.json();
+        } catch (error) {
+          return fallback;
+        }
+      }
+
+      function renderMembers(members) {
+        document.getElementById('memberGrid').innerHTML = members.map(member => `
+          <article class="member-card">
+            <div class="avatar">${escapeHtml(member.avatar || String(member.name || '').slice(0, 1))}</div>
+            <div>
+              <h3>${escapeHtml(member.name)}</h3>
+              <p class="member-meta">${escapeHtml(member.grade)} · ${escapeHtml(member.group)}</p>
+              <p>${escapeHtml(member.intro)}</p>
+              <span class="tag">${escapeHtml(member.direction)}</span>
+            </div>
+          </article>
+        `).join('');
+      }
+
+      function renderProjects(projects) {
+        document.getElementById('projectGrid').innerHTML = projects.map(project => `
+          <article class="project-card">
+            <div class="project-topline"><span class="status-pill">${escapeHtml(project.status)}</span><span>${escapeHtml(project.type)}</span></div>
+            <h3>${escapeHtml(project.name)}</h3>
+            <p>${escapeHtml(project.intro)}</p>
+          </article>
+        `).join('');
+      }
+
+      function renderActivities(activities) {
+        document.getElementById('activityList').innerHTML = activities.map(activity => `
+          <article class="timeline-item">
+            <div class="timeline-date">${escapeHtml(activity.date)}</div>
+            <div><h3>${escapeHtml(activity.title)}</h3><p>${escapeHtml(activity.intro)}</p></div>
+          </article>
+        `).join('');
+      }
+
+      function renderBoard() {
+        const black = [21, 31, 41, 51];
+        const white = [23, 32, 40, 49];
+        const cells = Array.from({ length: 81 }, (_, index) => {
+          const cell = index + 1;
+          const cls = black.includes(cell) ? 'preview-cell black' : white.includes(cell) ? 'preview-cell white' : 'preview-cell';
+          return `<div class="${cls}"></div>`;
+        }).join('');
+        document.getElementById('boardPreview').innerHTML = cells;
+      }
+
+      async function init() {
+        const [members, projects, activities] = await Promise.all([
+          loadJson('public/data/members.json', fallbackMembers),
+          loadJson('public/data/projects.json', fallbackProjects),
+          loadJson('public/data/activities.json', fallbackActivities)
+        ]);
+        renderMembers(members);
+        renderProjects(projects);
+        renderActivities(activities);
+        renderBoard();
+      }
+
+      document.getElementById('menuButton').addEventListener('click', () => {
+        document.getElementById('nav').classList.toggle('open');
+      });
+      document.getElementById('nav').addEventListener('click', () => {
+        document.getElementById('nav').classList.remove('open');
+      });
+
+      init();
+    </script>
+  </body>
+</html>
