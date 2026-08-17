@@ -539,7 +539,7 @@
           <p class="hero-text">致力于算法研究与编程实践，涵盖人工智能、数据结构、竞赛算法和工程项目。从零基础入门到 AI 五子棋研发，这里把训练、竞赛和作品展示连接起来。</p>
           <div class="hero-actions">
             <a class="primary-action" href="#join">立即加入</a>
-            <a class="secondary-action" href="#gomoku">查看 AI 五子棋计划</a>
+            <a class="secondary-action" href="public/appmonitor.html">查看 APPMonitor 发布页</a>
           </div>
           <div class="hero-stats" aria-label="社团亮点">
             <div class="stat"><strong>8 代</strong><span>五子棋 AI 迭代路线</span></div>
@@ -671,6 +671,7 @@
             <div class="project-topline"><span class="status-pill">${escapeHtml(project.status)}</span><span>${escapeHtml(project.type)}</span></div>
             <h3>${escapeHtml(project.name)}</h3>
             <p>${escapeHtml(project.intro)}</p>
+            ${project.link ? `<a class="secondary-action" href="${escapeHtml(project.link)}">${escapeHtml(project.linkText || '查看详情')} →</a>` : ''}
           </article>
         `).join('');
       }
