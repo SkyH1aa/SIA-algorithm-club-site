@@ -25,6 +25,7 @@
       * { box-sizing: border-box; }
       html { scroll-behavior: smooth; }
       body {
+        position: relative;
         margin: 0;
         min-width: 320px;
         min-height: 100vh;
@@ -58,6 +59,60 @@
           linear-gradient(108deg, transparent 0%, rgba(0, 229, 255, 0.055) 30%, rgba(124, 77, 255, 0.04) 54%, transparent 78%),
           linear-gradient(252deg, transparent 0%, rgba(124, 77, 255, 0.05) 24%, rgba(255, 95, 200, 0.035) 58%, transparent 86%);
         opacity: 0.76;
+      }
+
+      .ambient-background {
+        position: fixed;
+        inset: 0;
+        z-index: -2;
+        overflow: hidden;
+        pointer-events: none;
+      }
+      .ambient-orb {
+        position: absolute;
+        width: min(46vw, 620px);
+        aspect-ratio: 1;
+        border-radius: 50%;
+        filter: blur(72px);
+        opacity: 0.17;
+        will-change: transform;
+        animation: drift-orb 20s ease-in-out infinite alternate;
+      }
+      .orb-cyan { top: -20%; left: -12%; background: var(--cyan); }
+      .orb-violet { top: 18%; right: -18%; background: var(--violet); animation-delay: -8s; }
+      .ambient-grid {
+        position: absolute;
+        inset: -80px;
+        background-image:
+          linear-gradient(rgba(0, 229, 255, 0.055) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 229, 255, 0.055) 1px, transparent 1px);
+        background-size: 72px 72px;
+        mask-image: radial-gradient(ellipse 100% 72% at 50% 8%, #000 0%, transparent 88%);
+        opacity: 0.48;
+        animation: grid-shift 28s linear infinite;
+      }
+      #particleCanvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.7; }
+      .pointer-glow {
+        position: fixed;
+        z-index: -1;
+        width: 460px;
+        height: 460px;
+        left: var(--pointer-x, 50%);
+        top: var(--pointer-y, 14%);
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(0, 229, 255, 0.1), transparent 68%);
+        pointer-events: none;
+        transition: left 0.22s ease-out, top 0.22s ease-out;
+      }
+      @keyframes drift-orb {
+        from { transform: translate3d(-2%, -1%, 0) scale(1); }
+        to { transform: translate3d(7%, 5%, 0) scale(1.1); }
+      }
+      @keyframes grid-shift { to { transform: translate3d(72px, 72px, 0); } }
+      @keyframes rise-in {
+        from { opacity: 0; transform: translateY(18px); }
+        to { opacity: 1; transform: translateY(0); }
       }
 
       a { color: inherit; text-decoration: none; }
@@ -113,6 +168,7 @@
         font-size: 14px;
         line-height: 20px;
       }
+      .nav a { transition: border-color 0.25s ease, background 0.25s ease, color 0.25s ease; }
       .nav a:hover {
         border-color: rgba(0, 229, 255, 0.26);
         background: rgba(0, 229, 255, 0.07);
@@ -205,12 +261,16 @@
         background: linear-gradient(135deg, rgba(0, 229, 255, 0.92), rgba(124, 77, 255, 0.9));
         color: #020409;
         box-shadow: 0 0 28px rgba(0, 229, 255, 0.24);
+        transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
       }
+      .primary-action:hover { transform: translateY(-3px); box-shadow: 0 0 38px rgba(0, 229, 255, 0.42); filter: saturate(1.15); }
       .secondary-action {
         border: 1px solid rgba(0, 229, 255, 0.26);
         background: rgba(8, 13, 30, 0.72);
         color: var(--white);
+        transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
       }
+      .secondary-action:hover { transform: translateY(-2px); border-color: rgba(0, 229, 255, 0.56); background: rgba(0, 229, 255, 0.1); }
 
       .hero-stats {
         display: grid;
@@ -297,7 +357,15 @@
         border-radius: 10px;
         background: linear-gradient(180deg, rgba(8, 13, 30, 0.82), rgba(4, 8, 20, 0.66));
         box-shadow: 0 14px 48px rgba(0, 0, 0, 0.22), inset 0 0 24px rgba(0, 229, 255, 0.035);
+        transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
       }
+      .info-card:hover, .project-card:hover, .member-card:hover, .join-card:hover, .timeline-item:hover {
+        transform: translateY(-6px);
+        border-color: rgba(0, 229, 255, 0.48);
+        box-shadow: 0 20px 58px rgba(0, 0, 0, 0.3), 0 0 28px rgba(0, 229, 255, 0.1), inset 0 0 24px rgba(0, 229, 255, 0.06);
+      }
+      .section-block { view-timeline-name: --section-reveal; view-timeline-axis: block; animation: section-reveal linear both; animation-timeline: --section-reveal; animation-range: entry 0% cover 24%; }
+      @keyframes section-reveal { from { opacity: 0.25; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
       .info-card, .project-card, .join-card { padding: 22px; }
       .info-card { overflow: hidden; }
       .info-card::after, .project-card::after, .member-card::after, .timeline-item::after {
@@ -486,6 +554,9 @@
         .direction-grid, .project-grid, .member-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
       @media (max-width: 720px) {
+        .ambient-orb { width: 78vw; filter: blur(54px); opacity: 0.13; }
+        .ambient-grid { background-size: 52px 52px; }
+        .pointer-glow { display: none; }
         .menu-button { display: inline-flex; align-items: center; justify-content: center; }
         .nav {
           position: absolute;
@@ -512,9 +583,23 @@
         .member-card { min-height: auto; }
         h1 { font-size: 46px; }
       }
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        .ambient-orb, .ambient-grid, #particleCanvas { animation: none; }
+        .pointer-glow { display: none; }
+        .section-block { animation: none; }
+        .primary-action, .secondary-action, .info-card, .project-card, .member-card, .join-card, .timeline-item { transition: none; }
+      }
     </style>
   </head>
   <body>
+    <div class="ambient-background" aria-hidden="true">
+      <div class="ambient-orb orb-cyan"></div>
+      <div class="ambient-orb orb-violet"></div>
+      <div class="ambient-grid"></div>
+      <canvas id="particleCanvas"></canvas>
+    </div>
+    <div class="pointer-glow" aria-hidden="true"></div>
     <header class="topbar">
       <a class="brand" href="#home">
         <span class="brand-mark">S</span>
@@ -716,6 +801,52 @@
       document.getElementById('nav').addEventListener('click', () => {
         document.getElementById('nav').classList.remove('open');
       });
+
+      const pointerQuery = window.matchMedia('(pointer: fine) and (prefers-reduced-motion: no-preference)');
+      if (pointerQuery.matches) {
+        window.addEventListener('pointermove', event => {
+          document.documentElement.style.setProperty('--pointer-x', `${event.clientX}px`);
+          document.documentElement.style.setProperty('--pointer-y', `${event.clientY}px`);
+        }, { passive: true });
+      }
+
+      const canvas = document.getElementById('particleCanvas');
+      const particleQuery = window.matchMedia('(prefers-reduced-motion: no-preference)');
+      if (canvas && particleQuery.matches) {
+        const context = canvas.getContext('2d');
+        let particles = [];
+        let animationFrame;
+        function resizeCanvas() {
+          const scale = Math.min(window.devicePixelRatio || 1, 2);
+          canvas.width = window.innerWidth * scale;
+          canvas.height = window.innerHeight * scale;
+          context.setTransform(scale, 0, 0, scale, 0, 0);
+          const count = Math.min(58, Math.max(24, Math.floor(window.innerWidth / 24)));
+          particles = Array.from({ length: count }, () => ({
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            radius: Math.random() * 1.5 + 0.45,
+            speed: Math.random() * 0.18 + 0.06,
+            alpha: Math.random() * 0.42 + 0.18
+          }));
+        }
+        function drawParticles() {
+          context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+          particles.forEach(particle => {
+            particle.y -= particle.speed;
+            if (particle.y < -4) particle.y = window.innerHeight + 4;
+            context.beginPath();
+            context.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+            context.fillStyle = `rgba(0, 229, 255, ${particle.alpha})`;
+            context.fill();
+          });
+          animationFrame = window.requestAnimationFrame(drawParticles);
+        }
+        resizeCanvas();
+        drawParticles();
+        window.addEventListener('resize', resizeCanvas, { passive: true });
+        window.addEventListener('pagehide', () => window.cancelAnimationFrame(animationFrame), { once: true });
+      }
 
       init();
     </script>
