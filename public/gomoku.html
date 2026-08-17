@@ -171,7 +171,7 @@
       if (!supabaseClient) return true;
 
       const { data, error } = await supabaseClient
-        .from('gomoku_scores')
+        .from('gomoku_players')
         .select('nickname')
         .eq('nickname', nickname)
         .limit(1);
@@ -217,9 +217,14 @@
         resultSubmitted = false;
         return;
       }
-      const { error } = await supabaseClient.from('gomoku_scores').insert({ nickname, result, moves: Math.max(1, moveCount), duration_ms: durationMs, score });
+      const { error } = await supabaseClient.rpc('record_gomoku_result', {
+        p_nickname: nickname,
+        p_result: result,
+        p_moves: Math.max(1, moveCount),
+        p_duration_ms: Math.min(durationMs, 86400000)
+      });
       if (error) {
-        document.getElementById('result').textContent += ` 成绩暂未保存：${error.message || '请确认 gomoku_scores 表和 INSERT 权限策略已创建。'}`;
+        document.getElementById('result').textContent += ` 成绩暂未保存：${error.message || '请确认已执行 gomoku_players 和 record_gomoku_result SQL。'}`;
         resultSubmitted = false;
         return;
       }
@@ -230,10 +235,10 @@
     async function loadLeaderboard() {
       const list = document.getElementById('leaderboardList');
       if (!supabaseClient) { list.innerHTML = '<li class="empty">Supabase 尚未初始化。</li>'; return; }
-      const { data, error } = await supabaseClient.from('gomoku_scores').select('nickname, score, result, moves').order('score', { ascending: false }).order('created_at', { ascending: true }).limit(20);
-      if (error) { list.innerHTML = '<li class="empty">排行榜暂不可用，请先执行 Supabase SQL 脚本。</li>'; return; }
+      const { data, error } = await supabaseClient.from('gomoku_players').select('nickname, total_score, wins, losses, draws, total_moves').order('total_score', { ascending: false }).order('updated_at', { ascending: true }).limit(20);
+      if (error) { list.innerHTML = '<li class="empty">排行榜暂不可用，请先执行累计成绩 SQL 脚本。</li>'; return; }
       if (!data.length) { list.innerHTML = '<li class="empty">暂无挑战记录，等你来成为第一名。</li>'; return; }
-      list.innerHTML = data.map((item, index) => `<li><span class="rank">${index + 1}</span><span>${escapeHtml(item.nickname)}<small> · ${item.result === 'win' ? '胜利' : item.result === 'draw' ? '平局' : '失败'}</small></span><span class="score">${item.score} 分</span></li>`).join('');
+      list.innerHTML = data.map((item, index) => `<li><span class="rank">${index + 1}</span><span>${escapeHtml(item.nickname)}<small> · ${item.wins}胜 ${item.losses}负 ${item.draws}平</small></span><span class="score">${item.total_score} 分</span></li>`).join('');
     }
 
     // 置换表缓存 (Transposition Table)
