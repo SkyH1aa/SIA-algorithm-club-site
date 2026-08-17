@@ -64,10 +64,12 @@
       .ambient-background {
         position: fixed;
         inset: 0;
-        z-index: -2;
+        z-index: 0;
         overflow: hidden;
         pointer-events: none;
       }
+      main, .footer { position: relative; z-index: 1; }
+      .topbar { isolation: isolate; }
       .ambient-orb {
         position: absolute;
         width: min(46vw, 620px);
@@ -91,10 +93,12 @@
         opacity: 0.48;
         animation: grid-shift 28s linear infinite;
       }
-      #particleCanvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.7; }
+      #particleCanvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.9; }
+      .ambient-orb { mix-blend-mode: screen; }
+      .ambient-grid { mix-blend-mode: screen; }
       .pointer-glow {
         position: fixed;
-        z-index: -1;
+        z-index: 0;
         width: 460px;
         height: 460px;
         left: var(--pointer-x, 50%);
@@ -364,8 +368,13 @@
         border-color: rgba(0, 229, 255, 0.48);
         box-shadow: 0 20px 58px rgba(0, 0, 0, 0.3), 0 0 28px rgba(0, 229, 255, 0.1), inset 0 0 24px rgba(0, 229, 255, 0.06);
       }
-      .section-block { view-timeline-name: --section-reveal; view-timeline-axis: block; animation: section-reveal linear both; animation-timeline: --section-reveal; animation-range: entry 0% cover 24%; }
+      .section-block { opacity: 1; }
+      @supports (animation-timeline: view()) {
+        .section-block { view-timeline-name: --section-reveal; view-timeline-axis: block; animation: section-reveal linear both; animation-timeline: --section-reveal; animation-range: entry 0% cover 24%; }
+      }
       @keyframes section-reveal { from { opacity: 0.25; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+      .reveal-ready { opacity: 0; transform: translateY(24px); transition: opacity 0.75s ease, transform 0.75s ease; }
+      .reveal-ready.is-visible { opacity: 1; transform: translateY(0); }
       .info-card, .project-card, .join-card { padding: 22px; }
       .info-card { overflow: hidden; }
       .info-card::after, .project-card::after, .member-card::after, .timeline-item::after {
@@ -588,6 +597,7 @@
         .ambient-orb, .ambient-grid, #particleCanvas { animation: none; }
         .pointer-glow { display: none; }
         .section-block { animation: none; }
+        .reveal-ready { opacity: 1; transform: none; transition: none; }
         .primary-action, .secondary-action, .info-card, .project-card, .member-card, .join-card, .timeline-item { transition: none; }
       }
     </style>
@@ -801,6 +811,21 @@
       document.getElementById('nav').addEventListener('click', () => {
         document.getElementById('nav').classList.remove('open');
       });
+
+      const motionQuery = window.matchMedia('(prefers-reduced-motion: no-preference)');
+      const revealItems = document.querySelectorAll('.section-block, .info-card, .project-card, .member-card, .timeline-item');
+      if (motionQuery.matches && 'IntersectionObserver' in window) {
+        revealItems.forEach(item => item.classList.add('reveal-ready'));
+        const revealObserver = new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              revealObserver.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.12 });
+        revealItems.forEach(item => revealObserver.observe(item));
+      }
 
       const pointerQuery = window.matchMedia('(pointer: fine) and (prefers-reduced-motion: no-preference)');
       if (pointerQuery.matches) {
