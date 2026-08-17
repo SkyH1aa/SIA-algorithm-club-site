@@ -669,7 +669,7 @@
       </section>
 
       <section class="section-block direction-section">
-        <div class="section-heading"><p class="eyebrow">FROM ZERO TO AI</p><h2>从算法训练到真实项目</h2><p>官网风格沿用招新海报的深空科技感，同时把社团方向拆成可以长期运营的项目模块。</p></div>
+        <div class="section-heading"><p class="eyebrow">FROM ZERO TO AI</p><h2>从算法训练到真实项目</h2><p>算法社已有资源展示：集中呈现社团成员、算法训练、AI 对战、软件项目与教学资料，让每一份积累都能被看见、被使用、被持续完善。</p></div>
         <div class="direction-grid">
           <article class="info-card"><span class="icon">CP</span><h3>竞赛算法</h3><p>系统训练搜索、图论、动态规划、数据结构等核心能力，为校内训练和各类竞赛打基础。</p></article>
           <article class="info-card"><span class="icon">AI</span><h3>AI 博弈</h3><p>以五子棋为起点，理解评估函数、Minimax 搜索、Alpha-Beta 剪枝和棋型识别。</p></article>
@@ -679,12 +679,12 @@
       </section>
 
       <section id="members" class="section-block">
-        <div class="section-heading inline-heading"><div><p class="eyebrow">CLUB MEMBERS</p><h2>成员展示</h2><p>成员资料仍由 JSON 文件维护，后续可以升级为数据库和后台。</p></div><span class="data-note">public/data/members.json</span></div>
+        <div class="section-heading inline-heading"><div><p class="eyebrow">CLUB MEMBERS</p><h2>成员展示</h2><p>算法社社长、副社长以及优秀社员展示。</p></div><span class="data-note">public/data/members.json</span></div>
         <div class="member-grid" id="memberGrid"></div>
       </section>
 
       <section id="projects" class="section-block muted-band">
-        <div class="section-heading"><p class="eyebrow">PROJECT LAB</p><h2>项目展示</h2><p>第一阶段先完成展示和入口，第二阶段再把已有五子棋 HTML 改造成可长期维护的对战页面。</p></div>
+        <div class="section-heading"><p class="eyebrow">PROJECT LAB</p><h2>项目展示</h2><p>算法社主打项目以及资源：从 AI 对战、软件开发到算法训练与教学资料，持续汇总社团正在建设和已经沉淀的内容。</p></div>
         <div class="project-grid" id="projectGrid"></div>
       </section>
 
@@ -733,7 +733,7 @@
       const fallbackMembers = [
         { name: '陈海铭', grade: 'A1C5-社长', group: '', direction: 'Windows 软件管控工具 / AI 五子棋', intro: 'Windows 软件管控工具 APPMonitor开发者& 五子棋AI模型创建者', avatar: '陈', avatarImage: 'public/assets/member-a1c5.jpg' },
         { name: '蒋元柏', grade: 'H3C1-副社长', group: '', direction: '五子棋 AI', intro: '参与五子棋模型建设和测试。', avatar: '蒋', avatarImage: 'public/assets/member-jiang-yuanbai.jpg' },
-        { name: '示例成员 C', grade: '高一', group: '后端组', direction: '接口 / 数据管理', intro: '计划负责后续排行榜、成员后台和训练数据统计。', avatar: 'C' }
+        { name: '优秀社员', grade: '虚位以待', group: '虚位以待', direction: '虚位以待', intro: '虚位以待', avatar: '待' }
       ];
       const fallbackProjects = [
         { name: 'AI 五子棋', status: '第二阶段接入', type: '人机对战', intro: '基于已有五子棋模型，后续接入官网，支持前端对战、昵称提交和排行榜。' },
