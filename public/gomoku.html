@@ -177,10 +177,14 @@
       const durationMs = gameStartedAt ? Date.now() - gameStartedAt : 0;
       const score = result === 'win' ? 3 : result === 'draw' ? 1 : 0;
       document.getElementById('result').textContent = `本局${result === 'win' ? '胜利' : result === 'draw' ? '平局' : '失败'}，获得 ${score} 分。`;
-      if (!supabaseClient) return;
+      if (!supabaseClient) {
+        document.getElementById('result').textContent += ' 成绩暂未保存：Supabase 尚未初始化。';
+        resultSubmitted = false;
+        return;
+      }
       const { error } = await supabaseClient.from('gomoku_scores').insert({ nickname, result, moves: Math.max(1, moveCount), duration_ms: durationMs, score });
       if (error) {
-        document.getElementById('result').textContent += ` 成绩暂未保存：${error.message || '请确认 Supabase 表和权限策略已创建。'}`;
+        document.getElementById('result').textContent += ` 成绩暂未保存：${error.message || '请确认 gomoku_scores 表和 INSERT 权限策略已创建。'}`;
         resultSubmitted = false;
         return;
       }
@@ -266,6 +270,7 @@
       if (gameover || board[row][col] !== 0 || currentPlayer !== playerColor) return;
       
       placePiece(row, col, playerColor);
+      moveCount++;
       
       if (!checkWin(row, col, playerColor)) {
         if (isBoardFull()) {
@@ -290,6 +295,7 @@
       }
       
       placePiece(move.row, move.col, aiColor);
+      moveCount++;
       
       if (!checkWin(move.row, move.col, aiColor)) {
         if (isBoardFull()) {
@@ -796,6 +802,7 @@
           gameover = true;
           const winner = player === playerColor ? '你' : 'AI';
           document.getElementById('status').textContent = `${winner}获胜！`;
+          finishGame(player === playerColor ? 'win' : 'loss');
           return true;
         }
       }
