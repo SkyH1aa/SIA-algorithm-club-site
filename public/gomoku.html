@@ -8,7 +8,9 @@
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-snap-type: y proximity; scroll-padding-top: 72px; }
     body {
+      position: relative;
       min-height: 100vh;
       margin: 0;
       padding: 28px 18px;
@@ -40,6 +42,7 @@
       text-align: center;
     }
     
+    .ambient-background{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}.ambient-orb{position:absolute;width:min(48vw,620px);aspect-ratio:1;border-radius:50%;filter:blur(72px);opacity:.18;mix-blend-mode:screen;animation:drift-orb 18s ease-in-out infinite alternate}.orb-cyan{top:-18%;left:-12%;background:#00e5ff}.orb-violet{top:20%;right:-16%;background:#7c4dff;animation-delay:-7s}.ambient-grid{position:absolute;inset:-80px;background-image:linear-gradient(rgba(0,229,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.055) 1px,transparent 1px);background-size:72px 72px;opacity:.45;animation:grid-shift 26s linear infinite}#particleCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:.75}.pointer-glow{position:fixed;z-index:0;width:420px;height:420px;left:var(--pointer-x,50%);top:var(--pointer-y,14%);transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(73,231,255,.1),transparent 68%);pointer-events:none}.page-shell{position:relative;z-index:1}.page-header,.game-layout,.leaderboard,.panel{scroll-snap-align:start}.panel,.page-header{transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease}.panel:hover{border-color:rgba(73,231,255,.45);box-shadow:0 22px 60px rgba(0,0,0,.3),0 0 30px rgba(73,231,255,.08)}@keyframes drift-orb{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(7%,5%,0) scale(1.1)}}@keyframes grid-shift{to{transform:translate3d(72px,72px,0)}}.reveal-ready{opacity:0;transform:translateY(24px);transition:opacity .75s ease,transform .75s ease}.reveal-ready.is-visible{opacity:1;transform:none}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.ambient-orb,.ambient-grid{animation:none}.pointer-glow{display:none}.reveal-ready{opacity:1;transform:none;transition:none}.panel,.page-header{transition:none}}
     .board {
       display: grid;
       grid-template-columns: repeat(15, 30px);
@@ -106,6 +109,7 @@
   </style>
 </head>
 <body>
+  <div class="ambient-background" aria-hidden="true"><div class="ambient-orb orb-cyan"></div><div class="ambient-orb orb-violet"></div><div class="ambient-grid"></div><canvas id="particleCanvas"></canvas></div><div class="pointer-glow" aria-hidden="true"></div>
   <div class="page-shell">
     <header class="page-header">
       <a href="../index.html">← 返回算法社官网</a>
@@ -874,6 +878,41 @@
     initBoard();
     document.getElementById('status').innerHTML = '选择执子: <button onclick="setPlayerColor(1)">黑子</button> <button onclick="setPlayerColor(2)">白子</button>';
     loadLeaderboard();
+  </script>
+  <script>
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: no-preference)');
+    if (!motionQuery.matches) document.documentElement.style.scrollSnapType = 'none';
+    if (motionQuery.matches) {
+      const revealItems = document.querySelectorAll('.page-header, .game-container, .leaderboard, .panel');
+      revealItems.forEach(item => item.classList.add('reveal-ready'));
+      const revealObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+        entry.target.classList.toggle('is-visible', entry.isIntersecting);
+      }), { threshold: 0.12 });
+      revealItems.forEach(item => revealObserver.observe(item));
+      if (window.matchMedia('(pointer: fine)').matches) window.addEventListener('pointermove', event => {
+        document.documentElement.style.setProperty('--pointer-x', `${event.clientX}px`);
+        document.documentElement.style.setProperty('--pointer-y', `${event.clientY}px`);
+      }, { passive: true });
+      const canvas = document.getElementById('particleCanvas');
+      const context = canvas.getContext('2d');
+      let particles = [], animationFrame;
+      function resizeParticles() {
+        const scale = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = window.innerWidth * scale; canvas.height = window.innerHeight * scale;
+        context.setTransform(scale, 0, 0, scale, 0, 0);
+        particles = Array.from({ length: Math.min(44, Math.max(20, window.innerWidth / 28 | 0)) }, () => ({
+          x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight,
+          r: .5 + Math.random() * 1.2, s: .05 + Math.random() * .15, a: .18 + Math.random() * .36
+        }));
+      }
+      function drawParticles() {
+        context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+        particles.forEach(p => { p.y -= p.s; if (p.y < 0) p.y = window.innerHeight; context.beginPath(); context.arc(p.x, p.y, p.r, 0, Math.PI * 2); context.fillStyle = `rgba(73,231,255,${p.a})`; context.fill(); });
+        animationFrame = requestAnimationFrame(drawParticles);
+      }
+      resizeParticles(); drawParticles(); window.addEventListener('resize', resizeParticles, { passive: true });
+      window.addEventListener('pagehide', () => cancelAnimationFrame(animationFrame), { once: true });
+    }
   </script>
 </body>
 </html>

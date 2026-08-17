@@ -21,8 +21,9 @@
       --panel: rgba(8, 13, 30, .78);
     }
     * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; scroll-snap-type: y proximity; scroll-padding-top: 72px; }
     body {
+      position: relative;
       margin: 0;
       min-width: 320px;
       color: var(--white);
@@ -65,6 +66,7 @@
     h2 { margin:0; font-size:clamp(28px,4vw,44px); }
     .section-title span { color:var(--muted); font-size:13px; }
     .release-list { display:grid; gap:16px; }
+    .hero, .notice, main > section, .release-card, .footer { scroll-snap-align: start; }
     .release-card { position:relative; padding:24px; border:1px solid rgba(0,229,255,.2); border-radius:12px; background:linear-gradient(180deg,rgba(8,13,30,.86),rgba(5,9,23,.72)); box-shadow:0 18px 55px rgba(0,229,255,.06); overflow:hidden; }
     .release-card::before { content:""; position:absolute; top:0; left:20px; width:48px; height:2px; background:linear-gradient(90deg,var(--cyan),var(--violet)); box-shadow:0 0 18px rgba(0,229,255,.65); }
     .release-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:14px; }
@@ -79,6 +81,7 @@
   </style>
 </head>
 <body>
+  <div class="ambient-background" aria-hidden="true"><div class="ambient-orb orb-cyan"></div><div class="ambient-orb orb-violet"></div><div class="ambient-grid"></div><canvas id="particleCanvas"></canvas></div><div class="pointer-glow" aria-hidden="true"></div>
   <header class="topbar">
     <a class="brand" href="../index.html">
       <span class="brand-mark">S</span>
@@ -176,5 +179,8 @@
   </main>
 
   <footer class="footer"><span>算法社 · APPMonitor</span><span>Windows 软件管控工具 · 作者微信：CHM008027</span></footer>
+<script>
+const motionQuery=window.matchMedia('(prefers-reduced-motion: no-preference)');if(!motionQuery.matches)document.documentElement.style.scrollSnapType='none';if(motionQuery.matches){const items=document.querySelectorAll('main .hero,main .notice,main section,.release-card,.footer');items.forEach(item=>item.classList.add('reveal-ready'));const observer=new IntersectionObserver(entries=>entries.forEach(entry=>entry.target.classList.toggle('is-visible',entry.isIntersecting)),{threshold:.12});items.forEach(item=>observer.observe(item));if(matchMedia('(pointer: fine)').matches)addEventListener('pointermove',e=>{document.documentElement.style.setProperty('--pointer-x',`${e.clientX}px`);document.documentElement.style.setProperty('--pointer-y',`${e.clientY}px`)},{passive:true});const canvas=document.getElementById('particleCanvas'),ctx=canvas.getContext('2d');let particles=[],frame;function resize(){const scale=Math.min(devicePixelRatio||1,2);canvas.width=innerWidth*scale;canvas.height=innerHeight*scale;ctx.setTransform(scale,0,0,scale,0,0);particles=Array.from({length:Math.min(52,Math.max(22,innerWidth/26|0))},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:.5+Math.random()*1.4,s:.05+Math.random()*.16,a:.2+Math.random()*.4}))}function draw(){ctx.clearRect(0,0,innerWidth,innerHeight);particles.forEach(p=>{p.y-=p.s;if(p.y<0)p.y=innerHeight;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(0,229,255,${p.a})`;ctx.fill()});frame=requestAnimationFrame(draw)}resize();draw();addEventListener('resize',resize,{passive:true});addEventListener('pagehide',()=>cancelAnimationFrame(frame),{once:true})}
+</script>
 </body>
 </html>

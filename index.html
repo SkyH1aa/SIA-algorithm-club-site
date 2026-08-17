@@ -23,7 +23,11 @@
       }
 
       * { box-sizing: border-box; }
-      html { scroll-behavior: smooth; }
+      html {
+        scroll-behavior: smooth;
+        scroll-snap-type: y mandatory;
+        scroll-padding-top: 72px;
+      }
       body {
         position: relative;
         margin: 0;
@@ -86,11 +90,11 @@
         position: absolute;
         inset: -80px;
         background-image:
-          linear-gradient(rgba(0, 229, 255, 0.055) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(0, 229, 255, 0.055) 1px, transparent 1px);
-        background-size: 72px 72px;
-        mask-image: radial-gradient(ellipse 100% 72% at 50% 8%, #000 0%, transparent 88%);
-        opacity: 0.48;
+          linear-gradient(rgba(0, 229, 255, 0.16) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 229, 255, 0.16) 1px, transparent 1px);
+        background-size: 64px 64px;
+        mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.96), rgba(0, 0, 0, 0.72));
+        opacity: 0.72;
         animation: grid-shift 28s linear infinite;
       }
       #particleCanvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.9; }
@@ -189,7 +193,17 @@
       }
 
       main { padding: 0 clamp(18px, 5vw, 72px) 36px; }
-      .section-block { max-width: 1180px; margin: 0 auto; padding: 78px 0; }
+      .section-block {
+        max-width: 1180px;
+        min-height: calc(100svh - 72px);
+        margin: 0 auto;
+        padding: 78px 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
+      }
 
       .hero {
         position: relative;
@@ -373,8 +387,9 @@
         .section-block { view-timeline-name: --section-reveal; view-timeline-axis: block; animation: section-reveal linear both; animation-timeline: --section-reveal; animation-range: entry 0% cover 24%; }
       }
       @keyframes section-reveal { from { opacity: 0.25; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
-      .reveal-ready { opacity: 0; transform: translateY(24px); transition: opacity 0.75s ease, transform 0.75s ease; }
+      .reveal-ready { opacity: 0; transform: translateY(32px); transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.2, 0.75, 0.25, 1); }
       .reveal-ready.is-visible { opacity: 1; transform: translateY(0); }
+      #home.reveal-ready, #members.reveal-ready, #projects.reveal-ready, #activities.reveal-ready, #join.reveal-ready, #gomoku.reveal-ready, .direction-section.reveal-ready { will-change: opacity, transform; }
       .info-card, .project-card, .join-card { padding: 22px; }
       .info-card { overflow: hidden; }
       .info-card::after, .project-card::after, .member-card::after, .timeline-item::after {
@@ -402,6 +417,7 @@
           rgba(2, 5, 15, 0.58);
       }
       .muted-band > * { max-width: 1180px; margin-left: auto; margin-right: auto; }
+      .muted-band { scroll-snap-align: start; }
 
       .member-card {
         display: flex;
@@ -563,6 +579,8 @@
         .direction-grid, .project-grid, .member-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
       @media (max-width: 720px) {
+        html { scroll-snap-type: y proximity; }
+        .section-block { min-height: auto; padding-top: 64px; padding-bottom: 64px; scroll-snap-stop: normal; }
         .ambient-orb { width: 78vw; filter: blur(54px); opacity: 0.13; }
         .ambient-grid { background-size: 52px 52px; }
         .pointer-glow { display: none; }
@@ -803,6 +821,7 @@
         renderProjects(projects);
         renderActivities(activities);
         renderBoard();
+        observeRevealItems();
       }
 
       document.getElementById('menuButton').addEventListener('click', () => {
@@ -813,18 +832,22 @@
       });
 
       const motionQuery = window.matchMedia('(prefers-reduced-motion: no-preference)');
-      const revealItems = document.querySelectorAll('.section-block, .info-card, .project-card, .member-card, .timeline-item');
+      let revealObserver;
+      function observeRevealItems() {
+        if (!motionQuery.matches || !('IntersectionObserver' in window)) return;
+        const revealItems = document.querySelectorAll('#home, .direction-section, #members, #projects, #activities, #join, #gomoku, .info-card, .project-card, .member-card, .timeline-item');
+        revealItems.forEach(item => {
+          if (!item.classList.contains('reveal-ready')) {
+            item.classList.add('reveal-ready');
+            revealObserver.observe(item);
+          }
+        });
+      }
       if (motionQuery.matches && 'IntersectionObserver' in window) {
-        revealItems.forEach(item => item.classList.add('reveal-ready'));
-        const revealObserver = new IntersectionObserver(entries => {
-          entries.forEach(entry => {
-            if (entry.isIntersecting) {
-              entry.target.classList.add('is-visible');
-              revealObserver.unobserve(entry.target);
-            }
-          });
+        revealObserver = new IntersectionObserver(entries => {
+          entries.forEach(entry => entry.target.classList.toggle('is-visible', entry.isIntersecting));
         }, { threshold: 0.12 });
-        revealItems.forEach(item => revealObserver.observe(item));
+        observeRevealItems();
       }
 
       const pointerQuery = window.matchMedia('(pointer: fine) and (prefers-reduced-motion: no-preference)');
