@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>100MiB 二进制流测试</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { max-width: 760px; margin: 40px auto; padding: 0 20px; background: #10141c; color: #edf2f7; }
+    main { padding: 28px; border: 1px solid #2d3748; border-radius: 16px; background: #171d28; }
+    h1 { margin-top: 0; font-size: 28px; }
+    p { color: #aab6c7; line-height: 1.6; }
+    label { display: block; margin: 20px 0 8px; color: #dce6f2; }
+    input, button { font: inherit; border-radius: 8px; border: 1px solid #46556a; padding: 10px 12px; }
+    input { width: min(100%, 320px); box-sizing: border-box; background: #0f141c; color: #fff; }
+    button { margin: 8px 8px 0 0; background: #3972e6; color: white; cursor: pointer; }
+    button.secondary { background: #344054; }
+    button:disabled { opacity: .5; cursor: wait; }
+    progress { width: 100%; height: 18px; margin: 16px 0; }
+    pre { min-height: 150px; white-space: pre-wrap; word-break: break-word; padding: 16px; border-radius: 8px; background: #0b0f15; color: #b9f6ca; }
+    .warning { color: #ffd580; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>100MiB 二进制流测试</h1>
+    <p>此页面只测试“浏览器 → Supabase Edge Function”的原始二进制请求和响应，不访问 WebDAV，也不修改正式社团盘。</p>
+    <p class="warning">上传测试会生成一个本地 100MiB Blob；下载测试会把响应读入浏览器内存并校验字节数。</p>
+
+    <label for="functionUrl">测试函数 URL</label>
+    <input id="functionUrl" value="https://jgezpvmlnhycxslqbwcx.supabase.co/functions/v1/stream-100m-test">
+
+    <label for="fileInput">选择上传文件</label>
+    <input id="fileInput" type="file">
+    <div>
+      <button id="uploadButton">上传并统计</button>
+      <button id="downloadButton" class="secondary">下载 100MiB 并校验</button>
+      <button id="makeButton" class="secondary">生成 100MiB 测试文件</button>
+      <button id="cancelButton" class="secondary" disabled>取消当前请求</button>
+    </div>
+    <progress id="progress" value="0" max="1"></progress>
+    <pre id="output">等待测试。</pre>
+  </main>
+
+  <script>
+    const MAX_BYTES = 100 * 1024 * 1024;
+    const urlInput = document.getElementById('functionUrl');
+    const fileInput = document.getElementById('fileInput');
+    const progress = document.getElementById('progress');
+    const output = document.getElementById('output');
+    const buttons = [...document.querySelectorAll('button')];
+    let controller = null;
+
+    function setBusy(busy) {
+      buttons.forEach(button => button.disabled = busy && button.id !== 'cancelButton');
+      document.getElementById('cancelButton').disabled = !busy;
+    }
+
+    function report(value) {
+      output.textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+    }
+
+    function makeTestBlob(size = MAX_BYTES) {
+      const chunks = [];
+      for (let offset = 0; offset < size; offset += 1024 * 1024) {
+        const length = Math.min(1024 * 1024, size - offset);
+        const bytes = new Uint8Array(length);
+        for (let index = 0; index < length; index += 1) bytes[index] = (offset + index) & 255;
+        chunks.push(bytes);
+      }
+      return new Blob(chunks, { type: 'application/octet-stream' });
+    }
+
+    async function upload() {
+      const file = fileInput.files[0];
+      if (!file) return report('请先选择文件。');
+      if (file.size > MAX_BYTES) return report('文件超过 100MiB。');
+      controller = new AbortController();
+      setBusy(true);
+      progress.value = 0;
+      const started = performance.now();
+      try {
+        const response = await fetch(urlInput.value, {
+          method: 'POST',
+          headers: { 'content-type': file.type || 'application/octet-stream' },
+          body: file.stream(),
+          signal: controller.signal,
+          duplex: 'half'
+        });
+        const payload = await response.json().catch(() => ({}));
+        report({ ok: response.ok, status: response.status, clientBytes: file.size, elapsedMs: Math.round(performance.now() - started), server: payload });
+      } catch (error) {
+        report(`上传失败：${error.name === 'AbortError' ? '已取消' : error.message}`);
+      } finally { controller = null; setBusy(false); }
+    }
+
+    async function download() {
+      controller = new AbortController();
+      setBusy(true);
+      progress.value = 0;
+      const started = performance.now();
+      try {
+        const response = await fetch(`${urlInput.value}?size=${MAX_BYTES}`, { signal: controller.signal });
+        if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
+        const expected = Number(response.headers.get('x-test-bytes'));
+        const reader = response.body.getReader();
+        const chunks = [];
+        let received = 0;
+        while (true) {
+          const part = await reader.read();
+          if (part.done) break;
+          chunks.push(part.value);
+          received += part.value.byteLength;
+          progress.value = expected ? received / expected : 0;
+        }
+        const blob = new Blob(chunks, { type: response.headers.get('content-type') || 'application/octet-stream' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `stream-test-${received}.bin`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        report({ ok: received === MAX_BYTES && received === expected, status: response.status, receivedBytes: received, expectedBytes: expected, serverChecksum: response.headers.get('x-test-checksum'), elapsedMs: Math.round(performance.now() - started) });
+      } catch (error) {
+        report(`下载失败：${error.name === 'AbortError' ? '已取消' : error.message}`);
+      } finally { controller = null; setBusy(false); }
+    }
+
+    document.getElementById('uploadButton').onclick = upload;
+    document.getElementById('downloadButton').onclick = download;
+    document.getElementById('makeButton').onclick = () => {
+      const blob = makeTestBlob();
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `local-stream-test-${MAX_BYTES}.bin`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      report(`已生成本地测试文件：${blob.size} 字节。`);
+    };
+    document.getElementById('cancelButton').onclick = () => controller?.abort();
+  </script>
+</body>
+</html>
