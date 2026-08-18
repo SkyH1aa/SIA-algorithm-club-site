@@ -5,6 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>APPMonitor · 软件发布页</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="member-identity.js"></script>
   <style>
     :root {
       font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
@@ -64,6 +66,8 @@
     .brand-mark { display:grid; width:42px; height:42px; place-items:center; border:1px solid rgba(0,229,255,.55); border-radius:8px; background:linear-gradient(135deg,rgba(0,229,255,.18),rgba(124,77,255,.22)); color:var(--cyan); font-weight:900; box-shadow:0 0 28px rgba(0,229,255,.22); }
     .brand strong, .brand small { display:block; }
     .brand small { color:var(--muted); font-size:12px; }
+    .member-identity { display:none; margin-left:10px; padding:5px 9px; border:1px solid rgba(0,229,255,.34); border-radius:999px; color:var(--cyan); font-size:12px; white-space:nowrap; }
+    .member-identity:not([hidden]) { display:inline-flex; }
     .back-link { padding:9px 13px; border:1px solid rgba(0,229,255,.26); border-radius:8px; color:var(--muted); font-size:14px; }
     .back-link:hover { color:var(--cyan); border-color:rgba(0,229,255,.6); background:rgba(0,229,255,.07); }
     main { width:min(1180px, calc(100% - 36px)); margin:0 auto; padding:34px 0 90px; }
@@ -102,6 +106,7 @@
       <span class="brand-mark">S</span>
       <span><strong>算法社</strong><small>Algorithm Club</small></span>
     </a>
+    <span class="member-identity" data-member-identity hidden></span>
     <a class="back-link" href="../index.html#projects">← 返回官网项目</a>
   </header>
 

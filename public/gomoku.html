@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>算法社 AI 五子棋挑战</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="member-identity.js"></script>
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
@@ -19,6 +20,7 @@
       font-family: Arial, sans-serif;
     }
     .page-shell { width: min(1120px, 100%); margin: 0 auto; }
+    .member-identity{display:none;margin:10px auto 0;padding:5px 9px;border:1px solid rgba(0,229,255,.34);border-radius:999px;color:#00e5ff;font-size:12px;width:max-content}.member-identity:not([hidden]){display:block}
     .page-header { margin-bottom: 22px; }
     .page-header a { color: #49e7ff; text-decoration: none; }
     .page-header h1 { margin: 8px 0; }
@@ -113,6 +115,7 @@
   <div class="page-shell">
     <header class="page-header">
       <a href="../index.html">← 返回算法社官网</a>
+      <span class="member-identity" data-member-identity hidden></span>
       <h1>AI 五子棋挑战</h1>
       <p>Powered by Sendelta Haiming · 浏览器端 Minimax + Alpha-Beta AI</p>
     </header>

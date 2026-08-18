@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>算法社 · Algorithm Club</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="public/member-identity.js" defer></script>
     <style>
       :root {
         font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -166,6 +168,17 @@
       .brand strong, .brand small { display: block; }
       .brand strong { font-size: 16px; line-height: 20px; letter-spacing: 0.5px; }
       .brand small { color: var(--muted); font-size: 12px; line-height: 16px; text-transform: uppercase; }
+      .member-identity {
+        display: none;
+        margin-left: 10px;
+        padding: 5px 9px;
+        border: 1px solid rgba(0, 229, 255, 0.34);
+        border-radius: 999px;
+        color: var(--cyan);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .member-identity:not([hidden]) { display: inline-flex; }
 
       .nav { display: flex; align-items: center; gap: 6px; }
       .nav a {
@@ -637,10 +650,11 @@
     </div>
     <div class="pointer-glow" aria-hidden="true"></div>
     <header class="topbar">
-      <a class="brand" href="#home">
-        <span class="brand-mark">S</span>
+      <a class="brand" href="#home" aria-label="算法社首页">
+        <span class="brand-mark">A</span>
         <span><strong>算法社</strong><small>Algorithm Club</small></span>
       </a>
+      <span class="member-identity" data-member-identity hidden></span>
       <button class="menu-button" type="button" id="menuButton" aria-label="打开导航">☰</button>
       <nav class="nav" id="nav">
         <a href="#home">首页</a>
