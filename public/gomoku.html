@@ -149,6 +149,7 @@
     let playerColor = null; // 1: 玩家执黑, 2: 玩家执白
     let aiColor = null; // AI颜色
     let moveCount = 0;
+    let gameMoves = [];
     let gameStartedAt = null;
     let resultSubmitted = false;
     let gameInProgress = false;
@@ -203,6 +204,26 @@
       return true;
     }
 
+    const GOMOKU_TRAINING_URL = `${SUPABASE_URL}/functions/v1/gomoku-training`;
+
+    async function uploadWinningGameTrainingData(nickname) {
+      if (!gameMoves.length) return false;
+      const response = await fetch(GOMOKU_TRAINING_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          result: 'loss',
+          nickname,
+          playerColor,
+          aiColor,
+          moves: gameMoves
+        })
+      });
+      if (!response.ok) return false;
+      const payload = await response.json().catch(() => ({}));
+      return payload.upload?.ok === true;
+    }
+
     function updateGameActionButton() {
       const button = document.getElementById('gameActionButton');
       button.textContent = gameInProgress && !gameover ? '投降' : '重新开始';
@@ -213,6 +234,7 @@
       moveCount = 0;
       gameStartedAt = Date.now();
       resultSubmitted = false;
+      gameMoves = [];
       gameInProgress = true;
       document.getElementById('result').textContent = '';
       updateGameActionButton();
@@ -227,9 +249,14 @@
       const durationMs = gameStartedAt ? Date.now() - gameStartedAt : 0;
       const score = result === 'win' ? 3 : result === 'draw' ? 1 : 0;
       document.getElementById('result').textContent = `本局${result === 'win' ? '胜利' : result === 'draw' ? '平局' : '失败'}，获得 ${score} 分。`;
-      if (!supabaseClient) {
+      if (result === 'win') {
+        const uploaded = await uploadWinningGameTrainingData(nickname);
+        document.getElementById('result').textContent += uploaded
+          ? ' 已保存本局落子数据用于 AI 训练。'
+          : ' 本局训练数据上传失败。';
+      }
+      if (!supabaseClient || typeof supabaseClient.rpc !== 'function') {
         document.getElementById('result').textContent += ' 成绩暂未保存：Supabase 尚未初始化。';
-        resultSubmitted = false;
         return;
       }
       const { error } = await supabaseClient.rpc('record_gomoku_result', {
@@ -240,7 +267,6 @@
       });
       if (error) {
         document.getElementById('result').textContent += ` 成绩暂未保存：${error.message || '请确认已执行 gomoku_players 和 record_gomoku_result SQL。'}`;
-        resultSubmitted = false;
         return;
       }
       document.getElementById('result').textContent += ' 已保存到排行榜。';
@@ -811,6 +837,7 @@
     // 放置棋子
     function placePiece(row, col, player) {
       board[row][col] = player;
+      gameMoves.push({ row, col, player });
       const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
       cell.classList.add(player === 1 ? 'black' : 'white');
     }
@@ -909,6 +936,7 @@
       playerColor = null;
       aiColor = null;
       moveCount = 0;
+      gameMoves = [];
       gameStartedAt = null;
       resultSubmitted = false;
       document.getElementById('result').textContent = '';
