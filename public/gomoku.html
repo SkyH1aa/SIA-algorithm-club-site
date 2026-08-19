@@ -129,7 +129,7 @@
         <div class="status" id="status">选择执子: <button onclick="setPlayerColor(1)">黑子</button> <button onclick="setPlayerColor(2)">白子</button></div>
         <div class="board" id="board"></div>
         <p class="result" id="result" aria-live="polite"></p>
-        <button onclick="resetGame()">重新开始</button>
+        <button id="gameActionButton" onclick="handleGameAction()">重新开始</button>
       </main>
       <aside class="leaderboard panel">
         <h2>挑战排行榜</h2>
@@ -151,6 +151,8 @@
     let moveCount = 0;
     let gameStartedAt = null;
     let resultSubmitted = false;
+    let gameInProgress = false;
+    let gameActionBusy = false;
 
     const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
@@ -201,14 +203,24 @@
       return true;
     }
 
+    function updateGameActionButton() {
+      const button = document.getElementById('gameActionButton');
+      button.textContent = gameInProgress && !gameover ? '投降' : '重新开始';
+      button.disabled = gameActionBusy;
+    }
+
     function startGameSession() {
       moveCount = 0;
       gameStartedAt = Date.now();
       resultSubmitted = false;
+      gameInProgress = true;
       document.getElementById('result').textContent = '';
+      updateGameActionButton();
     }
 
     async function finishGame(result) {
+      gameInProgress = false;
+      updateGameActionButton();
       const nickname = getNickname();
       if (!nickname || resultSubmitted) return;
       resultSubmitted = true;
@@ -304,6 +316,7 @@
       currentPlayer = 1; // 总是黑子先手
       const statusElement = document.getElementById('status');
       statusElement.innerHTML = playerColor === 1 ? '你的回合 (黑子)' : 'AI思考中 (黑子)';
+      updateGameActionButton();
       if (aiColor === 1) {
         setTimeout(makeAIMove, 500); // AI执黑先手
       }
@@ -866,11 +879,33 @@
       }
     }
 
+    async function handleGameAction() {
+      if (gameActionBusy) return;
+      if (!gameInProgress || gameover) {
+        resetGame();
+        return;
+      }
+
+      gameActionBusy = true;
+      updateGameActionButton();
+      gameover = true;
+      gameInProgress = false;
+      document.getElementById('status').textContent = '你已投降，AI 获胜！';
+      try {
+        await finishGame('loss');
+      } finally {
+        gameActionBusy = false;
+        updateGameActionButton();
+      }
+    }
+
     // 重新开始游戏
     function resetGame() {
+      if (gameInProgress && !gameover) return;
       board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
       currentPlayer = 1;
       gameover = false;
+      gameInProgress = false;
       playerColor = null;
       aiColor = null;
       moveCount = 0;
@@ -880,6 +915,7 @@
       transpositionTable.clear();
       initBoard();
       document.getElementById('status').innerHTML = '选择执子: <button onclick="setPlayerColor(1)">黑子</button> <button onclick="setPlayerColor(2)">白子</button>';
+      updateGameActionButton();
     }
 
     // 初始化游戏
