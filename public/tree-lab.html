@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>二叉树可视化实验室 · 算法社</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="member-identity.js" defer></script>
+  <style>
+    :root {
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
+      color: #f6fbff;
+      background: #020409;
+      --bg: #020409;
+      --panel: rgba(8, 13, 30, .8);
+      --cyan: #00e5ff;
+      --violet: #7c4dff;
+      --pink: #ff5fc8;
+      --gold: #ffd166;
+      --green: #71f3bf;
+      --text: #c8d4e2;
+      --muted: #8fa3b8;
+      --line: rgba(115, 221, 255, .2);
+      --shadow: 0 24px 90px rgba(0, 229, 255, .11);
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse 70% 50% at 15% 4%, rgba(0, 229, 255, .15), transparent 62%),
+        radial-gradient(ellipse 60% 42% at 88% 7%, rgba(124, 77, 255, .22), transparent 65%),
+        linear-gradient(180deg, #020409, #050917 50%, #020409);
+      color: #f6fbff;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0, 229, 255, .045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, .045) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: radial-gradient(ellipse 110% 100% at 50% 10%, #000, transparent 92%);
+    }
+    a { color: inherit; text-decoration: none; }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .48; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 14px clamp(18px, 5vw, 72px);
+      border-bottom: 1px solid var(--line);
+      background: rgba(2, 4, 12, .78);
+      backdrop-filter: blur(18px);
+    }
+    .brand { display: inline-flex; align-items: center; gap: 12px; margin-right: auto; }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border: 1px solid rgba(0, 229, 255, .55);
+      border-radius: 8px;
+      background: linear-gradient(135deg, rgba(0, 229, 255, .18), rgba(124, 77, 255, .22));
+      color: var(--cyan);
+      font-weight: 900;
+      box-shadow: 0 0 28px rgba(0, 229, 255, .22), inset 0 0 24px rgba(124, 77, 255, .18);
+    }
+    .brand strong, .brand small { display: block; }
+    .brand strong { font-size: 16px; }
+    .brand small { color: var(--muted); font-size: 12px; text-transform: uppercase; }
+    .member-identity {
+      display: none;
+      padding: 5px 9px;
+      border: 1px solid rgba(0, 229, 255, .34);
+      border-radius: 999px;
+      color: var(--cyan);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .member-identity:not([hidden]) { display: inline-flex; }
+    .back-link {
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      transition: .2s;
+    }
+    .back-link:hover {
+      border-color: rgba(0, 229, 255, .55);
+      background: rgba(0, 229, 255, .08);
+      color: var(--cyan);
+    }
+
+    main { max-width: 1280px; margin: 0 auto; padding: 54px clamp(18px, 5vw, 72px) 64px; }
+    .hero {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 30px;
+    }
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 2px;
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(30px, 5vw, 50px);
+      letter-spacing: .5px;
+      text-shadow: 0 0 28px rgba(0, 229, 255, .25);
+    }
+    .hero p:not(.eyebrow) {
+      max-width: 700px;
+      margin: 14px 0 0;
+      color: var(--text);
+      line-height: 1.75;
+    }
+    .algorithm-note {
+      min-width: 255px;
+      padding: 14px 17px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(8, 13, 30, .62);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+    .algorithm-note b { display: block; color: var(--gold); font-size: 14px; }
+
+    .lab-grid {
+      display: grid;
+      grid-template-columns: 310px minmax(0, 1fr);
+      gap: 22px;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+    .controls { padding: 20px; }
+    .controls h2, .visual-header h2 { margin: 0; font-size: 18px; }
+    .control-group { margin-top: 18px; }
+    .control-group label, .control-group legend {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .control-group fieldset { margin: 0; padding: 0; border: 0; }
+    .field, select, textarea {
+      width: 100%;
+      border: 1px solid rgba(115, 221, 255, .24);
+      border-radius: 9px;
+      background: rgba(2, 7, 18, .85);
+      color: #f6fbff;
+      outline: none;
+    }
+    .field, select { height: 42px; padding: 0 11px; }
+    textarea {
+      min-height: 72px;
+      padding: 10px 11px;
+      resize: vertical;
+      line-height: 1.5;
+      font: 13px/1.5 ui-monospace, Consolas, monospace;
+    }
+    .field:focus, select:focus, textarea:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(0, 229, 255, .11);
+    }
+    .hint {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .error {
+      min-height: 18px;
+      margin: 7px 0 0;
+      color: #ff8fcf;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .button-stack { display: grid; gap: 10px; margin-top: 18px; }
+    .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 9px 14px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: rgba(9, 20, 42, .82);
+      color: #f6fbff;
+      font-size: 14px;
+      font-weight: 700;
+      transition: transform .18s, border-color .18s, background .18s, color .18s;
+    }
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: rgba(0, 229, 255, .62);
+      color: var(--cyan);
+    }
+    .btn-primary {
+      border-color: rgba(0, 229, 255, .7);
+      background: linear-gradient(135deg, rgba(0, 229, 255, .22), rgba(124, 77, 255, .3));
+      color: #eaffff;
+    }
+    .btn-warn {
+      border-color: rgba(255, 209, 102, .45);
+      color: var(--gold);
+    }
+    .btn-danger {
+      border-color: rgba(255, 95, 200, .45);
+      color: var(--pink);
+    }
+    .mode-hint[hidden], .action-panel[hidden] { display: none; }
+
+    .visual { padding: 20px; min-width: 0; }
+    .visual-header {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .status {
+      padding: 6px 10px;
+      border: 1px solid rgba(0, 229, 255, .3);
+      border-radius: 999px;
+      color: var(--cyan);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .stage-wrap {
+      position: relative;
+      margin-top: 18px;
+      min-height: 420px;
+      padding: 18px 10px 12px;
+      border: 1px solid rgba(115, 221, 255, .16);
+      border-radius: 12px;
+      background: linear-gradient(180deg, rgba(0, 229, 255, .035), rgba(124, 77, 255, .06));
+      overflow: auto;
+    }
+    .tree-svg {
+      display: block;
+      width: 100%;
+      min-height: 380px;
+      overflow: visible;
+    }
+    .tree-edge {
+      fill: none;
+      stroke: rgba(0, 229, 255, .42);
+      stroke-width: 2;
+      transition: stroke .18s ease, stroke-width .18s ease;
+    }
+    .tree-edge.active {
+      stroke: var(--gold);
+      stroke-width: 2.6;
+      filter: drop-shadow(0 0 6px rgba(255, 209, 102, .55));
+    }
+    .tree-edge.remove {
+      stroke: var(--pink);
+      stroke-width: 2.4;
+    }
+    .node-g { cursor: default; }
+    .node-circle {
+      fill: url(#nodeGrad);
+      stroke: rgba(0, 229, 255, .72);
+      stroke-width: 2;
+      filter: drop-shadow(0 0 10px rgba(0, 229, 255, .28));
+      transition: fill .16s ease, stroke .16s ease, filter .16s ease;
+    }
+    .node-g.visit .node-circle {
+      stroke: var(--gold);
+      fill: #ffb84d;
+      filter: drop-shadow(0 0 14px rgba(255, 209, 102, .7));
+    }
+    .node-g.done .node-circle {
+      stroke: var(--green);
+      fill: #2db894;
+      filter: drop-shadow(0 0 12px rgba(113, 243, 191, .45));
+    }
+    .node-g.current .node-circle {
+      stroke: #fff7bd;
+      fill: #ffd166;
+      filter: drop-shadow(0 0 18px rgba(255, 209, 102, .85));
+    }
+    .node-g.insert .node-circle {
+      stroke: var(--cyan);
+      fill: #00c2d8;
+      filter: drop-shadow(0 0 16px rgba(0, 229, 255, .7));
+    }
+    .node-g.delete .node-circle {
+      stroke: var(--pink);
+      fill: #d94aa8;
+      filter: drop-shadow(0 0 16px rgba(255, 95, 200, .65));
+    }
+    .node-g.successor .node-circle {
+      stroke: var(--violet);
+      fill: #8a63ff;
+      filter: drop-shadow(0 0 14px rgba(124, 77, 255, .65));
+    }
+    .node-text {
+      fill: #eaffff;
+      font: 700 14px/1 ui-monospace, Consolas, monospace;
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+    .node-g.visit .node-text,
+    .node-g.current .node-text,
+    .node-g.done .node-text { fill: #081018; }
+    .empty-tree {
+      display: grid;
+      place-items: center;
+      min-height: 360px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .path-bar {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border: 1px solid rgba(115, 221, 255, .14);
+      border-radius: 10px;
+      background: rgba(2, 7, 18, .4);
+      color: var(--text);
+      font: 13px/1.55 ui-monospace, Consolas, monospace;
+      min-height: 46px;
+      word-break: break-word;
+    }
+    .path-bar b { color: var(--gold); font-weight: 700; }
+    .op-log {
+      margin-top: 10px;
+      padding: 12px 14px;
+      border: 1px solid rgba(115, 221, 255, .14);
+      border-radius: 10px;
+      background: rgba(2, 7, 18, .4);
+      color: var(--muted);
+      font: 12px/1.55 ui-monospace, Consolas, monospace;
+      max-height: 110px;
+      overflow: auto;
+    }
+    .op-log div { margin: 0 0 4px; }
+    .op-log .fresh { color: var(--cyan); }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .metric {
+      padding: 13px;
+      border: 1px solid rgba(115, 221, 255, .16);
+      border-radius: 10px;
+      background: rgba(2, 7, 18, .48);
+    }
+    .metric span { display: block; color: var(--muted); font-size: 12px; }
+    .metric strong {
+      display: block;
+      margin-top: 4px;
+      color: #f6fbff;
+      font: 700 22px/1.15 ui-monospace, Consolas, monospace;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 15px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .legend i {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      margin-right: 5px;
+      border-radius: 50%;
+      background: var(--cyan);
+    }
+    .legend .l-visit { background: var(--gold); }
+    .legend .l-done { background: var(--green); }
+    .legend .l-delete { background: var(--pink); }
+    .legend .l-successor { background: var(--violet); }
+    .dict-box {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border: 1px dashed rgba(255, 209, 102, .35);
+      border-radius: 10px;
+      background: rgba(255, 209, 102, .06);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+    .dict-box b { color: var(--gold); }
+    .dict-box code {
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(0, 229, 255, .1);
+      color: var(--cyan);
+      font: 12px/1.4 ui-monospace, Consolas, monospace;
+    }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 900px) {
+      .lab-grid { grid-template-columns: 1fr; }
+      .controls { order: 2; }
+      .hero { align-items: start; flex-direction: column; }
+      .algorithm-note { min-width: 0; width: 100%; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 560px) {
+      .topbar { gap: 10px; padding: 12px 16px; }
+      .brand small { display: none; }
+      .member-identity { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+      .back-link { padding: 8px; font-size: 12px; }
+      .visual, .controls { padding: 15px; }
+      .metrics { grid-template-columns: 1fr; }
+      .visual-header { flex-direction: column; }
+      .status { align-self: flex-start; }
+      .btn-row { grid-template-columns: 1fr; }
+      .stage-wrap { min-height: 320px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html" aria-label="返回算法社首页">
+      <span class="brand-mark">A</span>
+      <span><strong>算法社</strong><small>Algorithm Club</small></span>
+    </a>
+    <span class="member-identity" data-member-identity hidden></span>
+    <a class="back-link" href="visualization-lab.html">实验室选择</a>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="pageTitle">
+      <div>
+        <p class="eyebrow">BINARY TREE LAB · V1</p>
+        <h1 id="pageTitle">二叉树可视化实验室</h1>
+        <p>用 SVG 自动布局观察二叉树结构，演示前序 / 中序 / 后序 / 深搜 / 广搜层序遍历，并按二叉搜索树（BST）规则完成插入与删除。字典序模式展示「中序遍历即有序序列」。</p>
+      </div>
+      <aside class="algorithm-note" id="algorithmNote">
+        <b>前序遍历</b>
+        <span>根 → 左子树 → 右子树。适合复制树结构或做前缀表达式展开。</span>
+      </aside>
+    </section>
+
+    <section class="lab-grid" aria-label="二叉树演示控制台">
+      <form class="panel controls" id="controlForm">
+        <h2>实验设置</h2>
+
+        <div class="control-group">
+          <label for="mode">算法 / 模式</label>
+          <select id="mode">
+            <option value="preorder">前序遍历</option>
+            <option value="inorder">中序遍历</option>
+            <option value="postorder">后序遍历</option>
+            <option value="dfs">深搜遍历（DFS ≈ 先序）</option>
+            <option value="bfs">广搜层序遍历</option>
+            <option value="insert">BST 插入</option>
+            <option value="delete">BST 删除</option>
+            <option value="dict">字典序二叉树</option>
+          </select>
+        </div>
+
+        <div class="control-group" id="valueGroup">
+          <label for="valueInput" id="valueLabel">操作数值</label>
+          <input class="field" id="valueInput" type="text" inputmode="numeric" placeholder="例如：42" maxlength="8" />
+          <p class="hint mode-hint" id="valueHint">插入 / 删除时输入整数；遍历模式可不填。</p>
+          <p class="error" id="inputError" role="alert" aria-live="polite"></p>
+        </div>
+
+        <div class="control-group" id="seedGroup">
+          <label for="seedInput">示例 / 建树序列</label>
+          <textarea id="seedInput" placeholder="例如：50, 30, 70, 20, 40, 60, 80">50, 30, 70, 20, 40, 60, 80</textarea>
+          <p class="hint">以逗号或空格分隔的整数，按 BST 规则依次插入生成树。</p>
+        </div>
+
+        <div class="button-stack" id="playPanel">
+          <button class="btn btn-primary" type="button" id="startButton">开始演示</button>
+          <div class="btn-row">
+            <button class="btn" type="button" id="stepButton">单步执行</button>
+            <button class="btn btn-warn" type="button" id="resetButton">重置动画</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn" type="button" id="exampleButton">加载示例树</button>
+            <button class="btn" type="button" id="buildButton">按序列建树</button>
+          </div>
+        </div>
+
+        <div class="button-stack action-panel" id="mutatePanel" hidden>
+          <button class="btn btn-primary" type="button" id="insertButton">执行插入</button>
+          <button class="btn btn-danger" type="button" id="deleteButton">执行删除</button>
+          <div class="btn-row">
+            <button class="btn" type="button" id="stepMutateButton">单步执行</button>
+            <button class="btn btn-warn" type="button" id="resetMutateButton">重置动画</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn" type="button" id="exampleMutateButton">加载示例树</button>
+            <button class="btn" type="button" id="buildMutateButton">按序列建树</button>
+          </div>
+        </div>
+
+        <div class="button-stack action-panel" id="dictPanel" hidden>
+          <button class="btn btn-primary" type="button" id="dictExampleButton">一键生成字典序示例</button>
+          <button class="btn" type="button" id="dictInsertButton">按序插入当前值</button>
+          <div class="btn-row">
+            <button class="btn" type="button" id="dictInorderButton">演示中序（有序）</button>
+            <button class="btn btn-warn" type="button" id="dictResetButton">重置动画</button>
+          </div>
+          <button class="btn" type="button" id="dictBuildButton">按序列建树</button>
+        </div>
+      </form>
+
+      <section class="panel visual" aria-labelledby="visualTitle">
+        <div class="visual-header">
+          <div>
+            <h2 id="visualTitle">二叉树结构</h2>
+            <span class="sr-only" id="announcement" aria-live="polite"></span>
+          </div>
+          <span class="status" id="statusText" role="status">就绪 · 等待开始</span>
+        </div>
+
+        <div class="stage-wrap" id="stageWrap">
+          <svg class="tree-svg" id="treeSvg" role="img" aria-label="二叉树 SVG 可视化"></svg>
+        </div>
+
+        <div class="path-bar" id="pathBar"><b>访问序列：</b><span id="pathText">—</span></div>
+        <div class="op-log" id="opLog" aria-label="操作日志"><div>日志就绪 · 选择模式后开始操作</div></div>
+
+        <div class="dict-box" id="dictBox" hidden>
+          <b>字典序 / 数值序 BST</b><br />
+          按数值大小维护二叉搜索树：左子树 &lt; 根 &lt; 右子树。对字典序键（字母 / 字符串）同样适用——比较规则换成字典序即可。<br />
+          关键点：对 BST 做<strong>中序遍历</strong>，得到的访问序列天然有序。示例插入顺序
+          <code>50 → 30 → 70 → 20 → 40 → 60 → 80</code>，中序结果为
+          <code>20, 30, 40, 50, 60, 70, 80</code>。
+        </div>
+
+        <div class="metrics" aria-label="树指标">
+          <div class="metric"><span>访问节点数</span><strong id="visitedCount">0</strong></div>
+          <div class="metric"><span>当前步骤</span><strong id="stepCount">0</strong></div>
+          <div class="metric"><span>树大小</span><strong id="treeSize">0</strong></div>
+          <div class="metric"><span>树高度</span><strong id="treeHeight">0</strong></div>
+        </div>
+        <div class="legend" aria-label="颜色说明">
+          <span><i></i>普通节点</span>
+          <span><i class="l-visit"></i>正在访问</span>
+          <span><i class="l-done"></i>已访问</span>
+          <span><i class="l-delete"></i>删除目标</span>
+          <span><i class="l-successor"></i>后继 / 替换</span>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const el = (id) => document.getElementById(id);
+      const ui = {
+        mode: el('mode'),
+        valueInput: el('valueInput'),
+        valueLabel: el('valueLabel'),
+        valueHint: el('valueHint'),
+        seedInput: el('seedInput'),
+        inputError: el('inputError'),
+        note: el('algorithmNote'),
+        status: el('statusText'),
+        announcement: el('announcement'),
+        svg: el('treeSvg'),
+        pathText: el('pathText'),
+        opLog: el('opLog'),
+        dictBox: el('dictBox'),
+        visited: el('visitedCount'),
+        steps: el('stepCount'),
+        size: el('treeSize'),
+        height: el('treeHeight'),
+        playPanel: el('playPanel'),
+        mutatePanel: el('mutatePanel'),
+        dictPanel: el('dictPanel'),
+        start: el('startButton'),
+        step: el('stepButton'),
+        reset: el('resetButton'),
+        example: el('exampleButton'),
+        build: el('buildButton'),
+        insertBtn: el('insertButton'),
+        deleteBtn: el('deleteButton'),
+        stepMutate: el('stepMutateButton'),
+        resetMutate: el('resetMutateButton'),
+        exampleMutate: el('exampleMutateButton'),
+        buildMutate: el('buildMutateButton'),
+        dictExample: el('dictExampleButton'),
+        dictInsert: el('dictInsertButton'),
+        dictInorder: el('dictInorderButton'),
+        dictReset: el('dictResetButton'),
+        dictBuild: el('dictBuildButton'),
+      };
+
+      const descriptions = {
+        preorder: ['前序遍历', '根 → 左子树 → 右子树。适合复制树结构或做前缀表达式展开。'],
+        inorder: ['中序遍历', '左子树 → 根 → 右子树。在 BST 上中序结果即为升序序列。'],
+        postorder: ['后序遍历', '左子树 → 右子树 → 根。适合释放节点或做后缀表达式求值。'],
+        dfs: ['深搜遍历（DFS）', '递归深度优先：先访问当前节点再深入子树，访问顺序等价于前序遍历。'],
+        bfs: ['广搜层序遍历', '借助队列按层从左到右访问；适合求最短层数、层序序列。'],
+        insert: ['BST 插入', '从根比较：小于走左、大于走右，落到空位后挂接新节点。'],
+        delete: ['BST 删除', '无子直接替换；双子取中序后继（右子树最左）替换后再删后继。'],
+        dict: ['字典序二叉树', '按数值 / 字典序维护的 BST。中序遍历结果天然有序，可用于有序集合。'],
+      };
+
+      const EXAMPLE_SEED = [50, 30, 70, 20, 40, 60, 80];
+      const DICT_SEED = [50, 30, 70, 20, 40, 60, 80];
+      const NODE_R = 22;
+      const H_GAP = 70;
+      const V_GAP = 86;
+      const PAD_X = 36;
+      const PAD_Y = 40;
+      const DELAY = 520;
+
+      let idSeq = 1;
+      let root = null;
+      let snapshot = null;
+      let operations = [];
+      let cursor = 0;
+      let visitedCount = 0;
+      let playing = false;
+      let timer = null;
+      let highlight = new Map();
+      let edgeHighlight = new Set();
+      let visitPath = [];
+      let busy = false;
+
+      class TreeNode {
+        constructor(val) {
+          this.val = val;
+          this.left = null;
+          this.right = null;
+          this.id = 'n' + (idSeq++);
+        }
+      }
+
+      function cloneTree(node) {
+        if (!node) return null;
+        const n = new TreeNode(node.val);
+        n.id = node.id;
+        n.left = cloneTree(node.left);
+        n.right = cloneTree(node.right);
+        return n;
+      }
+
+      function treeSize(node) {
+        if (!node) return 0;
+        return 1 + treeSize(node.left) + treeSize(node.right);
+      }
+
+      function treeHeight(node) {
+        if (!node) return 0;
+        return 1 + Math.max(treeHeight(node.left), treeHeight(node.right));
+      }
+
+      function findNode(node, val) {
+        while (node) {
+          if (val === node.val) return node;
+          node = val < node.val ? node.left : node.right;
+        }
+        return null;
+      }
+
+      function parseSeed(text) {
+        const raw = String(text || '').trim();
+        if (!raw) throw new Error('请输入至少一个整数。');
+        const parts = raw.split(/[\s,，;；]+/).filter(Boolean);
+        if (parts.length < 1 || parts.length > 31) throw new Error('请输入 1–31 个整数。');
+        if (parts.some((v) => !/^[-+]?\d+$/.test(v))) throw new Error('只能输入整数，用逗号或空格分隔。');
+        const nums = parts.map(Number);
+        if (nums.some((n) => n < -9999 || n > 9999)) throw new Error('整数范围应在 -9999 至 9999。');
+        return nums;
+      }
+
+      function parseValue() {
+        const raw = ui.valueInput.value.trim();
+        if (!raw) throw new Error('请输入要操作的整数。');
+        if (!/^[-+]?\d+$/.test(raw)) throw new Error('操作值必须是整数。');
+        const n = Number(raw);
+        if (n < -9999 || n > 9999) throw new Error('整数范围应在 -9999 至 9999。');
+        return n;
+      }
+
+      function buildFromSequence(seq) {
+        idSeq = 1;
+        let r = null;
+        for (const v of seq) r = bstInsertSilent(r, v);
+        return r;
+      }
+
+      function bstInsertSilent(node, val) {
+        if (!node) return new TreeNode(val);
+        if (val === node.val) return node;
+        if (val < node.val) node.left = bstInsertSilent(node.left, val);
+        else node.right = bstInsertSilent(node.right, val);
+        return node;
+      }
+
+      function layout(node) {
+        const positions = new Map();
+        let index = 0;
+        function inorder(n, depth) {
+          if (!n) return;
+          inorder(n.left, depth + 1);
+          positions.set(n.id, { node: n, x: index++, y: depth, val: n.val });
+          inorder(n.right, depth + 1);
+        }
+        inorder(node, 0);
+        return positions;
+      }
+
+      function collectEdges(node, list = []) {
+        if (!node) return list;
+        if (node.left) list.push([node, node.left]);
+        if (node.right) list.push([node, node.right]);
+        collectEdges(node.left, list);
+        collectEdges(node.right, list);
+        return list;
+      }
+
+      function render() {
+        const size = treeSize(root);
+        const height = treeHeight(root);
+        ui.size.textContent = size;
+        ui.height.textContent = height;
+        ui.visited.textContent = visitedCount;
+        ui.steps.textContent = cursor;
+        ui.pathText.textContent = visitPath.length ? visitPath.join(' → ') : '—';
+
+        if (!root) {
+          ui.svg.setAttribute('viewBox', '0 0 640 380');
+          ui.svg.innerHTML = `
+            <defs>
+              <linearGradient id="nodeGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="rgba(0,229,255,.55)"/>
+                <stop offset="100%" stop-color="rgba(57,94,255,.35)"/>
+              </linearGradient>
+            </defs>
+            <text x="320" y="190" fill="#8fa3b8" text-anchor="middle" font-size="14">空树 · 请加载示例或插入节点</text>`;
+          return;
+        }
+
+        const pos = layout(root);
+        const count = pos.size;
+        const depthMax = Math.max(0, ...[...pos.values()].map((p) => p.y));
+        const width = Math.max(640, PAD_X * 2 + Math.max(1, count - 1) * H_GAP + NODE_R * 2);
+        const svgH = Math.max(380, PAD_Y * 2 + depthMax * V_GAP + NODE_R * 2);
+        ui.svg.setAttribute('viewBox', `0 0 ${width} ${svgH}`);
+
+        const xy = new Map();
+        for (const [id, p] of pos) {
+          const x = count === 1 ? width / 2 : PAD_X + NODE_R + p.x * ((width - PAD_X * 2 - NODE_R * 2) / Math.max(1, count - 1));
+          const y = PAD_Y + NODE_R + p.y * V_GAP;
+          xy.set(id, { x, y, node: p.node, val: p.val });
+        }
+
+        const edges = collectEdges(root);
+        let edgeHtml = '';
+        for (const [a, b] of edges) {
+          const pa = xy.get(a.id);
+          const pb = xy.get(b.id);
+          if (!pa || !pb) continue;
+          const key = a.id + '>' + b.id;
+          const cls = edgeHighlight.has(key) ? 'tree-edge active' : 'tree-edge';
+          edgeHtml += `<line class="${cls}" x1="${pa.x}" y1="${pa.y}" x2="${pb.x}" y2="${pb.y}" />`;
+        }
+
+        let nodeHtml = '';
+        for (const [id, p] of xy) {
+          const state = highlight.get(id) || '';
+          nodeHtml += `<g class="node-g ${state}" data-id="${id}">
+            <circle class="node-circle" cx="${p.x}" cy="${p.y}" r="${NODE_R}"></circle>
+            <text class="node-text" x="${p.x}" y="${p.y}">${p.val}</text>
+          </g>`;
+        }
+
+        ui.svg.innerHTML = `
+          <defs>
+            <linearGradient id="nodeGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="rgba(0,229,255,.55)"/>
+              <stop offset="100%" stop-color="rgba(57,94,255,.35)"/>
+            </linearGradient>
+          </defs>
+          ${edgeHtml}${nodeHtml}`;
+      }
+
+      function log(msg, fresh = true) {
+        const line = document.createElement('div');
+        if (fresh) line.className = 'fresh';
+        line.textContent = msg;
+        ui.opLog.prepend(line);
+        while (ui.opLog.children.length > 40) ui.opLog.removeChild(ui.opLog.lastChild);
+      }
+
+      function updateStatus(text) {
+        ui.status.textContent = text;
+        ui.announcement.textContent = text;
+      }
+
+      function stop() {
+        playing = false;
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+      }
+
+      function clearHighlights() {
+        highlight = new Map();
+        edgeHighlight = new Set();
+      }
+
+      function takeSnapshot() {
+        snapshot = cloneTree(root);
+      }
+
+      function restoreSnapshot() {
+        if (snapshot) root = cloneTree(snapshot);
+      }
+
+      /* ---------- Traversal ops ---------- */
+      function buildTraverseOps(type) {
+        const ops = [];
+        function visit(node) {
+          if (!node) return;
+          ops.push({ kind: 'visit', id: node.id, val: node.val });
+        }
+        function pre(node) {
+          if (!node) return;
+          visit(node);
+          if (node.left) ops.push({ kind: 'edge', from: node.id, to: node.left.id });
+          pre(node.left);
+          if (node.right) ops.push({ kind: 'edge', from: node.id, to: node.right.id });
+          pre(node.right);
+        }
+        function ino(node) {
+          if (!node) return;
+          if (node.left) ops.push({ kind: 'edge', from: node.id, to: node.left.id });
+          ino(node.left);
+          visit(node);
+          if (node.right) ops.push({ kind: 'edge', from: node.id, to: node.right.id });
+          ino(node.right);
+        }
+        function post(node) {
+          if (!node) return;
+          if (node.left) ops.push({ kind: 'edge', from: node.id, to: node.left.id });
+          post(node.left);
+          if (node.right) ops.push({ kind: 'edge', from: node.id, to: node.right.id });
+          post(node.right);
+          visit(node);
+        }
+        function dfs(node) {
+          // 递归 DFS 与先序等价：先访问再深入
+          pre(node);
+        }
+        function bfs(node) {
+          if (!node) return;
+          const q = [node];
+          while (q.length) {
+            const cur = q.shift();
+            visit(cur);
+            if (cur.left) {
+              ops.push({ kind: 'edge', from: cur.id, to: cur.left.id });
+              q.push(cur.left);
+            }
+            if (cur.right) {
+              ops.push({ kind: 'edge', from: cur.id, to: cur.right.id });
+              q.push(cur.right);
+            }
+          }
+        }
+        if (!root) {
+          ops.push({ kind: 'message', text: '空树，无法遍历' });
+          return ops;
+        }
+        if (type === 'preorder' || type === 'dfs') (type === 'dfs' ? dfs : pre)(root);
+        else if (type === 'inorder') ino(root);
+        else if (type === 'postorder') post(root);
+        else if (type === 'bfs') bfs(root);
+        ops.push({ kind: 'done' });
+        return ops;
+      }
+
+      /* ---------- Insert ops ---------- */
+      function buildInsertOps(val) {
+        const ops = [];
+        if (!root) {
+          ops.push({ kind: 'message', text: `插入 ${val} 作为根节点` });
+          ops.push({ kind: 'create-root', val });
+          ops.push({ kind: 'done', text: `插入完成 · 树大小 ${treeSize(root) + 1}` });
+          return ops;
+        }
+        let cur = root;
+        let parent = null;
+        let dir = null;
+        while (cur) {
+          ops.push({ kind: 'compare', id: cur.id, val: cur.val, target: val });
+          if (val === cur.val) {
+            ops.push({ kind: 'message', text: `值 ${val} 已存在，跳过插入` });
+            ops.push({ kind: 'done', text: '未修改树' });
+            return ops;
+          }
+          parent = cur;
+          if (val < cur.val) {
+            dir = 'left';
+            if (cur.left) ops.push({ kind: 'edge', from: cur.id, to: cur.left.id });
+            cur = cur.left;
+          } else {
+            dir = 'right';
+            if (cur.right) ops.push({ kind: 'edge', from: cur.id, to: cur.right.id });
+            cur = cur.right;
+          }
+        }
+        ops.push({ kind: 'message', text: `在 ${parent.val} 的${dir === 'left' ? '左' : '右'}侧插入 ${val}` });
+        ops.push({ kind: 'attach', parentId: parent.id, dir, val });
+        ops.push({ kind: 'done', text: `插入完成` });
+        return ops;
+      }
+
+      /* ---------- Delete ops ---------- */
+      function minNode(node) {
+        while (node && node.left) node = node.left;
+        return node;
+      }
+
+      function buildDeleteOps(val) {
+        const ops = [];
+        if (!root) {
+          ops.push({ kind: 'message', text: '空树，无法删除' });
+          ops.push({ kind: 'done' });
+          return ops;
+        }
+
+        // 查找路径
+        let cur = root;
+        let parent = null;
+        let dir = null;
+        while (cur && cur.val !== val) {
+          ops.push({ kind: 'compare', id: cur.id, val: cur.val, target: val });
+          parent = cur;
+          if (val < cur.val) {
+            dir = 'left';
+            if (cur.left) ops.push({ kind: 'edge', from: cur.id, to: cur.left.id });
+            cur = cur.left;
+          } else {
+            dir = 'right';
+            if (cur.right) ops.push({ kind: 'edge', from: cur.id, to: cur.right.id });
+            cur = cur.right;
+          }
+        }
+        if (!cur) {
+          ops.push({ kind: 'message', text: `未找到值 ${val}` });
+          ops.push({ kind: 'done', text: '删除取消' });
+          return ops;
+        }
+        ops.push({ kind: 'mark-delete', id: cur.id, val: cur.val });
+
+        const hasL = !!cur.left;
+        const hasR = !!cur.right;
+
+        if (!hasL && !hasR) {
+          ops.push({ kind: 'message', text: `节点 ${val} 为叶子，直接移除` });
+          ops.push({ kind: 'remove-leaf', parentId: parent ? parent.id : null, dir, id: cur.id });
+        } else if (!hasL || !hasR) {
+          const child = cur.left || cur.right;
+          ops.push({ kind: 'message', text: `节点 ${val} 仅有一个子节点 ${child.val}，用其子替换` });
+          ops.push({ kind: 'replace-one', parentId: parent ? parent.id : null, dir, id: cur.id, childId: child.id });
+        } else {
+          // 双子：找中序后继
+          ops.push({ kind: 'message', text: `节点 ${val} 有两个子节点，寻找中序后继（右子树最左）` });
+          ops.push({ kind: 'edge', from: cur.id, to: cur.right.id });
+          let succ = cur.right;
+          let succParent = cur;
+          ops.push({ kind: 'compare', id: succ.id, val: succ.val, target: '后继' });
+          while (succ.left) {
+            ops.push({ kind: 'edge', from: succ.id, to: succ.left.id });
+            succParent = succ;
+            succ = succ.left;
+            ops.push({ kind: 'compare', id: succ.id, val: succ.val, target: '后继' });
+          }
+          ops.push({ kind: 'mark-successor', id: succ.id, val: succ.val });
+          ops.push({ kind: 'message', text: `后继为 ${succ.val}，用其值替换 ${val}，再删除后继原位置` });
+          ops.push({
+            kind: 'replace-successor',
+            targetId: cur.id,
+            succId: succ.id,
+            succVal: succ.val,
+            succParentId: succParent.id,
+            succIsLeft: succParent.left === succ,
+          });
+        }
+        ops.push({ kind: 'done', text: `删除完成` });
+        return ops;
+      }
+
+      function prepareTraverse() {
+        prepareNamedTraverse(ui.mode.value);
+      }
+
+      function applyOp(op) {
+        if (!op) return;
+        if (op.kind === 'edge') {
+          edgeHighlight.add(op.from + '>' + op.to);
+          const fromState = highlight.get(op.from);
+          if (fromState !== 'done') highlight.set(op.from, 'visit');
+        } else if (op.kind === 'visit') {
+          // 将之前 current 转为 done
+          for (const [id, st] of [...highlight.entries()]) {
+            if (st === 'current' || st === 'visit') highlight.set(id, 'done');
+          }
+          highlight.set(op.id, 'current');
+          visitPath.push(op.val);
+          visitedCount += 1;
+          log(`访问节点 ${op.val}`);
+        } else if (op.kind === 'compare') {
+          for (const [id, st] of [...highlight.entries()]) {
+            if (st === 'current') highlight.set(id, 'visit');
+          }
+          highlight.set(op.id, 'current');
+          visitedCount += 1;
+          log(`比较节点 ${op.val} 与目标 ${op.target}`);
+        } else if (op.kind === 'message') {
+          log(op.text);
+        } else if (op.kind === 'create-root') {
+          root = new TreeNode(op.val);
+          highlight.set(root.id, 'insert');
+          log(`创建根节点 ${op.val}`);
+        } else if (op.kind === 'attach') {
+          const parent = findById(root, op.parentId);
+          const node = new TreeNode(op.val);
+          if (op.dir === 'left') parent.left = node;
+          else parent.right = node;
+          highlight.set(node.id, 'insert');
+          edgeHighlight.add(parent.id + '>' + node.id);
+          log(`挂接新节点 ${op.val}`);
+        } else if (op.kind === 'mark-delete') {
+          highlight.set(op.id, 'delete');
+          log(`标记删除目标 ${op.val}`);
+        } else if (op.kind === 'mark-successor') {
+          highlight.set(op.id, 'successor');
+          log(`标记中序后继 ${op.val}`);
+        } else if (op.kind === 'remove-leaf') {
+          if (!op.parentId) root = null;
+          else {
+            const p = findById(root, op.parentId);
+            if (op.dir === 'left') p.left = null;
+            else p.right = null;
+          }
+          highlight.delete(op.id);
+          log('移除叶子节点');
+        } else if (op.kind === 'replace-one') {
+          const child = findById(root, op.childId);
+          if (!op.parentId) root = child;
+          else {
+            const p = findById(root, op.parentId);
+            if (op.dir === 'left') p.left = child;
+            else p.right = child;
+          }
+          highlight.delete(op.id);
+          if (child) highlight.set(child.id, 'insert');
+          log('单子节点替换完成');
+        } else if (op.kind === 'replace-successor') {
+          const target = findById(root, op.targetId);
+          const succParent = findById(root, op.succParentId);
+          const succ = findById(root, op.succId);
+          if (target && succ) {
+            target.val = op.succVal;
+            highlight.set(target.id, 'insert');
+            // 删除后继：后继最多有右孩子
+            const succChild = succ.right;
+            if (op.succIsLeft) succParent.left = succChild;
+            else succParent.right = succChild;
+            highlight.delete(op.succId);
+            log(`值替换为 ${op.succVal}，并移除后继原节点`);
+          }
+        } else if (op.kind === 'done') {
+          for (const [id, st] of [...highlight.entries()]) {
+            if (st === 'current' || st === 'visit') highlight.set(id, 'done');
+          }
+          updateStatus(op.text || `完成 · 访问 ${visitedCount} 个节点`);
+          log(op.text || '演示完成');
+        }
+        render();
+      }
+
+      function findById(node, id) {
+        if (!node || !id) return null;
+        if (node.id === id) return node;
+        return findById(node.left, id) || findById(node.right, id);
+      }
+
+      function applyNext() {
+        if (cursor >= operations.length) {
+          finish();
+          return false;
+        }
+        const op = operations[cursor++];
+        applyOp(op);
+        if (op.kind !== 'done') {
+          updateStatus(`执行中 · ${cursor} / ${operations.length}`);
+        }
+        if (op.kind === 'done') finish();
+        return true;
+      }
+
+      function finish() {
+        stop();
+        render();
+        ui.start.textContent = '重新演示';
+        takeSnapshot();
+      }
+
+      function loop() {
+        if (!playing) return;
+        if (!applyNext()) return;
+        timer = setTimeout(loop, DELAY);
+      }
+
+      function startPause() {
+        const mode = ui.mode.value;
+        if (['insert', 'delete', 'dict'].includes(mode)) return;
+        if (!root) {
+          ui.inputError.textContent = '请先加载示例树或按序列建树。';
+          return;
+        }
+        ui.inputError.textContent = '';
+        if (cursor >= operations.length) prepareTraverse();
+        playing = !playing;
+        ui.start.textContent = playing ? '暂停演示' : '继续演示';
+        updateStatus(playing ? '演示进行中' : '已暂停 · 可继续或单步');
+        if (playing) loop();
+      }
+
+      function stepOnce() {
+        const mode = ui.mode.value;
+        if (['insert', 'delete'].includes(mode)) {
+          stepMutate();
+          return;
+        }
+        if (mode === 'dict') {
+          // dict 下单步走中序
+          if (!operations.length || cursor >= operations.length) {
+            ui.mode.value = 'inorder';
+            syncPanels();
+            prepareTraverse();
+            ui.mode.value = 'dict';
+            syncPanels();
+          }
+        } else if (!operations.length || cursor >= operations.length) {
+          if (!root) {
+            ui.inputError.textContent = '请先加载示例树。';
+            return;
+          }
+          prepareTraverse();
+        }
+        stop();
+        ui.start.textContent = '继续演示';
+        applyNext();
+      }
+
+      function resetAnim() {
+        stop();
+        restoreSnapshot();
+        clearHighlights();
+        visitPath = [];
+        visitedCount = 0;
+        cursor = 0;
+        operations = [];
+        render();
+        updateStatus('已重置 · 树结构恢复');
+        ui.start.textContent = '开始演示';
+        log('重置动画与高亮');
+        const mode = ui.mode.value;
+        if (['preorder', 'inorder', 'postorder', 'dfs', 'bfs'].includes(mode)) prepareTraverse();
+      }
+
+      function loadExample(seq = EXAMPLE_SEED) {
+        stop();
+        clearHighlights();
+        visitPath = [];
+        visitedCount = 0;
+        cursor = 0;
+        operations = [];
+        root = buildFromSequence(seq);
+        ui.seedInput.value = seq.join(', ');
+        takeSnapshot();
+        render();
+        updateStatus(`已加载示例树 · ${seq.length} 个节点`);
+        log(`加载示例：${seq.join(', ')}`);
+        ui.inputError.textContent = '';
+        const mode = ui.mode.value;
+        if (['preorder', 'inorder', 'postorder', 'dfs', 'bfs'].includes(mode)) prepareTraverse();
+      }
+
+      function buildFromInput() {
+        try {
+          const seq = parseSeed(ui.seedInput.value);
+          ui.inputError.textContent = '';
+          loadExample(seq);
+        } catch (err) {
+          ui.inputError.textContent = err.message;
+          updateStatus('输入有误 · 请修正建树序列');
+        }
+      }
+
+      function runMutate(kind) {
+        let val;
+        try {
+          val = parseValue();
+          ui.inputError.textContent = '';
+        } catch (err) {
+          ui.inputError.textContent = err.message;
+          return;
+        }
+        stop();
+        clearHighlights();
+        visitPath = [];
+        visitedCount = 0;
+        cursor = 0;
+        takeSnapshot();
+        operations = kind === 'insert' ? buildInsertOps(val) : buildDeleteOps(val);
+        render();
+        updateStatus(`就绪 · ${kind === 'insert' ? '插入' : '删除'} ${val} · ${operations.length} 步`);
+        log(`开始${kind === 'insert' ? '插入' : '删除'} ${val}`);
+        // 自动播放短动画
+        playing = true;
+        ui.start.textContent = '暂停演示';
+        loop();
+      }
+
+      function stepMutate() {
+        if (!operations.length || cursor >= operations.length) {
+          updateStatus('请先点击「执行插入 / 删除」生成步骤');
+          return;
+        }
+        stop();
+        applyNext();
+      }
+
+      function dictGenerate() {
+        loadExample(DICT_SEED);
+        ui.dictBox.hidden = false;
+        visitPath = [];
+        // 立即展示中序有序结果（静态说明 + 可再演示）
+        const ordered = [];
+        (function ino(n) {
+          if (!n) return;
+          ino(n.left);
+          ordered.push(n.val);
+          ino(n.right);
+        })(root);
+        ui.pathText.textContent = ordered.join(' → ');
+        updateStatus('字典序示例已生成 · 中序即有序');
+        log(`中序有序序列：${ordered.join(', ')}`);
+      }
+
+      function dictInsertNow() {
+        runMutate('insert');
+      }
+
+      function dictPlayInorder() {
+        if (!root) {
+          ui.inputError.textContent = '请先生成示例树。';
+          return;
+        }
+        ui.inputError.textContent = '';
+        stop();
+        clearHighlights();
+        visitPath = [];
+        visitedCount = 0;
+        cursor = 0;
+        takeSnapshot();
+        operations = buildTraverseOps('inorder');
+        render();
+        updateStatus(`演示中序 · 共 ${operations.length} 步 · 结果应升序`);
+        log('开始中序遍历（BST 上即有序输出）');
+        playing = true;
+        loop();
+      }
+
+      function syncPanels() {
+        const mode = ui.mode.value;
+        const [name, text] = descriptions[mode];
+        ui.note.innerHTML = `<b>${name}</b><span>${text}</span>`;
+        ui.dictBox.hidden = mode !== 'dict';
+        ui.playPanel.hidden = true;
+        ui.mutatePanel.hidden = true;
+        ui.dictPanel.hidden = true;
+
+        if (['preorder', 'inorder', 'postorder', 'dfs', 'bfs'].includes(mode)) {
+          ui.playPanel.hidden = false;
+          ui.valueHint.textContent = '遍历模式无需填写操作值；可单步或连续播放。';
+          ui.valueLabel.textContent = '操作数值（可选）';
+          if (root) prepareTraverse();
+          else {
+            operations = [];
+            cursor = 0;
+            updateStatus('就绪 · 请先加载示例树');
+            render();
+          }
+        } else if (mode === 'insert' || mode === 'delete') {
+          ui.mutatePanel.hidden = false;
+          ui.valueLabel.textContent = mode === 'insert' ? '插入数值' : '删除数值';
+          ui.valueHint.textContent = mode === 'insert'
+            ? '按 BST 规则插入；已存在则跳过。'
+            : '删除需处理叶子 / 单子 / 双子（后继替换）三种情况。';
+          ui.insertBtn.hidden = mode !== 'insert';
+          ui.deleteBtn.hidden = mode !== 'delete';
+          stop();
+          clearHighlights();
+          visitPath = [];
+          visitedCount = 0;
+          cursor = 0;
+          operations = [];
+          render();
+          updateStatus(mode === 'insert' ? '就绪 · 输入数值后执行插入' : '就绪 · 输入数值后执行删除');
+        } else {
+          ui.insertBtn.hidden = false;
+          ui.deleteBtn.hidden = false;
+          ui.dictPanel.hidden = false;
+          ui.valueLabel.textContent = '按序插入数值';
+          ui.valueHint.textContent = '字典序 / 数值序 BST：插入后中序遍历即为有序序列。';
+          stop();
+          clearHighlights();
+          visitPath = [];
+          visitedCount = 0;
+          cursor = 0;
+          operations = [];
+          render();
+          updateStatus('字典序模式 · 可一键生成示例或按序插入');
+        }
+      }
+
+      // Events
+      ui.mode.addEventListener('change', syncPanels);
+      ui.start.addEventListener('click', startPause);
+      ui.step.addEventListener('click', stepOnce);
+      ui.reset.addEventListener('click', resetAnim);
+      ui.example.addEventListener('click', () => loadExample(EXAMPLE_SEED));
+      ui.build.addEventListener('click', buildFromInput);
+
+      ui.insertBtn.addEventListener('click', () => runMutate('insert'));
+      ui.deleteBtn.addEventListener('click', () => runMutate('delete'));
+      ui.stepMutate.addEventListener('click', stepMutate);
+      ui.resetMutate.addEventListener('click', resetAnim);
+      ui.exampleMutate.addEventListener('click', () => loadExample(EXAMPLE_SEED));
+      ui.buildMutate.addEventListener('click', buildFromInput);
+
+      ui.dictExample.addEventListener('click', dictGenerate);
+      ui.dictInsert.addEventListener('click', dictInsertNow);
+      ui.dictInorder.addEventListener('click', dictPlayInorder);
+      ui.dictReset.addEventListener('click', resetAnim);
+      ui.dictBuild.addEventListener('click', buildFromInput);
+
+      el('controlForm').addEventListener('submit', (e) => e.preventDefault());
+
+      // Init
+      loadExample(EXAMPLE_SEED);
+      syncPanels();
+    })();
+  </script>
+</body>
+</html>
