@@ -907,6 +907,12 @@
       let homeFeedItems = [];
       let currentFeedItem = null;
       let temporarilySkippedFeedIds = new Set();
+      let homeAuthReady = false;
+      let homeMemberLoggedIn = false;
+      const homeAuthClient = window.supabase.createClient(
+        'https://jgezpvmlnhycxslqbwcx.supabase.co',
+        'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl'
+      );
       const feedDismissKey = 'algorithm-club-home-feed-dismissed-v2';
       const feedDismissLegacyKey = 'algorithm-club-home-feed-dismissed-v1';
 
@@ -1129,6 +1135,13 @@
         observeRevealItems();
         showHomeRecommendation();
       }
+
+      homeAuthClient.auth.getSession().then(({ data: { session } }) => {
+        syncHomeAuthSession(session);
+      });
+      homeAuthClient.auth.onAuthStateChange((_event, session) => {
+        syncHomeAuthSession(session);
+      });
 
       document.getElementById('feedModalClose').addEventListener('click', skipCurrentFeedTemporarily);
       document.getElementById('feedModalNever').addEventListener('click', dismissCurrentFeedForever);

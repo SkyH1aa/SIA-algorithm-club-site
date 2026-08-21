@@ -36,10 +36,10 @@
     .button:hover{background:rgba(0,229,255,.22)}.button.secondary{border-color:var(--line);background:transparent}
     .button:disabled{opacity:.55;cursor:not-allowed}
     .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-    .card{display:flex;flex-direction:column;min-height:280px;border:1px solid rgba(107,169,224,.2);border-radius:14px;overflow:hidden;background:linear-gradient(160deg,rgba(0,229,255,.06),rgba(146,120,255,.08));box-shadow:var(--shadow)}
-    .cover{height:150px;background:rgba(0,0,0,.28);display:grid;place-items:center;color:var(--muted);font-size:13px;overflow:hidden}
-    .cover img{width:100%;height:100%;object-fit:cover;display:block}
-    .card-body{display:flex;flex:1;flex-direction:column;padding:16px}
+    .card{display:flex;flex-direction:column;border:1px solid rgba(107,169,224,.2);border-radius:14px;overflow:hidden;background:linear-gradient(160deg,rgba(0,229,255,.06),rgba(146,120,255,.08));box-shadow:var(--shadow)}
+    .cover{min-height:120px;max-height:280px;background:rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;overflow:hidden}
+    .cover img{display:block;width:100%;height:auto;max-height:280px;object-fit:contain;object-position:center;background:rgba(0,0,0,.18)}
+    .card-body{display:flex;flex:1;flex-direction:column;padding:16px;position:relative;z-index:1;background:rgba(9,18,38,.92)}
     .card-body h3{margin:0 0 8px;font-size:18px}
     .desc{margin:0;color:var(--muted);font-size:13px;line-height:1.65;min-height:42px}
     .meta{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:14px 0;font-size:13px}

@@ -53,7 +53,7 @@
         <div class="section-head">
           <div>
             <h2>权限下放</h2>
-            <p class="intro">仅超管可给其他账号选择性开启：签到管理、积分管理、留言箱管理、邀请码管理、活动和公告内容管理。</p>
+            <p class="intro">仅超管可给其他账号选择性开启：签到管理、积分管理、留言箱管理、邀请码管理、活动和公告内容管理、积分商城管理。</p>
           </div>
         </div>
         <form class="form perm" id="permissionForm">
@@ -71,6 +71,7 @@
               <label><input type="checkbox" id="permMessages"> 留言箱管理</label>
               <label><input type="checkbox" id="permInvites"> 邀请码管理</label>
               <label><input type="checkbox" id="permEvents"> 活动与公告</label>
+              <label><input type="checkbox" id="permMall"> 积分商城</label>
             </div>
             <button class="button" type="submit" style="margin-top:12px;width:100%">保存权限</button>
           </div>
@@ -317,7 +318,7 @@
         $('permissionsList').innerHTML = '<div class="empty">还没有下放给其他账号的权限。</div>';
         return;
       }
-      $('permissionsList').innerHTML = `<table class="table"><thead><tr><th>账号</th><th>签到</th><th>积分</th><th>留言</th><th>邀请码</th><th>活动公告</th><th>备注</th><th>更新时间</th><th>操作</th></tr></thead><tbody>${rows.map(item => `
+      $('permissionsList').innerHTML = `<table class="table"><thead><tr><th>账号</th><th>签到</th><th>积分</th><th>留言</th><th>邀请码</th><th>活动公告</th><th>商城</th><th>备注</th><th>更新时间</th><th>操作</th></tr></thead><tbody>${rows.map(item => `
         <tr>
           <td>${escapeHtml(item.username)}</td>
           <td>${flagBadge(item.can_checkin)}</td>
@@ -325,6 +326,7 @@
           <td>${flagBadge(item.can_messages)}</td>
           <td>${flagBadge(item.can_invites)}</td>
           <td>${flagBadge(item.can_events)}</td>
+          <td>${flagBadge(item.can_mall)}</td>
           <td>${escapeHtml(item.note || '-')}</td>
           <td>${escapeHtml(formatTime(item.updated_at))}</td>
           <td class="actions">
@@ -346,6 +348,7 @@
           $('permMessages').checked = Boolean(row.can_messages);
           $('permInvites').checked = Boolean(row.can_invites);
           $('permEvents').checked = Boolean(row.can_events);
+          $('permMall').checked = Boolean(row.can_mall);
           setMessage($('permissionsMessage'), `已载入账号 ${username}，修改后点击保存。`);
         });
       });
