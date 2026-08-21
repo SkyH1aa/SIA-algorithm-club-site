@@ -38,6 +38,7 @@
           <textarea class="textarea" id="announcementContent" required></textarea>
           <div class="checks">
             <label><input type="checkbox" id="announcementPinned"> 置顶</label>
+            <label><input type="checkbox" id="announcementFeatured"> 首页推荐</label>
             <label><input type="checkbox" id="announcementPublished" checked> 发布</label>
           </div>
           <div class="actions"><button class="button" type="submit">保存公告</button><button class="button secondary" type="button" id="resetAnnouncement">清空表单</button></div>
@@ -158,6 +159,7 @@
       $('announcementContent').value = '';
       $('announcementCategory').value = '社团通知';
       $('announcementPinned').checked = false;
+      $('announcementFeatured').checked = false;
       $('announcementPublished').checked = true;
     }
     function resetEventForm() {
@@ -202,6 +204,7 @@
           $('announcementContent').value = item.content || '';
           $('announcementCategory').value = item.category || '社团通知';
           $('announcementPinned').checked = Boolean(item.is_pinned);
+          $('announcementFeatured').checked = Boolean(item.is_featured);
           $('announcementPublished').checked = Boolean(item.is_published);
           setMessage('announcementMessage', '已载入公告，修改后点保存。');
         };
