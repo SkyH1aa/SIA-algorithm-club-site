@@ -26,6 +26,28 @@
       </section>
       <section class="panel section"><div class="section-head"><div><h2>管理面板入口</h2><p class="intro">只显示你当前拥有的管理权限对应入口。</p></div><button class="button secondary" id="refreshButton" type="button">刷新概览</button></div><div class="grid" id="entryGrid"></div></section>
 
+      <section class="panel section hidden" id="superAdminsSection">
+        <div class="section-head">
+          <div>
+            <h2>超管交接</h2>
+            <p class="intro">仅现任超管可见。可把指定账号升级为同级超管，也可撤销他人超管权限；不能撤销自己，且至少保留 1 名超管。</p>
+          </div>
+        </div>
+        <form class="form inline" id="superAdminForm">
+          <div>
+            <label class="label" for="superAdminUsername">账号名</label>
+            <input class="input" id="superAdminUsername" maxlength="40" required placeholder="例如 aabbcc">
+          </div>
+          <div>
+            <label class="label" for="superAdminNote">备注（可选）</label>
+            <input class="input" id="superAdminNote" maxlength="200" placeholder="例如：新任社长">
+          </div>
+          <button class="button" type="submit">升级为超管</button>
+        </form>
+        <p class="message" id="superAdminsMessage" role="status"></p>
+        <div class="table-wrap" id="superAdminsList" style="margin-top:16px"><div class="empty loading">正在读取超管名单…</div></div>
+      </section>
+
       <section class="panel section hidden" id="permissionsSection">
         <div class="section-head">
           <div>
@@ -289,6 +311,7 @@
 
     function applySectionVisibility() {
       const superAdmin = Boolean(currentAccess.isSuperAdmin);
+      $('superAdminsSection').classList.toggle('hidden', !superAdmin);
       $('permissionsSection').classList.toggle('hidden', !superAdmin);
       $('resetsSection').classList.toggle('hidden', !superAdmin);
       $('directResetSection').classList.toggle('hidden', !superAdmin);
@@ -319,8 +342,14 @@
         $('bindingsList').innerHTML = '<div class="empty loading">正在读取绑定资料…</div>';
         $('resetsList').innerHTML = '<div class="empty loading">正在读取重置申请…</div>';
         $('permissionsList').innerHTML = '<div class="empty loading">正在读取权限列表…</div>';
-        tasks.push(call('admin_member_profiles_list'), call('admin_password_resets_list'), call('admin_staff_permissions_list'));
-        labels.push('profiles', 'resets', 'permissions');
+        $('superAdminsList').innerHTML = '<div class="empty loading">正在读取超管名单…</div>';
+        tasks.push(
+          call('admin_member_profiles_list'),
+          call('admin_password_resets_list'),
+          call('admin_staff_permissions_list'),
+          call('admin_super_admins_list')
+        );
+        labels.push('profiles', 'resets', 'permissions', 'superAdmins');
       }
       if (permOn('checkin')) {
         tasks.push(call('admin_checkin_list'), call('admin_course_checkin_list'));
@@ -444,6 +473,23 @@
         await refreshOverview();
       } catch (error) {
         setMessage($('permissionsMessage'), error.message, 'error');
+      }
+    });
+
+    $('superAdminForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      setMessage($('superAdminsMessage'), '正在升级超管…');
+      try {
+        const payload = await call('admin_super_admins_promote', {
+          username: $('superAdminUsername').value.trim(),
+          note: $('superAdminNote').value.trim()
+        });
+        setMessage($('superAdminsMessage'), payload.message || `已将 ${payload.superAdmin?.username || ''} 升级为超管。`, 'success');
+        $('superAdminUsername').value = '';
+        $('superAdminNote').value = '';
+        await refreshOverview();
+      } catch (error) {
+        setMessage($('superAdminsMessage'), error.message, 'error');
       }
     });
 

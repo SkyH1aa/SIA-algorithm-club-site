@@ -2,10 +2,6 @@
   const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
   const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
-  const SUPER_ADMIN_EMAILS = new Set([
-    'haimingadmin@club.local',
-    'collen@club.local'
-  ]);
 
   function usernameFromSession(session) {
     const email = session?.user?.email || '';
@@ -20,11 +16,6 @@
       can_invites: false,
       can_events: false
     };
-  }
-
-  function isSuperAdminSession(session) {
-    const email = String(session?.user?.email || '').toLowerCase();
-    return SUPER_ADMIN_EMAILS.has(email);
   }
 
   function hasStaffAccess(access) {
@@ -43,18 +34,6 @@
   async function fetchStaffAccess(session) {
     if (!session?.user?.id || !session?.access_token) {
       return { isSuperAdmin: false, permissions: emptyPermissions() };
-    }
-    if (isSuperAdminSession(session)) {
-      return {
-        isSuperAdmin: true,
-        permissions: {
-          can_checkin: true,
-          can_points: true,
-          can_messages: true,
-          can_invites: true,
-          can_events: true
-        }
-      };
     }
     try {
       const response = await fetch(FUNCTION_URL, {
@@ -102,19 +81,12 @@
       return;
     }
 
-    if (isSuperAdminSession(session)) {
-      applyAdminVisibility(true);
-      return;
-    }
-
     const access = await fetchStaffAccess(session);
     applyAdminVisibility(hasStaffAccess(access));
   }
 
   window.ClubStaffAccess = {
-    SUPER_ADMIN_EMAILS,
     emptyPermissions,
-    isSuperAdminSession,
     hasStaffAccess,
     fetchStaffAccess
   };

@@ -109,7 +109,6 @@
     const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
     const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
-    const SUPER_ADMINS = ['haimingadmin@club.local', 'collen@club.local'];
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const $ = id => document.getElementById(id);
     let currentSession = null;
@@ -350,7 +349,7 @@
       }
       try {
         const access = await call('staff_access_get');
-        const allowed = Boolean(access?.isSuperAdmin || access?.permissions?.can_events || SUPER_ADMINS.includes(session.user.email?.toLowerCase()));
+        const allowed = Boolean(access?.isSuperAdmin || access?.permissions?.can_events);
         $('denied').classList.toggle('hidden', allowed);
         $('content').classList.toggle('hidden', !allowed);
         if (allowed) await refresh();
