@@ -907,22 +907,84 @@
       let homeFeedItems = [];
       let currentFeedItem = null;
       let temporarilySkippedFeedIds = new Set();
-      const feedDismissKey = 'algorithm-club-home-feed-dismissed-v1';
-
-      function readDismissedFeedIds() {
-        try { return JSON.parse(localStorage.getItem(feedDismissKey) || '[]'); } catch (_error) { return []; }
-      }
-
-      function saveDismissedFeedIds(ids) {
-        try { localStorage.setItem(feedDismissKey, JSON.stringify(ids)); } catch (_error) { /* storage may be unavailable */ }
-      }
+      const feedDismissKey = 'algorithm-club-home-feed-dismissed-v2';
+      const feedDismissLegacyKey = 'algorithm-club-home-feed-dismissed-v1';
 
       function getFeedItemId(item) {
         return String(item.id || `${item.kind}-${item.title}-${item.date}`).replace(/[^a-zA-Z0-9_-]/g, '_');
       }
 
+      function getFeedPushAt(item) {
+        return String(item?.featured_push_at || item?.updated_at || item?.created_at || '').trim();
+      }
+
+      function normalizeDismissedRecords(raw) {
+        if (!Array.isArray(raw)) return [];
+        const map = new Map();
+        raw.forEach(entry => {
+          if (typeof entry === 'string' || typeof entry === 'number') {
+            const id = String(entry).trim();
+            if (id) map.set(id, { id, pushAt: '' });
+            return;
+          }
+          if (!entry || typeof entry !== 'object') return;
+          const id = String(entry.id || '').trim();
+          if (!id) return;
+          map.set(id, { id, pushAt: String(entry.pushAt || '').trim() });
+        });
+        return Array.from(map.values());
+      }
+
+      function readDismissedFeedRecords() {
+        try {
+          const current = localStorage.getItem(feedDismissKey);
+          if (current) return normalizeDismissedRecords(JSON.parse(current));
+          const legacy = localStorage.getItem(feedDismissLegacyKey);
+          if (!legacy) return [];
+          const migrated = normalizeDismissedRecords(JSON.parse(legacy));
+          saveDismissedFeedRecords(migrated);
+          return migrated;
+        } catch (_error) {
+          return [];
+        }
+      }
+
+      function saveDismissedFeedRecords(records) {
+        try {
+          localStorage.setItem(feedDismissKey, JSON.stringify(normalizeDismissedRecords(records)));
+        } catch (_error) { /* storage may be unavailable */ }
+      }
+
+      function isFeedDismissed(item) {
+        if (!item) return false;
+        const id = getFeedItemId(item);
+        const pushAt = getFeedPushAt(item);
+        const record = readDismissedFeedRecords().find(entry => entry.id === id);
+        if (!record) return false;
+        if (!pushAt) return true;
+        if (!record.pushAt) return true;
+        return record.pushAt === pushAt;
+      }
+
+      function syncLegacyDismissRecords(items) {
+        const list = Array.isArray(items) ? items : [];
+        const records = readDismissedFeedRecords();
+        let changed = false;
+        const next = records.map(record => {
+          if (record.pushAt) return record;
+          const matched = list.find(item => getFeedItemId(item) === record.id);
+          if (!matched) return record;
+          const pushAt = getFeedPushAt(matched);
+          if (!pushAt) return record;
+          changed = true;
+          return { id: record.id, pushAt };
+        });
+        if (changed) saveDismissedFeedRecords(next);
+      }
+
       function renderActivities(activities) {
         homeFeedItems = activities;
+        syncLegacyDismissRecords(activities);
         document.getElementById('activityList').innerHTML = activities.map(activity => `
           <button class="timeline-item home-feed-item" type="button" data-feed-id="${escapeHtml(getFeedItemId(activity))}">
             <div class="timeline-date">${escapeHtml(activity.date)}</div>
@@ -941,6 +1003,9 @@
           id: item.id,
           kind: 'announcement',
           is_featured: Boolean(item.is_featured),
+          featured_push_at: item.featured_push_at || item.updated_at || item.created_at || '',
+          updated_at: item.updated_at || '',
+          created_at: item.created_at || '',
           typeLabel: '首页推荐 · 公告',
           date: formatFeedDate(item.updated_at || item.created_at),
           title: item.title || '未命名公告',
@@ -953,6 +1018,9 @@
           id: item.id,
           kind: 'event',
           is_featured: Boolean(item.is_featured),
+          featured_push_at: item.featured_push_at || item.updated_at || item.created_at || '',
+          updated_at: item.updated_at || '',
+          created_at: item.created_at || '',
           typeLabel: '首页推荐 · 活动',
           date: formatFeedDate(item.starts_at || item.signup_deadline || item.updated_at || item.created_at),
           title: item.title || '未命名活动',
@@ -990,10 +1058,9 @@
       }
 
       function showHomeRecommendation() {
-        const dismissed = new Set(readDismissedFeedIds());
         const nextItem = homeFeedItems.find(item => {
           const id = getFeedItemId(item);
-          return item.is_featured === true && !dismissed.has(id) && !temporarilySkippedFeedIds.has(id);
+          return item.is_featured === true && !isFeedDismissed(item) && !temporarilySkippedFeedIds.has(id);
         });
         if (nextItem) openFeedModal(nextItem);
         else closeFeedModal();
@@ -1009,9 +1076,10 @@
       function dismissCurrentFeedForever() {
         if (!currentFeedItem) return;
         const id = getFeedItemId(currentFeedItem);
-        const dismissed = new Set(readDismissedFeedIds());
-        dismissed.add(id);
-        saveDismissedFeedIds([...dismissed]);
+        const pushAt = getFeedPushAt(currentFeedItem);
+        const records = readDismissedFeedRecords().filter(record => record.id !== id);
+        records.push({ id, pushAt });
+        saveDismissedFeedRecords(records);
         temporarilySkippedFeedIds.delete(id);
         closeFeedModal();
         showHomeRecommendation();

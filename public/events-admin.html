@@ -190,6 +190,7 @@
         <td>${escapeHtml(formatTime(item.updated_at))}</td>
         <td class="actions">
           <button class="button secondary" type="button" data-edit-ann="${escapeHtml(item.id)}">编辑</button>
+          ${item.is_published ? `<button class="button" type="button" data-repush-ann="${escapeHtml(item.id)}">再次推送主页</button>` : ''}
           <button class="button danger" type="button" data-del-ann="${escapeHtml(item.id)}">删除</button>
         </td>
       </tr>`).join('')}</tbody></table>`;
@@ -206,6 +207,19 @@
           $('announcementFeatured').checked = Boolean(item.is_featured);
           $('announcementPublished').checked = Boolean(item.is_published);
           setMessage('announcementMessage', '已载入公告，修改后点保存。');
+        };
+      });
+      $('announcementList').querySelectorAll('[data-repush-ann]').forEach(button => {
+        button.onclick = async () => {
+          if (!window.confirm('确认再次推送这条公告到主页？之前点过“不再提醒”的用户也会再看到一次。')) return;
+          setMessage('announcementMessage', '正在再次推送主页…');
+          try {
+            const payload = await call('admin_announcements_repush_home', { id: button.getAttribute('data-repush-ann') });
+            setMessage('announcementMessage', payload.message || '已再次推送主页。', 'success');
+            await refresh();
+          } catch (error) {
+            setMessage('announcementMessage', error.message, 'error');
+          }
         };
       });
       $('announcementList').querySelectorAll('[data-del-ann]').forEach(button => {
@@ -237,6 +251,7 @@
         <td class="actions">
           <button class="button secondary" type="button" data-edit-event="${escapeHtml(item.id)}">编辑</button>
           <button class="button" type="button" data-view-signups="${escapeHtml(item.id)}">报名名单</button>
+          ${item.is_published ? `<button class="button" type="button" data-repush-event="${escapeHtml(item.id)}">再次推送主页</button>` : ''}
           <button class="button danger" type="button" data-del-event="${escapeHtml(item.id)}">删除</button>
         </td>
       </tr>`).join('')}</tbody></table>`;
@@ -266,6 +281,19 @@
         button.onclick = () => {
           $('signupEventSelect').value = button.getAttribute('data-view-signups');
           void loadSignups();
+        };
+      });
+      $('eventList').querySelectorAll('[data-repush-event]').forEach(button => {
+        button.onclick = async () => {
+          if (!window.confirm('确认再次推送这条活动到主页？之前点过“不再提醒”的用户也会再看到一次。')) return;
+          setMessage('eventMessage', '正在再次推送主页…');
+          try {
+            const payload = await call('admin_events_repush_home', { id: button.getAttribute('data-repush-event') });
+            setMessage('eventMessage', payload.message || '已再次推送主页。', 'success');
+            await refresh();
+          } catch (error) {
+            setMessage('eventMessage', error.message, 'error');
+          }
         };
       });
       $('eventList').querySelectorAll('[data-del-event]').forEach(button => {
