@@ -2,6 +2,11 @@
   const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
   const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
+  // 仅迁移兜底：后端超管表未就绪或接口失败时，避免初始超管入口消失。
+  const BOOTSTRAP_SUPER_ADMIN_EMAILS = new Set([
+    'haimingadmin@club.local',
+    'collen@club.local'
+  ]);
 
   function usernameFromSession(session) {
     const email = session?.user?.email || '';
@@ -15,6 +20,23 @@
       can_messages: false,
       can_invites: false,
       can_events: false
+    };
+  }
+
+  function bootstrapSuperAccess(session) {
+    const email = String(session?.user?.email || '').toLowerCase();
+    if (!BOOTSTRAP_SUPER_ADMIN_EMAILS.has(email)) {
+      return { isSuperAdmin: false, permissions: emptyPermissions() };
+    }
+    return {
+      isSuperAdmin: true,
+      permissions: {
+        can_checkin: true,
+        can_points: true,
+        can_messages: true,
+        can_invites: true,
+        can_events: true
+      }
     };
   }
 
@@ -46,17 +68,23 @@
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        return { isSuperAdmin: false, permissions: emptyPermissions() };
+        return bootstrapSuperAccess(session);
       }
-      return {
+      const access = {
         isSuperAdmin: Boolean(payload.isSuperAdmin),
         permissions: {
           ...emptyPermissions(),
           ...(payload.permissions || {})
         }
       };
+      // 后端尚未识别超管时，初始超管仍临时可见入口，便于继续完成 SQL / Function 部署。
+      if (!hasStaffAccess(access)) {
+        const fallback = bootstrapSuperAccess(session);
+        if (fallback.isSuperAdmin) return fallback;
+      }
+      return access;
     } catch (_error) {
-      return { isSuperAdmin: false, permissions: emptyPermissions() };
+      return bootstrapSuperAccess(session);
     }
   }
 
