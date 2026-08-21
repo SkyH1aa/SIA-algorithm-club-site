@@ -1064,12 +1064,28 @@
       }
 
       function showHomeRecommendation() {
+        // 未登录社团盘用户不自动弹出活动/公告推荐
+        if (!homeAuthReady || !homeMemberLoggedIn) {
+          closeFeedModal();
+          return;
+        }
         const nextItem = homeFeedItems.find(item => {
           const id = getFeedItemId(item);
           return item.is_featured === true && !isFeedDismissed(item) && !temporarilySkippedFeedIds.has(id);
         });
         if (nextItem) openFeedModal(nextItem);
         else closeFeedModal();
+      }
+
+      function syncHomeAuthSession(session) {
+        homeAuthReady = true;
+        homeMemberLoggedIn = Boolean(session?.user?.id);
+        if (!homeMemberLoggedIn) {
+          temporarilySkippedFeedIds = new Set();
+          closeFeedModal();
+          return;
+        }
+        if (homeFeedItems.length) showHomeRecommendation();
       }
 
       function skipCurrentFeedTemporarily() {
@@ -1133,11 +1149,14 @@
         renderActivities(activities);
         renderBoard();
         observeRevealItems();
-        showHomeRecommendation();
+        // 自动推荐弹窗只在确认已登录后触发，避免访客看到弹窗
+        if (homeAuthReady && homeMemberLoggedIn) showHomeRecommendation();
       }
 
       homeAuthClient.auth.getSession().then(({ data: { session } }) => {
         syncHomeAuthSession(session);
+      }).catch(() => {
+        syncHomeAuthSession(null);
       });
       homeAuthClient.auth.onAuthStateChange((_event, session) => {
         syncHomeAuthSession(session);
