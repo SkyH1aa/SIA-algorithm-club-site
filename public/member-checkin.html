@@ -21,7 +21,7 @@
   </div>
 </main>
 <script>
-const SUPABASE_URL='https://jgezpvmlnhycxslqbwcx.supabase.co',SUPABASE_KEY='sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl',supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY),FUNCTION_URL=`${SUPABASE_URL}/functions/v1/club-drive`,admins=['haimingadmin@club.local','collen@club.local'];
+const SUPABASE_URL='https://jgezpvmlnhycxslqbwcx.supabase.co',SUPABASE_KEY='sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl',supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY),FUNCTION_URL=`${SUPABASE_URL}/functions/v1/club-drive`;
 const gate=document.getElementById('memberGate'),content=document.getElementById('memberContent'),adminPanel=document.getElementById('adminPanel'),redeemMessage=document.getElementById('redeemMessage'),adminMessage=document.getElementById('adminMessage');
 const checkinType=document.getElementById('checkinType'),codeField=document.getElementById('codeField'),checkinCode=document.getElementById('checkinCode'),submitCheckinButton=document.getElementById('submitCheckinButton');
 function message(node,text,type=''){node.textContent=text;node.className=`message ${type}`}
@@ -35,7 +35,7 @@ function renderCourse(items){document.getElementById('courseList').innerHTML=!it
 async function refreshAdmin(){try{const [record,pending,course]=await Promise.all([call('admin_checkin_list'),call('admin_checkin_pending_list'),call('admin_course_checkin_list')]);renderCodes(record.codes||[],record.uses||[]);renderPending(pending.pending||[]);renderCourse(course.requests||[])}catch(error){message(adminMessage,error.message,'error')}}
 let boundProfile=null;
 async function loadBoundProfile(){try{const payload=await call('member_profile_get');boundProfile=payload?.bound?payload.profile:null;if(boundProfile?.member_name){const nameInput=document.getElementById('memberName');if(!nameInput.value.trim())nameInput.value=boundProfile.member_name}}catch(_error){boundProfile=null}}
-async function updateSession(session){const member=Boolean(session?.user?.id),admin=admins.includes(session?.user?.email?.toLowerCase());gate.classList.toggle('active',!member);content.classList.toggle('hidden',!member);adminPanel.classList.toggle('active',admin);if(!member)return;await loadBoundProfile();if(admin)await refreshAdmin()}
+async function updateSession(session){const member=Boolean(session?.user?.id);gate.classList.toggle('active',!member);content.classList.toggle('hidden',!member);if(!member){adminPanel.classList.remove('active');return}await loadBoundProfile();const access=window.ClubStaffAccess?await window.ClubStaffAccess.fetchStaffAccess(session):{isSuperAdmin:false,permissions:{}};const admin=Boolean(access.isSuperAdmin||access.permissions?.can_checkin);adminPanel.classList.toggle('active',admin);if(admin)await refreshAdmin()}
 checkinType.addEventListener('change',updateCheckinType);
 document.getElementById('refreshRecordsButton').addEventListener('click',async event=>{const button=event.currentTarget;button.disabled=true;button.textContent='刷新中…';try{await refreshAdmin();message(adminMessage,'签到记录已刷新。','success')}finally{button.disabled=false;button.textContent='刷新记录'}});
 document.getElementById('refreshCourseButton').addEventListener('click',async event=>{const button=event.currentTarget;button.disabled=true;button.textContent='刷新中…';try{await refreshAdmin();message(adminMessage,'课程签到已刷新。','success')}finally{button.disabled=false;button.textContent='刷新课程签到'}});

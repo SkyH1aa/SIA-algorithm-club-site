@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>活动公告管理 · 算法社</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="member-identity.js" defer></script>
+  <style>
+    :root{--bg:#030712;--panel:rgba(9,18,38,.84);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--green:#72f3c2;--danger:#ff718a;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 12% 0,rgba(0,229,255,.14),transparent 28%),radial-gradient(circle at 88% 10%,rgba(146,120,255,.16),transparent 30%),var(--bg)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.82);backdrop-filter:blur(18px)}.topbar-inner{max-width:1200px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted)}main{max-width:1200px;margin:auto;padding:56px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}h1{margin:0 0 12px;font-size:clamp(36px,7vw,64px)}.lead{max-width:760px;color:var(--muted);line-height:1.8;margin:0 0 24px}.panel{padding:22px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);margin-bottom:16px}.panel h2{margin:0 0 8px}.intro{margin:0 0 16px;color:var(--muted);line-height:1.7}.gate,.denied{min-height:240px;display:grid;place-items:center;text-align:center}.hidden{display:none!important}.button{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:rgba(0,229,255,.12);color:var(--text);cursor:pointer;font:inherit}.button.secondary{border-color:var(--line);background:transparent}.button.danger{border-color:rgba(255,113,138,.55);background:rgba(255,113,138,.12)}.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form{display:grid;gap:10px}.label{color:var(--muted);font-size:13px}.input,.textarea,.select{width:100%;padding:11px 13px;color:var(--text);border:1px solid var(--line);border-radius:8px;background:rgba(2,7,18,.76);outline:none;font:inherit}.textarea{min-height:96px;resize:vertical}.checks{display:flex;flex-wrap:wrap;gap:12px;color:var(--muted);font-size:13px}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:760px}.table th,.table td{padding:11px 8px;border-bottom:1px solid rgba(107,169,224,.14);text-align:left;vertical-align:top}.table th{color:var(--muted);font-size:13px;font-weight:500}.actions{display:flex;gap:8px;flex-wrap:wrap}.message{min-height:22px;margin:10px 0 0;color:var(--muted);font-size:13px}.message.error{color:var(--danger)}.message.success{color:var(--green)}.empty{padding:24px 0;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}@media(max-width:900px){.grid-2{grid-template-columns:1fr}.identity{display:none!important}main{padding:42px 16px 70px}}
+  </style>
+</head>
+<body>
+  <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong>算法社</strong><small>Events Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html">返回管理员总览</a></div></header>
+  <main>
+    <section id="gate" class="panel gate"><div><strong>请先登录</strong><p class="intro">活动公告管理需要对应权限。</p><a class="button" href="drive.html">前往社团盘登录</a></div></section>
+    <section id="denied" class="panel denied hidden"><div><strong>无活动管理权限</strong><p class="intro">请联系 Haimingadmin / Collen 开通「活动和公告系统内容管理」权限。</p></div></section>
+    <div id="content" class="hidden">
+      <p class="eyebrow">EVENTS ADMIN</p>
+      <h1>活动与公告管理</h1>
+      <p class="lead">发布社团通知、活动报名、课程安排、比赛信息；设置截止时间、活动状态，并查看报名名单。首页最新公告会读取这里发布的内容。</p>
+
+      <section class="panel">
+        <h2>发布 / 编辑公告</h2>
+        <p class="intro">公告可用于社团通知、课程安排、比赛信息，并支持置顶到首页。</p>
+        <form class="form" id="announcementForm">
+          <input type="hidden" id="announcementId">
+          <div class="grid-2">
+            <div><label class="label" for="announcementTitle">标题</label><input class="input" id="announcementTitle" required></div>
+            <div>
+              <label class="label" for="announcementCategory">分类</label>
+              <select class="select" id="announcementCategory">
+                <option>社团通知</option><option>课程安排</option><option>比赛信息</option><option>活动报名</option><option>其他</option>
+              </select>
+            </div>
+          </div>
+          <label class="label" for="announcementContent">内容</label>
+          <textarea class="textarea" id="announcementContent" required></textarea>
+          <div class="checks">
+            <label><input type="checkbox" id="announcementPinned"> 置顶</label>
+            <label><input type="checkbox" id="announcementPublished" checked> 发布</label>
+          </div>
+          <div class="actions"><button class="button" type="submit">保存公告</button><button class="button secondary" type="button" id="resetAnnouncement">清空表单</button></div>
+        </form>
+        <p class="message" id="announcementMessage" role="status"></p>
+        <div class="table-wrap" id="announcementList" style="margin-top:16px"><div class="empty loading">正在读取公告…</div></div>
+      </section>
+
+      <section class="panel">
+        <h2>发布 / 编辑活动</h2>
+        <p class="intro">可设置活动状态、报名截止时间、是否开放报名，以及是否推荐到首页。</p>
+        <form class="form" id="eventForm">
+          <input type="hidden" id="eventId">
+          <div class="grid-2">
+            <div><label class="label" for="eventTitle">标题</label><input class="input" id="eventTitle" required></div>
+            <div>
+              <label class="label" for="eventCategory">分类</label>
+              <select class="select" id="eventCategory">
+                <option>活动报名</option><option>社团通知</option><option>课程安排</option><option>比赛信息</option><option>其他</option>
+              </select>
+            </div>
+          </div>
+          <label class="label" for="eventSummary">简介</label>
+          <input class="input" id="eventSummary">
+          <label class="label" for="eventContent">详细内容</label>
+          <textarea class="textarea" id="eventContent"></textarea>
+          <div class="grid-2">
+            <div>
+              <label class="label" for="eventStatus">活动状态</label>
+              <select class="select" id="eventStatus">
+                <option>草稿</option><option selected>报名中</option><option>进行中</option><option>已截止</option><option>已结束</option><option>已取消</option>
+              </select>
+            </div>
+            <div><label class="label" for="eventLocation">地点</label><input class="input" id="eventLocation"></div>
+          </div>
+          <div class="grid-2">
+            <div><label class="label" for="eventStartsAt">开始时间</label><input class="input" id="eventStartsAt" type="datetime-local"></div>
+            <div><label class="label" for="eventEndsAt">结束时间</label><input class="input" id="eventEndsAt" type="datetime-local"></div>
+          </div>
+          <div class="grid-2">
+            <div><label class="label" for="eventDeadline">报名截止</label><input class="input" id="eventDeadline" type="datetime-local"></div>
+            <div><label class="label" for="eventLimit">报名人数上限（可空）</label><input class="input" id="eventLimit" type="number" min="1"></div>
+          </div>
+          <div class="checks">
+            <label><input type="checkbox" id="eventAllowSignup" checked> 开放报名</label>
+            <label><input type="checkbox" id="eventFeatured"> 首页推荐</label>
+            <label><input type="checkbox" id="eventPublished" checked> 发布</label>
+          </div>
+          <div class="actions"><button class="button" type="submit">保存活动</button><button class="button secondary" type="button" id="resetEvent">清空表单</button></div>
+        </form>
+        <p class="message" id="eventMessage" role="status"></p>
+        <div class="table-wrap" id="eventList" style="margin-top:16px"><div class="empty loading">正在读取活动…</div></div>
+      </section>
+
+      <section class="panel">
+        <h2>报名名单</h2>
+        <p class="intro">选择活动后查看报名名单，并可取消/拒绝报名。</p>
+        <div class="actions" style="margin-bottom:12px">
+          <select class="select" id="signupEventSelect" style="max-width:360px"></select>
+          <button class="button secondary" type="button" id="refreshSignups">刷新名单</button>
+        </div>
+        <div class="table-wrap" id="signupList"><div class="empty">请选择活动。</div></div>
+        <p class="message" id="signupMessage" role="status"></p>
+      </section>
+    </div>
+  </main>
+  <script>
+    const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
+    const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
+    const SUPER_ADMINS = ['haimingadmin@club.local', 'collen@club.local'];
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const $ = id => document.getElementById(id);
+    let currentSession = null;
+    let eventsCache = [];
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    }
+    function formatTime(value) {
+      if (!value) return '-';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '-';
+      return date.toLocaleString('zh-CN', { hour12: false });
+    }
+    function toLocalInput(value) {
+      if (!value) return '';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '';
+      const pad = n => String(n).padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+    function fromLocalInput(value) {
+      return value ? new Date(value).toISOString() : null;
+    }
+    function setMessage(id, text, type = '') {
+      $(id).textContent = text;
+      $(id).className = `message ${type}`;
+    }
+    async function call(action, body = {}) {
+      if (!currentSession?.access_token) throw new Error('请先登录。');
+      const response = await fetch(FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${currentSession.access_token}`
+        },
+        body: JSON.stringify({ action, ...body })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || '请求失败。');
+      return payload;
+    }
+
+    function resetAnnouncementForm() {
+      $('announcementId').value = '';
+      $('announcementTitle').value = '';
+      $('announcementContent').value = '';
+      $('announcementCategory').value = '社团通知';
+      $('announcementPinned').checked = false;
+      $('announcementPublished').checked = true;
+    }
+    function resetEventForm() {
+      $('eventId').value = '';
+      $('eventTitle').value = '';
+      $('eventSummary').value = '';
+      $('eventContent').value = '';
+      $('eventCategory').value = '活动报名';
+      $('eventStatus').value = '报名中';
+      $('eventLocation').value = '';
+      $('eventStartsAt').value = '';
+      $('eventEndsAt').value = '';
+      $('eventDeadline').value = '';
+      $('eventLimit').value = '';
+      $('eventAllowSignup').checked = true;
+      $('eventFeatured').checked = false;
+      $('eventPublished').checked = true;
+    }
+
+    function renderAnnouncements(items) {
+      if (!items.length) {
+        $('announcementList').innerHTML = '<div class="empty">暂无公告。</div>';
+        return;
+      }
+      $('announcementList').innerHTML = `<table class="table"><thead><tr><th>标题</th><th>分类</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>${items.map(item => `<tr>
+        <td>${escapeHtml(item.title)}</td>
+        <td>${escapeHtml(item.category)}</td>
+        <td>${item.is_published ? '已发布' : '未发布'}${item.is_pinned ? ' / 置顶' : ''}</td>
+        <td>${escapeHtml(formatTime(item.updated_at))}</td>
+        <td class="actions">
+          <button class="button secondary" type="button" data-edit-ann="${escapeHtml(item.id)}">编辑</button>
+          <button class="button danger" type="button" data-del-ann="${escapeHtml(item.id)}">删除</button>
+        </td>
+      </tr>`).join('')}</tbody></table>`;
+
+      $('announcementList').querySelectorAll('[data-edit-ann]').forEach(button => {
+        button.onclick = () => {
+          const item = items.find(row => row.id === button.getAttribute('data-edit-ann'));
+          if (!item) return;
+          $('announcementId').value = item.id;
+          $('announcementTitle').value = item.title || '';
+          $('announcementContent').value = item.content || '';
+          $('announcementCategory').value = item.category || '社团通知';
+          $('announcementPinned').checked = Boolean(item.is_pinned);
+          $('announcementPublished').checked = Boolean(item.is_published);
+          setMessage('announcementMessage', '已载入公告，修改后点保存。');
+        };
+      });
+      $('announcementList').querySelectorAll('[data-del-ann]').forEach(button => {
+        button.onclick = async () => {
+          setMessage('announcementMessage', '正在删除…');
+          try {
+            await call('admin_announcements_delete', { id: button.getAttribute('data-del-ann') });
+            setMessage('announcementMessage', '公告已删除。', 'success');
+            await refresh();
+          } catch (error) {
+            setMessage('announcementMessage', error.message, 'error');
+          }
+        };
+      });
+    }
+
+    function renderEvents(items) {
+      eventsCache = items;
+      $('signupEventSelect').innerHTML = items.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.title)}</option>`).join('') || '<option value="">暂无活动</option>';
+      if (!items.length) {
+        $('eventList').innerHTML = '<div class="empty">暂无活动。</div>';
+        return;
+      }
+      $('eventList').innerHTML = `<table class="table"><thead><tr><th>标题</th><th>状态</th><th>截止</th><th>发布</th><th>操作</th></tr></thead><tbody>${items.map(item => `<tr>
+        <td>${escapeHtml(item.title)}</td>
+        <td>${escapeHtml(item.status)}</td>
+        <td>${escapeHtml(formatTime(item.signup_deadline))}</td>
+        <td>${item.is_published ? '是' : '否'}${item.is_featured ? ' / 首页' : ''}</td>
+        <td class="actions">
+          <button class="button secondary" type="button" data-edit-event="${escapeHtml(item.id)}">编辑</button>
+          <button class="button" type="button" data-view-signups="${escapeHtml(item.id)}">报名名单</button>
+          <button class="button danger" type="button" data-del-event="${escapeHtml(item.id)}">删除</button>
+        </td>
+      </tr>`).join('')}</tbody></table>`;
+
+      $('eventList').querySelectorAll('[data-edit-event]').forEach(button => {
+        button.onclick = () => {
+          const item = items.find(row => row.id === button.getAttribute('data-edit-event'));
+          if (!item) return;
+          $('eventId').value = item.id;
+          $('eventTitle').value = item.title || '';
+          $('eventSummary').value = item.summary || '';
+          $('eventContent').value = item.content || '';
+          $('eventCategory').value = item.category || '活动报名';
+          $('eventStatus').value = item.status || '报名中';
+          $('eventLocation').value = item.location || '';
+          $('eventStartsAt').value = toLocalInput(item.starts_at);
+          $('eventEndsAt').value = toLocalInput(item.ends_at);
+          $('eventDeadline').value = toLocalInput(item.signup_deadline);
+          $('eventLimit').value = item.signup_limit || '';
+          $('eventAllowSignup').checked = Boolean(item.allow_signup);
+          $('eventFeatured').checked = Boolean(item.is_featured);
+          $('eventPublished').checked = Boolean(item.is_published);
+          setMessage('eventMessage', '已载入活动，修改后点保存。');
+        };
+      });
+      $('eventList').querySelectorAll('[data-view-signups]').forEach(button => {
+        button.onclick = () => {
+          $('signupEventSelect').value = button.getAttribute('data-view-signups');
+          void loadSignups();
+        };
+      });
+      $('eventList').querySelectorAll('[data-del-event]').forEach(button => {
+        button.onclick = async () => {
+          setMessage('eventMessage', '正在删除…');
+          try {
+            await call('admin_events_delete', { id: button.getAttribute('data-del-event') });
+            setMessage('eventMessage', '活动已删除。', 'success');
+            await refresh();
+          } catch (error) {
+            setMessage('eventMessage', error.message, 'error');
+          }
+        };
+      });
+    }
+
+    async function loadSignups() {
+      const eventId = $('signupEventSelect').value;
+      if (!eventId) {
+        $('signupList').innerHTML = '<div class="empty">请选择活动。</div>';
+        return;
+      }
+      $('signupList').innerHTML = '<div class="empty loading">正在读取报名名单…</div>';
+      try {
+        const payload = await call('admin_event_signups_list', { eventId });
+        const rows = Array.isArray(payload.signups) ? payload.signups : [];
+        if (!rows.length) {
+          $('signupList').innerHTML = '<div class="empty">该活动暂无报名。</div>';
+          return;
+        }
+        $('signupList').innerHTML = `<table class="table"><thead><tr><th>姓名</th><th>班级</th><th>账号</th><th>联系方式</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows.map(item => `<tr>
+          <td>${escapeHtml(item.member_name)}</td>
+          <td>${escapeHtml(item.member_class || '-')}</td>
+          <td>${escapeHtml(item.username || '-')}</td>
+          <td>${escapeHtml(item.contact || '-')}</td>
+          <td>${escapeHtml(item.status)}</td>
+          <td class="actions">
+            <button class="button secondary" type="button" data-signup-status="${escapeHtml(item.id)}" data-status="已取消">取消</button>
+            <button class="button danger" type="button" data-signup-status="${escapeHtml(item.id)}" data-status="已拒绝">拒绝</button>
+          </td>
+        </tr>`).join('')}</tbody></table>`;
+        $('signupList').querySelectorAll('[data-signup-status]').forEach(button => {
+          button.onclick = async () => {
+            setMessage('signupMessage', '正在更新报名状态…');
+            try {
+              await call('admin_event_signup_update', {
+                id: button.getAttribute('data-signup-status'),
+                status: button.getAttribute('data-status')
+              });
+              setMessage('signupMessage', '报名状态已更新。', 'success');
+              await loadSignups();
+            } catch (error) {
+              setMessage('signupMessage', error.message, 'error');
+            }
+          };
+        });
+      } catch (error) {
+        $('signupList').innerHTML = '<div class="empty">读取失败。</div>';
+        setMessage('signupMessage', error.message, 'error');
+      }
+    }
+
+    async function refresh() {
+      const [announcementsPayload, eventsPayload] = await Promise.all([
+        call('admin_announcements_list'),
+        call('admin_events_list')
+      ]);
+      renderAnnouncements(Array.isArray(announcementsPayload.announcements) ? announcementsPayload.announcements : []);
+      renderEvents(Array.isArray(eventsPayload.events) ? eventsPayload.events : []);
+      if ($('signupEventSelect').value) await loadSignups();
+    }
+
+    async function updateSession(session) {
+      currentSession = session;
+      const logged = Boolean(session?.user?.id);
+      $('gate').classList.toggle('hidden', logged);
+      if (!logged) {
+        $('denied').classList.add('hidden');
+        $('content').classList.add('hidden');
+        return;
+      }
+      try {
+        const access = await call('staff_access_get');
+        const allowed = Boolean(access?.isSuperAdmin || access?.permissions?.can_events || SUPER_ADMINS.includes(session.user.email?.toLowerCase()));
+        $('denied').classList.toggle('hidden', allowed);
+        $('content').classList.toggle('hidden', !allowed);
+        if (allowed) await refresh();
+      } catch (error) {
+        $('denied').classList.remove('hidden');
+        $('content').classList.add('hidden');
+      }
+    }
+
+    $('resetAnnouncement').onclick = resetAnnouncementForm;
+    $('resetEvent').onclick = resetEventForm;
+    $('refreshSignups').onclick = () => void loadSignups();
+    $('announcementForm').onsubmit = async (event) => {
+      event.preventDefault();
+      setMessage('announcementMessage', '正在保存公告…');
+      try {
+        await call('admin_announcements_save', {
+          id: $('announcementId').value || undefined,
+          title: $('announcementTitle').value,
+          content: $('announcementContent').value,
+          category: $('announcementCategory').value,
+          is_pinned: $('announcementPinned').checked,
+          is_published: $('announcementPublished').checked
+        });
+        setMessage('announcementMessage', '公告已保存。', 'success');
+        resetAnnouncementForm();
+        await refresh();
+      } catch (error) {
+        setMessage('announcementMessage', error.message, 'error');
+      }
+    };
+    $('eventForm').onsubmit = async (event) => {
+      event.preventDefault();
+      setMessage('eventMessage', '正在保存活动…');
+      try {
+        await call('admin_events_save', {
+          id: $('eventId').value || undefined,
+          title: $('eventTitle').value,
+          summary: $('eventSummary').value,
+          content: $('eventContent').value,
+          category: $('eventCategory').value,
+          status: $('eventStatus').value,
+          location: $('eventLocation').value,
+          starts_at: fromLocalInput($('eventStartsAt').value),
+          ends_at: fromLocalInput($('eventEndsAt').value),
+          signup_deadline: fromLocalInput($('eventDeadline').value),
+          signup_limit: $('eventLimit').value || null,
+          allow_signup: $('eventAllowSignup').checked,
+          is_featured: $('eventFeatured').checked,
+          is_published: $('eventPublished').checked
+        });
+        setMessage('eventMessage', '活动已保存。', 'success');
+        resetEventForm();
+        await refresh();
+      } catch (error) {
+        setMessage('eventMessage', error.message, 'error');
+      }
+    };
+
+    supabaseClient.auth.onAuthStateChange((_event, session) => { void updateSession(session); });
+    supabaseClient.auth.getSession().then(({ data: { session } }) => updateSession(session));
+  </script>
+</body>
+</html>

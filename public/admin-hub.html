@@ -7,30 +7,60 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js"></script>
   <style>
-    :root{--bg:#030712;--panel:rgba(9,18,38,.84);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--violet:#9278ff;--green:#72f3c2;--danger:#ff718a;--warn:#ffd166;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 10% 0,rgba(0,229,255,.14),transparent 28%),radial-gradient(circle at 90% 8%,rgba(146,120,255,.16),transparent 30%),var(--bg)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.82);backdrop-filter:blur(18px)}.topbar-inner{max-width:1200px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted)}.back:hover{color:var(--cyan)}main{max-width:1200px;margin:auto;padding:56px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}h1{margin:0;font-size:clamp(40px,7vw,74px);letter-spacing:-1.5px;line-height:.98}h2{margin:0 0 8px;font-size:22px}.lead{max-width:760px;color:var(--muted);line-height:1.8;font-size:16px}.panel{border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(16px)}.gate,.denied{min-height:280px;display:grid;place-items:center;text-align:center;padding:28px}.gate strong,.denied strong{display:block;margin-bottom:10px;color:var(--cyan);font-size:24px}.gate p,.denied p{margin:0 0 18px;color:var(--muted);line-height:1.8}.hidden{display:none!important}.button{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:rgba(0,229,255,.12);color:var(--text);cursor:pointer;font:inherit}.button:hover{background:rgba(0,229,255,.22)}.button.secondary{border-color:var(--line);background:transparent}.button.danger{border-color:rgba(255,113,138,.55);background:rgba(255,113,138,.12)}.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr);gap:24px;align-items:end;margin:28px 0}.status-card{padding:22px}.status-card strong{display:block;margin-bottom:8px;color:var(--cyan);font-size:20px}.status-card span{color:var(--muted);font-size:13px;line-height:1.7}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}.stat{padding:18px;border:1px solid rgba(107,169,224,.18);border-radius:12px;background:rgba(0,10,28,.45)}.stat small{display:block;margin-bottom:8px;color:var(--muted);font-size:12px}.stat strong{font-size:28px;color:var(--green)}.section{padding:24px;margin-bottom:18px}.section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:16px}.intro{margin:0;color:var(--muted);line-height:1.7}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.card{display:flex;min-height:150px;flex-direction:column;justify-content:space-between;padding:18px;border:1px solid rgba(107,169,224,.2);border-radius:12px;background:linear-gradient(145deg,rgba(0,229,255,.07),rgba(146,120,255,.08));transition:transform .2s ease,border-color .2s ease}.card:hover{transform:translateY(-3px);border-color:rgba(0,229,255,.65)}.card strong{font-size:18px}.card p{margin:10px 0 0;color:var(--muted);line-height:1.65;font-size:14px}.card span{margin-top:16px;color:var(--cyan);font-size:13px}.form{display:grid;gap:12px;max-width:520px}.form.inline{grid-template-columns:1fr 1fr auto;align-items:end;max-width:none}.label{color:var(--muted);font-size:13px}.input{width:100%;padding:12px 14px;color:var(--text);border:1px solid var(--line);border-radius:8px;background:rgba(2,7,18,.76);outline:none}.input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1)}.secret-box{margin-top:14px;padding:14px 16px;border:1px dashed rgba(0,229,255,.45);border-radius:10px;background:rgba(0,229,255,.08);color:var(--cyan);line-height:1.7;display:none}.secret-box.active{display:block}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:820px}.table th,.table td{padding:12px 8px;border-bottom:1px solid rgba(107,169,224,.14);text-align:left;vertical-align:top}.table th{color:var(--muted);font-size:13px;font-weight:500}.actions{display:flex;gap:8px;flex-wrap:wrap}.badge{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid var(--line);color:var(--muted)}.badge.pending{border-color:rgba(255,209,102,.5);color:var(--warn)}.badge.approved{border-color:rgba(0,229,255,.5);color:var(--cyan)}.badge.used{border-color:rgba(114,243,194,.5);color:var(--green)}.badge.cancelled,.badge.expired{border-color:rgba(255,113,138,.45);color:var(--danger)}.message{min-height:22px;margin:12px 0 0;color:var(--muted);font-size:13px;line-height:1.6}.message.error{color:var(--danger)}.message.success{color:var(--green)}.empty{padding:34px 0;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}@media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr)}.form.inline{grid-template-columns:1fr}}@media(max-width:900px){.hero,.stats,.grid{grid-template-columns:1fr 1fr}}@media(max-width:640px){.topbar-inner{padding:13px 16px}.identity{display:none!important}main{padding:42px 16px 70px}.hero,.stats,.grid{grid-template-columns:1fr}.section{padding:18px}}
+    :root{--bg:#030712;--panel:rgba(9,18,38,.84);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--violet:#9278ff;--green:#72f3c2;--danger:#ff718a;--warn:#ffd166;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 10% 0,rgba(0,229,255,.14),transparent 28%),radial-gradient(circle at 90% 8%,rgba(146,120,255,.16),transparent 30%),var(--bg)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.82);backdrop-filter:blur(18px)}.topbar-inner{max-width:1200px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted)}.back:hover{color:var(--cyan)}main{max-width:1200px;margin:auto;padding:56px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}h1{margin:0;font-size:clamp(40px,7vw,74px);letter-spacing:-1.5px;line-height:.98}h2{margin:0 0 8px;font-size:22px}.lead{max-width:760px;color:var(--muted);line-height:1.8;font-size:16px}.panel{border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(16px)}.gate,.denied{min-height:280px;display:grid;place-items:center;text-align:center;padding:28px}.gate strong,.denied strong{display:block;margin-bottom:10px;color:var(--cyan);font-size:24px}.gate p,.denied p{margin:0 0 18px;color:var(--muted);line-height:1.8}.hidden{display:none!important}.button{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:rgba(0,229,255,.12);color:var(--text);cursor:pointer;font:inherit}.button:hover{background:rgba(0,229,255,.22)}.button.secondary{border-color:var(--line);background:transparent}.button.danger{border-color:rgba(255,113,138,.55);background:rgba(255,113,138,.12)}.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr);gap:24px;align-items:end;margin:28px 0}.status-card{padding:22px}.status-card strong{display:block;margin-bottom:8px;color:var(--cyan);font-size:20px}.status-card span{color:var(--muted);font-size:13px;line-height:1.7}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}.stat{padding:18px;border:1px solid rgba(107,169,224,.18);border-radius:12px;background:rgba(0,10,28,.45)}.stat small{display:block;margin-bottom:8px;color:var(--muted);font-size:12px}.stat strong{font-size:28px;color:var(--green)}.section{padding:24px;margin-bottom:18px}.section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:16px}.intro{margin:0;color:var(--muted);line-height:1.7}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.card{display:flex;min-height:150px;flex-direction:column;justify-content:space-between;padding:18px;border:1px solid rgba(107,169,224,.2);border-radius:12px;background:linear-gradient(145deg,rgba(0,229,255,.07),rgba(146,120,255,.08));transition:transform .2s ease,border-color .2s ease}.card:hover{transform:translateY(-3px);border-color:rgba(0,229,255,.65)}.card strong{font-size:18px}.card p{margin:10px 0 0;color:var(--muted);line-height:1.65;font-size:14px}.card span{margin-top:16px;color:var(--cyan);font-size:13px}.form{display:grid;gap:12px;max-width:520px}.form.inline{grid-template-columns:1fr 1fr auto;align-items:end;max-width:none}.form.perm{grid-template-columns:1.1fr 1fr;max-width:none;align-items:start}.label{color:var(--muted);font-size:13px}.input{width:100%;padding:12px 14px;color:var(--text);border:1px solid var(--line);border-radius:8px;background:rgba(2,7,18,.76);outline:none}.input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1)}.checks{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;border:1px solid rgba(107,169,224,.18);border-radius:10px;background:rgba(0,10,28,.35)}.checks label{display:flex;gap:8px;align-items:center;color:var(--text);font-size:14px}.secret-box{margin-top:14px;padding:14px 16px;border:1px dashed rgba(0,229,255,.45);border-radius:10px;background:rgba(0,229,255,.08);color:var(--cyan);line-height:1.7;display:none}.secret-box.active{display:block}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:820px}.table th,.table td{padding:12px 8px;border-bottom:1px solid rgba(107,169,224,.14);text-align:left;vertical-align:top}.table th{color:var(--muted);font-size:13px;font-weight:500}.actions{display:flex;gap:8px;flex-wrap:wrap}.badge{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid var(--line);color:var(--muted)}.badge.pending{border-color:rgba(255,209,102,.5);color:var(--warn)}.badge.approved{border-color:rgba(0,229,255,.5);color:var(--cyan)}.badge.used{border-color:rgba(114,243,194,.5);color:var(--green)}.badge.cancelled,.badge.expired{border-color:rgba(255,113,138,.45);color:var(--danger)}.badge.on{border-color:rgba(114,243,194,.5);color:var(--green)}.badge.off{border-color:rgba(145,168,194,.35);color:var(--muted)}.message{min-height:22px;margin:12px 0 0;color:var(--muted);font-size:13px;line-height:1.6}.message.error{color:var(--danger)}.message.success{color:var(--green)}.empty{padding:34px 0;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}.perm-tags{display:flex;flex-wrap:wrap;gap:6px}@media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr)}.form.inline,.form.perm{grid-template-columns:1fr}}@media(max-width:900px){.hero,.stats,.grid{grid-template-columns:1fr 1fr}}@media(max-width:640px){.topbar-inner{padding:13px 16px}.identity{display:none!important}main{padding:42px 16px 70px}.hero,.stats,.grid,.checks{grid-template-columns:1fr}.section{padding:18px}}
   </style>
 </head>
 <body>
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong>算法社</strong><small>Admin Hub</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html">返回官网</a></div></header>
   <main>
-    <section id="gate" class="panel gate"><div><strong>请先登录管理员账号</strong><p>管理员总览仅对 Haimingadmin 与 Collen 开放。</p><a class="button" href="drive.html">前往社团盘登录</a></div></section>
-    <section id="denied" class="panel denied hidden"><div><strong>无管理员权限</strong><p>当前账号不是管理员，无法进入后台总览。</p><a class="button" href="member-center.html">返回个人中心</a></div></section>
+    <section id="gate" class="panel gate"><div><strong>请先登录管理账号</strong><p>管理员总览对超管，以及被授予任一管理权限的账号开放。</p><a class="button" href="drive.html">前往社团盘登录</a></div></section>
+    <section id="denied" class="panel denied hidden"><div><strong>无管理权限</strong><p>当前账号没有可管理的模块。请联系 Haimingadmin / Collen 开通对应权限。</p><a class="button" href="member-center.html">返回个人中心</a></div></section>
     <div id="content" class="hidden">
-      <section class="hero"><div><p class="eyebrow">ADMIN OVERVIEW</p><h1>管理员总览</h1><p class="lead">汇总现有管理面板，查看姓名班级绑定，并处理密码重置申请。系统不会保存明文密码，管理员只能生成 24 小时秘钥或直接改密。</p></div><div class="panel status-card"><strong id="statusTitle">管理员已登录</strong><span id="statusHint">正在读取管理数据…</span></div></section>
-      <section class="stats">
-        <div class="panel stat"><small>绑定账号</small><strong id="statBindings">--</strong></div>
-        <div class="panel stat"><small>待处理重置</small><strong id="statPendingResets">--</strong></div>
-        <div class="panel stat"><small>签到码</small><strong id="statCodes">--</strong></div>
-        <div class="panel stat"><small>课程签到待审</small><strong id="statCourse">--</strong></div>
-        <div class="panel stat"><small>积分榜人数</small><strong id="statPoints">--</strong></div>
+      <section class="hero"><div><p class="eyebrow">ADMIN OVERVIEW</p><h1>管理员总览</h1><p class="lead">按权限显示可用管理入口。密码重置、直接改密、姓名班级绑定查看、权限分配仅 Haimingadmin / Collen 可用。</p></div><div class="panel status-card"><strong id="statusTitle">管理账号已登录</strong><span id="statusHint">正在读取管理数据…</span></div></section>
+      <section class="stats" id="statsSection">
+        <div class="panel stat" data-stat="bindings"><small>绑定账号</small><strong id="statBindings">--</strong></div>
+        <div class="panel stat" data-stat="resets"><small>待处理重置</small><strong id="statPendingResets">--</strong></div>
+        <div class="panel stat" data-stat="checkin"><small>签到码</small><strong id="statCodes">--</strong></div>
+        <div class="panel stat" data-stat="checkin"><small>课程签到待审</small><strong id="statCourse">--</strong></div>
+        <div class="panel stat" data-stat="points"><small>积分榜人数</small><strong id="statPoints">--</strong></div>
       </section>
-      <section class="panel section"><div class="section-head"><div><h2>管理面板入口</h2><p class="intro">以下入口来自现有管理员后台能力，点击进入对应页面继续操作。</p></div><button class="button secondary" id="refreshButton" type="button">刷新概览</button></div><div class="grid"><a class="card" href="member-checkin.html"><strong>签到兑换管理</strong><p>生成签到码、查看使用记录、处理待处理姓名与课程签到审核。</p><span>进入签到后台 →</span></a><a class="card" href="member-points.html"><strong>社员积分管理</strong><p>查看积分公示，并维护社员积分、姓名和班级记录。</p><span>进入积分后台 →</span></a><a class="card" href="member-messages.html"><strong>社员留言箱管理</strong><p>查看全部留言，编辑或删除不当内容。</p><span>进入留言后台 →</span></a><a class="card" href="drive.html"><strong>社团盘邀请码管理</strong><p>在社团盘管理员面板生成并查看邀请码。</p><span>进入社团盘 →</span></a></div></section>
+      <section class="panel section"><div class="section-head"><div><h2>管理面板入口</h2><p class="intro">只显示你当前拥有的管理权限对应入口。</p></div><button class="button secondary" id="refreshButton" type="button">刷新概览</button></div><div class="grid" id="entryGrid"></div></section>
 
-      <section class="panel section">
+      <section class="panel section hidden" id="permissionsSection">
+        <div class="section-head">
+          <div>
+            <h2>权限下放</h2>
+            <p class="intro">仅超管可给其他账号选择性开启：签到管理、积分管理、留言箱管理、邀请码管理、活动和公告内容管理。</p>
+          </div>
+        </div>
+        <form class="form perm" id="permissionForm">
+          <div>
+            <label class="label" for="permUsername">账号名</label>
+            <input class="input" id="permUsername" maxlength="40" required placeholder="例如 aabbcc">
+            <label class="label" for="permNote" style="display:block;margin-top:12px">备注（可选）</label>
+            <input class="input" id="permNote" maxlength="200" placeholder="例如：负责签到和活动">
+          </div>
+          <div>
+            <div class="label" style="margin-bottom:8px">可下放权限</div>
+            <div class="checks">
+              <label><input type="checkbox" id="permCheckin"> 签到管理</label>
+              <label><input type="checkbox" id="permPoints"> 积分管理</label>
+              <label><input type="checkbox" id="permMessages"> 留言箱管理</label>
+              <label><input type="checkbox" id="permInvites"> 邀请码管理</label>
+              <label><input type="checkbox" id="permEvents"> 活动与公告</label>
+            </div>
+            <button class="button" type="submit" style="margin-top:12px;width:100%">保存权限</button>
+          </div>
+        </form>
+        <p class="message" id="permissionsMessage" role="status"></p>
+        <div class="table-wrap" id="permissionsList" style="margin-top:16px"><div class="empty loading">正在读取权限列表…</div></div>
+      </section>
+
+      <section class="panel section hidden" id="resetsSection">
         <div class="section-head">
           <div>
             <h2>密码重置申请</h2>
-            <p class="intro">社员提交申请后，管理员生成与账号唯一对应的秘钥。秘钥自生成起 24 小时内有效，仅显示一次，请线下告知申请者。</p>
+            <p class="intro">社员提交申请后，超管生成与账号唯一对应的秘钥。秘钥自生成起 24 小时内有效，仅显示一次，请线下告知申请者。</p>
           </div>
         </div>
         <div class="table-wrap" id="resetsList"><div class="empty loading">正在读取重置申请…</div></div>
@@ -38,7 +68,7 @@
         <p class="message" id="resetsMessage" role="status"></p>
       </section>
 
-      <section class="panel section">
+      <section class="panel section hidden" id="directResetSection">
         <div class="section-head">
           <div>
             <h2>直接修改账号密码</h2>
@@ -59,17 +89,25 @@
         <p class="message" id="directResetMessage" role="status"></p>
       </section>
 
-      <section class="panel section"><div class="section-head"><div><h2>姓名 · 班级 · 账号绑定</h2><p class="intro">展示个人中心已绑定的中文姓名、班级和登录账号。</p></div></div><div class="table-wrap" id="bindingsList"><div class="empty loading">正在读取绑定资料…</div></div><p class="message" id="bindingsMessage" role="status"></p></section>
+      <section class="panel section hidden" id="bindingsSection"><div class="section-head"><div><h2>姓名 · 班级 · 账号绑定</h2><p class="intro">仅超管可查看个人中心已绑定的中文姓名、班级和登录账号。</p></div></div><div class="table-wrap" id="bindingsList"><div class="empty loading">正在读取绑定资料…</div></div><p class="message" id="bindingsMessage" role="status"></p></section>
     </div>
   </main>
   <script>
     const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
     const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
-    const ADMIN_EMAILS = ['haimingadmin@club.local', 'collen@club.local'];
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const $ = id => document.getElementById(id);
     let currentSession = null;
+    let currentAccess = { isSuperAdmin: false, permissions: window.ClubStaffAccess.emptyPermissions() };
+
+    const ENTRY_DEFS = [
+      { key: 'checkin', href: 'member-checkin.html', title: '签到兑换管理', desc: '生成签到码、查看使用记录、处理待处理姓名与课程签到审核。' },
+      { key: 'points', href: 'member-points.html', title: '社员积分管理', desc: '查看积分公示，并维护社员积分、姓名和班级记录。' },
+      { key: 'messages', href: 'member-messages.html', title: '社员留言箱管理', desc: '查看全部留言，编辑或删除不当内容。' },
+      { key: 'invites', href: 'drive.html', title: '社团盘邀请码管理', desc: '在社团盘管理员面板生成并查看邀请码。' },
+      { key: 'events', href: 'events-admin.html', title: '活动与公告管理', desc: '发布社团通知、活动报名、课程安排、比赛信息，并查看报名名单。' }
+    ];
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -103,8 +141,12 @@
       node.className = `message ${type}`;
     }
 
+    function permOn(key) {
+      return Boolean(currentAccess?.isSuperAdmin || currentAccess?.permissions?.[`can_${key}`]);
+    }
+
     async function call(action, body = {}) {
-      if (!currentSession) throw new Error('请先登录管理员账号。');
+      if (!currentSession) throw new Error('请先登录管理账号。');
       const response = await fetch(FUNCTION_URL, {
         method: 'POST',
         headers: {
@@ -116,6 +158,17 @@
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || '请求失败。');
       return payload;
+    }
+
+    function renderEntries() {
+      const cards = ENTRY_DEFS.filter(item => permOn(item.key)).map(item => `
+        <a class="card" href="${item.href}">
+          <strong>${escapeHtml(item.title)}</strong>
+          <p>${escapeHtml(item.desc)}</p>
+          <span>进入 →</span>
+        </a>
+      `).join('');
+      $('entryGrid').innerHTML = cards || '<div class="empty">当前账号暂无可用管理入口。</div>';
     }
 
     function renderBindings(profiles) {
@@ -176,58 +229,188 @@
       });
     }
 
+    function flagBadge(on) {
+      return on ? '<span class="badge on">开</span>' : '<span class="badge off">关</span>';
+    }
+
+    function renderPermissions(rows) {
+      if (!rows.length) {
+        $('permissionsList').innerHTML = '<div class="empty">还没有下放给其他账号的权限。</div>';
+        return;
+      }
+      $('permissionsList').innerHTML = `<table class="table"><thead><tr><th>账号</th><th>签到</th><th>积分</th><th>留言</th><th>邀请码</th><th>活动公告</th><th>备注</th><th>更新时间</th><th>操作</th></tr></thead><tbody>${rows.map(item => `
+        <tr>
+          <td>${escapeHtml(item.username)}</td>
+          <td>${flagBadge(item.can_checkin)}</td>
+          <td>${flagBadge(item.can_points)}</td>
+          <td>${flagBadge(item.can_messages)}</td>
+          <td>${flagBadge(item.can_invites)}</td>
+          <td>${flagBadge(item.can_events)}</td>
+          <td>${escapeHtml(item.note || '-')}</td>
+          <td>${escapeHtml(formatTime(item.updated_at))}</td>
+          <td class="actions">
+            <button class="button secondary" type="button" data-edit-perm="${escapeHtml(item.username)}">载入编辑</button>
+            <button class="button danger" type="button" data-delete-perm="${escapeHtml(item.username)}">清除权限</button>
+          </td>
+        </tr>
+      `).join('')}</tbody></table>`;
+
+      $('permissionsList').querySelectorAll('[data-edit-perm]').forEach(button => {
+        button.addEventListener('click', () => {
+          const username = button.getAttribute('data-edit-perm');
+          const row = rows.find(item => item.username === username);
+          if (!row) return;
+          $('permUsername').value = row.username || '';
+          $('permNote').value = row.note || '';
+          $('permCheckin').checked = Boolean(row.can_checkin);
+          $('permPoints').checked = Boolean(row.can_points);
+          $('permMessages').checked = Boolean(row.can_messages);
+          $('permInvites').checked = Boolean(row.can_invites);
+          $('permEvents').checked = Boolean(row.can_events);
+          setMessage($('permissionsMessage'), `已载入账号 ${username}，修改后点击保存。`);
+        });
+      });
+
+      $('permissionsList').querySelectorAll('[data-delete-perm]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const username = button.getAttribute('data-delete-perm');
+          if (!window.confirm(`确认清除账号 ${username} 的全部下放权限？`)) return;
+          setMessage($('permissionsMessage'), '正在清除权限…');
+          try {
+            await call('admin_staff_permissions_delete', { username });
+            setMessage($('permissionsMessage'), `已清除 ${username} 的权限。`, 'success');
+            await refreshOverview();
+          } catch (error) {
+            setMessage($('permissionsMessage'), error.message, 'error');
+          }
+        });
+      });
+    }
+
+    function applySectionVisibility() {
+      const superAdmin = Boolean(currentAccess.isSuperAdmin);
+      $('permissionsSection').classList.toggle('hidden', !superAdmin);
+      $('resetsSection').classList.toggle('hidden', !superAdmin);
+      $('directResetSection').classList.toggle('hidden', !superAdmin);
+      $('bindingsSection').classList.toggle('hidden', !superAdmin);
+      document.querySelectorAll('#statsSection [data-stat="bindings"], #statsSection [data-stat="resets"]').forEach(node => {
+        node.classList.toggle('hidden', !superAdmin);
+      });
+      document.querySelectorAll('#statsSection [data-stat="checkin"]').forEach(node => {
+        node.classList.toggle('hidden', !permOn('checkin'));
+      });
+      document.querySelectorAll('#statsSection [data-stat="points"]').forEach(node => {
+        node.classList.toggle('hidden', !permOn('points'));
+      });
+      renderEntries();
+    }
+
     async function refreshOverview(options = {}) {
-      $('bindingsList').innerHTML = '<div class="empty loading">正在读取绑定资料…</div>';
-      $('resetsList').innerHTML = '<div class="empty loading">正在读取重置申请…</div>';
-      $('bindingsMessage').textContent = '';
+      applySectionVisibility();
       if (!options.keepSecret) {
         $('secretBox').classList.remove('active');
         $('secretBox').textContent = '';
         setMessage($('resetsMessage'), '');
       }
+
+      const tasks = [];
+      const labels = [];
+      if (currentAccess.isSuperAdmin) {
+        $('bindingsList').innerHTML = '<div class="empty loading">正在读取绑定资料…</div>';
+        $('resetsList').innerHTML = '<div class="empty loading">正在读取重置申请…</div>';
+        $('permissionsList').innerHTML = '<div class="empty loading">正在读取权限列表…</div>';
+        tasks.push(call('admin_member_profiles_list'), call('admin_password_resets_list'), call('admin_staff_permissions_list'));
+        labels.push('profiles', 'resets', 'permissions');
+      }
+      if (permOn('checkin')) {
+        tasks.push(call('admin_checkin_list'), call('admin_course_checkin_list'));
+        labels.push('checkin', 'course');
+      }
+      if (permOn('points')) {
+        tasks.push(call('member_points_list'));
+        labels.push('points');
+      }
+
       try {
-        const [profilesPayload, resetsPayload, checkinPayload, coursePayload, pointsPayload] = await Promise.all([
-          call('admin_member_profiles_list'),
-          call('admin_password_resets_list'),
-          call('admin_checkin_list'),
-          call('admin_course_checkin_list'),
-          call('member_points_list')
-        ]);
-        const profiles = Array.isArray(profilesPayload.profiles) ? profilesPayload.profiles : [];
-        const resets = Array.isArray(resetsPayload.resets) ? resetsPayload.resets : [];
-        const codes = Array.isArray(checkinPayload.codes) ? checkinPayload.codes : [];
-        const course = Array.isArray(coursePayload.requests) ? coursePayload.requests : [];
-        const members = Array.isArray(pointsPayload.members) ? pointsPayload.members : [];
-        const pendingResets = resets.filter(item => item.status === 'pending').length;
-        $('statBindings').textContent = String(profiles.length);
-        $('statPendingResets').textContent = String(pendingResets);
-        $('statCodes').textContent = String(codes.length);
-        $('statCourse').textContent = String(course.length);
-        $('statPoints').textContent = String(members.length);
-        renderBindings(profiles);
-        renderResets(resets);
-        $('statusHint').textContent = `当前管理员：${usernameFromSession(currentSession)}。绑定 ${profiles.length} 条，待处理重置 ${pendingResets} 条。`;
+        const results = await Promise.all(tasks.map(promise => promise.catch(error => ({ __error: error }))));
+        const byLabel = Object.fromEntries(labels.map((label, index) => [label, results[index]]));
+        let hintParts = [`当前账号：${usernameFromSession(currentSession)}`];
+        if (currentAccess.isSuperAdmin) hintParts.push('超管');
+        else {
+          const enabled = ENTRY_DEFS.filter(item => permOn(item.key)).map(item => item.title.replace('管理', ''));
+          hintParts.push(enabled.length ? `权限：${enabled.join(' / ')}` : '无下放权限');
+        }
+
+        if (byLabel.profiles && !byLabel.profiles.__error) {
+          const profiles = Array.isArray(byLabel.profiles.profiles) ? byLabel.profiles.profiles : [];
+          $('statBindings').textContent = String(profiles.length);
+          renderBindings(profiles);
+          hintParts.push(`绑定 ${profiles.length} 条`);
+        } else if (currentAccess.isSuperAdmin) {
+          $('bindingsList').innerHTML = '<div class="empty">暂时无法读取绑定资料。</div>';
+          setMessage($('bindingsMessage'), byLabel.profiles?.__error?.message || '读取失败', 'error');
+        }
+
+        if (byLabel.resets && !byLabel.resets.__error) {
+          const resets = Array.isArray(byLabel.resets.resets) ? byLabel.resets.resets : [];
+          const pendingResets = resets.filter(item => item.status === 'pending').length;
+          $('statPendingResets').textContent = String(pendingResets);
+          renderResets(resets);
+          hintParts.push(`待处理重置 ${pendingResets} 条`);
+        } else if (currentAccess.isSuperAdmin) {
+          $('resetsList').innerHTML = '<div class="empty">暂时无法读取重置申请。</div>';
+          setMessage($('resetsMessage'), byLabel.resets?.__error?.message || '读取失败', 'error');
+        }
+
+        if (byLabel.permissions && !byLabel.permissions.__error) {
+          const permissions = Array.isArray(byLabel.permissions.permissions) ? byLabel.permissions.permissions : [];
+          renderPermissions(permissions);
+        } else if (currentAccess.isSuperAdmin) {
+          $('permissionsList').innerHTML = '<div class="empty">暂时无法读取权限列表。</div>';
+          setMessage($('permissionsMessage'), byLabel.permissions?.__error?.message || '读取失败', 'error');
+        }
+
+        if (byLabel.checkin && !byLabel.checkin.__error) {
+          const codes = Array.isArray(byLabel.checkin.codes) ? byLabel.checkin.codes : [];
+          $('statCodes').textContent = String(codes.length);
+        }
+        if (byLabel.course && !byLabel.course.__error) {
+          const course = Array.isArray(byLabel.course.requests) ? byLabel.course.requests : [];
+          $('statCourse').textContent = String(course.length);
+        }
+        if (byLabel.points && !byLabel.points.__error) {
+          const members = Array.isArray(byLabel.points.members) ? byLabel.points.members : [];
+          $('statPoints').textContent = String(members.length);
+        }
+
+        $('statusHint').textContent = hintParts.join(' · ');
       } catch (error) {
-        $('bindingsList').innerHTML = '<div class="empty">暂时无法读取绑定资料。</div>';
-        $('resetsList').innerHTML = '<div class="empty">暂时无法读取重置申请。</div>';
-        setMessage($('bindingsMessage'), error.message, 'error');
-        setMessage($('resetsMessage'), error.message, 'error');
+        $('statusHint').textContent = error.message;
       }
     }
 
     async function updateSession(session) {
       currentSession = session;
       const logged = Boolean(session?.user?.id);
-      const admin = ADMIN_EMAILS.includes(session?.user?.email?.toLowerCase());
       $('gate').classList.toggle('hidden', logged);
-      $('denied').classList.toggle('hidden', !logged || admin);
-      $('content').classList.toggle('hidden', !(logged && admin));
-      if (!(logged && admin)) return;
-      $('statusTitle').textContent = '管理员已登录';
+      if (!logged) {
+        $('denied').classList.add('hidden');
+        $('content').classList.add('hidden');
+        return;
+      }
+
+      currentAccess = await window.ClubStaffAccess.fetchStaffAccess(session);
+      const allowed = window.ClubStaffAccess.hasStaffAccess(currentAccess);
+      $('denied').classList.toggle('hidden', allowed);
+      $('content').classList.toggle('hidden', !allowed);
+      if (!allowed) return;
+
+      $('statusTitle').textContent = currentAccess.isSuperAdmin ? '超管已登录' : '管理账号已登录';
       await refreshOverview();
     }
 
     $('refreshButton').onclick = () => void refreshOverview();
+
     $('directResetForm').addEventListener('submit', async (event) => {
       event.preventDefault();
       setMessage($('directResetMessage'), '正在直接改密…');
@@ -241,6 +424,26 @@
         await refreshOverview();
       } catch (error) {
         setMessage($('directResetMessage'), error.message, 'error');
+      }
+    });
+
+    $('permissionForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      setMessage($('permissionsMessage'), '正在保存权限…');
+      try {
+        const payload = await call('admin_staff_permissions_save', {
+          username: $('permUsername').value.trim(),
+          note: $('permNote').value.trim(),
+          can_checkin: $('permCheckin').checked,
+          can_points: $('permPoints').checked,
+          can_messages: $('permMessages').checked,
+          can_invites: $('permInvites').checked,
+          can_events: $('permEvents').checked
+        });
+        setMessage($('permissionsMessage'), `已保存账号 ${payload.permission?.username || ''} 的权限。`, 'success');
+        await refreshOverview();
+      } catch (error) {
+        setMessage($('permissionsMessage'), error.message, 'error');
       }
     });
 

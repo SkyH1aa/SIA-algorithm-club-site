@@ -1,7 +1,8 @@
 (() => {
   const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
-  const ADMIN_EMAILS = new Set([
+  const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
+  const SUPER_ADMIN_EMAILS = new Set([
     'haimingadmin@club.local',
     'collen@club.local'
   ]);
@@ -11,26 +12,112 @@
     return email.includes('@') ? email.split('@')[0] : '';
   }
 
-  function isAdminSession(session) {
-    const email = String(session?.user?.email || '').toLowerCase();
-    return ADMIN_EMAILS.has(email);
+  function emptyPermissions() {
+    return {
+      can_checkin: false,
+      can_points: false,
+      can_messages: false,
+      can_invites: false,
+      can_events: false
+    };
   }
 
-  function updateIdentity(session) {
+  function isSuperAdminSession(session) {
+    const email = String(session?.user?.email || '').toLowerCase();
+    return SUPER_ADMIN_EMAILS.has(email);
+  }
+
+  function hasStaffAccess(access) {
+    if (!access) return false;
+    if (access.isSuperAdmin) return true;
+    const permissions = access.permissions || {};
+    return Boolean(
+      permissions.can_checkin
+      || permissions.can_points
+      || permissions.can_messages
+      || permissions.can_invites
+      || permissions.can_events
+    );
+  }
+
+  async function fetchStaffAccess(session) {
+    if (!session?.user?.id || !session?.access_token) {
+      return { isSuperAdmin: false, permissions: emptyPermissions() };
+    }
+    if (isSuperAdminSession(session)) {
+      return {
+        isSuperAdmin: true,
+        permissions: {
+          can_checkin: true,
+          can_points: true,
+          can_messages: true,
+          can_invites: true,
+          can_events: true
+        }
+      };
+    }
+    try {
+      const response = await fetch(FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ action: 'staff_access_get' })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        return { isSuperAdmin: false, permissions: emptyPermissions() };
+      }
+      return {
+        isSuperAdmin: Boolean(payload.isSuperAdmin),
+        permissions: {
+          ...emptyPermissions(),
+          ...(payload.permissions || {})
+        }
+      };
+    } catch (_error) {
+      return { isSuperAdmin: false, permissions: emptyPermissions() };
+    }
+  }
+
+  function applyAdminVisibility(visible) {
+    document.querySelectorAll('[data-admin-only]').forEach((element) => {
+      element.classList.toggle('is-visible', visible);
+      if (visible) element.removeAttribute('hidden');
+      else element.setAttribute('hidden', '');
+    });
+  }
+
+  async function updateIdentity(session) {
     const username = usernameFromSession(session);
-    const admin = isAdminSession(session);
 
     document.querySelectorAll('[data-member-identity]').forEach((element) => {
       element.textContent = username ? `社员：${username}` : '';
       element.hidden = !username;
     });
 
-    document.querySelectorAll('[data-admin-only]').forEach((element) => {
-      element.classList.toggle('is-visible', admin);
-      if (admin) element.removeAttribute('hidden');
-      else element.setAttribute('hidden', '');
-    });
+    if (!session?.user?.id) {
+      applyAdminVisibility(false);
+      return;
+    }
+
+    if (isSuperAdminSession(session)) {
+      applyAdminVisibility(true);
+      return;
+    }
+
+    const access = await fetchStaffAccess(session);
+    applyAdminVisibility(hasStaffAccess(access));
   }
+
+  window.ClubStaffAccess = {
+    SUPER_ADMIN_EMAILS,
+    emptyPermissions,
+    isSuperAdminSession,
+    hasStaffAccess,
+    fetchStaffAccess
+  };
 
   function start() {
     if (!window.supabase) return;

@@ -669,6 +669,7 @@
         <a href="#members">成员</a>
         <a href="#projects">项目</a>
         <a href="#activities">活动</a>
+        <a href="public/events.html">活动公告</a>
         <a href="#join">加入我们</a>
         <a href="public/club-features.html">社团功能</a>
         <a href="public/member-center.html">个人中心</a>
@@ -724,7 +725,7 @@
       </section>
 
       <section id="activities" class="section-block">
-        <div class="section-heading"><p class="eyebrow">CLUB TIMELINE</p><h2>活动安排</h2><p>用时间线展示招新、训练和挑战赛，让官网成为社团对外展示窗口。</p></div>
+        <div class="section-heading inline-heading"><div><p class="eyebrow">CLUB TIMELINE</p><h2>活动安排</h2><p>优先展示后台发布的最新公告与活动；若动态接口暂不可用，则回退到本地活动时间线。</p></div><a class="secondary-action" href="public/events.html">查看全部活动公告 →</a></div>
         <div class="timeline" id="activityList"></div>
       </section>
 
@@ -826,6 +827,13 @@
         `).join('');
       }
 
+      function formatFeedDate(value) {
+        if (!value) return '近期';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+        return date.toLocaleString('zh-CN', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+      }
+
       function renderActivities(activities) {
         document.getElementById('activityList').innerHTML = activities.map(activity => `
           <article class="timeline-item">
@@ -833,6 +841,43 @@
             <div><h3>${escapeHtml(activity.title)}</h3><p>${escapeHtml(activity.intro)}</p></div>
           </article>
         `).join('');
+      }
+
+      function buildHomeFeedItems(payload) {
+        const announcements = Array.isArray(payload?.announcements) ? payload.announcements : [];
+        const events = Array.isArray(payload?.events) ? payload.events : [];
+        const announcementItems = announcements.map(item => ({
+          date: formatFeedDate(item.updated_at || item.created_at),
+          title: `${item.is_pinned ? '【置顶】' : '【公告】'}${item.title || '未命名公告'}`,
+          intro: [item.category, item.content].filter(Boolean).join(' · ')
+        }));
+        const eventItems = events.map(item => ({
+          date: formatFeedDate(item.starts_at || item.signup_deadline || item.updated_at || item.created_at),
+          title: `【活动】${item.title || '未命名活动'}`,
+          intro: [item.status, item.category, item.summary || item.content, item.location ? `地点：${item.location}` : '']
+            .filter(Boolean)
+            .join(' · ')
+        }));
+        return [...announcementItems, ...eventItems].slice(0, 8);
+      }
+
+      async function loadHomeFeed(fallback) {
+        try {
+          const response = await fetch('https://jgezpvmlnhycxslqbwcx.supabase.co/functions/v1/club-drive', {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              apikey: 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl'
+            },
+            body: JSON.stringify({ action: 'public_home_feed' })
+          });
+          if (!response.ok) return fallback;
+          const payload = await response.json();
+          const items = buildHomeFeedItems(payload);
+          return items.length ? items : fallback;
+        } catch (_error) {
+          return fallback;
+        }
       }
 
       function renderBoard() {
@@ -847,11 +892,12 @@
       }
 
       async function init() {
-        const [members, projects, activities] = await Promise.all([
+        const [members, projects, localActivities] = await Promise.all([
           loadJson('public/data/members.json', fallbackMembers),
           loadJson('public/data/projects.json', fallbackProjects),
           loadJson('public/data/activities.json', fallbackActivities)
         ]);
+        const activities = await loadHomeFeed(localActivities);
         renderMembers(members);
         renderProjects(projects);
         renderActivities(activities);
