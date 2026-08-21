@@ -22,7 +22,7 @@
 
       <section class="panel">
         <h2>发布 / 编辑公告</h2>
-        <p class="intro">公告可用于社团通知、课程安排、比赛信息，并支持置顶到首页。</p>
+        <p class="intro">公告可用于社团通知、课程安排、比赛信息，并支持置顶及首页推荐弹窗。</p>
         <form class="form" id="announcementForm">
           <input type="hidden" id="announcementId">
           <div class="grid-2">
@@ -185,7 +185,7 @@
       $('announcementList').innerHTML = `<table class="table"><thead><tr><th>标题</th><th>分类</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>${items.map(item => `<tr>
         <td>${escapeHtml(item.title)}</td>
         <td>${escapeHtml(item.category)}</td>
-        <td>${item.is_published ? '已发布' : '未发布'}${item.is_pinned ? ' / 置顶' : ''}</td>
+        <td>${item.is_published ? '已发布' : '未发布'}${item.is_featured ? ' / 首页' : ''}${item.is_pinned ? ' / 置顶' : ''}</td>
         <td>${escapeHtml(formatTime(item.updated_at))}</td>
         <td class="actions">
           <button class="button secondary" type="button" data-edit-ann="${escapeHtml(item.id)}">编辑</button>
@@ -370,6 +370,7 @@
           content: $('announcementContent').value,
           category: $('announcementCategory').value,
           is_pinned: $('announcementPinned').checked,
+          is_featured: $('announcementFeatured').checked,
           is_published: $('announcementPublished').checked
         });
         setMessage('announcementMessage', '公告已保存。', 'success');

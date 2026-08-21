@@ -599,6 +599,62 @@
         font-size: 14px;
         background: rgba(2, 4, 12, 0.84);
       }
+      .home-feed-item {
+        width: 100%;
+        appearance: none;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+        background: transparent;
+      }
+      .home-feed-item:hover h3,
+      .home-feed-item:focus-visible h3 { color: var(--cyan); }
+      .home-feed-item:focus-visible { outline: 2px solid var(--cyan); outline-offset: 5px; }
+      .feed-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
+      }
+      .feed-modal.is-open { display: flex; }
+      .feed-modal-card {
+        position: relative;
+        width: min(100%, 620px);
+        max-height: min(84vh, 720px);
+        overflow: auto;
+        padding: 30px;
+        border: 1px solid rgba(0, 229, 255, 0.34);
+        border-radius: 16px;
+        background: linear-gradient(145deg, rgba(10, 21, 43, 0.98), rgba(4, 8, 20, 0.98));
+        box-shadow: 0 24px 90px rgba(0, 0, 0, 0.5), 0 0 36px rgba(0, 229, 255, 0.12);
+      }
+      .feed-modal-close {
+        position: absolute;
+        top: 12px;
+        right: 14px;
+        border: 0;
+        color: var(--muted);
+        background: transparent;
+        font-size: 28px;
+        line-height: 1;
+        cursor: pointer;
+      }
+      .feed-modal-close:hover { color: var(--cyan); }
+      .feed-modal-type { margin: 0 0 10px; color: var(--cyan); font: 12px Consolas, "Courier New", monospace; letter-spacing: 0.12em; }
+      .feed-modal-title { margin: 0 34px 10px 0; font-size: clamp(24px, 4vw, 36px); }
+      .feed-modal-meta { margin: 0 0 20px; color: var(--muted); font-size: 14px; }
+      .feed-modal-content { white-space: pre-wrap; color: #dce9ff; line-height: 1.8; }
+      .feed-modal-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+      .feed-modal-actions button { font: inherit; }
+      .feed-modal-never { border: 1px solid rgba(0, 229, 255, 0.35); color: var(--cyan); background: rgba(0, 229, 255, 0.08); cursor: pointer; }
+      .feed-modal-never:hover { background: rgba(0, 229, 255, 0.16); }
+      body.feed-modal-open { overflow: hidden; }
 
       @media (max-width: 980px) {
         .hero, .join-section, .gomoku-section { grid-template-columns: 1fr; }
@@ -765,6 +821,20 @@
 
     <footer class="footer"><span>算法社 · Algorithm Club</span><span>静态托管 · JSON 数据 · AI 五子棋预告入口</span></footer>
 
+    <div class="feed-modal" id="feedModal" role="dialog" aria-modal="true" aria-labelledby="feedModalTitle" aria-hidden="true">
+      <div class="feed-modal-card" role="document">
+        <button class="feed-modal-close" id="feedModalClose" type="button" aria-label="关闭推荐弹窗">×</button>
+        <p class="feed-modal-type" id="feedModalType">首页推荐</p>
+        <h2 class="feed-modal-title" id="feedModalTitle">最新推荐</h2>
+        <p class="feed-modal-meta" id="feedModalMeta"></p>
+        <div class="feed-modal-content" id="feedModalContent"></div>
+        <div class="feed-modal-actions">
+          <a class="primary-action" id="feedModalLink" href="public/events.html">查看详情 →</a>
+          <button class="secondary-action feed-modal-never" id="feedModalNever" type="button">显示不再提醒</button>
+        </div>
+      </div>
+    </div>
+
     <script>
       const fallbackMembers = [
         { name: '陈海铭', grade: 'A1C5-社长', group: '', direction: 'Windows 软件管控工具 / AI 五子棋', intro: 'Windows 软件管控工具 APPMonitor开发者& 五子棋AI模型创建者', avatar: '陈', avatarImage: 'public/assets/member-a1c5.jpg' },
@@ -834,31 +904,117 @@
         return date.toLocaleString('zh-CN', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
       }
 
+      let homeFeedItems = [];
+      let currentFeedItem = null;
+      let temporarilySkippedFeedIds = new Set();
+      const feedDismissKey = 'algorithm-club-home-feed-dismissed-v1';
+
+      function readDismissedFeedIds() {
+        try { return JSON.parse(localStorage.getItem(feedDismissKey) || '[]'); } catch (_error) { return []; }
+      }
+
+      function saveDismissedFeedIds(ids) {
+        try { localStorage.setItem(feedDismissKey, JSON.stringify(ids)); } catch (_error) { /* storage may be unavailable */ }
+      }
+
+      function getFeedItemId(item) {
+        return String(item.id || `${item.kind}-${item.title}-${item.date}`).replace(/[^a-zA-Z0-9_-]/g, '_');
+      }
+
       function renderActivities(activities) {
+        homeFeedItems = activities;
         document.getElementById('activityList').innerHTML = activities.map(activity => `
-          <article class="timeline-item">
+          <button class="timeline-item home-feed-item" type="button" data-feed-id="${escapeHtml(getFeedItemId(activity))}">
             <div class="timeline-date">${escapeHtml(activity.date)}</div>
             <div><h3>${escapeHtml(activity.title)}</h3><p>${escapeHtml(activity.intro)}</p></div>
-          </article>
+          </button>
         `).join('');
+        document.querySelectorAll('[data-feed-id]').forEach(item => {
+          item.addEventListener('click', () => openFeedModal(homeFeedItems.find(feedItem => getFeedItemId(feedItem) === item.dataset.feedId)));
+        });
       }
 
       function buildHomeFeedItems(payload) {
         const announcements = Array.isArray(payload?.announcements) ? payload.announcements : [];
         const events = Array.isArray(payload?.events) ? payload.events : [];
         const announcementItems = announcements.map(item => ({
+          id: item.id,
+          kind: 'announcement',
+          is_featured: Boolean(item.is_featured),
+          typeLabel: '首页推荐 · 公告',
           date: formatFeedDate(item.updated_at || item.created_at),
-          title: `${item.is_pinned ? '【置顶】' : '【公告】'}${item.title || '未命名公告'}`,
-          intro: [item.category, item.content].filter(Boolean).join(' · ')
+          title: item.title || '未命名公告',
+          intro: [item.category, item.content].filter(Boolean).join(' · '),
+          content: item.content || item.summary || '暂无公告详情。',
+          meta: [item.category, formatFeedDate(item.updated_at || item.created_at)].filter(Boolean).join(' · '),
+          link: 'public/events.html'
         }));
         const eventItems = events.map(item => ({
+          id: item.id,
+          kind: 'event',
+          is_featured: Boolean(item.is_featured),
+          typeLabel: '首页推荐 · 活动',
           date: formatFeedDate(item.starts_at || item.signup_deadline || item.updated_at || item.created_at),
-          title: `【活动】${item.title || '未命名活动'}`,
-          intro: [item.status, item.category, item.summary || item.content, item.location ? `地点：${item.location}` : '']
-            .filter(Boolean)
-            .join(' · ')
+          title: item.title || '未命名活动',
+          intro: [item.status, item.category, item.summary || item.content, item.location ? `地点：${item.location}` : ''].filter(Boolean).join(' · '),
+          content: item.content || item.summary || '暂无活动详情。',
+          meta: [item.status, item.category, item.location ? `地点：${item.location}` : '', item.starts_at ? `开始：${formatFeedDate(item.starts_at)}` : ''].filter(Boolean).join(' · '),
+          link: 'public/events.html'
         }));
-        return [...announcementItems, ...eventItems].slice(0, 8);
+        const allItems = [...announcementItems, ...eventItems];
+        const featuredItems = allItems.filter(item => item.is_featured === true);
+        const latestItems = allItems.filter(item => item.is_featured !== true).slice(0, 8);
+        return [...featuredItems, ...latestItems];
+      }
+
+      function closeFeedModal() {
+        const modal = document.getElementById('feedModal');
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('feed-modal-open');
+        currentFeedItem = null;
+      }
+
+      function openFeedModal(item) {
+        if (!item) return;
+        currentFeedItem = item;
+        document.getElementById('feedModalType').textContent = item.typeLabel || '首页推荐';
+        document.getElementById('feedModalTitle').textContent = item.title;
+        document.getElementById('feedModalMeta').textContent = item.meta || item.date || '';
+        document.getElementById('feedModalContent').textContent = item.content || item.intro || '';
+        document.getElementById('feedModalLink').href = item.link || 'public/events.html';
+        const modal = document.getElementById('feedModal');
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('feed-modal-open');
+      }
+
+      function showHomeRecommendation() {
+        const dismissed = new Set(readDismissedFeedIds());
+        const nextItem = homeFeedItems.find(item => {
+          const id = getFeedItemId(item);
+          return item.is_featured === true && !dismissed.has(id) && !temporarilySkippedFeedIds.has(id);
+        });
+        if (nextItem) openFeedModal(nextItem);
+        else closeFeedModal();
+      }
+
+      function skipCurrentFeedTemporarily() {
+        if (!currentFeedItem) return;
+        temporarilySkippedFeedIds.add(getFeedItemId(currentFeedItem));
+        closeFeedModal();
+        showHomeRecommendation();
+      }
+
+      function dismissCurrentFeedForever() {
+        if (!currentFeedItem) return;
+        const id = getFeedItemId(currentFeedItem);
+        const dismissed = new Set(readDismissedFeedIds());
+        dismissed.add(id);
+        saveDismissedFeedIds([...dismissed]);
+        temporarilySkippedFeedIds.delete(id);
+        closeFeedModal();
+        showHomeRecommendation();
       }
 
       async function loadHomeFeed(fallback) {
@@ -903,7 +1059,21 @@
         renderActivities(activities);
         renderBoard();
         observeRevealItems();
+        showHomeRecommendation();
       }
+
+      document.getElementById('feedModalClose').addEventListener('click', skipCurrentFeedTemporarily);
+      document.getElementById('feedModalNever').addEventListener('click', dismissCurrentFeedForever);
+      document.getElementById('feedModal').addEventListener('click', event => {
+        if (event.target.id === 'feedModal') skipCurrentFeedTemporarily();
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && currentFeedItem) skipCurrentFeedTemporarily();
+      });
+      window.addEventListener('pageshow', () => {
+        temporarilySkippedFeedIds = new Set();
+        if (homeFeedItems.length) showHomeRecommendation();
+      });
 
       document.getElementById('menuButton').addEventListener('click', () => {
         document.getElementById('nav').classList.toggle('open');
