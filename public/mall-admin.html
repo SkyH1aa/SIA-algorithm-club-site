@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>积分商城管理 · 算法社</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="member-identity.js" defer></script>
+  <style>
+    :root{--bg:#030712;--panel:rgba(9,18,38,.84);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--green:#72f3c2;--danger:#ff718a;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 12% 0,rgba(0,229,255,.14),transparent 28%),radial-gradient(circle at 88% 10%,rgba(146,120,255,.16),transparent 30%),var(--bg)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.82);backdrop-filter:blur(18px)}.topbar-inner{max-width:1200px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted)}main{max-width:1200px;margin:auto;padding:56px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}h1{margin:0 0 12px;font-size:clamp(36px,7vw,64px)}.lead{max-width:780px;color:var(--muted);line-height:1.8;margin:0 0 24px}.panel{padding:22px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);margin-bottom:16px}.panel h2{margin:0 0 8px}.intro{margin:0 0 16px;color:var(--muted);line-height:1.7}.gate,.denied{min-height:240px;display:grid;place-items:center;text-align:center}.hidden{display:none!important}.button{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:rgba(0,229,255,.12);color:var(--text);cursor:pointer;font:inherit}.button.secondary{border-color:var(--line);background:transparent}.button.danger{border-color:rgba(255,113,138,.55);background:rgba(255,113,138,.12)}.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.form{display:grid;gap:10px}.label{color:var(--muted);font-size:13px}.input,.textarea{width:100%;padding:11px 13px;color:var(--text);border:1px solid var(--line);border-radius:8px;background:rgba(2,7,18,.76);outline:none;font:inherit}.textarea{min-height:84px;resize:vertical}.checks{display:flex;flex-wrap:wrap;gap:12px;color:var(--muted);font-size:13px}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:860px}.table th,.table td{padding:11px 8px;border-bottom:1px solid rgba(107,169,224,.14);text-align:left;vertical-align:top}.table th{color:var(--muted);font-size:13px;font-weight:500}.actions{display:flex;gap:8px;flex-wrap:wrap}.thumb{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.25)}.badge{display:inline-flex;padding:3px 8px;border-radius:999px;font-size:12px}.badge.on{color:var(--green);border:1px solid rgba(114,243,194,.35);background:rgba(114,243,194,.08)}.badge.off{color:var(--muted);border:1px solid var(--line)}.message{min-height:22px;margin:10px 0 0;color:var(--muted);font-size:13px}.message.error{color:var(--danger)}.message.success{color:var(--green)}.empty{padding:24px 0;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}.section-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr}.identity{display:none!important}main{padding:42px 16px 70px}}
+  </style>
+</head>
+<body>
+  <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong>算法社</strong><small>Mall Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html">返回管理员总览</a></div></header>
+  <main>
+    <section id="gate" class="panel gate"><div><strong>请先登录</strong><p class="intro">积分商城管理需要对应权限。</p><a class="button" href="drive.html">前往社团盘登录</a></div></section>
+    <section id="denied" class="panel denied hidden"><div><strong>无积分商城管理权限</strong><p class="intro">请联系超管开通「积分商城」权限。</p></div></section>
+    <div id="content" class="hidden">
+      <p class="eyebrow">POINTS MALL ADMIN</p>
+      <h1>积分商城管理</h1>
+      <p class="lead">自定义商品名称、兑换积分、库存、上架状态与可选配图 URL。社员兑换后会立即扣积分并减库存；线下发货完成后点「已处理」即可删除该兑换记录。</p>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h2>发布 / 编辑商品</h2>
+            <p class="intro">配图只需填写图床图片 URL；留空表示无配图。已上架商品也可直接编辑。</p>
+          </div>
+          <button class="button secondary" type="button" id="refreshProducts">刷新商品</button>
+        </div>
+        <form class="form" id="productForm">
+          <input type="hidden" id="productId">
+          <div class="grid-2">
+            <div><label class="label" for="productName">商品名称</label><input class="input" id="productName" maxlength="80" required placeholder="例如 狼蛛磁轴键盘"></div>
+            <div><label class="label" for="productImageUrl">配图 URL（可选）</label><input class="input" id="productImageUrl" maxlength="500" placeholder="https://... 留空=无配图"></div>
+          </div>
+          <label class="label" for="productDescription">商品说明（可选）</label>
+          <textarea class="textarea" id="productDescription" maxlength="500" placeholder="简要说明规格、领取方式等"></textarea>
+          <div class="grid-3">
+            <div><label class="label" for="productPrice">兑换积分</label><input class="input" id="productPrice" type="number" min="1" max="1000000" required></div>
+            <div><label class="label" for="productStock">库存</label><input class="input" id="productStock" type="number" min="0" max="1000000" required></div>
+            <div><label class="label" for="productSort">排序（越小越靠前）</label><input class="input" id="productSort" type="number" min="0" max="100000" value="0"></div>
+          </div>
+          <div class="checks"><label><input type="checkbox" id="productListed"> 立即上架</label></div>
+          <div class="actions">
+            <button class="button" type="submit" id="productSaveButton">保存商品</button>
+            <button class="button secondary" type="button" id="resetProduct">清空表单</button>
+          </div>
+        </form>
+        <p class="message" id="productMessage" role="status"></p>
+        <div class="table-wrap" id="productList" style="margin-top:16px"><div class="empty loading">正在读取商品…</div></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h2>兑换记录</h2>
+            <p class="intro">展示待线下发放的兑换申请。点「已处理」会删除该条记录。</p>
+          </div>
+          <button class="button secondary" type="button" id="refreshRedemptions">刷新记录</button>
+        </div>
+        <div class="table-wrap" id="redemptionList"><div class="empty loading">正在读取兑换记录…</div></div>
+        <p class="message" id="redemptionMessage" role="status"></p>
+      </section>
+    </div>
+  </main>
+  <script>
+    const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
+    const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const $ = id => document.getElementById(id);
+    let productsCache = [];
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    }
+    function formatTime(value) {
+      if (!value) return '-';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '-';
+      return date.toLocaleString('zh-CN', { hour12: false });
+    }
+    function setMessage(node, text, type = '') {
+      node.textContent = text || '';
+      node.className = `message ${type}`;
+    }
+    async function call(action, body = {}) {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) throw new Error('请先登录。');
+      const response = await fetch(FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ action, ...body })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || '操作失败。');
+      return payload;
+    }
+
+    function resetProductForm() {
+      $('productForm').reset();
+      $('productId').value = '';
+      $('productSort').value = '0';
+      $('productListed').checked = false;
+      $('productSaveButton').textContent = '保存商品';
+      setMessage($('productMessage'), '');
+    }
+
+    function startEditProduct(id) {
+      const product = productsCache.find(item => item.id === id);
+      if (!product) return;
+      $('productId').value = product.id;
+      $('productName').value = product.name || '';
+      $('productImageUrl').value = product.image_url || '';
+      $('productDescription').value = product.description || '';
+      $('productPrice').value = product.price;
+      $('productStock').value = product.stock;
+      $('productSort').value = product.sort_order ?? 0;
+      $('productListed').checked = Boolean(product.is_listed);
+      $('productSaveButton').textContent = '保存修改';
+      setMessage($('productMessage'), `正在编辑「${product.name}」。`, 'success');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function renderProducts(products) {
+      productsCache = products;
+      if (!products.length) {
+        $('productList').innerHTML = '<div class="empty">还没有商品，请先在上方添加。</div>';
+        return;
+      }
+      $('productList').innerHTML = `<table class="table"><thead><tr><th>配图</th><th>商品</th><th>积分</th><th>库存</th><th>状态</th><th>排序</th><th>更新时间</th><th>操作</th></tr></thead><tbody>${products.map(item => `
+        <tr>
+          <td>${item.image_url ? `<img class="thumb" src="${escapeHtml(item.image_url)}" alt="">` : '<span class="badge off">无配图</span>'}</td>
+          <td><strong>${escapeHtml(item.name)}</strong><div style="color:var(--muted);font-size:12px;margin-top:4px;line-height:1.5">${escapeHtml(item.description || '-')}</div></td>
+          <td>${escapeHtml(item.price)}</td>
+          <td>${escapeHtml(item.stock)}</td>
+          <td><span class="badge ${item.is_listed ? 'on' : 'off'}">${item.is_listed ? '已上架' : '已下架'}</span></td>
+          <td>${escapeHtml(item.sort_order ?? 0)}</td>
+          <td>${escapeHtml(formatTime(item.updated_at))}</td>
+          <td class="actions">
+            <button class="button secondary" type="button" data-edit-product="${escapeHtml(item.id)}">编辑</button>
+            <button class="button danger" type="button" data-delete-product="${escapeHtml(item.id)}">删除</button>
+          </td>
+        </tr>
+      `).join('')}</tbody></table>`;
+
+      $('productList').querySelectorAll('[data-edit-product]').forEach(button => {
+        button.addEventListener('click', () => startEditProduct(button.getAttribute('data-edit-product')));
+      });
+      $('productList').querySelectorAll('[data-delete-product]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const id = button.getAttribute('data-delete-product');
+          const product = productsCache.find(item => item.id === id);
+          if (!window.confirm(`确认删除商品「${product?.name || id}」？`)) return;
+          setMessage($('productMessage'), '正在删除…');
+          try {
+            await call('admin_mall_products_delete', { id });
+            setMessage($('productMessage'), '商品已删除。', 'success');
+            if ($('productId').value === id) resetProductForm();
+            await refreshProducts();
+          } catch (error) {
+            setMessage($('productMessage'), error.message, 'error');
+          }
+        });
+      });
+    }
+
+    function renderRedemptions(rows) {
+      if (!rows.length) {
+        $('redemptionList').innerHTML = '<div class="empty">暂无待处理兑换记录。</div>';
+        return;
+      }
+      $('redemptionList').innerHTML = `<table class="table"><thead><tr><th>商品</th><th>消耗积分</th><th>账号</th><th>姓名</th><th>班级</th><th>兑换时间</th><th>操作</th></tr></thead><tbody>${rows.map(item => `
+        <tr>
+          <td>${escapeHtml(item.product_name)}</td>
+          <td>${escapeHtml(item.points_spent || item.product_price)}</td>
+          <td>${escapeHtml(item.username || '-')}</td>
+          <td>${escapeHtml(item.member_name || '-')}</td>
+          <td>${escapeHtml(item.member_class || '-')}</td>
+          <td>${escapeHtml(formatTime(item.created_at))}</td>
+          <td class="actions"><button class="button" type="button" data-done-redemption="${escapeHtml(item.id)}">已处理</button></td>
+        </tr>
+      `).join('')}</tbody></table>`;
+
+      $('redemptionList').querySelectorAll('[data-done-redemption]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const id = button.getAttribute('data-done-redemption');
+          if (!window.confirm('确认已线下发放？该操作会删除这条兑换记录。')) return;
+          setMessage($('redemptionMessage'), '正在标记已处理…');
+          try {
+            await call('admin_mall_redemption_delete', { id });
+            setMessage($('redemptionMessage'), '已处理并删除该记录。', 'success');
+            await refreshRedemptions();
+          } catch (error) {
+            setMessage($('redemptionMessage'), error.message, 'error');
+          }
+        });
+      });
+    }
+
+    async function refreshProducts() {
+      $('productList').innerHTML = '<div class="empty loading">正在读取商品…</div>';
+      try {
+        const payload = await call('admin_mall_products_list');
+        renderProducts(payload.products || []);
+        setMessage($('productMessage'), '');
+      } catch (error) {
+        $('productList').innerHTML = '<div class="empty">暂时无法读取商品。</div>';
+        setMessage($('productMessage'), error.message, 'error');
+      }
+    }
+
+    async function refreshRedemptions() {
+      $('redemptionList').innerHTML = '<div class="empty loading">正在读取兑换记录…</div>';
+      try {
+        const payload = await call('admin_mall_redemptions_list');
+        renderRedemptions(payload.redemptions || []);
+        setMessage($('redemptionMessage'), '');
+      } catch (error) {
+        $('redemptionList').innerHTML = '<div class="empty">暂时无法读取兑换记录。</div>';
+        setMessage($('redemptionMessage'), error.message, 'error');
+      }
+    }
+
+    async function updateView(session) {
+      currentSession = session;
+      const loggedIn = Boolean(session?.user?.id);
+      $('gate').classList.toggle('hidden', loggedIn);
+      if (!loggedIn) {
+        $('denied').classList.add('hidden');
+        $('content').classList.add('hidden');
+        return;
+      }
+      const access = window.ClubStaffAccess
+        ? await window.ClubStaffAccess.fetchStaffAccess(session)
+        : { isSuperAdmin: false, permissions: {} };
+      const allowed = Boolean(access.isSuperAdmin || access.permissions?.can_mall);
+      $('denied').classList.toggle('hidden', allowed);
+      $('content').classList.toggle('hidden', !allowed);
+      if (allowed) {
+        await Promise.all([refreshProducts(), refreshRedemptions()]);
+      }
+    }
+
+    $('resetProduct').addEventListener('click', resetProductForm);
+    $('refreshProducts').addEventListener('click', refreshProducts);
+    $('refreshRedemptions').addEventListener('click', refreshRedemptions);
+    $('productForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      setMessage($('productMessage'), '正在保存商品…');
+      try {
+        const id = $('productId').value.trim();
+        await call('admin_mall_products_save', {
+          id: id || undefined,
+          name: $('productName').value.trim(),
+          description: $('productDescription').value.trim(),
+          imageUrl: $('productImageUrl').value.trim(),
+          price: Number($('productPrice').value),
+          stock: Number($('productStock').value),
+          sortOrder: Number($('productSort').value || 0),
+          isListed: $('productListed').checked
+        });
+        setMessage($('productMessage'), id ? '商品已更新。' : '商品已添加。', 'success');
+        resetProductForm();
+        await refreshProducts();
+      } catch (error) {
+        setMessage($('productMessage'), error.message, 'error');
+      }
+    });
+
+    let currentSession = null;
+    supabaseClient.auth.onAuthStateChange((_event, session) => { void updateView(session); });
+    supabaseClient.auth.getSession().then(({ data: { session } }) => updateView(session));
+  </script>
+</body>
+</html>

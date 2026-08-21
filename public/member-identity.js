@@ -19,7 +19,8 @@
       can_points: false,
       can_messages: false,
       can_invites: false,
-      can_events: false
+      can_events: false,
+      can_mall: false
     };
   }
 
@@ -35,7 +36,8 @@
         can_points: true,
         can_messages: true,
         can_invites: true,
-        can_events: true
+        can_events: true,
+        can_mall: true
       }
     };
   }
@@ -50,6 +52,7 @@
       || permissions.can_messages
       || permissions.can_invites
       || permissions.can_events
+      || permissions.can_mall
     );
   }
 
