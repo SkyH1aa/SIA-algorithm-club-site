@@ -378,11 +378,9 @@
     }
     .mobile-controls .pad-left {
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      grid-template-rows: 48px 48px;
-      grid-template-areas:
-        ". . ."
-        "left soft right";
-      align-content: end;
+      grid-template-rows: minmax(44px, 52px);
+      grid-template-areas: "left soft right";
+      align-content: stretch;
     }
     .mobile-controls .pad-right {
       grid-template-columns: 1fr 1fr;
@@ -393,14 +391,14 @@
     .mobile-controls .pad-left .btn-left { grid-area: left; }
     .mobile-controls .pad-left .btn-soft { grid-area: soft; }
     .mobile-controls .pad-left .btn-right { grid-area: right; }
-    .mobile-controls .pad-right .btn-rot { grid-area: rot; min-height: 64px; }
-    .mobile-controls .pad-right .btn-hard { grid-area: hard; min-height: 64px; }
+    .mobile-controls .pad-right .btn-rot { grid-area: rot; min-height: 52px; }
+    .mobile-controls .pad-right .btn-hard { grid-area: hard; min-height: 52px; }
     .mobile-btn {
       appearance: none;
       border: 1px solid rgba(56,189,248,.35);
       border-radius: 12px;
-      min-height: 48px;
-      padding: 8px 6px;
+      min-height: 44px;
+      padding: 6px 4px;
       background: rgba(12, 28, 48, .95);
       color: #e7f7ff;
       font-size: 18px;
@@ -522,8 +520,61 @@
       canvas.board { height: min(560px, calc(100dvh - 250px)); max-height: calc(100dvh - 250px); }
     }
     @media (max-width: 760px) {
-      .boards { flex-wrap: wrap; overflow: auto; }
+      body {
+        overflow: hidden;
+        height: 100dvh;
+        padding: 6px 8px 0;
+      }
+      .page-shell {
+        width: 100%;
+        height: 100dvh;
+        min-height: 0;
+        gap: 4px;
+        padding-bottom: calc(var(--mobile-controls-h, 96px) + env(safe-area-inset-bottom, 0px));
+        overflow: hidden;
+      }
+      .page-header { gap: 4px 8px; }
+      .page-header h1 { font-size: 15px; }
+      .page-header a { font-size: 12px; }
+      .layout {
+        grid-template-columns: 1fr;
+        gap: 6px;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      main.panel {
+        gap: 4px;
+        padding: 8px;
+        overflow: hidden;
+        min-height: calc(100dvh - 140px - env(safe-area-inset-bottom, 0px));
+      }
+      .toolbar { gap: 4px; }
+      .setup { gap: 4px 8px; }
+      #nickHint { display: none; }
+      .setup input { min-width: 0; flex: 1 1 120px; }
+      .mode-btn, .action-btn { padding: 5px 8px; font-size: 11px; }
+      .assist-opts,
+      .versus-ai-opts,
+      .ai-play-opts { padding: 4px 6px; gap: 4px 8px; }
+      .assist-opts .opt-desc,
+      .versus-ai-opts .opt-desc,
+      .ai-play-opts .opt-desc { display: none; }
+
+      .play-area {
+        gap: 4px;
+        overflow: hidden;
+        min-height: 0;
+      }
+      .boards {
+        flex-wrap: nowrap;
+        gap: 6px;
+        overflow: hidden;
+        align-items: flex-start;
+        justify-content: center;
+      }
       .board-card {
+        flex: 1 1 0;
+        min-width: 0;
         grid-template-columns: 1fr;
         grid-template-areas:
           "title"
@@ -531,26 +582,85 @@
           "meta";
         justify-items: center;
         text-align: center;
+        row-gap: 2px;
       }
-      .board-meta { min-width: 0; width: min(240px, 100%); }
-      .stats { grid-template-columns: repeat(3, 1fr); }
-      .assist-opts .opt-desc,
-      .versus-ai-opts .opt-desc,
-      .ai-play-opts .opt-desc { display: none; }
+      .board-card h3 { font-size: 12px; }
+      .board-meta {
+        min-width: 0;
+        width: 100%;
+        gap: 4px;
+      }
+      .stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 2px;
+        font-size: 10px;
+      }
+      .stats strong { font-size: 12px; }
+      .next-box { padding: 4px; }
+      .next-box canvas { width: 56px; height: 36px; }
+
+      canvas.board {
+        width: min(52vw, 190px);
+        height: auto !important;
+        max-height: calc(100dvh - 270px - env(safe-area-inset-bottom, 0px)) !important;
+        aspect-ratio: 1 / 2;
+      }
+      /* 人机对战：双盘并排缩小，给底部按键留空 */
+      .boards:has(#aiCard:not(.hidden)) canvas.board {
+        width: min(40vw, 148px);
+        max-height: calc(100dvh - 290px - env(safe-area-inset-bottom, 0px)) !important;
+      }
+
+      .footer-bar {
+        gap: 2px 8px;
+        min-height: 0;
+      }
+      .versus-diff { font-size: 11px; }
+      .versus-diff strong { font-size: 12px; }
+      .result { font-size: 11px; }
+      .controls-hint { display: none; }
 
       .mobile-controls {
-        position: sticky;
-        bottom: 0;
-        z-index: 8;
-        margin-bottom: env(safe-area-inset-bottom, 0px);
+        position: fixed;
+        left: 8px;
+        right: 8px;
+        bottom: max(6px, env(safe-area-inset-bottom, 0px));
+        z-index: 50;
+        margin: 0;
+        padding: 6px;
+        gap: 8px;
+        box-shadow: 0 -8px 24px rgba(0, 0, 0, .45);
       }
       .mobile-controls.visible { display: flex; }
-      .controls-hint { display: none; }
-      canvas.board { width: min(220px, 68vw); height: auto; max-height: none; aspect-ratio: 1 / 2; }
+      .mobile-controls .pad-left {
+        grid-template-rows: 46px;
+      }
+      .mobile-controls .pad-right .btn-rot,
+      .mobile-controls .pad-right .btn-hard { min-height: 46px; }
+      .mobile-btn { min-height: 46px; font-size: 16px; }
+      .mobile-btn span { font-size: 9px; }
+
+      .leaderboard.panel {
+        max-height: 180px;
+        flex: 0 0 auto;
+      }
+    }
+    @media (max-width: 760px) and (max-height: 700px) {
+      canvas.board {
+        max-height: calc(100dvh - 250px - env(safe-area-inset-bottom, 0px)) !important;
+      }
+      .boards:has(#aiCard:not(.hidden)) canvas.board {
+        width: min(38vw, 132px);
+        max-height: calc(100dvh - 260px - env(safe-area-inset-bottom, 0px)) !important;
+      }
+      .next-box { display: none; }
+      .page-header .member-identity { display: none !important; }
     }
     @media (max-height: 760px) {
-      canvas.board { height: min(520px, calc(100dvh - 190px)); max-height: calc(100dvh - 190px); }
       .page-header h1 { font-size: 16px; }
+    }
+    @media (max-height: 760px) and (min-width: 761px) {
+      canvas.board { height: min(520px, calc(100dvh - 190px)); max-height: calc(100dvh - 190px); }
     }
     @media (prefers-reduced-motion: reduce) {
       .ambient-orb, .ambient-grid { animation: none; }
@@ -664,19 +774,6 @@
             </div>
           </div>
 
-
-          <div class="mobile-controls" id="mobileControls" aria-label="移动端操作">
-            <div class="pad-left">
-              <button type="button" class="mobile-btn btn-left" data-action="left" aria-label="左移">←<span>左移</span></button>
-              <button type="button" class="mobile-btn btn-soft" data-action="soft" aria-label="软降">↓<span>软降</span></button>
-              <button type="button" class="mobile-btn btn-right" data-action="right" aria-label="右移">→<span>右移</span></button>
-            </div>
-            <div class="pad-right">
-              <button type="button" class="mobile-btn btn-rot" data-action="rotate" aria-label="旋转">↻<span>旋转</span></button>
-              <button type="button" class="mobile-btn btn-hard" data-action="hard" aria-label="硬降">▼<span>硬降</span></button>
-            </div>
-          </div>
-
           <div class="footer-bar">
             <div class="versus-diff hidden" id="versusDiff">分差（玩家 − AI）<strong id="diffScore">0</strong></div>
             <p class="result" id="result" aria-live="polite"></p>
@@ -694,6 +791,18 @@
         <p class="hint" id="lbHint">普通：昵称 / 局数 / 最高分 · 按最高分降序</p>
         <ol class="leaderboard-list" id="leaderboardList"><li class="empty">正在读取排行榜...</li></ol>
       </aside>
+    </div>
+  </div>
+
+  <div class="mobile-controls" id="mobileControls" aria-label="移动端操作">
+    <div class="pad-left">
+      <button type="button" class="mobile-btn btn-left" data-action="left" aria-label="左移">←<span>左移</span></button>
+      <button type="button" class="mobile-btn btn-soft" data-action="soft" aria-label="软降">↓<span>软降</span></button>
+      <button type="button" class="mobile-btn btn-right" data-action="right" aria-label="右移">→<span>右移</span></button>
+    </div>
+    <div class="pad-right">
+      <button type="button" class="mobile-btn btn-rot" data-action="rotate" aria-label="旋转">↻<span>旋转</span></button>
+      <button type="button" class="mobile-btn btn-hard" data-action="hard" aria-label="硬降">▼<span>硬降</span></button>
     </div>
   </div>
 
@@ -1767,6 +1876,9 @@
     els.versusDiff.classList.toggle('hidden', !versus);
     els.surrenderBtn.classList.toggle('hidden', !versus);
     els.stopBtn.classList.toggle('hidden', !demo);
+    document.body.classList.toggle('is-versus', versus);
+    const boardsEl = document.querySelector('.boards');
+    if (boardsEl) boardsEl.classList.toggle('is-versus', versus);
     els.playerTitle.textContent = versus ? '玩家' : (state.mode === 'ai' ? 'AI 盘面' : '游戏盘面');
     els.nickname.disabled = !needsNick;
     els.nickname.placeholder = needsNick ? '请输入昵称' : '本模式无需昵称';
@@ -1778,6 +1890,38 @@
     syncVersusAiDropUI();
     syncAiPlayOptsUI();
     syncMobileControlsUI();
+    scheduleMobileViewportFit();
+  }
+
+  function measureMobileChrome() {
+    if (window.matchMedia('(max-width: 760px)').matches === false) return;
+    const header = document.querySelector('.page-header');
+    const toolbar = document.querySelector('.toolbar');
+    const footer = document.querySelector('.footer-bar');
+    const controls = els.mobileControls;
+    const safeBottom = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-bottom)')) || 0;
+    const controlsH = (controls && controls.classList.contains('visible'))
+      ? (controls.getBoundingClientRect().height + Math.max(6, safeBottom) + 8)
+      : Math.max(6, safeBottom);
+    const chrome =
+      (header ? header.getBoundingClientRect().height : 0) +
+      (toolbar ? toolbar.getBoundingClientRect().height : 0) +
+      (footer ? footer.getBoundingClientRect().height : 0) +
+      controlsH +
+      28;
+    const versusExtra = state.mode === 'versus' ? 24 : 0;
+    document.documentElement.style.setProperty('--mobile-chrome', `${Math.ceil(chrome)}px`);
+    document.documentElement.style.setProperty('--mobile-chrome-versus', `${Math.ceil(chrome + versusExtra)}px`);
+    document.documentElement.style.setProperty('--mobile-controls-h', `${Math.ceil(controlsH)}px`);
+  }
+
+  let mobileFitRaf = 0;
+  function scheduleMobileViewportFit() {
+    if (mobileFitRaf) cancelAnimationFrame(mobileFitRaf);
+    mobileFitRaf = requestAnimationFrame(() => {
+      mobileFitRaf = 0;
+      measureMobileChrome();
+    });
   }
 
   function createEngines() {
@@ -2226,6 +2370,12 @@
   createEngines();
   bindMobileControls();
   syncMobileControlsUI();
+  scheduleMobileViewportFit();
+  window.addEventListener('resize', scheduleMobileViewportFit);
+  window.addEventListener('orientationchange', () => setTimeout(scheduleMobileViewportFit, 80));
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', scheduleMobileViewportFit);
+  }
   loadLeaderboard();
 })();
 </script>
