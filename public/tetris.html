@@ -353,6 +353,98 @@
       justify-content: space-between;
       min-height: 18px;
     }
+
+    .mobile-controls {
+      display: none;
+      flex: 0 0 auto;
+      gap: 10px;
+      align-items: stretch;
+      justify-content: space-between;
+      margin-top: 2px;
+      padding: 8px;
+      border: 1px solid rgba(73,231,255,.22);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(8,21,34,.92), rgba(6,14,28,.96));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .mobile-controls .pad-left,
+    .mobile-controls .pad-right {
+      display: grid;
+      gap: 6px;
+      flex: 1 1 0;
+    }
+    .mobile-controls .pad-left {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-rows: 48px 48px;
+      grid-template-areas:
+        ". . ."
+        "left soft right";
+      align-content: end;
+    }
+    .mobile-controls .pad-right {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr;
+      grid-template-areas: "rot hard";
+      max-width: 46%;
+    }
+    .mobile-controls .pad-left .btn-left { grid-area: left; }
+    .mobile-controls .pad-left .btn-soft { grid-area: soft; }
+    .mobile-controls .pad-left .btn-right { grid-area: right; }
+    .mobile-controls .pad-right .btn-rot { grid-area: rot; min-height: 64px; }
+    .mobile-controls .pad-right .btn-hard { grid-area: hard; min-height: 64px; }
+    .mobile-btn {
+      appearance: none;
+      border: 1px solid rgba(56,189,248,.35);
+      border-radius: 12px;
+      min-height: 48px;
+      padding: 8px 6px;
+      background: rgba(12, 28, 48, .95);
+      color: #e7f7ff;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.1;
+      cursor: pointer;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      box-shadow: 0 4px 0 rgba(2, 18, 34, .85);
+      transition: transform .08s ease, background .12s ease, border-color .12s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mobile-btn span {
+      font-size: 10px;
+      font-weight: 600;
+      color: #91a9b8;
+      letter-spacing: .02em;
+    }
+    .mobile-btn:active,
+    .mobile-btn.is-pressed {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 rgba(2, 18, 34, .85);
+      background: rgba(14, 70, 110, .95);
+      border-color: #49e7ff;
+    }
+    .mobile-btn.btn-hard {
+      background: linear-gradient(180deg, rgba(255,111,0,.28), rgba(120,40,0,.55));
+      border-color: rgba(255,152,0,.55);
+      color: #ffe7c2;
+    }
+    .mobile-btn.btn-hard span { color: #ffc98a; }
+    .mobile-btn.btn-rot {
+      background: linear-gradient(180deg, rgba(56,189,248,.22), rgba(8,47,73,.7));
+    }
+    .mobile-btn:disabled {
+      opacity: .42;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
     .controls-hint {
       margin: 0;
       color: #64748b;
@@ -442,9 +534,19 @@
       }
       .board-meta { min-width: 0; width: min(240px, 100%); }
       .stats { grid-template-columns: repeat(3, 1fr); }
-      .assist-opts .opt-desc { display: none; }
-      .controls-hint { white-space: normal; }
-      canvas.board { width: min(240px, 72vw); height: auto; max-height: none; aspect-ratio: 1 / 2; }
+      .assist-opts .opt-desc,
+      .versus-ai-opts .opt-desc,
+      .ai-play-opts .opt-desc { display: none; }
+
+      .mobile-controls {
+        position: sticky;
+        bottom: 0;
+        z-index: 8;
+        margin-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      .mobile-controls.visible { display: flex; }
+      .controls-hint { display: none; }
+      canvas.board { width: min(220px, 68vw); height: auto; max-height: none; aspect-ratio: 1 / 2; }
     }
     @media (max-height: 760px) {
       canvas.board { height: min(520px, calc(100dvh - 190px)); max-height: calc(100dvh - 190px); }
@@ -559,6 +661,19 @@
                   <canvas id="aiNext" width="120" height="80"></canvas>
                 </div>
               </div>
+            </div>
+          </div>
+
+
+          <div class="mobile-controls" id="mobileControls" aria-label="移动端操作">
+            <div class="pad-left">
+              <button type="button" class="mobile-btn btn-left" data-action="left" aria-label="左移">←<span>左移</span></button>
+              <button type="button" class="mobile-btn btn-soft" data-action="soft" aria-label="软降">↓<span>软降</span></button>
+              <button type="button" class="mobile-btn btn-right" data-action="right" aria-label="右移">→<span>右移</span></button>
+            </div>
+            <div class="pad-right">
+              <button type="button" class="mobile-btn btn-rot" data-action="rotate" aria-label="旋转">↻<span>旋转</span></button>
+              <button type="button" class="mobile-btn btn-hard" data-action="hard" aria-label="硬降">▼<span>硬降</span></button>
             </div>
           </div>
 
@@ -1365,7 +1480,8 @@
     versusDiff: document.getElementById('versusDiff'),
     diffScore: document.getElementById('diffScore'),
     leaderboardList: document.getElementById('leaderboardList'),
-    lbHint: document.getElementById('lbHint')
+    lbHint: document.getElementById('lbHint'),
+    mobileControls: document.getElementById('mobileControls')
   };
 
   function modeNeedsNickname(mode = state.mode) {
@@ -1627,6 +1743,19 @@
     }
   }
 
+
+  function syncMobileControlsUI() {
+    const el = els.mobileControls;
+    if (!el) return;
+    // 仅在可手动操作模式显示：普通 / 辅助 / 人机对战；AI 游玩隐藏
+    const show = state.mode !== 'ai';
+    el.classList.toggle('visible', show);
+    const disabled = !show || !state.inProgress || !state.player || !!state.player.gameOver;
+    el.querySelectorAll('button[data-action]').forEach((btn) => {
+      btn.disabled = disabled;
+    });
+  }
+
   function applyModeUI() {
     document.querySelectorAll('.mode-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.mode === state.mode);
@@ -1648,6 +1777,7 @@
     }
     syncVersusAiDropUI();
     syncAiPlayOptsUI();
+    syncMobileControlsUI();
   }
 
   function createEngines() {
@@ -1746,6 +1876,7 @@
       if (!state.player || !state.ai) return;
       if (!state.player.gameOver && !state.ai.gameOver) return;
       state.inProgress = false;
+      syncMobileControlsUI();
       state.player.running = false;
       state.ai.running = false;
       state.player.stopTimers();
@@ -1773,6 +1904,7 @@
 
     // 单盘模式结束
     state.inProgress = false;
+    syncMobileControlsUI();
     clearLoops();
     if (state.player) {
       state.player.running = false;
@@ -1838,6 +1970,7 @@
     applyModeUI();
     createEngines();
     state.inProgress = true;
+    syncMobileControlsUI();
     state.resultSubmitted = false;
     state.surrendered = false;
     setResult('');
@@ -1868,6 +2001,7 @@
       if (!ok) return;
       state.surrendered = true;
       state.inProgress = false;
+      syncMobileControlsUI();
     }
     if (state.inProgress && isDemoMode()) {
       stopDemo(false);
@@ -1879,6 +2013,7 @@
     if (!isDemoMode() || !state.inProgress) return;
     state.surrendered = true;
     state.inProgress = false;
+    syncMobileControlsUI();
     clearLoops();
     if (state.player) {
       state.player.running = false;
@@ -1901,6 +2036,7 @@
     if (!ok) return;
     state.surrendered = true;
     state.inProgress = false;
+    syncMobileControlsUI();
     clearLoops();
     if (state.player) { state.player.running = false; state.player.stopTimers(); }
     if (state.ai) { state.ai.running = false; state.ai.stopTimers(); }
@@ -2001,6 +2137,74 @@
     });
   }
 
+
+  function handleMobileAction(action) {
+    if (!state.inProgress || !state.player) return;
+    if (state.mode === 'ai') return;
+    if (state.player.gameOver) return;
+    switch (action) {
+      case 'left': state.player.moveLeft(); break;
+      case 'right': state.player.moveRight(); break;
+      case 'soft': state.player.softDrop(false); break;
+      case 'rotate': state.player.rotate(); break;
+      case 'hard': state.player.hardDrop(); break;
+      default: return;
+    }
+    if (state.mode === 'assist') state.player.draw();
+  }
+
+  function bindMobileControls() {
+    const root = els.mobileControls;
+    if (!root || root.dataset.bound === '1') return;
+    root.dataset.bound = '1';
+
+    const pressTimers = new WeakMap();
+
+    const clearRepeat = (btn) => {
+      const t = pressTimers.get(btn);
+      if (!t) return;
+      if (t.delay) clearTimeout(t.delay);
+      if (t.interval) clearInterval(t.interval);
+      pressTimers.delete(btn);
+      btn.classList.remove('is-pressed');
+    };
+
+    const startRepeat = (btn, action) => {
+      clearRepeat(btn);
+      btn.classList.add('is-pressed');
+      handleMobileAction(action);
+      // 左右/软降支持长按连发；旋转/硬降单击一次
+      if (action === 'left' || action === 'right' || action === 'soft') {
+        const delay = setTimeout(() => {
+          const interval = setInterval(() => handleMobileAction(action), action === 'soft' ? 55 : 70);
+          pressTimers.set(btn, { delay: null, interval });
+        }, 220);
+        pressTimers.set(btn, { delay, interval: null });
+      } else {
+        pressTimers.set(btn, { delay: null, interval: null });
+      }
+    };
+
+    root.querySelectorAll('button[data-action]').forEach((btn) => {
+      const action = btn.getAttribute('data-action');
+      btn.addEventListener('pointerdown', (e) => {
+        if (btn.disabled) return;
+        e.preventDefault();
+        try { btn.setPointerCapture(e.pointerId); } catch (_) {}
+        startRepeat(btn, action);
+      });
+      const end = (e) => {
+        e.preventDefault();
+        clearRepeat(btn);
+      };
+      btn.addEventListener('pointerup', end);
+      btn.addEventListener('pointercancel', end);
+      btn.addEventListener('pointerleave', end);
+      // 阻止 touch 后合成 click 造成双触发
+      btn.addEventListener('click', (e) => e.preventDefault());
+    });
+  }
+
   document.addEventListener('keydown', (e) => {
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
     if (!state.inProgress || !state.player) return;
@@ -2020,6 +2224,8 @@
   // 启动
   applyModeUI();
   createEngines();
+  bindMobileControls();
+  syncMobileControlsUI();
   loadLeaderboard();
 })();
 </script>
