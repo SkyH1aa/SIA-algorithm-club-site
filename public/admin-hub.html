@@ -228,12 +228,30 @@
       $('bindingFormHint').textContent = '点击下方列表中的「编辑」载入账号后，可修改姓名与班级并保存。姓名需为 2–20 个连续中文字符。';
     }
 
+    function profileName(item) {
+      return typeof item?.member_name === 'string' ? item.member_name.trim() : '';
+    }
+
+    function profileClass(item) {
+      return typeof item?.member_class === 'string' ? item.member_class.trim() : '';
+    }
+
+    // 兼容旧接口：即使未返回 bound，只要已有姓名/班级也视为已绑定，避免误显示「未绑定」。
+    function isProfileBound(item) {
+      if (!item || typeof item !== 'object') return false;
+      if (item.bound === true) return true;
+      return Boolean(profileName(item) || profileClass(item));
+    }
+
     function loadBindingForm(item) {
       if (!item) return;
+      const bound = isProfileBound(item);
+      const nameText = profileName(item);
+      const classText = profileClass(item);
       $('bindingUsername').value = item.username || '';
-      $('bindingMemberName').value = item.bound ? (item.member_name || '') : '';
-      $('bindingMemberClass').value = item.bound ? (item.member_class || '') : '';
-      $('bindingFormHint').textContent = item.bound
+      $('bindingMemberName').value = nameText;
+      $('bindingMemberClass').value = classText;
+      $('bindingFormHint').textContent = bound
         ? `正在编辑账号 ${item.username}（已绑定）。保存后将覆盖原姓名与班级。`
         : `正在编辑账号 ${item.username}（未绑定）。填写姓名与班级后保存即可完成绑定。`;
       $('bindingMemberName').focus();
@@ -246,10 +264,10 @@
         return;
       }
       $('bindingsList').innerHTML = `<table class="table"><thead><tr><th>登录账号</th><th>中文姓名</th><th>班级</th><th>绑定状态</th><th>邮箱</th><th>更新时间</th><th>操作</th></tr></thead><tbody>${profiles.map(item => {
-        const bound = Boolean(item.bound);
-        const nameText = bound && item.member_name ? item.member_name : '未绑定';
-        const classText = bound && item.member_class ? item.member_class : '未绑定';
-        const timeText = bound ? formatTime(item.updated_at) : formatTime(item.registered_at);
+        const bound = isProfileBound(item);
+        const nameText = profileName(item) || '未绑定';
+        const classText = profileClass(item) || '未绑定';
+        const timeText = bound ? formatTime(item.updated_at || item.registered_at) : formatTime(item.registered_at || item.updated_at);
         return `<tr>
           <td>${escapeHtml(item.username)}</td>
           <td>${escapeHtml(nameText)}</td>
@@ -501,9 +519,13 @@
 
         if (byLabel.profiles && !byLabel.profiles.__error) {
           const profiles = Array.isArray(byLabel.profiles.profiles) ? byLabel.profiles.profiles : [];
-          $('statBindings').textContent = String(profiles.length);
+          const total = Number.isFinite(Number(byLabel.profiles.total)) ? Number(byLabel.profiles.total) : profiles.length;
+          const boundCount = Number.isFinite(Number(byLabel.profiles.boundCount))
+            ? Number(byLabel.profiles.boundCount)
+            : profiles.filter(isProfileBound).length;
+          $('statBindings').textContent = `${boundCount} / ${total}`;
           renderBindings(profiles);
-          hintParts.push(`绑定 ${profiles.length} 条`);
+          hintParts.push(`已绑定 ${boundCount} / 注册 ${total}`);
         } else if (currentAccess.isSuperAdmin) {
           $('bindingsList').innerHTML = '<div class="empty">暂时无法读取绑定资料。</div>';
           setMessage($('bindingsMessage'), byLabel.profiles?.__error?.message || '读取失败', 'error');
