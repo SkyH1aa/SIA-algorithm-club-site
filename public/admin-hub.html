@@ -16,9 +16,9 @@
     <section id="gate" class="panel gate"><div><strong>请先登录管理账号</strong><p>管理员总览对超管，以及被授予任一管理权限的账号开放。</p><a class="button" href="drive.html">前往社团盘登录</a></div></section>
     <section id="denied" class="panel denied hidden"><div><strong>无管理权限</strong><p>当前账号没有可管理的模块。请联系现任超管开通对应权限。</p><a class="button" href="member-center.html">返回个人中心</a></div></section>
     <div id="content" class="hidden">
-      <section class="hero"><div><p class="eyebrow">ADMIN OVERVIEW</p><h1>管理员总览</h1><p class="lead">按权限显示可用管理入口。密码重置、直接改密、姓名班级绑定查看、权限分配、超管交接仅现任超管可用。</p></div><div class="panel status-card"><strong id="statusTitle">管理账号已登录</strong><span id="statusHint">正在读取管理数据…</span></div></section>
+      <section class="hero"><div><p class="eyebrow">ADMIN OVERVIEW</p><h1>管理员总览</h1><p class="lead">按权限显示可用管理入口。密码重置、直接改密、姓名班级绑定编辑、权限分配、超管交接仅现任超管可用。</p></div><div class="panel status-card"><strong id="statusTitle">管理账号已登录</strong><span id="statusHint">正在读取管理数据…</span></div></section>
       <section class="stats" id="statsSection">
-        <div class="panel stat" data-stat="bindings"><small>绑定账号</small><strong id="statBindings">--</strong></div>
+        <div class="panel stat" data-stat="bindings"><small>已绑定 / 注册</small><strong id="statBindings">--</strong></div>
         <div class="panel stat" data-stat="resets"><small>待处理重置</small><strong id="statPendingResets">--</strong></div>
         <div class="panel stat" data-stat="checkin"><small>签到码</small><strong id="statCodes">--</strong></div>
         <div class="panel stat" data-stat="checkin"><small>课程签到待审</small><strong id="statCourse">--</strong></div>
@@ -113,7 +113,32 @@
         <p class="message" id="directResetMessage" role="status"></p>
       </section>
 
-      <section class="panel section hidden" id="bindingsSection"><div class="section-head"><div><h2>姓名 · 班级 · 账号绑定</h2><p class="intro">仅超管可查看个人中心已绑定的中文姓名、班级和登录账号。</p></div></div><div class="table-wrap" id="bindingsList"><div class="empty loading">正在读取绑定资料…</div></div><p class="message" id="bindingsMessage" role="status"></p></section>
+      <section class="panel section hidden" id="bindingsSection">
+        <div class="section-head">
+          <div>
+            <h2>姓名 · 班级 · 账号绑定</h2>
+            <p class="intro">仅超管可见。这里列出全部已注册账号；未绑定中文姓名和班级时显示「未绑定」。超管可直接编辑任意账号的绑定资料。</p>
+          </div>
+        </div>
+        <form class="form perm" id="bindingForm">
+          <div>
+            <label class="label" for="bindingUsername">登录账号</label>
+            <input class="input" id="bindingUsername" maxlength="40" required placeholder="例如 aabbcc" readonly>
+            <label class="label" for="bindingMemberName" style="display:block;margin-top:12px">中文姓名</label>
+            <input class="input" id="bindingMemberName" maxlength="20" required placeholder="例如 张三" pattern="[\u4e00-\u9fa5]{2,20}">
+            <label class="label" for="bindingMemberClass" style="display:block;margin-top:12px">班级</label>
+            <input class="input" id="bindingMemberClass" maxlength="40" required placeholder="例如 计科 2401">
+          </div>
+          <div>
+            <div class="label" style="margin-bottom:8px">编辑说明</div>
+            <p class="intro" id="bindingFormHint">点击下方列表中的「编辑」载入账号后，可修改姓名与班级并保存。姓名需为 2–20 个连续中文字符。</p>
+            <button class="button" type="submit" style="margin-top:12px;width:100%">保存绑定</button>
+            <button class="button secondary" type="button" id="bindingFormClear" style="margin-top:8px;width:100%">清空表单</button>
+          </div>
+        </form>
+        <p class="message" id="bindingsMessage" role="status"></p>
+        <div class="table-wrap" id="bindingsList" style="margin-top:16px"><div class="empty loading">正在读取绑定资料…</div></div>
+      </section>
     </div>
   </main>
   <script>
@@ -196,12 +221,56 @@
       $('entryGrid').innerHTML = cards || '<div class="empty">当前账号暂无可用管理入口。</div>';
     }
 
+    function clearBindingForm() {
+      $('bindingUsername').value = '';
+      $('bindingMemberName').value = '';
+      $('bindingMemberClass').value = '';
+      $('bindingFormHint').textContent = '点击下方列表中的「编辑」载入账号后，可修改姓名与班级并保存。姓名需为 2–20 个连续中文字符。';
+    }
+
+    function loadBindingForm(item) {
+      if (!item) return;
+      $('bindingUsername').value = item.username || '';
+      $('bindingMemberName').value = item.bound ? (item.member_name || '') : '';
+      $('bindingMemberClass').value = item.bound ? (item.member_class || '') : '';
+      $('bindingFormHint').textContent = item.bound
+        ? `正在编辑账号 ${item.username}（已绑定）。保存后将覆盖原姓名与班级。`
+        : `正在编辑账号 ${item.username}（未绑定）。填写姓名与班级后保存即可完成绑定。`;
+      $('bindingMemberName').focus();
+      setMessage($('bindingsMessage'), `已载入账号 ${item.username}，修改后点击保存绑定。`);
+    }
+
     function renderBindings(profiles) {
       if (!profiles.length) {
-        $('bindingsList').innerHTML = '<div class="empty">暂时还没有绑定记录。</div>';
+        $('bindingsList').innerHTML = '<div class="empty">暂时还没有已注册账号。</div>';
         return;
       }
-      $('bindingsList').innerHTML = `<table class="table"><thead><tr><th>中文姓名</th><th>班级</th><th>登录账号</th><th>邮箱</th><th>更新时间</th></tr></thead><tbody>${profiles.map(item => `<tr><td>${escapeHtml(item.member_name)}</td><td>${escapeHtml(item.member_class)}</td><td>${escapeHtml(item.username)}</td><td>${escapeHtml(item.email)}</td><td>${escapeHtml(formatTime(item.updated_at))}</td></tr>`).join('')}</tbody></table>`;
+      $('bindingsList').innerHTML = `<table class="table"><thead><tr><th>登录账号</th><th>中文姓名</th><th>班级</th><th>绑定状态</th><th>邮箱</th><th>更新时间</th><th>操作</th></tr></thead><tbody>${profiles.map(item => {
+        const bound = Boolean(item.bound);
+        const nameText = bound && item.member_name ? item.member_name : '未绑定';
+        const classText = bound && item.member_class ? item.member_class : '未绑定';
+        const timeText = bound ? formatTime(item.updated_at) : formatTime(item.registered_at);
+        return `<tr>
+          <td>${escapeHtml(item.username)}</td>
+          <td>${escapeHtml(nameText)}</td>
+          <td>${escapeHtml(classText)}</td>
+          <td>${bound ? '<span class="badge on">已绑定</span>' : '<span class="badge off">未绑定</span>'}</td>
+          <td>${escapeHtml(item.email || '-')}</td>
+          <td>${escapeHtml(timeText)}</td>
+          <td class="actions">
+            <button class="button secondary" type="button" data-edit-binding="${escapeHtml(item.username)}">编辑</button>
+          </td>
+        </tr>`;
+      }).join('')}</tbody></table>`;
+
+      $('bindingsList').querySelectorAll('[data-edit-binding]').forEach(button => {
+        button.addEventListener('click', () => {
+          const username = button.getAttribute('data-edit-binding');
+          const row = profiles.find(item => item.username === username);
+          if (!row) return;
+          loadBindingForm(row);
+        });
+      });
     }
 
     function renderResets(resets) {
@@ -562,6 +631,41 @@
       } catch (error) {
         setMessage($('superAdminsMessage'), error.message, 'error');
       }
+    });
+
+    $('bindingForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const username = $('bindingUsername').value.trim();
+      if (!username) {
+        setMessage($('bindingsMessage'), '请先从下方列表点击「编辑」载入账号。', 'error');
+        return;
+      }
+      setMessage($('bindingsMessage'), `正在保存账号 ${username} 的绑定…`);
+      try {
+        const payload = await call('admin_member_profile_bind', {
+          username,
+          memberName: $('bindingMemberName').value.trim(),
+          memberClass: $('bindingMemberClass').value.trim()
+        });
+        setMessage($('bindingsMessage'), payload.message || `已更新账号 ${username} 的绑定。`, 'success');
+        await refreshOverview();
+        const profile = payload.profile;
+        if (profile) {
+          loadBindingForm({
+            username: profile.username || username,
+            bound: true,
+            member_name: profile.member_name || '',
+            member_class: profile.member_class || ''
+          });
+        }
+      } catch (error) {
+        setMessage($('bindingsMessage'), error.message, 'error');
+      }
+    });
+
+    $('bindingFormClear').addEventListener('click', () => {
+      clearBindingForm();
+      setMessage($('bindingsMessage'), '已清空编辑表单。');
     });
 
     supabaseClient.auth.onAuthStateChange((_event, session) => { void updateSession(session); });
