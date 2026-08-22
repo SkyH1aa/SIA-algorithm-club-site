@@ -53,7 +53,7 @@
         <div class="section-head">
           <div>
             <h2>权限下放</h2>
-            <p class="intro">仅超管可给其他账号选择性开启：签到管理、积分管理、留言箱管理、邀请码管理、活动和公告内容管理、积分商城管理。</p>
+            <p class="intro">仅超管可给其他账号选择性开启：签到管理、积分管理、留言箱管理、邀请码管理、活动和公告内容管理、积分商城管理、成员展示管理、报名管理。</p>
           </div>
         </div>
         <form class="form perm" id="permissionForm">
@@ -73,6 +73,7 @@
               <label><input type="checkbox" id="permEvents"> 活动与公告</label>
               <label><input type="checkbox" id="permMall"> 积分商城</label>
               <label><input type="checkbox" id="permMembers"> 成员展示</label>
+              <label><input type="checkbox" id="permJoin"> 报名管理</label>
             </div>
             <button class="button" type="submit" style="margin-top:12px;width:100%">保存权限</button>
           </div>
@@ -158,7 +159,8 @@
       { key: 'invites', href: 'drive.html', title: '社团盘邀请码管理', desc: '在社团盘管理员面板生成并查看邀请码。' },
       { key: 'events', href: 'events-admin.html', title: '活动与公告管理', desc: '发布社团通知、活动报名、课程安排、比赛信息，并查看报名名单。' },
       { key: 'mall', href: 'mall-admin.html', title: '积分商城管理', desc: '上架/下架商品、设置价格库存与配图 URL，并处理兑换发货记录。' },
-      { key: 'members', href: 'members-admin.html', title: '成员展示管理', desc: '添加/编辑/移除首页成员卡片，维护姓名、班级、简介与可选图床图片 URL。' }
+      { key: 'members', href: 'members-admin.html', title: '成员展示管理', desc: '添加/编辑/移除首页成员卡片，维护姓名、班级、简介与可选图床图片 URL。' },
+      { key: 'join', href: 'join-admin.html', title: '报名管理', desc: '查看官网报名表单，删除未加入或已加入学生的报名记录。' }
     ];
 
     function escapeHtml(value) {
@@ -407,7 +409,7 @@
         $('permissionsList').innerHTML = '<div class="empty">还没有下放给其他账号的权限。</div>';
         return;
       }
-      $('permissionsList').innerHTML = `<table class="table"><thead><tr><th>账号</th><th>签到</th><th>积分</th><th>留言</th><th>邀请码</th><th>活动公告</th><th>商城</th><th>成员</th><th>备注</th><th>更新时间</th><th>操作</th></tr></thead><tbody>${rows.map(item => `
+      $('permissionsList').innerHTML = `<table class="table"><thead><tr><th>账号</th><th>签到</th><th>积分</th><th>留言</th><th>邀请码</th><th>活动公告</th><th>商城</th><th>成员</th><th>报名</th><th>备注</th><th>更新时间</th><th>操作</th></tr></thead><tbody>${rows.map(item => `
         <tr>
           <td>${escapeHtml(item.username)}</td>
           <td>${flagBadge(item.can_checkin)}</td>
@@ -417,6 +419,7 @@
           <td>${flagBadge(item.can_events)}</td>
           <td>${flagBadge(item.can_mall)}</td>
           <td>${flagBadge(item.can_members)}</td>
+          <td>${flagBadge(item.can_join)}</td>
           <td>${escapeHtml(item.note || '-')}</td>
           <td>${escapeHtml(formatTime(item.updated_at))}</td>
           <td class="actions">
@@ -440,6 +443,7 @@
           $('permEvents').checked = Boolean(row.can_events);
           $('permMall').checked = Boolean(row.can_mall);
           $('permMembers').checked = Boolean(row.can_members);
+          $('permJoin').checked = Boolean(row.can_join);
           setMessage($('permissionsMessage'), `已载入账号 ${username}，修改后点击保存。`);
         });
       });
@@ -634,7 +638,8 @@
           can_invites: $('permInvites').checked,
           can_events: $('permEvents').checked,
           can_mall: $('permMall').checked,
-          can_members: $('permMembers').checked
+          can_members: $('permMembers').checked,
+          can_join: $('permJoin').checked
         });
         setMessage($('permissionsMessage'), `已保存账号 ${payload.permission?.username || ''} 的权限。`, 'success');
         await refreshOverview();

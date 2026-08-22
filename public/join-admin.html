@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>报名管理 · 算法社</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="member-identity.js" defer></script>
+  <style>
+    :root{--bg:#030712;--panel:rgba(9,18,38,.84);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--green:#72f3c2;--danger:#ff718a;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 12% 0,rgba(0,229,255,.14),transparent 28%),radial-gradient(circle at 88% 10%,rgba(146,120,255,.16),transparent 30%),var(--bg)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.82);backdrop-filter:blur(18px)}.topbar-inner{max-width:1200px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted)}main{max-width:1200px;margin:auto;padding:56px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}h1{margin:0 0 12px;font-size:clamp(36px,7vw,64px)}.lead{max-width:780px;color:var(--muted);line-height:1.8;margin:0 0 24px}.panel{padding:22px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);margin-bottom:16px}.panel h2{margin:0 0 8px}.intro{margin:0 0 16px;color:var(--muted);line-height:1.7}.gate,.denied{min-height:240px;display:grid;place-items:center;text-align:center}.hidden{display:none!important}.button{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:rgba(0,229,255,.12);color:var(--text);cursor:pointer;font:inherit}.button.secondary{border-color:var(--line);background:transparent}.button.danger{border-color:rgba(255,113,138,.55);background:rgba(255,113,138,.12)}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:980px}.table th,.table td{padding:11px 8px;border-bottom:1px solid rgba(107,169,224,.14);text-align:left;vertical-align:top}.table th{color:var(--muted);font-size:13px;font-weight:500}.actions{display:flex;gap:8px;flex-wrap:wrap}.badge{display:inline-flex;padding:3px 8px;border-radius:999px;font-size:12px;border:1px solid rgba(0,229,255,.35);color:var(--cyan)}.muted-box{color:var(--muted);font-size:12px;line-height:1.55;max-width:220px;white-space:pre-wrap}.message{min-height:22px;margin:10px 0 0;color:var(--muted);font-size:13px}.message.error{color:var(--danger)}.message.success{color:var(--green)}.empty{padding:24px 0;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}.section-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.stat{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(0,10,28,.35);min-width:120px}.stat strong{display:block;font-size:22px}.stat span{color:var(--muted);font-size:12px}@media(max-width:900px){.identity{display:none!important}main{padding:42px 16px 70px}}
+  </style>
+</head>
+<body>
+  <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong>算法社</strong><small>Join Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html">返回管理员总览</a></div></header>
+  <main>
+    <section id="gate" class="panel gate"><div><strong>请先登录</strong><p class="intro">报名管理需要对应权限。</p><a class="button" href="drive.html">前往社团盘登录</a></div></section>
+    <section id="denied" class="panel denied hidden"><div><strong>无报名管理权限</strong><p class="intro">请联系超管开通「报名管理」权限。</p></div></section>
+    <div id="content" class="hidden">
+      <p class="eyebrow">JOIN APPLICATIONS ADMIN</p>
+      <h1>报名管理</h1>
+      <p class="lead">查看官网「立即加入」提交的报名信息。确认学生已加入或无需保留后，可直接删除对应记录。</p>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h2>报名列表</h2>
+            <p class="intro">仅超管与拥有报名管理权限的账号可见。删除后不可恢复，请确认后再操作。</p>
+          </div>
+          <button class="button secondary" type="button" id="refreshApplications">刷新列表</button>
+        </div>
+        <div class="stats">
+          <div class="stat"><strong id="statTotal">0</strong><span>报名总数</span></div>
+        </div>
+        <p class="message" id="joinAdminMessage" role="status"></p>
+        <div class="table-wrap" id="applicationList"><div class="empty loading">正在读取报名列表…</div></div>
+      </section>
+    </div>
+  </main>
+  <script>
+    const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
+    const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const $ = id => document.getElementById(id);
+    const CONTACT_LABELS = { wechat: '微信', phone: '手机号', qq: 'QQ', email: '邮箱' };
+    let applicationsCache = [];
+    let currentSession = null;
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    }
+    function formatTime(value) {
+      if (!value) return '-';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '-';
+      return date.toLocaleString('zh-CN', { hour12: false });
+    }
+    function setMessage(node, text, type = '') {
+      node.textContent = text || '';
+      node.className = `message ${type}`;
+    }
+    async function call(action, body = {}) {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) throw new Error('请先登录。');
+      const response = await fetch(FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ action, ...body })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || '操作失败。');
+      return payload;
+    }
+
+    function renderApplications(applications) {
+      applicationsCache = applications;
+      $('statTotal').textContent = String(applications.length);
+      if (!applications.length) {
+        $('applicationList').innerHTML = '<div class="empty">暂时没有报名记录。</div>';
+        return;
+      }
+      $('applicationList').innerHTML = `<table class="table"><thead><tr><th>姓名</th><th>班级</th><th>联系方式</th><th>自我介绍</th><th>吸引点</th><th>期望收获</th><th>提交时间</th><th>操作</th></tr></thead><tbody>${applications.map(item => `
+        <tr>
+          <td><strong>${escapeHtml(item.chinese_name)}</strong></td>
+          <td>${escapeHtml(item.member_class || '-')}</td>
+          <td>
+            <span class="badge">${escapeHtml(CONTACT_LABELS[item.contact_type] || item.contact_type || '-')}</span>
+            <div class="muted-box" style="margin-top:6px">${escapeHtml(item.contact_value || '-')}</div>
+          </td>
+          <td><div class="muted-box">${escapeHtml(item.self_intro || '-')}</div></td>
+          <td><div class="muted-box">${escapeHtml(item.attraction || '-')}</div></td>
+          <td><div class="muted-box">${escapeHtml(item.expectation || '-')}</div></td>
+          <td>${escapeHtml(formatTime(item.created_at))}</td>
+          <td class="actions">
+            <button class="button danger" type="button" data-delete-application="${escapeHtml(item.id)}">删除</button>
+          </td>
+        </tr>
+      `).join('')}</tbody></table>`;
+
+      $('applicationList').querySelectorAll('[data-delete-application]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const id = button.getAttribute('data-delete-application');
+          const item = applicationsCache.find(row => row.id === id);
+          if (!window.confirm(`确认删除「${item?.chinese_name || id}」的报名记录？`)) return;
+          setMessage($('joinAdminMessage'), '正在删除…');
+          try {
+            await call('admin_join_applications_delete', { id });
+            setMessage($('joinAdminMessage'), '报名记录已删除。', 'success');
+            await refreshApplications();
+          } catch (error) {
+            setMessage($('joinAdminMessage'), error.message, 'error');
+          }
+        });
+      });
+    }
+
+    async function refreshApplications() {
+      $('applicationList').innerHTML = '<div class="empty loading">正在读取报名列表…</div>';
+      try {
+        const payload = await call('admin_join_applications_list');
+        renderApplications(payload.applications || []);
+        setMessage($('joinAdminMessage'), '');
+      } catch (error) {
+        $('applicationList').innerHTML = '<div class="empty">暂时无法读取报名列表。</div>';
+        setMessage($('joinAdminMessage'), error.message, 'error');
+      }
+    }
+
+    async function updateView(session) {
+      currentSession = session;
+      const loggedIn = Boolean(session?.user?.id);
+      $('gate').classList.toggle('hidden', loggedIn);
+      if (!loggedIn) {
+        $('denied').classList.add('hidden');
+        $('content').classList.add('hidden');
+        return;
+      }
+      const access = window.ClubStaffAccess
+        ? await window.ClubStaffAccess.fetchStaffAccess(session)
+        : { isSuperAdmin: false, permissions: {} };
+      const allowed = Boolean(access.isSuperAdmin || access.permissions?.can_join);
+      $('denied').classList.toggle('hidden', allowed);
+      $('content').classList.toggle('hidden', !allowed);
+      if (allowed) await refreshApplications();
+    }
+
+    $('refreshApplications').addEventListener('click', refreshApplications);
+    supabaseClient.auth.onAuthStateChange((_event, session) => { void updateView(session); });
+    supabaseClient.auth.getSession().then(({ data: { session } }) => updateView(session));
+  </script>
+</body>
+</html>
