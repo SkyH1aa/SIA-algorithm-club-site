@@ -852,6 +852,61 @@
       .feed-modal-never:hover { background: rgba(0, 229, 255, 0.12); }
       body.feed-modal-open { overflow: hidden; }
 
+      .pc-tip-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.72);
+        backdrop-filter: blur(8px);
+      }
+      .pc-tip-modal.is-open { display: flex; }
+      .pc-tip-card {
+        position: relative;
+        width: min(100%, 420px);
+        padding: 28px 24px 22px;
+        border: 1px solid rgba(0, 229, 255, 0.32);
+        border-radius: 16px;
+        background: linear-gradient(145deg, rgba(10, 21, 43, 0.98), rgba(4, 8, 20, 0.98));
+        box-shadow: 0 24px 90px rgba(0, 0, 0, 0.5), 0 0 28px rgba(0, 229, 255, 0.08);
+        text-align: center;
+      }
+      .pc-tip-eyebrow {
+        margin: 0 0 10px;
+        color: var(--cyan);
+        font: 12px var(--mono);
+        letter-spacing: 0.12em;
+      }
+      .pc-tip-card h2 {
+        margin: 0 0 12px;
+        font-size: clamp(22px, 5vw, 28px);
+      }
+      .pc-tip-card p {
+        margin: 0 0 22px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+      .pc-tip-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+      }
+      .pc-tip-actions button { font: inherit; }
+      .pc-tip-dismiss {
+        border: 1px solid rgba(0, 229, 255, 0.3);
+        color: var(--cyan);
+        background: rgba(0, 229, 255, 0.06);
+        border-radius: 999px;
+        padding: 10px 18px;
+        cursor: pointer;
+      }
+      .pc-tip-dismiss:hover { background: rgba(0, 229, 255, 0.12); }
+      body.pc-tip-open { overflow: hidden; }
+
       .reveal-ready { opacity: 0; transform: translateY(12px); transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.2, 0.75, 0.25, 1); }
       .reveal-ready.is-visible { opacity: 1; transform: translateY(0); }
 
@@ -1321,6 +1376,18 @@
       </div>
     </div>
 
+    <div class="pc-tip-modal" id="pcTipModal" role="dialog" aria-modal="true" aria-labelledby="pcTipTitle" aria-hidden="true">
+      <div class="pc-tip-card" role="document">
+        <p class="pc-tip-eyebrow">BEST VIEW</p>
+        <h2 id="pcTipTitle">使用 PC 端浏览获得最佳效果</h2>
+        <p>当前为非电脑端访问。为获得完整视觉与交互体验，建议使用 PC 端浏览本站。</p>
+        <div class="pc-tip-actions">
+          <button class="primary-action" id="pcTipClose" type="button">我知道了</button>
+          <button class="pc-tip-dismiss" id="pcTipNever" type="button">本次不再提示</button>
+        </div>
+      </div>
+    </div>
+
     <script>
 
       const fallbackMembers = [
@@ -1752,18 +1819,96 @@
       ];
       function setupSectionNavigation() {
         const navLinks = new Map(sectionNavMap.map(([id, href]) => [id, document.querySelector(`.nav a[href="${href}"]`)]));
-        const sections = sectionNavMap.map(([id]) => document.getElementById(id)).filter(Boolean);
-        if (!sections.length || !('IntersectionObserver' in window)) return;
-        const sectionObserver = new IntersectionObserver(entries => {
-          entries.forEach(entry => {
-            if (!entry.isIntersecting) return;
-            navLinks.forEach(link => link?.classList.remove('is-active'));
-            navLinks.get(entry.target.id)?.classList.add('is-active');
+        const sections = sectionNavMap
+          .map(([id]) => {
+            const el = document.getElementById(id);
+            return el ? { id, el } : null;
+          })
+          .filter(Boolean);
+        if (!sections.length) return;
+
+        let activeId = '';
+        let navFrame = 0;
+        const homeSection = sections.find(section => section.id === 'home');
+        const proofSection = sections.find(section => section.id === 'proof');
+
+        function setActive(id) {
+          if (activeId === id) return;
+          activeId = id;
+          navLinks.forEach(link => link?.classList.remove('is-active'));
+          navLinks.get(id)?.classList.add('is-active');
+        }
+
+        function updateActiveNav() {
+          navFrame = 0;
+          const offset = 96;
+          let current = sections[0].id;
+
+          sections.forEach(section => {
+            const top = section.el.getBoundingClientRect().top;
+            if (top - offset <= 1) current = section.id;
           });
-        }, { rootMargin: '-24% 0px -58% 0px', threshold: 0 });
-        sections.forEach(section => sectionObserver.observe(section));
+
+          // #proof 嵌在 #home 内：只有证明带靠近顶部时才切到「实力」，避免首页/作品误亮。
+          if (homeSection && proofSection) {
+            const proofTop = proofSection.el.getBoundingClientRect().top;
+            const homeBottom = homeSection.el.getBoundingClientRect().bottom;
+            if (current === 'proof' && proofTop > window.innerHeight * 0.42) {
+              current = 'home';
+            }
+            if (current === 'home' && homeBottom <= offset + 8) {
+              const next = sections.find(section => section.id !== 'home' && section.id !== 'proof' && section.el.getBoundingClientRect().top - offset <= 1);
+              if (next) current = next.id;
+            }
+          }
+
+          if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 8) {
+            current = sections[sections.length - 1].id;
+          }
+
+          setActive(current);
+        }
+
+        window.addEventListener('scroll', () => {
+          if (navFrame) window.cancelAnimationFrame(navFrame);
+          navFrame = window.requestAnimationFrame(updateActiveNav);
+        }, { passive: true });
+        window.addEventListener('resize', updateActiveNav, { passive: true });
+        updateActiveNav();
       }
       setupSectionNavigation();
+
+      function setupPcTipModal() {
+        const modal = document.getElementById('pcTipModal');
+        const closeBtn = document.getElementById('pcTipClose');
+        const neverBtn = document.getElementById('pcTipNever');
+        if (!modal || !closeBtn || !neverBtn) return;
+
+        const storageKey = 'pc-tip-dismissed';
+        const isNarrow = window.matchMedia('(max-width: 900px)').matches;
+        const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+        const ua = String(navigator.userAgent || '').toLowerCase();
+        const isMobileUa = ['android', 'iphone', 'ipad', 'ipod', 'mobile', 'windows phone'].some(key => ua.includes(key));
+        const shouldTip = isNarrow || isCoarse || isMobileUa;
+        if (!shouldTip || sessionStorage.getItem(storageKey) === '1') return;
+
+        function closeTip(persist) {
+          modal.classList.remove('is-open');
+          modal.setAttribute('aria-hidden', 'true');
+          document.body.classList.remove('pc-tip-open');
+          if (persist) sessionStorage.setItem(storageKey, '1');
+        }
+
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('pc-tip-open');
+        closeBtn.addEventListener('click', () => closeTip(false));
+        neverBtn.addEventListener('click', () => closeTip(true));
+        modal.addEventListener('click', event => {
+          if (event.target === modal) closeTip(false);
+        });
+      }
+      setupPcTipModal();
 
       function setupCardInteractions() {
         if (!pointerQuery.matches) return;

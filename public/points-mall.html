@@ -63,7 +63,7 @@
     </div>
   </header>
   <main>
-    <section id="gate" class="panel gate"><div><strong>您还不是算法社社员！</strong><p class="intro" style="margin:10px 0 18px">请先使用受邀请码创建的社团盘账号登录。</p><a class="button" href="drive.html">前往社团盘登录</a></div></section>
+    <section id="gate" class="panel gate"><div><strong>您还不是算法社社员！</strong><p class="intro" style="margin:10px 0 18px">请先使用受邀请码创建的社团盘账号登录。</p><a class="button" href="member-center.html">前往个人中心登录</a></div></section>
     <div id="content" class="hidden">
       <section class="hero">
         <div>
@@ -114,7 +114,7 @@
       node.className = `message ${type}`;
     }
     async function callPublic(action, body = {}) {
-      if (!currentSession) throw new Error('请先登录社团盘。');
+      if (!currentSession) throw new Error('请先登录个人中心。');
       const response = await fetch(FUNCTION_URL, {
         method: 'POST',
         headers: {

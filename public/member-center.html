@@ -7,19 +7,45 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js"></script>
   <style>
-    :root{--bg:#030712;--panel:rgba(9,18,38,.82);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--violet:#9278ff;--green:#72f3c2;--danger:#ff718a;--warn:#ffd166;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 8% 5%,rgba(0,229,255,.14),transparent 31%),radial-gradient(circle at 92% 12%,rgba(146,120,255,.16),transparent 30%),var(--bg)}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;background-image:linear-gradient(rgba(0,229,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.06) 1px,transparent 1px);background-size:64px 64px;mask-image:linear-gradient(to bottom,#000,transparent 88%)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.8);backdrop-filter:blur(18px)}.topbar-inner{max-width:1180px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan);box-shadow:0 0 24px rgba(0,229,255,.18)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px;white-space:nowrap}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted);font-size:14px}.back:hover{color:var(--cyan)}main{position:relative;z-index:1;max-width:1180px;margin:auto;padding:62px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}.hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:28px;align-items:end;margin-bottom:28px}.hero h1{margin:0;font-size:clamp(42px,8vw,82px);line-height:.98;letter-spacing:-2px;text-shadow:0 0 28px rgba(0,229,255,.3)}.hero p{max-width:650px;color:var(--muted);font-size:17px;line-height:1.8}.panel{border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(16px)}.session-card{padding:22px}.session-card strong{display:block;margin-bottom:8px;color:var(--cyan);font-size:20px}.session-card span{color:var(--muted);font-size:13px;line-height:1.7}.member-content.hidden,.gate.hidden{display:none}.gate{min-height:260px;display:grid;place-items:center;text-align:center;padding:28px}.gate strong{display:block;margin-bottom:10px;color:var(--cyan);font-size:24px}.gate p{margin:0 0 18px;color:var(--muted);line-height:1.8}.button{display:inline-flex;justify-content:center;align-items:center;border:1px solid rgba(0,229,255,.55);border-radius:8px;padding:11px 15px;color:var(--text);background:rgba(0,229,255,.12);cursor:pointer;font:inherit}.button:hover{background:rgba(0,229,255,.22)}.button.secondary{border-color:var(--line);background:transparent}.button:disabled{opacity:.55;cursor:not-allowed}.panel-block{padding:24px;margin-bottom:18px}.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}.panel h2{margin:0 0 8px;font-size:22px}.intro{margin:0;color:var(--muted);line-height:1.7}.notice{display:none;margin-bottom:18px;padding:16px 18px;border:1px solid rgba(255,209,102,.45);border-radius:12px;background:rgba(255,209,102,.08)}.notice.active{display:block}.notice strong{display:block;margin-bottom:6px;color:var(--warn)}.notice p{margin:0;color:#f6e7b8;line-height:1.7}.profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}.profile-item{padding:16px;border:1px solid rgba(107,169,224,.18);border-radius:10px;background:rgba(0,10,28,.45)}.profile-item small{display:block;margin-bottom:7px;color:var(--muted);font-size:12px}.profile-item strong{display:block;overflow-wrap:anywhere;font-size:16px}.profile-item strong.accent{color:var(--green);font-size:25px}.bind-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;margin-top:18px}.field label{display:block;margin-bottom:7px;color:var(--muted);font-size:13px}.input{width:100%;padding:12px;color:var(--text);border:1px solid var(--line);border-radius:8px;background:rgba(2,7,18,.8);font:inherit;outline:none}.input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1)}.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}.quick-link{display:flex;min-height:116px;flex-direction:column;justify-content:space-between;padding:16px;border:1px solid rgba(107,169,224,.2);border-radius:10px;background:linear-gradient(145deg,rgba(0,229,255,.08),rgba(146,120,255,.08));transition:transform .2s ease,border-color .2s ease,background .2s ease}.quick-link:hover{transform:translateY(-3px);border-color:rgba(0,229,255,.65);background:rgba(0,229,255,.13)}.quick-link strong{font-size:16px}.quick-link span{color:var(--muted);font-size:13px;line-height:1.6}.quick-link[data-admin-only]{display:none}.quick-link[data-admin-only].is-visible{display:flex}.points-table{width:100%;border-collapse:collapse;margin-top:18px}.points-table th,.points-table td{padding:11px 8px;border-bottom:1px solid rgba(107,169,224,.14);text-align:left}.points-table th{color:var(--muted);font-size:13px;font-weight:500}.points-table th:last-child,.points-table td:last-child{text-align:right}.points-value{color:var(--green);font-weight:700}.message{min-height:23px;margin:14px 0 0;color:var(--muted);font-size:13px;line-height:1.6}.message.error{color:var(--danger)}.message.success{color:var(--green)}.empty{padding:35px 0;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}@media(max-width:900px){.bind-grid{grid-template-columns:1fr}.bind-grid .button{width:100%}}@media(max-width:760px){.hero{grid-template-columns:1fr}.topbar-inner{padding:13px 16px}.identity{display:none!important}main{padding:44px 16px 70px}.panel-block{padding:18px}.profile-grid,.quick-grid{grid-template-columns:1fr 1fr}.hero h1{letter-spacing:-1px}.points-table{font-size:14px}.points-table th,.points-table td{padding:10px 5px}}@media(max-width:430px){.profile-grid,.quick-grid{grid-template-columns:1fr}.back{font-size:13px}}
+    :root{--bg:#030712;--panel:rgba(9,18,38,.82);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--violet:#9278ff;--green:#72f3c2;--danger:#ff718a;--warn:#ffd166;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 8% 5%,rgba(0,229,255,.14),transparent 31%),radial-gradient(circle at 92% 12%,rgba(146,120,255,.16),transparent 30%),var(--bg)}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;background-image:linear-gradient(rgba(0,229,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.06) 1px,transparent 1px);background-size:64px 64px;mask-image:linear-gradient(to bottom,#000,transparent 88%)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.8);backdrop-filter:blur(18px)}.topbar-inner{max-width:1180px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan);box-shadow:0 0 24px rgba(0,229,255,.18)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px;white-space:nowrap}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted);font-size:14px}.back:hover{color:var(--cyan)}main{position:relative;z-index:1;max-width:1180px;margin:auto;padding:62px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}.hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:28px;align-items:end;margin-bottom:28px}.hero h1{margin:0;font-size:clamp(42px,8vw,82px);line-height:.98;letter-spacing:-2px;text-shadow:0 0 28px rgba(0,229,255,.3)}.hero p{max-width:650px;color:var(--muted);font-size:17px;line-height:1.8}.panel{border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(16px)}.session-card{padding:22px}.session-card strong{display:block;margin-bottom:8px;color:var(--cyan);font-size:20px}.session-card span{color:var(--muted);font-size:13px;line-height:1.7}.member-content.hidden,.auth-view.hidden{display:none}.auth-view{margin-bottom:18px}.auth-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.panel-block{padding:24px;margin-bottom:18px}.panel h2{margin:0 0 8px;font-size:22px}.intro{margin:0 0 16px;color:var(--muted);line-height:1.7}.form{display:grid;gap:12px}.field label,.label{display:block;margin-bottom:7px;color:var(--muted);font-size:13px}.input{width:100%;padding:12px;color:var(--text);border:1px solid var(--line);border-radius:8px;background:rgba(2,7,18,.8);font:inherit;outline:none}.input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1)}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}.button{display:inline-flex;justify-content:center;align-items:center;border:1px solid rgba(0,229,255,.55);border-radius:8px;padding:11px 15px;color:var(--text);background:rgba(0,229,255,.12);cursor:pointer;font:inherit}.button:hover{background:rgba(0,229,255,.22)}.button.secondary{border-color:var(--line);background:transparent}.button.danger{border-color:rgba(255,113,138,.5);background:rgba(255,113,138,.1)}.button:disabled{opacity:.55;cursor:not-allowed}.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}.notice{display:none;margin-bottom:18px;padding:16px 18px;border:1px solid rgba(255,209,102,.45);border-radius:12px;background:rgba(255,209,102,.08)}.notice.active{display:block}.notice strong{display:block;margin-bottom:6px;color:var(--warn)}.notice p{margin:0;color:#f6e7b8;line-height:1.7}.profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}.profile-item{padding:16px;border:1px solid rgba(107,169,224,.18);border-radius:10px;background:rgba(0,10,28,.45)}.profile-item small{display:block;margin-bottom:7px;color:var(--muted);font-size:12px}.profile-item strong{display:block;overflow-wrap:anywhere;font-size:16px}.profile-item strong.accent{color:var(--green);font-size:25px}.bind-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;margin-top:18px}.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}.quick-link{display:flex;min-height:116px;flex-direction:column;justify-content:space-between;padding:16px;border:1px solid rgba(107,169,224,.2);border-radius:10px;background:linear-gradient(145deg,rgba(0,229,255,.08),rgba(146,120,255,.08));transition:transform .2s ease,border-color .2s ease,background .2s ease}.quick-link:hover{transform:translateY(-3px);border-color:rgba(0,229,255,.65);background:rgba(0,229,255,.13)}.quick-link strong{font-size:16px}.quick-link span{color:var(--muted);font-size:13px;line-height:1.6}.quick-link[data-admin-only]{display:none}.quick-link[data-admin-only].is-visible{display:flex}.points-table{width:100%;border-collapse:collapse;margin-top:18px}.points-table th,.points-table td{padding:11px 8px;border-bottom:1px solid rgba(107,169,224,.14);text-align:left}.points-table th{color:var(--muted);font-size:13px;font-weight:500}.points-table th:last-child,.points-table td:last-child{text-align:right}.points-value{color:var(--green);font-weight:700}.message{min-height:23px;margin:14px 0 0;color:var(--muted);font-size:13px;line-height:1.6}.message.error{color:var(--danger)}.message.success{color:var(--green)}.empty{padding:35px 0;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}.drive-status{margin-top:14px;padding:14px 16px;border:1px solid rgba(114,243,194,.28);border-radius:10px;background:rgba(114,243,194,.08)}.drive-status strong{display:block;margin-bottom:6px;color:var(--green)}.drive-status span{color:#cdeedf;font-size:13px;line-height:1.7}.drive-status.warn{border-color:rgba(255,209,102,.4);background:rgba(255,209,102,.08)}.drive-status.warn strong{color:var(--warn)}.drive-status.warn span{color:#f6e7b8}@media(max-width:900px){.bind-grid{grid-template-columns:1fr}.bind-grid .button{width:100%}}@media(max-width:760px){.hero,.auth-grid{grid-template-columns:1fr}.topbar-inner{padding:13px 16px}.identity{display:none!important}main{padding:44px 16px 70px}.panel-block{padding:18px}.profile-grid,.quick-grid{grid-template-columns:1fr 1fr}.hero h1{letter-spacing:-1px}.points-table{font-size:14px}.points-table th,.points-table td{padding:10px 5px}}@media(max-width:430px){.profile-grid,.quick-grid{grid-template-columns:1fr}.back{font-size:13px}}
   </style>
 </head>
 <body>
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong>算法社</strong><small>Algorithm Club</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html">返回官网</a></div></header>
   <main>
-    <section id="gate" class="panel gate"><div><strong>请先登录社团盘</strong><p>个人中心复用现有社团盘账号，不会创建新用户，也不会修改旧表结构。</p><a class="button" href="drive.html">前往社团盘登录</a></div></section>
+    <section id="authView" class="auth-view">
+      <section class="hero"><div><p class="eyebrow">MEMBER CENTER</p><h1>个人中心</h1><p>登录、注册与资料绑定统一在这里完成。登录成功后会自动连接社团盘（123 云盘 WebDAV），再从社团功能进入文件管理。</p></div><div class="panel session-card"><strong id="authHeroStatus">尚未登录</strong><span id="authHeroHint">使用邀请码注册，或直接登录现有社团账号。</span></div></section>
+      <section class="auth-grid">
+        <div class="panel panel-block">
+          <h2>登录账号</h2>
+          <p class="intro">登录后即可使用个人中心、社团盘与全部社员功能。<a href="password-reset.html" style="color:#00e5ff;margin-left:6px">忘记密码？</a></p>
+          <form class="form" id="loginForm">
+            <div class="field"><label for="loginUsername">用户名</label><input class="input" id="loginUsername" autocomplete="username" required maxlength="40"></div>
+            <div class="field"><label for="loginPassword">密码</label><input class="input" id="loginPassword" type="password" autocomplete="current-password" required minlength="6"></div>
+            <div class="actions"><button class="button" type="submit">登录</button></div>
+          </form>
+        </div>
+        <div class="panel panel-block">
+          <h2>注册账号</h2>
+          <p class="intro">无需邮箱验证。注册成功后会自动登录，并创建你的社团盘专属目录。</p>
+          <form class="form" id="signupForm">
+            <div class="field"><label for="signupUsername">用户名</label><input class="input" id="signupUsername" autocomplete="username" required maxlength="40"></div>
+            <div class="field"><label for="signupPassword">密码</label><input class="input" id="signupPassword" type="password" autocomplete="new-password" required minlength="6"></div>
+            <div class="field"><label for="signupInviteCode">邀请码</label><input class="input" id="signupInviteCode" autocomplete="off" required maxlength="14" placeholder="例如 ABCD-EFGH-JKLM"></div>
+            <div class="actions"><button class="button secondary" type="submit">注册并进入</button></div>
+          </form>
+        </div>
+      </section>
+      <p id="authMessage" class="message" role="status"></p>
+    </section>
+
     <div id="content" class="member-content hidden">
-      <section class="hero"><div><p class="eyebrow">MEMBER CENTER</p><h1>个人中心</h1><p>集中查看社团账号、积分状态与常用功能入口。首次进入请设置中文姓名和班级，系统会自动绑定到积分榜。</p></div><div class="panel session-card"><strong id="statusTitle">社员已登录</strong><span id="statusHint">正在读取当前账号信息…</span></div></section>
+      <section class="hero"><div><p class="eyebrow">MEMBER CENTER</p><h1>个人中心</h1><p>集中查看社团账号、积分状态与常用功能入口。首次进入请设置中文姓名和班级，系统会自动绑定到积分榜。</p></div><div class="panel session-card"><strong id="statusTitle">社员已登录</strong><span id="statusHint">正在读取当前账号信息…</span><div class="actions" style="margin-top:14px"><button class="button secondary" id="logoutButton" type="button">退出登录</button><a class="button" href="drive.html">打开社团盘</a></div></div></section>
+      <section id="driveStatus" class="drive-status warn"><strong id="driveStatusTitle">社团盘连接中</strong><span id="driveStatusHint">登录后会自动连接 123 云盘 WebDAV…</span></section>
       <section id="bindNotice" class="notice"><strong>请先完善社员资料</strong><p>你还没有设置中文姓名和班级。设置后，签到兑换会自动填写姓名，社团留言箱会自动填写姓名和班级，积分商城才能扣分兑换。</p></section>
       <section class="panel panel-block"><div class="panel-head"><div><h2>账号概览</h2><p class="intro">以下信息来自现有登录账号和新的资料绑定表。</p></div></div><div class="profile-grid"><div class="profile-item"><small>登录账号</small><strong id="username">读取中…</strong></div><div class="profile-item"><small>登录邮箱</small><strong id="email">读取中…</strong></div><div class="profile-item"><small>绑定状态</small><strong id="identityState">检查中…</strong></div><div class="profile-item"><small>中文姓名</small><strong id="memberName">暂未绑定</strong></div><div class="profile-item"><small>班级</small><strong id="memberClass">暂未匹配</strong></div><div class="profile-item"><small>当前积分</small><strong id="memberPoints" class="accent">--</strong></div></div></section>
       <section class="panel panel-block"><div class="panel-head"><div><h2>设置姓名与班级</h2><p class="intro">姓名必须是 2 到 20 个连续中文字符。若积分榜已有同名唯一记录，会直接绑定；没有则自动创建积分榜记录并绑定。</p></div></div><form id="bindForm" class="bind-grid"><div class="field"><label for="bindName">中文姓名</label><input class="input" id="bindName" maxlength="20" required placeholder="例如：张三"></div><div class="field"><label for="bindClass">班级</label><input class="input" id="bindClass" maxlength="40" required placeholder="例如：高一（3）班"></div><button class="button" id="bindButton" type="submit">保存并绑定</button></form><p id="bindMessage" class="message" role="status"></p></section>
-      <section class="panel panel-block"><div class="panel-head"><div><h2>常用入口</h2><p class="intro">更新日志已放在个人中心；学习实验、签到和留言等功能统一进入社团功能页。</p></div></div><div class="quick-grid"><a class="quick-link" href="club-features.html"><strong>社团功能</strong><span>算法实验室、五子棋、教学资源、签到兑换、积分商城、留言箱、活动公告</span></a><a class="quick-link" href="points-mall.html"><strong>积分商城</strong><span>浏览上架商品并用社团积分兑换</span></a><a class="quick-link" href="events.html"><strong>活动与公告</strong><span>查看通知、课程安排与活动报名</span></a><a class="quick-link" href="drive.html"><strong>社团盘</strong><span>访问社团共享文件与资料</span></a><a class="quick-link" href="member-points.html"><strong>积分榜</strong><span>查看完整成员积分公示</span></a><a class="quick-link" href="changelog.html"><strong>更新日志</strong><span>查看官网功能更新与维护记录</span></a><a class="quick-link" href="password-reset.html"><strong>重置密码</strong><span>提交申请或使用管理员秘钥设置新密码</span></a><a class="quick-link" href="admin-hub.html" data-admin-only hidden><strong>管理员总览</strong><span>仅管理员可进入后台汇总面板</span></a></div></section>
+      <section class="panel panel-block"><div class="panel-head"><div><h2>常用入口</h2><p class="intro">登录入口已统一到个人中心；社团盘改从社团功能进入，登录后会自动连接 WebDAV。</p></div></div><div class="quick-grid"><a class="quick-link" href="club-features.html"><strong>社团功能</strong><span>算法实验室、五子棋、教学资源、签到兑换、积分商城、留言箱、活动公告、社团盘</span></a><a class="quick-link" href="drive.html"><strong>社团盘</strong><span>已登录时可直接打开 123 云盘专属目录</span></a><a class="quick-link" href="points-mall.html"><strong>积分商城</strong><span>浏览上架商品并用社团积分兑换</span></a><a class="quick-link" href="events.html"><strong>活动与公告</strong><span>查看通知、课程安排与活动报名</span></a><a class="quick-link" href="member-points.html"><strong>积分榜</strong><span>查看完整成员积分公示</span></a><a class="quick-link" href="changelog.html"><strong>更新日志</strong><span>查看官网功能更新与维护记录</span></a><a class="quick-link" href="password-reset.html"><strong>重置密码</strong><span>提交申请或使用管理员秘钥设置新密码</span></a><a class="quick-link" href="admin-hub.html" data-admin-only hidden><strong>管理员总览</strong><span>仅管理员可进入后台汇总面板</span></a></div></section>
       <section class="panel panel-block"><div class="panel-head"><div><h2>积分公示摘要</h2><p class="intro">展示当前积分榜，个人积分会在账号概览中优先显示。</p></div><button id="refreshButton" class="button secondary" type="button">刷新数据</button></div><div id="pointsList"><div class="empty loading">正在读取积分公示…</div></div><p id="pointsMessage" class="message" role="status"></p></section>
     </div>
   </main>
@@ -31,6 +57,7 @@
     const $ = id => document.getElementById(id);
     let currentSession = null;
     let currentProfile = null;
+    let authSequence = 0;
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -46,14 +73,22 @@
       node.className = `message ${type}`;
     }
 
-    async function callPublic(action, body = {}) {
-      if (!currentSession) throw new Error('请先登录社团盘。');
+    function setDriveStatus(ok, title, hint) {
+      const box = $('driveStatus');
+      box.classList.toggle('warn', !ok);
+      $('driveStatusTitle').textContent = title;
+      $('driveStatusHint').textContent = hint;
+    }
+
+    async function callPublic(action, body = {}, requireAuth = true) {
+      const headers = { 'content-type': 'application/json' };
+      if (requireAuth) {
+        if (!currentSession) throw new Error('请先登录个人中心。');
+        headers.authorization = `Bearer ${currentSession.access_token}`;
+      }
       const response = await fetch(FUNCTION_URL, {
         method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${currentSession.access_token}`
-        },
+        headers,
         body: JSON.stringify({ action, ...body })
       });
       const payload = await response.json().catch(() => ({}));
@@ -89,6 +124,17 @@
         : `当前账号：${usernameFromSession(currentSession)}。请先设置中文姓名和班级。`;
     }
 
+    async function connectDrive() {
+      setDriveStatus(false, '社团盘连接中', '正在连接 123 云盘 WebDAV，并检查你的专属目录…');
+      try {
+        const payload = await callPublic('list', { path: '' });
+        const count = Array.isArray(payload.files) ? payload.files.length : 0;
+        setDriveStatus(true, '社团盘已连接', `WebDAV 已就绪，专属目录可访问，当前根目录共 ${count} 项。可从社团功能或下方入口打开社团盘。`);
+      } catch (error) {
+        setDriveStatus(false, '社团盘暂未连上', error.message || '自动连接失败，进入社团盘页面后可再试。');
+      }
+    }
+
     async function loadProfile() {
       const payload = await callPublic('member_profile_get');
       currentProfile = payload;
@@ -109,24 +155,82 @@
     }
 
     async function refreshAll() {
-      await Promise.all([loadProfile().catch(error => {
-        currentProfile = { bound: false, profile: null };
-        updateProfileView();
-        setMessage($('bindMessage'), error.message, 'error');
-      }), refreshPoints()]);
+      await Promise.all([
+        loadProfile().catch(error => {
+          currentProfile = { bound: false, profile: null };
+          updateProfileView();
+          setMessage($('bindMessage'), error.message, 'error');
+        }),
+        refreshPoints(),
+        connectDrive()
+      ]);
     }
 
     async function updateSession(session) {
+      const sequence = ++authSequence;
       currentSession = session;
       const logged = Boolean(session?.user?.id);
-      $('gate').classList.toggle('hidden', logged);
+      $('authView').classList.toggle('hidden', logged);
       $('content').classList.toggle('hidden', !logged);
-      if (!logged) return;
+      if (!logged) {
+        $('authHeroStatus').textContent = '尚未登录';
+        $('authHeroHint').textContent = '使用邀请码注册，或直接登录现有社团账号。';
+        return;
+      }
+      setMessage($('authMessage'), '');
       setMessage($('bindMessage'), '');
       await refreshAll();
+      if (sequence !== authSequence) return;
     }
 
+    $('loginForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      setMessage($('authMessage'), '正在登录…');
+      try {
+        const username = $('loginUsername').value.trim();
+        const password = $('loginPassword').value;
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email: `${username}@club.local`,
+          password
+        });
+        if (error) throw error;
+        setMessage($('authMessage'), '登录成功，正在连接社团盘…', 'success');
+        await updateSession(data.session);
+      } catch (error) {
+        setMessage($('authMessage'), '登录失败：' + (error.message || '请检查用户名和密码。'), 'error');
+      }
+    });
+
+    $('signupForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      setMessage($('authMessage'), '正在验证邀请码并创建账号…');
+      const username = $('signupUsername').value.trim();
+      const password = $('signupPassword').value;
+      const inviteCode = $('signupInviteCode').value.trim().toUpperCase();
+      if (!/^[a-zA-Z0-9_-]{3,40}$/.test(username)) {
+        setMessage($('authMessage'), '用户名只能使用 3 到 40 位字母、数字、下划线或短横线。', 'error');
+        return;
+      }
+      try {
+        await callPublic('signup', { username, password, inviteCode }, false);
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email: `${username}@club.local`,
+          password
+        });
+        if (error) throw error;
+        setMessage($('authMessage'), '注册成功，正在进入个人中心并连接社团盘…', 'success');
+        await updateSession(data.session);
+      } catch (error) {
+        setMessage($('authMessage'), '注册失败：' + (error.message || '请稍后重试。'), 'error');
+      }
+    });
+
     $('refreshButton').onclick = () => void refreshAll();
+    $('logoutButton').onclick = async () => {
+      await supabaseClient.auth.signOut();
+      await updateSession(null);
+      setMessage($('authMessage'), '已退出登录。', 'success');
+    };
 
     $('bindForm').addEventListener('submit', async event => {
       event.preventDefault();
