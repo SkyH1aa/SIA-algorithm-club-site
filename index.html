@@ -225,11 +225,21 @@
         scroll-snap-stop: normal;
       }
       .section-block.hero-block {
-        padding-top: 36px;
-        padding-bottom: 48px;
+        padding-top: 18px;
+        padding-bottom: 0;
         min-height: calc(100svh - 76px);
+        height: calc(100svh - 76px);
         display: flex;
-        align-items: center;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 14px;
+        overflow: hidden;
+      }
+      .section-block.hero-block > .hero {
+        width: 100%;
+        flex: 1 1 auto;
+        min-height: 0;
+        align-content: center;
       }
 
       .eyebrow {
@@ -265,7 +275,7 @@
       }
       .club-affiliation {
         display: block;
-        margin: 0 0 16px;
+        margin: 0 0 10px;
         color: var(--muted);
         font-family: var(--mono);
         font-size: 12px;
@@ -368,7 +378,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 14px 14px 10px;
+        padding: 10px 12px 8px;
       }
       .panel-head span {
         color: var(--muted);
@@ -377,14 +387,14 @@
         letter-spacing: 0.12em;
       }
       .panel-head strong { color: var(--violet); font-size: 12px; }
-      .stage-track { position: relative; display: grid; gap: 8px; padding: 0 8px 8px; }
+      .stage-track { position: relative; display: grid; gap: 6px; padding: 0 8px 6px; }
       .panel-row {
         position: relative;
         display: grid;
-        grid-template-columns: 44px 1fr;
-        gap: 12px;
+        grid-template-columns: 40px 1fr;
+        gap: 10px;
         align-items: start;
-        padding: 14px;
+        padding: 10px 12px;
         border: 1px solid rgba(143, 163, 184, 0.14);
         border-radius: 12px;
         background: rgba(2, 4, 12, 0.45);
@@ -430,6 +440,10 @@
         border-top: 1px solid rgba(0, 229, 255, 0.12);
         border-bottom: 1px solid rgba(0, 229, 255, 0.12);
         background: rgba(7, 11, 22, 0.55);
+      }
+      .hero-proof {
+        margin-top: auto;
+        flex-shrink: 0;
       }
       .proof-inner {
         max-width: var(--max);
@@ -832,7 +846,6 @@
       }
       @media (max-width: 980px) {
         .hero, .join-section { grid-template-columns: 1fr; }
-        .hero-block { min-height: auto; padding-top: 42px; }
         .member-grid, .project-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
       @media (max-width: 767px) {
@@ -857,7 +870,12 @@
         main { padding-left: 18px; padding-right: 18px; }
         html { scroll-snap-type: y proximity; }
         .section-block, .muted-band { padding-top: 52px; padding-bottom: 52px; min-height: auto; }
-        .section-block.hero-block { min-height: calc(100svh - 76px); }
+        .section-block.hero-block {
+          height: auto;
+          min-height: auto;
+          overflow: visible;
+          padding-top: 24px;
+        }
         .capability-grid, .member-grid, .project-grid, .proof-inner { grid-template-columns: 1fr; }
         .proof-item { border-right: 0; border-bottom: 1px solid rgba(115, 221, 255, 0.1); padding: 12px 0; }
         .proof-item:last-child { border-bottom: 0; }
@@ -937,10 +955,7 @@
             <div class="panel-foot">深链：<a href="public/gomoku.html">挑战五子棋 AI</a> · <a href="public/club-features.html">社团功能总览</a></div>
           </aside>
         </div>
-      </section>
-
-      <section id="proof" class="section-block tight" aria-label="实力证明带">
-        <div class="proof-band">
+        <div id="proof" class="proof-band hero-proof" aria-label="实力证明带">
           <div class="proof-inner">
             <div class="proof-item"><strong>8</strong><span>代五子棋 AI 迭代</span></div>
             <div class="proof-item"><strong>7</strong><span>大算法可视化实验室</span></div>
@@ -1007,7 +1022,7 @@
             <h2>成员展示</h2>
             <p>算法社社长、副社长以及优秀社员。角色清晰，方向可见。</p>
           </div>
-          <span class="data-note">members.json</span>
+          <span class="data-note">后台可编辑</span>
         </div>
         <div class="member-grid" id="memberGrid"></div>
       </section>
@@ -1115,11 +1130,23 @@
         }
       }
 
+      function normalizeMemberCard(member) {
+        const name = String(member?.name || '').trim();
+        const grade = String(member?.member_class || member?.grade || '').trim();
+        const group = String(member?.group || '').trim();
+        const intro = String(member?.intro || '').trim();
+        const direction = String(member?.direction || grade || '成员展示').trim();
+        const avatarImage = String(member?.image_url || member?.avatarImage || '').trim();
+        const avatar = String(member?.avatar || name.slice(0, 1) || '成').trim();
+        return { name, grade, group, intro, direction, avatarImage, avatar };
+      }
+
       function renderMembers(members) {
-        document.getElementById('memberGrid').innerHTML = members.map(member => {
+        document.getElementById('memberGrid').innerHTML = members.map(raw => {
+          const member = normalizeMemberCard(raw);
           const avatarContent = member.avatarImage
             ? `<img src="${escapeHtml(member.avatarImage)}" alt="${escapeHtml(member.name)}头像" />`
-            : `<span>${escapeHtml(member.avatar || String(member.name || '').slice(0, 1))}</span>`;
+            : `<span>${escapeHtml(member.avatar)}</span>`;
           const gradeGroup = [member.grade, member.group].filter(Boolean).join(' · ');
           return `
           <article class="member-card">
@@ -1133,6 +1160,25 @@
           </article>
         `;
         }).join('');
+      }
+
+      async function loadShowcaseMembers(fallback) {
+        try {
+          const response = await fetch('https://jgezpvmlnhycxslqbwcx.supabase.co/functions/v1/club-drive', {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              apikey: 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl'
+            },
+            body: JSON.stringify({ action: 'showcase_members_list' })
+          });
+          if (!response.ok) return fallback;
+          const payload = await response.json().catch(() => ({}));
+          const members = Array.isArray(payload.members) ? payload.members : [];
+          return members.length ? members.map(normalizeMemberCard) : fallback;
+        } catch (_error) {
+          return fallback;
+        }
       }
 
       function renderProjects(projects) {
@@ -1388,7 +1434,7 @@
 
       async function init() {
         const [members, projects, localActivities] = await Promise.all([
-          loadJson('public/data/members.json', fallbackMembers),
+          loadShowcaseMembers(fallbackMembers),
           loadJson('public/data/projects.json', fallbackProjects),
           loadJson('public/data/activities.json', fallbackActivities)
         ]);

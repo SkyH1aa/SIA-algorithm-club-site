@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>成员展示管理 · 算法社</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="member-identity.js" defer></script>
+  <style>
+    :root{--bg:#030712;--panel:rgba(9,18,38,.84);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--green:#72f3c2;--danger:#ff718a;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 12% 0,rgba(0,229,255,.14),transparent 28%),radial-gradient(circle at 88% 10%,rgba(146,120,255,.16),transparent 30%),var(--bg)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.82);backdrop-filter:blur(18px)}.topbar-inner{max-width:1200px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted)}main{max-width:1200px;margin:auto;padding:56px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}h1{margin:0 0 12px;font-size:clamp(36px,7vw,64px)}.lead{max-width:780px;color:var(--muted);line-height:1.8;margin:0 0 24px}.panel{padding:22px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);margin-bottom:16px}.panel h2{margin:0 0 8px}.intro{margin:0 0 16px;color:var(--muted);line-height:1.7}.gate,.denied{min-height:240px;display:grid;place-items:center;text-align:center}.hidden{display:none!important}.button{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:rgba(0,229,255,.12);color:var(--text);cursor:pointer;font:inherit}.button.secondary{border-color:var(--line);background:transparent}.button.danger{border-color:rgba(255,113,138,.55);background:rgba(255,113,138,.12)}.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form{display:grid;gap:10px}.label{color:var(--muted);font-size:13px}.input,.textarea{width:100%;padding:11px 13px;color:var(--text);border:1px solid var(--line);border-radius:8px;background:rgba(2,7,18,.76);outline:none;font:inherit}.textarea{min-height:96px;resize:vertical}.checks{display:flex;flex-wrap:wrap;gap:12px;color:var(--muted);font-size:13px}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:860px}.table th,.table td{padding:11px 8px;border-bottom:1px solid rgba(107,169,224,.14);text-align:left;vertical-align:top}.table th{color:var(--muted);font-size:13px;font-weight:500}.actions{display:flex;gap:8px;flex-wrap:wrap}.thumb{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.25)}.badge{display:inline-flex;padding:3px 8px;border-radius:999px;font-size:12px}.badge.on{color:var(--green);border:1px solid rgba(114,243,194,.35);background:rgba(114,243,194,.08)}.badge.off{color:var(--muted);border:1px solid var(--line)}.message{min-height:22px;margin:10px 0 0;color:var(--muted);font-size:13px}.message.error{color:var(--danger)}.message.success{color:var(--green)}.empty{padding:24px 0;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}.section-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}@media(max-width:900px){.grid-2{grid-template-columns:1fr}.identity{display:none!important}main{padding:42px 16px 70px}}
+  </style>
+</head>
+<body>
+  <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong>算法社</strong><small>Members Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html">返回管理员总览</a></div></header>
+  <main>
+    <section id="gate" class="panel gate"><div><strong>请先登录</strong><p class="intro">成员展示管理需要对应权限。</p><a class="button" href="drive.html">前往社团盘登录</a></div></section>
+    <section id="denied" class="panel denied hidden"><div><strong>无成员展示管理权限</strong><p class="intro">请联系超管开通「成员展示」权限。</p></div></section>
+    <div id="content" class="hidden">
+      <p class="eyebrow">SHOWCASE MEMBERS ADMIN</p>
+      <h1>成员展示管理</h1>
+      <p class="lead">管理首页「成员展示」卡片：填写姓名、班级、简介与可选图床图片 URL。留空图片表示无图；取消展示后首页不会显示该卡片。</p>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h2>添加 / 编辑成员卡片</h2>
+            <p class="intro">配图只需填写图床图片 URL；留空表示默认无图片。已展示成员也可直接编辑。</p>
+          </div>
+          <button class="button secondary" type="button" id="refreshMembers">刷新列表</button>
+        </div>
+        <form class="form" id="memberForm">
+          <input type="hidden" id="memberId">
+          <div class="grid-2">
+            <div><label class="label" for="memberName">姓名</label><input class="input" id="memberName" maxlength="40" required placeholder="例如 陈海铭"></div>
+            <div><label class="label" for="memberClass">班级 / 职务</label><input class="input" id="memberClass" maxlength="80" placeholder="例如 A1C5-社长"></div>
+          </div>
+          <div class="grid-2">
+            <div><label class="label" for="memberImageUrl">图床图片 URL（可选）</label><input class="input" id="memberImageUrl" maxlength="500" placeholder="https://... 留空=无图片"></div>
+            <div><label class="label" for="memberSort">排序（越小越靠前）</label><input class="input" id="memberSort" type="number" min="0" max="100000" value="0"></div>
+          </div>
+          <label class="label" for="memberIntro">简介</label>
+          <textarea class="textarea" id="memberIntro" maxlength="500" placeholder="一句话介绍方向、职责或贡献"></textarea>
+          <div class="checks"><label><input type="checkbox" id="memberVisible" checked> 在首页展示</label></div>
+          <div class="actions">
+            <button class="button" type="submit" id="memberSaveButton">保存成员</button>
+            <button class="button secondary" type="button" id="resetMember">清空表单</button>
+          </div>
+        </form>
+        <p class="message" id="memberMessage" role="status"></p>
+        <div class="table-wrap" id="memberList" style="margin-top:16px"><div class="empty loading">正在读取成员展示…</div></div>
+      </section>
+    </div>
+  </main>
+  <script>
+    const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
+    const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const $ = id => document.getElementById(id);
+    let membersCache = [];
+    let currentSession = null;
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    }
+    function formatTime(value) {
+      if (!value) return '-';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '-';
+      return date.toLocaleString('zh-CN', { hour12: false });
+    }
+    function setMessage(node, text, type = '') {
+      node.textContent = text || '';
+      node.className = `message ${type}`;
+    }
+    async function call(action, body = {}) {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) throw new Error('请先登录。');
+      const response = await fetch(FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ action, ...body })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || '操作失败。');
+      return payload;
+    }
+
+    function resetMemberForm() {
+      $('memberForm').reset();
+      $('memberId').value = '';
+      $('memberSort').value = '0';
+      $('memberVisible').checked = true;
+      $('memberSaveButton').textContent = '保存成员';
+      setMessage($('memberMessage'), '');
+    }
+
+    function startEditMember(id) {
+      const member = membersCache.find(item => item.id === id);
+      if (!member) return;
+      $('memberId').value = member.id;
+      $('memberName').value = member.name || '';
+      $('memberClass').value = member.member_class || '';
+      $('memberImageUrl').value = member.image_url || '';
+      $('memberIntro').value = member.intro || '';
+      $('memberSort').value = member.sort_order ?? 0;
+      $('memberVisible').checked = member.is_visible !== false;
+      $('memberSaveButton').textContent = '保存修改';
+      setMessage($('memberMessage'), `正在编辑「${member.name}」。`, 'success');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function renderMembers(members) {
+      membersCache = members;
+      if (!members.length) {
+        $('memberList').innerHTML = '<div class="empty">还没有成员卡片，请先在上方添加。</div>';
+        return;
+      }
+      $('memberList').innerHTML = `<table class="table"><thead><tr><th>图片</th><th>姓名</th><th>班级 / 职务</th><th>简介</th><th>状态</th><th>排序</th><th>更新时间</th><th>操作</th></tr></thead><tbody>${members.map(item => `
+        <tr>
+          <td>${item.image_url ? `<img class="thumb" src="${escapeHtml(item.image_url)}" alt="">` : '<span class="badge off">无图片</span>'}</td>
+          <td><strong>${escapeHtml(item.name)}</strong></td>
+          <td>${escapeHtml(item.member_class || '-')}</td>
+          <td><div style="color:var(--muted);font-size:12px;line-height:1.5;max-width:280px">${escapeHtml(item.intro || '-')}</div></td>
+          <td><span class="badge ${item.is_visible ? 'on' : 'off'}">${item.is_visible ? '展示中' : '已隐藏'}</span></td>
+          <td>${escapeHtml(item.sort_order ?? 0)}</td>
+          <td>${escapeHtml(formatTime(item.updated_at))}</td>
+          <td class="actions">
+            <button class="button secondary" type="button" data-edit-member="${escapeHtml(item.id)}">编辑</button>
+            <button class="button danger" type="button" data-delete-member="${escapeHtml(item.id)}">移除</button>
+          </td>
+        </tr>
+      `).join('')}</tbody></table>`;
+
+      $('memberList').querySelectorAll('[data-edit-member]').forEach(button => {
+        button.addEventListener('click', () => startEditMember(button.getAttribute('data-edit-member')));
+      });
+      $('memberList').querySelectorAll('[data-delete-member]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const id = button.getAttribute('data-delete-member');
+          const member = membersCache.find(item => item.id === id);
+          if (!window.confirm(`确认移除成员展示「${member?.name || id}」？`)) return;
+          setMessage($('memberMessage'), '正在移除…');
+          try {
+            await call('admin_showcase_members_delete', { id });
+            setMessage($('memberMessage'), '成员展示已移除。', 'success');
+            if ($('memberId').value === id) resetMemberForm();
+            await refreshMembers();
+          } catch (error) {
+            setMessage($('memberMessage'), error.message, 'error');
+          }
+        });
+      });
+    }
+
+    async function refreshMembers() {
+      $('memberList').innerHTML = '<div class="empty loading">正在读取成员展示…</div>';
+      try {
+        const payload = await call('admin_showcase_members_list');
+        renderMembers(payload.members || []);
+        setMessage($('memberMessage'), '');
+      } catch (error) {
+        $('memberList').innerHTML = '<div class="empty">暂时无法读取成员展示。</div>';
+        setMessage($('memberMessage'), error.message, 'error');
+      }
+    }
+
+    async function updateView(session) {
+      currentSession = session;
+      const loggedIn = Boolean(session?.user?.id);
+      $('gate').classList.toggle('hidden', loggedIn);
+      if (!loggedIn) {
+        $('denied').classList.add('hidden');
+        $('content').classList.add('hidden');
+        return;
+      }
+      const access = window.ClubStaffAccess
+        ? await window.ClubStaffAccess.fetchStaffAccess(session)
+        : { isSuperAdmin: false, permissions: {} };
+      const allowed = Boolean(access.isSuperAdmin || access.permissions?.can_members);
+      $('denied').classList.toggle('hidden', allowed);
+      $('content').classList.toggle('hidden', !allowed);
+      if (allowed) await refreshMembers();
+    }
+
+    $('resetMember').addEventListener('click', resetMemberForm);
+    $('refreshMembers').addEventListener('click', refreshMembers);
+    $('memberForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      setMessage($('memberMessage'), '正在保存成员…');
+      try {
+        const id = $('memberId').value.trim();
+        await call('admin_showcase_members_save', {
+          id: id || undefined,
+          name: $('memberName').value.trim(),
+          memberClass: $('memberClass').value.trim(),
+          intro: $('memberIntro').value.trim(),
+          imageUrl: $('memberImageUrl').value.trim(),
+          sortOrder: Number($('memberSort').value || 0),
+          isVisible: $('memberVisible').checked
+        });
+        setMessage($('memberMessage'), id ? '成员展示已更新。' : '成员展示已添加。', 'success');
+        resetMemberForm();
+        await refreshMembers();
+      } catch (error) {
+        setMessage($('memberMessage'), error.message, 'error');
+      }
+    });
+
+    supabaseClient.auth.onAuthStateChange((_event, session) => { void updateView(session); });
+    supabaseClient.auth.getSession().then(({ data: { session } }) => updateView(session));
+  </script>
+</body>
+</html>
