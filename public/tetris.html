@@ -201,6 +201,43 @@
       cursor: pointer;
     }
     .versus-ai-opts .opt-desc { color: #c4a484; font-size: 11px; }
+    .ai-play-opts {
+      display: none;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      margin: 0;
+      padding: 5px 8px;
+      border: 1px solid rgba(73,231,255,.28);
+      border-radius: 10px;
+      background: rgba(8, 28, 40, .72);
+      align-items: center;
+    }
+    .ai-play-opts.visible { display: flex; }
+    .ai-play-opts .opts-title {
+      color: #7dd3fc;
+      font-size: 12px;
+      font-weight: 700;
+      margin-right: 4px;
+    }
+    .ai-play-opts label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #cfefff;
+      font-size: 12px;
+      cursor: pointer;
+      user-select: none;
+      margin: 0;
+    }
+    .ai-play-opts input {
+      width: 14px;
+      height: 14px;
+      min-width: 14px;
+      padding: 0;
+      accent-color: #38bdf8;
+      cursor: pointer;
+    }
+    .ai-play-opts .opt-desc { color: #91a9b8; font-size: 11px; }
 
     .play-area {
       flex: 1 1 auto;
@@ -460,6 +497,14 @@
             <label>
               <input type="checkbox" id="optDropGhost" checked />
               <span>落点轮廓<span class="opt-desc"> · 硬降预览</span></span>
+            </label>
+          </div>
+
+          <div class="ai-play-opts" id="aiPlayOpts">
+            <span class="opts-title">AI 游玩展示</span>
+            <label>
+              <input type="checkbox" id="optAiPlayHardDrop" />
+              <span>开启 AI 硬降<span class="opt-desc"> · 对齐后瞬降锁定</span></span>
             </label>
           </div>
 
@@ -1036,13 +1081,21 @@
           await this.wait(45);
           if (this.gameOver) return;
         }
-        // 逐步下落（动画），不要瞬移瞬锁
-        while (!this.gameOver && this.current && !this.collides(this.current.shape, this.current.x, this.current.y + 1)) {
-          this.current.y++;
+        // 硬降：对齐后瞬降锁定；关闭则逐步下落展示
+        if (this.aiPlayHardDrop) {
+          while (!this.gameOver && this.current && !this.collides(this.current.shape, this.current.x, this.current.y + 1)) {
+            this.current.y++;
+          }
           this.draw();
-          await this.wait(28);
+          if (!this.gameOver) this.lockCurrent();
+        } else {
+          while (!this.gameOver && this.current && !this.collides(this.current.shape, this.current.x, this.current.y + 1)) {
+            this.current.y++;
+            this.draw();
+            await this.wait(28);
+          }
+          if (!this.gameOver) this.lockCurrent();
         }
-        if (!this.gameOver) this.lockCurrent();
       } finally {
         this.aiBusy = false;
       }
@@ -1288,7 +1341,8 @@
     sharedBag: null,
     aiLoopTimer: null,
     versusAlignTimer: null,
-    versusAiDrop: 'none' // none | soft | hard
+    versusAiDrop: 'none', // none | soft | hard
+    aiPlayHardDrop: false
   };
 
   const els = {
@@ -1301,6 +1355,8 @@
     surrenderBtn: document.getElementById('surrenderBtn'),
     optColumnBeams: document.getElementById('optColumnBeams'),
     optDropGhost: document.getElementById('optDropGhost'),
+    aiPlayOpts: document.getElementById('aiPlayOpts'),
+    optAiPlayHardDrop: document.getElementById('optAiPlayHardDrop'),
     versusAiOpts: document.getElementById('versusAiOpts'),
     optAiSoftDrop: document.getElementById('optAiSoftDrop'),
     optAiHardDrop: document.getElementById('optAiHardDrop'),
@@ -1544,6 +1600,18 @@
     if (els.optAiHardDrop) els.optAiHardDrop.checked = state.versusAiDrop === 'hard';
   }
 
+  function syncAiPlayOptsUI() {
+    const aiPlay = state.mode === 'ai';
+    if (els.aiPlayOpts) els.aiPlayOpts.classList.toggle('visible', aiPlay);
+    if (els.optAiPlayHardDrop) els.optAiPlayHardDrop.checked = !!state.aiPlayHardDrop;
+  }
+
+  function applyAiPlayHardDropLive() {
+    if (state.player && state.mode === 'ai') {
+      state.player.aiPlayHardDrop = !!state.aiPlayHardDrop;
+    }
+  }
+
   function setVersusAiDrop(mode) {
     // mode: 'none' | 'soft' | 'hard'；两个增强只能开一个
     if (mode !== 'soft' && mode !== 'hard') mode = 'none';
@@ -1579,6 +1647,7 @@
         : 'AI 游玩 / AI 辅助仅展示，不写入排行榜；可随时点「停止」结束';
     }
     syncVersusAiDropUI();
+    syncAiPlayOptsUI();
   }
 
   function createEngines() {
@@ -1622,6 +1691,7 @@
       onGameOver: () => handleBoardGameOver('player'),
       onStats: () => updateDiff()
     });
+    state.player.aiPlayHardDrop = state.mode === 'ai' && !!state.aiPlayHardDrop;
 
     // 拦截 spawn 后同步 AI plan
     const origLock = state.player.lockCurrent.bind(state.player);
@@ -1921,6 +1991,13 @@
       }
       syncVersusAiDropUI();
       applyVersusDropModeLive();
+    });
+  }
+
+  if (els.optAiPlayHardDrop) {
+    els.optAiPlayHardDrop.addEventListener('change', () => {
+      state.aiPlayHardDrop = !!els.optAiPlayHardDrop.checked;
+      applyAiPlayHardDropLive();
     });
   }
 
