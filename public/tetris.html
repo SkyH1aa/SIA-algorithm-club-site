@@ -9,14 +9,17 @@
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
+    html, body { height: 100%; }
     body {
       position: relative;
       min-height: 100vh;
+      min-height: 100dvh;
       margin: 0;
-      padding: 28px 18px;
+      padding: 10px 12px;
       background: #07111f;
       color: #e7f7ff;
       font-family: Arial, system-ui, sans-serif;
+      overflow: hidden;
     }
     .ambient-background{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
     .ambient-orb{position:absolute;width:min(48vw,620px);aspect-ratio:1;border-radius:50%;filter:blur(72px);opacity:.18;mix-blend-mode:screen;animation:drift-orb 18s ease-in-out infinite alternate}
@@ -25,67 +28,248 @@
     .ambient-grid{position:absolute;inset:-80px;background-image:linear-gradient(rgba(0,229,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.055) 1px,transparent 1px);background-size:72px 72px;opacity:.45;animation:grid-shift 26s linear infinite}
     @keyframes drift-orb{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(7%,5%,0) scale(1.1)}}
     @keyframes grid-shift{to{transform:translate3d(72px,72px,0)}}
-    .page-shell { position: relative; z-index: 1; width: min(1280px, 100%); margin: 0 auto; }
-    .member-identity{display:none;margin:10px auto 0;padding:5px 9px;border:1px solid rgba(0,229,255,.34);border-radius:999px;color:#00e5ff;font-size:12px;width:max-content}
-    .member-identity:not([hidden]){display:block}
-    .page-header { margin-bottom: 22px; }
-    .page-header a { color: #49e7ff; text-decoration: none; }
-    .page-header h1 { margin: 8px 0; }
-    .page-header p { color: #91a9b8; margin: 0; }
-    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; align-items: start; }
+
+    .page-shell {
+      position: relative;
+      z-index: 1;
+      width: min(1360px, 100%);
+      height: calc(100vh - 20px);
+      height: calc(100dvh - 20px);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 0;
+    }
+    .member-identity{display:none;margin:0;padding:3px 8px;border:1px solid rgba(0,229,255,.34);border-radius:999px;color:#00e5ff;font-size:11px;width:max-content}
+    .member-identity:not([hidden]){display:inline-block}
+
+    .page-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 14px;
+      margin: 0;
+      flex: 0 0 auto;
+    }
+    .page-header a { color: #49e7ff; text-decoration: none; font-size: 13px; }
+    .page-header h1 {
+      margin: 0;
+      font-size: clamp(16px, 2vw, 20px);
+      font-weight: 700;
+      letter-spacing: .2px;
+    }
+    .page-header p { display: none; }
+
+    .layout {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 12px;
+      align-items: stretch;
+    }
+
     .panel {
-      padding: 18px;
+      padding: 10px;
       border: 1px solid rgba(73, 231, 255, .24);
       border-radius: 12px;
       background: rgba(13, 28, 47, .84);
-      box-shadow: 0 16px 42px rgba(0,0,0,.22);
+      box-shadow: 0 12px 28px rgba(0,0,0,.22);
+      min-height: 0;
     }
-    .panel:hover { border-color: rgba(73,231,255,.45); box-shadow: 0 22px 60px rgba(0,0,0,.3), 0 0 30px rgba(73,231,255,.08); }
-    .setup { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
-    label { color: #91a9b8; font-size: 14px; }
+    main.panel {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 0 0 auto;
+    }
+    .setup {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+      align-items: center;
+      margin: 0;
+    }
+    label { color: #91a9b8; font-size: 12px; }
     input, select {
-      min-width: 180px;
-      padding: 10px 12px;
+      min-width: 140px;
+      padding: 6px 10px;
       border: 1px solid #31536a;
       border-radius: 6px;
       background: #081522;
       color: #fff;
-      font-size: 15px;
+      font-size: 13px;
     }
-    .hint { color: #91a9b8; font-size: 13px; }
-    .mode-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .hint { color: #91a9b8; font-size: 12px; }
+
+    .control-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .mode-row { display: contents; }
     .mode-btn, .action-btn {
-      padding: 10px 14px;
+      padding: 6px 11px;
       border: 1px solid rgba(73,231,255,.28);
       border-radius: 999px;
       background: #0d1c2f;
       color: #e7f7ff;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 600;
+      line-height: 1.2;
+      white-space: nowrap;
     }
-    .mode-btn.active { background: #0284c7; border-color: #38bdf8; box-shadow: 0 0 18px rgba(56,189,248,.35); }
+    .mode-btn.active { background: #0284c7; border-color: #38bdf8; box-shadow: 0 0 14px rgba(56,189,248,.3); }
     .action-btn.primary { background: #FF6F00; border-color: #FF6F00; }
     .action-btn.danger { background: #7f1d1d; border-color: #ef4444; }
     .action-btn:disabled { opacity: .45; cursor: not-allowed; }
-    .boards {
+
+    .assist-opts {
       display: flex;
       flex-wrap: wrap;
-      gap: 18px;
-      justify-content: center;
-      align-items: flex-start;
+      gap: 6px 12px;
+      margin: 0;
+      padding: 5px 8px;
+      border: 1px solid rgba(73,231,255,.16);
+      border-radius: 10px;
+      background: rgba(8, 21, 34, .72);
+      align-items: center;
     }
-    .board-card { text-align: center; }
-    .board-card h3 { margin: 0 0 8px; color: #49e7ff; font-weight: 500; font-size: 16px; }
+    .assist-opts label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #cfefff;
+      font-size: 12px;
+      cursor: pointer;
+      user-select: none;
+      margin: 0;
+    }
+    .assist-opts input {
+      width: 14px;
+      height: 14px;
+      min-width: 14px;
+      padding: 0;
+      accent-color: #38bdf8;
+      cursor: pointer;
+    }
+    .assist-opts .opt-desc { color: #91a9b8; font-size: 11px; }
+    .versus-ai-opts {
+      display: none;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      margin: 0;
+      padding: 5px 8px;
+      border: 1px solid rgba(255, 183, 77, .28);
+      border-radius: 10px;
+      background: rgba(40, 24, 8, .55);
+      align-items: center;
+    }
+    .versus-ai-opts.visible { display: flex; }
+    .versus-ai-opts .opts-title {
+      color: #ffb74d;
+      font-size: 12px;
+      font-weight: 700;
+      margin-right: 4px;
+    }
+    .versus-ai-opts label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #ffe8c7;
+      font-size: 12px;
+      cursor: pointer;
+      user-select: none;
+      margin: 0;
+    }
+    .versus-ai-opts input {
+      width: 14px;
+      height: 14px;
+      min-width: 14px;
+      padding: 0;
+      accent-color: #ff9800;
+      cursor: pointer;
+    }
+    .versus-ai-opts .opt-desc { color: #c4a484; font-size: 11px; }
+
+    .play-area {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .boards {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 12px;
+      justify-content: center;
+      align-items: stretch;
+      overflow: hidden;
+    }
+    .board-card {
+      text-align: left;
+      display: grid;
+      grid-template-columns: auto auto;
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "title meta"
+        "board meta";
+      column-gap: 10px;
+      row-gap: 4px;
+      align-items: start;
+      min-height: 0;
+    }
+    .board-card h3 {
+      grid-area: title;
+      margin: 0;
+      color: #49e7ff;
+      font-weight: 500;
+      font-size: 13px;
+      line-height: 1.2;
+    }
     .board-wrap {
+      grid-area: board;
       position: relative;
-      display: inline-block;
+      display: block;
+      width: fit-content;
+      max-width: 100%;
       border: 2px solid #38bdf8;
       border-radius: 8px;
-      box-shadow: 0 0 24px rgba(56,189,248,.25);
+      box-shadow: 0 0 18px rgba(56,189,248,.22);
       background: #0b1437;
+      min-height: 0;
     }
-    canvas.board { display: block; background: #11142A; border-radius: 6px; }
+    canvas.board {
+      display: block;
+      background: #11142A;
+      border-radius: 6px;
+      width: auto;
+      height: min(600px, calc(100dvh - 210px));
+      max-height: calc(100dvh - 210px);
+      aspect-ratio: 1 / 2;
+    }
+    .board-meta {
+      grid-area: meta;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 108px;
+      padding-top: 2px;
+    }
     .overlay {
       position: absolute; inset: 0;
       background: rgba(11,20,55,.82);
@@ -93,92 +277,141 @@
       border-radius: 6px; z-index: 5;
     }
     .overlay.active { display: flex; }
-    .overlay h2 { margin: 0; color: #FF6F00; font-size: 28px; letter-spacing: 1px; }
-    .overlay p { margin: 8px 0 0; color: #94a3b8; }
+    .overlay h2 { margin: 0; color: #FF6F00; font-size: 22px; letter-spacing: 1px; }
+    .overlay p { margin: 6px 0 0; color: #94a3b8; font-size: 13px; }
+
     .stats {
       display: grid;
-      grid-template-columns: repeat(3, minmax(70px, 1fr));
-      gap: 8px;
-      margin-top: 10px;
-      font-size: 13px;
+      grid-template-columns: 1fr;
+      gap: 6px;
+      margin: 0;
+      font-size: 12px;
       color: #91a9b8;
     }
-    .stats strong { display: block; color: #e7f7ff; font-size: 16px; font-variant-numeric: tabular-nums; }
+    .stats strong {
+      display: block;
+      color: #e7f7ff;
+      font-size: 15px;
+      font-variant-numeric: tabular-nums;
+    }
     .next-box {
-      margin-top: 10px;
-      padding: 10px;
+      margin: 0;
+      padding: 8px;
       border: 1px solid #1e293b;
       border-radius: 8px;
       background: #0b1437;
-      display: inline-block;
+      display: block;
+      width: 100%;
+      text-align: center;
     }
-    .next-box .label { font-size: 12px; color: #64748b; margin-bottom: 4px; }
-    .controls-hint { margin-top: 12px; color: #64748b; font-size: 13px; line-height: 1.6; }
-    .assist-opts {
+    .next-box .label { font-size: 11px; color: #64748b; margin-bottom: 4px; }
+    .next-box canvas { max-width: 100%; height: auto; }
+
+    .footer-bar {
+      flex: 0 0 auto;
       display: flex;
       flex-wrap: wrap;
-      gap: 10px 16px;
-      margin: 0 0 14px;
-      padding: 10px 12px;
-      border: 1px solid rgba(73,231,255,.18);
-      border-radius: 12px;
-      background: rgba(8, 21, 34, .72);
-    }
-    .assist-opts label {
-      display: inline-flex;
+      gap: 6px 12px;
       align-items: center;
-      gap: 8px;
-      color: #cfefff;
-      font-size: 13px;
-      cursor: pointer;
-      user-select: none;
+      justify-content: space-between;
+      min-height: 18px;
     }
-    .assist-opts input {
-      width: 16px;
-      height: 16px;
-      accent-color: #38bdf8;
-      cursor: pointer;
+    .controls-hint {
+      margin: 0;
+      color: #64748b;
+      font-size: 11px;
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
     }
-    .assist-opts .opt-desc { color: #91a9b8; font-size: 12px; }
-    .result { min-height: 22px; margin: 12px 0 0; color: #49e7ff; font-weight: bold; }
-    .lb-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .result {
+      min-height: 0;
+      margin: 0;
+      color: #49e7ff;
+      font-weight: bold;
+      font-size: 12px;
+    }
+    .versus-diff {
+      margin: 0;
+      text-align: left;
+      font-size: 12px;
+      color: #c4b5fd;
+    }
+    .versus-diff strong { color: #ffd166; font-size: 14px; }
+
+    .leaderboard.panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .lb-tabs { display: flex; gap: 6px; margin-bottom: 8px; flex: 0 0 auto; }
     .lb-tab {
       flex: 1;
-      padding: 8px 10px;
+      padding: 6px 8px;
       border-radius: 8px;
       border: 1px solid rgba(73,231,255,.24);
       background: #081522;
       color: #91a9b8;
       cursor: pointer;
       font-weight: 600;
+      font-size: 12px;
     }
     .lb-tab.active { background: #0284c7; color: #fff; border-color: #38bdf8; }
-    .leaderboard h2 { margin: 0 0 6px; font-size: 18px; }
-    .leaderboard-list { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
+    .leaderboard h2 { margin: 0 0 6px; font-size: 15px; flex: 0 0 auto; }
+    .leaderboard > .hint { flex: 0 0 auto; margin: 0 0 6px; }
+    .leaderboard-list {
+      display: grid;
+      gap: 4px;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+      overflow: auto;
+      min-height: 0;
+      flex: 1 1 auto;
+    }
     .leaderboard-list li {
       display: grid;
-      grid-template-columns: 30px 1fr auto;
-      gap: 8px;
-      padding: 10px;
+      grid-template-columns: 26px 1fr auto;
+      gap: 6px;
+      padding: 7px 6px;
       border-bottom: 1px solid rgba(73,231,255,.12);
-      font-size: 14px;
+      font-size: 12px;
     }
     .rank { color: #49e7ff; font-weight: bold; }
     .score { color: #ffd166; font-weight: bold; }
-    .empty { color: #91a9b8; font-size: 14px; }
-    .versus-diff {
-      margin-top: 10px;
-      text-align: center;
-      font-size: 15px;
-      color: #c4b5fd;
-    }
-    .versus-diff strong { color: #ffd166; font-size: 20px; }
+    .empty { color: #91a9b8; font-size: 13px; }
     .hidden { display: none !important; }
-    @media (max-width: 980px) {
+
+    @media (max-width: 1100px) {
+      body { overflow: auto; }
+      .page-shell { height: auto; min-height: calc(100dvh - 20px); }
       .layout { grid-template-columns: 1fr; }
+      .leaderboard.panel { max-height: 280px; }
+      canvas.board { height: min(560px, calc(100dvh - 250px)); max-height: calc(100dvh - 250px); }
     }
-    @media (max-width: 700px) {
-      canvas.board { width: 240px !important; height: 480px !important; }
+    @media (max-width: 760px) {
+      .boards { flex-wrap: wrap; overflow: auto; }
+      .board-card {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "title"
+          "board"
+          "meta";
+        justify-items: center;
+        text-align: center;
+      }
+      .board-meta { min-width: 0; width: min(240px, 100%); }
+      .stats { grid-template-columns: repeat(3, 1fr); }
+      .assist-opts .opt-desc { display: none; }
+      .controls-hint { white-space: normal; }
+      canvas.board { width: min(240px, 72vw); height: auto; max-height: none; aspect-ratio: 1 / 2; }
+    }
+    @media (max-height: 760px) {
+      canvas.board { height: min(520px, calc(100dvh - 190px)); max-height: calc(100dvh - 190px); }
+      .page-header h1 { font-size: 16px; }
     }
     @media (prefers-reduced-motion: reduce) {
       .ambient-orb, .ambient-grid { animation: none; }
@@ -193,86 +426,102 @@
   </div>
   <div class="page-shell">
     <header class="page-header">
-      <a href="../index.html">← 返回算法社官网</a>
+      <a href="../index.html">← 返回官网</a>
       <span class="member-identity" data-member-identity hidden></span>
-      <h1>俄罗斯方块 · 算法成果展示</h1>
+      <h1 title="Dellacherie 专家系统 AI · 四模式 · 双排行榜">俄罗斯方块</h1>
       <p>Dellacherie 专家系统 AI · 四模式 · 双排行榜</p>
     </header>
 
     <div class="layout">
       <main class="panel">
-        <div class="setup">
-          <label for="nickname">挑战昵称</label>
-          <input id="nickname" maxlength="20" placeholder="请输入昵称" autocomplete="nickname" />
-          <span class="hint" id="nickHint">普通游玩 / 人机对战需输入昵称；AI 游玩与 AI 辅助无需昵称（不存档）</span>
-        </div>
-
-        <div class="mode-row" id="modeRow">
-          <button type="button" class="mode-btn active" data-mode="normal">正常游玩</button>
-          <button type="button" class="mode-btn" data-mode="ai">AI 游玩</button>
-          <button type="button" class="mode-btn" data-mode="assist">AI 辅助</button>
-          <button type="button" class="mode-btn" data-mode="versus">人机对战</button>
-        </div>
-
-        <div class="mode-row">
-          <button type="button" class="action-btn primary" id="startBtn">开始游戏</button>
-          <button type="button" class="action-btn" id="restartBtn" disabled>重新开始</button>
-          <button type="button" class="action-btn danger hidden" id="stopBtn" disabled>停止</button>
-          <button type="button" class="action-btn danger hidden" id="surrenderBtn" disabled>投降（不记分）</button>
-        </div>
-
-        <div class="assist-opts" id="assistOpts">
-          <label>
-            <input type="checkbox" id="optColumnBeams" checked />
-            <span>左右列光束<span class="opt-desc"> · 标出当前方块最左/最右通道</span></span>
-          </label>
-          <label>
-            <input type="checkbox" id="optDropGhost" checked />
-            <span>落点轮廓<span class="opt-desc"> · 显示硬降预览轮廓</span></span>
-          </label>
-        </div>
-
-        <div class="boards">
-          <div class="board-card" id="playerCard">
-            <h3 id="playerTitle">玩家</h3>
-            <div class="board-wrap">
-              <canvas class="board" id="playerBoard" width="300" height="600"></canvas>
-              <div class="overlay" id="playerOverlay"><h2>GAME OVER</h2><p id="playerOverlayText">顶到最上</p></div>
-            </div>
-            <div class="stats">
-              <div>得分<strong id="playerScore">0</strong></div>
-              <div>行数<strong id="playerLines">0</strong></div>
-              <div>等级<strong id="playerLevel">0</strong></div>
-            </div>
-            <div class="next-box">
-              <div class="label">NEXT</div>
-              <canvas id="playerNext" width="120" height="80"></canvas>
-            </div>
+        <div class="toolbar">
+          <div class="setup">
+            <label for="nickname">昵称</label>
+            <input id="nickname" maxlength="20" placeholder="计分模式需填写" autocomplete="nickname" />
+            <span class="hint" id="nickHint">普通 / 对战需昵称；AI 演示免昵称不存档</span>
           </div>
 
-          <div class="board-card hidden" id="aiCard">
-            <h3>AI</h3>
-            <div class="board-wrap">
-              <canvas class="board" id="aiBoard" width="300" height="600"></canvas>
-              <div class="overlay" id="aiOverlay"><h2>GAME OVER</h2><p>顶到最上</p></div>
-            </div>
-            <div class="stats">
-              <div>得分<strong id="aiScore">0</strong></div>
-              <div>行数<strong id="aiLines">0</strong></div>
-              <div>等级<strong id="aiLevel">0</strong></div>
-            </div>
-            <div class="next-box">
-              <div class="label">NEXT</div>
-              <canvas id="aiNext" width="120" height="80"></canvas>
-            </div>
+          <div class="control-strip" id="modeRow">
+            <button type="button" class="mode-btn active" data-mode="normal">正常</button>
+            <button type="button" class="mode-btn" data-mode="ai">AI 游玩</button>
+            <button type="button" class="mode-btn" data-mode="assist">AI 辅助</button>
+            <button type="button" class="mode-btn" data-mode="versus">人机对战</button>
+            <button type="button" class="action-btn primary" id="startBtn">开始</button>
+            <button type="button" class="action-btn" id="restartBtn" disabled>重开</button>
+            <button type="button" class="action-btn danger hidden" id="stopBtn" disabled>停止</button>
+            <button type="button" class="action-btn danger hidden" id="surrenderBtn" disabled>投降</button>
+          </div>
+
+          <div class="assist-opts" id="assistOpts">
+            <label>
+              <input type="checkbox" id="optColumnBeams" checked />
+              <span>左右列光束<span class="opt-desc"> · 落点通道</span></span>
+            </label>
+            <label>
+              <input type="checkbox" id="optDropGhost" checked />
+              <span>落点轮廓<span class="opt-desc"> · 硬降预览</span></span>
+            </label>
+          </div>
+
+          <div class="versus-ai-opts" id="versusAiOpts">
+            <span class="opts-title">对战 AI 增强</span>
+            <label>
+              <input type="checkbox" id="optAiSoftDrop" />
+              <span>开启 AI 软降<span class="opt-desc"> · 记榜分差 ×1.25</span></span>
+            </label>
+            <label>
+              <input type="checkbox" id="optAiHardDrop" />
+              <span>开启 AI 硬降<span class="opt-desc"> · 记榜分差 ×2</span></span>
+            </label>
           </div>
         </div>
 
-        <div class="versus-diff hidden" id="versusDiff">分差（玩家 − AI）<strong id="diffScore">0</strong></div>
-        <p class="result" id="result" aria-live="polite"></p>
-        <div class="controls-hint">
-          ← → 移动 · ↑ 旋转 · ↓ 软降 · 空格 硬降<br>
-          辅助：左右列光束 / 落点轮廓可随时开关 · AI 游玩逐步下落锁定 · 人机对战 AI 靠自然重力 · 投降不记分
+        <div class="play-area">
+          <div class="boards">
+            <div class="board-card" id="playerCard">
+              <h3 id="playerTitle">玩家</h3>
+              <div class="board-wrap">
+                <canvas class="board" id="playerBoard" width="300" height="600"></canvas>
+                <div class="overlay" id="playerOverlay"><h2>GAME OVER</h2><p id="playerOverlayText">顶到最上</p></div>
+              </div>
+              <div class="board-meta">
+                <div class="stats">
+                  <div>得分<strong id="playerScore">0</strong></div>
+                  <div>行数<strong id="playerLines">0</strong></div>
+                  <div>等级<strong id="playerLevel">0</strong></div>
+                </div>
+                <div class="next-box">
+                  <div class="label">NEXT</div>
+                  <canvas id="playerNext" width="120" height="80"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <div class="board-card hidden" id="aiCard">
+              <h3>AI</h3>
+              <div class="board-wrap">
+                <canvas class="board" id="aiBoard" width="300" height="600"></canvas>
+                <div class="overlay" id="aiOverlay"><h2>GAME OVER</h2><p>顶到最上</p></div>
+              </div>
+              <div class="board-meta">
+                <div class="stats">
+                  <div>得分<strong id="aiScore">0</strong></div>
+                  <div>行数<strong id="aiLines">0</strong></div>
+                  <div>等级<strong id="aiLevel">0</strong></div>
+                </div>
+                <div class="next-box">
+                  <div class="label">NEXT</div>
+                  <canvas id="aiNext" width="120" height="80"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer-bar">
+            <div class="versus-diff hidden" id="versusDiff">分差（玩家 − AI）<strong id="diffScore">0</strong></div>
+            <p class="result" id="result" aria-live="polite"></p>
+            <div class="controls-hint">← → 移动 · ↑ 旋转 · ↓ 软降 · 空格 硬降 · 辅助可随时开关</div>
+          </div>
         </div>
       </main>
 
@@ -799,7 +1048,7 @@
       }
     }
 
-    // versus AI：只旋转+左右，不下 soft/hard drop，靠自然重力
+    // versus AI：先旋转+左右对齐；可选软降/硬降增强，否则靠自然重力
     tickVersusAiAlign() {
       if (!this.running || this.gameOver || !this.current || this.aiBusy) return;
       if (!this.aiPlan) {
@@ -813,8 +1062,36 @@
         this.rotate(true);
         return;
       }
-      if (this.current.x < target.x) this.moveRight(true);
-      else if (this.current.x > target.x) this.moveLeft(true);
+      if (this.current.x < target.x) {
+        this.moveRight(true);
+        return;
+      }
+      if (this.current.x > target.x) {
+        this.moveLeft(true);
+        return;
+      }
+
+      // 已对齐目标列/姿态
+      const mode = this.versusDropMode || 'none';
+      if (mode === 'soft') {
+        // 软降比硬降慢：对齐循环约 90ms，隔一拍再降一格
+        this._softDropTick = (this._softDropTick || 0) + 1;
+        if (this._softDropTick % 2 !== 0) return;
+        if (!this.collides(this.current.shape, this.current.x, this.current.y + 1)) {
+          this.current.y++;
+          this.draw();
+        } else {
+          this.lockCurrent();
+        }
+        return;
+      }
+      if (mode === 'hard') {
+        while (!this.collides(this.current.shape, this.current.x, this.current.y + 1)) {
+          this.current.y++;
+        }
+        this.lockCurrent();
+      }
+      // none：等待自然重力
     }
 
     onPieceChangedForAi() {
@@ -1010,7 +1287,8 @@
     ai: null,
     sharedBag: null,
     aiLoopTimer: null,
-    versusAlignTimer: null
+    versusAlignTimer: null,
+    versusAiDrop: 'none' // none | soft | hard
   };
 
   const els = {
@@ -1023,6 +1301,9 @@
     surrenderBtn: document.getElementById('surrenderBtn'),
     optColumnBeams: document.getElementById('optColumnBeams'),
     optDropGhost: document.getElementById('optDropGhost'),
+    versusAiOpts: document.getElementById('versusAiOpts'),
+    optAiSoftDrop: document.getElementById('optAiSoftDrop'),
+    optAiHardDrop: document.getElementById('optAiHardDrop'),
     aiCard: document.getElementById('aiCard'),
     playerTitle: document.getElementById('playerTitle'),
     versusDiff: document.getElementById('versusDiff'),
@@ -1060,32 +1341,34 @@
   }
 
   async function nicknameExists(nickname) {
-    const confirmed = loadConfirmedNicks();
-    if (confirmed.includes(nickname)) return { exists: true, confirmed: true };
-
-    let cloudExists = false;
-    if (supabaseClient) {
-      try {
-        const [a, b] = await Promise.all([
-          supabaseClient.from('tetris_players').select('nickname').eq('nickname', nickname).limit(1),
-          supabaseClient.from('tetris_versus_players').select('nickname').eq('nickname', nickname).limit(1)
-        ]);
-        if (!a.error && a.data?.length) cloudExists = true;
-        if (!b.error && b.data?.length) cloudExists = true;
-      } catch (_) { /* ignore */ }
+    // 已部署云端：以 Supabase 排行榜为准（对齐五子棋）；本地榜不再参与重名判定
+    if (!supabaseClient) {
+      setResult('云端未连接，无法确认昵称是否重名。请检查网络后重试。');
+      return { exists: false, confirmed: false, error: true };
     }
-    const localNormal = readLocalLB(LB_NORMAL_KEY);
-    const localVersus = readLocalLB(LB_VERSUS_KEY);
-    const localExists = localNormal.some(x => x.nickname === nickname) || localVersus.some(x => x.nickname === nickname);
-    return { exists: cloudExists || localExists, confirmed: false };
+    try {
+      const [a, b] = await Promise.all([
+        supabaseClient.from('tetris_players').select('nickname').eq('nickname', nickname).limit(1),
+        supabaseClient.from('tetris_versus_players').select('nickname').eq('nickname', nickname).limit(1)
+      ]);
+      if (a.error || b.error) {
+        setResult(`无法确认昵称是否已存在：${(a.error || b.error).message || '请稍后重试。'}`);
+        return { exists: false, confirmed: false, error: true };
+      }
+      const cloudExists = !!(a.data?.length || b.data?.length);
+      return { exists: cloudExists, confirmed: false, error: false };
+    } catch (err) {
+      setResult(`无法确认昵称是否已存在：${err?.message || '请稍后重试。'}`);
+      return { exists: false, confirmed: false, error: true };
+    }
   }
 
   async function confirmNickname(nickname) {
     const info = await nicknameExists(nickname);
-    if (!info.exists || info.confirmed) {
-      saveConfirmedNick(nickname);
-      return true;
-    }
+    if (info.error) return false;
+    // 对齐五子棋：新昵称直接开局；云端已存在则每次都弹确认（不靠本地缓存跳过）
+    if (!info.exists) return true;
+
     const isOwner = window.confirm(
       `排行榜上已经有昵称“${nickname}”。\n\n这是你本人正在使用的昵称吗？\n\n点击“确定”继续使用（成绩累计到同昵称）；点击“取消”后请输入一个新的昵称。`
     );
@@ -1095,7 +1378,8 @@
       els.nickname.select();
       return false;
     }
-    saveConfirmedNick(nickname);
+    // 本地确认缓存已停用，避免“确认一次后永远不再提示”
+    // saveConfirmedNick(nickname);
     return true;
   }
 
@@ -1131,33 +1415,49 @@
   }
 
   async function recordNormalScore(nickname, score) {
-    let savedCloud = false;
-    if (supabaseClient?.rpc) {
-      try {
-        const { error } = await supabaseClient.rpc('record_tetris_score', {
-          p_nickname: nickname,
-          p_score: score
-        });
-        if (!error) savedCloud = true;
-      } catch (_) { /* fallback */ }
+    if (!supabaseClient?.rpc) {
+      setResult('云端未连接，成绩未保存。');
+      return 'none';
     }
-    upsertLocalScore(LB_NORMAL_KEY, nickname, score);
-    return savedCloud ? 'cloud' : 'local';
+    try {
+      const { error } = await supabaseClient.rpc('record_tetris_score', {
+        p_nickname: nickname,
+        p_score: score
+      });
+      if (error) {
+        setResult(`云端保存失败：${error.message || '请稍后重试'}`);
+        return 'none';
+      }
+      // 已部署 Supabase：不再写入本地排行榜兜底
+      // upsertLocalScore(LB_NORMAL_KEY, nickname, score);
+      return 'cloud';
+    } catch (err) {
+      setResult(`云端保存失败：${err?.message || '请稍后重试'}`);
+      return 'none';
+    }
   }
 
   async function recordVersusScore(nickname, score) {
-    let savedCloud = false;
-    if (supabaseClient?.rpc) {
-      try {
-        const { error } = await supabaseClient.rpc('record_tetris_versus_score', {
-          p_nickname: nickname,
-          p_score: score
-        });
-        if (!error) savedCloud = true;
-      } catch (_) { /* fallback */ }
+    if (!supabaseClient?.rpc) {
+      setResult('云端未连接，成绩未保存。');
+      return 'none';
     }
-    upsertLocalScore(LB_VERSUS_KEY, nickname, score);
-    return savedCloud ? 'cloud' : 'local';
+    try {
+      const { error } = await supabaseClient.rpc('record_tetris_versus_score', {
+        p_nickname: nickname,
+        p_score: score
+      });
+      if (error) {
+        setResult(`云端保存失败：${error.message || '请稍后重试'}`);
+        return 'none';
+      }
+      // 已部署 Supabase：不再写入本地排行榜兜底
+      // upsertLocalScore(LB_VERSUS_KEY, nickname, score);
+      return 'cloud';
+    } catch (err) {
+      setResult(`云端保存失败：${err?.message || '请稍后重试'}`);
+      return 'none';
+    }
   }
 
   async function loadLeaderboard() {
@@ -1184,10 +1484,15 @@
       } catch (_) { /* fallback */ }
     }
     if (source !== 'cloud') {
-      rows = readLocalLB(isVersus ? LB_VERSUS_KEY : LB_NORMAL_KEY)
-        .slice()
-        .sort((a, b) => (b.high_score - a.high_score) || String(a.updated_at || '').localeCompare(String(b.updated_at || '')))
-        .slice(0, 20);
+      // 已部署 Supabase：不再回退本地榜；保留注释便于紧急排障
+      // rows = readLocalLB(isVersus ? LB_VERSUS_KEY : LB_NORMAL_KEY)
+      //   .slice()
+      //   .sort((a, b) => (b.high_score - a.high_score) || String(a.updated_at || '').localeCompare(String(b.updated_at || '')))
+      //   .slice(0, 20);
+      rows = [];
+      els.lbHint.textContent = (isVersus
+        ? '人机对战：昵称 / 局数 / 最高分差（玩家−AI）· 按最高分降序'
+        : '普通：昵称 / 局数 / 最高分 · 按最高分降序') + ' · 云端暂不可用';
     }
 
     if (!rows.length) {
@@ -1225,6 +1530,35 @@
     return mode === 'ai' || mode === 'assist';
   }
 
+  function getVersusScoreMultiplier() {
+    if (state.versusAiDrop === 'hard') return 2;
+    if (state.versusAiDrop === 'soft') return 1.25;
+    return 1;
+  }
+
+  function syncVersusAiDropUI() {
+    const versus = state.mode === 'versus';
+    if (els.versusAiOpts) els.versusAiOpts.classList.toggle('visible', versus);
+    if (!versus) return;
+    if (els.optAiSoftDrop) els.optAiSoftDrop.checked = state.versusAiDrop === 'soft';
+    if (els.optAiHardDrop) els.optAiHardDrop.checked = state.versusAiDrop === 'hard';
+  }
+
+  function setVersusAiDrop(mode) {
+    // mode: 'none' | 'soft' | 'hard'；两个增强只能开一个
+    if (mode !== 'soft' && mode !== 'hard') mode = 'none';
+    if (state.versusAiDrop === mode) {
+      // 再次点击同一项则关闭
+      state.versusAiDrop = 'none';
+    } else {
+      state.versusAiDrop = mode;
+    }
+    syncVersusAiDropUI();
+    if (state.mode === 'versus' && state.ai) {
+      state.ai.versusDropMode = state.versusAiDrop;
+    }
+  }
+
   function applyModeUI() {
     document.querySelectorAll('.mode-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.mode === state.mode);
@@ -1241,9 +1575,10 @@
     els.nickname.placeholder = needsNick ? '请输入昵称' : '本模式无需昵称';
     if (els.nickHint) {
       els.nickHint.textContent = needsNick
-        ? '未输入昵称不能开始；重名需确认是否本人继续'
+        ? '未输入昵称不能开始；云端重名需确认是否本人继续'
         : 'AI 游玩 / AI 辅助仅展示，不写入排行榜；可随时点「停止」结束';
     }
+    syncVersusAiDropUI();
   }
 
   function createEngines() {
@@ -1307,12 +1642,13 @@
         label: 'ai',
         allowSoftHardDrop: false,
         showAssistGhost: false,
-        gravityMs: 700, // 略快于玩家，但禁止硬降
+        gravityMs: 700, // 未开增强时靠自然重力；增强由 versusDropMode 驱动
         aiGravityFactor: 1,
         sharedBag: wrapBag(aiBag),
         onGameOver: () => handleBoardGameOver('ai'),
         onStats: () => updateDiff()
       });
+      state.ai.versusDropMode = state.versusAiDrop;
 
       const aiOrigSpawn = state.ai.spawnPiece.bind(state.ai);
       state.ai.spawnPiece = function () {
@@ -1349,12 +1685,16 @@
       els.restartBtn.disabled = false;
       els.startBtn.disabled = false;
 
-      const diff = state.player.score - state.ai.score;
+      const rawDiff = state.player.score - state.ai.score;
+      const mult = getVersusScoreMultiplier();
+      const diff = Math.round(rawDiff * mult);
       const nickname = getNickname();
       if (!nickname) return;
       state.resultSubmitted = true;
       const where = await recordVersusScore(nickname, diff);
-      setResult(`对战结束（${who === 'player' ? '玩家' : 'AI'}顶格失败）。分差 ${diff}。成绩已写入人机对战榜（${where === 'cloud' ? '云端' : '本地兜底'}）。`);
+      const boostText = mult === 1 ? '' : `（AI ${state.versusAiDrop === 'hard' ? '硬降' : '软降'}加成 ×${mult}，原始分差 ${rawDiff}）`;
+      const whereText = where === 'cloud' ? '云端' : '未保存';
+      setResult(`对战结束（${who === 'player' ? '玩家' : 'AI'}顶格失败）。记榜分差 ${diff}${boostText}。成绩写入：${whereText}。`);
       state.lbTab = 'versus';
       document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.lb === 'versus'));
       await loadLeaderboard();
@@ -1392,7 +1732,7 @@
     if (!nickname || state.resultSubmitted) return;
     state.resultSubmitted = true;
     const where = await recordNormalScore(nickname, score);
-    setResult(`GAME OVER。本局得分 ${score}。已写入普通排行榜（${where === 'cloud' ? '云端' : '本地兜底'}）。`);
+    setResult(`GAME OVER。本局得分 ${score}。成绩写入：${where === 'cloud' ? '云端' : '未保存'}。`);
     state.lbTab = 'normal';
     document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.lb === 'normal'));
     await loadLeaderboard();
@@ -1544,6 +1884,43 @@
       guidePrefs.dropGhost = !!els.optDropGhost.checked;
       saveGuidePrefs();
       redrawGuides();
+    });
+  }
+
+  function applyVersusDropModeLive() {
+    if (!state.ai || state.mode !== 'versus') return;
+    state.ai.versusDropMode = state.versusAiDrop;
+    if (!state.inProgress) return;
+    if (state.versusAiDrop === 'soft' || state.versusAiDrop === 'hard') {
+      state.ai.stopTimers();
+      state.ai.running = true;
+    } else if (!state.ai.gameOver) {
+      state.ai.startGravity();
+    }
+  }
+
+  if (els.optAiSoftDrop) {
+    els.optAiSoftDrop.addEventListener('change', () => {
+      if (els.optAiSoftDrop.checked) {
+        state.versusAiDrop = 'soft';
+        if (els.optAiHardDrop) els.optAiHardDrop.checked = false;
+      } else if (state.versusAiDrop === 'soft') {
+        state.versusAiDrop = 'none';
+      }
+      syncVersusAiDropUI();
+      applyVersusDropModeLive();
+    });
+  }
+  if (els.optAiHardDrop) {
+    els.optAiHardDrop.addEventListener('change', () => {
+      if (els.optAiHardDrop.checked) {
+        state.versusAiDrop = 'hard';
+        if (els.optAiSoftDrop) els.optAiSoftDrop.checked = false;
+      } else if (state.versusAiDrop === 'hard') {
+        state.versusAiDrop = 'none';
+      }
+      syncVersusAiDropUI();
+      applyVersusDropModeLive();
     });
   }
 
