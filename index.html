@@ -531,6 +531,11 @@
         background: linear-gradient(180deg, rgba(10, 16, 36, 0.9), rgba(5, 9, 22, 0.72));
       }
       .info-card, .project-card, .join-card, .flagship-card { padding: 22px; }
+      .flagship-card {
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+      }
       .info-card .icon { margin-bottom: 14px; }
       .info-card p, .project-card p, .join-card p, .flagship-card p { margin-bottom: 0; font-size: 14px; line-height: 1.7; }
       .info-card.featured {
@@ -550,8 +555,26 @@
 
       .flagship-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.85fr);
+        grid-template-columns: 1fr;
         gap: 18px;
+      }
+      .flagship-side-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .flagship-card .card-link,
+      .flagship-card .secondary-action {
+        margin-top: auto;
+      }
+      .info-card .card-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+      .info-card .card-links .card-link {
+        margin-top: 0;
       }
       .flagship-main {
         display: grid;
@@ -1055,7 +1078,7 @@
       @media (max-width: 1199px) {
         .capability-grid { grid-template-columns: 1fr 1fr; }
         .info-card.featured { grid-row: auto; min-height: auto; }
-        .flagship-grid, .flagship-main { grid-template-columns: 1fr; }
+        .flagship-main, .flagship-side-grid { grid-template-columns: 1fr; }
         .proof-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .proof-item:nth-child(2) { border-right: 0; }
       }
@@ -1216,8 +1239,8 @@
             <a class="hero-side-link" href="public/appmonitor.html">APPMonitor 发布页 →</a>
             <div class="hero-metrics" aria-label="关键能力摘要">
               <span><strong>8</strong> 代五子棋 AI</span>
+              <span><strong>4</strong> 模式俄罗斯方块</span>
               <span><strong>7</strong> 大算法实验室</span>
-              <span><strong>全套</strong> 管理系统</span>
             </div>
           </div>
           <aside class="hero-panel" aria-label="三阶段建设轨道">
@@ -1227,7 +1250,7 @@
               <div class="panel-row"><span class="icon">02</span><div><strong>第二阶段 · 已完成</strong><span>实现五子棋以及全套管理系统的配套建设部署</span></div></div>
               <div class="panel-row focus"><span class="icon">03</span><div><strong>第三阶段 · 已完工</strong><span>已投入社团正常使用</span></div></div>
             </div>
-            <div class="panel-foot">深链：<a href="public/gomoku.html">挑战五子棋 AI</a> · <a href="public/club-features.html">社团功能总览</a></div>
+            <div class="panel-foot">深链：<a href="public/gomoku.html">挑战五子棋 AI</a> · <a href="public/tetris.html">挑战俄罗斯方块</a> · <a href="public/club-features.html">社团功能总览</a></div>
           </aside>
         </div>
         <div id="proof" class="proof-band hero-proof" aria-label="实力证明带">
@@ -1251,9 +1274,12 @@
             <div>
               <span class="icon">AI</span>
               <h3>AI 博弈</h3>
-              <p>以五子棋为载体，贯通评估函数、Minimax、Alpha-Beta 与棋型识别，并把模型接进可挑战、可排行的产品形态。</p>
+              <p>以五子棋与俄罗斯方块为载体，贯通评估函数、搜索剪枝、局面特征与决策可视化，并把模型接进可挑战、可辅助、可人机对战的产品形态。</p>
             </div>
-            <a class="secondary-action card-link" href="public/gomoku.html">进入五子棋挑战 →</a>
+            <div class="card-links">
+              <a class="secondary-action card-link" href="public/gomoku.html">进入五子棋挑战 →</a>
+              <a class="secondary-action card-link" href="public/tetris.html">进入俄罗斯方块 →</a>
+            </div>
           </article>
           <article class="info-card"><span class="icon">CP</span><h3>竞赛算法</h3><p>搜索、图论、DP 与数据结构系统训练，服务校内竞赛与长期能力建设。</p></article>
           <article class="info-card"><span class="icon">WEB</span><h3>工程实践</h3><p>把算法作品做成可访问网页，沉淀成员、活动、项目与管理闭环。</p></article>
@@ -1265,7 +1291,7 @@
         <div class="section-heading">
           <p class="eyebrow">Flagship Works</p>
           <h2>旗舰作品</h2>
-          <p>首页情绪高峰留给真正跑起来的产品：五子棋 AI 对战系统，与七大算法实验室。</p>
+          <p>首页情绪高峰留给真正跑起来的产品：五子棋与俄罗斯方块 AI、APPMonitor，以及七大算法实验室。</p>
         </div>
         <div class="flagship-grid">
           <div class="flagship-main">
@@ -1278,15 +1304,35 @@
             </div>
             <div class="board-shell"><div class="board-preview" id="boardPreview" aria-label="五子棋预览"></div></div>
           </div>
-          <article class="flagship-card lab-card">
-            <p class="eyebrow">VISUALIZATION LAB</p>
-            <h3>算法实验室 · 七入口</h3>
-            <p>排序、搜索、数据结构、图论、动态规划、二叉树与堆——连续演示与单步推演并存。</p>
-            <div class="lab-tags">
-              <span>排序</span><span>搜索</span><span>数据结构</span><span>图论</span><span>DP</span><span>二叉树</span><span>堆</span>
-            </div>
-            <a class="secondary-action" href="public/visualization-lab.html">选择实验室 →</a>
-          </article>
+          <div class="flagship-side-grid">
+            <article class="flagship-card lab-card">
+              <p class="eyebrow">TETRIS AI SYSTEM</p>
+              <h3>AI 俄罗斯方块</h3>
+              <p>支持正常游玩、AI 演示、AI 辅助阴影与公平人机对战；双方同序列，AI 仅自然降落，双榜可记录。</p>
+              <div class="lab-tags">
+                <span>正常游玩</span><span>AI 演示</span><span>辅助阴影</span><span>人机对战</span><span>双排行榜</span>
+              </div>
+              <a class="secondary-action" href="public/tetris.html">进入俄罗斯方块 →</a>
+            </article>
+            <article class="flagship-card lab-card">
+              <p class="eyebrow">WINDOWS SOFTWARE</p>
+              <h3>APPMonitor</h3>
+              <p>由算法社社长鼎力开发。Windows 软件管控与网络监控工具，持续加入自律助手、使用统计、USB 管控和高级防护能力。当前 V7.0。</p>
+              <div class="lab-tags">
+                <span>软件管控</span><span>自律助手</span><span>网络监控</span><span>USB 管控</span><span>V7.0</span>
+              </div>
+              <a class="secondary-action" href="public/appmonitor.html">查看发布页 →</a>
+            </article>
+            <article class="flagship-card lab-card">
+              <p class="eyebrow">VISUALIZATION LAB</p>
+              <h3>算法实验室 · 七入口</h3>
+              <p>排序、搜索、数据结构、图论、动态规划、二叉树与堆——连续演示与单步推演并存。</p>
+              <div class="lab-tags">
+                <span>排序</span><span>搜索</span><span>数据结构</span><span>图论</span><span>DP</span><span>二叉树</span><span>堆</span>
+              </div>
+              <a class="secondary-action" href="public/visualization-lab.html">选择实验室 →</a>
+            </article>
+          </div>
         </div>
       </section>
 
@@ -1396,9 +1442,11 @@
         { name: '优秀社员', grade: '虚位以待', group: '虚位以待', direction: '虚位以待', intro: '虚位以待', avatar: '待' }
       ];
       const fallbackProjects = [
-        { name: 'AI 五子棋', status: '第二阶段接入', type: '人机对战', intro: '基于已有五子棋模型，后续接入官网，支持前端对战、昵称提交和排行榜。' },
+        { name: 'APPMonitor', status: '持续发布', type: 'Windows 软件管控', intro: 'Windows 软件管控与网络监控工具，持续加入自律助手、使用统计、USB 管控和高级防护能力。', link: 'public/appmonitor.html', linkText: '查看发布页' },
+        { name: 'AI 五子棋', status: '已接入', type: '人机对战', intro: '基于已有五子棋模型，支持前端对战、昵称提交和 Supabase 排行榜。', link: 'public/gomoku.html', linkText: '开始挑战' },
+        { name: 'AI 俄罗斯方块', status: '已接入', type: '人机对战 / AI 辅助', intro: '支持正常游玩、AI 演示、AI 辅助阴影与公平人机对战，并接入普通榜与对战榜。', link: 'public/tetris.html', linkText: '开始挑战' },
         { name: '算法可视化实验室', status: '七大实验室已开放', type: '教学展示', intro: '覆盖排序、搜索、数据结构、图论最短路、动态规划、二叉树与堆，支持连续演示与单步推演。', link: 'public/visualization-lab.html', linkText: '选择实验室' },
-        { name: '算法训练平台', status: '未来计划', type: '训练系统', intro: '整理题单、训练路线、社员成长记录，后期再评估是否升级为完整 OJ。' }
+        { name: '教学资源与 AI Bot 对战平台', status: '计划上线', type: '教学资源 / 对战平台', intro: '持续建设算法教学资源、训练路线和题单资料，并拓展更多 AI Bot 对战平台。' }
       ];
       const fallbackActivities = [
         { title: '社团招新', date: '2026-08-19', intro: '面向对算法、编程、AI 和网页开发感兴趣的同学开放报名。' },

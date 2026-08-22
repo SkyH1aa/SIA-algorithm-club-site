@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>算法社 · 俄罗斯方块多模式</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="member-identity.js"></script>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      position: relative;
+      min-height: 100vh;
+      margin: 0;
+      padding: 28px 18px;
+      background: #07111f;
+      color: #e7f7ff;
+      font-family: Arial, system-ui, sans-serif;
+    }
+    .ambient-background{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+    .ambient-orb{position:absolute;width:min(48vw,620px);aspect-ratio:1;border-radius:50%;filter:blur(72px);opacity:.18;mix-blend-mode:screen;animation:drift-orb 18s ease-in-out infinite alternate}
+    .orb-cyan{top:-18%;left:-12%;background:#00e5ff}
+    .orb-violet{top:20%;right:-16%;background:#7c4dff;animation-delay:-7s}
+    .ambient-grid{position:absolute;inset:-80px;background-image:linear-gradient(rgba(0,229,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.055) 1px,transparent 1px);background-size:72px 72px;opacity:.45;animation:grid-shift 26s linear infinite}
+    @keyframes drift-orb{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(7%,5%,0) scale(1.1)}}
+    @keyframes grid-shift{to{transform:translate3d(72px,72px,0)}}
+    .page-shell { position: relative; z-index: 1; width: min(1280px, 100%); margin: 0 auto; }
+    .member-identity{display:none;margin:10px auto 0;padding:5px 9px;border:1px solid rgba(0,229,255,.34);border-radius:999px;color:#00e5ff;font-size:12px;width:max-content}
+    .member-identity:not([hidden]){display:block}
+    .page-header { margin-bottom: 22px; }
+    .page-header a { color: #49e7ff; text-decoration: none; }
+    .page-header h1 { margin: 8px 0; }
+    .page-header p { color: #91a9b8; margin: 0; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; align-items: start; }
+    .panel {
+      padding: 18px;
+      border: 1px solid rgba(73, 231, 255, .24);
+      border-radius: 12px;
+      background: rgba(13, 28, 47, .84);
+      box-shadow: 0 16px 42px rgba(0,0,0,.22);
+    }
+    .panel:hover { border-color: rgba(73,231,255,.45); box-shadow: 0 22px 60px rgba(0,0,0,.3), 0 0 30px rgba(73,231,255,.08); }
+    .setup { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+    label { color: #91a9b8; font-size: 14px; }
+    input, select {
+      min-width: 180px;
+      padding: 10px 12px;
+      border: 1px solid #31536a;
+      border-radius: 6px;
+      background: #081522;
+      color: #fff;
+      font-size: 15px;
+    }
+    .hint { color: #91a9b8; font-size: 13px; }
+    .mode-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .mode-btn, .action-btn {
+      padding: 10px 14px;
+      border: 1px solid rgba(73,231,255,.28);
+      border-radius: 999px;
+      background: #0d1c2f;
+      color: #e7f7ff;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .mode-btn.active { background: #0284c7; border-color: #38bdf8; box-shadow: 0 0 18px rgba(56,189,248,.35); }
+    .action-btn.primary { background: #FF6F00; border-color: #FF6F00; }
+    .action-btn.danger { background: #7f1d1d; border-color: #ef4444; }
+    .action-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .boards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    .board-card { text-align: center; }
+    .board-card h3 { margin: 0 0 8px; color: #49e7ff; font-weight: 500; font-size: 16px; }
+    .board-wrap {
+      position: relative;
+      display: inline-block;
+      border: 2px solid #38bdf8;
+      border-radius: 8px;
+      box-shadow: 0 0 24px rgba(56,189,248,.25);
+      background: #0b1437;
+    }
+    canvas.board { display: block; background: #11142A; border-radius: 6px; }
+    .overlay {
+      position: absolute; inset: 0;
+      background: rgba(11,20,55,.82);
+      display: none; align-items: center; justify-content: center; flex-direction: column;
+      border-radius: 6px; z-index: 5;
+    }
+    .overlay.active { display: flex; }
+    .overlay h2 { margin: 0; color: #FF6F00; font-size: 28px; letter-spacing: 1px; }
+    .overlay p { margin: 8px 0 0; color: #94a3b8; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(70px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: #91a9b8;
+    }
+    .stats strong { display: block; color: #e7f7ff; font-size: 16px; font-variant-numeric: tabular-nums; }
+    .next-box {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      background: #0b1437;
+      display: inline-block;
+    }
+    .next-box .label { font-size: 12px; color: #64748b; margin-bottom: 4px; }
+    .controls-hint { margin-top: 12px; color: #64748b; font-size: 13px; line-height: 1.6; }
+    .assist-opts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      margin: 0 0 14px;
+      padding: 10px 12px;
+      border: 1px solid rgba(73,231,255,.18);
+      border-radius: 12px;
+      background: rgba(8, 21, 34, .72);
+    }
+    .assist-opts label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #cfefff;
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .assist-opts input {
+      width: 16px;
+      height: 16px;
+      accent-color: #38bdf8;
+      cursor: pointer;
+    }
+    .assist-opts .opt-desc { color: #91a9b8; font-size: 12px; }
+    .result { min-height: 22px; margin: 12px 0 0; color: #49e7ff; font-weight: bold; }
+    .lb-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .lb-tab {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(73,231,255,.24);
+      background: #081522;
+      color: #91a9b8;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .lb-tab.active { background: #0284c7; color: #fff; border-color: #38bdf8; }
+    .leaderboard h2 { margin: 0 0 6px; font-size: 18px; }
+    .leaderboard-list { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
+    .leaderboard-list li {
+      display: grid;
+      grid-template-columns: 30px 1fr auto;
+      gap: 8px;
+      padding: 10px;
+      border-bottom: 1px solid rgba(73,231,255,.12);
+      font-size: 14px;
+    }
+    .rank { color: #49e7ff; font-weight: bold; }
+    .score { color: #ffd166; font-weight: bold; }
+    .empty { color: #91a9b8; font-size: 14px; }
+    .versus-diff {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 15px;
+      color: #c4b5fd;
+    }
+    .versus-diff strong { color: #ffd166; font-size: 20px; }
+    .hidden { display: none !important; }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 700px) {
+      canvas.board { width: 240px !important; height: 480px !important; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ambient-orb, .ambient-grid { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-background" aria-hidden="true">
+    <div class="ambient-orb orb-cyan"></div>
+    <div class="ambient-orb orb-violet"></div>
+    <div class="ambient-grid"></div>
+  </div>
+  <div class="page-shell">
+    <header class="page-header">
+      <a href="../index.html">← 返回算法社官网</a>
+      <span class="member-identity" data-member-identity hidden></span>
+      <h1>俄罗斯方块 · 算法成果展示</h1>
+      <p>Dellacherie 专家系统 AI · 四模式 · 双排行榜</p>
+    </header>
+
+    <div class="layout">
+      <main class="panel">
+        <div class="setup">
+          <label for="nickname">挑战昵称</label>
+          <input id="nickname" maxlength="20" placeholder="请输入昵称" autocomplete="nickname" />
+          <span class="hint" id="nickHint">普通游玩 / 人机对战需输入昵称；AI 游玩与 AI 辅助无需昵称（不存档）</span>
+        </div>
+
+        <div class="mode-row" id="modeRow">
+          <button type="button" class="mode-btn active" data-mode="normal">正常游玩</button>
+          <button type="button" class="mode-btn" data-mode="ai">AI 游玩</button>
+          <button type="button" class="mode-btn" data-mode="assist">AI 辅助</button>
+          <button type="button" class="mode-btn" data-mode="versus">人机对战</button>
+        </div>
+
+        <div class="mode-row">
+          <button type="button" class="action-btn primary" id="startBtn">开始游戏</button>
+          <button type="button" class="action-btn" id="restartBtn" disabled>重新开始</button>
+          <button type="button" class="action-btn danger hidden" id="stopBtn" disabled>停止</button>
+          <button type="button" class="action-btn danger hidden" id="surrenderBtn" disabled>投降（不记分）</button>
+        </div>
+
+        <div class="assist-opts" id="assistOpts">
+          <label>
+            <input type="checkbox" id="optColumnBeams" checked />
+            <span>左右列光束<span class="opt-desc"> · 标出当前方块最左/最右通道</span></span>
+          </label>
+          <label>
+            <input type="checkbox" id="optDropGhost" checked />
+            <span>落点轮廓<span class="opt-desc"> · 显示硬降预览轮廓</span></span>
+          </label>
+        </div>
+
+        <div class="boards">
+          <div class="board-card" id="playerCard">
+            <h3 id="playerTitle">玩家</h3>
+            <div class="board-wrap">
+              <canvas class="board" id="playerBoard" width="300" height="600"></canvas>
+              <div class="overlay" id="playerOverlay"><h2>GAME OVER</h2><p id="playerOverlayText">顶到最上</p></div>
+            </div>
+            <div class="stats">
+              <div>得分<strong id="playerScore">0</strong></div>
+              <div>行数<strong id="playerLines">0</strong></div>
+              <div>等级<strong id="playerLevel">0</strong></div>
+            </div>
+            <div class="next-box">
+              <div class="label">NEXT</div>
+              <canvas id="playerNext" width="120" height="80"></canvas>
+            </div>
+          </div>
+
+          <div class="board-card hidden" id="aiCard">
+            <h3>AI</h3>
+            <div class="board-wrap">
+              <canvas class="board" id="aiBoard" width="300" height="600"></canvas>
+              <div class="overlay" id="aiOverlay"><h2>GAME OVER</h2><p>顶到最上</p></div>
+            </div>
+            <div class="stats">
+              <div>得分<strong id="aiScore">0</strong></div>
+              <div>行数<strong id="aiLines">0</strong></div>
+              <div>等级<strong id="aiLevel">0</strong></div>
+            </div>
+            <div class="next-box">
+              <div class="label">NEXT</div>
+              <canvas id="aiNext" width="120" height="80"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="versus-diff hidden" id="versusDiff">分差（玩家 − AI）<strong id="diffScore">0</strong></div>
+        <p class="result" id="result" aria-live="polite"></p>
+        <div class="controls-hint">
+          ← → 移动 · ↑ 旋转 · ↓ 软降 · 空格 硬降<br>
+          辅助：左右列光束 / 落点轮廓可随时开关 · AI 游玩逐步下落锁定 · 人机对战 AI 靠自然重力 · 投降不记分
+        </div>
+      </main>
+
+      <aside class="leaderboard panel">
+        <h2>排行榜</h2>
+        <div class="lb-tabs">
+          <button type="button" class="lb-tab active" data-lb="normal">普通榜</button>
+          <button type="button" class="lb-tab" data-lb="versus">人机对战榜</button>
+        </div>
+        <p class="hint" id="lbHint">普通：昵称 / 局数 / 最高分 · 按最高分降序</p>
+        <ol class="leaderboard-list" id="leaderboardList"><li class="empty">正在读取排行榜...</li></ol>
+      </aside>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const COLS = 10;
+  const ROWS = 20;
+  const BLOCK = 30;
+  const POINTS = [0, 100, 300, 500, 800];
+  const SHAPES = [
+    [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+    [[1,1],[1,1]],
+    [[0,1,0],[1,1,1],[0,0,0]],
+    [[0,1,1],[1,1,0],[0,0,0]],
+    [[1,1,0],[0,1,1],[0,0,0]],
+    [[1,0,0],[1,1,1],[0,0,0]],
+    [[0,0,1],[1,1,1],[0,0,0]]
+  ];
+  const COLORS = ['#00BCD4','#FFEB3B','#AB47BC','#66BB6A','#EF5350','#FF8A65','#42A5F5'];
+
+  const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
+  const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const LB_NORMAL_KEY = 'tetris_lb_normal';
+  const LB_VERSUS_KEY = 'tetris_lb_versus';
+  const CONFIRMED_NICK_KEY = 'tetris_confirmed_nicknames';
+  const GUIDE_PREFS_KEY = 'tetris_guide_prefs';
+  const guidePrefs = (() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem(GUIDE_PREFS_KEY) || '{}');
+      return {
+        columnBeams: raw.columnBeams !== false,
+        dropGhost: raw.dropGhost !== false
+      };
+    } catch (_) {
+      return { columnBeams: true, dropGhost: true };
+    }
+  })();
+  function saveGuidePrefs() {
+    localStorage.setItem(GUIDE_PREFS_KEY, JSON.stringify(guidePrefs));
+  }
+  function redrawGuides() {
+    if (state.player) state.player.draw();
+    if (state.ai) state.ai.draw();
+  }
+
+  // ---------- 工具 ----------
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, ch => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[ch]));
+  }
+  function cloneMat(m) { return m.map(r => [...r]); }
+  function rotMat(mat) {
+    const rows = mat.length, cols = mat[0].length;
+    return Array.from({ length: cols }, (_, c) =>
+      Array.from({ length: rows }, (_, r) => mat[rows - 1 - r][c])
+    );
+  }
+  function getAllRotations(mat) {
+    const seen = new Set(), rots = [];
+    let cur = cloneMat(mat);
+    for (let i = 0; i < 4; i++) {
+      const key = cur.map(r => r.join(',')).join('|');
+      if (!seen.has(key)) { seen.add(key); rots.push(cloneMat(cur)); }
+      cur = rotMat(cur);
+    }
+    return rots;
+  }
+  function createPiece(typeIndex) {
+    const shape = cloneMat(SHAPES[typeIndex]);
+    return {
+      shape,
+      x: Math.floor((COLS - shape[0].length) / 2),
+      y: 0,
+      typeIndex
+    };
+  }
+  function genBag() {
+    const a = [0,1,2,3,4,5,6];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // ---------- 共享序列（versus 双方一致） ----------
+  class SharedBag {
+    constructor() {
+      this.queue = [];
+      this.cursor = 0;
+    }
+    ensure(n) {
+      while (this.queue.length < this.cursor + n) {
+        this.queue.push(...genBag());
+      }
+    }
+    peek(offset = 0) {
+      this.ensure(offset + 1);
+      return this.queue[this.cursor + offset];
+    }
+    take() {
+      this.ensure(1);
+      return this.queue[this.cursor++];
+    }
+    reset() {
+      this.queue = [];
+      this.cursor = 0;
+    }
+    forkAt(cursor) {
+      const fork = new SharedBag();
+      fork.queue = [...this.queue];
+      fork.cursor = cursor;
+      return fork;
+    }
+  }
+
+  // ---------- Dellacherie AI（仅当前 + next） ----------
+  class TetrisAI {
+    static simulateLock(board, placement) {
+      const sim = board.map(r => [...r]);
+      const { shape, x, y, typeIndex } = placement;
+      for (let r = 0; r < shape.length; r++) {
+        for (let c = 0; c < shape[0].length; c++) {
+          if (shape[r][c]) {
+            const by = y + r, bx = x + c;
+            if (by >= 0 && by < ROWS && bx >= 0 && bx < COLS) sim[by][bx] = typeIndex + 1;
+          }
+        }
+      }
+      let cleared = 0;
+      for (let r = ROWS - 1; r >= 0;) {
+        let full = true;
+        for (let c = 0; c < COLS; c++) if (sim[r][c] === 0) { full = false; break; }
+        if (full) {
+          cleared++;
+          for (let rr = r; rr > 0; rr--) sim[rr] = [...sim[rr - 1]];
+          sim[0] = Array(COLS).fill(0);
+        } else r--;
+      }
+      return { sim, cleared };
+    }
+
+    static evaluatePlacement(board, placement) {
+      const { sim, cleared } = this.simulateLock(board, placement);
+      const { y } = placement;
+      const lh = y;
+      const ec = cleared * 10;
+      let rt = 0;
+      for (let r = 0; r < ROWS; r++) {
+        let prev = 1;
+        for (let c = 0; c < COLS; c++) {
+          const cur = sim[r][c] !== 0 ? 1 : 0;
+          if (cur !== prev) rt++;
+          prev = cur;
+        }
+        if (prev !== 1) rt++;
+      }
+      let ct = 0;
+      for (let c = 0; c < COLS; c++) {
+        let prev = 1;
+        for (let r = 0; r < ROWS; r++) {
+          const cur = sim[r][c] !== 0 ? 1 : 0;
+          if (cur !== prev) ct++;
+          prev = cur;
+        }
+        if (prev !== 1) ct++;
+      }
+      let holes = 0;
+      for (let c = 0; c < COLS; c++) {
+        let blocked = false;
+        for (let r = 0; r < ROWS; r++) {
+          if (sim[r][c] !== 0) blocked = true;
+          else if (blocked) holes++;
+        }
+      }
+      let ws = 0;
+      for (let c = 0; c < COLS; c++) {
+        let depth = 0;
+        for (let r = ROWS - 1; r >= 0; r--) {
+          if (sim[r][c] === 0 && (c === 0 || sim[r][c - 1] !== 0) && (c === COLS - 1 || sim[r][c + 1] !== 0)) depth++;
+          else break;
+        }
+        ws += depth * depth;
+      }
+      return 4.500 * lh + 3.418 * ec - 3.217 * rt - 9.348 * ct - 7.899 * holes - 3.385 * ws;
+    }
+
+    static collidesOn(board, shape, ox, oy) {
+      for (let r = 0; r < shape.length; r++) {
+        for (let c = 0; c < shape[0].length; c++) {
+          if (!shape[r][c]) continue;
+          const bx = ox + c, by = oy + r;
+          if (bx < 0 || bx >= COLS || by >= ROWS) return true;
+          if (by >= 0 && board[by][bx] !== 0) return true;
+        }
+      }
+      return false;
+    }
+
+    static hardDropY(board, shape, sx, sy) {
+      let y = sy;
+      while (!this.collidesOn(board, shape, sx, y + 1)) y++;
+      return y;
+    }
+
+    static isSurfaceFlatForI(board, placement) {
+      const sim = this.simulateLock(board, placement).sim;
+      const heights = Array(COLS).fill(0);
+      for (let c = 0; c < COLS; c++) {
+        for (let r = 0; r < ROWS; r++) if (sim[r][c] !== 0) { heights[c] = ROWS - r; break; }
+      }
+      let maxFlat = 1, curFlat = 1;
+      for (let c = 1; c < COLS; c++) {
+        if (Math.abs(heights[c] - heights[c - 1]) <= 1) {
+          curFlat++;
+          maxFlat = Math.max(maxFlat, curFlat);
+        } else curFlat = 1;
+      }
+      return maxFlat >= 4 ? 1 : 0;
+    }
+
+    static bestMove(board, currentPiece, nextPiece) {
+      if (!currentPiece) return null;
+      const rots = getAllRotations(currentPiece.shape);
+      let best = null, bestScore = -Infinity;
+      for (const rot of rots) {
+        for (let x = -2; x < COLS; x++) {
+          if (this.collidesOn(board, rot, x, 0)) continue;
+          const y = this.hardDropY(board, rot, x, 0);
+          const placement = { shape: rot, x, y, typeIndex: currentPiece.typeIndex };
+          let scoreVal = this.evaluatePlacement(board, placement);
+          if (nextPiece && nextPiece.typeIndex === 0) {
+            scoreVal += this.isSurfaceFlatForI(board, placement) * 1.5;
+          }
+          if (scoreVal > bestScore || (Math.abs(scoreVal - bestScore) < 1e-6 && y > (best ? best.y : -1))) {
+            bestScore = scoreVal;
+            best = placement;
+          }
+        }
+      }
+      return best;
+    }
+  }
+
+  // ---------- 可实例化游戏引擎 ----------
+  class TetrisEngine {
+    constructor(options) {
+      this.canvas = options.canvas;
+      this.ctx = this.canvas.getContext('2d');
+      this.nextCanvas = options.nextCanvas || null;
+      this.nextCtx = this.nextCanvas ? this.nextCanvas.getContext('2d') : null;
+      this.overlay = options.overlay || null;
+      this.scoreEl = options.scoreEl || null;
+      this.linesEl = options.linesEl || null;
+      this.levelEl = options.levelEl || null;
+      this.label = options.label || 'player';
+      this.allowSoftHardDrop = options.allowSoftHardDrop !== false;
+      this.showAssistGhost = !!options.showAssistGhost;
+      this.gravityMs = options.gravityMs || 800;
+      this.aiGravityFactor = options.aiGravityFactor || 1;
+      this.onGameOver = options.onGameOver || (() => {});
+      this.onStats = options.onStats || (() => {});
+      this.sharedBag = options.sharedBag || null;
+      this.localBag = [];
+      this.reset(false);
+    }
+
+    reset(startTimers = true) {
+      this.stopTimers();
+      this.board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+      this.current = null;
+      this.next = null;
+      this.score = 0;
+      this.lines = 0;
+      this.level = 0;
+      this.gameOver = false;
+      this.running = false;
+      this.assistTarget = null;
+      this.aiBusy = false;
+      this.aiPlan = null;
+      this.dropIntervalMs = this.gravityMs;
+      this.localBag = [];
+      if (this.overlay) this.overlay.classList.remove('active');
+      this.spawnPiece();
+      this.draw();
+      this.updateStats();
+      if (startTimers) this.startGravity();
+    }
+
+    start() {
+      this.running = true;
+      this.gameOver = false;
+      if (this.overlay) this.overlay.classList.remove('active');
+      this.startGravity();
+      this.draw();
+    }
+
+    stopTimers() {
+      if (this.fallTimer) { clearInterval(this.fallTimer); this.fallTimer = null; }
+      if (this.aiAnimTimer) { clearTimeout(this.aiAnimTimer); this.aiAnimTimer = null; }
+      if (this.aiStepTimer) { clearTimeout(this.aiStepTimer); this.aiStepTimer = null; }
+    }
+
+    startGravity() {
+      if (this.fallTimer) clearInterval(this.fallTimer);
+      const ms = Math.max(80, Math.floor(this.dropIntervalMs / this.aiGravityFactor));
+      this.fallTimer = setInterval(() => {
+        if (!this.running || this.gameOver || this.aiBusy) return;
+        this.softDrop(true);
+      }, ms);
+    }
+
+    popType() {
+      if (this.sharedBag) return this.sharedBag.take();
+      if (!this.localBag.length) this.localBag = genBag();
+      return this.localBag.pop();
+    }
+
+    spawnPiece() {
+      if (!this.next) {
+        this.current = createPiece(this.popType());
+        this.next = createPiece(this.popType());
+      } else {
+        this.current = this.next;
+        this.next = createPiece(this.popType());
+      }
+      this.current.x = Math.floor((COLS - this.current.shape[0].length) / 2);
+      this.current.y = 0;
+      this.assistTarget = null;
+      if (this.collides(this.current.shape, this.current.x, this.current.y)) {
+        this.triggerGameOver('顶到最上');
+      }
+    }
+
+    collides(shape, ox, oy) {
+      return TetrisAI.collidesOn(this.board, shape, ox, oy);
+    }
+
+    lockCurrent() {
+      if (!this.current) return;
+      const { shape, x, y, typeIndex } = this.current;
+      for (let r = 0; r < shape.length; r++) {
+        for (let c = 0; c < shape[0].length; c++) {
+          if (!shape[r][c]) continue;
+          const by = y + r, bx = x + c;
+          if (by >= 0 && by < ROWS && bx >= 0 && bx < COLS) {
+            this.board[by][bx] = typeIndex + 1;
+          } else if (by < 0) {
+            this.triggerGameOver('顶到最上');
+            return;
+          }
+        }
+      }
+      this.clearRows();
+      this.spawnPiece();
+      this.draw();
+      this.updateStats();
+    }
+
+    clearRows() {
+      let removed = 0;
+      for (let row = ROWS - 1; row >= 0;) {
+        let full = true;
+        for (let col = 0; col < COLS; col++) if (this.board[row][col] === 0) { full = false; break; }
+        if (full) {
+          for (let r = row; r > 0; r--) this.board[r] = [...this.board[r - 1]];
+          this.board[0] = Array(COLS).fill(0);
+          removed++;
+        } else row--;
+      }
+      if (removed > 0) {
+        this.score += POINTS[Math.min(removed, 4)];
+        this.lines += removed;
+        const newLevel = Math.floor(this.lines / 10);
+        if (newLevel > this.level) {
+          this.level = newLevel;
+          this.dropIntervalMs = Math.max(100, this.gravityMs - this.level * 70);
+          if (this.running && !this.gameOver) this.startGravity();
+        }
+      }
+    }
+
+    triggerGameOver(reason) {
+      if (this.gameOver) return;
+      this.gameOver = true;
+      this.running = false;
+      this.stopTimers();
+      if (this.overlay) {
+        this.overlay.classList.add('active');
+        const p = this.overlay.querySelector('p');
+        if (p) p.textContent = reason || '顶到最上';
+      }
+      this.draw();
+      this.onGameOver(this);
+    }
+
+    moveLeft(force = false) {
+      if (!force && !this.canControl()) return false;
+      if (!this.current || this.gameOver) return false;
+      if (!this.collides(this.current.shape, this.current.x - 1, this.current.y)) {
+        this.current.x--;
+        this.draw();
+        return true;
+      }
+      return false;
+    }
+
+    moveRight(force = false) {
+      if (!force && !this.canControl()) return false;
+      if (!this.current || this.gameOver) return false;
+      if (!this.collides(this.current.shape, this.current.x + 1, this.current.y)) {
+        this.current.x++;
+        this.draw();
+        return true;
+      }
+      return false;
+    }
+
+    rotate(force = false) {
+      if (!force && !this.canControl()) return false;
+      if (!this.current || this.gameOver) return false;
+      const rotated = rotMat(this.current.shape);
+      const tries = [
+        [0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]
+      ];
+      for (const [dx, dy] of tries) {
+        if (!this.collides(rotated, this.current.x + dx, this.current.y + dy)) {
+          this.current.shape = rotated;
+          this.current.x += dx;
+          this.current.y += dy;
+          this.draw();
+          return true;
+        }
+      }
+      return false;
+    }
+
+    softDrop(fromGravity = false) {
+      if (!this.current || this.gameOver || !this.running) return false;
+      if (!fromGravity && !this.allowSoftHardDrop) return false;
+      if (!this.collides(this.current.shape, this.current.x, this.current.y + 1)) {
+        this.current.y++;
+        this.draw();
+        return true;
+      }
+      this.lockCurrent();
+      return false;
+    }
+
+    hardDrop() {
+      if (!this.canControl() || !this.allowSoftHardDrop) return false;
+      while (!this.collides(this.current.shape, this.current.x, this.current.y + 1)) {
+        this.current.y++;
+      }
+      this.lockCurrent();
+      return true;
+    }
+
+    canControl() {
+      return this.running && !this.gameOver && this.current && !this.aiBusy;
+    }
+
+    refreshAssist() {
+      if (!this.showAssistGhost || !this.current || this.gameOver) {
+        this.assistTarget = null;
+        return;
+      }
+      this.assistTarget = TetrisAI.bestMove(this.board, this.current, this.next);
+    }
+
+    // AI 游玩：旋转/平移后逐步下落再锁定（有降落动画）
+    // 注意：aiBusy 期间 canControl() 为 false，必须 force=true 才能旋转/平移
+    async playAiAnimatedMove() {
+      if (!this.running || this.gameOver || !this.current || this.aiBusy) return;
+      const best = TetrisAI.bestMove(this.board, this.current, this.next);
+      if (!best) {
+        this.triggerGameOver('AI 无法放置');
+        return;
+      }
+      this.aiBusy = true;
+      try {
+        // 先旋转对齐（force，绕过 aiBusy 拦截）
+        let guard = 0;
+        while (guard++ < 8) {
+          if (!this.current) break;
+          const targetKey = best.shape.map(r => r.join(',')).join('|');
+          const curKey = this.current.shape.map(r => r.join(',')).join('|');
+          if (targetKey === curKey) break;
+          if (!this.rotate(true)) break;
+          await this.wait(55);
+          if (this.gameOver) return;
+        }
+        // 再左右平移
+        guard = 0;
+        while (this.current && this.current.x !== best.x && guard++ < 20) {
+          const moved = this.current.x < best.x ? this.moveRight(true) : this.moveLeft(true);
+          if (!moved) break;
+          await this.wait(45);
+          if (this.gameOver) return;
+        }
+        // 逐步下落（动画），不要瞬移瞬锁
+        while (!this.gameOver && this.current && !this.collides(this.current.shape, this.current.x, this.current.y + 1)) {
+          this.current.y++;
+          this.draw();
+          await this.wait(28);
+        }
+        if (!this.gameOver) this.lockCurrent();
+      } finally {
+        this.aiBusy = false;
+      }
+    }
+
+    // versus AI：只旋转+左右，不下 soft/hard drop，靠自然重力
+    tickVersusAiAlign() {
+      if (!this.running || this.gameOver || !this.current || this.aiBusy) return;
+      if (!this.aiPlan) {
+        this.aiPlan = TetrisAI.bestMove(this.board, this.current, this.next);
+        if (!this.aiPlan) return;
+      }
+      const target = this.aiPlan;
+      const targetKey = target.shape.map(r => r.join(',')).join('|');
+      const curKey = this.current.shape.map(r => r.join(',')).join('|');
+      if (targetKey !== curKey) {
+        this.rotate(true);
+        return;
+      }
+      if (this.current.x < target.x) this.moveRight(true);
+      else if (this.current.x > target.x) this.moveLeft(true);
+    }
+
+    onPieceChangedForAi() {
+      this.aiPlan = null;
+    }
+
+    wait(ms) {
+      return new Promise(resolve => {
+        this.aiAnimTimer = setTimeout(resolve, ms);
+      });
+    }
+
+    updateStats() {
+      if (this.scoreEl) this.scoreEl.textContent = String(this.score);
+      if (this.linesEl) this.linesEl.textContent = String(this.lines);
+      if (this.levelEl) this.levelEl.textContent = String(this.level);
+      this.onStats(this);
+    }
+
+    drawNext() {
+      if (!this.nextCtx || !this.nextCanvas) return;
+      this.nextCtx.clearRect(0, 0, this.nextCanvas.width, this.nextCanvas.height);
+      if (!this.next) return;
+      const { shape, typeIndex } = this.next;
+      const rows = shape.length, cols = shape[0].length;
+      const cell = 16;
+      const offX = (this.nextCanvas.width - cols * cell) / 2;
+      const offY = (this.nextCanvas.height - rows * cell) / 2;
+      this.nextCtx.fillStyle = COLORS[typeIndex];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (shape[r][c]) this.nextCtx.fillRect(offX + c * cell, offY + r * cell, cell - 1, cell - 1);
+        }
+      }
+    }
+
+    getCurrentBounds() {
+      if (!this.current) return null;
+      const { shape, x, y } = this.current;
+      let minC = Infinity, maxC = -Infinity, minR = Infinity, maxR = -Infinity;
+      for (let r = 0; r < shape.length; r++) {
+        for (let c = 0; c < shape[0].length; c++) {
+          if (!shape[r][c]) continue;
+          minC = Math.min(minC, x + c);
+          maxC = Math.max(maxC, x + c);
+          minR = Math.min(minR, y + r);
+          maxR = Math.max(maxR, y + r);
+        }
+      }
+      if (!Number.isFinite(minC)) return null;
+      return { minC, maxC, minR, maxR };
+    }
+
+    getHardDropY() {
+      if (!this.current) return null;
+      const { shape, x, y } = this.current;
+      let dropY = y;
+      while (!this.collides(shape, x, dropY + 1)) dropY++;
+      return dropY;
+    }
+
+    drawColumnBeams(ctx, bounds) {
+      if (!bounds) return;
+      const cols = [bounds.minC, bounds.maxC];
+      cols.forEach((col, idx) => {
+        if (col < 0 || col >= COLS) return;
+        const gx = col * BLOCK;
+        const grad = ctx.createLinearGradient(gx, 0, gx + BLOCK, 0);
+        if (idx === 0) {
+          grad.addColorStop(0, 'rgba(73,231,255,0.22)');
+          grad.addColorStop(0.55, 'rgba(73,231,255,0.08)');
+          grad.addColorStop(1, 'rgba(73,231,255,0)');
+        } else {
+          grad.addColorStop(0, 'rgba(73,231,255,0)');
+          grad.addColorStop(0.45, 'rgba(73,231,255,0.08)');
+          grad.addColorStop(1, 'rgba(73,231,255,0.22)');
+        }
+        ctx.fillStyle = grad;
+        ctx.fillRect(gx, 0, BLOCK, this.canvas.height);
+
+        ctx.strokeStyle = 'rgba(125, 242, 255, 0.72)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        const edgeX = idx === 0 ? gx + 0.75 : gx + BLOCK - 0.75;
+        ctx.moveTo(edgeX, 0);
+        ctx.lineTo(edgeX, this.canvas.height);
+        ctx.stroke();
+      });
+    }
+
+    drawDropGhost(ctx) {
+      if (!this.current) return;
+      const { shape, x, typeIndex } = this.current;
+      const dropY = this.getHardDropY();
+      if (dropY == null || dropY === this.current.y) return;
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.16)';
+      ctx.strokeStyle = COLORS[typeIndex] || 'rgba(56,189,248,0.75)';
+      ctx.lineWidth = 1.5;
+      for (let r = 0; r < shape.length; r++) {
+        for (let c = 0; c < shape[0].length; c++) {
+          if (!shape[r][c]) continue;
+          const px = (x + c) * BLOCK + 1.5;
+          const py = (dropY + r) * BLOCK + 1.5;
+          ctx.fillRect(px, py, BLOCK - 3, BLOCK - 3);
+          ctx.strokeRect(px, py, BLOCK - 3, BLOCK - 3);
+        }
+      }
+    }
+
+    draw() {
+      const ctx = this.ctx;
+      ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 0.5;
+      for (let r = 0; r <= ROWS; r++) {
+        ctx.beginPath(); ctx.moveTo(0, r * BLOCK); ctx.lineTo(this.canvas.width, r * BLOCK); ctx.stroke();
+      }
+      for (let c = 0; c <= COLS; c++) {
+        ctx.beginPath(); ctx.moveTo(c * BLOCK, 0); ctx.lineTo(c * BLOCK, this.canvas.height); ctx.stroke();
+      }
+
+      // 列光束：先画在网格上、方块下，避免挡住当前块
+      if (guidePrefs.columnBeams && this.current && !this.gameOver) {
+        this.drawColumnBeams(ctx, this.getCurrentBounds());
+      }
+
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (!this.board[r][c]) continue;
+          ctx.fillStyle = COLORS[this.board[r][c] - 1];
+          ctx.fillRect(c * BLOCK + 1, r * BLOCK + 1, BLOCK - 2, BLOCK - 2);
+          ctx.fillStyle = 'rgba(255,255,255,0.08)';
+          ctx.fillRect(c * BLOCK + 1, r * BLOCK + 1, BLOCK - 2, 4);
+        }
+      }
+
+      if (this.showAssistGhost && this.current && !this.gameOver) {
+        this.refreshAssist();
+        if (this.assistTarget) {
+          // 深色阴影建议落点（比半透明更暗）
+          ctx.fillStyle = 'rgba(8, 20, 40, 0.78)';
+          for (let r = 0; r < this.assistTarget.shape.length; r++) {
+            for (let c = 0; c < this.assistTarget.shape[0].length; c++) {
+              if (!this.assistTarget.shape[r][c]) continue;
+              ctx.fillRect(
+                (this.assistTarget.x + c) * BLOCK + 1,
+                (this.assistTarget.y + r) * BLOCK + 1,
+                BLOCK - 2, BLOCK - 2
+              );
+            }
+          }
+          ctx.strokeStyle = 'rgba(56,189,248,0.55)';
+          ctx.lineWidth = 1.5;
+          for (let r = 0; r < this.assistTarget.shape.length; r++) {
+            for (let c = 0; c < this.assistTarget.shape[0].length; c++) {
+              if (!this.assistTarget.shape[r][c]) continue;
+              ctx.strokeRect(
+                (this.assistTarget.x + c) * BLOCK + 1.5,
+                (this.assistTarget.y + r) * BLOCK + 1.5,
+                BLOCK - 3, BLOCK - 3
+              );
+            }
+          }
+        }
+      }
+
+      // 硬降落点轮廓（当前姿态）
+      if (guidePrefs.dropGhost && this.current && !this.gameOver) {
+        this.drawDropGhost(ctx);
+      }
+
+      if (this.current && !this.gameOver) {
+        const { shape, x, y, typeIndex } = this.current;
+        ctx.fillStyle = COLORS[typeIndex];
+        for (let r = 0; r < shape.length; r++) {
+          for (let c = 0; c < shape[0].length; c++) {
+            if (shape[r][c]) ctx.fillRect((x + c) * BLOCK + 1, (y + r) * BLOCK + 1, BLOCK - 2, BLOCK - 2);
+          }
+        }
+      }
+      this.drawNext();
+    }
+  }
+
+  // ---------- 页面状态 ----------
+  const state = {
+    mode: 'normal',
+    lbTab: 'normal',
+    inProgress: false,
+    resultSubmitted: false,
+    surrendered: false,
+    player: null,
+    ai: null,
+    sharedBag: null,
+    aiLoopTimer: null,
+    versusAlignTimer: null
+  };
+
+  const els = {
+    nickname: document.getElementById('nickname'),
+    nickHint: document.getElementById('nickHint'),
+    result: document.getElementById('result'),
+    startBtn: document.getElementById('startBtn'),
+    restartBtn: document.getElementById('restartBtn'),
+    stopBtn: document.getElementById('stopBtn'),
+    surrenderBtn: document.getElementById('surrenderBtn'),
+    optColumnBeams: document.getElementById('optColumnBeams'),
+    optDropGhost: document.getElementById('optDropGhost'),
+    aiCard: document.getElementById('aiCard'),
+    playerTitle: document.getElementById('playerTitle'),
+    versusDiff: document.getElementById('versusDiff'),
+    diffScore: document.getElementById('diffScore'),
+    leaderboardList: document.getElementById('leaderboardList'),
+    lbHint: document.getElementById('lbHint')
+  };
+
+  function modeNeedsNickname(mode = state.mode) {
+    return mode === 'normal' || mode === 'versus';
+  }
+
+  function setResult(text) { els.result.textContent = text || ''; }
+
+  function getNickname() {
+    const nickname = els.nickname.value.trim();
+    if (!nickname) {
+      setResult('请先输入挑战昵称。');
+      els.nickname.focus();
+      return null;
+    }
+    return nickname;
+  }
+
+  function loadConfirmedNicks() {
+    try { return JSON.parse(localStorage.getItem(CONFIRMED_NICK_KEY) || '[]'); }
+    catch { return []; }
+  }
+  function saveConfirmedNick(nick) {
+    const list = loadConfirmedNicks();
+    if (!list.includes(nick)) {
+      list.push(nick);
+      localStorage.setItem(CONFIRMED_NICK_KEY, JSON.stringify(list));
+    }
+  }
+
+  async function nicknameExists(nickname) {
+    const confirmed = loadConfirmedNicks();
+    if (confirmed.includes(nickname)) return { exists: true, confirmed: true };
+
+    let cloudExists = false;
+    if (supabaseClient) {
+      try {
+        const [a, b] = await Promise.all([
+          supabaseClient.from('tetris_players').select('nickname').eq('nickname', nickname).limit(1),
+          supabaseClient.from('tetris_versus_players').select('nickname').eq('nickname', nickname).limit(1)
+        ]);
+        if (!a.error && a.data?.length) cloudExists = true;
+        if (!b.error && b.data?.length) cloudExists = true;
+      } catch (_) { /* ignore */ }
+    }
+    const localNormal = readLocalLB(LB_NORMAL_KEY);
+    const localVersus = readLocalLB(LB_VERSUS_KEY);
+    const localExists = localNormal.some(x => x.nickname === nickname) || localVersus.some(x => x.nickname === nickname);
+    return { exists: cloudExists || localExists, confirmed: false };
+  }
+
+  async function confirmNickname(nickname) {
+    const info = await nicknameExists(nickname);
+    if (!info.exists || info.confirmed) {
+      saveConfirmedNick(nickname);
+      return true;
+    }
+    const isOwner = window.confirm(
+      `排行榜上已经有昵称“${nickname}”。\n\n这是你本人正在使用的昵称吗？\n\n点击“确定”继续使用（成绩累计到同昵称）；点击“取消”后请输入一个新的昵称。`
+    );
+    if (!isOwner) {
+      setResult('这个昵称已被使用，请输入一个新的昵称。');
+      els.nickname.focus();
+      els.nickname.select();
+      return false;
+    }
+    saveConfirmedNick(nickname);
+    return true;
+  }
+
+  function readLocalLB(key) {
+    try {
+      const raw = JSON.parse(localStorage.getItem(key) || '[]');
+      return Array.isArray(raw) ? raw : [];
+    } catch { return []; }
+  }
+
+  function writeLocalLB(key, list) {
+    localStorage.setItem(key, JSON.stringify(list.slice(0, 50)));
+  }
+
+  function upsertLocalScore(key, nickname, score) {
+    const list = readLocalLB(key);
+    const idx = list.findIndex(x => x.nickname === nickname);
+    if (idx >= 0) {
+      list[idx].games_played = (list[idx].games_played || 0) + 1;
+      list[idx].high_score = Math.max(list[idx].high_score ?? -Infinity, score);
+      list[idx].updated_at = new Date().toISOString();
+    } else {
+      list.push({
+        nickname,
+        games_played: 1,
+        high_score: score,
+        updated_at: new Date().toISOString()
+      });
+    }
+    list.sort((a, b) => (b.high_score - a.high_score) || String(a.updated_at).localeCompare(String(b.updated_at)));
+    writeLocalLB(key, list);
+    return list;
+  }
+
+  async function recordNormalScore(nickname, score) {
+    let savedCloud = false;
+    if (supabaseClient?.rpc) {
+      try {
+        const { error } = await supabaseClient.rpc('record_tetris_score', {
+          p_nickname: nickname,
+          p_score: score
+        });
+        if (!error) savedCloud = true;
+      } catch (_) { /* fallback */ }
+    }
+    upsertLocalScore(LB_NORMAL_KEY, nickname, score);
+    return savedCloud ? 'cloud' : 'local';
+  }
+
+  async function recordVersusScore(nickname, score) {
+    let savedCloud = false;
+    if (supabaseClient?.rpc) {
+      try {
+        const { error } = await supabaseClient.rpc('record_tetris_versus_score', {
+          p_nickname: nickname,
+          p_score: score
+        });
+        if (!error) savedCloud = true;
+      } catch (_) { /* fallback */ }
+    }
+    upsertLocalScore(LB_VERSUS_KEY, nickname, score);
+    return savedCloud ? 'cloud' : 'local';
+  }
+
+  async function loadLeaderboard() {
+    const isVersus = state.lbTab === 'versus';
+    els.lbHint.textContent = isVersus
+      ? '人机对战：昵称 / 局数 / 最高分差（玩家−AI）· 按最高分降序'
+      : '普通：昵称 / 局数 / 最高分 · 按最高分降序';
+
+    let rows = [];
+    let source = 'local';
+    if (supabaseClient) {
+      try {
+        const table = isVersus ? 'tetris_versus_players' : 'tetris_players';
+        const { data, error } = await supabaseClient
+          .from(table)
+          .select('nickname, games_played, high_score, updated_at')
+          .order('high_score', { ascending: false })
+          .order('updated_at', { ascending: true })
+          .limit(20);
+        if (!error && Array.isArray(data)) {
+          rows = data;
+          source = 'cloud';
+        }
+      } catch (_) { /* fallback */ }
+    }
+    if (source !== 'cloud') {
+      rows = readLocalLB(isVersus ? LB_VERSUS_KEY : LB_NORMAL_KEY)
+        .slice()
+        .sort((a, b) => (b.high_score - a.high_score) || String(a.updated_at || '').localeCompare(String(b.updated_at || '')))
+        .slice(0, 20);
+    }
+
+    if (!rows.length) {
+      els.leaderboardList.innerHTML = '<li class="empty">暂无记录，等你来成为第一名。</li>';
+      return;
+    }
+    els.leaderboardList.innerHTML = rows.map((item, index) => `
+      <li>
+        <span class="rank">${index + 1}</span>
+        <span>${escapeHtml(item.nickname)}<small> · ${item.games_played || 0} 局</small></span>
+        <span class="score">${item.high_score} 分</span>
+      </li>
+    `).join('');
+  }
+
+  function clearLoops() {
+    if (state.aiLoopTimer) { clearTimeout(state.aiLoopTimer); state.aiLoopTimer = null; }
+    if (state.versusAlignTimer) { clearInterval(state.versusAlignTimer); state.versusAlignTimer = null; }
+  }
+
+  function destroyEngines() {
+    clearLoops();
+    if (state.player) state.player.stopTimers();
+    if (state.ai) state.ai.stopTimers();
+    state.player = null;
+    state.ai = null;
+  }
+
+  function updateDiff() {
+    if (state.mode !== 'versus' || !state.player || !state.ai) return;
+    els.diffScore.textContent = String(state.player.score - state.ai.score);
+  }
+
+  function isDemoMode(mode = state.mode) {
+    return mode === 'ai' || mode === 'assist';
+  }
+
+  function applyModeUI() {
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === state.mode);
+    });
+    const versus = state.mode === 'versus';
+    const demo = isDemoMode();
+    const needsNick = modeNeedsNickname();
+    els.aiCard.classList.toggle('hidden', !versus);
+    els.versusDiff.classList.toggle('hidden', !versus);
+    els.surrenderBtn.classList.toggle('hidden', !versus);
+    els.stopBtn.classList.toggle('hidden', !demo);
+    els.playerTitle.textContent = versus ? '玩家' : (state.mode === 'ai' ? 'AI 盘面' : '游戏盘面');
+    els.nickname.disabled = !needsNick;
+    els.nickname.placeholder = needsNick ? '请输入昵称' : '本模式无需昵称';
+    if (els.nickHint) {
+      els.nickHint.textContent = needsNick
+        ? '未输入昵称不能开始；重名需确认是否本人继续'
+        : 'AI 游玩 / AI 辅助仅展示，不写入排行榜；可随时点「停止」结束';
+    }
+  }
+
+  function createEngines() {
+    destroyEngines();
+    const shared = state.mode === 'versus' ? new SharedBag() : null;
+    state.sharedBag = shared;
+
+    // versus：双方各自从同一序列起点消费，保证序列一致
+    // 用两个独立 cursor 的 fork，按相同顺序 take
+    let playerBag = null;
+    let aiBag = null;
+    if (shared) {
+      // 预生成足够长的序列，双方按相同索引消费
+      shared.ensure(400);
+      playerBag = {
+        i: 0,
+        take() { return shared.queue[this.i++]; }
+      };
+      aiBag = {
+        i: 0,
+        take() { return shared.queue[this.i++]; }
+      };
+    }
+
+    const wrapBag = (bagLike) => ({
+      take() { return bagLike.take(); }
+    });
+
+    state.player = new TetrisEngine({
+      canvas: document.getElementById('playerBoard'),
+      nextCanvas: document.getElementById('playerNext'),
+      overlay: document.getElementById('playerOverlay'),
+      scoreEl: document.getElementById('playerScore'),
+      linesEl: document.getElementById('playerLines'),
+      levelEl: document.getElementById('playerLevel'),
+      label: 'player',
+      allowSoftHardDrop: true,
+      showAssistGhost: state.mode === 'assist',
+      gravityMs: 800,
+      sharedBag: playerBag ? wrapBag(playerBag) : null,
+      onGameOver: () => handleBoardGameOver('player'),
+      onStats: () => updateDiff()
+    });
+
+    // 拦截 spawn 后同步 AI plan
+    const origLock = state.player.lockCurrent.bind(state.player);
+    state.player.lockCurrent = function () {
+      const before = this.current;
+      origLock();
+      if (state.mode === 'assist') this.draw();
+    };
+
+    if (state.mode === 'versus') {
+      state.ai = new TetrisEngine({
+        canvas: document.getElementById('aiBoard'),
+        nextCanvas: document.getElementById('aiNext'),
+        overlay: document.getElementById('aiOverlay'),
+        scoreEl: document.getElementById('aiScore'),
+        linesEl: document.getElementById('aiLines'),
+        levelEl: document.getElementById('aiLevel'),
+        label: 'ai',
+        allowSoftHardDrop: false,
+        showAssistGhost: false,
+        gravityMs: 700, // 略快于玩家，但禁止硬降
+        aiGravityFactor: 1,
+        sharedBag: wrapBag(aiBag),
+        onGameOver: () => handleBoardGameOver('ai'),
+        onStats: () => updateDiff()
+      });
+
+      const aiOrigSpawn = state.ai.spawnPiece.bind(state.ai);
+      state.ai.spawnPiece = function () {
+        aiOrigSpawn();
+        this.onPieceChangedForAi();
+      };
+    }
+
+    // 初始只准备盘面，不自动开跑
+    state.player.running = false;
+    state.player.stopTimers();
+    if (state.ai) {
+      state.ai.running = false;
+      state.ai.stopTimers();
+    }
+    state.player.draw();
+    if (state.ai) state.ai.draw();
+    updateDiff();
+  }
+
+  async function handleBoardGameOver(who) {
+    if (!state.inProgress || state.surrendered || state.resultSubmitted) return;
+    // versus：任一方顶格失败才记分
+    if (state.mode === 'versus') {
+      if (!state.player || !state.ai) return;
+      if (!state.player.gameOver && !state.ai.gameOver) return;
+      state.inProgress = false;
+      state.player.running = false;
+      state.ai.running = false;
+      state.player.stopTimers();
+      state.ai.stopTimers();
+      clearLoops();
+      els.surrenderBtn.disabled = true;
+      els.restartBtn.disabled = false;
+      els.startBtn.disabled = false;
+
+      const diff = state.player.score - state.ai.score;
+      const nickname = getNickname();
+      if (!nickname) return;
+      state.resultSubmitted = true;
+      const where = await recordVersusScore(nickname, diff);
+      setResult(`对战结束（${who === 'player' ? '玩家' : 'AI'}顶格失败）。分差 ${diff}。成绩已写入人机对战榜（${where === 'cloud' ? '云端' : '本地兜底'}）。`);
+      state.lbTab = 'versus';
+      document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.lb === 'versus'));
+      await loadLeaderboard();
+      return;
+    }
+
+    // 单盘模式结束
+    state.inProgress = false;
+    clearLoops();
+    if (state.player) {
+      state.player.running = false;
+      state.player.aiBusy = false;
+      state.player.stopTimers();
+    }
+    els.restartBtn.disabled = false;
+    els.startBtn.disabled = false;
+    els.stopBtn.disabled = true;
+    const score = state.player ? state.player.score : 0;
+
+    // 仅普通游玩写入普通榜；AI 游玩 / AI 辅助只展示不存档
+    if (state.mode === 'ai') {
+      setResult(`AI 游玩结束。本局得分 ${score}（不写入排行榜）。`);
+      return;
+    }
+    if (state.mode === 'assist') {
+      setResult(`AI 辅助结束。本局得分 ${score}（不写入排行榜）。`);
+      return;
+    }
+    if (state.mode !== 'normal') {
+      setResult(`本局结束。得分 ${score}（不写入排行榜）。`);
+      return;
+    }
+
+    const nickname = getNickname();
+    if (!nickname || state.resultSubmitted) return;
+    state.resultSubmitted = true;
+    const where = await recordNormalScore(nickname, score);
+    setResult(`GAME OVER。本局得分 ${score}。已写入普通排行榜（${where === 'cloud' ? '云端' : '本地兜底'}）。`);
+    state.lbTab = 'normal';
+    document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.lb === 'normal'));
+    await loadLeaderboard();
+  }
+
+  function scheduleAiAutoLoop() {
+    clearLoops();
+    const loop = async () => {
+      if (!state.inProgress || state.mode !== 'ai' || !state.player || state.player.gameOver) return;
+      await state.player.playAiAnimatedMove();
+      if (!state.inProgress || state.player.gameOver) return;
+      state.aiLoopTimer = setTimeout(loop, 180);
+    };
+    state.aiLoopTimer = setTimeout(loop, 200);
+  }
+
+  function startVersusAiAlign() {
+    clearLoops();
+    state.versusAlignTimer = setInterval(() => {
+      if (!state.inProgress || !state.ai || state.ai.gameOver) return;
+      state.ai.tickVersusAiAlign();
+    }, 90);
+  }
+
+  async function startGame() {
+    // 仅普通游玩 / 人机对战需要昵称与存档确认；AI 游玩、AI 辅助免昵称
+    if (modeNeedsNickname()) {
+      const nickname = getNickname();
+      if (!nickname) return;
+      if (!(await confirmNickname(nickname))) return;
+    }
+
+    applyModeUI();
+    createEngines();
+    state.inProgress = true;
+    state.resultSubmitted = false;
+    state.surrendered = false;
+    setResult('');
+    els.startBtn.disabled = true;
+    els.restartBtn.disabled = false;
+    els.surrenderBtn.disabled = state.mode !== 'versus';
+    els.stopBtn.disabled = !isDemoMode();
+
+    state.player.start();
+    if (state.mode === 'assist') state.player.draw();
+
+    if (state.mode === 'ai') {
+      // AI 模式：关闭玩家重力，改用动画驱动
+      state.player.stopTimers();
+      state.player.running = true;
+      scheduleAiAutoLoop();
+    }
+
+    if (state.mode === 'versus' && state.ai) {
+      state.ai.start();
+      startVersusAiAlign();
+    }
+  }
+
+  async function restartGame() {
+    if (state.inProgress && state.mode === 'versus' && !state.surrendered && !state.resultSubmitted) {
+      const ok = window.confirm('当前对局进行中。重新开始将视为放弃本局且不记分，是否继续？');
+      if (!ok) return;
+      state.surrendered = true;
+      state.inProgress = false;
+    }
+    if (state.inProgress && isDemoMode()) {
+      stopDemo(false);
+    }
+    await startGame();
+  }
+
+  function stopDemo(showMessage = true) {
+    if (!isDemoMode() || !state.inProgress) return;
+    state.surrendered = true;
+    state.inProgress = false;
+    clearLoops();
+    if (state.player) {
+      state.player.running = false;
+      state.player.aiBusy = false;
+      state.player.stopTimers();
+    }
+    els.stopBtn.disabled = true;
+    els.startBtn.disabled = false;
+    els.restartBtn.disabled = false;
+    if (showMessage) {
+      const score = state.player ? state.player.score : 0;
+      const label = state.mode === 'ai' ? 'AI 游玩' : 'AI 辅助';
+      setResult(`已停止${label}。本局得分 ${score}（不写入排行榜）。`);
+    }
+  }
+
+  function surrender() {
+    if (state.mode !== 'versus' || !state.inProgress) return;
+    const ok = window.confirm('确认投降？投降不记分，本局不会写入人机对战榜。');
+    if (!ok) return;
+    state.surrendered = true;
+    state.inProgress = false;
+    clearLoops();
+    if (state.player) { state.player.running = false; state.player.stopTimers(); }
+    if (state.ai) { state.ai.running = false; state.ai.stopTimers(); }
+    els.surrenderBtn.disabled = true;
+    els.startBtn.disabled = false;
+    setResult('已投降：本局不记分。');
+  }
+
+  // ---------- 事件绑定 ----------
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (state.inProgress) {
+        if (isDemoMode()) {
+          setResult('请先点「停止」结束当前演示，再切换模式。');
+        } else {
+          setResult('请先结束或投降当前对局，再切换模式。');
+        }
+        return;
+      }
+      state.mode = btn.dataset.mode;
+      applyModeUI();
+      createEngines();
+      setResult('');
+    });
+  });
+
+  document.querySelectorAll('.lb-tab').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      state.lbTab = btn.dataset.lb;
+      document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t === btn));
+      await loadLeaderboard();
+    });
+  });
+
+  els.startBtn.addEventListener('click', startGame);
+  els.restartBtn.addEventListener('click', restartGame);
+  els.stopBtn.addEventListener('click', () => stopDemo(true));
+  els.surrenderBtn.addEventListener('click', surrender);
+
+  if (els.optColumnBeams) {
+    els.optColumnBeams.checked = !!guidePrefs.columnBeams;
+    els.optColumnBeams.addEventListener('change', () => {
+      guidePrefs.columnBeams = !!els.optColumnBeams.checked;
+      saveGuidePrefs();
+      redrawGuides();
+    });
+  }
+  if (els.optDropGhost) {
+    els.optDropGhost.checked = !!guidePrefs.dropGhost;
+    els.optDropGhost.addEventListener('change', () => {
+      guidePrefs.dropGhost = !!els.optDropGhost.checked;
+      saveGuidePrefs();
+      redrawGuides();
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+    if (!state.inProgress || !state.player) return;
+    if (state.mode === 'ai') return; // AI 游玩不响应键盘
+    if (state.player.gameOver) return;
+
+    switch (e.key) {
+      case 'ArrowLeft': state.player.moveLeft(); break;
+      case 'ArrowRight': state.player.moveRight(); break;
+      case 'ArrowDown': state.player.softDrop(false); break;
+      case 'ArrowUp': state.player.rotate(); break;
+      case ' ': state.player.hardDrop(); break;
+    }
+    if (state.mode === 'assist') state.player.draw();
+  });
+
+  // 启动
+  applyModeUI();
+  createEngines();
+  loadLeaderboard();
+})();
+</script>
+</body>
+</html>
