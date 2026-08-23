@@ -51,6 +51,10 @@
     .speed-btn.active{background:#0284c7;border-color:#38bdf8;box-shadow:0 0 12px rgba(56,189,248,.28)}
     .speed-btn:disabled{opacity:.45;cursor:not-allowed}
     .opt-desc{color:#91a9b8;font-size:12px}
+    .mode-opts{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+    .toggle-opt{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid rgba(73,231,255,.28);border-radius:999px;background:#0d1c2f;color:#e7f7ff;font-size:12px;font-weight:700;cursor:pointer;user-select:none}
+    .toggle-opt.active{background:#7c3aed;border-color:#a78bfa;box-shadow:0 0 12px rgba(167,139,250,.28)}
+    .toggle-opt:disabled,.toggle-opt.is-disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
     .play-area{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:8px}
     .boards{display:flex;gap:12px;justify-content:center;align-items:flex-start;flex:1 1 auto;min-height:0}
     .board-card{display:flex;flex-direction:column;gap:6px;align-items:center;min-width:0}
@@ -127,13 +131,16 @@
             <button type="button" class="action-btn danger" id="surrenderBtn" hidden disabled>投降</button>
           </div>
           <div class="assist-note" id="assistNote">AI 辅助：深色阴影轨迹与转向箭头均来自同一套 AI 决策（逐步模拟至当前苹果）。你仍完全手动操控。</div>
-          <div class="speed-opts" id="speedOpts">
-            <span class="speed-label">小蛇倍速</span>
-            <button type="button" class="speed-btn active" data-speed="1">1×</button>
-            <button type="button" class="speed-btn" data-speed="1.25">1.25×</button>
-            <button type="button" class="speed-btn" data-speed="1.5">1.5×</button>
-            <button type="button" class="speed-btn" data-speed="2">2×</button>
-            <span class="opt-desc" id="speedHint">普通 / 人机对战记榜成绩 × 倍速</span>
+          <div class="mode-opts">
+            <div class="speed-opts" id="speedOpts">
+              <span class="speed-label">小蛇倍速</span>
+              <button type="button" class="speed-btn active" data-speed="1">1×</button>
+              <button type="button" class="speed-btn" data-speed="1.25">1.25×</button>
+              <button type="button" class="speed-btn" data-speed="1.5">1.5×</button>
+              <button type="button" class="speed-btn" data-speed="2">2×</button>
+            </div>
+            <button type="button" class="toggle-opt" id="penetrateBtn" aria-pressed="false">穿透模式：关</button>
+            <span class="opt-desc" id="speedHint">普通 / 人机对战：记榜 × 倍速；穿透可穿身但撞墙会死，再 ×0.5，原始分最高 30</span>
           </div>
         </div>
         <div class="play-area">
@@ -189,6 +196,8 @@
   const OPP = { 0: 1, 1: 0, 2: 3, 3: 2 };
   const SPEED_OPTIONS = [1, 1.25, 1.5, 2];
   const BASE_SPEED_MS = 280;
+  // 穿透模式下，正常游玩 / 人机对战记榜用原始分上限（×0.5 / 倍速之前）
+  const PENETRATE_SCORE_CAP = 30;
   const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
   const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -205,11 +214,25 @@
       this.ctx = canvas.getContext('2d');
       this.controller = opts.controller || 'human'; // human | ai
       this.assist = !!opts.assist;
+      this.penetrate = !!opts.penetrate;
+      this.scoreCap = Number.isFinite(opts.scoreCap) ? opts.scoreCap : null;
       this.onGameOver = opts.onGameOver || (() => {});
       this.onScore = opts.onScore || (() => {});
       this.loopId = null;
       this.paused = false;
       this.reset();
+    }
+
+    nextCell(x, y, dir) {
+      return { x: x + DIRS[dir].dx, y: y + DIRS[dir].dy };
+    }
+
+    foodDist(ax, ay, bx, by) {
+      return Math.abs(ax - bx) + Math.abs(ay - by);
+    }
+
+    outOfBounds(cell) {
+      return cell.x < 0 || cell.x >= COLS || cell.y < 0 || cell.y >= ROWS;
     }
 
     reset() {
@@ -286,21 +309,22 @@
       const prev = new Map([[sk, null]]);
       while (q.length) {
         const cur = q.shift();
-        for (const d of DIRS) {
-          const nx = cur.x + d.dx, ny = cur.y + d.dy;
-          if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
-          const nk = `${nx},${ny}`;
+        for (let i = 0; i < 4; i++) {
+          const next = this.nextCell(cur.x, cur.y, i);
+          // 墙始终不可穿；穿透模式仅忽略身体阻挡
+          if (this.outOfBounds(next)) continue;
+          const nk = keyOf(next);
           if (prev.has(nk)) continue;
-          if (blocked.has(nk) && nk !== gk) continue;
+          if (!this.penetrate && blocked.has(nk) && nk !== gk) continue;
           prev.set(nk, cur);
           if (nk === gk) {
-            const path = [{ x: nx, y: ny }];
+            const path = [{ x: next.x, y: next.y }];
             let p = cur;
             while (p) { path.push(p); p = prev.get(keyOf(p)); }
             path.reverse();
             return path;
           }
-          q.push({ x: nx, y: ny });
+          q.push({ x: next.x, y: next.y });
         }
       }
       return null;
@@ -311,13 +335,14 @@
       const q = [start];
       while (q.length) {
         const cur = q.shift();
-        for (const d of DIRS) {
-          const nx = cur.x + d.dx, ny = cur.y + d.dy;
-          if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
-          const nk = `${nx},${ny}`;
-          if (seen.has(nk) || blocked.has(nk)) continue;
+        for (let i = 0; i < 4; i++) {
+          const next = this.nextCell(cur.x, cur.y, i);
+          if (this.outOfBounds(next)) continue;
+          const nk = keyOf(next);
+          if (seen.has(nk)) continue;
+          if (!this.penetrate && blocked.has(nk)) continue;
           seen.add(nk);
-          q.push({ x: nx, y: ny });
+          q.push({ x: next.x, y: next.y });
         }
       }
       return seen;
@@ -328,16 +353,18 @@
     }
 
     canEscapeAfterEating(foodCell, steps = 12, snakeBody = null) {
+      // 穿透可穿身，逃生空间很大；仍要避开墙
+      if (this.penetrate) return true;
       const source = snakeBody || this.snake;
       const sim = [{ ...foodCell }, ...source.map(s => ({ ...s }))];
       for (let i = 0; i < steps; i++) {
         const h = sim[0];
         const body = new Set(sim.slice(1).map(keyOf));
         let moved = false;
-        for (const d of DIRS) {
-          const nx = h.x + d.dx, ny = h.y + d.dy;
-          if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS || body.has(`${nx},${ny}`)) continue;
-          sim.unshift({ x: nx, y: ny });
+        for (let di = 0; di < 4; di++) {
+          const next = this.nextCell(h.x, h.y, di);
+          if (this.outOfBounds(next) || body.has(keyOf(next))) continue;
+          sim.unshift({ x: next.x, y: next.y });
           sim.pop();
           moved = true;
           break;
@@ -347,40 +374,44 @@
       return true;
     }
 
-    // AI 仅看当前苹果，符合正常规则；可对任意局面求解决策（辅助轨迹复用）
+    // AI 仅看当前苹果；穿透模式可穿身但不可穿墙
     aiDecideFromState(snake, food, dirIdx = 0) {
       if (!snake?.length || !food) return -1;
       const head = snake[0];
       const legal = [];
       for (let i = 0; i < 4; i++) {
         if (i === OPP[dirIdx] && snake.length > 1) continue;
-        const nx = head.x + DIRS[i].dx, ny = head.y + DIRS[i].dy;
-        if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
-        const ate = nx === food.x && ny === food.y;
-        const blocked = ate ? snake : snake.slice(0, -1);
-        if (blocked.some(s => s.x === nx && s.y === ny)) continue;
+        const next = this.nextCell(head.x, head.y, i);
+        if (this.outOfBounds(next)) continue;
+        const ate = next.x === food.x && next.y === food.y;
+        if (!this.penetrate) {
+          const blocked = ate ? snake : snake.slice(0, -1);
+          if (blocked.some(s => s.x === next.x && s.y === next.y)) continue;
+        }
         legal.push(i);
       }
       if (!legal.length) return -1;
 
       let best = -Infinity, bestDir = legal[0];
       for (const d of legal) {
-        const nx = head.x + DIRS[d].dx, ny = head.y + DIRS[d].dy;
+        const next = this.nextCell(head.x, head.y, d);
+        const nx = next.x, ny = next.y;
         const ate = nx === food.x && ny === food.y;
-        if (ate && !this.canEscapeAfterEating(food, Math.min(snake.length + 5, 18), snake)) continue;
+        if (!this.penetrate && ate && !this.canEscapeAfterEating(food, Math.min(snake.length + 5, 18), snake)) continue;
         const ns = [{ x: nx, y: ny }, ...snake.map(s => ({ ...s }))];
         if (!ate) ns.pop();
         const nb = new Set(ns.slice(1).map(keyOf));
         const area = this.bfsReach(ns[0], nb).size;
-        const exits = DIRS.filter(q => {
-          const x = nx + q.dx, y = ny + q.dy;
-          return x >= 0 && x < COLS && y >= 0 && y < ROWS && !nb.has(`${x},${y}`);
+        const exits = DIRS.filter((_, qi) => {
+          const qn = this.nextCell(nx, ny, qi);
+          if (this.outOfBounds(qn)) return false;
+          return this.penetrate || !nb.has(keyOf(qn));
         }).length;
-        const softBody = new Set(ns.slice(1, -1).map(keyOf));
+        const softBody = this.penetrate ? new Set() : new Set(ns.slice(1, -1).map(keyOf));
         const targetPath = this.bfsPath(ns[0], food, softBody);
-        const tailReach = this.bfsHasPath(ns[0], ns[ns.length - 1], softBody);
-        const currentDist = Math.abs(head.x - food.x) + Math.abs(head.y - food.y);
-        const nextDist = Math.abs(nx - food.x) + Math.abs(ny - food.y);
+        const tailReach = this.penetrate ? true : this.bfsHasPath(ns[0], ns[ns.length - 1], softBody);
+        const currentDist = this.foodDist(head.x, head.y, food.x, food.y);
+        const nextDist = this.foodDist(nx, ny, food.x, food.y);
         const foodProgress = (currentDist - nextDist) * 42;
         const followsFoodPath = targetPath && targetPath.length > 1 && targetPath[1].x === nx && targetPath[1].y === ny;
         let value = area * 5 + exits * 14 + (tailReach ? 55 : -90) + (targetPath ? 120 : 0) + (followsFoodPath ? 180 : 0) + foodProgress;
@@ -413,15 +444,16 @@
         if (step === 0) this.assistDir = decided;
         dirIdx = decided;
         const head = snake[0];
-        const nx = head.x + DIRS[dirIdx].dx;
-        const ny = head.y + DIRS[dirIdx].dy;
-        if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) break;
-        const ate = nx === food.x && ny === food.y;
-        const bodyCheck = ate ? snake : snake.slice(0, -1);
-        if (bodyCheck.some(s => s.x === nx && s.y === ny)) break;
+        const next = this.nextCell(head.x, head.y, dirIdx);
+        if (this.outOfBounds(next)) break;
+        const ate = next.x === food.x && next.y === food.y;
+        if (!this.penetrate) {
+          const bodyCheck = ate ? snake : snake.slice(0, -1);
+          if (bodyCheck.some(s => s.x === next.x && s.y === next.y)) break;
+        }
         if (!ate) snake.pop();
-        snake.unshift({ x: nx, y: ny });
-        path.push({ x: nx, y: ny });
+        snake.unshift({ x: next.x, y: next.y });
+        path.push({ x: next.x, y: next.y });
         if (ate) break;
       }
       this.assistPath = path;
@@ -432,6 +464,10 @@
       for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
         if (!this.snake.some(s => s.x === x && s.y === y)) empty.push({ x, y });
       }
+      if (!empty.length) {
+        this.food = null;
+        return false;
+      }
       for (let i = empty.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [empty[i], empty[j]] = [empty[j], empty[i]];
@@ -440,7 +476,8 @@
       const bodySet = new Set(this.snake.slice(1).map(keyOf));
       const candidates = empty.slice(0, Math.min(40, empty.length));
       const safe = candidates.filter(cell => this.bfsHasPath(head, cell, bodySet) && this.canEscapeAfterEating(cell, Math.min(this.snake.length + 4, 14)));
-      this.food = (safe[0] || candidates.find(c => this.bfsHasPath(head, c, bodySet)) || empty[0] || { x: 0, y: 0 });
+      this.food = (safe[0] || candidates.find(c => this.bfsHasPath(head, c, bodySet)) || empty[0]);
+      return true;
     }
 
     finish(reason) {
@@ -464,19 +501,33 @@
       }
       this.dirIdx = dir;
       const head = this.snake[0];
-      const nx = head.x + DIRS[dir].dx, ny = head.y + DIRS[dir].dy;
-      if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) { this.finish('wall'); return; }
-      const ate = nx === this.food.x && ny === this.food.y;
-      const bodyCheck = ate ? this.snake : this.snake.slice(0, -1);
-      if (bodyCheck.some(s => s.x === nx && s.y === ny)) { this.finish('self'); return; }
+      const next = this.nextCell(head.x, head.y, dir);
+      // 撞墙始终死亡；穿透仅忽略自撞
+      if (this.outOfBounds(next)) {
+        this.finish('wall');
+        return;
+      }
+      const ate = !!(this.food && next.x === this.food.x && next.y === this.food.y);
+      if (!this.penetrate) {
+        const bodyCheck = ate ? this.snake : this.snake.slice(0, -1);
+        if (bodyCheck.some(s => s.x === next.x && s.y === next.y)) {
+          this.finish('self');
+          return;
+        }
+      }
       if (!ate) this.snake.pop();
-      this.snake.unshift({ x: nx, y: ny });
+      this.snake.unshift({ x: next.x, y: next.y });
       if (ate) {
-        this.score += 1;
+        const nextScore = this.score + 1;
+        this.score = this.scoreCap == null ? nextScore : Math.min(nextScore, this.scoreCap);
         this.baseSpeedMs = Math.max(90, this.baseSpeedMs - 3);
         this.speedMs = this.getTickMs();
-        this.spawnFood();
+        const spawned = this.spawnFood();
         this.stop();
+        if (!spawned) {
+          this.finish('clear');
+          return;
+        }
         if (!this.gameOver) this.loopId = setInterval(() => this.step(), this.getTickMs());
         this.onScore(this);
       }
@@ -522,13 +573,15 @@
       }
       ctx.shadowBlur = 0;
 
-      ctx.fillStyle = '#ef4444';
-      ctx.shadowColor = 'rgba(239,68,68,.5)';
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(this.food.x * cell + cell / 2, this.food.y * cell + cell / 2, cell / 2 - 5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
+      if (this.food) {
+        ctx.fillStyle = '#ef4444';
+        ctx.shadowColor = 'rgba(239,68,68,.5)';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(this.food.x * cell + cell / 2, this.food.y * cell + cell / 2, cell / 2 - 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
 
       if (this.assist && this.assistDir >= 0 && this.snake.length) {
         const h = this.snake[0];
@@ -551,7 +604,7 @@
         ctx.fillStyle = '#ff6f00';
         ctx.font = `bold ${Math.max(18, cell)}px Arial`;
         ctx.textAlign = 'center';
-        ctx.fillText('GAME OVER', w / 2, h / 2);
+        ctx.fillText(this.penetrate && !this.food ? 'CLEARED' : 'GAME OVER', w / 2, h / 2);
       }
     }
   }
@@ -563,6 +616,7 @@
     resultSubmitted: false,
     surrendered: false,
     speedMult: 1,
+    penetrate: false,
     player: null,
     ai: null
   };
@@ -576,6 +630,7 @@
     assistNote: document.getElementById('assistNote'),
     speedOpts: document.getElementById('speedOpts'),
     speedHint: document.getElementById('speedHint'),
+    penetrateBtn: document.getElementById('penetrateBtn'),
     playerTitle: document.getElementById('playerTitle'),
     playerCanvas: document.getElementById('playerCanvas'),
     aiCanvas: document.getElementById('aiCanvas'),
@@ -603,10 +658,24 @@
     return mode === 'ai' || mode === 'assist';
   }
   function getScoreMultiplier() {
-    return SPEED_OPTIONS.includes(state.speedMult) ? state.speedMult : 1;
+    const speed = SPEED_OPTIONS.includes(state.speedMult) ? state.speedMult : 1;
+    return state.penetrate ? speed * 0.5 : speed;
+  }
+  function getPenetrateScoreCap(mode = state.mode) {
+    // 仅记榜模式生效；演示模式不封顶
+    if (!state.penetrate) return null;
+    if (mode !== 'normal' && mode !== 'versus') return null;
+    return PENETRATE_SCORE_CAP;
+  }
+  function capRawScore(score, mode = state.mode) {
+    const cap = getPenetrateScoreCap(mode);
+    const n = Number(score) || 0;
+    return cap == null ? n : Math.min(n, cap);
   }
   function formatMult(mult = getScoreMultiplier()) {
-    return Number.isInteger(mult) ? `${mult}` : String(mult);
+    const n = Number(mult);
+    if (Number.isInteger(n)) return `${n}`;
+    return String(Math.round(n * 100) / 100);
   }
   function syncSpeedUI() {
     document.querySelectorAll('.speed-btn').forEach(btn => {
@@ -614,11 +683,34 @@
       btn.classList.toggle('active', val === state.speedMult);
       btn.disabled = state.inProgress;
     });
-    if (els.speedHint) {
-      els.speedHint.textContent = modeNeedsNickname()
-        ? `记榜成绩 ×${formatMult()}（普通得分 / 对战分差）`
-        : `仅影响演示速度，不记榜`;
+    if (els.penetrateBtn) {
+      els.penetrateBtn.classList.toggle('active', state.penetrate);
+      els.penetrateBtn.classList.toggle('is-disabled', state.inProgress);
+      els.penetrateBtn.disabled = state.inProgress;
+      els.penetrateBtn.setAttribute('aria-pressed', state.penetrate ? 'true' : 'false');
+      els.penetrateBtn.textContent = state.penetrate ? '穿透模式：开' : '穿透模式：关';
     }
+    if (els.speedHint) {
+      if (modeNeedsNickname()) {
+        const parts = [`记榜 ×${formatMult()}`];
+        if (state.speedMult !== 1) parts.push(`倍速 ${formatMult(state.speedMult)}`);
+        if (state.penetrate) {
+          parts.push('穿透 ×0.5');
+          parts.push(`原始分上限 ${PENETRATE_SCORE_CAP}`);
+        }
+        els.speedHint.textContent = `${parts.join(' · ')}（普通得分 / 对战分差）`;
+      } else {
+        els.speedHint.textContent = state.penetrate
+          ? '穿透已开：双方可穿身，撞墙仍死；演示不记榜'
+          : '仅影响演示速度，不记榜';
+      }
+    }
+    const demo = isDemoMode();
+    // 穿透仍可能撞墙结束；保留手动结束便于提前记榜
+    const showStop = demo || (state.mode === 'normal' && state.penetrate);
+    els.stopBtn.hidden = !showStop;
+    els.stopBtn.classList.toggle('hidden', !showStop);
+    els.stopBtn.textContent = demo ? '停止' : '结束并记榜';
   }
   function applySpeedToEngines() {
     if (state.player) state.player.setSpeedMult(state.speedMult);
@@ -633,6 +725,15 @@
     state.speedMult = SPEED_OPTIONS.includes(next) ? next : 1;
     applySpeedToEngines();
     syncSpeedUI();
+  }
+  function setPenetrate(on) {
+    if (state.inProgress) {
+      setResult('对局进行中不可切换穿透模式，请结束后再改。');
+      return;
+    }
+    state.penetrate = !!on;
+    syncSpeedUI();
+    createEngines();
   }
 
   async function nicknameExists(nickname) {
@@ -759,8 +860,6 @@
     els.versusDiff.classList.toggle('hidden', !versus);
     els.surrenderBtn.hidden = !versus;
     els.surrenderBtn.classList.toggle('hidden', !versus);
-    els.stopBtn.hidden = !demo;
-    els.stopBtn.classList.toggle('hidden', !demo);
     els.assistNote.classList.toggle('visible', state.mode === 'assist');
     document.body.classList.toggle('is-versus', versus);
     els.boards.classList.toggle('is-versus', versus);
@@ -768,10 +867,22 @@
     els.nickname.disabled = !needsNick;
     els.nickname.placeholder = needsNick ? '请输入昵称' : '本模式无需昵称';
     els.nickHint.textContent = needsNick
-      ? '未输入昵称不能开始；云端重名需确认是否本人继续'
+      ? (state.penetrate
+        ? `穿透开启：撞自己不死，撞墙仍死；记榜再 ×0.5，原始分最高 ${PENETRATE_SCORE_CAP}。也可点「结束并记榜」`
+        : '未输入昵称不能开始；云端重名需确认是否本人继续')
       : 'AI 游玩 / AI 辅助仅展示，不写入排行榜；可随时点「停止」结束';
     syncSpeedUI();
     syncMobileControlsUI();
+  }
+
+  function describeScoreBoost(raw, mult, kind = 'score', opts = {}) {
+    const bits = [];
+    if (state.speedMult !== 1) bits.push(`×${formatMult(state.speedMult)} 倍速`);
+    if (state.penetrate) bits.push('×0.5 穿透');
+    if (opts.capped) bits.push(`原始封顶 ${PENETRATE_SCORE_CAP}`);
+    if (mult === 1 && !bits.length) return '';
+    const label = kind === 'diff' ? `原始分差 ${raw}` : `原始 ${raw}`;
+    return `（${label}${bits.length ? ' ' + bits.join(' ') : ` ×${formatMult(mult)}`}）`;
   }
 
   async function settleNormal(engine) {
@@ -779,10 +890,11 @@
     state.resultSubmitted = true;
     state.inProgress = false;
     const nickname = els.nickname.value.trim();
-    const raw = engine.score;
+    const actual = engine?.score || 0;
+    const raw = capRawScore(actual, 'normal');
     const mult = getScoreMultiplier();
     const finalScore = Math.round(raw * mult);
-    const boostText = mult === 1 ? '' : `（原始 ${raw} ×${formatMult(mult)}）`;
+    const boostText = describeScoreBoost(raw, mult, 'score', { capped: state.penetrate && actual > raw });
     setResult(`本局记榜得分 ${finalScore}${boostText}，正在写入普通榜...`);
     const saved = await recordNormalScore(nickname, finalScore);
     setResult(saved === 'cloud'
@@ -810,15 +922,24 @@
       syncMobileControlsUI();
       return;
     }
-    const rawDiff = state.player.score - state.ai.score;
+    const playerRaw = capRawScore(state.player?.score || 0, 'versus');
+    const aiRaw = capRawScore(state.ai?.score || 0, 'versus');
+    const rawDiff = playerRaw - aiRaw;
     const mult = getScoreMultiplier();
     const diff = Math.round(rawDiff * mult);
-    const boostText = mult === 1 ? '' : `（原始分差 ${rawDiff} ×${formatMult(mult)}）`;
+    const capped = state.penetrate && (
+      (state.player?.score || 0) > playerRaw || (state.ai?.score || 0) > aiRaw
+    );
+    const boostText = describeScoreBoost(rawDiff, mult, 'diff', { capped });
     const nickname = els.nickname.value.trim();
     const who = reasonEngine === state.player ? '玩家' : 'AI';
-    setResult(`${who}失败（${reason === 'wall' ? '撞墙' : reason === 'self' ? '撞到自己' : '无法行动'}）。记榜分差 ${diff}${boostText}，正在写入对战榜...`);
+    const reasonText = reason === 'wall' ? '撞墙'
+      : reason === 'self' ? '撞到自己'
+      : reason === 'clear' ? '盘面已吃满'
+      : '无法行动';
+    setResult(`${who}${reason === 'clear' ? '通关' : '失败'}（${reasonText}）。记榜分差 ${diff}${boostText}，正在写入对战榜...`);
     const saved = await recordVersusScore(nickname, diff);
-    setResult(`${who}失败。记榜分差 ${diff}${boostText}${saved === 'cloud' ? '，已写入人机对战榜。' : '。'}`);
+    setResult(`${who}${reason === 'clear' ? '通关' : '失败'}。记榜分差 ${diff}${boostText}${saved === 'cloud' ? '，已写入人机对战榜。' : '。'}`);
     state.lbTab = 'versus';
     document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.lb === 'versus'));
     await loadLeaderboard();
@@ -830,20 +951,27 @@
 
   function createEngines() {
     destroyEngines();
+    const penetrate = state.penetrate;
+    const scoreCap = getPenetrateScoreCap(state.mode);
     if (state.mode === 'versus') {
       state.player = new SnakeEngine(els.playerCanvas, {
         controller: 'human',
+        penetrate,
+        scoreCap,
         onScore: updateScores,
         onGameOver: (eng, reason) => settleVersus(eng, reason)
       });
       state.ai = new SnakeEngine(els.aiCanvas, {
         controller: 'ai',
+        penetrate,
+        scoreCap,
         onScore: updateScores,
         onGameOver: (eng, reason) => settleVersus(eng, reason)
       });
     } else if (state.mode === 'ai') {
       state.player = new SnakeEngine(els.playerCanvas, {
         controller: 'ai',
+        penetrate,
         onScore: updateScores,
         onGameOver: () => {
           state.inProgress = false;
@@ -858,6 +986,7 @@
       state.player = new SnakeEngine(els.playerCanvas, {
         controller: 'human',
         assist: true,
+        penetrate,
         onScore: updateScores,
         onGameOver: () => {
           state.inProgress = false;
@@ -871,6 +1000,8 @@
     } else {
       state.player = new SnakeEngine(els.playerCanvas, {
         controller: 'human',
+        penetrate,
+        scoreCap,
         onScore: updateScores,
         onGameOver: (eng) => settleNormal(eng)
       });
@@ -906,7 +1037,14 @@
   }
 
   function stopDemo() {
-    if (!isDemoMode() || !state.inProgress) return;
+    if (!state.inProgress) return;
+    // 普通 + 穿透：撞墙才会死，提供「结束并记榜」便于提前结算
+    if (state.mode === 'normal' && state.penetrate) {
+      if (state.player && !state.player.gameOver) state.player.finish('manual');
+      else settleNormal(state.player);
+      return;
+    }
+    if (!isDemoMode()) return;
     state.inProgress = false;
     if (state.player) state.player.finish('stop');
     setResult('已停止演示，不写入排行榜。');
@@ -951,6 +1089,9 @@
   document.querySelectorAll('.speed-btn').forEach(btn => {
     btn.addEventListener('click', () => setSpeedMult(btn.dataset.speed));
   });
+  if (els.penetrateBtn) {
+    els.penetrateBtn.addEventListener('click', () => setPenetrate(!state.penetrate));
+  }
 
   document.addEventListener('keydown', (e) => {
     const map = { ArrowRight: 0, ArrowLeft: 1, ArrowUp: 2, ArrowDown: 3 };
