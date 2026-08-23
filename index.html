@@ -1832,12 +1832,17 @@
             },
             body: JSON.stringify({ action: 'public_home_feed' })
           });
-          if (!response.ok) return fallback;
-          const payload = await response.json();
+          if (!response.ok) {
+            return { items: fallback, fromFallback: true, payload: null };
+          }
+          const payload = await response.json().catch(() => ({}));
           const items = buildHomeFeedItems(payload);
-          return items.length ? items : fallback;
+          if (!items.length) {
+            return { items: fallback, fromFallback: true, payload: null };
+          }
+          return { items, fromFallback: false, payload };
         } catch (_error) {
-          return fallback;
+          return { items: fallback, fromFallback: true, payload: null };
         }
       }
 

@@ -105,21 +105,36 @@
     });
   }
 
-  async function updateIdentity(session) {
-    const username = usernameFromSession(session);
+  let latestSession = null;
 
+  function memberLabelText(username) {
+    if (window.ClubI18n && typeof window.ClubI18n.t === 'function') {
+      // 确保字典已合并；部分页面脚本顺序可能导致首次 t() 发生在 init 前。
+      if (typeof window.ClubI18n.init === 'function') {
+        try { window.ClubI18n.init({ apply: false }); } catch (_error) { /* ignore */ }
+      }
+      const translated = window.ClubI18n.t('common.memberLabel', { username });
+      if (translated && translated !== 'common.memberLabel') return translated;
+    }
+    return `社员：${username}`;
+  }
+
+  function renderIdentityLabel(session) {
+    const username = usernameFromSession(session);
     document.querySelectorAll('[data-member-identity]').forEach((element) => {
       if (!username) {
         element.textContent = '';
         element.hidden = true;
         return;
       }
-      const label = (window.ClubI18n && typeof window.ClubI18n.t === 'function')
-        ? window.ClubI18n.t('common.memberLabel', { username })
-        : `社员：${username}`;
-      element.textContent = label;
+      element.textContent = memberLabelText(username);
       element.hidden = false;
     });
+  }
+
+  async function updateIdentity(session) {
+    latestSession = session || null;
+    renderIdentityLabel(latestSession);
 
     if (!session?.user?.id) {
       applyAdminVisibility(false);
@@ -141,6 +156,9 @@
     const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     client.auth.getSession().then(({ data: { session } }) => updateIdentity(session));
     client.auth.onAuthStateChange((_event, session) => updateIdentity(session));
+    window.addEventListener('club:langchange', () => {
+      renderIdentityLabel(latestSession);
+    });
   }
 
   if (document.readyState === 'loading') {
