@@ -57,6 +57,7 @@ html[data-theme="light"] .topbar,
 html[data-theme="light"] header.topbar {
   background: rgba(255, 255, 255, 0.86) !important;
   border-bottom-color: var(--line) !important;
+  box-shadow: 0 4px 20px rgba(15, 40, 80, 0.08) !important;
 }
 
 html[data-theme="light"] .panel,
@@ -139,17 +140,24 @@ html[data-theme="light"] .brand-mark,
 html[data-theme="light"] .identity {
   color: var(--cyan) !important;
 }
+html[data-theme="light"] .brand small {
+  color: #3a5068 !important;
+}
 
-/* 首页 hero 面板 / 行 */
+/* 首页 hero 面板 / 行 — 亮色下消除黑阴影 */
 html[data-theme="light"] .hero-panel {
   background: var(--panel) !important;
   border-color: var(--line) !important;
+  box-shadow: var(--shadow) !important;
+}
+html[data-theme="light"] .hero-panel::after {
+  opacity: 0 !important;
 }
 html[data-theme="light"] .hero-panel::before {
   opacity: 0 !important;
 }
 html[data-theme="light"] .panel-row {
-  background: rgba(255, 255, 255, 0.6) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
   border-color: var(--line) !important;
 }
 html[data-theme="light"] .panel-row.focus {
@@ -182,10 +190,6 @@ html[data-theme="light"] .info-card.featured {
 }
 
 /* 首页证明条 / 旗舰主区 */
-html[data-theme="light"] .proof-band {
-  background: rgba(255, 255, 255, 0.5) !important;
-  border-color: var(--line) !important;
-}
 html[data-theme="light"] .flagship-main {
   background: var(--panel) !important;
   border-color: var(--line) !important;
@@ -210,6 +214,56 @@ html[data-theme="light"] .step-list span {
 /* 首页滚动进度条 — 亮色阴影淡化 */
 html[data-theme="light"] .scroll-progress {
   box-shadow: 0 0 14px rgba(0, 136, 168, 0.3) !important;
+}
+
+/* 首页文字硬编码浅色覆盖 — 亮色下加深 */
+html[data-theme="light"] .hero-text {
+  color: #1c2a3a !important;
+}
+html[data-theme="light"] .club-affiliation {
+  color: #2c4058 !important;
+}
+html[data-theme="light"] .eyebrow {
+  color: #0088a8 !important;
+}
+html[data-theme="light"] .hero-copy::before {
+  opacity: 0.4 !important;
+}
+html[data-theme="light"] .panel-foot {
+  color: #2c4058 !important;
+}
+html[data-theme="light"] .panel-row span {
+  color: #2c4058 !important;
+}
+html[data-theme="light"] .panel-head span {
+  color: #2c4058 !important;
+}
+html[data-theme="light"] .panel-row strong {
+  color: #0b1a2a !important;
+}
+html[data-theme="light"] .panel-foot a {
+  color: #0088a8 !important;
+}
+
+/* 证明条背景 — 亮色下纯浅底，消除黑色阴影感 */
+html[data-theme="light"] .proof-band {
+  background: #eef3fa !important;
+  border-color: rgba(0, 110, 140, 0.2) !important;
+}
+html[data-theme="light"] .proof-item strong {
+  text-shadow: none !important;
+}
+html[data-theme="light"] .proof-item span {
+  color: #2c4058 !important;
+}
+
+/* 亮色下标题文字 */
+html[data-theme="light"] .title-glow {
+  color: #0b1220 !important;
+  text-shadow: 0 0 22px rgba(0, 136, 168, 0.15) !important;
+}
+html[data-theme="light"] .title-sub {
+  -webkit-text-stroke-color: rgba(0, 80, 110, 0.85) !important;
 }
 
 /* 主题切换控件 */
