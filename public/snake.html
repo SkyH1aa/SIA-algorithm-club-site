@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>算法社 · 贪吃蛇多模式</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="member-identity.js"></script>
+  <style>
+    :root { color-scheme: dark; --mobile-chrome: 210px; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      position: relative; min-height: 100vh; min-height: 100dvh; margin: 0;
+      padding: 10px 12px; background: #07111f; color: #e7f7ff;
+      font-family: Arial, system-ui, sans-serif; overflow: hidden;
+    }
+    .ambient-background{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+    .ambient-orb{position:absolute;width:min(48vw,620px);aspect-ratio:1;border-radius:50%;filter:blur(72px);opacity:.18;mix-blend-mode:screen;animation:drift-orb 18s ease-in-out infinite alternate}
+    .orb-cyan{top:-18%;left:-12%;background:#00e5ff}
+    .orb-violet{top:20%;right:-16%;background:#7c4dff;animation-delay:-7s}
+    .ambient-grid{position:absolute;inset:-80px;background-image:linear-gradient(rgba(0,229,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.055) 1px,transparent 1px);background-size:72px 72px;opacity:.45;animation:grid-shift 26s linear infinite}
+    @keyframes drift-orb{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(7%,5%,0) scale(1.1)}}
+    @keyframes grid-shift{to{transform:translate3d(72px,72px,0)}}
+    .page-shell{position:relative;z-index:1;width:min(1360px,100%);height:calc(100vh - 20px);height:calc(100dvh - 20px);margin:0 auto;display:flex;flex-direction:column;gap:8px;min-height:0}
+    .member-identity{display:none;margin:0;padding:3px 8px;border:1px solid rgba(0,229,255,.34);border-radius:999px;color:#00e5ff;font-size:11px;width:max-content}
+    .member-identity:not([hidden]){display:inline-block}
+    .page-header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0;flex:0 0 auto}
+    .page-header a{color:#49e7ff;text-decoration:none;font-size:13px}
+    .page-header h1{margin:0;font-size:clamp(16px,2vw,20px);font-weight:700}
+    .page-header p{display:none}
+    .layout{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:12px;align-items:stretch}
+    .panel{padding:10px;border:1px solid rgba(73,231,255,.24);border-radius:12px;background:rgba(13,28,47,.84);box-shadow:0 12px 28px rgba(0,0,0,.22);min-height:0}
+    main.panel{display:flex;flex-direction:column;gap:8px;overflow:hidden}
+    .toolbar{display:flex;flex-direction:column;gap:6px;flex:0 0 auto}
+    .setup{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:0}
+    label{color:#91a9b8;font-size:12px}
+    input{min-width:140px;padding:6px 10px;border:1px solid #31536a;border-radius:6px;background:#081522;color:#fff;font-size:13px}
+    .hint{color:#91a9b8;font-size:12px}
+    .control-strip{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+    .mode-btn,.action-btn,.lb-tab{padding:6px 11px;border:1px solid rgba(73,231,255,.28);border-radius:999px;background:#0d1c2f;color:#e7f7ff;cursor:pointer;font-size:12px;font-weight:600;line-height:1.2;white-space:nowrap}
+    .mode-btn.active,.lb-tab.active{background:#0284c7;border-color:#38bdf8;box-shadow:0 0 14px rgba(56,189,248,.3)}
+    .action-btn.primary{background:#FF6F00;border-color:#FF6F00}
+    .action-btn.danger{background:#7f1d1d;border-color:#ef4444}
+    .action-btn:disabled{opacity:.45;cursor:not-allowed}
+    .assist-note{display:none;margin:0;padding:5px 8px;border:1px solid rgba(73,231,255,.16);border-radius:10px;background:rgba(8,21,34,.72);color:#cfefff;font-size:12px}
+    .assist-note.visible{display:block}
+    .speed-opts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+    .speed-label{color:#91a9b8;font-size:12px;font-weight:700}
+    .speed-btn{padding:5px 10px;border:1px solid rgba(73,231,255,.28);border-radius:999px;background:#0d1c2f;color:#e7f7ff;cursor:pointer;font-size:12px;font-weight:700;line-height:1.2}
+    .speed-btn.active{background:#0284c7;border-color:#38bdf8;box-shadow:0 0 12px rgba(56,189,248,.28)}
+    .speed-btn:disabled{opacity:.45;cursor:not-allowed}
+    .opt-desc{color:#91a9b8;font-size:12px}
+    .play-area{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:8px}
+    .boards{display:flex;gap:12px;justify-content:center;align-items:flex-start;flex:1 1 auto;min-height:0}
+    .board-card{display:flex;flex-direction:column;gap:6px;align-items:center;min-width:0}
+    .hidden{display:none!important}
+    .board-card.hidden{display:none}
+    .board-title{margin:0;font-size:13px;color:#91a9b8;font-weight:700}
+    .board-meta{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;font-size:12px;color:#cfefff}
+    .board-meta strong{color:#ffd166}
+    canvas.snake-board{display:block;width:min(520px, calc((100vw - 340px) * .48));max-height:min(560px, calc(100dvh - 220px));aspect-ratio:1/1;background:#0b1437;border:1px solid rgba(73,231,255,.28);border-radius:10px;touch-action:none}
+    body.is-versus canvas.snake-board{width:min(420px, calc((100vw - 340px) * .42));}
+    .versus-diff{font-size:12px;color:#91a9b8}
+    .versus-diff strong{color:#ffd166;font-size:14px}
+    .result{min-height:18px;margin:0;color:#49e7ff;font-weight:700;font-size:13px}
+    .leaderboard{display:flex;flex-direction:column;gap:8px;overflow:auto}
+    .leaderboard h2{margin:0;font-size:16px}
+    .lb-tabs{display:flex;gap:6px;flex-wrap:wrap}
+    .leaderboard-list{display:grid;gap:6px;padding:0;margin:0;list-style:none}
+    .leaderboard-list li{display:grid;grid-template-columns:28px 1fr auto;gap:8px;padding:8px;border-bottom:1px solid rgba(73,231,255,.12);font-size:13px}
+    .rank{color:#49e7ff;font-weight:700}
+    .score{color:#ffd166;font-weight:700}
+    .empty{color:#91a9b8;font-size:13px}
+    .mobile-controls{display:none;position:fixed;left:0;right:0;bottom:0;z-index:20;padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(7,17,31,0),rgba(7,17,31,.96) 28%);gap:12px;justify-content:space-between;align-items:flex-end;pointer-events:none}
+    .mobile-controls.visible{display:flex}
+    .pad,.actions{display:grid;gap:6px;pointer-events:auto}
+    .pad{grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,46px)}
+    .actions{grid-template-columns:1fr;width:72px}
+    .mobile-controls button{border:1px solid rgba(73,231,255,.35);border-radius:12px;background:rgba(13,28,47,.92);color:#e7f7ff;font-size:18px;font-weight:700;min-height:46px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+    .mobile-controls button:disabled{opacity:.35}
+    .pad .up{grid-column:2;grid-row:1}
+    .pad .left{grid-column:1;grid-row:2}
+    .pad .down{grid-column:2;grid-row:2}
+    .pad .right{grid-column:3;grid-row:2}
+    .key-hint{color:#91a9b8;font-size:11px}
+    @media (max-width: 980px){
+      .layout{grid-template-columns:1fr}
+      .leaderboard{max-height:220px}
+      canvas.snake-board{width:min(520px, calc(100vw - 48px));max-height:min(520px, calc(100dvh - var(--mobile-chrome)));}
+      body.is-versus canvas.snake-board{width:min(46vw, calc((100vw - 36px) / 2));max-height:min(46vw, calc(100dvh - var(--mobile-chrome)));}
+    }
+    @media (max-width: 760px){
+      body{padding:6px 8px 96px;overflow:auto}
+      .page-shell{height:auto;min-height:calc(100dvh - 12px)}
+      .page-header p{display:none}
+      .boards.is-versus{gap:8px}
+      .key-hint{display:none}
+      body.is-versus .leaderboard{display:none}
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-background" aria-hidden="true"><div class="ambient-orb orb-cyan"></div><div class="ambient-orb orb-violet"></div><div class="ambient-grid"></div></div>
+  <div class="page-shell">
+    <header class="page-header">
+      <a href="../index.html">← 返回算法社官网</a>
+      <span class="member-identity" data-member-identity hidden></span>
+      <h1>AI 贪吃蛇多模式</h1>
+      <p>正常游玩 · AI 演示 · AI 辅助轨迹 · 人机对战</p>
+    </header>
+    <div class="layout">
+      <main class="panel">
+        <div class="toolbar">
+          <div class="setup">
+            <label for="nickname">挑战昵称</label>
+            <input id="nickname" maxlength="20" placeholder="请输入昵称" autocomplete="nickname" />
+            <span class="hint" id="nickHint">普通 / 人机对战需昵称；AI 游玩与 AI 辅助免昵称</span>
+          </div>
+          <div class="control-strip">
+            <button type="button" class="mode-btn active" data-mode="normal">正常游玩</button>
+            <button type="button" class="mode-btn" data-mode="ai">AI 游玩</button>
+            <button type="button" class="mode-btn" data-mode="assist">AI 辅助</button>
+            <button type="button" class="mode-btn" data-mode="versus">人机对战</button>
+            <button type="button" class="action-btn primary" id="startBtn">开始</button>
+            <button type="button" class="action-btn" id="stopBtn" hidden>停止</button>
+            <button type="button" class="action-btn danger" id="surrenderBtn" hidden disabled>投降</button>
+          </div>
+          <div class="assist-note" id="assistNote">AI 辅助：深色阴影轨迹与转向箭头均来自同一套 AI 决策（逐步模拟至当前苹果）。你仍完全手动操控。</div>
+          <div class="speed-opts" id="speedOpts">
+            <span class="speed-label">小蛇倍速</span>
+            <button type="button" class="speed-btn active" data-speed="1">1×</button>
+            <button type="button" class="speed-btn" data-speed="1.25">1.25×</button>
+            <button type="button" class="speed-btn" data-speed="1.5">1.5×</button>
+            <button type="button" class="speed-btn" data-speed="2">2×</button>
+            <span class="opt-desc" id="speedHint">普通 / 人机对战记榜成绩 × 倍速</span>
+          </div>
+        </div>
+        <div class="play-area">
+          <div class="boards" id="boards">
+            <div class="board-card" id="playerCard">
+              <p class="board-title" id="playerTitle">游戏盘面</p>
+              <canvas class="snake-board" id="playerCanvas" width="480" height="480"></canvas>
+              <div class="board-meta">得分 <strong id="playerScore">0</strong> · 长度 <strong id="playerLen">3</strong></div>
+            </div>
+            <div class="board-card hidden" id="aiCard">
+              <p class="board-title">AI 盘面</p>
+              <canvas class="snake-board" id="aiCanvas" width="480" height="480"></canvas>
+              <div class="board-meta">得分 <strong id="aiScore">0</strong> · 长度 <strong id="aiLen">3</strong></div>
+            </div>
+          </div>
+          <div class="versus-diff hidden" id="versusDiff">分差（玩家 − AI）<strong id="diffScore">0</strong></div>
+          <p class="result" id="result" aria-live="polite"></p>
+          <p class="key-hint">键盘：方向键转向 · 空格暂停（单盘模式）</p>
+        </div>
+      </main>
+      <aside class="leaderboard panel">
+        <h2>排行榜</h2>
+        <div class="lb-tabs">
+          <button type="button" class="lb-tab active" data-lb="normal">普通榜</button>
+          <button type="button" class="lb-tab" data-lb="versus">人机对战榜</button>
+        </div>
+        <p class="hint" id="lbHint">普通：昵称 / 局数 / 最高分 · 按最高分降序</p>
+        <ol class="leaderboard-list" id="leaderboardList"><li class="empty">正在读取排行榜...</li></ol>
+      </aside>
+    </div>
+  </div>
+  <div class="mobile-controls" id="mobileControls" aria-label="移动端操作">
+    <div class="pad">
+      <button type="button" class="up" data-dir="2">↑</button>
+      <button type="button" class="left" data-dir="1">←</button>
+      <button type="button" class="down" data-dir="3">↓</button>
+      <button type="button" class="right" data-dir="0">→</button>
+    </div>
+    <div class="actions">
+      <button type="button" id="mobilePause" title="暂停">⏸</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const COLS = 16, ROWS = 16;
+  const DIRS = [
+    { dx: 1, dy: 0, n: '→' },
+    { dx: -1, dy: 0, n: '←' },
+    { dx: 0, dy: -1, n: '↑' },
+    { dx: 0, dy: 1, n: '↓' }
+  ];
+  const OPP = { 0: 1, 1: 0, 2: 3, 3: 2 };
+  const SPEED_OPTIONS = [1, 1.25, 1.5, 2];
+  const BASE_SPEED_MS = 280;
+  const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
+  const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
+  }
+
+  function keyOf(p) { return `${p.x},${p.y}`; }
+
+  class SnakeEngine {
+    constructor(canvas, opts = {}) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext('2d');
+      this.controller = opts.controller || 'human'; // human | ai
+      this.assist = !!opts.assist;
+      this.onGameOver = opts.onGameOver || (() => {});
+      this.onScore = opts.onScore || (() => {});
+      this.loopId = null;
+      this.paused = false;
+      this.reset();
+    }
+
+    reset() {
+      this.stop();
+      const midX = Math.floor(COLS / 2);
+      const midY = Math.floor(ROWS / 2);
+      this.snake = [
+        { x: midX, y: midY },
+        { x: midX - 1, y: midY },
+        { x: midX - 2, y: midY }
+      ];
+      this.dirIdx = 0;
+      this.userDir = -1;
+      this.score = 0;
+      this.baseSpeedMs = BASE_SPEED_MS;
+      this.speedMult = 1;
+      this.speedMs = Math.max(40, Math.round(this.baseSpeedMs / this.speedMult));
+      this.gameOver = false;
+      this.started = false;
+      this.food = { x: midX + 3, y: midY };
+      this.assistPath = [];
+      this.assistDir = -1;
+      this.spawnFood();
+      this.draw();
+      this.onScore(this);
+    }
+
+    getTickMs() {
+      const mult = SPEED_OPTIONS.includes(this.speedMult) ? this.speedMult : 1;
+      return Math.max(40, Math.round(this.baseSpeedMs / mult));
+    }
+
+    setSpeedMult(mult) {
+      const next = Number(mult);
+      this.speedMult = SPEED_OPTIONS.includes(next) ? next : 1;
+      this.speedMs = this.getTickMs();
+      if (this.started && !this.gameOver && this.loopId) {
+        this.stop();
+        this.loopId = setInterval(() => this.step(), this.getTickMs());
+      }
+    }
+
+    stop() {
+      if (this.loopId) { clearInterval(this.loopId); this.loopId = null; }
+    }
+
+    start() {
+      this.stop();
+      this.started = true;
+      this.paused = false;
+      this.gameOver = false;
+      this.speedMs = this.getTickMs();
+      this.loopId = setInterval(() => this.step(), this.getTickMs());
+      this.draw();
+    }
+
+    togglePause() {
+      if (!this.started || this.gameOver) return;
+      this.paused = !this.paused;
+    }
+
+    setDirection(dir) {
+      if (!this.started || this.paused || this.gameOver) return;
+      if (dir < 0 || dir > 3) return;
+      if (dir === OPP[this.dirIdx]) return;
+      this.userDir = dir;
+    }
+
+    bfsPath(start, goal, blocked) {
+      if (!start || !goal) return null;
+      const sk = keyOf(start), gk = keyOf(goal);
+      if (sk === gk) return [start];
+      const q = [start];
+      const prev = new Map([[sk, null]]);
+      while (q.length) {
+        const cur = q.shift();
+        for (const d of DIRS) {
+          const nx = cur.x + d.dx, ny = cur.y + d.dy;
+          if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
+          const nk = `${nx},${ny}`;
+          if (prev.has(nk)) continue;
+          if (blocked.has(nk) && nk !== gk) continue;
+          prev.set(nk, cur);
+          if (nk === gk) {
+            const path = [{ x: nx, y: ny }];
+            let p = cur;
+            while (p) { path.push(p); p = prev.get(keyOf(p)); }
+            path.reverse();
+            return path;
+          }
+          q.push({ x: nx, y: ny });
+        }
+      }
+      return null;
+    }
+
+    bfsReach(start, blocked) {
+      const seen = new Set([keyOf(start)]);
+      const q = [start];
+      while (q.length) {
+        const cur = q.shift();
+        for (const d of DIRS) {
+          const nx = cur.x + d.dx, ny = cur.y + d.dy;
+          if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
+          const nk = `${nx},${ny}`;
+          if (seen.has(nk) || blocked.has(nk)) continue;
+          seen.add(nk);
+          q.push({ x: nx, y: ny });
+        }
+      }
+      return seen;
+    }
+
+    bfsHasPath(start, goal, blocked) {
+      return !!this.bfsPath(start, goal, blocked);
+    }
+
+    canEscapeAfterEating(foodCell, steps = 12, snakeBody = null) {
+      const source = snakeBody || this.snake;
+      const sim = [{ ...foodCell }, ...source.map(s => ({ ...s }))];
+      for (let i = 0; i < steps; i++) {
+        const h = sim[0];
+        const body = new Set(sim.slice(1).map(keyOf));
+        let moved = false;
+        for (const d of DIRS) {
+          const nx = h.x + d.dx, ny = h.y + d.dy;
+          if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS || body.has(`${nx},${ny}`)) continue;
+          sim.unshift({ x: nx, y: ny });
+          sim.pop();
+          moved = true;
+          break;
+        }
+        if (!moved) return false;
+      }
+      return true;
+    }
+
+    // AI 仅看当前苹果，符合正常规则；可对任意局面求解决策（辅助轨迹复用）
+    aiDecideFromState(snake, food, dirIdx = 0) {
+      if (!snake?.length || !food) return -1;
+      const head = snake[0];
+      const legal = [];
+      for (let i = 0; i < 4; i++) {
+        if (i === OPP[dirIdx] && snake.length > 1) continue;
+        const nx = head.x + DIRS[i].dx, ny = head.y + DIRS[i].dy;
+        if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
+        const ate = nx === food.x && ny === food.y;
+        const blocked = ate ? snake : snake.slice(0, -1);
+        if (blocked.some(s => s.x === nx && s.y === ny)) continue;
+        legal.push(i);
+      }
+      if (!legal.length) return -1;
+
+      let best = -Infinity, bestDir = legal[0];
+      for (const d of legal) {
+        const nx = head.x + DIRS[d].dx, ny = head.y + DIRS[d].dy;
+        const ate = nx === food.x && ny === food.y;
+        if (ate && !this.canEscapeAfterEating(food, Math.min(snake.length + 5, 18), snake)) continue;
+        const ns = [{ x: nx, y: ny }, ...snake.map(s => ({ ...s }))];
+        if (!ate) ns.pop();
+        const nb = new Set(ns.slice(1).map(keyOf));
+        const area = this.bfsReach(ns[0], nb).size;
+        const exits = DIRS.filter(q => {
+          const x = nx + q.dx, y = ny + q.dy;
+          return x >= 0 && x < COLS && y >= 0 && y < ROWS && !nb.has(`${x},${y}`);
+        }).length;
+        const softBody = new Set(ns.slice(1, -1).map(keyOf));
+        const targetPath = this.bfsPath(ns[0], food, softBody);
+        const tailReach = this.bfsHasPath(ns[0], ns[ns.length - 1], softBody);
+        const currentDist = Math.abs(head.x - food.x) + Math.abs(head.y - food.y);
+        const nextDist = Math.abs(nx - food.x) + Math.abs(ny - food.y);
+        const foodProgress = (currentDist - nextDist) * 42;
+        const followsFoodPath = targetPath && targetPath.length > 1 && targetPath[1].x === nx && targetPath[1].y === ny;
+        let value = area * 5 + exits * 14 + (tailReach ? 55 : -90) + (targetPath ? 120 : 0) + (followsFoodPath ? 180 : 0) + foodProgress;
+        if (ate) value += 120;
+        if (value > best) { best = value; bestDir = d; }
+      }
+      return bestDir;
+    }
+
+    aiDecide() {
+      if (this.gameOver || !this.snake.length) return -1;
+      return this.aiDecideFromState(this.snake, this.food, this.dirIdx);
+    }
+
+    computeAssistHint() {
+      if (!this.assist || this.gameOver || !this.started) {
+        this.assistPath = [];
+        this.assistDir = -1;
+        return;
+      }
+      let snake = this.snake.map(s => ({ ...s }));
+      const food = { ...this.food };
+      let dirIdx = this.dirIdx;
+      const path = [];
+      this.assistDir = -1;
+      const maxSteps = COLS * ROWS * 2;
+      for (let step = 0; step < maxSteps; step++) {
+        const decided = this.aiDecideFromState(snake, food, dirIdx);
+        if (decided < 0) break;
+        if (step === 0) this.assistDir = decided;
+        dirIdx = decided;
+        const head = snake[0];
+        const nx = head.x + DIRS[dirIdx].dx;
+        const ny = head.y + DIRS[dirIdx].dy;
+        if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) break;
+        const ate = nx === food.x && ny === food.y;
+        const bodyCheck = ate ? snake : snake.slice(0, -1);
+        if (bodyCheck.some(s => s.x === nx && s.y === ny)) break;
+        if (!ate) snake.pop();
+        snake.unshift({ x: nx, y: ny });
+        path.push({ x: nx, y: ny });
+        if (ate) break;
+      }
+      this.assistPath = path;
+    }
+
+    spawnFood() {
+      const empty = [];
+      for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+        if (!this.snake.some(s => s.x === x && s.y === y)) empty.push({ x, y });
+      }
+      for (let i = empty.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [empty[i], empty[j]] = [empty[j], empty[i]];
+      }
+      const head = this.snake[0];
+      const bodySet = new Set(this.snake.slice(1).map(keyOf));
+      const candidates = empty.slice(0, Math.min(40, empty.length));
+      const safe = candidates.filter(cell => this.bfsHasPath(head, cell, bodySet) && this.canEscapeAfterEating(cell, Math.min(this.snake.length + 4, 14)));
+      this.food = (safe[0] || candidates.find(c => this.bfsHasPath(head, c, bodySet)) || empty[0] || { x: 0, y: 0 });
+    }
+
+    finish(reason) {
+      if (this.gameOver) return;
+      this.gameOver = true;
+      this.stop();
+      this.draw();
+      this.onGameOver(this, reason || 'crash');
+    }
+
+    step() {
+      if (!this.started || this.paused || this.gameOver) return;
+      let dir = this.dirIdx;
+      if (this.controller === 'ai') {
+        const decided = this.aiDecide();
+        if (decided < 0) { this.finish('ai-stuck'); return; }
+        dir = decided;
+      } else if (this.userDir >= 0 && this.userDir !== OPP[this.dirIdx]) {
+        dir = this.userDir;
+        this.userDir = -1;
+      }
+      this.dirIdx = dir;
+      const head = this.snake[0];
+      const nx = head.x + DIRS[dir].dx, ny = head.y + DIRS[dir].dy;
+      if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) { this.finish('wall'); return; }
+      const ate = nx === this.food.x && ny === this.food.y;
+      const bodyCheck = ate ? this.snake : this.snake.slice(0, -1);
+      if (bodyCheck.some(s => s.x === nx && s.y === ny)) { this.finish('self'); return; }
+      if (!ate) this.snake.pop();
+      this.snake.unshift({ x: nx, y: ny });
+      if (ate) {
+        this.score += 1;
+        this.baseSpeedMs = Math.max(90, this.baseSpeedMs - 3);
+        this.speedMs = this.getTickMs();
+        this.spawnFood();
+        this.stop();
+        if (!this.gameOver) this.loopId = setInterval(() => this.step(), this.getTickMs());
+        this.onScore(this);
+      }
+      if (this.assist) this.computeAssistHint();
+      this.draw();
+      this.onScore(this);
+    }
+
+    draw() {
+      const ctx = this.ctx;
+      const w = this.canvas.width, h = this.canvas.height;
+      const cell = Math.min(w / COLS, h / ROWS);
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#0b1437';
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      for (let r = 0; r <= ROWS; r++) {
+        ctx.beginPath(); ctx.moveTo(0, r * cell); ctx.lineTo(COLS * cell, r * cell); ctx.stroke();
+      }
+      for (let c = 0; c <= COLS; c++) {
+        ctx.beginPath(); ctx.moveTo(c * cell, 0); ctx.lineTo(c * cell, ROWS * cell); ctx.stroke();
+      }
+
+      if (this.assist && this.assistPath.length) {
+        for (const p of this.assistPath) {
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+          ctx.fillRect(p.x * cell + 2, p.y * cell + 2, cell - 4, cell - 4);
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.55)';
+          ctx.strokeRect(p.x * cell + 2.5, p.y * cell + 2.5, cell - 5, cell - 5);
+        }
+      }
+
+      for (let i = this.snake.length - 1; i >= 0; i--) {
+        const s = this.snake[i];
+        const isHead = i === 0;
+        ctx.fillStyle = this.controller === 'ai'
+          ? (isHead ? '#38bdf8' : '#0369a1')
+          : (isHead ? '#22c55e' : '#166534');
+        ctx.shadowColor = isHead ? (this.controller === 'ai' ? 'rgba(56,189,248,.45)' : 'rgba(34,197,94,.4)') : 'transparent';
+        ctx.shadowBlur = isHead ? 10 : 0;
+        ctx.fillRect(s.x * cell + 2, s.y * cell + 2, cell - 4, cell - 4);
+      }
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = '#ef4444';
+      ctx.shadowColor = 'rgba(239,68,68,.5)';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(this.food.x * cell + cell / 2, this.food.y * cell + cell / 2, cell / 2 - 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      if (this.assist && this.assistDir >= 0 && this.snake.length) {
+        const h = this.snake[0];
+        const d = DIRS[this.assistDir];
+        const cx = h.x * cell + cell / 2;
+        const cy = h.y * cell + cell / 2;
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        if (d.dx === 1) { ctx.moveTo(cx + 4, cy); ctx.lineTo(cx - 6, cy - 7); ctx.lineTo(cx - 6, cy + 7); }
+        else if (d.dx === -1) { ctx.moveTo(cx - 4, cy); ctx.lineTo(cx + 6, cy - 7); ctx.lineTo(cx + 6, cy + 7); }
+        else if (d.dy === -1) { ctx.moveTo(cx, cy - 4); ctx.lineTo(cx - 7, cy + 6); ctx.lineTo(cx + 7, cy + 6); }
+        else { ctx.moveTo(cx, cy + 4); ctx.lineTo(cx - 7, cy - 6); ctx.lineTo(cx + 7, cy - 6); }
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      if (this.gameOver) {
+        ctx.fillStyle = 'rgba(0,0,0,.45)';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#ff6f00';
+        ctx.font = `bold ${Math.max(18, cell)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText('GAME OVER', w / 2, h / 2);
+      }
+    }
+  }
+
+  const state = {
+    mode: 'normal',
+    lbTab: 'normal',
+    inProgress: false,
+    resultSubmitted: false,
+    surrendered: false,
+    speedMult: 1,
+    player: null,
+    ai: null
+  };
+
+  const els = {
+    nickname: document.getElementById('nickname'),
+    nickHint: document.getElementById('nickHint'),
+    startBtn: document.getElementById('startBtn'),
+    stopBtn: document.getElementById('stopBtn'),
+    surrenderBtn: document.getElementById('surrenderBtn'),
+    assistNote: document.getElementById('assistNote'),
+    speedOpts: document.getElementById('speedOpts'),
+    speedHint: document.getElementById('speedHint'),
+    playerTitle: document.getElementById('playerTitle'),
+    playerCanvas: document.getElementById('playerCanvas'),
+    aiCanvas: document.getElementById('aiCanvas'),
+    aiCard: document.getElementById('aiCard'),
+    boards: document.getElementById('boards'),
+    playerScore: document.getElementById('playerScore'),
+    playerLen: document.getElementById('playerLen'),
+    aiScore: document.getElementById('aiScore'),
+    aiLen: document.getElementById('aiLen'),
+    versusDiff: document.getElementById('versusDiff'),
+    diffScore: document.getElementById('diffScore'),
+    result: document.getElementById('result'),
+    lbHint: document.getElementById('lbHint'),
+    leaderboardList: document.getElementById('leaderboardList'),
+    mobileControls: document.getElementById('mobileControls'),
+    mobilePause: document.getElementById('mobilePause')
+  };
+
+  function setResult(text) { els.result.textContent = text || ''; }
+
+  function modeNeedsNickname(mode = state.mode) {
+    return mode === 'normal' || mode === 'versus';
+  }
+  function isDemoMode(mode = state.mode) {
+    return mode === 'ai' || mode === 'assist';
+  }
+  function getScoreMultiplier() {
+    return SPEED_OPTIONS.includes(state.speedMult) ? state.speedMult : 1;
+  }
+  function formatMult(mult = getScoreMultiplier()) {
+    return Number.isInteger(mult) ? `${mult}` : String(mult);
+  }
+  function syncSpeedUI() {
+    document.querySelectorAll('.speed-btn').forEach(btn => {
+      const val = Number(btn.dataset.speed);
+      btn.classList.toggle('active', val === state.speedMult);
+      btn.disabled = state.inProgress;
+    });
+    if (els.speedHint) {
+      els.speedHint.textContent = modeNeedsNickname()
+        ? `记榜成绩 ×${formatMult()}（普通得分 / 对战分差）`
+        : `仅影响演示速度，不记榜`;
+    }
+  }
+  function applySpeedToEngines() {
+    if (state.player) state.player.setSpeedMult(state.speedMult);
+    if (state.ai) state.ai.setSpeedMult(state.speedMult);
+  }
+  function setSpeedMult(mult) {
+    if (state.inProgress) {
+      setResult('对局进行中不可切换倍速，请结束后再改。');
+      return;
+    }
+    const next = Number(mult);
+    state.speedMult = SPEED_OPTIONS.includes(next) ? next : 1;
+    applySpeedToEngines();
+    syncSpeedUI();
+  }
+
+  async function nicknameExists(nickname) {
+    if (!supabaseClient) return { exists: false, error: '云端未连接' };
+    try {
+      const [a, b] = await Promise.all([
+        supabaseClient.from('snake_players').select('nickname').eq('nickname', nickname).limit(1),
+        supabaseClient.from('snake_versus_players').select('nickname').eq('nickname', nickname).limit(1)
+      ]);
+      if (a.error || b.error) return { exists: false, error: (a.error || b.error).message };
+      return { exists: !!(a.data?.length || b.data?.length) };
+    } catch (err) {
+      return { exists: false, error: err?.message || '查询失败' };
+    }
+  }
+
+  async function confirmNickname(nickname) {
+    const info = await nicknameExists(nickname);
+    if (info.error) {
+      setResult(`无法校验昵称：${info.error}`);
+      return false;
+    }
+    if (!info.exists) return true;
+    return window.confirm(`昵称「${nickname}」已存在，是否确认为本人并继续累计成绩？`);
+  }
+
+  async function recordNormalScore(nickname, score) {
+    if (!supabaseClient?.rpc) { setResult('云端未连接，成绩未保存。'); return 'none'; }
+    try {
+      const { error } = await supabaseClient.rpc('record_snake_score', { p_nickname: nickname, p_score: score });
+      if (error) { setResult(`云端保存失败：${error.message || '请稍后重试'}`); return 'none'; }
+      return 'cloud';
+    } catch (err) {
+      setResult(`云端保存失败：${err?.message || '请稍后重试'}`);
+      return 'none';
+    }
+  }
+
+  async function recordVersusScore(nickname, score) {
+    if (!supabaseClient?.rpc) { setResult('云端未连接，成绩未保存。'); return 'none'; }
+    try {
+      const { error } = await supabaseClient.rpc('record_snake_versus_score', { p_nickname: nickname, p_score: score });
+      if (error) { setResult(`云端保存失败：${error.message || '请稍后重试'}`); return 'none'; }
+      return 'cloud';
+    } catch (err) {
+      setResult(`云端保存失败：${err?.message || '请稍后重试'}`);
+      return 'none';
+    }
+  }
+
+  async function loadLeaderboard() {
+    const isVersus = state.lbTab === 'versus';
+    els.lbHint.textContent = isVersus
+      ? '人机对战：昵称 / 局数 / 最高分差（玩家−AI）· 按最高分降序'
+      : '普通：昵称 / 局数 / 最高分 · 按最高分降序';
+    let rows = [];
+    if (supabaseClient) {
+      try {
+        const table = isVersus ? 'snake_versus_players' : 'snake_players';
+        const { data, error } = await supabaseClient
+          .from(table)
+          .select('nickname, games_played, high_score, updated_at')
+          .order('high_score', { ascending: false })
+          .order('updated_at', { ascending: true })
+          .limit(50);
+        if (!error && Array.isArray(data)) rows = data;
+        else els.lbHint.textContent += ' · 云端暂不可用';
+      } catch (_) {
+        els.lbHint.textContent += ' · 云端暂不可用';
+      }
+    } else {
+      els.lbHint.textContent += ' · 云端暂不可用';
+    }
+    if (!rows.length) {
+      els.leaderboardList.innerHTML = '<li class="empty">暂无记录，等你来成为第一名。</li>';
+      return;
+    }
+    els.leaderboardList.innerHTML = rows.map((item, index) => `
+      <li>
+        <span class="rank">${index + 1}</span>
+        <span>${escapeHtml(item.nickname)}<small> · ${item.games_played || 0} 局</small></span>
+        <span class="score">${item.high_score} 分</span>
+      </li>
+    `).join('');
+  }
+
+  function updateScores() {
+    if (state.player) {
+      els.playerScore.textContent = String(state.player.score);
+      els.playerLen.textContent = String(state.player.snake.length);
+    }
+    if (state.ai) {
+      els.aiScore.textContent = String(state.ai.score);
+      els.aiLen.textContent = String(state.ai.snake.length);
+    }
+    if (state.mode === 'versus' && state.player && state.ai) {
+      els.diffScore.textContent = String(state.player.score - state.ai.score);
+    }
+  }
+
+  function destroyEngines() {
+    if (state.player) state.player.stop();
+    if (state.ai) state.ai.stop();
+    state.player = null;
+    state.ai = null;
+  }
+
+  function syncMobileControlsUI() {
+    const show = state.mode !== 'ai';
+    els.mobileControls.classList.toggle('visible', show && window.matchMedia('(max-width: 760px)').matches);
+    const disabled = !show || !state.inProgress || !state.player || state.player.gameOver;
+    els.mobileControls.querySelectorAll('button[data-dir]').forEach(btn => { btn.disabled = disabled; });
+    els.mobilePause.disabled = !state.inProgress || state.mode === 'versus' || !state.player || state.player.gameOver;
+  }
+
+  function applyModeUI() {
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === state.mode);
+    });
+    const versus = state.mode === 'versus';
+    const demo = isDemoMode();
+    const needsNick = modeNeedsNickname();
+    els.aiCard.classList.toggle('hidden', !versus);
+    els.versusDiff.classList.toggle('hidden', !versus);
+    els.surrenderBtn.hidden = !versus;
+    els.surrenderBtn.classList.toggle('hidden', !versus);
+    els.stopBtn.hidden = !demo;
+    els.stopBtn.classList.toggle('hidden', !demo);
+    els.assistNote.classList.toggle('visible', state.mode === 'assist');
+    document.body.classList.toggle('is-versus', versus);
+    els.boards.classList.toggle('is-versus', versus);
+    els.playerTitle.textContent = versus ? '玩家' : (state.mode === 'ai' ? 'AI 盘面' : '游戏盘面');
+    els.nickname.disabled = !needsNick;
+    els.nickname.placeholder = needsNick ? '请输入昵称' : '本模式无需昵称';
+    els.nickHint.textContent = needsNick
+      ? '未输入昵称不能开始；云端重名需确认是否本人继续'
+      : 'AI 游玩 / AI 辅助仅展示，不写入排行榜；可随时点「停止」结束';
+    syncSpeedUI();
+    syncMobileControlsUI();
+  }
+
+  async function settleNormal(engine) {
+    if (state.resultSubmitted || state.mode !== 'normal') return;
+    state.resultSubmitted = true;
+    state.inProgress = false;
+    const nickname = els.nickname.value.trim();
+    const raw = engine.score;
+    const mult = getScoreMultiplier();
+    const finalScore = Math.round(raw * mult);
+    const boostText = mult === 1 ? '' : `（原始 ${raw} ×${formatMult(mult)}）`;
+    setResult(`本局记榜得分 ${finalScore}${boostText}，正在写入普通榜...`);
+    const saved = await recordNormalScore(nickname, finalScore);
+    setResult(saved === 'cloud'
+      ? `本局记榜得分 ${finalScore}${boostText}，已写入普通榜。`
+      : `本局记榜得分 ${finalScore}${boostText}。`);
+    state.lbTab = 'normal';
+    document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.lb === 'normal'));
+    await loadLeaderboard();
+    els.startBtn.disabled = false;
+    syncSpeedUI();
+    syncMobileControlsUI();
+  }
+
+  async function settleVersus(reasonEngine, reason) {
+    if (state.resultSubmitted || state.mode !== 'versus') return;
+    state.resultSubmitted = true;
+    state.inProgress = false;
+    if (state.player) state.player.stop();
+    if (state.ai) state.ai.stop();
+    if (state.surrendered) {
+      setResult('已投降，本局不记入排行榜。');
+      els.startBtn.disabled = false;
+      els.surrenderBtn.disabled = true;
+      syncSpeedUI();
+      syncMobileControlsUI();
+      return;
+    }
+    const rawDiff = state.player.score - state.ai.score;
+    const mult = getScoreMultiplier();
+    const diff = Math.round(rawDiff * mult);
+    const boostText = mult === 1 ? '' : `（原始分差 ${rawDiff} ×${formatMult(mult)}）`;
+    const nickname = els.nickname.value.trim();
+    const who = reasonEngine === state.player ? '玩家' : 'AI';
+    setResult(`${who}失败（${reason === 'wall' ? '撞墙' : reason === 'self' ? '撞到自己' : '无法行动'}）。记榜分差 ${diff}${boostText}，正在写入对战榜...`);
+    const saved = await recordVersusScore(nickname, diff);
+    setResult(`${who}失败。记榜分差 ${diff}${boostText}${saved === 'cloud' ? '，已写入人机对战榜。' : '。'}`);
+    state.lbTab = 'versus';
+    document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.lb === 'versus'));
+    await loadLeaderboard();
+    els.startBtn.disabled = false;
+    els.surrenderBtn.disabled = true;
+    syncSpeedUI();
+    syncMobileControlsUI();
+  }
+
+  function createEngines() {
+    destroyEngines();
+    if (state.mode === 'versus') {
+      state.player = new SnakeEngine(els.playerCanvas, {
+        controller: 'human',
+        onScore: updateScores,
+        onGameOver: (eng, reason) => settleVersus(eng, reason)
+      });
+      state.ai = new SnakeEngine(els.aiCanvas, {
+        controller: 'ai',
+        onScore: updateScores,
+        onGameOver: (eng, reason) => settleVersus(eng, reason)
+      });
+    } else if (state.mode === 'ai') {
+      state.player = new SnakeEngine(els.playerCanvas, {
+        controller: 'ai',
+        onScore: updateScores,
+        onGameOver: () => {
+          state.inProgress = false;
+          setResult(`AI 本局得分 ${state.player.score}（演示不记榜）。`);
+          els.startBtn.disabled = false;
+          els.stopBtn.disabled = true;
+          syncSpeedUI();
+          syncMobileControlsUI();
+        }
+      });
+    } else if (state.mode === 'assist') {
+      state.player = new SnakeEngine(els.playerCanvas, {
+        controller: 'human',
+        assist: true,
+        onScore: updateScores,
+        onGameOver: () => {
+          state.inProgress = false;
+          setResult(`辅助模式结束，得分 ${state.player.score}（不记榜）。`);
+          els.startBtn.disabled = false;
+          els.stopBtn.disabled = true;
+          syncSpeedUI();
+          syncMobileControlsUI();
+        }
+      });
+    } else {
+      state.player = new SnakeEngine(els.playerCanvas, {
+        controller: 'human',
+        onScore: updateScores,
+        onGameOver: (eng) => settleNormal(eng)
+      });
+    }
+    applySpeedToEngines();
+    updateScores();
+  }
+
+  async function startGame() {
+    if (state.inProgress) return;
+    if (modeNeedsNickname()) {
+      const nickname = els.nickname.value.trim();
+      if (!nickname) {
+        setResult('请先输入挑战昵称。');
+        els.nickname.focus();
+        return;
+      }
+      if (!(await confirmNickname(nickname))) return;
+    }
+    state.resultSubmitted = false;
+    state.surrendered = false;
+    state.inProgress = true;
+    setResult('');
+    createEngines();
+    state.player.start();
+    if (state.mode === 'assist') state.player.computeAssistHint();
+    if (state.mode === 'versus' && state.ai) state.ai.start();
+    els.startBtn.disabled = true;
+    els.stopBtn.disabled = false;
+    els.surrenderBtn.disabled = state.mode !== 'versus';
+    syncSpeedUI();
+    syncMobileControlsUI();
+  }
+
+  function stopDemo() {
+    if (!isDemoMode() || !state.inProgress) return;
+    state.inProgress = false;
+    if (state.player) state.player.finish('stop');
+    setResult('已停止演示，不写入排行榜。');
+    els.startBtn.disabled = false;
+    els.stopBtn.disabled = true;
+    syncSpeedUI();
+    syncMobileControlsUI();
+  }
+
+  function surrender() {
+    if (state.mode !== 'versus' || !state.inProgress || state.resultSubmitted) return;
+    state.surrendered = true;
+    if (state.player && !state.player.gameOver) state.player.finish('surrender');
+    else settleVersus(state.player, 'surrender');
+  }
+
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (state.inProgress) {
+        setResult('请先结束当前对局，再切换模式。');
+        return;
+      }
+      state.mode = btn.dataset.mode;
+      applyModeUI();
+      createEngines();
+      setResult('');
+    });
+  });
+
+  document.querySelectorAll('.lb-tab').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      state.lbTab = btn.dataset.lb;
+      document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.lb === state.lbTab));
+      await loadLeaderboard();
+    });
+  });
+
+  els.startBtn.addEventListener('click', startGame);
+  els.stopBtn.addEventListener('click', stopDemo);
+  els.surrenderBtn.addEventListener('click', surrender);
+
+  document.querySelectorAll('.speed-btn').forEach(btn => {
+    btn.addEventListener('click', () => setSpeedMult(btn.dataset.speed));
+  });
+
+  document.addEventListener('keydown', (e) => {
+    const map = { ArrowRight: 0, ArrowLeft: 1, ArrowUp: 2, ArrowDown: 3 };
+    if (e.key === ' ') {
+      if (state.mode !== 'versus' && state.player) {
+        e.preventDefault();
+        state.player.togglePause();
+        setResult(state.player.paused ? '已暂停' : '继续游戏');
+      }
+      return;
+    }
+    if (map[e.key] === undefined) return;
+    e.preventDefault();
+    if (state.mode === 'ai') return;
+    if (state.player) state.player.setDirection(map[e.key]);
+  });
+
+  els.mobileControls.querySelectorAll('button[data-dir]').forEach(btn => {
+    const fire = (ev) => {
+      ev.preventDefault();
+      if (state.mode === 'ai' || !state.player) return;
+      state.player.setDirection(Number(btn.dataset.dir));
+    };
+    btn.addEventListener('pointerdown', fire);
+  });
+  els.mobilePause.addEventListener('click', () => {
+    if (state.mode === 'versus' || !state.player) return;
+    state.player.togglePause();
+    setResult(state.player.paused ? '已暂停' : '继续游戏');
+  });
+
+  window.addEventListener('resize', syncMobileControlsUI);
+
+  applyModeUI();
+  createEngines();
+  loadLeaderboard();
+  els.stopBtn.disabled = true;
+})();
+</script>
+</body>
+</html>
