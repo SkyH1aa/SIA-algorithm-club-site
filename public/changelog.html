@@ -1,21 +1,23 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="pages.changelog.title">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>更新维护日志 · 算法社</title>
   <script src="member-identity.js"></script>
-  <style>
+    <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root{--bg:#030712;--panel:rgba(9,18,38,.84);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--violet:#9278ff;--green:#72f3c2;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 12% 0,rgba(0,229,255,.14),transparent 28%),radial-gradient(circle at 88% 10%,rgba(146,120,255,.15),transparent 30%),var(--bg)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.82);backdrop-filter:blur(18px)}.topbar-inner{max-width:980px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted)}.back:hover{color:var(--cyan)}main{max-width:980px;margin:auto;padding:56px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}h1{margin:0 0 14px;font-size:clamp(40px,7vw,74px);letter-spacing:-1.5px;line-height:.98}.lead{max-width:700px;margin:0 0 28px;color:var(--muted);line-height:1.8;font-size:16px}.panel{border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(16px)}.timeline{display:grid;gap:14px}.entry{padding:22px}.entry-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}.date{color:var(--cyan);font-size:13px;letter-spacing:1px}.entry h2{margin:0;font-size:22px}.entry ul{margin:0;padding-left:18px;color:var(--muted);line-height:1.8}.empty{padding:40px 22px;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}@media(max-width:640px){.topbar-inner{padding:13px 16px}.identity{display:none!important}main{padding:42px 16px 70px}.entry{padding:18px}}
   </style>
 </head>
 <body>
-  <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong>算法社</strong><small>Changelog</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html">返回官网</a></div></header>
+  <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Changelog</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
   <main>
     <p class="eyebrow">SITE CHANGELOG</p>
-    <h1>更新维护日志</h1>
-    <p class="lead">记录算法社官网的功能更新与维护内容，对所有访客开放。</p>
-    <section id="logList" class="timeline"><div class="panel empty loading">正在读取更新日志…</div></section>
+    <h1 data-i18n="pages.changelog.h1">更新维护日志</h1>
+    <p class="lead" data-i18n="changelog.lead">记录算法社官网的功能更新与维护内容，对所有访客开放。</p>
+    <section id="logList" class="timeline"><div class="panel empty loading" data-i18n="changelog.loading">正在读取更新日志…</div></section>
   </main>
   <script>
     function escapeHtml(value) {
@@ -26,22 +28,23 @@
       const list = document.getElementById('logList');
       try {
         const response = await fetch('data/changelog.json', { cache: 'no-store' });
-        if (!response.ok) throw new Error('读取更新日志失败。');
+        if (!response.ok) throw new Error(ClubI18n.t('changelog.loadFail'));
         const entries = await response.json();
         if (!Array.isArray(entries) || !entries.length) {
-          list.innerHTML = '<div class="panel empty">暂时还没有更新记录。</div>';
+          list.innerHTML = '<div class="panel empty">' + ClubI18n.t('changelog.empty') + '</div>';
           return;
         }
         list.innerHTML = entries.map(entry => {
           const items = Array.isArray(entry.items) ? entry.items : [];
-          return `<article class="panel entry"><div class="entry-head"><strong class="date">${escapeHtml(entry.date || '')}</strong></div><h2>${escapeHtml(entry.title || '未命名更新')}</h2><ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></article>`;
+          return `<article class="panel entry"><div class="entry-head"><strong class="date">${escapeHtml(entry.date || '')}</strong></div><h2>${escapeHtml(entry.title || ClubI18n.t('changelog.unnamed'))}</h2><ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></article>`;
         }).join('');
       } catch (error) {
-        list.innerHTML = `<div class="panel empty">${escapeHtml(error.message || '读取更新日志失败。')}</div>`;
+        list.innerHTML = `<div class="panel empty">${escapeHtml(error.message || ClubI18n.t('changelog.loadFail'))}</div>`;
       }
     }
 
     loadChangelog();
+    window.addEventListener('club:langchange', () => { void loadChangelog(); });
   </script>
 </body>
 </html>

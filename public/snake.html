@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="snake.title">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>算法社 · 贪吃蛇多模式</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js"></script>
-  <style>
+    <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root { color-scheme: dark; --mobile-chrome: 210px; }
     * { box-sizing: border-box; }
     html, body { height: 100%; }
@@ -108,71 +110,71 @@
   <div class="ambient-background" aria-hidden="true"><div class="ambient-orb orb-cyan"></div><div class="ambient-orb orb-violet"></div><div class="ambient-grid"></div></div>
   <div class="page-shell">
     <header class="page-header">
-      <a href="../index.html">← 返回算法社官网</a>
+      <a href="../index.html" data-i18n="common.backSiteLong">← 返回算法社官网</a>
       <span class="member-identity" data-member-identity hidden></span>
-      <h1>AI 贪吃蛇多模式</h1>
-      <p>正常游玩 · AI 演示 · AI 辅助轨迹 · 人机对战</p>
+      <h1 data-i18n="snake.h1">AI 贪吃蛇多模式</h1>
+      <p data-i18n="snake.tagline">正常游玩 · AI 演示 · AI 辅助轨迹 · 人机对战</p>
     </header>
     <div class="layout">
       <main class="panel">
         <div class="toolbar">
           <div class="setup">
-            <label for="nickname">挑战昵称</label>
-            <input id="nickname" maxlength="20" placeholder="请输入昵称" autocomplete="nickname" />
-            <span class="hint" id="nickHint">普通 / 人机对战需昵称；AI 游玩与 AI 辅助免昵称</span>
+            <label for="nickname" data-i18n="games.nickPlaceholder">挑战昵称</label>
+            <input id="nickname" maxlength="20" placeholder="请输入昵称" data-i18n-placeholder="games.nickPlaceholder" autocomplete="nickname" />
+            <span class="hint" id="nickHint" data-i18n="snake.nickHintStatic">普通 / 人机对战需昵称；AI 游玩与 AI 辅助免昵称</span>
           </div>
           <div class="control-strip">
-            <button type="button" class="mode-btn active" data-mode="normal">正常游玩</button>
-            <button type="button" class="mode-btn" data-mode="ai">AI 游玩</button>
-            <button type="button" class="mode-btn" data-mode="assist">AI 辅助</button>
-            <button type="button" class="mode-btn" data-mode="versus">人机对战</button>
-            <button type="button" class="action-btn primary" id="startBtn">开始</button>
-            <button type="button" class="action-btn" id="stopBtn" hidden>停止</button>
-            <button type="button" class="action-btn danger" id="surrenderBtn" hidden disabled>投降</button>
+            <button type="button" class="mode-btn active" data-mode="normal" data-i18n="games.modeNormal">正常游玩</button>
+            <button type="button" class="mode-btn" data-mode="ai" data-i18n="games.modeAi">AI 游玩</button>
+            <button type="button" class="mode-btn" data-mode="assist" data-i18n="games.modeAssist">AI 辅助</button>
+            <button type="button" class="mode-btn" data-mode="versus" data-i18n="games.modeVersus">人机对战</button>
+            <button type="button" class="action-btn primary" id="startBtn" data-i18n="games.start">开始</button>
+            <button type="button" class="action-btn" id="stopBtn" hidden data-i18n="games.stop">停止</button>
+            <button type="button" class="action-btn danger" id="surrenderBtn" hidden disabled data-i18n="games.surrender">投降</button>
           </div>
-          <div class="assist-note" id="assistNote">AI 辅助：深色阴影轨迹与转向箭头均来自同一套 AI 决策（逐步模拟至当前苹果）。你仍完全手动操控。</div>
+          <div class="assist-note" id="assistNote" data-i18n="snake.assistNote">AI 辅助：深色阴影轨迹与转向箭头均来自同一套 AI 决策（逐步模拟至当前苹果）。你仍完全手动操控。</div>
           <div class="mode-opts">
             <div class="speed-opts" id="speedOpts">
-              <span class="speed-label">小蛇倍速</span>
+              <span class="speed-label" data-i18n="snake.speed">小蛇倍速</span>
               <button type="button" class="speed-btn active" data-speed="1">1×</button>
               <button type="button" class="speed-btn" data-speed="1.25">1.25×</button>
               <button type="button" class="speed-btn" data-speed="1.5">1.5×</button>
               <button type="button" class="speed-btn" data-speed="2">2×</button>
             </div>
-            <button type="button" class="toggle-opt" id="penetrateBtn" aria-pressed="false">穿透模式：关</button>
-            <span class="opt-desc" id="speedHint">普通 / 人机对战：记榜 × 倍速；穿透可穿身但撞墙会死，再 ×0.5，原始分最高 30</span>
+            <button type="button" class="toggle-opt" id="penetrateBtn" aria-pressed="false" data-i18n="snake.penetrateOff">穿透模式：关</button>
+            <span class="opt-desc" id="speedHint" data-i18n="snake.optDescStatic">普通 / 人机对战：记榜 × 倍速；穿透可穿身但撞墙会死，再 ×0.5，原始分最高 30</span>
           </div>
         </div>
         <div class="play-area">
           <div class="boards" id="boards">
             <div class="board-card" id="playerCard">
-              <p class="board-title" id="playerTitle">游戏盘面</p>
+              <p class="board-title" id="playerTitle" data-i18n="snake.board">游戏盘面</p>
               <canvas class="snake-board" id="playerCanvas" width="480" height="480"></canvas>
-              <div class="board-meta">得分 <strong id="playerScore">0</strong> · 长度 <strong id="playerLen">3</strong></div>
+              <div class="board-meta"><span data-i18n="snake.score">得分</span> <strong id="playerScore">0</strong> · <span data-i18n="snake.length">长度</span> <strong id="playerLen">3</strong></div>
             </div>
             <div class="board-card hidden" id="aiCard">
-              <p class="board-title">AI 盘面</p>
+              <p class="board-title" data-i18n="snake.aiBoard">AI 盘面</p>
               <canvas class="snake-board" id="aiCanvas" width="480" height="480"></canvas>
-              <div class="board-meta">得分 <strong id="aiScore">0</strong> · 长度 <strong id="aiLen">3</strong></div>
+              <div class="board-meta"><span data-i18n="snake.score">得分</span> <strong id="aiScore">0</strong> · <span data-i18n="snake.length">长度</span> <strong id="aiLen">3</strong></div>
             </div>
           </div>
-          <div class="versus-diff hidden" id="versusDiff">分差（玩家 − AI）<strong id="diffScore">0</strong></div>
+          <div class="versus-diff hidden" id="versusDiff"><span data-i18n="snake.diff">分差（玩家 − AI）</span><strong id="diffScore">0</strong></div>
           <p class="result" id="result" aria-live="polite"></p>
-          <p class="key-hint">键盘：方向键转向 · 空格暂停（单盘模式）</p>
+          <p class="key-hint" data-i18n="snake.keyHint">键盘：方向键转向 · 空格暂停（单盘模式）</p>
         </div>
       </main>
       <aside class="leaderboard panel">
-        <h2>排行榜</h2>
+        <h2 data-i18n="games.leaderboard">排行榜</h2>
         <div class="lb-tabs">
-          <button type="button" class="lb-tab active" data-lb="normal">普通榜</button>
-          <button type="button" class="lb-tab" data-lb="versus">人机对战榜</button>
+          <button type="button" class="lb-tab active" data-lb="normal" data-i18n="games.normalLb">普通榜</button>
+          <button type="button" class="lb-tab" data-lb="versus" data-i18n="games.versusLb">人机对战榜</button>
         </div>
-        <p class="hint" id="lbHint">普通：昵称 / 局数 / 最高分 · 按最高分降序</p>
-        <ol class="leaderboard-list" id="leaderboardList"><li class="empty">正在读取排行榜...</li></ol>
+        <p class="hint" id="lbHint" data-i18n="games.lbNormalHint">普通：昵称 / 局数 / 最高分 · 按最高分降序</p>
+        <ol class="leaderboard-list" id="leaderboardList"><li class="empty" data-i18n="common.loading">正在读取…</li></ol>
       </aside>
     </div>
   </div>
-  <div class="mobile-controls" id="mobileControls" aria-label="移动端操作">
+  <div class="mobile-controls" id="mobileControls" aria-label="移动端操作" data-i18n-aria="snake.mobileAria">
     <div class="pad">
       <button type="button" class="up" data-dir="2">↑</button>
       <button type="button" class="left" data-dir="1">←</button>
@@ -180,7 +182,7 @@
       <button type="button" class="right" data-dir="0">→</button>
     </div>
     <div class="actions">
-      <button type="button" id="mobilePause" title="暂停">⏸</button>
+      <button type="button" id="mobilePause" title="暂停" data-i18n-title="snake.pauseTitle">⏸</button>
     </div>
   </div>
 
@@ -688,21 +690,21 @@
       els.penetrateBtn.classList.toggle('is-disabled', state.inProgress);
       els.penetrateBtn.disabled = state.inProgress;
       els.penetrateBtn.setAttribute('aria-pressed', state.penetrate ? 'true' : 'false');
-      els.penetrateBtn.textContent = state.penetrate ? '穿透模式：开' : '穿透模式：关';
+      els.penetrateBtn.textContent = ClubI18n.t(state.penetrate ? 'snake.penetrateOn' : 'snake.penetrateOff');
     }
     if (els.speedHint) {
       if (modeNeedsNickname()) {
-        const parts = [`记榜 ×${formatMult()}`];
-        if (state.speedMult !== 1) parts.push(`倍速 ${formatMult(state.speedMult)}`);
+        const parts = [ClubI18n.t('snake.scoreHintParts', { mult: formatMult() })];
+        if (state.speedMult !== 1) parts.push(ClubI18n.t('snake.speedPart', { mult: formatMult(state.speedMult) }));
         if (state.penetrate) {
-          parts.push('穿透 ×0.5');
-          parts.push(`原始分上限 ${PENETRATE_SCORE_CAP}`);
+          parts.push(ClubI18n.t('snake.penetratePart'));
+          parts.push(ClubI18n.t('snake.rawCapPart', { cap: PENETRATE_SCORE_CAP }));
         }
-        els.speedHint.textContent = `${parts.join(' · ')}（普通得分 / 对战分差）`;
+        els.speedHint.textContent = parts.join(' · ') + ClubI18n.t('snake.scoreHintTail');
       } else {
         els.speedHint.textContent = state.penetrate
-          ? '穿透已开：双方可穿身，撞墙仍死；演示不记榜'
-          : '仅影响演示速度，不记榜';
+          ? ClubI18n.t('snake.penetrateDemoOn')
+          : ClubI18n.t('snake.demoSpeedOnly');
       }
     }
     const demo = isDemoMode();
@@ -710,7 +712,7 @@
     const showStop = demo || (state.mode === 'normal' && state.penetrate);
     els.stopBtn.hidden = !showStop;
     els.stopBtn.classList.toggle('hidden', !showStop);
-    els.stopBtn.textContent = demo ? '停止' : '结束并记榜';
+    els.stopBtn.textContent = demo ? ClubI18n.t('games.stop') : ClubI18n.t('snake.stopAndSave');
   }
   function applySpeedToEngines() {
     if (state.player) state.player.setSpeedMult(state.speedMult);
@@ -718,7 +720,7 @@
   }
   function setSpeedMult(mult) {
     if (state.inProgress) {
-      setResult('对局进行中不可切换倍速，请结束后再改。');
+      setResult(ClubI18n.t('snake.noSpeedDuring'));
       return;
     }
     const next = Number(mult);
@@ -728,7 +730,7 @@
   }
   function setPenetrate(on) {
     if (state.inProgress) {
-      setResult('对局进行中不可切换穿透模式，请结束后再改。');
+      setResult(ClubI18n.t('snake.noPenetrateDuring'));
       return;
     }
     state.penetrate = !!on;
@@ -737,7 +739,7 @@
   }
 
   async function nicknameExists(nickname) {
-    if (!supabaseClient) return { exists: false, error: '云端未连接' };
+    if (!supabaseClient) return { exists: false, error: ClubI18n.t('games.cloudOfflineShort') };
     try {
       const [a, b] = await Promise.all([
         supabaseClient.from('snake_players').select('nickname').eq('nickname', nickname).limit(1),
@@ -746,40 +748,40 @@
       if (a.error || b.error) return { exists: false, error: (a.error || b.error).message };
       return { exists: !!(a.data?.length || b.data?.length) };
     } catch (err) {
-      return { exists: false, error: err?.message || '查询失败' };
+      return { exists: false, error: err?.message || ClubI18n.t('games.queryFail') };
     }
   }
 
   async function confirmNickname(nickname) {
     const info = await nicknameExists(nickname);
     if (info.error) {
-      setResult(`无法校验昵称：${info.error}`);
+      setResult(ClubI18n.t('games.nickCheckError', { msg: info.error }));
       return false;
     }
     if (!info.exists) return true;
-    return window.confirm(`昵称「${nickname}」已存在，是否确认为本人并继续累计成绩？`);
+    return window.confirm(ClubI18n.t('games.nickConfirm', { nick: nickname }));
   }
 
   async function recordNormalScore(nickname, score) {
-    if (!supabaseClient?.rpc) { setResult('云端未连接，成绩未保存。'); return 'none'; }
+    if (!supabaseClient?.rpc) { setResult(ClubI18n.t('games.cloudOffline')); return 'none'; }
     try {
       const { error } = await supabaseClient.rpc('record_snake_score', { p_nickname: nickname, p_score: score });
-      if (error) { setResult(`云端保存失败：${error.message || '请稍后重试'}`); return 'none'; }
+      if (error) { setResult(ClubI18n.t('games.cloudSaveFail', { msg: error.message || ClubI18n.t('games.retryLater') })); return 'none'; }
       return 'cloud';
     } catch (err) {
-      setResult(`云端保存失败：${err?.message || '请稍后重试'}`);
+      setResult(ClubI18n.t('games.cloudSaveFail', { msg: err?.message || ClubI18n.t('games.retryLater') }));
       return 'none';
     }
   }
 
   async function recordVersusScore(nickname, score) {
-    if (!supabaseClient?.rpc) { setResult('云端未连接，成绩未保存。'); return 'none'; }
+    if (!supabaseClient?.rpc) { setResult(ClubI18n.t('games.cloudOffline')); return 'none'; }
     try {
       const { error } = await supabaseClient.rpc('record_snake_versus_score', { p_nickname: nickname, p_score: score });
-      if (error) { setResult(`云端保存失败：${error.message || '请稍后重试'}`); return 'none'; }
+      if (error) { setResult(ClubI18n.t('games.cloudSaveFail', { msg: error.message || ClubI18n.t('games.retryLater') })); return 'none'; }
       return 'cloud';
     } catch (err) {
-      setResult(`云端保存失败：${err?.message || '请稍后重试'}`);
+      setResult(ClubI18n.t('games.cloudSaveFail', { msg: err?.message || ClubI18n.t('games.retryLater') }));
       return 'none';
     }
   }
@@ -787,8 +789,8 @@
   async function loadLeaderboard() {
     const isVersus = state.lbTab === 'versus';
     els.lbHint.textContent = isVersus
-      ? '人机对战：昵称 / 局数 / 最高分差（玩家−AI）· 按最高分降序'
-      : '普通：昵称 / 局数 / 最高分 · 按最高分降序';
+      ? ClubI18n.t('games.lbVersusHint')
+      : ClubI18n.t('games.lbNormalHint');
     let rows = [];
     if (supabaseClient) {
       try {
@@ -800,22 +802,22 @@
           .order('updated_at', { ascending: true })
           .limit(50);
         if (!error && Array.isArray(data)) rows = data;
-        else els.lbHint.textContent += ' · 云端暂不可用';
+        else els.lbHint.textContent += ClubI18n.t('games.lbCloudOff');
       } catch (_) {
-        els.lbHint.textContent += ' · 云端暂不可用';
+        els.lbHint.textContent += ClubI18n.t('games.lbCloudOff');
       }
     } else {
-      els.lbHint.textContent += ' · 云端暂不可用';
+      els.lbHint.textContent += ClubI18n.t('games.lbCloudOff');
     }
     if (!rows.length) {
-      els.leaderboardList.innerHTML = '<li class="empty">暂无记录，等你来成为第一名。</li>';
+      els.leaderboardList.innerHTML = '<li class="empty">' + ClubI18n.t('games.emptyLb') + '</li>';
       return;
     }
     els.leaderboardList.innerHTML = rows.map((item, index) => `
       <li>
         <span class="rank">${index + 1}</span>
-        <span>${escapeHtml(item.nickname)}<small> · ${item.games_played || 0} 局</small></span>
-        <span class="score">${item.high_score} 分</span>
+        <span>${escapeHtml(item.nickname)}<small> · ${ClubI18n.t('games.gamesUnit', { n: item.games_played || 0 })}</small></span>
+        <span class="score">${ClubI18n.t('games.scoreUnit', { n: item.high_score })}</span>
       </li>
     `).join('');
   }
@@ -863,25 +865,25 @@
     els.assistNote.classList.toggle('visible', state.mode === 'assist');
     document.body.classList.toggle('is-versus', versus);
     els.boards.classList.toggle('is-versus', versus);
-    els.playerTitle.textContent = versus ? '玩家' : (state.mode === 'ai' ? 'AI 盘面' : '游戏盘面');
+    els.playerTitle.textContent = versus ? ClubI18n.t('snake.playerBoard') : (state.mode === 'ai' ? ClubI18n.t('snake.aiBoard') : ClubI18n.t('snake.board'));
     els.nickname.disabled = !needsNick;
-    els.nickname.placeholder = needsNick ? '请输入昵称' : '本模式无需昵称';
+    els.nickname.placeholder = needsNick ? ClubI18n.t('games.nickNeed') : ClubI18n.t('games.nickPhOptional');
     els.nickHint.textContent = needsNick
       ? (state.penetrate
-        ? `穿透开启：撞自己不死，撞墙仍死；记榜再 ×0.5，原始分最高 ${PENETRATE_SCORE_CAP}。也可点「结束并记榜」`
-        : '未输入昵称不能开始；云端重名需确认是否本人继续')
-      : 'AI 游玩 / AI 辅助仅展示，不写入排行榜；可随时点「停止」结束';
+        ? ClubI18n.t('snake.nickHintPenetrate', { cap: PENETRATE_SCORE_CAP })
+        : ClubI18n.t('games.nickHintNeed'))
+      : ClubI18n.t('games.nickHintDemo');
     syncSpeedUI();
     syncMobileControlsUI();
   }
 
   function describeScoreBoost(raw, mult, kind = 'score', opts = {}) {
     const bits = [];
-    if (state.speedMult !== 1) bits.push(`×${formatMult(state.speedMult)} 倍速`);
-    if (state.penetrate) bits.push('×0.5 穿透');
-    if (opts.capped) bits.push(`原始封顶 ${PENETRATE_SCORE_CAP}`);
+    if (state.speedMult !== 1) bits.push(ClubI18n.t('snake.boostSpeed', { mult: formatMult(state.speedMult) }));
+    if (state.penetrate) bits.push(ClubI18n.t('snake.boostPenetrate'));
+    if (opts.capped) bits.push(ClubI18n.t('snake.boostCap', { cap: PENETRATE_SCORE_CAP }));
     if (mult === 1 && !bits.length) return '';
-    const label = kind === 'diff' ? `原始分差 ${raw}` : `原始 ${raw}`;
+    const label = kind === 'diff' ? ClubI18n.t('snake.rawDiffLabel', { raw }) : ClubI18n.t('snake.rawScoreLabel', { raw });
     return `（${label}${bits.length ? ' ' + bits.join(' ') : ` ×${formatMult(mult)}`}）`;
   }
 
@@ -895,11 +897,11 @@
     const mult = getScoreMultiplier();
     const finalScore = Math.round(raw * mult);
     const boostText = describeScoreBoost(raw, mult, 'score', { capped: state.penetrate && actual > raw });
-    setResult(`本局记榜得分 ${finalScore}${boostText}，正在写入普通榜...`);
+    setResult(ClubI18n.t('snake.savingNormal', { score: finalScore, boost: boostText }));
     const saved = await recordNormalScore(nickname, finalScore);
     setResult(saved === 'cloud'
-      ? `本局记榜得分 ${finalScore}${boostText}，已写入普通榜。`
-      : `本局记榜得分 ${finalScore}${boostText}。`);
+      ? ClubI18n.t('snake.savedNormal', { score: finalScore, boost: boostText })
+      : ClubI18n.t('snake.scoredNormal', { score: finalScore, boost: boostText }));
     state.lbTab = 'normal';
     document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.lb === 'normal'));
     await loadLeaderboard();
@@ -915,7 +917,7 @@
     if (state.player) state.player.stop();
     if (state.ai) state.ai.stop();
     if (state.surrendered) {
-      setResult('已投降，本局不记入排行榜。');
+      setResult(ClubI18n.t('games.surrendered'));
       els.startBtn.disabled = false;
       els.surrenderBtn.disabled = true;
       syncSpeedUI();
@@ -932,14 +934,17 @@
     );
     const boostText = describeScoreBoost(rawDiff, mult, 'diff', { capped });
     const nickname = els.nickname.value.trim();
-    const who = reasonEngine === state.player ? '玩家' : 'AI';
-    const reasonText = reason === 'wall' ? '撞墙'
-      : reason === 'self' ? '撞到自己'
-      : reason === 'clear' ? '盘面已吃满'
-      : '无法行动';
-    setResult(`${who}${reason === 'clear' ? '通关' : '失败'}（${reasonText}）。记榜分差 ${diff}${boostText}，正在写入对战榜...`);
+    const who = reasonEngine === state.player ? ClubI18n.t('snake.whoPlayer') : ClubI18n.t('snake.whoAi');
+    const reasonText = reason === 'wall' ? ClubI18n.t('snake.reasonWall')
+      : reason === 'self' ? ClubI18n.t('snake.reasonSelf')
+      : reason === 'clear' ? ClubI18n.t('snake.reasonFull')
+      : ClubI18n.t('snake.reasonStuck');
+    const outcome = reason === 'clear' ? ClubI18n.t('snake.clearWin') : ClubI18n.t('snake.fail');
+    setResult(ClubI18n.t('snake.versusSaving', { who, outcome, reason: reasonText, diff, boost: boostText }));
     const saved = await recordVersusScore(nickname, diff);
-    setResult(`${who}${reason === 'clear' ? '通关' : '失败'}。记榜分差 ${diff}${boostText}${saved === 'cloud' ? '，已写入人机对战榜。' : '。'}`);
+    setResult(saved === 'cloud'
+      ? ClubI18n.t('snake.versusSaved', { who, outcome, diff, boost: boostText })
+      : ClubI18n.t('snake.versusDone', { who, outcome, diff, boost: boostText }));
     state.lbTab = 'versus';
     document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.lb === 'versus'));
     await loadLeaderboard();
@@ -975,7 +980,7 @@
         onScore: updateScores,
         onGameOver: () => {
           state.inProgress = false;
-          setResult(`AI 本局得分 ${state.player.score}（演示不记榜）。`);
+          setResult(ClubI18n.t('snake.aiDemoScore', { score: state.player.score }));
           els.startBtn.disabled = false;
           els.stopBtn.disabled = true;
           syncSpeedUI();
@@ -990,7 +995,7 @@
         onScore: updateScores,
         onGameOver: () => {
           state.inProgress = false;
-          setResult(`辅助模式结束，得分 ${state.player.score}（不记榜）。`);
+          setResult(ClubI18n.t('snake.assistEnd', { score: state.player.score }));
           els.startBtn.disabled = false;
           els.stopBtn.disabled = true;
           syncSpeedUI();
@@ -1015,7 +1020,7 @@
     if (modeNeedsNickname()) {
       const nickname = els.nickname.value.trim();
       if (!nickname) {
-        setResult('请先输入挑战昵称。');
+        setResult(ClubI18n.t('games.nickRequired'));
         els.nickname.focus();
         return;
       }
@@ -1047,7 +1052,7 @@
     if (!isDemoMode()) return;
     state.inProgress = false;
     if (state.player) state.player.finish('stop');
-    setResult('已停止演示，不写入排行榜。');
+    setResult(ClubI18n.t('snake.demoStopped'));
     els.startBtn.disabled = false;
     els.stopBtn.disabled = true;
     syncSpeedUI();
@@ -1064,7 +1069,7 @@
   document.querySelectorAll('.mode-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       if (state.inProgress) {
-        setResult('请先结束当前对局，再切换模式。');
+        setResult(ClubI18n.t('games.endFirst'));
         return;
       }
       state.mode = btn.dataset.mode;
@@ -1099,7 +1104,7 @@
       if (state.mode !== 'versus' && state.player) {
         e.preventDefault();
         state.player.togglePause();
-        setResult(state.player.paused ? '已暂停' : '继续游戏');
+        setResult(state.player.paused ? ClubI18n.t('games.paused') : ClubI18n.t('games.resumed'));
       }
       return;
     }
@@ -1120,10 +1125,19 @@
   els.mobilePause.addEventListener('click', () => {
     if (state.mode === 'versus' || !state.player) return;
     state.player.togglePause();
-    setResult(state.player.paused ? '已暂停' : '继续游戏');
+    setResult(state.player.paused ? ClubI18n.t('games.paused') : ClubI18n.t('games.resumed'));
   });
 
   window.addEventListener('resize', syncMobileControlsUI);
+
+  window.addEventListener('club:langchange', () => {
+    try {
+      if (typeof ClubI18n?.apply === 'function') ClubI18n.apply(document);
+      applyModeUI();
+      syncSpeedUI();
+      void loadLeaderboard();
+    } catch (_e) {}
+  });
 
   applyModeUI();
   createEngines();

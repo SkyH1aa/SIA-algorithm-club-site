@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="lab.common.hubTitle">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>算法可视化实验室 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js" defer></script>
-  <style>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root{font-family:"Microsoft YaHei","PingFang SC","Noto Sans CJK SC",system-ui,sans-serif;color:#f6fbff;background:#020409;--bg:#020409;--panel:rgba(8,13,30,.8);--cyan:#00e5ff;--violet:#7c4dff;--pink:#ff5fc8;--gold:#ffd166;--green:#71f3bf;--text:#c8d4e2;--muted:#8fa3b8;--line:rgba(115,221,255,.2);--shadow:0 24px 90px rgba(0,229,255,.13)}
     *{box-sizing:border-box}body{margin:0;min-width:320px;min-height:100vh;background:radial-gradient(ellipse 70% 50% at 14% 4%,rgba(0,229,255,.16),transparent 62%),radial-gradient(ellipse 60% 42% at 88% 7%,rgba(124,77,255,.22),transparent 65%),linear-gradient(180deg,#020409,#050917 50%,#020409);color:#f6fbff;overflow-x:hidden}body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(rgba(0,229,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.045) 1px,transparent 1px);background-size:72px 72px;mask-image:radial-gradient(ellipse 110% 100% at 50% 10%,#000,transparent 92%)}
     a{color:inherit;text-decoration:none}
@@ -51,24 +53,24 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="../index.html" aria-label="返回算法社首页"><span class="brand-mark">A</span><span><strong>算法社</strong><small>Algorithm Club</small></span></a>
+    <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a>
     <span class="member-identity" data-member-identity hidden></span>
-    <a class="back-link" href="../index.html">返回首页</a>
+    <a class="back-link" href="../index.html" data-i18n="common.backHome">返回首页</a>
   </header>
   <main>
     <section class="intro" aria-labelledby="pageTitle">
       <p class="eyebrow">ALGORITHM VISUALIZATION LAB</p>
-      <h1 id="pageTitle">选择你的实验</h1>
-      <p>覆盖排序、搜索、数据结构、图论最短路、动态规划、二叉树与堆。把算法过程变成可观察、可单步推演的动态演示。</p>
+      <h1 id="pageTitle" data-i18n="lab.common.chooseTitle">选择你的实验</h1>
+      <p data-i18n="lab.common.chooseLead">覆盖排序、搜索、数据结构、图论最短路、动态规划、二叉树与堆。把算法过程变成可观察、可单步推演的动态演示。</p>
     </section>
-    <section class="choices" aria-label="实验室分类">
-      <a class="choice" href="sorting-lab.html"><span class="choice-content"><span class="choice-icon">⇅</span><h2>排序</h2><p>以柱状图追踪冒泡、桶、快速与插入排序的比较、交换和数据移动。</p><span class="go">进入排序实验室</span></span></a>
-      <a class="choice search" href="search-lab.html"><span class="choice-content"><span class="choice-icon">⌕</span><h2>搜索</h2><p>在迷宫找路中比较广度优先搜索与深度优先搜索的探索顺序和最终路径。</p><span class="go">进入搜索实验室</span></span></a>
-      <a class="choice ds" href="ds-lab.html"><span class="choice-content"><span class="choice-icon">⧉</span><h2>数据结构</h2><p>亲手操作栈、队列与链表：观察 LIFO / FIFO，以及头插、尾插与按值删除。</p><span class="go">进入数据结构实验室</span></span></a>
-      <a class="choice graph" href="graph-lab.html"><span class="choice-content"><span class="choice-icon">⬡</span><h2>图论</h2><p>可视化 Dijkstra、Bellman–Ford、SPFA 与 Floyd–Warshall 的松弛过程与最短路。</p><span class="go">进入图论实验室</span></span></a>
-      <a class="choice dp" href="dp-lab.html"><span class="choice-content"><span class="choice-icon">▦</span><h2>动态规划</h2><p>观察一维递推、LIS 与 0-1 背包的状态转移填表，以及最优方案回溯。</p><span class="go">进入 DP 实验室</span></span></a>
-      <a class="choice tree" href="tree-lab.html"><span class="choice-content"><span class="choice-icon">⑂</span><h2>二叉树</h2><p>前中后序与层序遍历，BST 插入删除，以及字典序二叉树的中序有序性。</p><span class="go">进入二叉树实验室</span></span></a>
-      <a class="choice heap" href="heap-lab.html"><span class="choice-content"><span class="choice-icon">▲</span><h2>堆</h2><p>建堆、插入上浮、删除下沉与堆排序；数组视图与树视图同步展示。</p><span class="go">进入堆实验室</span></span></a>
+    <section class="choices" data-i18n-aria="lab.common.hubAria" aria-label="实验室分类">
+      <a class="choice" href="sorting-lab.html"><span class="choice-content"><span class="choice-icon">⇅</span><h2 data-i18n="lab.common.sort">排序</h2><p data-i18n="lab.common.sortDesc">以柱状图追踪冒泡、桶、快速与插入排序的比较、交换和数据移动。</p><span class="go" data-i18n="lab.common.enterSort">进入排序实验室</span></span></a>
+      <a class="choice search" href="search-lab.html"><span class="choice-content"><span class="choice-icon">⌕</span><h2 data-i18n="lab.common.search">搜索</h2><p data-i18n="lab.common.searchDesc">在迷宫找路中比较广度优先搜索与深度优先搜索的探索顺序和最终路径。</p><span class="go" data-i18n="lab.common.enterSearch">进入搜索实验室</span></span></a>
+      <a class="choice ds" href="ds-lab.html"><span class="choice-content"><span class="choice-icon">⧉</span><h2 data-i18n="lab.common.ds">数据结构</h2><p data-i18n="lab.common.dsDesc">亲手操作栈、队列与链表：观察 LIFO / FIFO，以及头插、尾插与按值删除。</p><span class="go" data-i18n="lab.common.enterDs">进入数据结构实验室</span></span></a>
+      <a class="choice graph" href="graph-lab.html"><span class="choice-content"><span class="choice-icon">⬡</span><h2 data-i18n="lab.common.graph">图论</h2><p data-i18n="lab.common.graphDesc">可视化 Dijkstra、Bellman–Ford、SPFA 与 Floyd–Warshall 的松弛过程与最短路。</p><span class="go" data-i18n="lab.common.enterGraph">进入图论实验室</span></span></a>
+      <a class="choice dp" href="dp-lab.html"><span class="choice-content"><span class="choice-icon">▦</span><h2 data-i18n="lab.common.dp">动态规划</h2><p data-i18n="lab.common.dpDesc">观察一维递推、LIS 与 0-1 背包的状态转移填表，以及最优方案回溯。</p><span class="go" data-i18n="lab.common.enterDp">进入 DP 实验室</span></span></a>
+      <a class="choice tree" href="tree-lab.html"><span class="choice-content"><span class="choice-icon">⑂</span><h2 data-i18n="lab.common.tree">二叉树</h2><p data-i18n="lab.common.treeDesc">前中后序与层序遍历，BST 插入删除，以及字典序二叉树的中序有序性。</p><span class="go" data-i18n="lab.common.enterTree">进入二叉树实验室</span></span></a>
+      <a class="choice heap" href="heap-lab.html"><span class="choice-content"><span class="choice-icon">▲</span><h2 data-i18n="lab.common.heap">堆</h2><p data-i18n="lab.common.heapDesc">建堆、插入上浮、删除下沉与堆排序；数组视图与树视图同步展示。</p><span class="go" data-i18n="lab.common.enterHeap">进入堆实验室</span></span></a>
     </section>
   </main>
 </body>

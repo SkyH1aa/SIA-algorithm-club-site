@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="gomoku.title">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>算法社 AI 五子棋挑战</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js"></script>
-  <style>
+    <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; scroll-snap-type: y proximity; scroll-padding-top: 72px; }
@@ -114,27 +116,27 @@
   <div class="ambient-background" aria-hidden="true"><div class="ambient-orb orb-cyan"></div><div class="ambient-orb orb-violet"></div><div class="ambient-grid"></div><canvas id="particleCanvas"></canvas></div><div class="pointer-glow" aria-hidden="true"></div>
   <div class="page-shell">
     <header class="page-header">
-      <a href="../index.html">← 返回算法社官网</a>
+      <a href="../index.html" data-i18n="common.backSiteLong">← 返回算法社官网</a>
       <span class="member-identity" data-member-identity hidden></span>
-      <h1>AI 五子棋挑战</h1>
-      <p>Powered by Sendelta Haiming · 浏览器端 Minimax + Alpha-Beta AI</p>
+      <h1 data-i18n="gomoku.h1">AI 五子棋挑战</h1>
+      <p data-i18n="gomoku.tagline">Powered by Sendelta Haiming · 浏览器端 Minimax + Alpha-Beta AI</p>
     </header>
     <div class="game-layout">
       <main class="game-container panel">
         <div class="setup">
-          <label for="nickname">挑战昵称</label>
-          <input id="nickname" maxlength="20" placeholder="请输入昵称" autocomplete="nickname" />
-          <span class="hint">先填写昵称，再选择执子</span>
+          <label for="nickname" data-i18n="games.nickPlaceholder">挑战昵称</label>
+          <input id="nickname" maxlength="20" placeholder="请输入昵称" data-i18n-placeholder="games.nickPlaceholder" autocomplete="nickname" />
+          <span class="hint" data-i18n="gomoku.nickSideHint">先填写昵称，再选择执子</span>
         </div>
-        <div class="status" id="status">选择执子: <button onclick="setPlayerColor(1)">黑子</button> <button onclick="setPlayerColor(2)">白子</button></div>
+        <div class="status" id="status"></div>
         <div class="board" id="board"></div>
         <p class="result" id="result" aria-live="polite"></p>
-        <button id="gameActionButton" onclick="handleGameAction()">重新开始</button>
+        <button id="gameActionButton" onclick="handleGameAction()" data-i18n="games.restart">重新开始</button>
       </main>
       <aside class="leaderboard panel">
-        <h2>挑战排行榜</h2>
-        <p class="hint">按胜利得分排序，平局 1 分，失败 0 分。</p>
-        <ol class="leaderboard-list" id="leaderboardList"><li class="empty">正在读取排行榜...</li></ol>
+        <h2 data-i18n="games.leaderboard">排行榜</h2>
+        <p class="hint" data-i18n="gomoku.lbHint">按胜利得分排序，平局 1 分，失败 0 分。</p>
+        <ol class="leaderboard-list" id="leaderboardList"><li class="empty" data-i18n="common.loading">正在读取…</li></ol>
       </aside>
     </div>
   </div>
@@ -166,7 +168,7 @@
     function getNickname() {
       const nickname = document.getElementById('nickname').value.trim();
       if (!nickname) {
-        document.getElementById('result').textContent = '请先输入挑战昵称。';
+        document.getElementById('result').textContent = ClubI18n.t('games.nickRequired');
         document.getElementById('nickname').focus();
         return null;
       }
@@ -183,19 +185,17 @@
         .limit(1);
 
       if (error) {
-        document.getElementById('result').textContent = `无法确认昵称是否已存在：${error.message || '请稍后重试。'}`;
+        document.getElementById('result').textContent = ClubI18n.t('games.nickCheckExistFail', { msg: error.message || ClubI18n.t('games.retryLater') });
         return false;
       }
 
       if (!data.length) return true;
 
-      const isOwner = window.confirm(
-        `排行榜上已经有昵称“${nickname}”。\n\n这是你本人正在使用的昵称吗？\n\n点击“确定”继续使用；点击“取消”后请输入一个新的昵称。`
-      );
+      const isOwner = window.confirm(ClubI18n.t('games.nickConfirm', { nick: nickname }));
 
       if (!isOwner) {
         const nicknameInput = document.getElementById('nickname');
-        document.getElementById('result').textContent = '这个昵称已被使用，请输入一个新的昵称。';
+        document.getElementById('result').textContent = ClubI18n.t('games.nickTaken');
         nicknameInput.focus();
         nicknameInput.select();
         return false;
@@ -226,7 +226,7 @@
 
     function updateGameActionButton() {
       const button = document.getElementById('gameActionButton');
-      button.textContent = gameInProgress && !gameover ? '投降' : '重新开始';
+      button.textContent = gameInProgress && !gameover ? ClubI18n.t('games.surrender') : ClubI18n.t('games.restart');
       button.disabled = gameActionBusy;
     }
 
@@ -248,15 +248,15 @@
       resultSubmitted = true;
       const durationMs = gameStartedAt ? Date.now() - gameStartedAt : 0;
       const score = result === 'win' ? 3 : result === 'draw' ? 1 : 0;
-      document.getElementById('result').textContent = `本局${result === 'win' ? '胜利' : result === 'draw' ? '平局' : '失败'}，获得 ${score} 分。`;
+      document.getElementById('result').textContent = ClubI18n.t(result === 'win' ? 'gomoku.win' : result === 'draw' ? 'gomoku.draw' : 'gomoku.lose', { score });
       if (result === 'win') {
         const uploaded = await uploadWinningGameTrainingData(nickname);
         document.getElementById('result').textContent += uploaded
-          ? ' 已保存本局落子数据用于 AI 训练。'
-          : ' 本局训练数据上传失败。';
+          ? ClubI18n.t('gomoku.trainSaved')
+          : ClubI18n.t('gomoku.trainFail');
       }
       if (!supabaseClient || typeof supabaseClient.rpc !== 'function') {
-        document.getElementById('result').textContent += ' 成绩暂未保存：Supabase 尚未初始化。';
+        document.getElementById('result').textContent += ClubI18n.t('gomoku.scoreNoInit');
         return;
       }
       const { error } = await supabaseClient.rpc('record_gomoku_result', {
@@ -266,20 +266,20 @@
         p_duration_ms: Math.min(durationMs, 86400000)
       });
       if (error) {
-        document.getElementById('result').textContent += ` 成绩暂未保存：${error.message || '请确认已执行 gomoku_players 和 record_gomoku_result SQL。'}`;
+        document.getElementById('result').textContent += ClubI18n.t('gomoku.scoreSaveFail', { msg: error.message || 'please run gomoku SQL scripts' });
         return;
       }
-      document.getElementById('result').textContent += ' 已保存到排行榜。';
+      document.getElementById('result').textContent += ClubI18n.t('gomoku.scoreSaved');
       await loadLeaderboard();
     }
 
     async function loadLeaderboard() {
       const list = document.getElementById('leaderboardList');
-      if (!supabaseClient) { list.innerHTML = '<li class="empty">Supabase 尚未初始化。</li>'; return; }
+      if (!supabaseClient) { list.innerHTML = '<li class="empty">' + ClubI18n.t('gomoku.lbNoInit') + '</li>'; return; }
       const { data, error } = await supabaseClient.from('gomoku_players').select('nickname, total_score, wins, losses, draws, total_moves').order('total_score', { ascending: false }).order('updated_at', { ascending: true }).limit(20);
-      if (error) { list.innerHTML = '<li class="empty">排行榜暂不可用，请先执行累计成绩 SQL 脚本。</li>'; return; }
-      if (!data.length) { list.innerHTML = '<li class="empty">暂无挑战记录，等你来成为第一名。</li>'; return; }
-      list.innerHTML = data.map((item, index) => `<li><span class="rank">${index + 1}</span><span>${escapeHtml(item.nickname)}<small> · ${item.wins}胜 ${item.losses}负 ${item.draws}平</small></span><span class="score">${item.total_score} 分</span></li>`).join('');
+      if (error) { list.innerHTML = '<li class="empty">' + ClubI18n.t('gomoku.lbUnavailable') + '</li>'; return; }
+      if (!data.length) { list.innerHTML = '<li class="empty">' + ClubI18n.t('games.emptyLb') + '</li>'; return; }
+      list.innerHTML = data.map((item, index) => `<li><span class="rank">${index + 1}</span><span>${escapeHtml(item.nickname)}<small> · ${ClubI18n.t('gomoku.lbRow', { wins: item.wins, losses: item.losses, draws: item.draws })}</small></span><span class="score">${ClubI18n.t('games.scoreUnit', { n: item.total_score })}</span></li>`).join('');
     }
 
     // 置换表缓存 (Transposition Table)
@@ -341,7 +341,7 @@
       aiColor = color === 1 ? 2 : 1;
       currentPlayer = 1; // 总是黑子先手
       const statusElement = document.getElementById('status');
-      statusElement.innerHTML = playerColor === 1 ? '你的回合 (黑子)' : 'AI思考中 (黑子)';
+      statusElement.innerHTML = playerColor === 1 ? ClubI18n.t('gomoku.yourTurnBlack') : ClubI18n.t('gomoku.aiThinkingBlack');
       updateGameActionButton();
       if (aiColor === 1) {
         setTimeout(makeAIMove, 500); // AI执黑先手
@@ -358,7 +358,7 @@
       if (!checkWin(row, col, playerColor)) {
         if (isBoardFull()) {
           gameover = true;
-          document.getElementById('status').textContent = '平局！';
+          document.getElementById('status').textContent = ClubI18n.t('gomoku.drawShort');
           finishGame('draw');
           return;
         }
@@ -383,7 +383,7 @@
       if (!checkWin(move.row, move.col, aiColor)) {
         if (isBoardFull()) {
           gameover = true;
-          document.getElementById('status').textContent = '平局！';
+          document.getElementById('status').textContent = ClubI18n.t('gomoku.drawShort');
           finishGame('draw');
           return;
         }
@@ -884,8 +884,8 @@
         
         if (count >= 5) {
           gameover = true;
-          const winner = player === playerColor ? '你' : 'AI';
-          document.getElementById('status').textContent = `${winner}获胜！`;
+          const winner = player === playerColor ? ClubI18n.t('gomoku.winnerYou') : ClubI18n.t('games.aiLabel');
+          document.getElementById('status').textContent = ClubI18n.t('gomoku.winner', { winner });
           finishGame(player === playerColor ? 'win' : 'loss');
           return true;
         }
@@ -900,9 +900,9 @@
       
       const statusElement = document.getElementById('status');
       if (currentPlayer === playerColor) {
-        statusElement.textContent = `你的回合 (${playerColor === 1 ? '黑子' : '白子'})`;
+        statusElement.textContent = ClubI18n.t(playerColor === 1 ? 'gomoku.yourTurnBlack' : 'gomoku.yourTurnWhite');
       } else {
-        statusElement.textContent = `AI思考中 (${aiColor === 1 ? '黑子' : '白子'})`;
+        statusElement.textContent = ClubI18n.t('gomoku.aiThinking');
       }
     }
 
@@ -917,7 +917,7 @@
       updateGameActionButton();
       gameover = true;
       gameInProgress = false;
-      document.getElementById('status').textContent = '你已投降，AI 获胜！';
+      document.getElementById('status').textContent = ClubI18n.t('gomoku.youSurrendered');
       try {
         await finishGame('loss');
       } finally {
@@ -942,13 +942,13 @@
       document.getElementById('result').textContent = '';
       transpositionTable.clear();
       initBoard();
-      document.getElementById('status').innerHTML = '选择执子: <button onclick="setPlayerColor(1)">黑子</button> <button onclick="setPlayerColor(2)">白子</button>';
+      document.getElementById('status').innerHTML = ClubI18n.t('gomoku.chooseSide') + ': <button onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';
       updateGameActionButton();
     }
 
     // 初始化游戏
     initBoard();
-    document.getElementById('status').innerHTML = '选择执子: <button onclick="setPlayerColor(1)">黑子</button> <button onclick="setPlayerColor(2)">白子</button>';
+    document.getElementById('status').innerHTML = ClubI18n.t('gomoku.chooseSide') + ': <button onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';
     loadLeaderboard();
   </script>
   <script>
@@ -985,6 +985,21 @@
       resizeParticles(); drawParticles(); window.addEventListener('resize', resizeParticles, { passive: true });
       window.addEventListener('pagehide', () => cancelAnimationFrame(animationFrame), { once: true });
     }
-  </script>
+  
+    window.addEventListener('club:langchange', () => {
+      try {
+        if (typeof ClubI18n?.apply === 'function') ClubI18n.apply(document);
+        if (typeof updateGameActionButton === 'function') updateGameActionButton();
+        if (typeof updateStatus === 'function') updateStatus();
+        if (!gameInProgress && !gameover && typeof resetGame !== 'undefined') {
+          const status = document.getElementById('status');
+          if (status && status.querySelector('button')) {
+            status.innerHTML = ClubI18n.t('gomoku.chooseSide') + ': <button onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';
+          }
+        }
+        if (typeof loadLeaderboard === 'function') void loadLeaderboard();
+      } catch (_e) {}
+    });
+</script>
 </body>
 </html>

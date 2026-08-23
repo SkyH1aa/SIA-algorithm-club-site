@@ -1,12 +1,14 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="features.title">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>社团功能 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js" defer></script>
-  <style>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root {
       --bg: #030712;
       --panel: rgba(9, 18, 38, .84);
@@ -156,89 +158,89 @@
     <div class="topbar-inner">
       <a class="brand" href="../index.html">
         <span class="brand-mark">S</span>
-        <span><strong>算法社</strong><small>Club Features</small></span>
+        <span><strong data-i18n="common.brand">算法社</strong><small>Club Features</small></span>
       </a>
       <span class="identity" data-member-identity hidden></span>
-      <a class="back" href="../index.html">返回官网</a>
+      <a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a>
     </div>
   </header>
   <main>
     <p class="eyebrow">CLUB FEATURES</p>
-    <h1>社团功能</h1>
-    <p class="lead">把学习实验、对战挑战、教学资源、活动公告和社员日常功能集中到这里，首页顶栏只保留核心导航。</p>
+    <h1 data-i18n="features.h1">社团功能</h1>
+    <p class="lead" data-i18n="features.lead">把学习实验、对战挑战、教学资源、活动公告和社员日常功能集中到这里，首页顶栏只保留核心导航。</p>
     <section class="grid" aria-label="社团功能入口">
       <a class="card" href="visualization-lab.html">
         <div>
-          <strong>算法实验室</strong>
-          <p>进入排序、搜索、数据结构、图论、动态规划、二叉树与堆的可视化实验。</p>
+          <strong data-i18n="features.lab">算法实验室</strong>
+          <p data-i18n="features.labDesc">进入排序、搜索、数据结构、图论、动态规划、二叉树与堆的可视化实验。</p>
         </div>
-        <span>进入算法实验室 →</span>
+        <span data-i18n="features.labGo">进入算法实验室 →</span>
       </a>
       <a class="card" href="gomoku.html">
         <div>
-          <strong>五子棋</strong>
-          <p>挑战浏览器端 AI 五子棋，查看对战与排行榜入口。</p>
+          <strong data-i18n="features.gomoku">五子棋</strong>
+          <p data-i18n="features.gomokuDesc">挑战浏览器端 AI 五子棋，查看对战与排行榜入口。</p>
         </div>
-        <span>开始五子棋挑战 →</span>
+        <span data-i18n="features.gomokuGo">开始五子棋挑战 →</span>
       </a>
       <a class="card" href="tetris.html">
         <div>
-          <strong>俄罗斯方块</strong>
-          <p>正常游玩、AI 演示、AI 辅助阴影与公平人机对战，查看双排行榜入口。</p>
+          <strong data-i18n="features.tetris">俄罗斯方块</strong>
+          <p data-i18n="features.tetrisDesc">正常游玩、AI 演示、AI 辅助阴影与公平人机对战，查看双排行榜入口。</p>
         </div>
-        <span>开始俄罗斯方块挑战 →</span>
+        <span data-i18n="features.tetrisGo">开始俄罗斯方块挑战 →</span>
       </a>
       <a class="card" href="snake.html">
         <div>
-          <strong>贪吃蛇</strong>
-          <p>正常游玩、AI 演示、AI 辅助深色轨迹与转向提醒、双窗人机对战，查看双排行榜入口。</p>
+          <strong data-i18n="features.snake">贪吃蛇</strong>
+          <p data-i18n="features.snakeDesc">正常游玩、AI 演示、AI 辅助深色轨迹与转向提醒、双窗人机对战，查看双排行榜入口。</p>
         </div>
-        <span>开始贪吃蛇挑战 →</span>
+        <span data-i18n="features.snakeGo">开始贪吃蛇挑战 →</span>
       </a>
       <a class="card" href="resources.html">
         <div>
-          <strong>教学资源</strong>
-          <p>查看 Python / C++ 教材、答案解析与资源下载入口。</p>
+          <strong data-i18n="features.resources">教学资源</strong>
+          <p data-i18n="features.resourcesDesc">查看 Python / C++ 教材、答案解析与资源下载入口。</p>
         </div>
-        <span>进入教学资源 →</span>
+        <span data-i18n="features.resourcesGo">进入教学资源 →</span>
       </a>
       <a class="card" href="member-checkin.html">
         <div>
-          <strong>签到兑换</strong>
-          <p>使用签到码兑换积分，或提交课程签到等待审核。</p>
+          <strong data-i18n="features.checkin">签到兑换</strong>
+          <p data-i18n="features.checkinDesc">使用签到码兑换积分，或提交课程签到等待审核。</p>
         </div>
-        <span>进入签到兑换 →</span>
+        <span data-i18n="features.checkinGo">进入签到兑换 →</span>
       </a>
       <a class="card" href="points-mall.html">
         <div>
-          <strong>积分商城</strong>
-          <p>浏览管理员上架的商品，用社团积分兑换实物或权益。</p>
+          <strong data-i18n="features.mall">积分商城</strong>
+          <p data-i18n="features.mallDesc">浏览管理员上架的商品，用社团积分兑换实物或权益。</p>
         </div>
-        <span>进入积分商城 →</span>
+        <span data-i18n="features.mallGo">进入积分商城 →</span>
       </a>
       <a class="card" href="member-messages.html">
         <div>
-          <strong>社员留言箱</strong>
-          <p>提交建议、问题或反馈，查看社团留言内容。</p>
+          <strong data-i18n="features.messages">社员留言箱</strong>
+          <p data-i18n="features.messagesDesc">提交建议、问题或反馈，查看社团留言内容。</p>
         </div>
-        <span>进入社员留言箱 →</span>
+        <span data-i18n="features.messagesGo">进入社员留言箱 →</span>
       </a>
       <a class="card" href="events.html">
         <div>
-          <strong>活动与公告</strong>
-          <p>查看社团通知、课程安排、比赛信息，并报名进行中的活动。</p>
+          <strong data-i18n="features.events">活动与公告</strong>
+          <p data-i18n="features.eventsDesc">查看社团通知、课程安排、比赛信息，并报名进行中的活动。</p>
         </div>
-        <span>进入活动与公告 →</span>
+        <span data-i18n="features.eventsGo">进入活动与公告 →</span>
       </a>
       <a class="card" href="drive.html">
         <div>
-          <strong>社团盘</strong>
-          <p>访问 123 云盘专属目录。请先在个人中心登录，登录后会自动连接 WebDAV。</p>
+          <strong data-i18n="features.drive">社团盘</strong>
+          <p data-i18n="features.driveDesc">访问 123 云盘专属目录。请先在个人中心登录，登录后会自动连接 WebDAV。</p>
         </div>
-        <span>进入社团盘 →</span>
+        <span data-i18n="features.driveGo">进入社团盘 →</span>
       </a>
     </section>
-    <p class="hint">登录入口统一在个人中心；社团盘已放入本页。更新日志在个人中心内，活动管理与积分商城管理入口在管理员总览中按权限显示。</p>
+    <p class="hint" data-i18n="features.hint">登录入口统一在个人中心；社团盘已放入本页。更新日志在个人中心内，活动管理与积分商城管理入口在管理员总览中按权限显示。</p>
   </main>
 </body>
 </html>

@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="home.title">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>算法社 · Algorithm Club</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="public/i18n-dict.js"></script>
+    <script src="public/i18n.js"></script>
     <script src="public/member-identity.js" defer></script>
     <style>
       :root {
@@ -217,6 +219,32 @@
       .nav a[data-admin-only],
       .nav a[data-admin-only][hidden] { display: none !important; }
       .nav a[data-admin-only].is-visible { display: inline-flex !important; }
+      .lang-switcher {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        margin-left: 6px;
+        padding: 3px;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        background: rgba(15, 23, 42, 0.45);
+      }
+      .lang-switcher button {
+        border: 0;
+        background: transparent;
+        color: rgba(226, 232, 240, 0.78);
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        padding: 6px 10px;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      .lang-switcher button.is-active {
+        background: linear-gradient(135deg, #22d3ee, #818cf8);
+        color: #0f172a;
+      }
       .menu-button {
         display: none;
         width: 40px;
@@ -1128,6 +1156,11 @@
         .nav.open { display: flex; }
         .nav a { padding: 11px 12px; }
         .nav a[data-admin-only].is-visible { display: flex !important; }
+        .nav .lang-switcher {
+          display: inline-flex;
+          align-self: flex-start;
+          margin: 8px 4px 4px;
+        }
         main { padding-left: 18px; padding-right: 18px; }
         html { scroll-snap-type: y proximity; }
         .section-block, .muted-band { padding-top: 52px; padding-bottom: 52px; min-height: auto; }
@@ -1206,21 +1239,22 @@
     <div class="scroll-progress" aria-hidden="true"></div>
 
     <header class="topbar">
-      <a class="brand" href="#home" aria-label="算法社首页">
+      <a class="brand" href="#home" data-i18n-aria="common.homeAria" aria-label="算法社首页">
         <span class="brand-mark">A</span>
-        <span><strong>算法社</strong><small>Algorithm Club</small></span>
+        <span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span>
       </a>
       <span class="member-identity" data-member-identity hidden></span>
-      <button class="menu-button" type="button" id="menuButton" aria-label="打开导航">☰</button>
+      <button class="menu-button" type="button" id="menuButton" data-i18n-aria="common.openNav" aria-label="打开导航">☰</button>
       <nav class="nav" id="nav">
-        <a href="#home">首页</a>
-        <a href="#proof">实力</a>
-        <a href="#gomoku">作品</a>
-        <a href="#members">成员</a>
-        <a href="#join">加入</a>
-        <a class="nav-emphasis" href="public/club-features.html">社团功能</a>
-        <a href="public/member-center.html">个人中心</a>
-        <a href="public/admin-hub.html" data-admin-only hidden>管理员总览</a>
+        <a href="#home" data-i18n="nav.home">首页</a>
+        <a href="#proof" data-i18n="nav.proof">实力</a>
+        <a href="#gomoku" data-i18n="nav.works">作品</a>
+        <a href="#members" data-i18n="nav.members">成员</a>
+        <a href="#join" data-i18n="nav.join">加入</a>
+        <a class="nav-emphasis" href="public/club-features.html" data-i18n="nav.features">社团功能</a>
+        <a href="public/member-center.html" data-i18n="nav.memberCenter">个人中心</a>
+        <a href="public/admin-hub.html" data-admin-only hidden data-i18n="nav.admin">管理员总览</a>
+        <div id="langSwitcherHost"></div>
       </nav>
     </header>
 
@@ -1229,36 +1263,36 @@
         <div class="hero">
           <div class="hero-copy">
             <p class="eyebrow">Algorithm Club · Productized Training</p>
-            <h1><span class="title-glow">算法社</span><span class="title-sub">Algorithm Club</span></h1>
-            <small class="club-affiliation">新哲文院·科创未来 · 新哲文院科创部社团</small>
-            <p class="hero-text">把算法训练做成可运行的产品与系统：从竞赛基础、可视化实验室，到五子棋 AI 与社团管理系统，用真实作品证明训练价值。</p>
+            <h1><span class="title-glow" data-i18n="common.brand">算法社</span><span class="title-sub">Algorithm Club</span></h1>
+            <small class="club-affiliation" data-i18n="home.affiliation">新哲文院·科创未来 · 新哲文院科创部社团</small>
+            <p class="hero-text" data-i18n="home.heroText">把算法训练做成可运行的产品与系统：从竞赛基础、可视化实验室，到五子棋 AI 与社团管理系统，用真实作品证明训练价值。</p>
             <div class="hero-actions">
-              <a class="primary-action" href="public/join.html">立即加入</a>
-              <a class="secondary-action" href="public/visualization-lab.html">进入算法实验室</a>
+              <a class="primary-action" href="public/join.html" data-i18n="home.joinNow">立即加入</a>
+              <a class="secondary-action" href="public/visualization-lab.html" data-i18n="home.enterLab">进入算法实验室</a>
             </div>
-            <a class="hero-side-link" href="public/appmonitor.html">APPMonitor 发布页 →</a>
-            <div class="hero-metrics" aria-label="关键能力摘要">
-              <span><strong>8</strong> 代五子棋 AI</span>
-              <span><strong>4</strong> 模式方块 / 蛇</span>
-              <span><strong>7</strong> 大算法实验室</span>
+            <a class="hero-side-link" href="public/appmonitor.html" data-i18n="home.appmonitorLink">APPMonitor 发布页 →</a>
+            <div class="hero-metrics" data-i18n-aria="home.metricsAria" aria-label="关键能力摘要">
+              <span><strong>8</strong> <span data-i18n="home.metricGomoku">代五子棋 AI</span></span>
+              <span><strong>4</strong> <span data-i18n="home.metricModes">模式方块 / 蛇</span></span>
+              <span><strong>7</strong> <span data-i18n="home.metricLabs">大算法实验室</span></span>
             </div>
           </div>
-          <aside class="hero-panel" aria-label="三阶段建设轨道">
-            <div class="panel-head"><span>STAGE TRACK</span><strong>三阶段已完工</strong></div>
+          <aside class="hero-panel" data-i18n-aria="home.stageAria" aria-label="三阶段建设轨道">
+            <div class="panel-head"><span>STAGE TRACK</span><strong data-i18n="home.stageDone">三阶段已完工</strong></div>
             <div class="stage-track">
-              <div class="panel-row"><span class="icon">01</span><div><strong>第一阶段 · 已完成</strong><span>从零打造属于自己的官网页面</span></div></div>
-              <div class="panel-row"><span class="icon">02</span><div><strong>第二阶段 · 已完成</strong><span>实现五子棋以及全套管理系统的配套建设部署</span></div></div>
-              <div class="panel-row focus"><span class="icon">03</span><div><strong>第三阶段 · 已完工</strong><span>已投入社团正常使用</span></div></div>
+              <div class="panel-row"><span class="icon">01</span><div><strong data-i18n="home.stage1Title">第一阶段 · 已完成</strong><span data-i18n="home.stage1Desc">从零打造属于自己的官网页面</span></div></div>
+              <div class="panel-row"><span class="icon">02</span><div><strong data-i18n="home.stage2Title">第二阶段 · 已完成</strong><span data-i18n="home.stage2Desc">实现五子棋以及全套管理系统的配套建设部署</span></div></div>
+              <div class="panel-row focus"><span class="icon">03</span><div><strong data-i18n="home.stage3Title">第三阶段 · 已完工</strong><span data-i18n="home.stage3Desc">已投入社团正常使用</span></div></div>
             </div>
-            <div class="panel-foot">深链：<a href="public/gomoku.html">挑战五子棋 AI</a> · <a href="public/tetris.html">挑战俄罗斯方块</a> · <a href="public/club-features.html">社团功能总览</a></div>
+            <div class="panel-foot"><span data-i18n="home.deepLinkPrefix">深链：</span><a href="public/gomoku.html" data-i18n="home.challengeGomoku">挑战五子棋 AI</a> · <a href="public/tetris.html" data-i18n="home.challengeTetris">挑战俄罗斯方块</a> · <a href="public/club-features.html" data-i18n="home.featuresOverview">社团功能总览</a></div>
           </aside>
         </div>
-        <div id="proof" class="proof-band hero-proof" aria-label="实力证明带">
+        <div id="proof" class="proof-band hero-proof" data-i18n-aria="home.proofAria" aria-label="实力证明带">
           <div class="proof-inner">
-            <div class="proof-item"><strong>8</strong><span>代五子棋 AI 迭代</span></div>
-            <div class="proof-item"><strong>7</strong><span>大算法可视化实验室</span></div>
-            <div class="proof-item"><strong>全套</strong><span>社团管理系统已落地</span></div>
-            <div class="proof-item"><strong>开源</strong><span>GitHub Pages 部署</span></div>
+            <div class="proof-item"><strong>8</strong><span data-i18n="home.proofGomoku">代五子棋 AI 迭代</span></div>
+            <div class="proof-item"><strong>7</strong><span data-i18n="home.proofLabs">大算法可视化实验室</span></div>
+            <div class="proof-item"><strong data-i18n="home.proofFull">全套</strong><span data-i18n="home.proofSystem">社团管理系统已落地</span></div>
+            <div class="proof-item"><strong data-i18n="home.proofOss">开源</strong><span data-i18n="home.proofOpen">GitHub Pages 部署</span></div>
           </div>
         </div>
       </section>
@@ -1266,81 +1300,81 @@
       <section id="capabilities" class="section-block direction-section">
         <div class="section-heading">
           <p class="eyebrow">Capability Matrix</p>
-          <h2>能力矩阵</h2>
-          <p>竞赛、AI、工程与教学资源协同运转——训练不止于题单，最终沉淀为可访问的作品与系统。</p>
+          <h2 data-i18n="home.capTitle">能力矩阵</h2>
+          <p data-i18n="home.capLead">竞赛、AI、工程与教学资源协同运转——训练不止于题单，最终沉淀为可访问的作品与系统。</p>
         </div>
         <div class="capability-grid direction-grid">
           <article class="info-card featured">
             <div>
               <span class="icon">AI</span>
-              <h3>AI 博弈</h3>
-              <p>以五子棋、俄罗斯方块与贪吃蛇为载体，贯通评估函数、搜索剪枝、局面特征与决策可视化，并把模型接进可挑战、可辅助、可人机对战的产品形态。</p>
+              <h3 data-i18n="home.capAi">AI 博弈</h3>
+              <p data-i18n="home.capAiDesc">以五子棋、俄罗斯方块与贪吃蛇为载体，贯通评估函数、搜索剪枝、局面特征与决策可视化，并把模型接进可挑战、可辅助、可人机对战的产品形态。</p>
             </div>
             <div class="card-links">
-              <a class="secondary-action card-link" href="public/gomoku.html">进入五子棋挑战 →</a>
-              <a class="secondary-action card-link" href="public/tetris.html">进入俄罗斯方块 →</a>
-              <a class="secondary-action card-link" href="public/snake.html">进入贪吃蛇挑战 →</a>
+              <a class="secondary-action card-link" href="public/gomoku.html" data-i18n="home.enterGomoku">进入五子棋挑战 →</a>
+              <a class="secondary-action card-link" href="public/tetris.html" data-i18n="home.enterTetris">进入俄罗斯方块 →</a>
+              <a class="secondary-action card-link" href="public/snake.html" data-i18n="home.enterSnake">进入贪吃蛇挑战 →</a>
             </div>
           </article>
-          <article class="info-card"><span class="icon">CP</span><h3>竞赛算法</h3><p>搜索、图论、DP 与数据结构系统训练，服务校内竞赛与长期能力建设。</p></article>
-          <article class="info-card"><span class="icon">WEB</span><h3>工程实践</h3><p>把算法作品做成可访问网页，沉淀成员、活动、项目与管理闭环。</p></article>
-          <article class="info-card"><span class="icon">DOC</span><h3>教学资源</h3><p>Python / C++ 教材与解析集中开放，支持在线学习与完整下载。</p><a class="secondary-action card-link" href="public/resources.html">进入资源中心 →</a></article>
+          <article class="info-card"><span class="icon">CP</span><h3 data-i18n="home.capCp">竞赛算法</h3><p data-i18n="home.capCpDesc">搜索、图论、DP 与数据结构系统训练，服务校内竞赛与长期能力建设。</p></article>
+          <article class="info-card"><span class="icon">WEB</span><h3 data-i18n="home.capWeb">工程实践</h3><p data-i18n="home.capWebDesc">把算法作品做成可访问网页，沉淀成员、活动、项目与管理闭环。</p></article>
+          <article class="info-card"><span class="icon">DOC</span><h3 data-i18n="home.capDoc">教学资源</h3><p data-i18n="home.capDocDesc">Python / C++ 教材与解析集中开放，支持在线学习与完整下载。</p><a class="secondary-action card-link" href="public/resources.html" data-i18n="home.enterResources">进入资源中心 →</a></article>
         </div>
       </section>
 
       <section id="gomoku" class="section-block">
         <div class="section-heading">
           <p class="eyebrow">Flagship Works</p>
-          <h2>旗舰作品</h2>
-          <p>首页情绪高峰留给真正跑起来的产品：五子棋、俄罗斯方块与贪吃蛇 AI、APPMonitor，以及七大算法实验室。</p>
+          <h2 data-i18n="home.worksTitle">旗舰作品</h2>
+          <p data-i18n="home.worksLead">首页情绪高峰留给真正跑起来的产品：五子棋、俄罗斯方块与贪吃蛇 AI、APPMonitor，以及七大算法实验室。</p>
         </div>
         <div class="flagship-grid">
           <div class="flagship-main">
             <div class="gomoku-copy">
               <p class="eyebrow">GOMOKU AI BATTLE SYSTEM</p>
-              <h2>AI 五子棋已接入</h2>
-              <p>浏览器端人机挑战、昵称提交与 Supabase 排行榜已打通，可直接对战、可复盘成绩。</p>
-              <div class="step-list"><span>棋型识别</span><span>Minimax</span><span>Alpha-Beta</span><span>人机挑战</span><span>成绩保存</span><span>排行榜</span></div>
-              <a class="primary-action" href="public/gomoku.html">开始挑战 AI 五子棋 →</a>
+              <h2 data-i18n="home.gomokuReady">AI 五子棋已接入</h2>
+              <p data-i18n="home.gomokuDesc">浏览器端人机挑战、昵称提交与 Supabase 排行榜已打通，可直接对战、可复盘成绩。</p>
+              <div class="step-list"><span data-i18n="home.tagShape">棋型识别</span><span>Minimax</span><span>Alpha-Beta</span><span data-i18n="home.tagChallenge">人机挑战</span><span data-i18n="home.tagSave">成绩保存</span><span data-i18n="home.tagLb">排行榜</span></div>
+              <a class="primary-action" href="public/gomoku.html" data-i18n="home.startGomoku">开始挑战 AI 五子棋 →</a>
             </div>
             <div class="board-shell"><div class="board-preview" id="boardPreview" aria-label="五子棋预览"></div></div>
           </div>
           <div class="flagship-side-grid">
             <article class="flagship-card lab-card">
               <p class="eyebrow">TETRIS AI SYSTEM</p>
-              <h3>AI 俄罗斯方块</h3>
-              <p>支持正常游玩、AI 演示、AI 辅助阴影与公平人机对战；双方同序列，AI 仅自然降落，双榜可记录。</p>
+              <h3 data-i18n="home.tetrisTitle">AI 俄罗斯方块</h3>
+              <p data-i18n="home.tetrisDesc">支持正常游玩、AI 演示、AI 辅助阴影与公平人机对战；双方同序列，AI 仅自然降落，双榜可记录。</p>
               <div class="lab-tags">
-                <span>正常游玩</span><span>AI 演示</span><span>辅助阴影</span><span>人机对战</span><span>双排行榜</span>
+                <span data-i18n="home.tagNormal">正常游玩</span><span data-i18n="home.tagAiDemo">AI 演示</span><span data-i18n="home.tagAssistShadow">辅助阴影</span><span data-i18n="home.tagVersus">人机对战</span><span data-i18n="home.tagDualLb">双排行榜</span>
               </div>
-              <a class="secondary-action" href="public/tetris.html">进入俄罗斯方块 →</a>
+              <a class="secondary-action" href="public/tetris.html" data-i18n="home.enterTetris">进入俄罗斯方块 →</a>
             </article>
             <article class="flagship-card lab-card">
               <p class="eyebrow">SNAKE AI SYSTEM</p>
-              <h3>AI 贪吃蛇</h3>
-              <p>支持正常游玩、AI 演示、AI 辅助深色轨迹与转向提醒、双窗人机对战；AI 仅看当前苹果，普通榜与对战榜可记录。</p>
+              <h3 data-i18n="home.snakeTitle">AI 贪吃蛇</h3>
+              <p data-i18n="home.snakeDesc">支持正常游玩、AI 演示、AI 辅助深色轨迹与转向提醒、双窗人机对战；AI 仅看当前苹果，普通榜与对战榜可记录。</p>
               <div class="lab-tags">
-                <span>正常游玩</span><span>AI 演示</span><span>辅助轨迹</span><span>人机对战</span><span>双排行榜</span>
+                <span data-i18n="home.tagNormal">正常游玩</span><span data-i18n="home.tagAiDemo">AI 演示</span><span data-i18n="home.tagAssistTrail">辅助轨迹</span><span data-i18n="home.tagVersus">人机对战</span><span data-i18n="home.tagDualLb">双排行榜</span>
               </div>
-              <a class="secondary-action" href="public/snake.html">进入贪吃蛇 →</a>
+              <a class="secondary-action" href="public/snake.html" data-i18n="home.enterSnake">进入贪吃蛇挑战 →</a>
             </article>
             <article class="flagship-card lab-card">
               <p class="eyebrow">WINDOWS SOFTWARE</p>
-              <h3>APPMonitor</h3>
-              <p>由算法社社长鼎力开发。Windows 软件管控与网络监控工具，持续加入自律助手、使用统计、USB 管控和高级防护能力。当前 V7.0。</p>
+              <h3 data-i18n="home.appTitle">APPMonitor</h3>
+              <p data-i18n="home.appDesc">由算法社社长鼎力开发。Windows 软件管控与网络监控工具，持续加入自律助手、使用统计、USB 管控和高级防护能力。当前 V7.0。</p>
               <div class="lab-tags">
-                <span>软件管控</span><span>自律助手</span><span>网络监控</span><span>USB 管控</span><span>V7.0</span>
+                <span data-i18n="home.tagSoft">软件管控</span><span data-i18n="home.tagSelf">自律助手</span><span data-i18n="home.tagNet">网络监控</span><span data-i18n="home.tagUsb">USB 管控</span><span>V7.0</span>
               </div>
-              <a class="secondary-action" href="public/appmonitor.html">查看发布页 →</a>
+              <a class="secondary-action" href="public/appmonitor.html" data-i18n="home.viewRelease">查看发布页 →</a>
             </article>
             <article class="flagship-card lab-card">
               <p class="eyebrow">VISUALIZATION LAB</p>
-              <h3>算法实验室 · 七入口</h3>
-              <p>排序、搜索、数据结构、图论、动态规划、二叉树与堆——连续演示与单步推演并存。</p>
+              <h3 data-i18n="home.labTitle">算法实验室 · 七入口</h3>
+              <p data-i18n="home.labDesc">排序、搜索、数据结构、图论、动态规划、二叉树与堆——连续演示与单步推演并存。</p>
               <div class="lab-tags">
-                <span>排序</span><span>搜索</span><span>数据结构</span><span>图论</span><span>DP</span><span>二叉树</span><span>堆</span>
+                <span data-i18n="home.tagSort">排序</span><span data-i18n="home.tagSearch">搜索</span><span data-i18n="home.tagDs">数据结构</span><span data-i18n="home.tagGraph">图论</span><span>DP</span><span data-i18n="home.tagTree">二叉树</span><span data-i18n="home.tagHeap">堆</span>
               </div>
-              <a class="secondary-action" href="public/visualization-lab.html">选择实验室 →</a>
+              <a class="secondary-action" href="public/visualization-lab.html" data-i18n="home.chooseLab">选择实验室 →</a>
             </article>
           </div>
         </div>
@@ -1350,10 +1384,10 @@
         <div class="section-heading inline-heading">
           <div>
             <p class="eyebrow">People</p>
-            <h2>成员展示</h2>
-            <p>算法社社长、副社长以及优秀社员。角色清晰，方向可见。</p>
+            <h2 data-i18n="home.membersTitle">成员展示</h2>
+            <p data-i18n="home.membersLead">算法社社长、副社长以及优秀社员。角色清晰，方向可见。</p>
           </div>
-          <span class="data-note">后台可编辑</span>
+          <span class="data-note" data-i18n="home.editable">后台可编辑</span>
         </div>
         <div class="member-grid" id="memberGrid"></div>
       </section>
@@ -1361,8 +1395,8 @@
       <section id="projects" class="section-block muted-band">
         <div class="section-heading">
           <p class="eyebrow">Momentum</p>
-          <h2>项目沉淀</h2>
-          <p>从 AI 对战、可视化到训练平台规划，持续汇总正在建设与已经开放的内容。</p>
+          <h2 data-i18n="home.projectsTitle">项目沉淀</h2>
+          <p data-i18n="home.projectsLead">从 AI 对战、可视化到训练平台规划，持续汇总正在建设与已经开放的内容。</p>
         </div>
         <div class="project-grid" id="projectGrid"></div>
       </section>
@@ -1371,15 +1405,15 @@
         <div class="section-heading inline-heading">
           <div>
             <p class="eyebrow">Progress</p>
-            <h2>活动进展</h2>
-            <p>优先展示后台发布的最新公告与活动；接口不可用时回退本地时间线。</p>
+            <h2 data-i18n="home.activitiesTitle">活动进展</h2>
+            <p data-i18n="home.activitiesLead">优先展示后台发布的最新公告与活动；接口不可用时回退本地时间线。</p>
           </div>
-          <a class="secondary-action" href="public/events.html">查看全部活动公告 →</a>
+          <a class="secondary-action" href="public/events.html" data-i18n="home.viewAllEvents">查看全部活动公告 →</a>
         </div>
         <div class="route-strip" aria-label="路线进度呼应">
-          <span class="is-active">01 官网已上线</span>
-          <span>02 五子棋 + 管理系统</span>
-          <span>03 投入正常使用</span>
+          <span class="is-active" data-i18n="home.route1">01 官网已上线</span>
+          <span data-i18n="home.route2">02 五子棋 + 管理系统</span>
+          <span data-i18n="home.route3">03 投入正常使用</span>
         </div>
         <div class="timeline" id="activityList"></div>
       </section>
@@ -1387,47 +1421,47 @@
       <section id="join" class="section-block join-section">
         <div>
           <p class="eyebrow">Join</p>
-          <h2>准备好把训练变成作品了吗</h2>
-          <p>无论你是零基础新手还是竞赛选手，都可以在算法、前端与项目方向找到明确路径，参与官网、五子棋与实验室等长期建设。</p>
+          <h2 data-i18n="home.joinTitle">准备好把训练变成作品了吗</h2>
+          <p data-i18n="home.joinLead">无论你是零基础新手还是竞赛选手，都可以在算法、前端与项目方向找到明确路径，参与官网、五子棋与实验室等长期建设。</p>
           <div class="join-list">
-            <span>算法组：训练竞赛算法，负责题单、讲解和训练路线。</span>
-            <span>前端组：维护官网视觉、交互页面和算法可视化展示。</span>
-            <span>项目组：建立模型 / 训练 AI / 软件开发。</span>
+            <span data-i18n="home.joinAlgo">算法组：训练竞赛算法，负责题单、讲解和训练路线。</span>
+            <span data-i18n="home.joinFront">前端组：维护官网视觉、交互页面和算法可视化展示。</span>
+            <span data-i18n="home.joinProject">项目组：建立模型 / 训练 AI / 软件开发。</span>
           </div>
           <div class="hero-actions" style="margin-top:18px">
-            <a class="primary-action" href="public/join.html">立即加入</a>
+            <a class="primary-action" href="public/join.html" data-i18n="home.joinNow">立即加入</a>
           </div>
         </div>
         <div class="join-card">
           <span class="icon">GO</span>
-          <h3>立即加入</h3>
-          <p>填写报名信息即可提交申请；也可扫描二维码添加负责人微信，备注“算法社”。</p>
+          <h3 data-i18n="home.joinCardTitle">立即加入</h3>
+          <p data-i18n="home.joinCardDesc">填写报名信息即可提交申请；也可扫描二维码添加负责人微信，备注“算法社”。</p>
           <div class="hero-actions" style="margin:14px 0 16px">
-            <a class="primary-action" href="public/join.html">前往报名表单</a>
+            <a class="primary-action" href="public/join.html" data-i18n="home.goForm">前往报名表单</a>
           </div>
           <div class="qr-box">
-            <img src="public/assets/wechat-qrcode.jpg" alt="算法社负责人微信二维码" />
-            <p class="qr-tip">扫码添加微信，加入算法社</p>
+            <img src="public/assets/wechat-qrcode.jpg" data-i18n-attr="alt:home.qrAlt" alt="算法社负责人微信二维码" />
+            <p class="qr-tip" data-i18n="home.qrTip">扫码添加微信，加入算法社</p>
           </div>
         </div>
       </section>
     </main>
 
     <footer class="footer">
-      <span><strong>算法社</strong> · 新哲文院·科创未来</span>
+      <span data-i18n="home.footerLeft">算法社 · 新哲文院·科创未来</span>
       <span>Deep Neon · JSON 驱动 · Supabase Auth</span>
     </footer>
 
     <div class="feed-modal" id="feedModal" role="dialog" aria-modal="true" aria-labelledby="feedModalTitle" aria-hidden="true">
       <div class="feed-modal-card" role="document">
-        <button class="feed-modal-close" id="feedModalClose" type="button" aria-label="关闭推荐弹窗">×</button>
-        <p class="feed-modal-type" id="feedModalType">首页推荐</p>
-        <h2 class="feed-modal-title" id="feedModalTitle">最新推荐</h2>
+        <button class="feed-modal-close" id="feedModalClose" type="button" data-i18n-aria="home.feedClose" aria-label="关闭推荐弹窗">×</button>
+        <p class="feed-modal-type" id="feedModalType" data-i18n="home.feedType">首页推荐</p>
+        <h2 class="feed-modal-title" id="feedModalTitle" data-i18n="home.feedTitle">最新推荐</h2>
         <p class="feed-modal-meta" id="feedModalMeta"></p>
         <div class="feed-modal-content" id="feedModalContent"></div>
         <div class="feed-modal-actions">
-          <a class="primary-action" id="feedModalLink" href="public/events.html">查看详情 →</a>
-          <button class="secondary-action feed-modal-never" id="feedModalNever" type="button">显示不再提醒</button>
+          <a class="primary-action" id="feedModalLink" href="public/events.html" data-i18n="common.viewDetailsArrow">查看详情 →</a>
+          <button class="secondary-action feed-modal-never" id="feedModalNever" type="button" data-i18n="home.feedNever">显示不再提醒</button>
         </div>
       </div>
     </div>
@@ -1435,35 +1469,51 @@
     <div class="pc-tip-modal" id="pcTipModal" role="dialog" aria-modal="true" aria-labelledby="pcTipTitle" aria-hidden="true">
       <div class="pc-tip-card" role="document">
         <p class="pc-tip-eyebrow">BEST VIEW</p>
-        <h2 id="pcTipTitle">使用 PC 端浏览获得最佳效果</h2>
-        <p>当前为非电脑端访问。为获得完整视觉与交互体验，建议使用 PC 端浏览本站。</p>
+        <h2 id="pcTipTitle" data-i18n="home.pcTitle">使用 PC 端浏览获得最佳效果</h2>
+        <p data-i18n="home.pcText">当前为非电脑端访问。为获得完整视觉与交互体验，建议使用 PC 端浏览本站。</p>
         <div class="pc-tip-actions">
-          <button class="primary-action" id="pcTipClose" type="button">我知道了</button>
-          <button class="pc-tip-dismiss" id="pcTipNever" type="button">本次不再提示</button>
+          <button class="primary-action" id="pcTipClose" type="button" data-i18n="home.pcOk">我知道了</button>
+          <button class="pc-tip-dismiss" id="pcTipNever" type="button" data-i18n="home.pcNever">本次不再提示</button>
         </div>
       </div>
     </div>
 
     <script>
+      const t = (key, vars) => (window.ClubI18n && typeof window.ClubI18n.t === 'function')
+        ? window.ClubI18n.t(key, vars)
+        : key;
 
-      const fallbackMembers = [
-        { name: '陈海铭', grade: 'A1C5-社长', group: '', direction: 'Windows 软件管控工具 / AI 五子棋', intro: 'Windows 软件管控工具 APPMonitor开发者& 五子棋AI模型创建者', avatar: '陈', avatarImage: 'public/assets/member-a1c5.jpg' },
-        { name: '蒋元柏', grade: 'H3C1-副社长', group: '', direction: '五子棋 AI', intro: '参与五子棋模型建设和测试。', avatar: '蒋', avatarImage: 'public/assets/member-jiang-yuanbai.jpg' },
-        { name: '优秀社员', grade: '虚位以待', group: '虚位以待', direction: '虚位以待', intro: '虚位以待', avatar: '待' }
-      ];
-      const fallbackProjects = [
-        { name: 'APPMonitor', status: '持续发布', type: 'Windows 软件管控', intro: 'Windows 软件管控与网络监控工具，持续加入自律助手、使用统计、USB 管控和高级防护能力。', link: 'public/appmonitor.html', linkText: '查看发布页' },
-        { name: 'AI 五子棋', status: '已接入', type: '人机对战', intro: '基于已有五子棋模型，支持前端对战、昵称提交和 Supabase 排行榜。', link: 'public/gomoku.html', linkText: '开始挑战' },
-        { name: 'AI 俄罗斯方块', status: '已接入', type: '人机对战 / AI 辅助', intro: '支持正常游玩、AI 演示、AI 辅助阴影与公平人机对战，并接入普通榜与对战榜。', link: 'public/tetris.html', linkText: '开始挑战' },
-        { name: 'AI 贪吃蛇', status: '已接入', type: '人机对战 / AI 辅助', intro: '支持正常游玩、AI 演示、AI 辅助深色轨迹与转向提醒、双窗人机对战；AI 仅看当前苹果，并接入普通榜与对战榜。', link: 'public/snake.html', linkText: '开始挑战' },
-        { name: '算法可视化实验室', status: '七大实验室已开放', type: '教学展示', intro: '覆盖排序、搜索、数据结构、图论最短路、动态规划、二叉树与堆，支持连续演示与单步推演。', link: 'public/visualization-lab.html', linkText: '选择实验室' },
-        { name: '教学资源与 AI Bot 对战平台', status: '已经上线', type: '教学资源 / 对战平台', intro: '教学资源已开放四份核心教材（Python 教材 / Python 答案 / C++ 教材 / C++ 答案）与算法可视化；AI Bot 对战已接入五子棋、俄罗斯方块与贪吃蛇。', link: 'public/club-features.html', linkText: '进入社团功能' }
-      ];
-      const fallbackActivities = [
-        { title: '社团招新', date: '2026-08-19', intro: '面向对算法、编程、AI 和网页开发感兴趣的同学开放报名。' },
-        { title: '每周算法训练', date: '每周周二周四下午 ECA', intro: '围绕基础语法、数据结构、搜索、图论和动态规划组织训练。' },
-        { title: '算法培训与项目建设', date: '第二阶段计划', intro: '开展算法培训、模型建设、软件开发和 AI Bot 对战平台迭代，让社员从训练走向真实项目。' }
-      ];
+      function getFallbackMembers() {
+        const vacant = t('home.vacant');
+        return [
+          { name: '陈海铭', grade: 'A1C5-社长', group: '', direction: 'Windows 软件管控工具 / AI 五子棋', intro: 'Windows 软件管控工具 APPMonitor开发者& 五子棋AI模型创建者', avatar: '陈', avatarImage: 'public/assets/member-a1c5.jpg' },
+          { name: '蒋元柏', grade: 'H3C1-副社长', group: '', direction: '五子棋 AI', intro: '参与五子棋模型建设和测试。', avatar: '蒋', avatarImage: 'public/assets/member-jiang-yuanbai.jpg' },
+          { name: t('home.memberOutstanding'), grade: vacant, group: vacant, direction: vacant, intro: vacant, avatar: t('home.memberFallbackAvatar') === 'M' ? 'M' : '待' }
+        ];
+      }
+      function getFallbackProjects() {
+        return [
+          { name: 'APPMonitor', status: t('home.projAppStatus'), type: t('home.projAppType'), intro: t('home.projAppIntro'), link: 'public/appmonitor.html', linkText: t('home.projViewRelease') },
+          { name: t('home.projGomokuName'), status: t('home.projLive'), type: t('home.projVersus'), intro: t('home.projGomokuIntro'), link: 'public/gomoku.html', linkText: t('home.projStart') },
+          { name: t('home.projTetrisName'), status: t('home.projLive'), type: t('home.projVersusAssist'), intro: t('home.projTetrisIntro'), link: 'public/tetris.html', linkText: t('home.projStart') },
+          { name: t('home.projSnakeName'), status: t('home.projLive'), type: t('home.projVersusAssist'), intro: t('home.projSnakeIntro'), link: 'public/snake.html', linkText: t('home.projStart') },
+          { name: t('home.projLabName'), status: t('home.projLabStatus'), type: t('home.projTeach'), intro: t('home.projLabIntro'), link: 'public/visualization-lab.html', linkText: t('home.projChooseLab') },
+          { name: t('home.projPlatformName'), status: t('home.projOnline'), type: t('home.projPlatformType'), intro: t('home.projPlatformIntro'), link: 'public/club-features.html', linkText: t('home.projEnterFeatures') }
+        ];
+      }
+      function getFallbackActivities() {
+        return [
+          { title: t('home.actRecruitTitle'), date: '2026-08-19', intro: t('home.actRecruitIntro') },
+          { title: t('home.actWeeklyTitle'), date: t('home.actWeeklyDate'), intro: t('home.actWeeklyIntro') },
+          { title: t('home.actBuildTitle'), date: t('home.actBuildDate'), intro: t('home.actBuildIntro') }
+        ];
+      }
+
+      let cachedMembers = null;
+      let cachedProjectsSource = null;
+      let cachedActivitiesSource = null;
+      let usingFallbackProjects = true;
+      let usingFallbackActivities = true;
 
       function escapeHtml(value) {
         return String(value || '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
@@ -1484,17 +1534,19 @@
         const grade = String(member?.member_class || member?.grade || '').trim();
         const group = String(member?.group || '').trim();
         const intro = String(member?.intro || '').trim();
-        const direction = String(member?.direction || grade || '成员展示').trim();
+        const direction = String(member?.direction || grade || t('home.memberFallbackDir')).trim();
         const avatarImage = String(member?.image_url || member?.avatarImage || '').trim();
-        const avatar = String(member?.avatar || name.slice(0, 1) || '成').trim();
+        const avatar = String(member?.avatar || name.slice(0, 1) || t('home.memberFallbackAvatar')).trim();
         return { name, grade, group, intro, direction, avatarImage, avatar };
       }
 
       function renderMembers(members) {
+        cachedMembers = members;
         document.getElementById('memberGrid').innerHTML = members.map(raw => {
           const member = normalizeMemberCard(raw);
+          const avatarAlt = t('home.avatarAlt', { name: member.name });
           const avatarContent = member.avatarImage
-            ? `<img src="${escapeHtml(member.avatarImage)}" alt="${escapeHtml(member.name)}头像" />`
+            ? `<img src="${escapeHtml(member.avatarImage)}" alt="${escapeHtml(avatarAlt)}" />`
             : `<span>${escapeHtml(member.avatar)}</span>`;
           const gradeGroup = [member.grade, member.group].filter(Boolean).join(' · ');
           return `
@@ -1696,7 +1748,7 @@
       function openFeedModal(item) {
         if (!item) return;
         currentFeedItem = item;
-        document.getElementById('feedModalType').textContent = item.typeLabel || '首页推荐';
+        document.getElementById('feedModalType').textContent = item.typeLabel || t('home.feedType');
         document.getElementById('feedModalTitle').textContent = item.title;
         document.getElementById('feedModalMeta').textContent = item.meta || item.date || '';
         document.getElementById('feedModalContent').textContent = item.content || item.intro || '';
@@ -1705,6 +1757,25 @@
         modal.classList.add('is-open');
         modal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('feed-modal-open');
+      }
+
+      function refreshLocalizedDynamicContent() {
+        if (cachedMembers) renderMembers(cachedMembers);
+        if (usingFallbackProjects) {
+          renderProjects(getFallbackProjects());
+        } else if (cachedProjectsSource) {
+          renderProjects(cachedProjectsSource);
+        }
+        if (usingFallbackActivities) {
+          renderActivities(getFallbackActivities());
+        } else if (cachedActivitiesSource) {
+          const rebuilt = buildHomeFeedItems(cachedActivitiesSource);
+          renderActivities(rebuilt.length ? rebuilt : getFallbackActivities());
+          if (currentFeedItem) {
+            const next = homeFeedItems.find(item => getFeedItemId(item) === getFeedItemId(currentFeedItem));
+            if (next) openFeedModal(next);
+          }
+        }
       }
 
       function showHomeRecommendation() {
@@ -1782,21 +1853,37 @@
       }
 
       async function init() {
+        if (window.ClubI18n && typeof window.ClubI18n.mountSwitcher === 'function') {
+          window.ClubI18n.mountSwitcher(document.getElementById('langSwitcherHost'));
+        }
+        const fallbackMembers = getFallbackMembers();
+        const fallbackProjects = getFallbackProjects();
+        const fallbackActivities = getFallbackActivities();
         const [members, projects, localActivities] = await Promise.all([
           loadShowcaseMembers(fallbackMembers),
           loadJson('public/data/projects.json', fallbackProjects),
           loadJson('public/data/activities.json', fallbackActivities)
         ]);
-        const activities = await loadHomeFeed(localActivities);
+        const feedResult = await loadHomeFeed(localActivities);
+        cachedMembers = members;
+        cachedProjectsSource = projects;
+        usingFallbackProjects = projects === fallbackProjects || !Array.isArray(projects) || !projects.length;
+        if (usingFallbackProjects) cachedProjectsSource = null;
+        usingFallbackActivities = feedResult.fromFallback;
+        cachedActivitiesSource = feedResult.payload;
         renderMembers(members);
-        renderProjects(projects);
-        renderActivities(activities);
+        renderProjects(usingFallbackProjects ? getFallbackProjects() : projects);
+        renderActivities(feedResult.items);
         renderBoard();
         observeRevealItems();
         setupCardInteractions();
         // 自动推荐弹窗只在确认已登录后触发，避免访客看到弹窗
         if (homeAuthReady && homeMemberLoggedIn) showHomeRecommendation();
       }
+
+      window.addEventListener('club:langchange', () => {
+        refreshLocalizedDynamicContent();
+      });
 
       homeAuthClient.auth.getSession().then(({ data: { session } }) => {
         syncHomeAuthSession(session);

@@ -1,73 +1,75 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="join.title">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>加入算法社 · 报名</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js" defer></script>
-  <style>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root{--bg:#030712;--panel:rgba(9,18,38,.84);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--violet:#9278ff;--green:#72f3c2;--danger:#ff718a;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 12% 0,rgba(0,229,255,.14),transparent 28%),radial-gradient(circle at 88% 10%,rgba(146,120,255,.16),transparent 30%),var(--bg)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.82);backdrop-filter:blur(18px)}.topbar-inner{max-width:1080px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted)}.back:hover{color:var(--cyan)}main{max-width:1080px;margin:auto;padding:56px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}h1{margin:0 0 14px;font-size:clamp(36px,7vw,64px);letter-spacing:-1.2px;line-height:.98}.lead{max-width:760px;margin:0 0 28px;color:var(--muted);line-height:1.8}.layout{display:grid;grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);gap:16px}.panel{padding:22px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow)}.panel h2{margin:0 0 8px;font-size:22px}.intro{margin:0 0 16px;color:var(--muted);line-height:1.7}.info-list{display:grid;gap:10px;margin:0;padding:0;list-style:none}.info-list li{padding:12px 14px;border:1px solid rgba(107,169,224,.16);border-radius:10px;background:rgba(0,10,28,.38);color:var(--muted);line-height:1.7}.info-list strong{color:var(--text)}.welcome{margin-top:14px;padding:14px 16px;border:1px solid rgba(114,243,194,.28);border-radius:12px;background:rgba(114,243,194,.08);color:var(--green);line-height:1.7}.form{display:grid;gap:12px}.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.label{color:var(--muted);font-size:13px}.hint{margin:4px 0 0;color:var(--muted);font-size:12px;line-height:1.5}.input,.textarea,.select{width:100%;padding:12px 14px;color:var(--text);border:1px solid var(--line);border-radius:8px;background:rgba(2,7,18,.76);outline:none;font:inherit}.select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--cyan) 50%),linear-gradient(135deg,var(--cyan) 50%,transparent 50%);background-position:calc(100% - 18px) calc(50% - 3px),calc(100% - 12px) calc(50% - 3px);background-size:6px 6px,6px 6px;background-repeat:no-repeat;padding-right:36px}.textarea{min-height:96px;resize:vertical}.contact-row{display:grid;grid-template-columns:150px 1fr;gap:10px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}.button{display:inline-flex;align-items:center;justify-content:center;padding:11px 16px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:rgba(0,229,255,.12);color:var(--text);cursor:pointer;font:inherit}.button:hover{background:rgba(0,229,255,.22)}.button.secondary{border-color:var(--line);background:transparent}.message{min-height:22px;margin:12px 0 0;color:var(--muted);font-size:13px;line-height:1.6}.message.error{color:var(--danger)}.message.success{color:var(--green)}.required{color:var(--cyan)}@media(max-width:900px){.layout,.grid-2,.contact-row{grid-template-columns:1fr}.identity{display:none!important}main{padding:42px 16px 70px}}
   </style>
 </head>
 <body>
-  <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong>算法社</strong><small>Join Application</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html">返回官网</a></div></header>
+  <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Join Application</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
   <main>
     <p class="eyebrow">JOIN THE CLUB</p>
-    <h1>加入算法社</h1>
-    <p class="lead">填写报名信息后提交即可。管理员会查看你的申请并尽快联系你。欢迎所有零基础选手加入！</p>
+    <h1 data-i18n="join.h1">加入算法社</h1>
+    <p class="lead" data-i18n="join.lead">填写报名信息后提交即可。管理员会查看你的申请并尽快联系你。欢迎所有零基础选手加入！</p>
     <section class="layout">
       <aside class="panel">
-        <h2>社团信息</h2>
-        <p class="intro">先了解活动节奏与方向，再决定是否报名。</p>
+        <h2 data-i18n="join.info">社团信息</h2>
+        <p class="intro" data-i18n="join.infoIntro">先了解活动节奏与方向，再决定是否报名。</p>
         <ul class="info-list">
-          <li><strong>社团时间</strong><br>每周二和周四下午的 ECA 时间（15:45 到 17:10），一周出勤一天即可。</li>
-          <li><strong>主要教学</strong><br>C++ 和 Python，负责软件项目开发维护以及竞赛培训。</li>
+          <li><strong data-i18n="join.timeTitle">社团时间</strong><br><span data-i18n="join.timeBody">每周二和周四下午的 ECA 时间（15:45 到 17:10），一周出勤一天即可。</span></li>
+          <li><strong data-i18n="join.teachTitle">主要教学</strong><br><span data-i18n="join.teachBody">C++ 和 Python，负责软件项目开发维护以及竞赛培训。</span></li>
         </ul>
-        <div class="welcome">欢迎所有的零基础选手加入！</div>
+        <div class="welcome" data-i18n="join.welcome">欢迎所有的零基础选手加入！</div>
       </aside>
       <section class="panel">
-        <h2>报名表单</h2>
-        <p class="intro">带 <span class="required">*</span> 的为必填项。联系方式请先选择类型，再填写对应号码 / 账号。</p>
+        <h2 data-i18n="join.form">报名表单</h2>
+        <p class="intro" data-i18n="join.formIntro" data-i18n-mode="html">带 <span class="required">*</span> 的为必填项。联系方式请先选择类型，再填写对应号码 / 账号。</p>
         <form class="form" id="joinForm">
           <div class="grid-2">
             <div>
-              <label class="label" for="chineseName">中文姓名 <span class="required">*</span></label>
-              <input class="input" id="chineseName" name="chineseName" maxlength="20" required placeholder="例如 张三" pattern="[\u4e00-\u9fa5]{2,20}" autocomplete="name">
-              <p class="hint">请填写 2–20 个连续中文字符。</p>
+              <label class="label" for="chineseName"><span data-i18n="join.name">中文姓名*</span></label>
+              <input class="input" id="chineseName" name="chineseName" maxlength="20" required placeholder="例如 张三" data-i18n-placeholder="join.namePlaceholder" pattern="[\u4e00-\u9fa5]{2,20}" autocomplete="name">
+              <p class="hint" data-i18n="join.nameInvalid">请填写 2–20 个连续中文字符。</p>
             </div>
             <div>
-              <label class="label" for="memberClass">班级 <span class="required">*</span></label>
-              <input class="input" id="memberClass" name="memberClass" maxlength="80" required placeholder="例如 A1C5 / 计科 2401" autocomplete="organization-title">
+              <label class="label" for="memberClass"><span data-i18n="join.className">班级*</span></label>
+              <input class="input" id="memberClass" name="memberClass" maxlength="80" required placeholder="例如 A1C5 / 计科 2401" data-i18n-placeholder="join.classPlaceholder" autocomplete="organization-title">
             </div>
           </div>
           <div>
-            <label class="label" for="contactType">联系方式 <span class="required">*</span></label>
+            <label class="label" for="contactType"><span data-i18n="join.contact">联系方式*</span></label>
             <div class="contact-row">
               <select class="select" id="contactType" name="contactType" required>
-                <option value="wechat">微信号</option>
-                <option value="phone">手机号</option>
-                <option value="qq">QQ号</option>
-                <option value="email">邮箱</option>
+                <option value="wechat" data-i18n="join.wechat">微信号</option>
+                <option value="phone" data-i18n="join.phone">手机号</option>
+                <option value="qq" data-i18n="join.qq">QQ号</option>
+                <option value="email" data-i18n="join.email">邮箱</option>
               </select>
-              <input class="input" id="contactValue" name="contactValue" maxlength="120" required placeholder="请输入微信号">
+              <input class="input" id="contactValue" name="contactValue" maxlength="120" required placeholder="请输入微信号" data-i18n-placeholder="join.contactValuePh">
             </div>
           </div>
           <div>
-            <label class="label" for="selfIntro">介绍你自己（选填）</label>
-            <textarea class="textarea" id="selfIntro" name="selfIntro" maxlength="500" placeholder="例如：兴趣方向、编程基础、是否参加过竞赛等"></textarea>
+            <label class="label" for="selfIntro" data-i18n="join.selfIntro">介绍你自己（选填）</label>
+            <textarea class="textarea" id="selfIntro" name="selfIntro" maxlength="500" placeholder="例如：兴趣方向、编程基础、是否参加过竞赛等" data-i18n-placeholder="join.selfIntroPh"></textarea>
           </div>
           <div>
-            <label class="label" for="attraction">算法社什么吸引了你（选填）</label>
-            <textarea class="textarea" id="attraction" name="attraction" maxlength="500" placeholder="例如：项目实践、竞赛培训、社团氛围等"></textarea>
+            <label class="label" for="attraction" data-i18n="join.attraction">算法社什么吸引了你（选填）</label>
+            <textarea class="textarea" id="attraction" name="attraction" maxlength="500" placeholder="例如：项目实践、竞赛培训、社团氛围等" data-i18n-placeholder="join.attractionPh"></textarea>
           </div>
           <div>
-            <label class="label" for="expectation">你想在算法社获得什么（选填）</label>
-            <textarea class="textarea" id="expectation" name="expectation" maxlength="500" placeholder="例如：学会一门语言、做出作品、参加比赛等"></textarea>
+            <label class="label" for="expectation" data-i18n="join.expectation">你想在算法社获得什么（选填）</label>
+            <textarea class="textarea" id="expectation" name="expectation" maxlength="500" placeholder="例如：学会一门语言、做出作品、参加比赛等" data-i18n-placeholder="join.expectationPh"></textarea>
           </div>
           <div class="actions">
-            <button class="button" type="submit" id="submitButton">提交报名</button>
-            <button class="button secondary" type="reset" id="resetButton">清空表单</button>
+            <button class="button" type="submit" id="submitButton" data-i18n="join.submit">提交报名</button>
+            <button class="button secondary" type="reset" id="resetButton" data-i18n="common.clearForm">清空表单</button>
           </div>
         </form>
         <p class="message" id="joinMessage" role="status"></p>
@@ -79,12 +81,12 @@
     const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
     const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
     const $ = id => document.getElementById(id);
-    const CONTACT_PLACEHOLDERS = {
-      wechat: '请输入微信号',
-      phone: '请输入手机号',
-      qq: '请输入 QQ 号',
-      email: '请输入邮箱'
-    };
+    const CONTACT_PLACEHOLDERS = () => ({
+      wechat: ClubI18n.t('join.phWechat'),
+      phone: ClubI18n.t('join.phPhone'),
+      qq: ClubI18n.t('join.phQq'),
+      email: ClubI18n.t('join.phEmail')
+    });
 
     function setMessage(text, type = '') {
       $('joinMessage').textContent = text || '';
@@ -93,7 +95,7 @@
 
     function syncContactPlaceholder() {
       const type = $('contactType').value;
-      $('contactValue').placeholder = CONTACT_PLACEHOLDERS[type] || '请输入联系方式';
+      $('contactValue').placeholder = CONTACT_PLACEHOLDERS()[type] || ClubI18n.t('join.phContact');
     }
 
     async function submitJoin(payload) {
@@ -103,12 +105,13 @@
         body: JSON.stringify({ action: 'join_application_create', ...payload })
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || '提交报名失败。');
+      if (!response.ok) throw new Error(result.error || ClubI18n.t('join.submitFail'));
       return result;
     }
 
     $('contactType').addEventListener('change', syncContactPlaceholder);
     syncContactPlaceholder();
+    window.addEventListener('club:langchange', () => { syncContactPlaceholder(); if (window.ClubI18n) ClubI18n.apply(document); });
 
     $('joinForm').addEventListener('reset', () => {
       setTimeout(() => {
@@ -124,19 +127,19 @@
       const contactType = $('contactType').value;
       const contactValue = $('contactValue').value.trim();
       if (!/^[\u4e00-\u9fa5]{2,20}$/.test(chineseName)) {
-        setMessage('中文姓名需为 2–20 个连续中文字符。', 'error');
+        setMessage(ClubI18n.t('join.nameInvalid'), 'error');
         return;
       }
       if (!memberClass) {
-        setMessage('请填写班级。', 'error');
+        setMessage(ClubI18n.t('join.classRequired'), 'error');
         return;
       }
       if (!contactValue) {
-        setMessage('请填写联系方式。', 'error');
+        setMessage(ClubI18n.t('join.contactRequired'), 'error');
         return;
       }
       $('submitButton').disabled = true;
-      setMessage('正在提交报名…');
+      setMessage(ClubI18n.t('join.submitting'));
       try {
         const result = await submitJoin({
           chineseName,
@@ -147,11 +150,11 @@
           attraction: $('attraction').value.trim(),
           expectation: $('expectation').value.trim()
         });
-        setMessage(result.message || '报名已提交，我们会尽快联系你。', 'success');
+        setMessage(result.message || ClubI18n.t('join.submitted'), 'success');
         $('joinForm').reset();
         syncContactPlaceholder();
       } catch (error) {
-        setMessage(error.message || '提交失败。', 'error');
+        setMessage(error.message || ClubI18n.t('join.failed'), 'error');
       } finally {
         $('submitButton').disabled = false;
       }

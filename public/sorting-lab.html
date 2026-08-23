@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="lab.sorting.title">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>排序可视化实验室 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js" defer></script>
-  <style>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root { font-family:"Microsoft YaHei","PingFang SC","Noto Sans CJK SC",system-ui,sans-serif; color:#f6fbff; background:#020409; --bg:#020409; --panel:rgba(8,13,30,.8); --cyan:#00e5ff; --violet:#7c4dff; --pink:#ff5fc8; --gold:#ffd166; --text:#c8d4e2; --muted:#8fa3b8; --line:rgba(115,221,255,.2); --shadow:0 24px 90px rgba(0,229,255,.11); }
     *{box-sizing:border-box} body{margin:0;min-width:320px;min-height:100vh;background:radial-gradient(ellipse 70% 50% at 15% 4%,rgba(0,229,255,.15),transparent 62%),radial-gradient(ellipse 60% 42% at 88% 7%,rgba(124,77,255,.22),transparent 65%),linear-gradient(180deg,#020409,#050917 50%,#020409);color:#f6fbff;overflow-x:hidden} body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(rgba(0,229,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.045) 1px,transparent 1px);background-size:72px 72px;mask-image:radial-gradient(ellipse 110% 100% at 50% 10%,#000,transparent 92%)}
     a{color:inherit;text-decoration:none} button,input,select,textarea{font:inherit} button{cursor:pointer} button:disabled{cursor:not-allowed;opacity:.48}.topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:20px;padding:14px clamp(18px,5vw,72px);border-bottom:1px solid var(--line);background:rgba(2,4,12,.78);backdrop-filter:blur(18px)}.brand{display:inline-flex;align-items:center;gap:12px;margin-right:auto}.brand-mark{display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:linear-gradient(135deg,rgba(0,229,255,.18),rgba(124,77,255,.22));color:var(--cyan);font-weight:900;box-shadow:0 0 28px rgba(0,229,255,.22),inset 0 0 24px rgba(124,77,255,.18)}.brand strong,.brand small{display:block}.brand strong{font-size:16px}.brand small{color:var(--muted);font-size:12px;text-transform:uppercase}.member-identity{display:none;padding:5px 9px;border:1px solid rgba(0,229,255,.34);border-radius:999px;color:var(--cyan);font-size:12px;white-space:nowrap}.member-identity:not([hidden]){display:inline-flex}.back-link{padding:8px 12px;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:14px;transition:.2s}.back-link:hover{border-color:rgba(0,229,255,.55);background:rgba(0,229,255,.08);color:var(--cyan)}
@@ -19,29 +21,29 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="../index.html" aria-label="返回算法社首页"><span class="brand-mark">A</span><span><strong>算法社</strong><small>Algorithm Club</small></span></a>
+    <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a>
     <span class="member-identity" data-member-identity hidden></span>
-    <a class="back-link" href="visualization-lab.html">实验室选择</a>
+    <a class="back-link" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
   </header>
   <main>
     <section class="hero" aria-labelledby="pageTitle">
-      <div><p class="eyebrow">SORTING VISUALIZATION LAB · V1</p><h1 id="pageTitle">排序可视化实验室</h1><p>观察每一次比较、交换与移动。选择算法和数据集后，可连续演示或手动单步执行，理解排序过程如何逐步收敛。</p></div>
-      <aside class="algorithm-note" id="algorithmNote"><b>冒泡排序</b><span>重复比较相邻元素，将较大值逐步推向序列末端。</span></aside>
+      <div><p class="eyebrow">SORTING VISUALIZATION LAB · V1</p><h1 id="pageTitle" data-i18n="lab.sorting.h1">排序可视化实验室</h1><p data-i18n="lab.sorting.lead">观察每一次比较、交换与移动。选择算法和数据集后，可连续演示或手动单步执行，理解排序过程如何逐步收敛。</p></div>
+      <aside class="algorithm-note" id="algorithmNote"><b data-i18n="lab.sorting.bubble">冒泡排序</b><span data-i18n="lab.sorting.bubbleDesc">重复比较相邻元素，将较大值逐步推向序列末端。</span></aside>
     </section>
-    <section class="lab-grid" aria-label="排序演示控制台">
+    <section class="lab-grid" data-i18n-aria="lab.sorting.consoleAria" aria-label="排序演示控制台">
       <form class="panel controls" id="controlForm">
-        <h2>实验设置</h2>
-        <div class="control-group"><label for="algorithm">排序算法</label><select id="algorithm"><option value="bubble">冒泡排序</option><option value="bucket">桶排序</option><option value="quick">快速排序</option><option value="insertion">插入排序</option></select></div>
-        <div class="control-group"><fieldset><legend>数据模式</legend><div class="radio-row"><label><input type="radio" name="mode" value="random" checked /><span>随机生成</span></label><label><input type="radio" name="mode" value="custom" /><span>自定义</span></label></div></fieldset></div>
-        <div class="control-group custom-input" id="customWrap" hidden><label for="customData">自定义整数</label><textarea id="customData" placeholder="例如：12, 5, 28, 9, 16"></textarea><p class="hint">以逗号或空格分隔，支持 4–32 个 -999 至 999 的整数。</p><p class="error" id="inputError" role="alert" aria-live="polite"></p></div>
-        <div class="control-group"><label for="size">随机数据数量：<span id="sizeValue">16</span></label><input class="field" id="size" type="range" min="6" max="28" value="16" /><p class="hint">随机数据使用 5–99 的不重复整数，数量较大时将隐藏部分数值标签。</p></div>
-        <div class="button-stack"><button class="btn btn-primary" type="button" id="startButton">开始演示</button><button class="btn" type="button" id="stepButton">单步执行</button><button class="btn btn-warn" type="button" id="resetButton">重置当前数据</button><button class="btn" type="button" id="randomButton">随机生成</button></div>
+        <h2 data-i18n="lab.common.settings">实验设置</h2>
+        <div class="control-group"><label for="algorithm" data-i18n="lab.sorting.algoLabel">排序算法</label><select id="algorithm"><option value="bubble" data-i18n="lab.sorting.bubble">冒泡排序</option><option value="bucket" data-i18n="lab.sorting.bucket">桶排序</option><option value="quick" data-i18n="lab.sorting.quick">快速排序</option><option value="insertion" data-i18n="lab.sorting.insertion">插入排序</option></select></div>
+        <div class="control-group"><fieldset><legend data-i18n="lab.common.dataMode">数据模式</legend><div class="radio-row"><label><input type="radio" name="mode" value="random" checked /><span data-i18n="lab.common.randomMode">随机生成</span></label><label><input type="radio" name="mode" value="custom" /><span data-i18n="lab.common.custom">自定义</span></label></div></fieldset></div>
+        <div class="control-group custom-input" id="customWrap" hidden><label for="customData" data-i18n="lab.common.customInts">自定义整数</label><textarea id="customData" placeholder="例如：12, 5, 28, 9, 16" data-i18n-placeholder="lab.sorting.customPh"></textarea><p class="hint" data-i18n="lab.sorting.customHint">以逗号或空格分隔，支持 4–32 个 -999 至 999 的整数。</p><p class="error" id="inputError" role="alert" aria-live="polite"></p></div>
+        <div class="control-group"><label for="size"><span data-i18n="lab.common.randomSize">随机数据数量：</span><span id="sizeValue">16</span></label><input class="field" id="size" type="range" min="6" max="28" value="16" /><p class="hint" data-i18n="lab.sorting.randomHint">随机数据使用 5–99 的不重复整数，数量较大时将隐藏部分数值标签。</p></div>
+        <div class="button-stack"><button class="btn btn-primary" type="button" id="startButton" data-i18n="lab.common.start">开始演示</button><button class="btn" type="button" id="stepButton" data-i18n="lab.common.step">单步执行</button><button class="btn btn-warn" type="button" id="resetButton" data-i18n="lab.common.reset">重置当前数据</button><button class="btn" type="button" id="randomButton" data-i18n="lab.common.random">随机生成</button></div>
       </form>
       <section class="panel visual" aria-labelledby="visualTitle">
-        <div class="visual-header"><div><h2 id="visualTitle">数据柱状图</h2><span class="sr-only" id="announcement" aria-live="polite"></span></div><span class="status" id="statusText" role="status">就绪 · 等待开始</span></div>
-        <div class="chart-wrap"><div class="bars" id="bars" aria-label="待排序整数柱状图"></div></div>
-        <div class="metrics" aria-label="排序计数"><div class="metric"><span>比较次数</span><strong id="comparisons">0</strong></div><div class="metric"><span>交换 / 移动</span><strong id="moves">0</strong></div><div class="metric"><span>当前步骤</span><strong id="steps">0</strong></div></div>
-        <div class="legend" aria-label="颜色说明"><span><i></i>待处理</span><span><i class="l-compare"></i>正在比较</span><span><i class="l-move"></i>交换 / 移动</span><span><i class="l-sorted"></i>已就位</span></div>
+        <div class="visual-header"><div><h2 id="visualTitle" data-i18n="lab.sorting.chartTitle">数据柱状图</h2><span class="sr-only" id="announcement" aria-live="polite"></span></div><span class="status" id="statusText" role="status" data-i18n="lab.common.ready">就绪</span></div>
+        <div class="chart-wrap"><div class="bars" id="bars" data-i18n-aria="lab.sorting.chartAria" aria-label="待排序整数柱状图"></div></div>
+        <div class="metrics" data-i18n-aria="lab.sorting.metricsAria" aria-label="排序计数"><div class="metric"><span data-i18n="lab.sorting.comparisons">比较次数</span><strong id="comparisons">0</strong></div><div class="metric"><span data-i18n="lab.sorting.moves">交换 / 移动</span><strong id="moves">0</strong></div><div class="metric"><span data-i18n="lab.common.currentStep">当前步骤</span><strong id="steps">0</strong></div></div>
+        <div class="legend" data-i18n-aria="lab.common.colorLegend" aria-label="颜色说明"><span><i></i><span data-i18n="lab.sorting.legPending">待处理</span></span><span><i class="l-compare"></i><span data-i18n="lab.sorting.legCompare">正在比较</span></span><span><i class="l-move"></i><span data-i18n="lab.sorting.legMove">交换 / 移动</span></span><span><i class="l-sorted"></i><span data-i18n="lab.sorting.legSorted">已就位</span></span></div>
       </section>
     </section>
   </main>
@@ -49,11 +51,15 @@
     (() => {
       const el = id => document.getElementById(id);
       const ui = { algorithm:el('algorithm'), size:el('size'), sizeValue:el('sizeValue'), customWrap:el('customWrap'), customData:el('customData'), inputError:el('inputError'), bars:el('bars'), status:el('statusText'), note:el('algorithmNote'), comparisons:el('comparisons'), moves:el('moves'), steps:el('steps'), start:el('startButton'), step:el('stepButton'), reset:el('resetButton'), random:el('randomButton'), announcement:el('announcement') };
-      const descriptions = { bubble:['冒泡排序','重复比较相邻元素，将较大值逐步推向序列末端。'], bucket:['桶排序','按数值范围分桶，在每个桶内插入排序后依序合并。'], quick:['快速排序','选择枢轴分区：小于枢轴的元素在左，大于枢轴的元素在右。'], insertion:['插入排序','依次取出元素，在左侧已排序区中向前移动并插入正确位置。'] };
+      const descKeys = { bubble:['lab.sorting.bubble','lab.sorting.bubbleDesc'], bucket:['lab.sorting.bucket','lab.sorting.bucketDesc'], quick:['lab.sorting.quick','lab.sorting.quickDesc'], insertion:['lab.sorting.insertion','lab.sorting.insertionDesc'] };
+      function getDescriptions(){ const o={}; for(const k of Object.keys(descKeys)){ o[k]=[ClubI18n.t(descKeys[k][0]), ClubI18n.t(descKeys[k][1])]; } return o; }
+      function refreshNote(){ const [name,text]=getDescriptions()[ui.algorithm.value]; ui.note.innerHTML=`<b>${name}</b><span>${text}</span>`; }
+      function syncStartLabel(){ if(cursor>=operations.length && operations.length){ ui.start.textContent=ClubI18n.t('lab.common.restart'); } else if(playing){ ui.start.textContent=ClubI18n.t('lab.common.pause'); } else if(cursor>0){ ui.start.textContent=ClubI18n.t('lab.common.resume'); } else { ui.start.textContent=ClubI18n.t('lab.common.start'); } }
+      function refreshStaticStatus(){ if(ui.inputError.textContent){ updateStatus(ClubI18n.t('lab.sorting.errFixCustom')); return; } if(playing){ updateStatus(ClubI18n.t('lab.common.running')); return; } if(cursor>=operations.length && operations.length){ updateStatus(ClubI18n.t('lab.common.doneOps',{n:cursor})); return; } if(cursor>0){ updateStatus(ClubI18n.t('lab.common.paused')); return; } updateStatus(ClubI18n.t('lab.common.readyOps',{n:operations.length})); }
       let source = [], data = [], operations = [], cursor = 0, comparisons = 0, moves = 0, timer = null, playing = false;
       const sleepDelay = 240;
       function randomData(count=Number(ui.size.value)){ const pool=Array.from({length:95},(_,i)=>i+5); for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]} return pool.slice(0,count); }
-      function parseCustom(){ const raw=ui.customData.value.trim(); if(!raw){throw new Error('请输入自定义整数。')} const values=raw.split(/[\s,，]+/).filter(Boolean); if(values.length<4||values.length>32) throw new Error('请输入 4–32 个整数。'); if(values.some(v=>!/^[-+]?\d+$/.test(v))) throw new Error('只能输入以逗号或空格分隔的整数。'); const nums=values.map(Number); if(nums.some(n=>n<-999||n>999)) throw new Error('整数范围应在 -999 至 999。'); return nums; }
+      function parseCustom(){ const raw=ui.customData.value.trim(); if(!raw){throw new Error(ClubI18n.t('lab.sorting.errNeedCustom'))} const values=raw.split(/[\s,，]+/).filter(Boolean); if(values.length<4||values.length>32) throw new Error(ClubI18n.t('lab.sorting.errCount')); if(values.some(v=>!/^[-+]?\d+$/.test(v))) throw new Error(ClubI18n.t('lab.sorting.errIntsOnly')); const nums=values.map(Number); if(nums.some(n=>n<-999||n>999)) throw new Error(ClubI18n.t('lab.sorting.errRange')); return nums; }
       function add(ops,type,details={}){ops.push({type,...details});}
       function bubbleOps(arr){ const a=arr.slice(),ops=[]; for(let end=a.length-1;end>0;end--){for(let i=0;i<end;i++){add(ops,'compare',{indices:[i,i+1]});if(a[i]>a[i+1]){[a[i],a[i+1]]=[a[i+1],a[i]];add(ops,'move',{indices:[i,i+1],values:[a[i],a[i+1]]});}}add(ops,'sorted',{indices:[end]});} add(ops,'sorted',{indices:[0]});return ops; }
       function insertionOps(arr){ const a=arr.slice(),ops=[]; add(ops,'sorted',{indices:[0]}); for(let i=1;i<a.length;i++){const key=a[i];let j=i-1;add(ops,'select',{indices:[i]});while(j>=0){add(ops,'compare',{indices:[j,j+1]});if(a[j]>key){a[j+1]=a[j];add(ops,'move',{indices:[j+1],values:[a[j]]});j--;}else break;}a[j+1]=key;add(ops,'move',{indices:[j+1],values:[key]});add(ops,'sorted',{indices:Array.from({length:i+1},(_,k)=>k)});}return ops; }
@@ -61,31 +67,39 @@
       function bucketOps(arr){const a=arr.slice(),ops=[],min=Math.min(...a),max=Math.max(...a),bucketCount=Math.max(2,Math.ceil(Math.sqrt(a.length))),width=Math.max(1,Math.ceil((max-min+1)/bucketCount)),buckets=Array.from({length:bucketCount},()=>[]);a.forEach((value,index)=>{const b=Math.min(bucketCount-1,Math.floor((value-min)/width));add(ops,'compare',{indices:[index]});buckets[b].push(value);add(ops,'bucket',{indices:[index]});});let merged=[];buckets.forEach(bucket=>{for(let i=1;i<bucket.length;i++){const key=bucket[i];let j=i-1;while(j>=0){add(ops,'compare',{indices:[]});if(bucket[j]>key){bucket[j+1]=bucket[j];j--;}else break;}bucket[j+1]=key;}merged=merged.concat(bucket);});merged.forEach((value,index)=>add(ops,'move',{indices:[index],values:[value]}));add(ops,'sorted',{indices:merged.map((_,i)=>i)});return ops;}
       function buildOps(){const type=ui.algorithm.value;return type==='bubble'?bubbleOps(data):type==='bucket'?bucketOps(data):type==='quick'?quickOps(data):insertionOps(data)}
       function classFor(index,op){if(op?.type==='sorted'&&op.indices?.includes(index))return'sorted';if(op?.type==='pivot'&&op.indices?.includes(index))return'pivot';if(op?.type==='compare'&&op.indices?.includes(index))return'compare';if(['move','select','bucket'].includes(op?.type)&&op.indices?.includes(index))return'move';return''}
-      function render(op=null){const max=Math.max(...data.map(Math.abs),1);ui.bars.innerHTML=data.map((value,index)=>`<div class="bar ${classFor(index,op)}" data-value="${value}" style="--height:${Math.max(5,Math.abs(value)/max*100)}%" aria-label="第 ${index+1} 个数值：${value}"></div>`).join(''); ui.comparisons.textContent=comparisons;ui.moves.textContent=moves;ui.steps.textContent=cursor;}
+      function render(op=null){const max=Math.max(...data.map(Math.abs),1);ui.bars.innerHTML=data.map((value,index)=>`<div class="bar ${classFor(index,op)}" data-value="${value}" style="--height:${Math.max(5,Math.abs(value)/max*100)}%" aria-label="${ClubI18n.t('lab.sorting.barAria',{i:index+1,v:value})}"></div>`).join(''); ui.comparisons.textContent=comparisons;ui.moves.textContent=moves;ui.steps.textContent=cursor;}
       function updateStatus(text){ui.status.textContent=text;ui.announcement.textContent=text;}
-      function prepare(){ stop(); cursor=0; comparisons=0;moves=0;data=source.slice();operations=buildOps();render();updateStatus('就绪 · 共 '+operations.length+' 个操作');ui.start.textContent='开始演示';}
-      function applyNext(){if(cursor>=operations.length){finish();return false}const op=operations[cursor++];if(op.type==='compare')comparisons++;if(op.type==='move'){moves++;op.indices.forEach((index,n)=>{if(op.values&&n<op.values.length)data[index]=op.values[n];});}render(op);const labels={compare:'正在比较',move:'正在交换 / 移动',pivot:'正在选择枢轴',bucket:'正在分配到桶',select:'正在选择待插入元素',sorted:'元素已就位'};updateStatus(`${labels[op.type]||'执行中'} · ${cursor} / ${operations.length}`);return true}
-      function finish(){stop();render({type:'sorted',indices:data.map((_,i)=>i)});updateStatus(`完成 · 已执行 ${cursor} 个操作`);ui.start.textContent='重新演示';}
+      function prepare(){ stop(); cursor=0; comparisons=0;moves=0;data=source.slice();operations=buildOps();render();updateStatus(ClubI18n.t('lab.common.readyOps',{n:operations.length}));ui.start.textContent=ClubI18n.t('lab.common.start');}
+      function applyNext(){if(cursor>=operations.length){finish();return false}const op=operations[cursor++];if(op.type==='compare')comparisons++;if(op.type==='move'){moves++;op.indices.forEach((index,n)=>{if(op.values&&n<op.values.length)data[index]=op.values[n];});}render(op);const labelKeys={compare:'lab.sorting.opCompare',move:'lab.sorting.opMove',pivot:'lab.sorting.opPivot',bucket:'lab.sorting.opBucket',select:'lab.sorting.opSelect',sorted:'lab.sorting.opSorted'};const label=ClubI18n.t(labelKeys[op.type]||'lab.common.executing');updateStatus(ClubI18n.t('lab.common.stepOf',{label,cur:cursor,total:operations.length}));return true}
+      function finish(){stop();render({type:'sorted',indices:data.map((_,i)=>i)});updateStatus(ClubI18n.t('lab.common.doneOps',{n:cursor}));ui.start.textContent=ClubI18n.t('lab.common.restart');}
       function loop(){if(!playing)return;if(!applyNext())return;timer=setTimeout(loop,sleepDelay)}
       function syncCustomData(){
         if(cursor!==0 || document.querySelector('input[name="mode"]:checked').value!=='custom') return true;
-        try{ui.inputError.textContent='';useData(parseCustom());return true}catch(err){ui.inputError.textContent=err.message;updateStatus('输入有误 · 请修正自定义数据');return false}
+        try{ui.inputError.textContent='';useData(parseCustom());return true}catch(err){ui.inputError.textContent=err.message;updateStatus(ClubI18n.t('lab.sorting.errFixCustom'));return false}
       }
       function startPause(){
         if(!playing && !syncCustomData()) return;
         if(cursor>=operations.length)prepare();
-        playing=!playing;ui.start.textContent=playing?'暂停演示':'继续演示';updateStatus(playing?'演示进行中':'已暂停 · 可继续或单步');if(playing)loop();
+        playing=!playing;ui.start.textContent=playing?ClubI18n.t('lab.common.pause'):ClubI18n.t('lab.common.resume');updateStatus(playing?ClubI18n.t('lab.common.running'):ClubI18n.t('lab.common.paused'));if(playing)loop();
       }
       function stop(){playing=false;if(timer){clearTimeout(timer);timer=null}}
       function useData(values){source=values.slice();prepare()}
       function generateRandom(){ui.inputError.textContent='';document.querySelector('input[name="mode"][value="random"]').checked=true;ui.customWrap.hidden=true;useData(randomData());}
-      ui.algorithm.addEventListener('change',()=>{const [name,text]=descriptions[ui.algorithm.value];ui.note.innerHTML=`<b>${name}</b><span>${text}</span>`;prepare();});
+      ui.algorithm.addEventListener('change',()=>{refreshNote();prepare();});
       ui.size.addEventListener('input',()=>ui.sizeValue.textContent=ui.size.value);
       document.querySelectorAll('input[name="mode"]').forEach(input=>input.addEventListener('change',()=>{ui.customWrap.hidden=input.value!=='custom'||!input.checked;if(input.checked&&input.value==='random')generateRandom();}));
-      ui.start.addEventListener('click',startPause);ui.step.addEventListener('click',()=>{stop();if(!syncCustomData())return;ui.start.textContent='继续演示';applyNext();});ui.reset.addEventListener('click',()=>{if(syncCustomData())prepare();});ui.random.addEventListener('click',generateRandom);
+      ui.start.addEventListener('click',startPause);ui.step.addEventListener('click',()=>{stop();if(!syncCustomData())return;ui.start.textContent=ClubI18n.t('lab.common.resume');applyNext();});ui.reset.addEventListener('click',()=>{if(syncCustomData())prepare();});ui.random.addEventListener('click',generateRandom);
       ui.customData.addEventListener('change',()=>{if(document.querySelector('input[name="mode"]:checked').value!=='custom')return;try{ui.inputError.textContent='';useData(parseCustom())}catch(err){ui.inputError.textContent=err.message}});
       document.getElementById('controlForm').addEventListener('submit',e=>e.preventDefault());
       useData(randomData());
+      refreshNote();
+      window.addEventListener('club:langchange', () => {
+        refreshNote();
+        syncStartLabel();
+        refreshStaticStatus();
+        render(cursor>0 && cursor<=operations.length ? operations[cursor-1] : null);
+        if (typeof ClubI18n?.apply === 'function') ClubI18n.apply(document);
+      });
     })();
   </script>
 </body>

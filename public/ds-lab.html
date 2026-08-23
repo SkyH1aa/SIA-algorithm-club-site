@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="lab.ds.title">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>数据结构可视化实验室 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js" defer></script>
-  <style>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root {
       font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
       color: #f6fbff;
@@ -560,53 +562,53 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="../index.html" aria-label="返回算法社首页">
+    <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页">
       <span class="brand-mark">A</span>
-      <span><strong>算法社</strong><small>Algorithm Club</small></span>
+      <span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span>
     </a>
     <span class="member-identity" data-member-identity hidden></span>
-    <a class="back-link" href="visualization-lab.html">实验室选择</a>
+    <a class="back-link" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
   </header>
 
   <main>
     <section class="hero" aria-labelledby="pageTitle">
       <div>
         <p class="eyebrow">DATA STRUCTURE LAB · V1</p>
-        <h1 id="pageTitle">数据结构可视化实验室</h1>
-        <p>亲手操作栈、队列与链表：观察 push/pop、enqueue/dequeue，以及头插、尾插与按值删除时节点与指针如何变化。</p>
+        <h1 id="pageTitle" data-i18n="lab.ds.h1">数据结构可视化实验室</h1>
+        <p data-i18n="lab.ds.lead">亲手操作栈、队列与链表：观察 push/pop、enqueue/dequeue，以及头插、尾插与按值删除时节点与指针如何变化。</p>
       </div>
       <aside class="algorithm-note" id="structureNote">
-        <b>栈 Stack</b>
-        <span>后进先出（LIFO）。只能在栈顶压入或弹出元素。</span>
+        <b data-i18n="lab.ds.stack">栈 Stack</b>
+        <span data-i18n="lab.ds.stackDesc">后进先出（LIFO）。只能在栈顶压入或弹出元素。</span>
       </aside>
     </section>
 
-    <section class="lab-grid" aria-label="数据结构演示控制台">
+    <section class="lab-grid" data-i18n-aria="lab.ds.consoleAria" aria-label="数据结构演示控制台">
       <form class="panel controls" id="controlForm">
-        <h2>实验设置</h2>
+        <h2 data-i18n="lab.common.settings">实验设置</h2>
 
         <div class="control-group">
-          <label for="structure">数据结构</label>
+          <label for="structure" data-i18n="lab.ds.structLabel">数据结构</label>
           <select id="structure">
-            <option value="stack">栈 Stack</option>
-            <option value="queue">队列 Queue</option>
-            <option value="list">链表 Linked List</option>
+            <option value="stack" data-i18n="lab.ds.stack">栈 Stack</option>
+            <option value="queue" data-i18n="lab.ds.queue">队列 Queue</option>
+            <option value="list" data-i18n="lab.ds.list">链表 Linked List</option>
           </select>
         </div>
 
         <div class="control-group" id="valueGroup">
-          <label for="valueInput">操作数值</label>
-          <input class="field" id="valueInput" type="text" inputmode="numeric" placeholder="例如：7" maxlength="6" />
-          <p class="hint">支持 -999 至 999 的整数。栈/队列用 push 与 enqueue；链表可头插或尾插。</p>
+          <label for="valueInput" data-i18n="lab.ds.valueLabel">操作数值</label>
+          <input class="field" id="valueInput" type="text" inputmode="numeric" placeholder="例如：7" maxlength="6" data-i18n-placeholder="lab.ds.valuePh" />
+          <p class="hint" data-i18n="lab.ds.valueHint">支持 -999 至 999 的整数。栈/队列用 push 与 enqueue；链表可头插或尾插。</p>
           <p class="error" id="inputError" role="alert" aria-live="polite"></p>
         </div>
 
         <div class="control-group" id="listModeGroup" hidden>
           <fieldset>
-            <legend>链表插入位置</legend>
+            <legend data-i18n="lab.ds.listInsertLegend">链表插入位置</legend>
             <div class="radio-row">
-              <label><input type="radio" name="listInsert" value="head" checked /><span>头插</span></label>
-              <label><input type="radio" name="listInsert" value="tail" /><span>尾插</span></label>
+              <label><input type="radio" name="listInsert" value="head" checked /><span data-i18n="lab.ds.insertHead">头插</span></label>
+              <label><input type="radio" name="listInsert" value="tail" /><span data-i18n="lab.ds.insertTail">尾插</span></label>
             </div>
           </fieldset>
         </div>
@@ -616,39 +618,39 @@
         </div>
 
         <div class="button-stack" style="margin-top:12px">
-          <button class="btn btn-warn" type="button" id="seedButton">填充示例数据</button>
-          <button class="btn" type="button" id="clearButton">清空结构</button>
+          <button class="btn btn-warn" type="button" id="seedButton" data-i18n="lab.ds.seed">填充示例数据</button>
+          <button class="btn" type="button" id="clearButton" data-i18n="lab.ds.clear">清空结构</button>
         </div>
       </form>
 
       <section class="panel visual" aria-labelledby="visualTitle">
         <div class="visual-header">
           <div>
-            <h2 id="visualTitle">结构视图</h2>
+            <h2 id="visualTitle" data-i18n="lab.ds.visualTitle">结构视图</h2>
             <span class="sr-only" id="announcement" aria-live="polite"></span>
           </div>
-          <span class="status" id="statusText" role="status">就绪 · 等待操作</span>
+          <span class="status" id="statusText" role="status" data-i18n="lab.common.ready">就绪</span>
         </div>
 
         <div class="stage-wrap">
-          <div class="stage-label" id="stageLabel">栈顶在上方 · LIFO</div>
-          <div class="stage" id="stage" aria-label="数据结构可视化区域"></div>
+          <div class="stage-label" id="stageLabel" data-i18n="lab.ds.stageStack">栈顶在上方 · LIFO</div>
+          <div class="stage" id="stage" data-i18n-aria="lab.ds.stageAria" aria-label="数据结构可视化区域"></div>
         </div>
 
-        <div class="metrics" aria-label="结构计数">
-          <div class="metric"><span id="metricALabel">元素个数</span><strong id="metricA">0</strong></div>
-          <div class="metric"><span id="metricBLabel">栈顶 / 队首</span><strong id="metricB">—</strong></div>
-          <div class="metric"><span>操作次数</span><strong id="opCount">0</strong></div>
+        <div class="metrics" data-i18n-aria="lab.ds.metricsAria" aria-label="结构计数">
+          <div class="metric"><span id="metricALabel" data-i18n="lab.ds.metricCount">元素个数</span><strong id="metricA">0</strong></div>
+          <div class="metric"><span id="metricBLabel" data-i18n="lab.ds.metricTopFront">栈顶 / 队首</span><strong id="metricB">—</strong></div>
+          <div class="metric"><span data-i18n="lab.ds.opCount">操作次数</span><strong id="opCount">0</strong></div>
         </div>
 
-        <div class="legend" aria-label="颜色说明">
-          <span><i></i>普通节点</span>
-          <span><i class="l-active"></i>当前操作</span>
-          <span><i class="l-highlight"></i>即将移出</span>
-          <span><i class="l-pointer"></i>头 / 尾指针</span>
+        <div class="legend" data-i18n-aria="lab.common.colorLegend" aria-label="颜色说明">
+          <span><i></i><span data-i18n="lab.ds.legNode">普通节点</span></span>
+          <span><i class="l-active"></i><span data-i18n="lab.ds.legActive">当前操作</span></span>
+          <span><i class="l-highlight"></i><span data-i18n="lab.ds.legRemove">即将移出</span></span>
+          <span><i class="l-pointer"></i><span data-i18n="lab.ds.legPointer">头 / 尾指针</span></span>
         </div>
 
-        <div class="op-log" id="opLog" aria-live="polite">提示：选择结构后，输入数值并执行插入或删除操作。</div>
+        <div class="op-log" id="opLog" aria-live="polite" data-i18n="lab.ds.hintLog">提示：选择结构后，输入数值并执行插入或删除操作。</div>
       </section>
     </section>
   </main>
@@ -678,23 +680,17 @@
         visualTitle: el('visualTitle')
       };
 
-      const descriptions = {
-        stack: ['栈 Stack', '后进先出（LIFO）。只能在栈顶压入或弹出元素。'],
-        queue: ['队列 Queue', '先进先出（FIFO）。队尾入队，队首出队。'],
-        list: ['链表 Linked List', '节点通过指针串联。可在头部或尾部插入，也可按值删除节点。']
+      const descKeys = {
+        stack: ['lab.ds.stack', 'lab.ds.stackDesc'],
+        queue: ['lab.ds.queue', 'lab.ds.queueDesc'],
+        list: ['lab.ds.list', 'lab.ds.listDesc']
       };
-
-      const stageTips = {
-        stack: '栈顶在上方 · LIFO',
-        queue: '左侧为队首 · 右侧为队尾 · FIFO',
-        list: '从左到右：head → … → null'
-      };
-
-      const titles = {
-        stack: '栈视图',
-        queue: '队列视图',
-        list: '链表视图'
-      };
+      const stageTipKeys = { stack: 'lab.ds.stageStack', queue: 'lab.ds.stageQueue', list: 'lab.ds.stageList' };
+      const titleKeys = { stack: 'lab.ds.visualTitle', queue: 'lab.ds.visualTitle', list: 'lab.ds.visualTitle' };
+      function getDescriptions(){ const o={}; for(const k of Object.keys(descKeys)){ o[k]=[ClubI18n.t(descKeys[k][0]), ClubI18n.t(descKeys[k][1])]; } return o; }
+      function stageTipsOf(type){ return ClubI18n.t(stageTipKeys[type]); }
+      function titleOf(type){ return ClubI18n.t(titleKeys[type]); }
+      function refreshNote(){ const [name,text]=getDescriptions()[structure()]; ui.note.innerHTML=`<b>${name}</b><span>${text}</span>`; }
 
       let items = [];
       let opCount = 0;
@@ -704,10 +700,10 @@
 
       function parseValue() {
         const raw = ui.valueInput.value.trim();
-        if (!raw) throw new Error('请输入要操作的整数。');
-        if (!/^[-+]?\d+$/.test(raw)) throw new Error('只能输入整数。');
+        if (!raw) throw new Error(ClubI18n.t('lab.ds.errNeedValue'));
+        if (!/^[-+]?\d+$/.test(raw)) throw new Error(ClubI18n.t('lab.ds.errIntsOnly'));
         const num = Number(raw);
-        if (num < -999 || num > 999) throw new Error('整数范围应在 -999 至 999。');
+        if (num < -999 || num > 999) throw new Error(ClubI18n.t('lab.ds.errRange'));
         return num;
       }
 
@@ -747,19 +743,19 @@
         const type = structure();
         const buttons = {
           stack: [
-            ['pushButton', 'btn btn-primary', 'Push 入栈'],
-            ['popButton', 'btn btn-danger', 'Pop 出栈'],
-            ['peekButton', 'btn', 'Peek 查看栈顶']
+            ['pushButton', 'btn btn-primary', ClubI18n.t('lab.ds.btnPush')],
+            ['popButton', 'btn btn-danger', ClubI18n.t('lab.ds.btnPop')],
+            ['peekButton', 'btn', ClubI18n.t('lab.ds.btnPeek')]
           ],
           queue: [
-            ['enqueueButton', 'btn btn-primary', 'Enqueue 入队'],
-            ['dequeueButton', 'btn btn-danger', 'Dequeue 出队'],
-            ['frontButton', 'btn', 'Front 查看队首']
+            ['enqueueButton', 'btn btn-primary', ClubI18n.t('lab.ds.btnEnqueue')],
+            ['dequeueButton', 'btn btn-danger', ClubI18n.t('lab.ds.btnDequeue')],
+            ['frontButton', 'btn', ClubI18n.t('lab.ds.btnFront')]
           ],
           list: [
-            ['insertButton', 'btn btn-primary', '插入节点'],
-            ['deleteButton', 'btn btn-danger', '按值删除'],
-            ['searchButton', 'btn', '按值查找']
+            ['insertButton', 'btn btn-primary', ClubI18n.t('lab.ds.btnInsert')],
+            ['deleteButton', 'btn btn-danger', ClubI18n.t('lab.ds.btnDelete')],
+            ['searchButton', 'btn', ClubI18n.t('lab.ds.btnSearch')]
           ]
         }[type];
 
@@ -786,16 +782,16 @@
         const type = structure();
         ui.metricA.textContent = String(items.length);
         if (type === 'stack') {
-          ui.metricALabel.textContent = '栈内元素';
-          ui.metricBLabel.textContent = '栈顶';
+          ui.metricALabel.textContent = ClubI18n.t('lab.ds.countStack');
+          ui.metricBLabel.textContent = ClubI18n.t('lab.ds.topStack');
           ui.metricB.textContent = items.length ? String(items[items.length - 1]) : '—';
         } else if (type === 'queue') {
-          ui.metricALabel.textContent = '队内元素';
-          ui.metricBLabel.textContent = '队首';
+          ui.metricALabel.textContent = ClubI18n.t('lab.ds.countQueue');
+          ui.metricBLabel.textContent = ClubI18n.t('lab.ds.frontQueue');
           ui.metricB.textContent = items.length ? String(items[0]) : '—';
         } else {
-          ui.metricALabel.textContent = '节点个数';
-          ui.metricBLabel.textContent = '头节点';
+          ui.metricALabel.textContent = ClubI18n.t('lab.ds.countList');
+          ui.metricBLabel.textContent = ClubI18n.t('lab.ds.headList');
           ui.metricB.textContent = items.length ? String(items[0]) : '—';
         }
       }
@@ -824,8 +820,8 @@
         lastMode = mode;
 
         const type = structure();
-        ui.stageLabel.textContent = stageTips[type];
-        ui.visualTitle.textContent = titles[type];
+        ui.stageLabel.textContent = stageTipsOf(type);
+        ui.visualTitle.textContent = titleOf(type);
 
         if (type === 'stack') {
           ui.stage.innerHTML = `
@@ -842,7 +838,7 @@
                 index === enterIndex ? 'enter' : '',
                 index === exitIndex ? 'exit' : ''
               ].filter(Boolean).join(' ');
-              return `<div class="${cls}" data-value="${value}" aria-label="栈位置 ${index + 1}：${value}"><span class="cell-index">${index === items.length - 1 ? 'top' : index}</span>${value}</div>`;
+              return `<div class="${cls}" data-value="${value}" aria-label="${ClubI18n.t('lab.ds.stackSlot',{i:index+1,v:value})}"><span class="cell-index">${index === items.length - 1 ? 'top' : index}</span>${value}</div>`;
             }).join('');
           }
         } else if (type === 'queue') {
@@ -861,7 +857,7 @@
                 index === exitIndex ? 'exit' : ''
               ].filter(Boolean).join(' ');
               const tag = index === 0 ? 'front' : (index === items.length - 1 ? 'rear' : String(index));
-              return `<div class="${cls}" data-value="${value}" aria-label="队列位置 ${index + 1}：${value}"><span class="cell-index">${tag}</span>${value}</div>`;
+              return `<div class="${cls}" data-value="${value}" aria-label="${ClubI18n.t('lab.ds.queueSlot',{i:index+1,v:value})}"><span class="cell-index">${tag}</span>${value}</div>`;
             }).join('');
           }
         } else {
@@ -879,7 +875,7 @@
               ].filter(Boolean).join(' ');
               parts.push(`
                 <div class="list-node-wrap">
-                  <div class="${cls}" data-value="${value}" aria-label="链表节点 ${index + 1}：${value}">
+                  <div class="${cls}" data-value="${value}" aria-label="${ClubI18n.t('lab.ds.listSlot',{i:index+1,v:value})}">
                     <span class="cell-index">n${index}</span>${value}
                   </div>
                   <div class="list-arrow" aria-hidden="true">→</div>
@@ -908,10 +904,10 @@
           clearError();
           let value;
           try { value = parseValue(); }
-          catch (err) { ui.inputError.textContent = err.message; setStatus('输入有误'); return; }
+          catch (err) { ui.inputError.textContent = err.message; setStatus(ClubI18n.t('lab.common.inputError')); return; }
           if (items.length >= 12) {
-            ui.inputError.textContent = '演示栈最多 12 个元素。';
-            setStatus('已达容量上限');
+            ui.inputError.textContent = ClubI18n.t('lab.ds.errStackCap');
+            setStatus(ClubI18n.t('lab.ds.atCapacity'));
             return;
           }
           items.push(value);
@@ -928,8 +924,8 @@
         await withLock(async () => {
           clearError();
           if (!items.length) {
-            setStatus('空栈 · 无法出栈');
-            setLog('pop() 失败：栈为空（underflow）。');
+            setStatus(ClubI18n.t('lab.ds.emptyStackPop'));
+            setLog(ClubI18n.t('lab.ds.popFail'));
             return;
           }
           const topIndex = items.length - 1;
@@ -943,7 +939,7 @@
           bumpOps();
           render({ focusIndex: items.length ? items.length - 1 : -1, mode: 'pointer' });
           setStatus(items.length ? `Pop ${value} · 新栈顶 ${items[items.length - 1]}` : `Pop ${value} · 栈已空`);
-          setLog(`pop() → 返回 ${value}；当前栈（底→顶）：[${items.join(', ') || '空'}]`);
+          setLog(`pop() → 返回 ${value}；当前栈（底→顶）：[${items.join(', ') || ClubI18n.t('lab.ds.empty')}]`);
         });
       }
 
@@ -951,8 +947,8 @@
         await withLock(async () => {
           clearError();
           if (!items.length) {
-            setStatus('空栈 · 无栈顶');
-            setLog('peek() 失败：栈为空。');
+            setStatus(ClubI18n.t('lab.ds.emptyStackTop'));
+            setLog(ClubI18n.t('lab.ds.peekFail'));
             return;
           }
           const topIndex = items.length - 1;
@@ -971,10 +967,10 @@
           clearError();
           let value;
           try { value = parseValue(); }
-          catch (err) { ui.inputError.textContent = err.message; setStatus('输入有误'); return; }
+          catch (err) { ui.inputError.textContent = err.message; setStatus(ClubI18n.t('lab.common.inputError')); return; }
           if (items.length >= 12) {
-            ui.inputError.textContent = '演示队列最多 12 个元素。';
-            setStatus('已达容量上限');
+            ui.inputError.textContent = ClubI18n.t('lab.ds.errQueueCap');
+            setStatus(ClubI18n.t('lab.ds.atCapacity'));
             return;
           }
           items.push(value);
@@ -991,8 +987,8 @@
         await withLock(async () => {
           clearError();
           if (!items.length) {
-            setStatus('空队列 · 无法出队');
-            setLog('dequeue() 失败：队列为空（underflow）。');
+            setStatus(ClubI18n.t('lab.ds.emptyQueueDeq'));
+            setLog(ClubI18n.t('lab.ds.deqFail'));
             return;
           }
           const value = items[0];
@@ -1005,7 +1001,7 @@
           bumpOps();
           render({ focusIndex: items.length ? 0 : -1, mode: 'pointer' });
           setStatus(items.length ? `Dequeue ${value} · 新队首 ${items[0]}` : `Dequeue ${value} · 队列已空`);
-          setLog(`dequeue() → 返回 ${value}；当前队列（前→后）：[${items.join(', ') || '空'}]`);
+          setLog(`dequeue() → 返回 ${value}；当前队列（前→后）：[${items.join(', ') || ClubI18n.t('lab.ds.empty')}]`);
         });
       }
 
@@ -1013,8 +1009,8 @@
         await withLock(async () => {
           clearError();
           if (!items.length) {
-            setStatus('空队列 · 无队首');
-            setLog('front() 失败：队列为空。');
+            setStatus(ClubI18n.t('lab.ds.emptyQueueFront'));
+            setLog(ClubI18n.t('lab.ds.frontFail'));
             return;
           }
           const value = items[0];
@@ -1032,10 +1028,10 @@
           clearError();
           let value;
           try { value = parseValue(); }
-          catch (err) { ui.inputError.textContent = err.message; setStatus('输入有误'); return; }
+          catch (err) { ui.inputError.textContent = err.message; setStatus(ClubI18n.t('lab.common.inputError')); return; }
           if (items.length >= 10) {
-            ui.inputError.textContent = '演示链表最多 10 个节点。';
-            setStatus('已达容量上限');
+            ui.inputError.textContent = ClubI18n.t('lab.ds.errListCap');
+            setStatus(ClubI18n.t('lab.ds.atCapacity'));
             return;
           }
           const mode = listInsertMode();
@@ -1056,10 +1052,10 @@
           clearError();
           let value;
           try { value = parseValue(); }
-          catch (err) { ui.inputError.textContent = err.message; setStatus('输入有误'); return; }
+          catch (err) { ui.inputError.textContent = err.message; setStatus(ClubI18n.t('lab.common.inputError')); return; }
           if (!items.length) {
-            setStatus('空链表 · 无法删除');
-            setLog('delete(value) 失败：链表为空。');
+            setStatus(ClubI18n.t('lab.ds.emptyListDel'));
+            setLog(ClubI18n.t('lab.ds.delEmpty'));
             return;
           }
 
@@ -1079,7 +1075,7 @@
               bumpOps();
               render({ focusIndex: items.length ? Math.min(i, items.length - 1) : -1, mode: 'pointer' });
               setStatus(`已删除 ${value}`);
-              setLog(`delete(${value}) 成功 · 新链表：[${items.join(' → ') || '空'}] → null`);
+              setLog(`delete(${value}) 成功 · 新链表：[${items.join(' → ') || ClubI18n.t('lab.ds.empty')}] → null`);
               return;
             }
           }
@@ -1096,10 +1092,10 @@
           clearError();
           let value;
           try { value = parseValue(); }
-          catch (err) { ui.inputError.textContent = err.message; setStatus('输入有误'); return; }
+          catch (err) { ui.inputError.textContent = err.message; setStatus(ClubI18n.t('lab.common.inputError')); return; }
           if (!items.length) {
-            setStatus('空链表 · 无法查找');
-            setLog('search(value) 失败：链表为空。');
+            setStatus(ClubI18n.t('lab.ds.emptyListSearch'));
+            setLog(ClubI18n.t('lab.ds.searchEmpty'));
             return;
           }
 
@@ -1133,7 +1129,7 @@
         opCount = 0;
         ui.opCount.textContent = '0';
         render({ focusIndex: type === 'stack' ? items.length - 1 : 0, mode: 'pointer' });
-        setStatus('已填充示例数据');
+        setStatus(ClubI18n.t('lab.ds.seeded'));
         setLog(type === 'stack'
           ? `示例栈（底→顶）：[${items.join(', ')}]`
           : type === 'queue'
@@ -1147,14 +1143,13 @@
         opCount = 0;
         ui.opCount.textContent = '0';
         render({ focusIndex: -1, mode: 'active' });
-        setStatus('已清空');
-        setLog('结构已清空，可以开始新的操作序列。');
+        setStatus(ClubI18n.t('lab.ds.cleared'));
+        setLog(ClubI18n.t('lab.ds.clearedLong'));
       }
 
       function syncStructureUI() {
         const type = structure();
-        const [name, text] = descriptions[type];
-        ui.note.innerHTML = `<b>${name}</b><span>${text}</span>`;
+        refreshNote();
         ui.listModeGroup.hidden = type !== 'list';
         renderActions();
         items = [];
@@ -1162,7 +1157,7 @@
         ui.opCount.textContent = '0';
         clearError();
         render({ focusIndex: -1, mode: 'active' });
-        setStatus('就绪 · 等待操作');
+        setStatus(ClubI18n.t('lab.ds.readyWait'));
         setLog(`已切换到${name}。输入数值后执行对应操作。`);
       }
 
@@ -1181,6 +1176,20 @@
 
       syncStructureUI();
       seedData();
+      window.addEventListener('club:langchange', () => {
+        refreshNote();
+        renderActions();
+        // re-render stage labels/metrics via switchStructure-like refresh
+        const type = structure();
+        ui.stageLabel.textContent = stageTipsOf(type);
+        ui.visualTitle.textContent = titleOf(type);
+        if (type === 'stack') { ui.metricALabel.textContent = ClubI18n.t('lab.ds.countStack'); ui.metricBLabel.textContent = ClubI18n.t('lab.ds.topStack'); }
+        else if (type === 'queue') { ui.metricALabel.textContent = ClubI18n.t('lab.ds.countQueue'); ui.metricBLabel.textContent = ClubI18n.t('lab.ds.frontQueue'); }
+        else { ui.metricALabel.textContent = ClubI18n.t('lab.ds.countList'); ui.metricBLabel.textContent = ClubI18n.t('lab.ds.headList'); }
+        if (typeof render === 'function') render();
+        if (typeof ClubI18n?.apply === 'function') ClubI18n.apply(document);
+      });
+
     })();
   </script>
 </body>

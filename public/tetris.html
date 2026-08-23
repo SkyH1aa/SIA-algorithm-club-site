@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="tetris.title">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>算法社 · 俄罗斯方块多模式</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js"></script>
-  <style>
+    <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
     html, body { height: 100%; }
@@ -675,60 +677,60 @@
   </div>
   <div class="page-shell">
     <header class="page-header">
-      <a href="../index.html">← 返回官网</a>
+      <a href="../index.html" data-i18n="common.backSiteArrow">← 返回官网</a>
       <span class="member-identity" data-member-identity hidden></span>
-      <h1 title="Dellacherie 专家系统 AI · 四模式 · 双排行榜">俄罗斯方块</h1>
-      <p>Dellacherie 专家系统 AI · 四模式 · 双排行榜</p>
+      <h1 title="Dellacherie 专家系统 AI · 四模式 · 双排行榜" data-i18n="tetris.h1">俄罗斯方块</h1>
+      <p data-i18n="tetris.tagline">Dellacherie 专家系统 AI · 四模式 · 双排行榜</p>
     </header>
 
     <div class="layout">
       <main class="panel">
         <div class="toolbar">
           <div class="setup">
-            <label for="nickname">昵称</label>
-            <input id="nickname" maxlength="20" placeholder="计分模式需填写" autocomplete="nickname" />
-            <span class="hint" id="nickHint">普通 / 对战需昵称；AI 演示免昵称不存档</span>
+            <label for="nickname" data-i18n="tetris.nickLabel">昵称</label>
+            <input id="nickname" maxlength="20" placeholder="计分模式需填写" data-i18n-placeholder="tetris.nickPh" autocomplete="nickname" />
+            <span class="hint" id="nickHint" data-i18n="tetris.nickHint">普通 / 对战需昵称；AI 演示免昵称不存档</span>
           </div>
 
           <div class="control-strip" id="modeRow">
-            <button type="button" class="mode-btn active" data-mode="normal">正常</button>
-            <button type="button" class="mode-btn" data-mode="ai">AI 游玩</button>
-            <button type="button" class="mode-btn" data-mode="assist">AI 辅助</button>
-            <button type="button" class="mode-btn" data-mode="versus">人机对战</button>
-            <button type="button" class="action-btn primary" id="startBtn">开始</button>
-            <button type="button" class="action-btn" id="restartBtn" disabled>重开</button>
-            <button type="button" class="action-btn danger hidden" id="stopBtn" disabled>停止</button>
-            <button type="button" class="action-btn danger hidden" id="surrenderBtn" disabled>投降</button>
+            <button type="button" class="mode-btn active" data-mode="normal" data-i18n="games.modeNormal">正常游玩</button>
+            <button type="button" class="mode-btn" data-mode="ai" data-i18n="games.modeAi">AI 游玩</button>
+            <button type="button" class="mode-btn" data-mode="assist" data-i18n="games.modeAssist">AI 辅助</button>
+            <button type="button" class="mode-btn" data-mode="versus" data-i18n="games.modeVersus">人机对战</button>
+            <button type="button" class="action-btn primary" id="startBtn" data-i18n="games.start">开始</button>
+            <button type="button" class="action-btn" id="restartBtn" disabled data-i18n="games.restart">重新开始</button>
+            <button type="button" class="action-btn danger hidden" id="stopBtn" disabled data-i18n="games.stop">停止</button>
+            <button type="button" class="action-btn danger hidden" id="surrenderBtn" disabled data-i18n="games.surrender">投降</button>
           </div>
 
           <div class="assist-opts" id="assistOpts">
             <label>
               <input type="checkbox" id="optColumnBeams" checked />
-              <span>左右列光束<span class="opt-desc"> · 落点通道</span></span>
+              <span><span data-i18n="tetris.beams">左右列光束</span><span class="opt-desc" data-i18n="tetris.beamsDesc"> · 落点通道</span></span>
             </label>
             <label>
               <input type="checkbox" id="optDropGhost" checked />
-              <span>落点轮廓<span class="opt-desc"> · 硬降预览</span></span>
+              <span><span data-i18n="tetris.ghost">落点轮廓</span><span class="opt-desc" data-i18n="tetris.ghostDesc"> · 硬降预览</span></span>
             </label>
           </div>
 
           <div class="ai-play-opts" id="aiPlayOpts">
-            <span class="opts-title">AI 游玩展示</span>
+            <span class="opts-title" data-i18n="tetris.aiPlayOpts">AI 游玩展示</span>
             <label>
               <input type="checkbox" id="optAiPlayHardDrop" />
-              <span>开启 AI 硬降<span class="opt-desc"> · 对齐后瞬降锁定</span></span>
+              <span><span data-i18n="tetris.aiHard">开启 AI 硬降</span><span class="opt-desc" data-i18n="tetris.aiHardDesc"> · 对齐后瞬降锁定</span></span>
             </label>
           </div>
 
           <div class="versus-ai-opts" id="versusAiOpts">
-            <span class="opts-title">对战 AI 增强</span>
+            <span class="opts-title" data-i18n="tetris.versusAiOpts">对战 AI 增强</span>
             <label>
               <input type="checkbox" id="optAiSoftDrop" />
-              <span>开启 AI 软降<span class="opt-desc"> · 记榜分差 ×1.25</span></span>
+              <span><span data-i18n="tetris.aiSoft">开启 AI 软降</span><span class="opt-desc" data-i18n="tetris.aiSoftDesc"> · 记榜分差 ×1.25</span></span>
             </label>
             <label>
               <input type="checkbox" id="optAiHardDrop" />
-              <span>开启 AI 硬降<span class="opt-desc"> · 记榜分差 ×2</span></span>
+              <span><span data-i18n="tetris.aiHard">开启 AI 硬降</span><span class="opt-desc" data-i18n="tetris.aiHardVersusDesc"> · 记榜分差 ×2</span></span>
             </label>
           </div>
         </div>
@@ -736,16 +738,16 @@
         <div class="play-area">
           <div class="boards">
             <div class="board-card" id="playerCard">
-              <h3 id="playerTitle">玩家</h3>
+              <h3 id="playerTitle" data-i18n="snake.playerBoard">玩家</h3>
               <div class="board-wrap">
                 <canvas class="board" id="playerBoard" width="300" height="600"></canvas>
-                <div class="overlay" id="playerOverlay"><h2>GAME OVER</h2><p id="playerOverlayText">顶到最上</p></div>
+                <div class="overlay" id="playerOverlay"><h2>GAME OVER</h2><p id="playerOverlayText" data-i18n="tetris.topped">顶到最上</p></div>
               </div>
               <div class="board-meta">
                 <div class="stats">
-                  <div>得分<strong id="playerScore">0</strong></div>
-                  <div>行数<strong id="playerLines">0</strong></div>
-                  <div>等级<strong id="playerLevel">0</strong></div>
+                  <div><span data-i18n="snake.score">得分</span><strong id="playerScore">0</strong></div>
+                  <div><span data-i18n="tetris.lines">行数</span><strong id="playerLines">0</strong></div>
+                  <div><span data-i18n="tetris.level">等级</span><strong id="playerLevel">0</strong></div>
                 </div>
                 <div class="next-box">
                   <div class="label">NEXT</div>
@@ -758,13 +760,13 @@
               <h3>AI</h3>
               <div class="board-wrap">
                 <canvas class="board" id="aiBoard" width="300" height="600"></canvas>
-                <div class="overlay" id="aiOverlay"><h2>GAME OVER</h2><p>顶到最上</p></div>
+                <div class="overlay" id="aiOverlay"><h2>GAME OVER</h2><p data-i18n="tetris.overlayTop">顶到最上</p></div>
               </div>
               <div class="board-meta">
                 <div class="stats">
-                  <div>得分<strong id="aiScore">0</strong></div>
-                  <div>行数<strong id="aiLines">0</strong></div>
-                  <div>等级<strong id="aiLevel">0</strong></div>
+                  <div><span data-i18n="snake.score">得分</span><strong id="aiScore">0</strong></div>
+                  <div><span data-i18n="tetris.lines">行数</span><strong id="aiLines">0</strong></div>
+                  <div><span data-i18n="tetris.level">等级</span><strong id="aiLevel">0</strong></div>
                 </div>
                 <div class="next-box">
                   <div class="label">NEXT</div>
@@ -775,34 +777,34 @@
           </div>
 
           <div class="footer-bar">
-            <div class="versus-diff hidden" id="versusDiff">分差（玩家 − AI）<strong id="diffScore">0</strong></div>
+            <div class="versus-diff hidden" id="versusDiff"><span data-i18n="snake.diff">分差（玩家 − AI）</span><strong id="diffScore">0</strong></div>
             <p class="result" id="result" aria-live="polite"></p>
-            <div class="controls-hint">← → 移动 · ↑ 旋转 · ↓ 软降 · 空格 硬降 · 辅助可随时开关</div>
+            <div class="controls-hint" data-i18n="tetris.controlsHint">← → 移动 · ↑ 旋转 · ↓ 软降 · 空格 硬降 · 辅助可随时开关</div>
           </div>
         </div>
       </main>
 
       <aside class="leaderboard panel">
-        <h2>排行榜</h2>
+        <h2 data-i18n="games.leaderboard">排行榜</h2>
         <div class="lb-tabs">
-          <button type="button" class="lb-tab active" data-lb="normal">普通榜</button>
-          <button type="button" class="lb-tab" data-lb="versus">人机对战榜</button>
+          <button type="button" class="lb-tab active" data-lb="normal" data-i18n="games.normalLb">普通榜</button>
+          <button type="button" class="lb-tab" data-lb="versus" data-i18n="games.versusLb">人机对战榜</button>
         </div>
-        <p class="hint" id="lbHint">普通：昵称 / 局数 / 最高分 · 按最高分降序</p>
-        <ol class="leaderboard-list" id="leaderboardList"><li class="empty">正在读取排行榜...</li></ol>
+        <p class="hint" id="lbHint" data-i18n="games.lbNormalHint">普通：昵称 / 局数 / 最高分 · 按最高分降序</p>
+        <ol class="leaderboard-list" id="leaderboardList"><li class="empty" data-i18n="common.loading">正在读取…</li></ol>
       </aside>
     </div>
   </div>
 
-  <div class="mobile-controls" id="mobileControls" aria-label="移动端操作">
+  <div class="mobile-controls" id="mobileControls" aria-label="移动端操作" data-i18n-aria="snake.mobileAria">
     <div class="pad-left">
-      <button type="button" class="mobile-btn btn-left" data-action="left" aria-label="左移">←<span>左移</span></button>
-      <button type="button" class="mobile-btn btn-soft" data-action="soft" aria-label="软降">↓<span>软降</span></button>
-      <button type="button" class="mobile-btn btn-right" data-action="right" aria-label="右移">→<span>右移</span></button>
+      <button type="button" class="mobile-btn btn-left" data-action="left" aria-label="左移" data-i18n-aria="tetris.moveLeft">←<span data-i18n="tetris.moveLeft">左移</span></button>
+      <button type="button" class="mobile-btn btn-soft" data-action="soft" aria-label="软降" data-i18n-aria="tetris.softDrop">↓<span data-i18n="tetris.softDrop">软降</span></button>
+      <button type="button" class="mobile-btn btn-right" data-action="right" aria-label="右移" data-i18n-aria="tetris.moveRight">→<span data-i18n="tetris.moveRight">右移</span></button>
     </div>
     <div class="pad-right">
-      <button type="button" class="mobile-btn btn-rot" data-action="rotate" aria-label="旋转">↻<span>旋转</span></button>
-      <button type="button" class="mobile-btn btn-hard" data-action="hard" aria-label="硬降">▼<span>硬降</span></button>
+      <button type="button" class="mobile-btn btn-rot" data-action="rotate" aria-label="旋转" data-i18n-aria="tetris.rotate">↻<span data-i18n="tetris.rotate">旋转</span></button>
+      <button type="button" class="mobile-btn btn-hard" data-action="hard" aria-label="硬降" data-i18n-aria="tetris.hardDrop">▼<span data-i18n="tetris.hardDrop">硬降</span></button>
     </div>
   </div>
 
@@ -1135,7 +1137,7 @@
       this.current.y = 0;
       this.assistTarget = null;
       if (this.collides(this.current.shape, this.current.x, this.current.y)) {
-        this.triggerGameOver('顶到最上');
+        this.triggerGameOver(ClubI18n.t('tetris.topped'));
       }
     }
 
@@ -1153,7 +1155,7 @@
           if (by >= 0 && by < ROWS && bx >= 0 && bx < COLS) {
             this.board[by][bx] = typeIndex + 1;
           } else if (by < 0) {
-            this.triggerGameOver('顶到最上');
+            this.triggerGameOver(ClubI18n.t('tetris.topped'));
             return;
           }
         }
@@ -1195,7 +1197,7 @@
       if (this.overlay) {
         this.overlay.classList.add('active');
         const p = this.overlay.querySelector('p');
-        if (p) p.textContent = reason || '顶到最上';
+        if (p) p.textContent = reason || ClubI18n.t('tetris.topped');
       }
       this.draw();
       this.onGameOver(this);
@@ -1281,7 +1283,7 @@
       if (!this.running || this.gameOver || !this.current || this.aiBusy) return;
       const best = TetrisAI.bestMove(this.board, this.current, this.next);
       if (!best) {
-        this.triggerGameOver('AI 无法放置');
+        this.triggerGameOver(ClubI18n.t('tetris.aiCannotPlace'));
         return;
       }
       this.aiBusy = true;
@@ -1602,7 +1604,7 @@
   function getNickname() {
     const nickname = els.nickname.value.trim();
     if (!nickname) {
-      setResult('请先输入挑战昵称。');
+      setResult(ClubI18n.t('games.nickRequired'));
       els.nickname.focus();
       return null;
     }
@@ -1624,7 +1626,7 @@
   async function nicknameExists(nickname) {
     // 已部署云端：以 Supabase 排行榜为准（对齐五子棋）；本地榜不再参与重名判定
     if (!supabaseClient) {
-      setResult('云端未连接，无法确认昵称是否重名。请检查网络后重试。');
+      setResult(ClubI18n.t('tetris.nickCloudCheckFail'));
       return { exists: false, confirmed: false, error: true };
     }
     try {
@@ -1633,13 +1635,13 @@
         supabaseClient.from('tetris_versus_players').select('nickname').eq('nickname', nickname).limit(1)
       ]);
       if (a.error || b.error) {
-        setResult(`无法确认昵称是否已存在：${(a.error || b.error).message || '请稍后重试。'}`);
+        setResult(ClubI18n.t('games.nickCheckExistFail', { msg: (a.error || b.error).message || ClubI18n.t('games.retryLater') }));
         return { exists: false, confirmed: false, error: true };
       }
       const cloudExists = !!(a.data?.length || b.data?.length);
       return { exists: cloudExists, confirmed: false, error: false };
     } catch (err) {
-      setResult(`无法确认昵称是否已存在：${err?.message || '请稍后重试。'}`);
+      setResult(ClubI18n.t('games.nickCheckExistFail', { msg: err?.message || ClubI18n.t('games.retryLater') }));
       return { exists: false, confirmed: false, error: true };
     }
   }
@@ -1650,11 +1652,9 @@
     // 对齐五子棋：新昵称直接开局；云端已存在则每次都弹确认（不靠本地缓存跳过）
     if (!info.exists) return true;
 
-    const isOwner = window.confirm(
-      `排行榜上已经有昵称“${nickname}”。\n\n这是你本人正在使用的昵称吗？\n\n点击“确定”继续使用（成绩累计到同昵称）；点击“取消”后请输入一个新的昵称。`
-    );
+    const isOwner = window.confirm(ClubI18n.t('games.nickConfirm', { nick: nickname }));
     if (!isOwner) {
-      setResult('这个昵称已被使用，请输入一个新的昵称。');
+      setResult(ClubI18n.t('games.nickTaken'));
       els.nickname.focus();
       els.nickname.select();
       return false;
@@ -1697,7 +1697,7 @@
 
   async function recordNormalScore(nickname, score) {
     if (!supabaseClient?.rpc) {
-      setResult('云端未连接，成绩未保存。');
+      setResult(ClubI18n.t('games.cloudOffline'));
       return 'none';
     }
     try {
@@ -1706,21 +1706,21 @@
         p_score: score
       });
       if (error) {
-        setResult(`云端保存失败：${error.message || '请稍后重试'}`);
+        setResult(ClubI18n.t('games.cloudSaveFail', { msg: error.message || ClubI18n.t('games.retryLater') }));
         return 'none';
       }
       // 已部署 Supabase：不再写入本地排行榜兜底
       // upsertLocalScore(LB_NORMAL_KEY, nickname, score);
       return 'cloud';
     } catch (err) {
-      setResult(`云端保存失败：${err?.message || '请稍后重试'}`);
+      setResult(ClubI18n.t('games.cloudSaveFail', { msg: err?.message || ClubI18n.t('games.retryLater') }));
       return 'none';
     }
   }
 
   async function recordVersusScore(nickname, score) {
     if (!supabaseClient?.rpc) {
-      setResult('云端未连接，成绩未保存。');
+      setResult(ClubI18n.t('games.cloudOffline'));
       return 'none';
     }
     try {
@@ -1729,14 +1729,14 @@
         p_score: score
       });
       if (error) {
-        setResult(`云端保存失败：${error.message || '请稍后重试'}`);
+        setResult(ClubI18n.t('games.cloudSaveFail', { msg: error.message || ClubI18n.t('games.retryLater') }));
         return 'none';
       }
       // 已部署 Supabase：不再写入本地排行榜兜底
       // upsertLocalScore(LB_VERSUS_KEY, nickname, score);
       return 'cloud';
     } catch (err) {
-      setResult(`云端保存失败：${err?.message || '请稍后重试'}`);
+      setResult(ClubI18n.t('games.cloudSaveFail', { msg: err?.message || ClubI18n.t('games.retryLater') }));
       return 'none';
     }
   }
@@ -1744,8 +1744,8 @@
   async function loadLeaderboard() {
     const isVersus = state.lbTab === 'versus';
     els.lbHint.textContent = isVersus
-      ? '人机对战：昵称 / 局数 / 最高分差（玩家−AI）· 按最高分降序'
-      : '普通：昵称 / 局数 / 最高分 · 按最高分降序';
+      ? ClubI18n.t('games.lbVersusHint')
+      : ClubI18n.t('games.lbNormalHint');
 
     let rows = [];
     let source = 'local';
@@ -1772,19 +1772,19 @@
       //   .slice(0, 20);
       rows = [];
       els.lbHint.textContent = (isVersus
-        ? '人机对战：昵称 / 局数 / 最高分差（玩家−AI）· 按最高分降序'
-        : '普通：昵称 / 局数 / 最高分 · 按最高分降序') + ' · 云端暂不可用';
+        ? ClubI18n.t('games.lbVersusHint')
+        : ClubI18n.t('games.lbNormalHint')) + ClubI18n.t('games.lbCloudOff');
     }
 
     if (!rows.length) {
-      els.leaderboardList.innerHTML = '<li class="empty">暂无记录，等你来成为第一名。</li>';
+      els.leaderboardList.innerHTML = '<li class="empty">' + ClubI18n.t('games.emptyLb') + '</li>';
       return;
     }
     els.leaderboardList.innerHTML = rows.map((item, index) => `
       <li>
         <span class="rank">${index + 1}</span>
-        <span>${escapeHtml(item.nickname)}<small> · ${item.games_played || 0} 局</small></span>
-        <span class="score">${item.high_score} 分</span>
+        <span>${escapeHtml(item.nickname)}<small> · ${ClubI18n.t('games.gamesUnit', { n: item.games_played || 0 })}</small></span>
+        <span class="score">${ClubI18n.t('games.scoreUnit', { n: item.high_score })}</span>
       </li>
     `).join('');
   }
@@ -1879,13 +1879,13 @@
     document.body.classList.toggle('is-versus', versus);
     const boardsEl = document.querySelector('.boards');
     if (boardsEl) boardsEl.classList.toggle('is-versus', versus);
-    els.playerTitle.textContent = versus ? '玩家' : (state.mode === 'ai' ? 'AI 盘面' : '游戏盘面');
+    els.playerTitle.textContent = versus ? ClubI18n.t('snake.playerBoard') : (state.mode === 'ai' ? ClubI18n.t('snake.aiBoard') : ClubI18n.t('snake.board'));
     els.nickname.disabled = !needsNick;
-    els.nickname.placeholder = needsNick ? '请输入昵称' : '本模式无需昵称';
+    els.nickname.placeholder = needsNick ? ClubI18n.t('games.nickNeed') : ClubI18n.t('games.nickPhOptional');
     if (els.nickHint) {
       els.nickHint.textContent = needsNick
-        ? '未输入昵称不能开始；云端重名需确认是否本人继续'
-        : 'AI 游玩 / AI 辅助仅展示，不写入排行榜；可随时点「停止」结束';
+        ? ClubI18n.t('games.nickHintNeed')
+        : ClubI18n.t('games.nickHintDemo');
     }
     syncVersusAiDropUI();
     syncAiPlayOptsUI();
@@ -2037,9 +2037,11 @@
       if (!nickname) return;
       state.resultSubmitted = true;
       const where = await recordVersusScore(nickname, diff);
-      const boostText = mult === 1 ? '' : `（AI ${state.versusAiDrop === 'hard' ? '硬降' : '软降'}加成 ×${mult}，原始分差 ${rawDiff}）`;
-      const whereText = where === 'cloud' ? '云端' : '未保存';
-      setResult(`对战结束（${who === 'player' ? '玩家' : 'AI'}顶格失败）。记榜分差 ${diff}${boostText}。成绩写入：${whereText}。`);
+      const boostMode = state.versusAiDrop === 'hard' ? ClubI18n.t('tetris.boostHard') : ClubI18n.t('tetris.boostSoft');
+      const boostText = mult === 1 ? '' : ClubI18n.t('tetris.boostText', { mode: boostMode, mult, raw: rawDiff });
+      const whereText = where === 'cloud' ? ClubI18n.t('tetris.whereCloud') : ClubI18n.t('tetris.whereNone');
+      const whoLabel = who === 'player' ? ClubI18n.t('snake.playerBoard') : ClubI18n.t('games.aiLabel');
+      setResult(ClubI18n.t('tetris.versusEnd', { who: whoLabel, diff, boost: boostText, where: whereText }));
       state.lbTab = 'versus';
       document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.lb === 'versus'));
       await loadLeaderboard();
@@ -2062,15 +2064,15 @@
 
     // 仅普通游玩写入普通榜；AI 游玩 / AI 辅助只展示不存档
     if (state.mode === 'ai') {
-      setResult(`AI 游玩结束。本局得分 ${score}（不写入排行榜）。`);
+      setResult(ClubI18n.t('tetris.aiPlayEnd', { score }));
       return;
     }
     if (state.mode === 'assist') {
-      setResult(`AI 辅助结束。本局得分 ${score}（不写入排行榜）。`);
+      setResult(ClubI18n.t('tetris.assistEnd', { score }));
       return;
     }
     if (state.mode !== 'normal') {
-      setResult(`本局结束。得分 ${score}（不写入排行榜）。`);
+      setResult(ClubI18n.t('tetris.roundEndNoSave', { score }));
       return;
     }
 
@@ -2078,7 +2080,7 @@
     if (!nickname || state.resultSubmitted) return;
     state.resultSubmitted = true;
     const where = await recordNormalScore(nickname, score);
-    setResult(`GAME OVER。本局得分 ${score}。成绩写入：${where === 'cloud' ? '云端' : '未保存'}。`);
+    setResult(ClubI18n.t('tetris.gameOverSaved', { score, where: where === 'cloud' ? ClubI18n.t('tetris.whereCloud') : ClubI18n.t('tetris.whereNone') }));
     state.lbTab = 'normal';
     document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.lb === 'normal'));
     await loadLeaderboard();
@@ -2141,7 +2143,7 @@
 
   async function restartGame() {
     if (state.inProgress && state.mode === 'versus' && !state.surrendered && !state.resultSubmitted) {
-      const ok = window.confirm('当前对局进行中。重新开始将视为放弃本局且不记分，是否继续？');
+      const ok = window.confirm(ClubI18n.t('tetris.confirmRestart'));
       if (!ok) return;
       state.surrendered = true;
       state.inProgress = false;
@@ -2169,14 +2171,14 @@
     els.restartBtn.disabled = false;
     if (showMessage) {
       const score = state.player ? state.player.score : 0;
-      const label = state.mode === 'ai' ? 'AI 游玩' : 'AI 辅助';
-      setResult(`已停止${label}。本局得分 ${score}（不写入排行榜）。`);
+      const label = state.mode === 'ai' ? ClubI18n.t('tetris.modeAiPlay') : ClubI18n.t('tetris.modeAiAssist');
+      setResult(ClubI18n.t('tetris.stoppedDemo', { label, score }));
     }
   }
 
   function surrender() {
     if (state.mode !== 'versus' || !state.inProgress) return;
-    const ok = window.confirm('确认投降？投降不记分，本局不会写入人机对战榜。');
+    const ok = window.confirm(ClubI18n.t('tetris.confirmSurrender'));
     if (!ok) return;
     state.surrendered = true;
     state.inProgress = false;
@@ -2186,7 +2188,7 @@
     if (state.ai) { state.ai.running = false; state.ai.stopTimers(); }
     els.surrenderBtn.disabled = true;
     els.startBtn.disabled = false;
-    setResult('已投降：本局不记分。');
+    setResult(ClubI18n.t('games.surrendered'));
   }
 
   // ---------- 事件绑定 ----------
@@ -2194,9 +2196,9 @@
     btn.addEventListener('click', () => {
       if (state.inProgress) {
         if (isDemoMode()) {
-          setResult('请先点「停止」结束当前演示，再切换模式。');
+          setResult(ClubI18n.t('tetris.stopFirst'));
         } else {
-          setResult('请先结束或投降当前对局，再切换模式。');
+          setResult(ClubI18n.t('games.endFirst'));
         }
         return;
       }
@@ -2376,6 +2378,14 @@
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', scheduleMobileViewportFit);
   }
+  window.addEventListener('club:langchange', () => {
+    try {
+      if (typeof ClubI18n?.apply === 'function') ClubI18n.apply(document);
+      applyModeUI();
+      void loadLeaderboard();
+    } catch (_e) {}
+  });
+
   loadLeaderboard();
 })();
 </script>

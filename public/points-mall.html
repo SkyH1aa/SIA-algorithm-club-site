@@ -1,12 +1,14 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="pages.mall.title">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>积分商城 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js" defer></script>
-  <style>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root{--bg:#030712;--panel:rgba(9,18,38,.84);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--violet:#9278ff;--green:#72f3c2;--danger:#ff718a;--warn:#ffd166;--shadow:0 24px 70px rgba(0,0,0,.34)}
     *{box-sizing:border-box}html{min-height:100%;background:var(--bg)}
     body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 12% 0,rgba(0,229,255,.14),transparent 28%),radial-gradient(circle at 88% 10%,rgba(146,120,255,.16),transparent 30%),var(--bg)}
@@ -57,41 +59,41 @@
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong>算法社</strong><small>Points Mall</small></span></a>
+      <a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Points Mall</small></span></a>
       <span class="identity" data-member-identity hidden></span>
-      <a class="back" href="club-features.html">返回社团功能</a>
+      <a class="back" href="club-features.html" data-i18n="common.backFeatures">返回社团功能</a>
     </div>
   </header>
   <main>
-    <section id="gate" class="panel gate"><div><strong>您还不是算法社社员！</strong><p class="intro" style="margin:10px 0 18px">请先使用受邀请码创建的社团盘账号登录。</p><a class="button" href="member-center.html">前往个人中心登录</a></div></section>
+    <section id="gate" class="panel gate"><div><strong data-i18n="mall.gateTitle">您还不是算法社社员！</strong><p class="intro" style="margin:10px 0 18px" data-i18n="mall.gateHint">请先使用受邀请码创建的社团盘账号登录。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
     <div id="content" class="hidden">
       <section class="hero">
         <div>
           <p class="eyebrow">POINTS MALL</p>
-          <h1>积分商城</h1>
-          <p class="lead">用社团积分兑换管理员上架的实物或权益。兑换会立即扣积分并减库存，管理员线下发放后会清理兑换记录。</p>
+          <h1 data-i18n="pages.mall.h1">积分商城</h1>
+          <p class="lead" data-i18n="mall.lead">用社团积分兑换管理员上架的实物或权益。兑换会立即扣积分并减库存，管理员线下发放后会清理兑换记录。</p>
         </div>
         <div class="panel status">
-          <strong id="statusTitle">社员已登录</strong>
-          <span id="statusHint">正在读取积分与商品…</span>
-          <div style="margin-top:14px"><small style="color:var(--muted)">当前积分</small><div class="points-accent" id="myPoints">--</div></div>
+          <strong id="statusTitle" data-i18n="mall.loggedIn">社员已登录</strong>
+          <span id="statusHint" data-i18n="mall.loadingStatus">正在读取积分与商品…</span>
+          <div style="margin-top:14px"><small style="color:var(--muted)" data-i18n="mall.currentPoints">当前积分</small><div class="points-accent" id="myPoints">--</div></div>
         </div>
       </section>
 
       <section id="bindNotice" class="notice">
-        <strong>兑换前请先绑定姓名与班级</strong>
-        <p>积分商城按积分榜扣分。请先到<a href="member-center.html" style="color:var(--cyan);text-decoration:underline">个人中心</a>设置中文姓名和班级，并确认积分榜已有对应记录后再兑换。</p>
+        <strong data-i18n="mall.bindTitle">兑换前请先绑定姓名与班级</strong>
+        <p data-i18n="mall.bindHint" data-i18n-mode="html">积分商城按积分榜扣分。请先到<a href="member-center.html" style="color:var(--cyan);text-decoration:underline">个人中心</a>设置中文姓名和班级，并确认积分榜已有对应记录后再兑换。</p>
       </section>
 
       <section class="panel">
         <div class="section-head">
           <div>
-            <h2>可兑换商品</h2>
-            <p class="intro">仅展示已上架且有库存的商品。配图来自管理员填写的图床 URL。</p>
+            <h2 data-i18n="mall.products">可兑换商品</h2>
+            <p class="intro" data-i18n="mall.productsIntro">仅展示已上架且有库存的商品。配图来自管理员填写的图床 URL。</p>
           </div>
-          <button class="button secondary" type="button" id="refreshButton">刷新</button>
+          <button class="button secondary" type="button" id="refreshButton" data-i18n="common.refresh">刷新</button>
         </div>
-        <div id="productGrid"><div class="empty loading">正在读取商品…</div></div>
+        <div id="productGrid"><div class="empty loading" data-i18n="mall.loadingProducts">正在读取商品…</div></div>
         <p class="message" id="mallMessage" role="status"></p>
       </section>
     </div>
@@ -114,7 +116,7 @@
       node.className = `message ${type}`;
     }
     async function callPublic(action, body = {}) {
-      if (!currentSession) throw new Error('请先登录个人中心。');
+      if (!currentSession) throw new Error(ClubI18n.t('mall.loginRequired'));
       const response = await fetch(FUNCTION_URL, {
         method: 'POST',
         headers: {
@@ -124,7 +126,7 @@
         body: JSON.stringify({ action, ...body })
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || '操作失败。');
+      if (!response.ok) throw new Error(payload.error || ClubI18n.t('mall.opFailed'));
       return payload;
     }
 
@@ -134,17 +136,17 @@
       $('bindNotice').classList.toggle('active', !bound);
       $('myPoints').textContent = bound ? String(profile.points ?? 0) : '--';
       if (bound) {
-        $('statusTitle').textContent = '可以兑换';
-        $('statusHint').textContent = `已绑定 ${profile.member_name} / ${profile.member_class}。兑换会立即扣积分。`;
+        $('statusTitle').textContent = ClubI18n.t('mall.canRedeem');
+        $('statusHint').textContent = ClubI18n.t('mall.boundHint', { name: profile.member_name, klass: profile.member_class });
       } else {
-        $('statusTitle').textContent = '尚未绑定资料';
-        $('statusHint').textContent = '请先到个人中心绑定姓名班级，再回来兑换。';
+        $('statusTitle').textContent = ClubI18n.t('mall.unboundTitle');
+        $('statusHint').textContent = ClubI18n.t('mall.unboundHint');
       }
     }
 
     function renderProducts(products) {
       if (!products.length) {
-        $('productGrid').innerHTML = '<div class="empty">暂时没有可兑换商品。</div>';
+        $('productGrid').innerHTML = '<div class="empty">' + ClubI18n.t('mall.emptyProducts') + '</div>';
         return;
       }
       const bound = Boolean(currentProfile?.bound && currentProfile?.profile);
@@ -154,15 +156,15 @@
         const stock = Number(product.stock || 0);
         const canAfford = bound && points >= price && stock > 0;
         const cover = product.image_url
-          ? `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'配图加载失败'}))">`
-          : '<span>暂无配图</span>';
-        const tip = !bound ? '请先绑定资料' : (stock <= 0 ? '已兑完' : (points < price ? '积分不足' : '立即兑换'));
+          ? `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:ClubI18n.t('mall.noImage')}))">`
+          : '<span>' + ClubI18n.t('mall.noImage') + '</span>';
+        const tip = !bound ? ClubI18n.t('mall.bindFirst') : (stock <= 0 ? ClubI18n.t('mall.soldOut') : (points < price ? ClubI18n.t('mall.insufficient') : ClubI18n.t('mall.redeemNow')));
         return `<article class="card">
           <div class="cover">${cover}</div>
           <div class="card-body">
             <h3>${escapeHtml(product.name)}</h3>
-            <p class="desc">${escapeHtml(product.description || '暂无说明')}</p>
-            <div class="meta"><span class="price">${escapeHtml(price)} 积分</span><span class="stock">库存 ${escapeHtml(stock)}</span></div>
+            <p class="desc">${escapeHtml(product.description || ClubI18n.t('mall.noDesc'))}</p>
+            <div class="meta"><span class="price">${ClubI18n.t('mall.pricePoints', { price: escapeHtml(price) })}</span><span class="stock">${ClubI18n.t('mall.stock', { stock: escapeHtml(stock) })}</span></div>
             <button class="button redeem-btn" type="button" data-id="${escapeHtml(product.id)}" data-name="${escapeHtml(product.name)}" data-price="${escapeHtml(price)}" ${canAfford ? '' : 'disabled'}>${tip}</button>
           </div>
         </article>`;
@@ -183,13 +185,13 @@
     }
 
     async function loadProducts() {
-      $('productGrid').innerHTML = '<div class="empty loading">正在读取商品…</div>';
+      $('productGrid').innerHTML = '<div class="empty loading">' + ClubI18n.t('mall.loadingProducts') + '</div>';
       try {
         const payload = await callPublic('mall_products_list');
         renderProducts(payload.products || []);
         setMessage($('mallMessage'), '');
       } catch (error) {
-        $('productGrid').innerHTML = '<div class="empty">暂时无法读取商品。</div>';
+        $('productGrid').innerHTML = '<div class="empty">' + ClubI18n.t('mall.failProducts') + '</div>';
         setMessage($('mallMessage'), error.message, 'error');
       }
     }
@@ -202,12 +204,12 @@
     async function redeemProduct(productId, productName, price) {
       if (!productId || redeemingId) return;
       if (!currentProfile?.bound) {
-        setMessage($('mallMessage'), '请先到个人中心绑定姓名与班级。', 'error');
+        setMessage($('mallMessage'), ClubI18n.t('mall.bindRequired'), 'error');
         return;
       }
-      if (!confirm(`确认花费 ${price} 积分兑换「${productName}」吗？兑换后立即扣分，不可撤销。`)) return;
+      if (!confirm(ClubI18n.t('mall.confirmRedeem', { price, name: productName }))) return;
       redeemingId = productId;
-      setMessage($('mallMessage'), '正在兑换…');
+      setMessage($('mallMessage'), ClubI18n.t('mall.redeeming'));
       try {
         const payload = await callPublic('mall_redeem', { productId });
         const remaining = payload?.remaining_points;
@@ -215,7 +217,7 @@
           currentProfile.profile.points = remaining;
           updateProfileUi();
         }
-        setMessage($('mallMessage'), `兑换成功：${productName}。请等待管理员线下发放。`, 'success');
+        setMessage($('mallMessage'), ClubI18n.t('mall.redeemOk', { name: productName }), 'success');
         await loadProducts();
       } catch (error) {
         setMessage($('mallMessage'), error.message, 'error');
@@ -237,6 +239,7 @@
     $('refreshButton').onclick = () => { void refreshAll(); };
     supabaseClient.auth.onAuthStateChange((_event, session) => { void updateSession(session); });
     supabaseClient.auth.getSession().then(({ data: { session } }) => { void updateSession(session); });
+    window.addEventListener('club:langchange', () => { updateProfileUi(); void loadProducts(); if (window.ClubI18n) ClubI18n.apply(document); });
   </script>
 </body>
 </html>

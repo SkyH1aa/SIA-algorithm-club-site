@@ -1,24 +1,26 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="pages.events.title">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>活动与公告 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js" defer></script>
-  <style>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root{--bg:#030712;--panel:rgba(9,18,38,.84);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--violet:#9278ff;--green:#72f3c2;--danger:#ff718a;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 12% 0,rgba(0,229,255,.14),transparent 28%),radial-gradient(circle at 88% 10%,rgba(146,120,255,.16),transparent 30%),var(--bg)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.82);backdrop-filter:blur(18px)}.topbar-inner{max-width:1180px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted)}.back:hover{color:var(--cyan)}main{max-width:1180px;margin:auto;padding:56px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}h1{margin:0 0 14px;font-size:clamp(40px,7vw,74px);letter-spacing:-1.5px;line-height:.98}.lead{max-width:760px;margin:0 0 28px;color:var(--muted);line-height:1.8}.layout{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}.panel{padding:22px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow)}.panel h2{margin:0 0 8px;font-size:22px}.intro{margin:0 0 16px;color:var(--muted);line-height:1.7}.list{display:grid;gap:12px}.card{padding:16px;border:1px solid rgba(107,169,224,.18);border-radius:12px;background:rgba(0,10,28,.42)}.card strong{display:block;margin-bottom:6px;font-size:18px}.meta{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}.badge{display:inline-flex;padding:4px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);font-size:12px}.badge.cyan{border-color:rgba(0,229,255,.45);color:var(--cyan)}.badge.green{border-color:rgba(114,243,194,.45);color:var(--green)}.card p{margin:0;color:var(--muted);line-height:1.7;white-space:pre-wrap}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.button{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:rgba(0,229,255,.12);color:var(--text);cursor:pointer;font:inherit}.button:hover{background:rgba(0,229,255,.22)}.button.secondary{border-color:var(--line);background:transparent}.form{display:grid;gap:10px;margin-top:12px}.label{color:var(--muted);font-size:13px}.input,.textarea{width:100%;padding:12px 14px;color:var(--text);border:1px solid var(--line);border-radius:8px;background:rgba(2,7,18,.76);outline:none;font:inherit}.textarea{min-height:88px;resize:vertical}.message{min-height:22px;margin:10px 0 0;color:var(--muted);font-size:13px;line-height:1.6}.message.error{color:var(--danger)}.message.success{color:var(--green)}.empty{padding:28px 0;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}@media(max-width:900px){.layout{grid-template-columns:1fr}.identity{display:none!important}main{padding:42px 16px 70px}}
   </style>
 </head>
 <body>
-  <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong>算法社</strong><small>Events & Notices</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html">返回官网</a></div></header>
+  <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Events & Notices</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
   <main>
     <p class="eyebrow">EVENTS & NOTICES</p>
-    <h1>活动与公告</h1>
-    <p class="lead">查看社团通知、课程安排、比赛信息与活动报名。登录后可直接报名；管理员可在活动管理后台发布和修改内容。</p>
+    <h1 data-i18n="pages.events.h1">活动与公告</h1>
+    <p class="lead" data-i18n="events.lead">查看社团通知、课程安排、比赛信息与活动报名。登录后可直接报名；管理员可在活动管理后台发布和修改内容。</p>
     <section class="layout">
-      <div class="panel"><h2>最新公告</h2><p class="intro">置顶公告会优先显示，包含社团通知、课程安排和比赛信息。</p><div class="list" id="announcementList"><div class="empty loading">正在读取公告…</div></div></div>
-      <div class="panel"><h2>活动报名</h2><p class="intro">查看活动状态、截止时间，并提交报名。</p><div class="list" id="eventList"><div class="empty loading">正在读取活动…</div></div><p class="message" id="pageMessage" role="status"></p></div>
+      <div class="panel"><h2 data-i18n="events.announcements">最新公告</h2><p class="intro" data-i18n="events.announcementsIntro">置顶公告会优先显示，包含社团通知、课程安排和比赛信息。</p><div class="list" id="announcementList"><div class="empty loading" data-i18n="events.loadingAnnouncements">正在读取公告…</div></div></div>
+      <div class="panel"><h2 data-i18n="events.signup">活动报名</h2><p class="intro" data-i18n="events.signupIntro">查看活动状态、截止时间，并提交报名。</p><div class="list" id="eventList"><div class="empty loading" data-i18n="events.loadingEvents">正在读取活动…</div></div><p class="message" id="pageMessage" role="status"></p></div>
     </section>
   </main>
   <script>
@@ -46,7 +48,7 @@
     async function call(action, body = {}, auth = false) {
       const headers = { 'content-type': 'application/json' };
       if (auth) {
-        if (!currentSession?.access_token) throw new Error('请先登录后再报名。');
+        if (!currentSession?.access_token) throw new Error(ClubI18n.t('events.loginRequired'));
         headers.authorization = `Bearer ${currentSession.access_token}`;
       }
       const response = await fetch(FUNCTION_URL, {
@@ -55,22 +57,22 @@
         body: JSON.stringify({ action, ...body })
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || '请求失败。');
+      if (!response.ok) throw new Error(payload.error || ClubI18n.t('events.requestFailed'));
       return payload;
     }
 
     function renderAnnouncements(items) {
       if (!items.length) {
-        $('announcementList').innerHTML = '<div class="empty">暂时没有公告。</div>';
+        $('announcementList').innerHTML = '<div class="empty">' + ClubI18n.t('events.emptyAnnouncements') + '</div>';
         return;
       }
       $('announcementList').innerHTML = items.map(item => `
         <article class="card">
           <strong>${escapeHtml(item.title)}</strong>
           <div class="meta">
-            <span class="badge cyan">${escapeHtml(item.category || '社团通知')}</span>
-            ${item.is_pinned ? '<span class="badge green">置顶</span>' : ''}
-            <span class="badge">更新：${escapeHtml(formatTime(item.updated_at))}</span>
+            <span class="badge cyan">${escapeHtml(item.category || ClubI18n.t('events.defaultCategoryAnn'))}</span>
+            ${item.is_pinned ? '<span class="badge green">' + ClubI18n.t('events.pinned') + '</span>' : ''}
+            <span class="badge">${ClubI18n.t('events.updated', { time: escapeHtml(formatTime(item.updated_at)) })}</span>
           </div>
           <p>${escapeHtml(item.content)}</p>
         </article>
@@ -79,36 +81,36 @@
 
     function renderEvents(items) {
       if (!items.length) {
-        $('eventList').innerHTML = '<div class="empty">暂时没有活动。</div>';
+        $('eventList').innerHTML = '<div class="empty">' + ClubI18n.t('events.emptyEvents') + '</div>';
         return;
       }
       $('eventList').innerHTML = items.map(item => `
         <article class="card" data-event-id="${escapeHtml(item.id)}">
           <strong>${escapeHtml(item.title)}</strong>
           <div class="meta">
-            <span class="badge cyan">${escapeHtml(item.category || '活动报名')}</span>
+            <span class="badge cyan">${escapeHtml(item.category || ClubI18n.t('events.defaultCategoryEvt'))}</span>
             <span class="badge green">${escapeHtml(item.status || '-')}</span>
-            ${item.is_featured ? '<span class="badge">首页推荐</span>' : ''}
+            ${item.is_featured ? '<span class="badge">' + ClubI18n.t('events.featured') + '</span>' : ''}
           </div>
-          <p>${escapeHtml(item.summary || item.content || '暂无简介')}</p>
+          <p>${escapeHtml(item.summary || item.content || ClubI18n.t('events.noSummary'))}</p>
           <div class="meta" style="margin-top:10px">
-            <span class="badge">地点：${escapeHtml(item.location || '-')}</span>
-            <span class="badge">开始：${escapeHtml(formatTime(item.starts_at))}</span>
-            <span class="badge">截止：${escapeHtml(formatTime(item.signup_deadline))}</span>
+            <span class="badge">${ClubI18n.t('events.location', { value: escapeHtml(item.location || '-') })}</span>
+            <span class="badge">${ClubI18n.t('events.starts', { time: escapeHtml(formatTime(item.starts_at)) })}</span>
+            <span class="badge">${ClubI18n.t('events.deadline', { time: escapeHtml(formatTime(item.signup_deadline)) })}</span>
           </div>
           ${item.allow_signup ? `
             <form class="form signup-form">
-              <label class="label">姓名</label>
+              <label class="label">${ClubI18n.t('events.name')}</label>
               <input class="input" name="memberName" required value="${escapeHtml(boundProfile?.member_name || '')}">
-              <label class="label">班级</label>
+              <label class="label">${ClubI18n.t('events.className')}</label>
               <input class="input" name="memberClass" value="${escapeHtml(boundProfile?.member_class || '')}">
-              <label class="label">联系方式（可选）</label>
-              <input class="input" name="contact" placeholder="QQ / 微信 / 手机号">
-              <label class="label">备注（可选）</label>
-              <textarea class="textarea" name="note" placeholder="可选补充说明"></textarea>
-              <div class="actions"><button class="button" type="submit">提交报名</button></div>
+              <label class="label">${ClubI18n.t('events.contactOptional')}</label>
+              <input class="input" name="contact" placeholder="${ClubI18n.t('events.contactPlaceholder')}">
+              <label class="label">${ClubI18n.t('events.noteOptional')}</label>
+              <textarea class="textarea" name="note" placeholder="${ClubI18n.t('events.notePlaceholder')}"></textarea>
+              <div class="actions"><button class="button" type="submit">${ClubI18n.t('events.submitSignup')}</button></div>
             </form>
-          ` : '<p class="message">该活动暂未开放报名。</p>'}
+          ` : '<p class="message">' + ClubI18n.t('events.signupClosed') + '</p>'}
         </article>
       `).join('');
 
@@ -117,7 +119,7 @@
           event.preventDefault();
           const card = form.closest('[data-event-id]');
           const data = new FormData(form);
-          setMessage('正在提交报名…');
+          setMessage(ClubI18n.t('events.submitting'));
           try {
             await call('event_signup', {
               eventId: card.getAttribute('data-event-id'),
@@ -126,7 +128,7 @@
               contact: data.get('contact'),
               note: data.get('note')
             }, true);
-            setMessage('报名成功。', 'success');
+            setMessage(ClubI18n.t('events.signupOk'), 'success');
           } catch (error) {
             setMessage(error.message, 'error');
           }
@@ -158,8 +160,8 @@
         renderAnnouncements(Array.isArray(announcementsPayload.announcements) ? announcementsPayload.announcements : []);
         renderEvents(Array.isArray(eventsPayload.events) ? eventsPayload.events : []);
       } catch (error) {
-        $('announcementList').innerHTML = '<div class="empty">暂时无法读取公告。</div>';
-        $('eventList').innerHTML = '<div class="empty">暂时无法读取活动。</div>';
+        $('announcementList').innerHTML = '<div class="empty">' + ClubI18n.t('events.failAnnouncements') + '</div>';
+        $('eventList').innerHTML = '<div class="empty">' + ClubI18n.t('events.failEvents') + '</div>';
         setMessage(error.message, 'error');
       }
     }
@@ -172,6 +174,7 @@
       currentSession = session;
       void refresh();
     });
+    window.addEventListener('club:langchange', () => { void refresh(); });
   </script>
 </body>
 </html>

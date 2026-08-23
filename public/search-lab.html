@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="lab.search.title">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>迷宫搜索可视化实验室 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js" defer></script>
-  <style>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root { font-family:"Microsoft YaHei","PingFang SC","Noto Sans CJK SC",system-ui,sans-serif; color:#f6fbff; background:#020409; --bg:#020409; --panel:rgba(8,13,30,.8); --cyan:#00e5ff; --violet:#7c4dff; --pink:#ff5fc8; --gold:#ffd166; --green:#71f3bf; --text:#c8d4e2; --muted:#8fa3b8; --line:rgba(115,221,255,.2); --shadow:0 24px 90px rgba(0,229,255,.11); }
     *{box-sizing:border-box} body{margin:0;min-width:320px;min-height:100vh;background:radial-gradient(ellipse 70% 50% at 15% 4%,rgba(0,229,255,.15),transparent 62%),radial-gradient(ellipse 60% 42% at 88% 7%,rgba(124,77,255,.22),transparent 65%),linear-gradient(180deg,#020409,#050917 50%,#020409);color:#f6fbff;overflow-x:hidden} body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(rgba(0,229,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.045) 1px,transparent 1px);background-size:72px 72px;mask-image:radial-gradient(ellipse 110% 100% at 50% 10%,#000,transparent 92%)}
     a{color:inherit;text-decoration:none} button,input,select,textarea{font:inherit} button{cursor:pointer} button:disabled{cursor:not-allowed;opacity:.48}.topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:20px;padding:14px clamp(18px,5vw,72px);border-bottom:1px solid var(--line);background:rgba(2,4,12,.78);backdrop-filter:blur(18px)}.brand{display:inline-flex;align-items:center;gap:12px;margin-right:auto}.brand-mark{display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:linear-gradient(135deg,rgba(0,229,255,.18),rgba(124,77,255,.22));color:var(--cyan);font-weight:900;box-shadow:0 0 28px rgba(0,229,255,.22),inset 0 0 24px rgba(124,77,255,.18)}.brand strong,.brand small{display:block}.brand strong{font-size:16px}.brand small{color:var(--muted);font-size:12px;text-transform:uppercase}.member-identity{display:none;padding:5px 9px;border:1px solid rgba(0,229,255,.34);border-radius:999px;color:var(--cyan);font-size:12px;white-space:nowrap}.member-identity:not([hidden]){display:inline-flex}.back-link{padding:8px 12px;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:14px;transition:.2s}.back-link:hover{border-color:rgba(0,229,255,.55);background:rgba(0,229,255,.08);color:var(--cyan)}
@@ -18,33 +20,33 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="../index.html" aria-label="返回算法社首页"><span class="brand-mark">A</span><span><strong>算法社</strong><small>Algorithm Club</small></span></a>
+    <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a>
     <span class="member-identity" data-member-identity hidden></span>
-    <a class="back-link" href="visualization-lab.html">实验室选择</a>
+    <a class="back-link" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
   </header>
   <main>
     <section class="hero" aria-labelledby="pageTitle">
-      <div><p class="eyebrow">MAZE SEARCH VISUALIZATION · V1</p><h1 id="pageTitle">迷宫找路可视化实验室</h1><p>在同一个迷宫中观察广度优先搜索与深度优先搜索如何探索。可随机生成可通行迷宫，或输入字符网格自定义题目，并连续演示或单步查看每一次扩展。</p></div>
-      <aside class="algorithm-note" id="algorithmNote"><b>广度优先搜索</b><span>按层推进队列，首次到达终点时得到步数最少的路径。</span></aside>
+      <div><p class="eyebrow">MAZE SEARCH VISUALIZATION · V1</p><h1 id="pageTitle" data-i18n="lab.search.h1">迷宫找路可视化实验室</h1><p data-i18n="lab.search.lead">在同一个迷宫中观察广度优先搜索与深度优先搜索如何探索。可随机生成可通行迷宫，或输入字符网格自定义题目，并连续演示或单步查看每一次扩展。</p></div>
+      <aside class="algorithm-note" id="algorithmNote"><b data-i18n="lab.search.bfsName">广度优先搜索</b><span data-i18n="lab.search.bfsDesc">按层推进队列，首次到达终点时得到步数最少的路径。</span></aside>
     </section>
-    <section class="lab-grid" aria-label="迷宫搜索演示控制台">
+    <section class="lab-grid" data-i18n-aria="lab.search.consoleAria" aria-label="迷宫搜索演示控制台">
       <form class="panel controls" id="controlForm">
-        <h2>实验设置</h2>
-        <div class="control-group"><label for="algorithm">搜索算法</label><select id="algorithm"><option value="bfs">广度优先搜索 BFS</option><option value="dfs">深度优先搜索 DFS</option></select></div>
-        <div class="control-group"><fieldset><legend>迷宫模式</legend><div class="radio-row"><label><input type="radio" name="mode" value="random" checked /><span>随机迷宫</span></label><label><input type="radio" name="mode" value="custom" /><span>自定义</span></label></div></fieldset></div>
-        <div class="control-group" id="randomOptions"><label for="mazeSize">随机迷宫规格</label><select id="mazeSize"><option value="9x13">9 × 13</option><option value="11x17" selected>11 × 17</option><option value="13x21">13 × 21</option></select><p class="hint">随机墙体会反复生成，直到起点和终点可达。</p></div>
-        <div class="control-group custom-input" id="customWrap" hidden><label for="customMaze">自定义字符迷宫</label><textarea id="customMaze" spellcheck="false">S..#.....
+        <h2 data-i18n="lab.common.settings">实验设置</h2>
+        <div class="control-group"><label for="algorithm" data-i18n="lab.search.algoLabel">搜索算法</label><select id="algorithm"><option value="bfs" data-i18n="lab.search.bfs">广度优先搜索 BFS</option><option value="dfs" data-i18n="lab.search.dfs">深度优先搜索 DFS</option></select></div>
+        <div class="control-group"><fieldset><legend data-i18n="lab.search.mazeMode">迷宫模式</legend><div class="radio-row"><label><input type="radio" name="mode" value="random" checked /><span data-i18n="lab.search.randomMaze">随机迷宫</span></label><label><input type="radio" name="mode" value="custom" /><span data-i18n="lab.common.custom">自定义</span></label></div></fieldset></div>
+        <div class="control-group" id="randomOptions"><label for="mazeSize" data-i18n="lab.search.mazeSize">随机迷宫规格</label><select id="mazeSize"><option value="9x13">9 × 13</option><option value="11x17" selected>11 × 17</option><option value="13x21">13 × 21</option></select><p class="hint" data-i18n="lab.search.mazeSizeHint">随机墙体会反复生成，直到起点和终点可达。</p></div>
+        <div class="control-group custom-input" id="customWrap" hidden><label for="customMaze" data-i18n="lab.search.customMaze">自定义字符迷宫</label><textarea id="customMaze" spellcheck="false">S..#.....
 .#.#.###.
 .#...#...
 .###.#.#.
-.....#..E</textarea><p class="hint">使用 S 起点、E 终点、. 通路、# 墙体。每行等长，范围 5–21 行、5–31 列。</p><p class="error" id="inputError" role="alert" aria-live="polite"></p></div>
-        <div class="button-stack"><button class="btn btn-primary" type="button" id="startButton">开始演示</button><button class="btn" type="button" id="stepButton">单步执行</button><button class="btn btn-warn" type="button" id="resetButton">重置当前迷宫</button><button class="btn" type="button" id="randomButton">随机生成</button></div>
+.....#..E</textarea><p class="hint" data-i18n="lab.search.customHint">使用 S 起点、E 终点、. 通路、# 墙体。每行等长，范围 5–21 行、5–31 列。</p><p class="error" id="inputError" role="alert" aria-live="polite"></p></div>
+        <div class="button-stack"><button class="btn btn-primary" type="button" id="startButton" data-i18n="lab.common.start">开始演示</button><button class="btn" type="button" id="stepButton" data-i18n="lab.common.step">单步执行</button><button class="btn btn-warn" type="button" id="resetButton" data-i18n="lab.search.resetMaze">重置当前迷宫</button><button class="btn" type="button" id="randomButton" data-i18n="lab.common.random">随机生成</button></div>
       </form>
       <section class="panel visual" aria-labelledby="visualTitle">
-        <div class="visual-header"><div><h2 id="visualTitle">迷宫探索过程</h2><span class="sr-only" id="announcement" aria-live="polite"></span></div><span class="status" id="statusText" role="status">就绪 · 等待开始</span></div>
-        <div class="maze-frame"><div class="maze" id="maze" aria-label="迷宫网格"></div></div>
-        <div class="metrics" aria-label="搜索计数"><div class="metric"><span>已访问节点</span><strong id="visitedCount">0</strong></div><div class="metric"><span id="frontierLabel">队列待处理</span><strong id="frontierCount">0</strong></div><div class="metric"><span>当前步骤</span><strong id="steps">0</strong></div></div>
-        <div class="legend" aria-label="颜色说明"><span><i></i>起点</span><span><i class="l-wall"></i>墙体</span><span><i class="l-frontier"></i>待探索</span><span><i class="l-visited"></i>已访问</span><span><i class="l-path"></i>最终路径</span></div>
+        <div class="visual-header"><div><h2 id="visualTitle" data-i18n="lab.search.visualTitle">迷宫探索过程</h2><span class="sr-only" id="announcement" aria-live="polite"></span></div><span class="status" id="statusText" role="status" data-i18n="lab.common.ready">就绪</span></div>
+        <div class="maze-frame"><div class="maze" id="maze" data-i18n-aria="lab.search.mazeAria" aria-label="迷宫网格"></div></div>
+        <div class="metrics" data-i18n-aria="lab.search.metricsAria" aria-label="搜索计数"><div class="metric"><span data-i18n="lab.search.visited">已访问节点</span><strong id="visitedCount">0</strong></div><div class="metric"><span id="frontierLabel" data-i18n="lab.search.frontierQueue">队列待处理</span><strong id="frontierCount">0</strong></div><div class="metric"><span data-i18n="lab.common.currentStep">当前步骤</span><strong id="steps">0</strong></div></div>
+        <div class="legend" data-i18n-aria="lab.common.colorLegend" aria-label="颜色说明"><span><i></i><span data-i18n="lab.search.legStart">起点</span></span><span><i class="l-wall"></i><span data-i18n="lab.search.legWall">墙体</span></span><span><i class="l-frontier"></i><span data-i18n="lab.search.legFrontier">待探索</span></span><span><i class="l-visited"></i><span data-i18n="lab.search.legVisited">已访问</span></span><span><i class="l-path"></i><span data-i18n="lab.search.legPath">最终路径</span></span></div>
       </section>
     </section>
   </main>
@@ -52,7 +54,12 @@
     (() => {
       const el=id=>document.getElementById(id);
       const ui={algorithm:el('algorithm'),customWrap:el('customWrap'),customMaze:el('customMaze'),randomOptions:el('randomOptions'),mazeSize:el('mazeSize'),inputError:el('inputError'),maze:el('maze'),status:el('statusText'),note:el('algorithmNote'),visited:el('visitedCount'),frontier:el('frontierCount'),frontierLabel:el('frontierLabel'),steps:el('steps'),start:el('startButton'),step:el('stepButton'),reset:el('resetButton'),random:el('randomButton'),announcement:el('announcement')};
-      const descriptions={bfs:['广度优先搜索','按层推进队列，首次到达终点时得到步数最少的路径。'],dfs:['深度优先搜索','沿一条路径尽可能深入，遇到死路后再回退探索。']};
+      const descKeys={bfs:['lab.search.bfsName','lab.search.bfsDesc'],dfs:['lab.search.dfsName','lab.search.dfsDesc']};
+      function getDescriptions(){const o={};for(const k of Object.keys(descKeys)){o[k]=[ClubI18n.t(descKeys[k][0]),ClubI18n.t(descKeys[k][1])];}return o;}
+      function refreshNote(){const [name,text]=getDescriptions()[ui.algorithm.value];ui.note.innerHTML=`<b>${name}</b><span>${text}</span>`;}
+      function syncStartLabel(){if(cursor>=operations.length&&operations.length){ui.start.textContent=ClubI18n.t('lab.common.restart');}else if(playing){ui.start.textContent=ClubI18n.t('lab.common.pause');}else if(cursor>0){ui.start.textContent=ClubI18n.t('lab.common.resume');}else{ui.start.textContent=ClubI18n.t('lab.common.start');}}
+      function refreshFrontierLabel(){ui.frontierLabel.textContent=ui.algorithm.value==='bfs'?ClubI18n.t('lab.search.frontierQueue'):ClubI18n.t('lab.search.frontierStack');}
+      function refreshStaticStatus(){if(ui.inputError.textContent){updateStatus(ClubI18n.t('lab.search.errFixCustom'));return;}if(playing){updateStatus(ClubI18n.t('lab.common.running'));return;}if(cursor>=operations.length&&operations.length){const completed=operations[operations.length-1];updateStatus(completed?.found?ClubI18n.t('lab.search.doneFound',{n:visitedCount}):ClubI18n.t('lab.search.doneMiss'));return;}if(cursor>0){updateStatus(ClubI18n.t('lab.common.paused'));return;}updateStatus(ClubI18n.t('lab.common.readyOps',{n:operations.length}));}
       const key=cell=>`${cell.r},${cell.c}`; const same=(a,b)=>a.r===b.r&&a.c===b.c;
       let source=null,grid=null,operations=[],cursor=0,visitedCount=0,frontierCount=0,timer=null,playing=false;
       const delay=95;
@@ -62,46 +69,54 @@
       function randomMaze(){const [rows,cols]=ui.mazeSize.value.split('x').map(Number);for(let attempt=0;attempt<80;attempt++){const cells=Array.from({length:rows},()=>Array.from({length:cols},()=>Math.random()<.28?'#':'.'));const start={r:0,c:0},end={r:rows-1,c:cols-1};cells[start.r][start.c]='S';cells[end.r][end.c]='E';const maze={cells,start,end};if(reachable(maze))return maze}const cells=Array.from({length:rows},()=>Array(cols).fill('.'));for(let r=1;r<rows-1;r++)for(let c=0;c<cols;c++)if(Math.random()<.22)cells[r][c]='#';cells[0][0]='S';cells[rows-1][cols-1]='E';return {cells,start:{r:0,c:0},end:{r:rows-1,c:cols-1}}}
       function parseCustom(){
         const value=ui.customMaze.value.replace(/\r/g,'').trim();
-        if(!value)throw new Error('请输入自定义字符迷宫。');
+        if(!value)throw new Error(ClubI18n.t('lab.search.errNeedCustom'));
         const lines=value.split('\n');
-        if(lines.length<5||lines.length>21)throw new Error('迷宫行数应为 5–21 行。');
+        if(lines.length<5||lines.length>21)throw new Error(ClubI18n.t('lab.search.errRows'));
         const cols=lines[0]?.length||0;
-        if(cols<5||cols>31||lines.some(line=>line.length!==cols))throw new Error('每行必须等长，列数应为 5–31。');
-        if(lines.some(line=>/[^SE.#]/.test(line)))throw new Error('只允许使用 S、E、.、# 四种字符。');
+        if(cols<5||cols>31||lines.some(line=>line.length!==cols))throw new Error(ClubI18n.t('lab.search.errCols'));
+        if(lines.some(line=>/[^SE.#]/.test(line)))throw new Error(ClubI18n.t('lab.search.errChars'));
         let start=null,end=null;
         lines.forEach((line,r)=>{
           [...line].forEach((char,c)=>{
             if(char==='S'){
-              if(start)throw new Error('只能有一个起点 S。');
+              if(start)throw new Error(ClubI18n.t('lab.search.errOneS'));
               start={r,c};
             }
             if(char==='E'){
-              if(end)throw new Error('只能有一个终点 E。');
+              if(end)throw new Error(ClubI18n.t('lab.search.errOneE'));
               end={r,c};
             }
           });
         });
-        if(!start||!end)throw new Error('必须包含一个起点 S 和一个终点 E。');
+        if(!start||!end)throw new Error(ClubI18n.t('lab.search.errNeedSE'));
         const maze={cells:lines.map(line=>[...line]),start,end};
-        if(!reachable(maze))throw new Error('该迷宫没有可到达终点的路径。');
+        if(!reachable(maze))throw new Error(ClubI18n.t('lab.search.errUnreachable'));
         return maze;
       }
       function buildOps(maze,type){const ops=[],frontier=[maze.start],seen=new Set([key(maze.start)]),previous=new Map();let found=false;ops.push({type:'frontier',cell:maze.start,frontier:1});while(frontier.length){const current=type==='bfs'?frontier.shift():frontier.pop();ops.push({type:'visit',cell:current,frontier:frontier.length});if(same(current,maze.end)){found=true;break}const nexts=openNeighbors(maze,current);if(type==='dfs')nexts.reverse();for(const next of nexts){if(seen.has(key(next)))continue;seen.add(key(next));previous.set(key(next),current);frontier.push(next);ops.push({type:'frontier',cell:next,frontier:frontier.length});}}if(found){const path=[];let current=maze.end;while(!same(current,maze.start)){path.push(current);current=previous.get(key(current));if(!current)break}path.reverse().forEach(cell=>ops.push({type:'path',cell,frontier:0}));ops.push({type:'complete',found:true,frontier:0})}else ops.push({type:'complete',found:false,frontier:0});return ops}
       function classFor(cell){const value=grid.cells[cell.r][cell.c];if(value==='S')return'start';if(value==='E')return'end';return value==='#'?'wall':''}
-      function render(active=null){const states=new Map();for(let i=0;i<cursor;i++){const op=operations[i];if(['frontier','visit','path'].includes(op.type))states.set(key(op.cell),op.type)}if(active&&active.cell)states.set(key(active.cell),active.type);const rows=grid.cells.length,cols=grid.cells[0].length;ui.maze.style.gridTemplateColumns=`repeat(${cols}, clamp(15px, 3.6vw, 34px))`;ui.maze.innerHTML=grid.cells.map((row,r)=>row.map((_,c)=>{const cell={r,c};let state=states.get(key(cell));const base=classFor(cell);if(base==='start'||base==='end'||base==='wall')state='';return `<div class="cell ${base} ${state||''}" aria-label="第 ${r+1} 行第 ${c+1} 列"></div>`}).join('')).join('');ui.visited.textContent=visitedCount;ui.frontier.textContent=frontierCount;ui.steps.textContent=cursor}
+      function render(active=null){const states=new Map();for(let i=0;i<cursor;i++){const op=operations[i];if(['frontier','visit','path'].includes(op.type))states.set(key(op.cell),op.type)}if(active&&active.cell)states.set(key(active.cell),active.type);const rows=grid.cells.length,cols=grid.cells[0].length;ui.maze.style.gridTemplateColumns=`repeat(${cols}, clamp(15px, 3.6vw, 34px))`;ui.maze.innerHTML=grid.cells.map((row,r)=>row.map((_,c)=>{const cell={r,c};let state=states.get(key(cell));const base=classFor(cell);if(base==='start'||base==='end'||base==='wall')state='';return `<div class="cell ${base} ${state||''}" aria-label="${ClubI18n.t('lab.search.cellAria',{r:r+1,c:c+1})}"></div>`}).join('')).join('');ui.visited.textContent=visitedCount;ui.frontier.textContent=frontierCount;ui.steps.textContent=cursor}
       function updateStatus(text){ui.status.textContent=text;ui.announcement.textContent=text}
       function stop(){playing=false;if(timer){clearTimeout(timer);timer=null}}
-      function prepare(){stop();cursor=0;visitedCount=0;frontierCount=0;grid=cloneMaze(source);operations=buildOps(grid,ui.algorithm.value);ui.frontierLabel.textContent=ui.algorithm.value==='bfs'?'队列待处理':'栈待处理';render();updateStatus(`就绪 · 共 ${operations.length} 个操作`);ui.start.textContent='开始演示'}
-      function applyNext(){if(cursor>=operations.length){finish();return false}const op=operations[cursor++];if(op.type==='visit')visitedCount++;frontierCount=op.frontier??frontierCount;render(op);const labels={frontier:ui.algorithm.value==='bfs'?'加入队列':'压入栈',visit:'正在访问节点',path:'正在回溯最终路径',complete:op.found?'已找到终点':'未找到路径'};updateStatus(`${labels[op.type]||'执行中'} · ${cursor} / ${operations.length}`);if(op.type==='complete')finish();return true}
-      function finish(){stop();render();const completed=operations[operations.length-1];updateStatus(completed?.found?`完成 · 找到路径，访问 ${visitedCount} 个节点`:`完成 · 未找到可行路径`);ui.start.textContent='重新演示'}
+      function prepare(){stop();cursor=0;visitedCount=0;frontierCount=0;grid=cloneMaze(source);operations=buildOps(grid,ui.algorithm.value);refreshFrontierLabel();render();updateStatus(ClubI18n.t('lab.common.readyOps',{n:operations.length}));ui.start.textContent=ClubI18n.t('lab.common.start')}
+      function applyNext(){if(cursor>=operations.length){finish();return false}const op=operations[cursor++];if(op.type==='visit')visitedCount++;frontierCount=op.frontier??frontierCount;render(op);const labelKeys={enqueue:'lab.search.opEnqueue',push:'lab.search.opPush',visit:'lab.search.opVisit',path:'lab.search.opPath',found:'lab.search.opFound',miss:'lab.search.opMiss'};const label=ClubI18n.t(labelKeys[op.type]||'lab.common.executing');updateStatus(ClubI18n.t('lab.common.stepOf',{label,cur:cursor,total:operations.length}));if(op.type==='complete')finish();return true}
+      function finish(){stop();render();const completed=operations[operations.length-1];updateStatus(completed?.found?ClubI18n.t('lab.search.doneFound',{n:visitedCount}):ClubI18n.t('lab.search.doneMiss'));ui.start.textContent=ClubI18n.t('lab.common.restart')}
       function loop(){if(!playing)return;if(!applyNext())return;timer=setTimeout(loop,delay)}
-      function syncCustom(){if(cursor!==0||document.querySelector('input[name="mode"]:checked').value!=='custom')return true;try{ui.inputError.textContent='';source=parseCustom();prepare();return true}catch(error){ui.inputError.textContent=error.message;updateStatus('输入有误 · 请修正自定义迷宫');return false}}
-      function startPause(){if(!playing&&!syncCustom())return;if(cursor>=operations.length)prepare();playing=!playing;ui.start.textContent=playing?'暂停演示':'继续演示';updateStatus(playing?'演示进行中':'已暂停 · 可继续或单步');if(playing)loop()}
+      function syncCustom(){if(cursor!==0||document.querySelector('input[name="mode"]:checked').value!=='custom')return true;try{ui.inputError.textContent='';source=parseCustom();prepare();return true}catch(error){ui.inputError.textContent=error.message;updateStatus(ClubI18n.t('lab.search.errFixCustom'));return false}}
+      function startPause(){if(!playing&&!syncCustom())return;if(cursor>=operations.length)prepare();playing=!playing;ui.start.textContent=playing?ClubI18n.t('lab.common.pause'):ClubI18n.t('lab.common.resume');updateStatus(playing?ClubI18n.t('lab.common.running'):ClubI18n.t('lab.common.paused'));if(playing)loop()}
       function makeRandom(){ui.inputError.textContent='';document.querySelector('input[name="mode"][value="random"]').checked=true;ui.customWrap.hidden=true;ui.randomOptions.hidden=false;source=randomMaze();prepare()}
-      ui.algorithm.addEventListener('change',()=>{const [name,text]=descriptions[ui.algorithm.value];ui.note.innerHTML=`<b>${name}</b><span>${text}</span>`;prepare()});
+      ui.algorithm.addEventListener('change',()=>{refreshNote();prepare()});
       document.querySelectorAll('input[name="mode"]').forEach(input=>input.addEventListener('change',()=>{if(!input.checked)return;const custom=input.value==='custom';ui.customWrap.hidden=!custom;ui.randomOptions.hidden=custom;if(!custom)makeRandom();}));
-      ui.mazeSize.addEventListener('change',makeRandom);ui.start.addEventListener('click',startPause);ui.step.addEventListener('click',()=>{stop();if(!syncCustom())return;ui.start.textContent='继续演示';applyNext()});ui.reset.addEventListener('click',()=>{if(syncCustom())prepare()});ui.random.addEventListener('click',makeRandom);ui.customMaze.addEventListener('change',()=>{if(document.querySelector('input[name="mode"]:checked').value!=='custom')return;try{ui.inputError.textContent='';source=parseCustom();prepare()}catch(error){ui.inputError.textContent=error.message}});el('controlForm').addEventListener('submit',event=>event.preventDefault());
+      ui.mazeSize.addEventListener('change',makeRandom);ui.start.addEventListener('click',startPause);ui.step.addEventListener('click',()=>{stop();if(!syncCustom())return;ui.start.textContent=ClubI18n.t('lab.common.resume');applyNext()});ui.reset.addEventListener('click',()=>{if(syncCustom())prepare()});ui.random.addEventListener('click',makeRandom);ui.customMaze.addEventListener('change',()=>{if(document.querySelector('input[name="mode"]:checked').value!=='custom')return;try{ui.inputError.textContent='';source=parseCustom();prepare()}catch(error){ui.inputError.textContent=error.message}});el('controlForm').addEventListener('submit',event=>event.preventDefault());
       source=randomMaze();prepare();
+      refreshNote();
+      window.addEventListener('club:langchange', () => {
+        refreshNote();
+        refreshFrontierLabel();
+        syncStartLabel();
+        refreshStaticStatus();
+        if (typeof ClubI18n?.apply === 'function') ClubI18n.apply(document);
+      });
     })();
   </script>
 </body>

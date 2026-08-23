@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="lab.dp.title">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>动态规划可视化实验室 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js" defer></script>
-  <style>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root{font-family:"Microsoft YaHei","PingFang SC","Noto Sans CJK SC",system-ui,sans-serif;color:#f6fbff;background:#020409;--bg:#020409;--panel:rgba(8,13,30,.8);--cyan:#00e5ff;--violet:#7c4dff;--pink:#ff5fc8;--gold:#ffd166;--green:#71f3bf;--text:#c8d4e2;--muted:#8fa3b8;--line:rgba(115,221,255,.2);--shadow:0 24px 90px rgba(0,229,255,.11)}
     *{box-sizing:border-box}body{margin:0;min-width:320px;min-height:100vh;background:radial-gradient(ellipse 70% 50% at 15% 4%,rgba(0,229,255,.15),transparent 62%),radial-gradient(ellipse 60% 42% at 88% 7%,rgba(124,77,255,.22),transparent 65%),linear-gradient(180deg,#020409,#050917 50%,#020409);color:#f6fbff;overflow-x:hidden}body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(rgba(0,229,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.045) 1px,transparent 1px);background-size:72px 72px;mask-image:radial-gradient(ellipse 110% 100% at 50% 10%,#000,transparent 92%)}
     a{color:inherit;text-decoration:none}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.48}
@@ -27,77 +29,77 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="../index.html" aria-label="返回算法社首页"><span class="brand-mark">A</span><span><strong>算法社</strong><small>Algorithm Club</small></span></a>
+    <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a>
     <span class="member-identity" data-member-identity hidden></span>
-    <a class="back-link" href="visualization-lab.html">实验室选择</a>
+    <a class="back-link" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
   </header>
   <main>
     <section class="hero" aria-labelledby="pageTitle">
       <div>
         <p class="eyebrow">DYNAMIC PROGRAMMING LAB · V1</p>
-        <h1 id="pageTitle">动态规划可视化实验室</h1>
-        <p>观察状态转移如何填表。可演示经典一维递推，以及 0-1 背包的二维 DP 表更新与最优方案回溯。</p>
+        <h1 id="pageTitle" data-i18n="lab.dp.h1">动态规划可视化实验室</h1>
+        <p data-i18n="lab.dp.lead">观察状态转移如何填表。可演示经典一维递推，以及 0-1 背包的二维 DP 表更新与最优方案回溯。</p>
       </div>
-      <aside class="algorithm-note" id="algorithmNote"><b>0-1 背包</b><span>每个物品只能选一次，按容量从大到小转移：dp[j]=max(dp[j], dp[j-w]+v)。</span></aside>
+      <aside class="algorithm-note" id="algorithmNote"><b data-i18n="lab.dp.knapsackName">0-1 背包</b><span data-i18n="lab.dp.knapsackNote">每个物品只能选一次，按容量从大到小转移：dp[j]=max(dp[j], dp[j-w]+v)。</span></aside>
     </section>
-    <section class="lab-grid" aria-label="动态规划演示控制台">
+    <section class="lab-grid" data-i18n-aria="lab.dp.consoleAria" aria-label="动态规划演示控制台">
       <form class="panel controls" id="controlForm">
-        <h2>实验设置</h2>
+        <h2 data-i18n="lab.common.settings">实验设置</h2>
         <div class="control-group">
-          <label for="algorithm">DP 题目</label>
+          <label for="algorithm" data-i18n="lab.dp.topicLabel">DP 题目</label>
           <select id="algorithm">
-            <option value="knapsack01">0-1 背包</option>
-            <option value="fib">斐波那契（一维递推）</option>
-            <option value="lis">最长上升子序列 LIS</option>
+            <option value="knapsack01" data-i18n="lab.dp.knapsack">0-1 背包</option>
+            <option value="fib" data-i18n="lab.dp.fib">斐波那契（一维递推）</option>
+            <option value="lis" data-i18n="lab.dp.lis">最长上升子序列 LIS</option>
           </select>
         </div>
         <div class="control-group" id="capacityGroup">
-          <label for="capacity">背包容量</label>
+          <label for="capacity" data-i18n="lab.dp.capacity">背包容量</label>
           <input class="field" id="capacity" type="number" min="1" max="20" value="10" />
-          <p class="hint">建议 5–15，便于观察二维表。</p>
+          <p class="hint" data-i18n="lab.dp.capacityHint">建议 5–15，便于观察二维表。</p>
         </div>
         <div class="control-group">
-          <label for="customData" id="dataLabel">物品列表（重量,价值）</label>
+          <label for="customData" id="dataLabel" data-i18n="lab.dp.itemsLabel">物品列表（重量,价值）</label>
           <textarea id="customData" spellcheck="false">2,3
 3,4
 4,5
 5,8
 6,9</textarea>
-          <p class="hint" id="dataHint">每行一个物品：重量,价值。最多 8 个物品。</p>
+          <p class="hint" id="dataHint" data-i18n="lab.dp.itemsHint">每行一个物品：重量,价值。最多 8 个物品。</p>
           <p class="error" id="inputError" role="alert" aria-live="polite"></p>
         </div>
         <div class="button-stack">
-          <button class="btn btn-primary" type="button" id="startButton">开始演示</button>
-          <button class="btn" type="button" id="stepButton">单步执行</button>
-          <button class="btn btn-warn" type="button" id="resetButton">重置当前题</button>
-          <button class="btn" type="button" id="sampleButton">载入示例</button>
+          <button class="btn btn-primary" type="button" id="startButton" data-i18n="lab.common.start">开始演示</button>
+          <button class="btn" type="button" id="stepButton" data-i18n="lab.common.step">单步执行</button>
+          <button class="btn btn-warn" type="button" id="resetButton" data-i18n="lab.dp.resetTopic">重置当前题</button>
+          <button class="btn" type="button" id="sampleButton" data-i18n="lab.dp.loadSample">载入示例</button>
         </div>
       </form>
       <section class="panel visual" aria-labelledby="visualTitle">
         <div class="visual-header">
           <div>
-            <h2 id="visualTitle">状态转移表</h2>
+            <h2 id="visualTitle" data-i18n="lab.dp.visualTitle">状态转移表</h2>
             <span class="sr-only" id="announcement" aria-live="polite"></span>
           </div>
-          <span class="status" id="statusText" role="status">就绪 · 等待开始</span>
+          <span class="status" id="statusText" role="status" data-i18n="lab.common.ready">就绪</span>
         </div>
         <div class="stage">
-          <div class="items" id="itemsView" aria-label="输入数据"></div>
+          <div class="items" id="itemsView" data-i18n-aria="lab.dp.inputAria" aria-label="输入数据"></div>
           <div class="formula" id="formulaBox"><code>dp[i][j] = max(dp[i-1][j], dp[i-1][j-w] + v)</code> · 不选 / 选当前物品</div>
-          <div class="table-wrap"><table class="dp" id="dpTable" aria-label="DP 状态表"></table></div>
+          <div class="table-wrap"><table class="dp" id="dpTable" data-i18n-aria="lab.dp.tableAria" aria-label="DP 状态表"></table></div>
         </div>
-        <div class="metrics" aria-label="DP 计数">
-          <div class="metric"><span>状态更新</span><strong id="updates">0</strong></div>
-          <div class="metric"><span>最优值</span><strong id="best">0</strong></div>
-          <div class="metric"><span>当前步骤</span><strong id="steps">0</strong></div>
+        <div class="metrics" data-i18n-aria="lab.dp.metricsAria" aria-label="DP 计数">
+          <div class="metric"><span data-i18n="lab.dp.updates">状态更新</span><strong id="updates">0</strong></div>
+          <div class="metric"><span data-i18n="lab.dp.best">最优值</span><strong id="best">0</strong></div>
+          <div class="metric"><span data-i18n="lab.common.currentStep">当前步骤</span><strong id="steps">0</strong></div>
         </div>
-        <div class="legend" aria-label="颜色说明">
-          <span><i></i>当前格子</span>
-          <span><i class="l-source"></i>转移来源</span>
-          <span><i class="l-updated"></i>刚刚更新</span>
-          <span><i class="l-path"></i>最优方案</span>
+        <div class="legend" data-i18n-aria="lab.common.colorLegend" aria-label="颜色说明">
+          <span><i></i><span data-i18n="lab.dp.legCell">当前格子</span></span>
+          <span><i class="l-source"></i><span data-i18n="lab.dp.legSource">转移来源</span></span>
+          <span><i class="l-updated"></i><span data-i18n="lab.dp.legUpdated">刚刚更新</span></span>
+          <span><i class="l-path"></i><span data-i18n="lab.dp.legPath">最优方案</span></span>
         </div>
-        <div class="log" id="opLog" aria-label="操作日志"></div>
+        <div class="log" id="opLog" data-i18n-aria="lab.dp.logAria" aria-label="操作日志"></div>
       </section>
     </section>
   </main>
@@ -114,16 +116,28 @@
         announcement: el('announcement'), opLog: el('opLog')
       };
 
-      const descriptions = {
-        knapsack01: ['0-1 背包', '每个物品只能选一次。对每个物品遍历容量，比较“不选”与“选入”两种转移，得到最大价值。'],
-        fib: ['斐波那契递推', '经典一维动态规划：F(n)=F(n-1)+F(n-2)。适合理解“用已算状态推出新状态”。'],
-        lis: ['最长上升子序列', 'dp[i] 表示以第 i 个元素结尾的 LIS 长度，枚举前面更小的元素做转移。']
+      const descKeys = {
+        knapsack01: ['lab.dp.knapsackName', 'lab.dp.knapsackDesc'],
+        fib: ['lab.dp.fibName', 'lab.dp.fibDesc'],
+        lis: ['lab.dp.lisName', 'lab.dp.lisDesc']
       };
-      const formulas = {
-        knapsack01: '<code>dp[i][j] = max(dp[i-1][j], dp[i-1][j-w] + v)</code> · 不选 / 选当前物品',
-        fib: '<code>dp[i] = dp[i-1] + dp[i-2]</code> · 由前两项推出当前项',
-        lis: '<code>dp[i] = max(dp[j]) + 1</code>（a[j] &lt; a[i]）· 否则至少为 1'
+      const formulaKeys = {
+        knapsack01: 'lab.dp.formulaKnapsack',
+        fib: 'lab.dp.formulaFib',
+        lis: 'lab.dp.formulaLis'
       };
+      function getDescriptions(){
+        const o = {};
+        for (const k of Object.keys(descKeys)) {
+          o[k] = [ClubI18n.t(descKeys[k][0]), ClubI18n.t(descKeys[k][1])];
+        }
+        return o;
+      }
+      function getFormulas(){
+        const o = {};
+        for (const k of Object.keys(formulaKeys)) o[k] = ClubI18n.t(formulaKeys[k]);
+        return o;
+      }
       const samples = {
         knapsack01: { capacity: 10, text: '2,3\n3,4\n4,5\n5,8\n6,9' },
         fib: { text: '10' },
@@ -150,54 +164,73 @@
         ui.opLog.prepend(line);
         while(ui.opLog.childElementCount>40) ui.opLog.lastChild.remove();
       }
+      function syncStartLabel(){
+        if(cursor>=operations.length && operations.length){ ui.start.textContent=ClubI18n.t('lab.common.restart'); }
+        else if(playing){ ui.start.textContent=ClubI18n.t('lab.common.pause'); }
+        else if(cursor>0){ ui.start.textContent=ClubI18n.t('lab.common.resume'); }
+        else { ui.start.textContent=ClubI18n.t('lab.common.start'); }
+      }
+      function refreshStaticStatus(){
+        if(ui.inputError.textContent){ updateStatus(ClubI18n.t('lab.dp.errFixData')); return; }
+        if(playing){ updateStatus(ClubI18n.t('lab.common.running')); return; }
+        if(cursor>=operations.length && operations.length){ updateStatus(ClubI18n.t('lab.dp.doneBest',{v:best})); return; }
+        if(cursor>0){ updateStatus(ClubI18n.t('lab.common.paused')); return; }
+        updateStatus(ClubI18n.t('lab.common.readyOps',{n:operations.length}));
+      }
 
       function syncAlgoUI(){
         const type = ui.algorithm.value;
-        const [name,text]=descriptions[type];
+        const [name,text]=getDescriptions()[type];
         ui.note.innerHTML=`<b>${name}</b><span>${text}</span>`;
-        ui.formulaBox.innerHTML=formulas[type];
+        ui.formulaBox.innerHTML=getFormulas()[type];
         ui.capacityGroup.hidden = type !== 'knapsack01';
         if(type==='knapsack01'){
-          ui.dataLabel.textContent='物品列表（重量,价值）';
-          ui.dataHint.textContent='每行一个物品：重量,价值。最多 8 个物品。';
+          ui.dataLabel.textContent=ClubI18n.t('lab.dp.itemsLabel');
+          ui.dataLabel.removeAttribute('data-i18n');
+          ui.dataHint.textContent=ClubI18n.t('lab.dp.itemsHint');
+          ui.dataHint.removeAttribute('data-i18n');
         }else if(type==='fib'){
-          ui.dataLabel.textContent='计算到第 n 项';
-          ui.dataHint.textContent='输入 2–16 的整数 n。';
+          ui.dataLabel.textContent=ClubI18n.t('lab.dp.nLabel');
+          ui.dataLabel.removeAttribute('data-i18n');
+          ui.dataHint.textContent=ClubI18n.t('lab.dp.nHint');
+          ui.dataHint.removeAttribute('data-i18n');
         }else{
-          ui.dataLabel.textContent='整数序列';
-          ui.dataHint.textContent='以空格或逗号分隔，长度 3–12。';
+          ui.dataLabel.textContent=ClubI18n.t('lab.dp.seqLabel');
+          ui.dataLabel.removeAttribute('data-i18n');
+          ui.dataHint.textContent=ClubI18n.t('lab.dp.seqHint');
+          ui.dataHint.removeAttribute('data-i18n');
         }
       }
 
       function parseInput(){
         const type=ui.algorithm.value;
         const raw=ui.customData.value.trim();
-        if(!raw) throw new Error('请输入题目数据。');
+        if(!raw) throw new Error(ClubI18n.t('lab.dp.errNeedData'));
         if(type==='knapsack01'){
           const cap=Number(ui.capacity.value);
-          if(!Number.isInteger(cap)||cap<1||cap>20) throw new Error('背包容量应为 1–20 的整数。');
+          if(!Number.isInteger(cap)||cap<1||cap>20) throw new Error(ClubI18n.t('lab.dp.errCap'));
           const lines=raw.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-          if(lines.length<1||lines.length>8) throw new Error('物品数量应为 1–8。');
+          if(lines.length<1||lines.length>8) throw new Error(ClubI18n.t('lab.dp.errItemsCount'));
           const items=lines.map((line,idx)=>{
             const parts=line.split(/[\s,，]+/).filter(Boolean);
-            if(parts.length!==2||parts.some(p=>!/^\d+$/.test(p))) throw new Error(`第 ${idx+1} 行格式应为：重量,价值`);
+            if(parts.length!==2||parts.some(p=>!/^\d+$/.test(p))) throw new Error(ClubI18n.t('lab.dp.errItemFmt',{i:idx+1}));
             const w=Number(parts[0]), v=Number(parts[1]);
-            if(w<1||w>20||v<0||v>99) throw new Error(`第 ${idx+1} 行：重量 1–20，价值 0–99。`);
-            return {w,v,name:`物品${idx+1}`};
+            if(w<1||w>20||v<0||v>99) throw new Error(ClubI18n.t('lab.dp.errItemRange',{i:idx+1}));
+            return {w,v,name:ClubI18n.t('lab.dp.itemName',{i:idx+1})};
           });
           return {type, capacity:cap, items};
         }
         if(type==='fib'){
-          if(!/^\d+$/.test(raw)) throw new Error('请输入整数 n。');
+          if(!/^\d+$/.test(raw)) throw new Error(ClubI18n.t('lab.dp.errNInt'));
           const n=Number(raw);
-          if(n<2||n>16) throw new Error('n 应为 2–16。');
+          if(n<2||n>16) throw new Error(ClubI18n.t('lab.dp.errNRange'));
           return {type,n};
         }
         const vals=raw.split(/[\s,，]+/).filter(Boolean);
-        if(vals.length<3||vals.length>12) throw new Error('序列长度应为 3–12。');
-        if(vals.some(v=>!/^[-+]?\d+$/.test(v))) throw new Error('序列只能包含整数。');
+        if(vals.length<3||vals.length>12) throw new Error(ClubI18n.t('lab.dp.errSeqLen'));
+        if(vals.some(v=>!/^[-+]?\d+$/.test(v))) throw new Error(ClubI18n.t('lab.dp.errSeqInts'));
         const arr=vals.map(Number);
-        if(arr.some(n=>n<-99||n>999)) throw new Error('元素范围建议 -99 至 999。');
+        if(arr.some(n=>n<-99||n>999)) throw new Error(ClubI18n.t('lab.dp.errSeqRange'));
         return {type,arr};
       }
 
@@ -205,10 +238,10 @@
         const {items,capacity}=problem;
         const n=items.length;
         const dp=Array.from({length:n+1},()=>Array(capacity+1).fill(0));
-        const ops=[{type:'init',table:dp.map(r=>r.slice()),message:'初始化 dp 表为 0'}];
+        const ops=[{type:'init',table:dp.map(r=>r.slice()),message:ClubI18n.t('lab.dp.initTable')}];
         for(let i=1;i<=n;i++){
           const {w,v,name}=items[i-1];
-          ops.push({type:'item',index:i-1,message:`考虑 ${name}（w=${w}, v=${v}）`});
+          ops.push({type:'item',index:i-1,message:ClubI18n.t('lab.dp.considerItem',{name,w,v})});
           for(let j=0;j<=capacity;j++){
             const skip=dp[i-1][j];
             let take=skip, can=j>=w;
@@ -220,26 +253,25 @@
               sources: can? [[i-1,j],[i-1,j-w]] : [[i-1,j]],
               updated: can && take!==skip,
               message: can
-                ? `容量 ${j}：不选=${skip}，选入=${dp[i-1][j-w]+v} → ${take}`
-                : `容量 ${j}：装不下，继承 ${skip}`
+                ? ClubI18n.t('lab.dp.capTake',{j,skip,take:dp[i-1][j-w]+v,best:take})
+                : ClubI18n.t('lab.dp.capSkip',{j,skip})
             });
           }
         }
-        // reconstruct
         let i=n,j=capacity;
         const chosen=[];
         while(i>0 && j>=0){
           if(dp[i][j]!==dp[i-1][j]){
             chosen.push(i-1);
-            ops.push({type:'path', i, j, item:i-1, message:`回溯：选择 ${items[i-1].name}`});
+            ops.push({type:'path', i, j, item:i-1, message:ClubI18n.t('lab.dp.traceTake',{name:items[i-1].name})});
             j-=items[i-1].w;
             i--;
           }else{
-            ops.push({type:'path', i, j, message:`回溯：不选 ${items[i-1].name}`});
+            ops.push({type:'path', i, j, message:ClubI18n.t('lab.dp.traceSkip',{name:items[i-1].name})});
             i--;
           }
         }
-        ops.push({type:'done', best:dp[n][capacity], chosen, message:`完成 · 最大价值 ${dp[n][capacity]}`});
+        ops.push({type:'done', best:dp[n][capacity], chosen, message:ClubI18n.t('lab.dp.doneKnapsack',{v:dp[n][capacity]})});
         return {ops, initial:Array.from({length:n+1},()=>Array(capacity+1).fill(0)), rowLabels:['∅',...items.map(x=>x.name)], colLabels:Array.from({length:capacity+1},(_,k)=>String(k))};
       }
 
@@ -248,15 +280,15 @@
         const dp=Array(n+1).fill(0);
         dp[0]=0; dp[1]=1;
         const ops=[
-          {type:'init',table:[dp.slice()],message:'初始化 F(0)=0, F(1)=1'},
-          {type:'cell',i:0,j:0,value:0,sources:[],updated:false,message:'写入 F(0)=0'},
-          {type:'cell',i:0,j:1,value:1,sources:[],updated:false,message:'写入 F(1)=1'}
+          {type:'init',table:[dp.slice()],message:ClubI18n.t('lab.dp.initFib')},
+          {type:'cell',i:0,j:0,value:0,sources:[],updated:false,message:ClubI18n.t('lab.dp.writeF0')},
+          {type:'cell',i:0,j:1,value:1,sources:[],updated:false,message:ClubI18n.t('lab.dp.writeF1')}
         ];
         for(let i=2;i<=n;i++){
           dp[i]=dp[i-1]+dp[i-2];
-          ops.push({type:'cell',i:0,j:i,value:dp[i],sources:[[0,i-1],[0,i-2]],updated:true,message:`F(${i})=F(${i-1})+F(${i-2})=${dp[i]}`});
+          ops.push({type:'cell',i:0,j:i,value:dp[i],sources:[[0,i-1],[0,i-2]],updated:true,message:ClubI18n.t('lab.dp.fibCalc',{i,a:i-1,b:i-2,v:dp[i]})});
         }
-        ops.push({type:'done',best:dp[n],message:`完成 · F(${n})=${dp[n]}`});
+        ops.push({type:'done',best:dp[n],message:ClubI18n.t('lab.dp.doneFib',{n,v:dp[n]})});
         return {ops, initial:[Array(n+1).fill(null).map((_,idx)=>idx<=1?dp[idx]:'')], rowLabels:['F(i)'], colLabels:Array.from({length:n+1},(_,k)=>String(k))};
       }
 
@@ -264,20 +296,20 @@
         const a=problem.arr;
         const n=a.length;
         const dp=Array(n).fill(1);
-        const ops=[{type:'init',table:[dp.slice()],message:'每个位置初始 LIS 长度为 1'}];
+        const ops=[{type:'init',table:[dp.slice()],message:ClubI18n.t('lab.dp.lisInit')}];
         for(let i=0;i<n;i++){
-          ops.push({type:'item',index:i,message:`处理 a[${i}]=${a[i]}`});
+          ops.push({type:'item',index:i,message:ClubI18n.t('lab.dp.handleAi',{i,v:a[i]})});
           for(let j=0;j<i;j++){
-            ops.push({type:'compare',i:0,j:i,sources:[[0,j]],message:`比较 a[${j}]=${a[j]} 与 a[${i}]=${a[i]}`});
+            ops.push({type:'compare',i:0,j:i,sources:[[0,j]],message:ClubI18n.t('lab.dp.cmpAjAi',{j,aj:a[j],i,ai:a[i]})});
             if(a[j]<a[i] && dp[j]+1>dp[i]){
               dp[i]=dp[j]+1;
-              ops.push({type:'cell',i:0,j:i,value:dp[i],sources:[[0,j]],updated:true,message:`更新 dp[${i}]=${dp[i]}`});
+              ops.push({type:'cell',i:0,j:i,value:dp[i],sources:[[0,j]],updated:true,message:ClubI18n.t('lab.dp.updateDpi',{i,v:dp[i]})});
             }
           }
-          ops.push({type:'cell',i:0,j:i,value:dp[i],sources:[],updated:false,message:`确定 dp[${i}]=${dp[i]}`});
+          ops.push({type:'cell',i:0,j:i,value:dp[i],sources:[],updated:false,message:ClubI18n.t('lab.dp.setDpi',{i,v:dp[i]})});
         }
         const bestVal=Math.max(...dp);
-        ops.push({type:'done',best:bestVal,message:`完成 · LIS 长度 ${bestVal}`});
+        ops.push({type:'done',best:bestVal,message:ClubI18n.t('lab.dp.doneLis',{v:bestVal})});
         return {ops, initial:[Array(n).fill(1)], rowLabels:['dp[i]'], colLabels:a.map(String)};
       }
 
@@ -291,14 +323,13 @@
         if(source.type==='knapsack01'){
           ui.itemsView.innerHTML=source.items.map((it,idx)=>`<div class="item-card ${idx===highlight?'active':''} ${chosen.includes(idx)?'chosen':''}"><b>${it.name}</b>w=${it.w} · v=${it.v}</div>`).join('');
         }else if(source.type==='fib'){
-          ui.itemsView.innerHTML=`<div class="item-card active"><b>目标</b>计算 F(${source.n})</div>`;
+          ui.itemsView.innerHTML=`<div class="item-card active"><b>${ClubI18n.t('lab.dp.fibTarget')}</b>${ClubI18n.t('lab.dp.fibTargetBody',{n:source.n})}</div>`;
         }else{
           ui.itemsView.innerHTML=source.arr.map((v,idx)=>`<div class="item-card ${idx===highlight?'active':''}"><b>a[${idx}]</b>${v}</div>`).join('');
         }
       }
 
       function renderTable(){
-        const rows=table.length, cols=table[0]?.length||0;
         const head=`<tr><th></th>${colLabels.map(c=>`<th>${c}</th>`).join('')}</tr>`;
         const body=table.map((row,i)=>{
           const cells=row.map((val,j)=>{
@@ -333,8 +364,8 @@
         ui.opLog.innerHTML='';
         renderItems();
         renderTable();
-        updateStatus(`就绪 · 共 ${operations.length} 个操作`);
-        ui.start.textContent='开始演示';
+        updateStatus(ClubI18n.t('lab.common.readyOps',{n:operations.length}));
+        ui.start.textContent=ClubI18n.t('lab.common.start');
       }
 
       function applyNext(){
@@ -362,13 +393,12 @@
         }
         if(op.message) log(op.message);
         renderTable();
-        updateStatus(`${op.message||'执行中'} · ${cursor} / ${operations.length}`);
+        updateStatus(ClubI18n.t('lab.common.stepOf',{label:op.message||ClubI18n.t('lab.common.executing'),cur:cursor,total:operations.length}));
         if(op.type==='done') finish();
         return true;
       }
 
       function collectPathCells(){
-        // mark final best cell for knapsack / fib / lis
         if(source.type==='knapsack01') return [[source.items.length, source.capacity]];
         if(source.type==='fib') return [[0, source.n]];
         let max= -1, idx=0;
@@ -379,8 +409,8 @@
       function finish(){
         stop();
         renderTable();
-        updateStatus(`完成 · 最优值 ${best}`);
-        ui.start.textContent='重新演示';
+        updateStatus(ClubI18n.t('lab.dp.doneBest',{v:best}));
+        ui.start.textContent=ClubI18n.t('lab.common.restart');
       }
 
       function loop(){
@@ -397,7 +427,7 @@
           return true;
         }catch(err){
           ui.inputError.textContent=err.message;
-          updateStatus('输入有误 · 请修正题目数据');
+          updateStatus(ClubI18n.t('lab.dp.errFixData'));
           return false;
         }
       }
@@ -406,8 +436,8 @@
         if(!playing && cursor===0 && !syncAndPrepare()) return;
         if(cursor>=operations.length) prepare();
         playing=!playing;
-        ui.start.textContent=playing?'暂停演示':'继续演示';
-        updateStatus(playing?'演示进行中':'已暂停 · 可继续或单步');
+        ui.start.textContent=playing?ClubI18n.t('lab.common.pause'):ClubI18n.t('lab.common.resume');
+        updateStatus(playing?ClubI18n.t('lab.common.running'):ClubI18n.t('lab.common.paused'));
         if(playing) loop();
       }
 
@@ -420,7 +450,7 @@
 
       ui.algorithm.addEventListener('change',()=>{syncAlgoUI();loadSample();});
       ui.start.addEventListener('click',startPause);
-      ui.step.addEventListener('click',()=>{stop(); if(cursor===0 && !syncAndPrepare()) return; ui.start.textContent='继续演示'; applyNext();});
+      ui.step.addEventListener('click',()=>{stop(); if(cursor===0 && !syncAndPrepare()) return; ui.start.textContent=ClubI18n.t('lab.common.resume'); applyNext();});
       ui.reset.addEventListener('click',()=>syncAndPrepare());
       ui.sample.addEventListener('click',loadSample);
       ui.customData.addEventListener('change',()=>{ if(cursor===0) syncAndPrepare(); });
@@ -429,6 +459,25 @@
 
       syncAlgoUI();
       loadSample();
+      window.addEventListener('club:langchange', () => {
+        syncAlgoUI();
+        syncStartLabel();
+        if(source){
+          if(cursor===0 && !playing){
+            try { source=parseInput(); prepare(); } catch(_e) { /* keep */ }
+          } else {
+            refreshStaticStatus();
+            if(source.type==='fib') renderItems();
+            else if(source.type==='knapsack01'){
+              source.items.forEach((it,idx)=>{ it.name = ClubI18n.t('lab.dp.itemName',{i:idx+1}); });
+              renderItems();
+              rowLabels=['∅',...source.items.map(x=>x.name)];
+              renderTable();
+            }
+          }
+        }
+        if (typeof ClubI18n?.apply === 'function') ClubI18n.apply(document);
+      });
     })();
   </script>
 </body>

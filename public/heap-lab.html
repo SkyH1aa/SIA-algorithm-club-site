@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="lab.heap.title">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>堆可视化实验室 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js" defer></script>
-  <style>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root {
       font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
       color: #f6fbff;
@@ -291,7 +293,7 @@
       padding-top: 8px;
     }
     .array-row:empty::after {
-      content: "空数组";
+      content: attr(data-empty);
       display: grid;
       place-items: center;
       width: 100%;
@@ -505,122 +507,122 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="../index.html" aria-label="返回算法社首页">
+    <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页">
       <span class="brand-mark">A</span>
-      <span><strong>算法社</strong><small>Algorithm Club</small></span>
+      <span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span>
     </a>
     <span class="member-identity" data-member-identity hidden></span>
-    <a class="back-link" href="visualization-lab.html">实验室选择</a>
+    <a class="back-link" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
   </header>
 
   <main>
     <section class="hero" aria-labelledby="pageTitle">
       <div>
         <p class="eyebrow">HEAP VISUALIZATION LAB · V1</p>
-        <h1 id="pageTitle">堆可视化实验室</h1>
-        <p>同时观察堆的数组存储与二叉树结构。可逐步演示建堆、上浮插入、下沉删除堆顶，以及完整堆排序过程，理解父子索引关系与堆序维护。</p>
+        <h1 id="pageTitle" data-i18n="lab.heap.h1">堆可视化实验室</h1>
+        <p data-i18n="lab.heap.lead">同时观察堆的数组存储与二叉树结构。可逐步演示建堆、上浮插入、下沉删除堆顶，以及完整堆排序过程，理解父子索引关系与堆序维护。</p>
       </div>
       <aside class="algorithm-note" id="modeNote">
-        <b>建堆 Build-Heap</b>
-        <span>自底向上对每个非叶节点执行下沉，把无序数组调整为堆。</span>
+        <b data-i18n="lab.heap.buildName">建堆 Build-Heap</b>
+        <span data-i18n="lab.heap.buildDesc">自底向上对每个非叶节点执行下沉，把无序数组调整为堆。</span>
       </aside>
     </section>
 
-    <section class="lab-grid" aria-label="堆演示控制台">
+    <section class="lab-grid" data-i18n-aria="lab.heap.consoleAria" aria-label="堆演示控制台">
       <form class="panel controls" id="controlForm">
-        <h2>实验设置</h2>
+        <h2 data-i18n="lab.common.settings">实验设置</h2>
 
         <div class="control-group">
-          <label for="operation">演示操作</label>
+          <label for="operation" data-i18n="lab.heap.opLabel">演示操作</label>
           <select id="operation">
-            <option value="build">建堆 heapify</option>
-            <option value="insert">插入（上浮）</option>
-            <option value="extract">删除堆顶（下沉）</option>
-            <option value="sort">堆排序</option>
+            <option value="build" data-i18n="lab.heap.build">建堆 heapify</option>
+            <option value="insert" data-i18n="lab.heap.insert">插入（上浮）</option>
+            <option value="extract" data-i18n="lab.heap.extract">删除堆顶（下沉）</option>
+            <option value="sort" data-i18n="lab.heap.sort">堆排序</option>
           </select>
         </div>
 
         <div class="control-group">
           <fieldset>
-            <legend>堆类型</legend>
+            <legend data-i18n="lab.heap.heapType">堆类型</legend>
             <div class="radio-row">
-              <label><input type="radio" name="heapType" value="max" checked /><span>最大堆</span></label>
-              <label><input type="radio" name="heapType" value="min" /><span>最小堆</span></label>
+              <label><input type="radio" name="heapType" value="max" checked /><span data-i18n="lab.heap.maxHeap">最大堆</span></label>
+              <label><input type="radio" name="heapType" value="min" /><span data-i18n="lab.heap.minHeap">最小堆</span></label>
             </div>
           </fieldset>
         </div>
 
         <div class="control-group">
           <fieldset>
-            <legend>数据模式</legend>
+            <legend data-i18n="lab.common.dataMode">数据模式</legend>
             <div class="radio-row">
-              <label><input type="radio" name="mode" value="random" checked /><span>随机生成</span></label>
-              <label><input type="radio" name="mode" value="custom" /><span>自定义</span></label>
+              <label><input type="radio" name="mode" value="random" checked /><span data-i18n="lab.common.randomMode">随机生成</span></label>
+              <label><input type="radio" name="mode" value="custom" /><span data-i18n="lab.common.custom">自定义</span></label>
             </div>
           </fieldset>
         </div>
 
         <div class="control-group custom-input" id="customWrap" hidden>
-          <label for="customData">自定义整数</label>
-          <textarea id="customData" placeholder="例如：12, 5, 28, 9, 16"></textarea>
-          <p class="hint">以逗号或空格分隔，支持 3–15 个 -999 至 999 的整数。</p>
+          <label for="customData" data-i18n="lab.common.customInts">自定义整数</label>
+          <textarea id="customData" placeholder="例如：12, 5, 28, 9, 16" data-i18n-placeholder="lab.heap.customPh"></textarea>
+          <p class="hint" data-i18n="lab.heap.customHint">以逗号或空格分隔，支持 3–15 个 -999 至 999 的整数。</p>
           <p class="error" id="inputError" role="alert" aria-live="polite"></p>
         </div>
 
         <div class="control-group" id="sizeGroup">
-          <label for="size">随机数据数量：<span id="sizeValue">9</span></label>
+          <label for="size"><span data-i18n="lab.common.randomSize">随机数据数量：</span><span id="sizeValue">9</span></label>
           <input class="field" id="size" type="range" min="5" max="15" value="9" />
-          <p class="hint">随机数据使用 5–99 的不重复整数。节点过多时树形图会自动压缩。</p>
+          <p class="hint" data-i18n="lab.heap.randomHint">随机数据使用 5–99 的不重复整数。节点过多时树形图会自动压缩。</p>
         </div>
 
         <div class="control-group insert-input" id="insertWrap" hidden>
-          <label for="insertValue">插入数值</label>
-          <input class="field" id="insertValue" type="text" inputmode="numeric" placeholder="例如：42" maxlength="5" />
-          <p class="hint">插入前会先静默建堆（若当前不是堆），再演示上浮过程。</p>
+          <label for="insertValue" data-i18n="lab.heap.insertValue">插入数值</label>
+          <input class="field" id="insertValue" type="text" inputmode="numeric" placeholder="例如：42" maxlength="5" data-i18n-placeholder="lab.heap.insertPh" />
+          <p class="hint" data-i18n="lab.heap.insertHint">插入前会先静默建堆（若当前不是堆），再演示上浮过程。</p>
           <p class="error" id="insertError" role="alert" aria-live="polite"></p>
         </div>
 
         <div class="button-stack">
-          <button class="btn btn-primary" type="button" id="startButton">开始演示</button>
-          <button class="btn" type="button" id="stepButton">单步执行</button>
-          <button class="btn btn-warn" type="button" id="resetButton">重置当前数据</button>
-          <button class="btn" type="button" id="randomButton">随机生成</button>
+          <button class="btn btn-primary" type="button" id="startButton" data-i18n="lab.common.start">开始演示</button>
+          <button class="btn" type="button" id="stepButton" data-i18n="lab.common.step">单步执行</button>
+          <button class="btn btn-warn" type="button" id="resetButton" data-i18n="lab.common.reset">重置当前数据</button>
+          <button class="btn" type="button" id="randomButton" data-i18n="lab.common.random">随机生成</button>
         </div>
       </form>
 
       <section class="panel visual" aria-labelledby="visualTitle">
         <div class="visual-header">
           <div>
-            <h2 id="visualTitle">数组视图 · 二叉树视图</h2>
+            <h2 id="visualTitle" data-i18n="lab.heap.visualTitle">数组视图 · 二叉树视图</h2>
             <span class="sr-only" id="announcement" aria-live="polite"></span>
           </div>
-          <span class="status" id="statusText" role="status">就绪 · 等待开始</span>
+          <span class="status" id="statusText" role="status" data-i18n="lab.common.ready">就绪</span>
         </div>
 
         <div class="views">
           <div class="view-box">
-            <h3 class="view-title">数组存储（下标从 0 开始）</h3>
-            <div class="array-row" id="arrayView" aria-label="堆数组视图"></div>
+            <h3 class="view-title" data-i18n="lab.heap.arrayTitle">数组存储（下标从 0 开始）</h3>
+            <div class="array-row" id="arrayView" data-i18n-aria="lab.heap.arrayAria" aria-label="堆数组视图" data-empty="空数组"></div>
           </div>
           <div class="view-box">
-            <h3 class="view-title">完全二叉树结构</h3>
-            <div class="tree-wrap" id="treeWrap" aria-label="堆二叉树视图"></div>
+            <h3 class="view-title" data-i18n="lab.heap.treeTitle">完全二叉树结构</h3>
+            <div class="tree-wrap" id="treeWrap" data-i18n-aria="lab.heap.treeAria" aria-label="堆二叉树视图"></div>
           </div>
         </div>
 
-        <div class="metrics" aria-label="堆操作计数">
-          <div class="metric"><span>比较次数</span><strong id="comparisons">0</strong></div>
-          <div class="metric"><span>交换次数</span><strong id="swaps">0</strong></div>
-          <div class="metric"><span>当前步骤</span><strong id="steps">0</strong></div>
+        <div class="metrics" data-i18n-aria="lab.heap.metricsAria" aria-label="堆操作计数">
+          <div class="metric"><span data-i18n="lab.heap.comparisons">比较次数</span><strong id="comparisons">0</strong></div>
+          <div class="metric"><span data-i18n="lab.heap.swaps">交换次数</span><strong id="swaps">0</strong></div>
+          <div class="metric"><span data-i18n="lab.common.currentStep">当前步骤</span><strong id="steps">0</strong></div>
         </div>
-        <div class="legend" aria-label="颜色说明">
-          <span><i></i>普通节点</span>
-          <span><i class="l-compare"></i>正在比较</span>
-          <span><i class="l-swap"></i>正在交换</span>
-          <span><i class="l-focus"></i>当前焦点</span>
-          <span><i class="l-sorted"></i>已就位 / 堆外</span>
+        <div class="legend" data-i18n-aria="lab.common.colorLegend" aria-label="颜色说明">
+          <span><i></i><span data-i18n="lab.heap.legNode">普通节点</span></span>
+          <span><i class="l-compare"></i><span data-i18n="lab.heap.legCompare">正在比较</span></span>
+          <span><i class="l-swap"></i><span data-i18n="lab.heap.legSwap">正在交换</span></span>
+          <span><i class="l-focus"></i><span data-i18n="lab.heap.legFocus">当前焦点</span></span>
+          <span><i class="l-sorted"></i><span data-i18n="lab.heap.legSorted">已就位 / 堆外</span></span>
         </div>
-        <div class="op-log" id="opLog" aria-live="polite">准备就绪。选择操作后开始演示。</div>
+        <div class="op-log" id="opLog" aria-live="polite" data-i18n="lab.heap.logReady">准备就绪。选择操作后开始演示。</div>
       </section>
     </section>
   </main>
@@ -654,12 +656,41 @@
         opLog: el('opLog')
       };
 
-      const descriptions = {
-        build: ['建堆 Build-Heap', '自底向上对每个非叶节点执行下沉，把无序数组调整为堆。'],
-        insert: ['插入 Sift-Up', '新元素追加到末尾，再沿父链上浮，直到恢复堆序。'],
-        extract: ['删除堆顶 Sift-Down', '用末尾元素覆盖堆顶后缩小堆，再对新堆顶下沉调整。'],
-        sort: ['堆排序 Heap Sort', '先建堆，再反复取出堆顶放到末尾，最终得到有序序列。']
+      const descKeys = {
+        build: ['lab.heap.buildName', 'lab.heap.buildDesc'],
+        insert: ['lab.heap.insertName', 'lab.heap.insertDesc'],
+        extract: ['lab.heap.extractName', 'lab.heap.extractDesc'],
+        sort: ['lab.heap.sortName', 'lab.heap.sortDesc']
       };
+      function getDescriptions() {
+        const o = {};
+        for (const k of Object.keys(descKeys)) {
+          o[k] = [ClubI18n.t(descKeys[k][0]), ClubI18n.t(descKeys[k][1])];
+        }
+        return o;
+      }
+      function syncStartLabel() {
+        if (cursor >= operations.length && operations.length) ui.start.textContent = ClubI18n.t('lab.common.restart');
+        else if (playing) ui.start.textContent = ClubI18n.t('lab.common.pause');
+        else if (cursor > 0) ui.start.textContent = ClubI18n.t('lab.common.resume');
+        else ui.start.textContent = ClubI18n.t('lab.common.start');
+      }
+      function refreshStaticStatus() {
+        if (ui.inputError.textContent || ui.insertError.textContent) {
+          updateStatus(ClubI18n.t(ui.insertError.textContent ? 'lab.heap.errFixRetry' : 'lab.heap.errFixCustom'));
+          return;
+        }
+        if (playing) { updateStatus(ClubI18n.t('lab.common.running')); return; }
+        if (cursor >= operations.length && operations.length) {
+          updateStatus(ClubI18n.t('lab.common.doneOps', { n: cursor }));
+          return;
+        }
+        if (cursor > 0) { updateStatus(ClubI18n.t('lab.common.paused')); return; }
+        updateStatus(ClubI18n.t('lab.common.readyOps', { n: operations.length }));
+      }
+      function syncEmptyLabel() {
+        ui.arrayView.setAttribute('data-empty', ClubI18n.t('lab.heap.emptyArr'));
+      }
 
       let baseSource = [];
       let source = [];
@@ -705,22 +736,22 @@
 
       function parseCustom() {
         const raw = ui.customData.value.trim();
-        if (!raw) throw new Error('请输入自定义整数。');
+        if (!raw) throw new Error(ClubI18n.t('lab.heap.errNeedCustom'));
         const values = raw.split(/[\s,，]+/).filter(Boolean);
-        if (values.length < 3 || values.length > 15) throw new Error('请输入 3–15 个整数。');
-        if (values.some(v => !/^[-+]?\d+$/.test(v))) throw new Error('只能输入以逗号或空格分隔的整数。');
+        if (values.length < 3 || values.length > 15) throw new Error(ClubI18n.t('lab.heap.errCount'));
+        if (values.some(v => !/^[-+]?\d+$/.test(v))) throw new Error(ClubI18n.t('lab.heap.errIntsOnly'));
         const nums = values.map(Number);
-        if (nums.some(n => n < -999 || n > 999)) throw new Error('整数范围应在 -999 至 999。');
+        if (nums.some(n => n < -999 || n > 999)) throw new Error(ClubI18n.t('lab.heap.errRange'));
         return nums;
       }
 
       function parseInsertValue() {
         const raw = ui.insertValue.value.trim();
-        if (!raw) throw new Error('请输入要插入的整数。');
-        if (!/^[-+]?\d+$/.test(raw)) throw new Error('插入值必须是整数。');
+        if (!raw) throw new Error(ClubI18n.t('lab.heap.errNeedInsert'));
+        if (!/^[-+]?\d+$/.test(raw)) throw new Error(ClubI18n.t('lab.heap.errInsertInt'));
         const num = Number(raw);
-        if (num < -999 || num > 999) throw new Error('插入值范围应在 -999 至 999。');
-        if (source.length >= 15) throw new Error('演示规模上限为 15 个元素。');
+        if (num < -999 || num > 999) throw new Error(ClubI18n.t('lab.heap.errInsertRange'));
+        if (source.length >= 15) throw new Error(ClubI18n.t('lab.heap.errCap'));
         return num;
       }
 
@@ -743,28 +774,29 @@
         return a;
       }
 
-      function siftDownOps(a, start, end, ops, label = '下沉') {
+      function siftDownOps(a, start, end, ops, labelKey = 'lab.heap.sink') {
+        const label = ClubI18n.t(labelKey);
         let i = start;
-        add(ops, 'focus', { indices: [i], message: `${label}：从下标 ${i}（值 ${a[i]}）开始` });
+        add(ops, 'focus', { indices: [i], message: ClubI18n.t('lab.heap.buildStart', { label, i, v: a[i] }) });
         while (true) {
           const l = left(i);
           const r = right(i);
           let best = i;
           if (l < end) {
-            add(ops, 'compare', { indices: [i, l], message: `比较父节点 ${a[i]} 与左孩子 ${a[l]}` });
+            add(ops, 'compare', { indices: [i, l], message: ClubI18n.t('lab.heap.cmpLeft', { v: a[i], l: a[l] }) });
             if (better(a[l], a[best])) best = l;
           }
           if (r < end) {
-            add(ops, 'compare', { indices: [best === i ? i : best, r], message: `比较当前优胜者与右孩子 ${a[r]}` });
+            add(ops, 'compare', { indices: [best === i ? i : best, r], message: ClubI18n.t('lab.heap.cmpRight', { r: a[r] }) });
             if (better(a[r], a[best])) best = r;
           }
           if (best === i) {
-            add(ops, 'focus', { indices: [i], message: `${label}结束：下标 ${i} 已满足堆序` });
+            add(ops, 'focus', { indices: [i], message: ClubI18n.t('lab.heap.buildEnd', { label, i }) });
             break;
           }
           add(ops, 'swap', {
             indices: [i, best],
-            message: `交换 ${a[i]} 与 ${a[best]}（下标 ${i} ↔ ${best}）`
+            message: ClubI18n.t('lab.heap.swapChild', { v: a[i], b: a[best], i, bi: best })
           });
           [a[i], a[best]] = [a[best], a[i]];
           i = best;
@@ -773,34 +805,35 @@
 
       function siftUpOps(a, start, ops) {
         let i = start;
-        add(ops, 'focus', { indices: [i], message: `上浮：新元素 ${a[i]} 位于下标 ${i}` });
+        add(ops, 'focus', { indices: [i], message: ClubI18n.t('lab.heap.swimStart', { v: a[i], i }) });
         while (i > 0) {
           const p = parent(i);
-          add(ops, 'compare', { indices: [i, p], message: `比较 ${a[i]} 与父节点 ${a[p]}` });
+          add(ops, 'compare', { indices: [i, p], message: ClubI18n.t('lab.heap.cmpParent', { v: a[i], p: a[p] }) });
           if (!better(a[i], a[p])) {
-            add(ops, 'focus', { indices: [i], message: `上浮结束：${a[i]} 已满足堆序` });
+            add(ops, 'focus', { indices: [i], message: ClubI18n.t('lab.heap.swimEnd', { v: a[i] }) });
             break;
           }
           add(ops, 'swap', {
             indices: [i, p],
-            message: `交换 ${a[i]} 与父节点 ${a[p]}（下标 ${i} ↔ ${p}）`
+            message: ClubI18n.t('lab.heap.swapParent', { v: a[i], p: a[p], i, pi: p })
           });
           [a[i], a[p]] = [a[p], a[i]];
           i = p;
         }
-        if (i === 0) add(ops, 'focus', { indices: [0], message: `上浮完成：${a[0]} 成为新堆顶` });
+        if (i === 0) add(ops, 'focus', { indices: [0], message: ClubI18n.t('lab.heap.swimTop', { v: a[0] }) });
       }
 
       function buildHeapOps(arr) {
         const a = arr.slice();
         const ops = [];
         const n = a.length;
-        add(ops, 'info', { message: `开始建堆（${heapType() === 'max' ? '最大堆' : '最小堆'}），长度 ${n}` });
+        const type = ClubI18n.t(heapType() === 'max' ? 'lab.heap.maxHeap' : 'lab.heap.minHeap');
+        add(ops, 'info', { message: ClubI18n.t('lab.heap.buildStartType', { type, n }) });
         for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
-          add(ops, 'focus', { indices: [i], message: `对非叶节点下标 ${i}（值 ${a[i]}）执行 heapify` });
-          siftDownOps(a, i, n, ops, '建堆下沉');
+          add(ops, 'focus', { indices: [i], message: ClubI18n.t('lab.heap.heapifyI', { i, v: a[i] }) });
+          siftDownOps(a, i, n, ops, 'lab.heap.buildSink');
         }
-        add(ops, 'done', { message: '建堆完成，数组已满足堆序', heap: true });
+        add(ops, 'done', { message: ClubI18n.t('lab.heap.buildDone'), heap: true });
         return { ops, final: a };
       }
 
@@ -808,40 +841,40 @@
         const base = isHeap ? arr.slice() : silentHeapify(arr);
         const a = base.slice();
         const ops = [];
-        if (!isHeap) add(ops, 'info', { message: '当前不是堆，已先静默建堆' });
+        if (!isHeap) add(ops, 'info', { message: ClubI18n.t('lab.heap.silentBuild') });
         a.push(value);
-        add(ops, 'push', { value, message: `将 ${value} 追加到数组末尾（下标 ${a.length - 1}）` });
+        add(ops, 'push', { value, message: ClubI18n.t('lab.heap.appendVal', { v: value, i: a.length - 1 }) });
         siftUpOps(a, a.length - 1, ops);
-        add(ops, 'done', { message: `插入完成，新堆顶为 ${a[0]}`, heap: true });
+        add(ops, 'done', { message: ClubI18n.t('lab.heap.insertDone', { v: a[0] }), heap: true });
         return { ops, start: base, final: a };
       }
 
       function extractOps(arr) {
         if (!arr.length) {
-          return { ops: [{ type: 'info', message: '堆为空，无法删除堆顶' }], start: [], final: [] };
+          return { ops: [{ type: 'info', message: ClubI18n.t('lab.heap.errEmptyExtract') }], start: [], final: [] };
         }
         const base = isHeap ? arr.slice() : silentHeapify(arr);
         const a = base.slice();
         const ops = [];
-        if (!isHeap) add(ops, 'info', { message: '当前不是堆，已先静默建堆' });
+        if (!isHeap) add(ops, 'info', { message: ClubI18n.t('lab.heap.silentBuild') });
         const root = a[0];
-        add(ops, 'focus', { indices: [0], message: `准备删除堆顶 ${root}` });
+        add(ops, 'focus', { indices: [0], message: ClubI18n.t('lab.heap.prepExtract', { v: root }) });
         if (a.length === 1) {
           a.pop();
-          add(ops, 'pop', { message: `弹出唯一元素 ${root}，堆为空` });
-          add(ops, 'done', { message: `已删除堆顶 ${root}`, heap: true });
+          add(ops, 'pop', { message: ClubI18n.t('lab.heap.popOnly', { v: root }) });
+          add(ops, 'done', { message: ClubI18n.t('lab.heap.extracted', { v: root }), heap: true });
           return { ops, start: base, final: a };
         }
         const last = a[a.length - 1];
         add(ops, 'swap', {
           indices: [0, a.length - 1],
-          message: `用末尾元素 ${last} 覆盖堆顶 ${root}`
+          message: ClubI18n.t('lab.heap.coverTop', { last, root })
         });
         [a[0], a[a.length - 1]] = [a[a.length - 1], a[0]];
         a.pop();
-        add(ops, 'pop', { message: `弹出原堆顶 ${root}，堆大小变为 ${a.length}` });
-        siftDownOps(a, 0, a.length, ops, '删除后下沉');
-        add(ops, 'done', { message: `已删除堆顶 ${root}，新堆顶为 ${a[0]}`, heap: true });
+        add(ops, 'pop', { message: ClubI18n.t('lab.heap.popSize', { v: root, n: a.length }) });
+        siftDownOps(a, 0, a.length, ops, 'lab.heap.extractSink');
+        add(ops, 'done', { message: ClubI18n.t('lab.heap.extractedNew', { root, v: a[0] }), heap: true });
         return { ops, start: base, final: a };
       }
 
@@ -849,23 +882,24 @@
         const a = arr.slice();
         const ops = [];
         const n = a.length;
-        add(ops, 'info', { message: `堆排序开始（${heapType() === 'max' ? '最大堆 → 升序' : '最小堆 → 降序'}）` });
+        const order = ClubI18n.t(heapType() === 'max' ? 'lab.heap.maxAsc' : 'lab.heap.minDesc');
+        add(ops, 'info', { message: ClubI18n.t('lab.heap.sortStart', { order }) });
         for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
-          add(ops, 'focus', { indices: [i], message: `建堆阶段：heapify 下标 ${i}` });
-          siftDownOps(a, i, n, ops, '建堆下沉');
+          add(ops, 'focus', { indices: [i], message: ClubI18n.t('lab.heap.buildPhase', { i }) });
+          siftDownOps(a, i, n, ops, 'lab.heap.buildSink');
         }
-        add(ops, 'info', { message: '建堆完成，开始反复取出堆顶', heapSize: n });
+        add(ops, 'info', { message: ClubI18n.t('lab.heap.buildDoneSort'), heapSize: n });
         for (let end = n - 1; end > 0; end--) {
           add(ops, 'swap', {
             indices: [0, end],
-            message: `交换堆顶 ${a[0]} 与末尾 ${a[end]}，固定到位置 ${end}`
+            message: ClubI18n.t('lab.heap.swapEnds', { a: a[0], b: a[end], end })
           });
           [a[0], a[end]] = [a[end], a[0]];
-          add(ops, 'sorted', { indices: [end], message: `下标 ${end} 已就位（值 ${a[end]}）`, heapSize: end });
-          if (end > 1) siftDownOps(a, 0, end, ops, '排序下沉');
+          add(ops, 'sorted', { indices: [end], message: ClubI18n.t('lab.heap.idxSorted', { i: end, v: a[end] }), heapSize: end });
+          if (end > 1) siftDownOps(a, 0, end, ops, 'lab.heap.sortSink');
         }
-        add(ops, 'sorted', { indices: [0], message: '下标 0 已就位', heapSize: 0 });
-        add(ops, 'done', { message: '堆排序完成', heap: false, sortedAll: true });
+        add(ops, 'sorted', { indices: [0], message: ClubI18n.t('lab.heap.idx0Sorted'), heapSize: 0 });
+        add(ops, 'done', { message: ClubI18n.t('lab.heap.sortDone'), heap: false, sortedAll: true });
         return { ops, final: a };
       }
 
@@ -897,15 +931,16 @@
       }
 
       function render(op = null) {
+        syncEmptyLabel();
         ui.arrayView.innerHTML = data.map((value, index) => {
           const dim = index >= heapSize && heapSize < data.length ? ' dim' : '';
-          return `<div class="cell ${classFor(index)}${dim}" aria-label="下标 ${index}，值 ${value}">
+          return `<div class="cell ${classFor(index)}${dim}" aria-label="${ClubI18n.t('lab.heap.slot', { i: index, v: value })}">
             <span class="cell-index">[${index}]</span>${value}
           </div>`;
         }).join('');
 
         if (!data.length) {
-          ui.treeWrap.innerHTML = '<div class="tree-empty">空堆 · 暂无节点</div>';
+          ui.treeWrap.innerHTML = `<div class="tree-empty">${ClubI18n.t('lab.heap.emptyHeap')}</div>`;
         } else {
           const visible = Math.min(data.length, Math.max(heapSize, data.length));
           const { positions, width, height } = layoutTree(visible);
@@ -935,7 +970,7 @@
               <text class="node-index" y="34">[${index}]</text>
             </g>`;
           }).join('');
-          ui.treeWrap.innerHTML = `<svg class="tree-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="堆的完全二叉树">
+          ui.treeWrap.innerHTML = `<svg class="tree-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${ClubI18n.t('lab.heap.treeSvgAria')}">
             <defs>
               <linearGradient id="nodeGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stop-color="rgba(0,229,255,.95)" />
@@ -950,7 +985,10 @@
         ui.comparisons.textContent = comparisons;
         ui.swaps.textContent = swaps;
         ui.steps.textContent = cursor;
-        if (op?.message) ui.opLog.textContent = op.message;
+        if (op?.message) {
+          ui.opLog.textContent = op.message;
+          ui.opLog.removeAttribute('data-i18n');
+        }
       }
 
       function updateStatus(text) {
@@ -1016,18 +1054,20 @@
         swaps = 0;
         clearActive();
         sortedSet = new Set();
+        preOpSource = source.slice();
+        preOpIsHeap = isHeap;
         try {
           ui.insertError.textContent = '';
           buildOperations();
-          render({ message: `已生成 ${operations.length} 个操作，可开始演示。` });
-          updateStatus('就绪 · 共 ' + operations.length + ' 个操作');
-          ui.start.textContent = '开始演示';
+          render({ message: ClubI18n.t('lab.heap.opsReady', { n: operations.length }) });
+          updateStatus(ClubI18n.t('lab.common.readyOps', { n: operations.length }));
+          ui.start.textContent = ClubI18n.t('lab.common.start');
         } catch (err) {
           operations = [];
           data = source.slice();
           heapSize = data.length;
           render({ message: err.message });
-          updateStatus('输入有误 · 请修正后重试');
+          updateStatus(ClubI18n.t('lab.heap.errFixRetry'));
           ui.insertError.textContent = err.message;
         }
       }
@@ -1079,16 +1119,20 @@
 
         render(op);
         const labels = {
-          compare: '正在比较',
-          swap: '正在交换',
-          focus: '聚焦节点',
-          push: '追加元素',
-          pop: '弹出元素',
-          sorted: '元素就位',
-          info: '过程说明',
-          done: '操作完成'
+          compare: ClubI18n.t('lab.heap.legCompare'),
+          swap: ClubI18n.t('lab.heap.legSwap'),
+          focus: ClubI18n.t('lab.heap.focusNode'),
+          push: ClubI18n.t('lab.heap.append'),
+          pop: ClubI18n.t('lab.heap.popped'),
+          sorted: ClubI18n.t('lab.heap.sorted'),
+          info: ClubI18n.t('lab.heap.processNote'),
+          done: ClubI18n.t('lab.heap.opDone')
         };
-        updateStatus(`${labels[op.type] || '执行中'} · ${cursor} / ${operations.length}`);
+        updateStatus(ClubI18n.t('lab.common.stepOf', {
+          label: labels[op.type] || ClubI18n.t('lab.common.executing'),
+          cur: cursor,
+          total: operations.length
+        }));
         if (op.type === 'done' || cursor >= operations.length) {
           finish();
           return false;
@@ -1111,9 +1155,9 @@
           sortedSet = new Set(data.map((_, i) => i));
         }
         const last = operations[Math.max(0, cursor - 1)] || operations[operations.length - 1];
-        render(last || { message: '演示结束' });
-        updateStatus(`完成 · 已执行 ${cursor} 个操作`);
-        ui.start.textContent = '重新演示';
+        render(last || { message: ClubI18n.t('lab.heap.demoEnd') });
+        updateStatus(ClubI18n.t('lab.common.doneOps', { n: cursor }));
+        ui.start.textContent = ClubI18n.t('lab.common.restart');
       }
 
       function loop() {
@@ -1130,7 +1174,7 @@
           return true;
         } catch (err) {
           ui.inputError.textContent = err.message;
-          updateStatus('输入有误 · 请修正自定义数据');
+          updateStatus(ClubI18n.t('lab.heap.errFixCustom'));
           return false;
         }
       }
@@ -1146,8 +1190,8 @@
         if (!operations.length || cursor >= operations.length) replayCurrent();
         if (!operations.length) return;
         playing = !playing;
-        ui.start.textContent = playing ? '暂停演示' : '继续演示';
-        updateStatus(playing ? '演示进行中' : '已暂停 · 可继续或单步');
+        ui.start.textContent = playing ? ClubI18n.t('lab.common.pause') : ClubI18n.t('lab.common.resume');
+        updateStatus(playing ? ClubI18n.t('lab.common.running') : ClubI18n.t('lab.common.paused'));
         if (playing) loop();
       }
 
@@ -1175,7 +1219,7 @@
       }
 
       function refreshNote() {
-        const [name, text] = descriptions[ui.operation.value];
+        const [name, text] = getDescriptions()[ui.operation.value];
         ui.note.innerHTML = `<b>${name}</b><span>${text}</span>`;
       }
 
@@ -1214,7 +1258,7 @@
         if (!syncCustomData()) return;
         if (!operations.length || cursor >= operations.length) replayCurrent();
         if (!operations.length) return;
-        ui.start.textContent = '继续演示';
+        ui.start.textContent = ClubI18n.t('lab.common.resume');
         applyNext();
       });
       ui.reset.addEventListener('click', () => {
@@ -1242,7 +1286,21 @@
 
       syncOpPanels();
       refreshNote();
+      syncEmptyLabel();
       useData(randomData());
+      window.addEventListener('club:langchange', () => {
+        if (typeof ClubI18n?.apply === 'function') ClubI18n.apply(document);
+        refreshNote();
+        syncEmptyLabel();
+        syncStartLabel();
+        if (cursor === 0 && !playing) {
+          try { prepare(); } catch (_e) { /* keep */ }
+        } else {
+          refreshStaticStatus();
+          const last = cursor > 0 && cursor <= operations.length ? operations[cursor - 1] : null;
+          render(last);
+        }
+      });
     })();
   </script>
 </body>

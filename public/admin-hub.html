@@ -1,95 +1,97 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="pages.adminHub.title">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>管理员总览 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js"></script>
-  <style>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root{--bg:#030712;--panel:rgba(9,18,38,.84);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--violet:#9278ff;--green:#72f3c2;--danger:#ff718a;--warn:#ffd166;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 10% 0,rgba(0,229,255,.14),transparent 28%),radial-gradient(circle at 90% 8%,rgba(146,120,255,.16),transparent 30%),var(--bg)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.82);backdrop-filter:blur(18px)}.topbar-inner{max-width:1200px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted)}.back:hover{color:var(--cyan)}main{max-width:1200px;margin:auto;padding:56px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}h1{margin:0;font-size:clamp(40px,7vw,74px);letter-spacing:-1.5px;line-height:.98}h2{margin:0 0 8px;font-size:22px}.lead{max-width:760px;color:var(--muted);line-height:1.8;font-size:16px}.panel{border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(16px)}.gate,.denied{min-height:280px;display:grid;place-items:center;text-align:center;padding:28px}.gate strong,.denied strong{display:block;margin-bottom:10px;color:var(--cyan);font-size:24px}.gate p,.denied p{margin:0 0 18px;color:var(--muted);line-height:1.8}.hidden{display:none!important}.button{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:rgba(0,229,255,.12);color:var(--text);cursor:pointer;font:inherit}.button:hover{background:rgba(0,229,255,.22)}.button.secondary{border-color:var(--line);background:transparent}.button.danger{border-color:rgba(255,113,138,.55);background:rgba(255,113,138,.12)}.button:disabled{opacity:.45;cursor:not-allowed;pointer-events:none}.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr);gap:24px;align-items:end;margin:28px 0}.status-card{padding:22px}.status-card strong{display:block;margin-bottom:8px;color:var(--cyan);font-size:20px}.status-card span{color:var(--muted);font-size:13px;line-height:1.7}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}.stat{padding:18px;border:1px solid rgba(107,169,224,.18);border-radius:12px;background:rgba(0,10,28,.45)}.stat small{display:block;margin-bottom:8px;color:var(--muted);font-size:12px}.stat strong{font-size:28px;color:var(--green)}.section{padding:24px;margin-bottom:18px}.section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:16px}.intro{margin:0;color:var(--muted);line-height:1.7}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.card{display:flex;min-height:150px;flex-direction:column;justify-content:space-between;padding:18px;border:1px solid rgba(107,169,224,.2);border-radius:12px;background:linear-gradient(145deg,rgba(0,229,255,.07),rgba(146,120,255,.08));transition:transform .2s ease,border-color .2s ease}.card:hover{transform:translateY(-3px);border-color:rgba(0,229,255,.65)}.card strong{font-size:18px}.card p{margin:10px 0 0;color:var(--muted);line-height:1.65;font-size:14px}.card span{margin-top:16px;color:var(--cyan);font-size:13px}.form{display:grid;gap:12px;max-width:520px}.form.inline{grid-template-columns:1fr 1fr auto;align-items:end;max-width:none}.form.perm{grid-template-columns:1.1fr 1fr;max-width:none;align-items:start}.label{color:var(--muted);font-size:13px}.input{width:100%;padding:12px 14px;color:var(--text);border:1px solid var(--line);border-radius:8px;background:rgba(2,7,18,.76);outline:none}.input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1)}.checks{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;border:1px solid rgba(107,169,224,.18);border-radius:10px;background:rgba(0,10,28,.35)}.checks label{display:flex;gap:8px;align-items:center;color:var(--text);font-size:14px}.secret-box{margin-top:14px;padding:14px 16px;border:1px dashed rgba(0,229,255,.45);border-radius:10px;background:rgba(0,229,255,.08);color:var(--cyan);line-height:1.7;display:none}.secret-box.active{display:block}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:820px}.table th,.table td{padding:12px 8px;border-bottom:1px solid rgba(107,169,224,.14);text-align:left;vertical-align:top}.table th{color:var(--muted);font-size:13px;font-weight:500}.actions{display:flex;gap:8px;flex-wrap:wrap}.badge{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid var(--line);color:var(--muted)}.badge.pending{border-color:rgba(255,209,102,.5);color:var(--warn)}.badge.approved{border-color:rgba(0,229,255,.5);color:var(--cyan)}.badge.used{border-color:rgba(114,243,194,.5);color:var(--green)}.badge.cancelled,.badge.expired{border-color:rgba(255,113,138,.45);color:var(--danger)}.badge.on{border-color:rgba(114,243,194,.5);color:var(--green)}.badge.off{border-color:rgba(145,168,194,.35);color:var(--muted)}.message{min-height:22px;margin:12px 0 0;color:var(--muted);font-size:13px;line-height:1.6}.message.error{color:var(--danger)}.message.success{color:var(--green)}.empty{padding:34px 0;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}.perm-tags{display:flex;flex-wrap:wrap;gap:6px}@media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr)}.form.inline,.form.perm{grid-template-columns:1fr}}@media(max-width:900px){.hero,.stats,.grid{grid-template-columns:1fr 1fr}}@media(max-width:640px){.topbar-inner{padding:13px 16px}.identity{display:none!important}main{padding:42px 16px 70px}.hero,.stats,.grid,.checks{grid-template-columns:1fr}.section{padding:18px}}
   </style>
 </head>
 <body>
-  <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong>算法社</strong><small>Admin Hub</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html">返回官网</a></div></header>
+  <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Admin Hub</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
   <main>
-    <section id="gate" class="panel gate"><div><strong>请先登录管理账号</strong><p>管理员总览对超管，以及被授予任一管理权限的账号开放。</p><a class="button" href="member-center.html">前往个人中心登录</a></div></section>
-    <section id="denied" class="panel denied hidden"><div><strong>无管理权限</strong><p>当前账号没有可管理的模块。请联系现任超管开通对应权限。</p><a class="button" href="member-center.html">返回个人中心</a></div></section>
+    <section id="gate" class="panel gate"><div><strong data-i18n="admin.loginFirst">请先登录管理账号</strong><p data-i18n="admin.gateLead">管理员总览对超管，以及被授予任一管理权限的账号开放。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+    <section id="denied" class="panel denied hidden"><div><strong data-i18n="admin.noPerm">无管理权限</strong><p data-i18n="admin.deniedLead">当前账号没有可管理的模块。请联系现任超管开通对应权限。</p><a class="button" href="member-center.html" data-i18n="common.backMember">返回个人中心</a></div></section>
     <div id="content" class="hidden">
-      <section class="hero"><div><p class="eyebrow">ADMIN OVERVIEW</p><h1>管理员总览</h1><p class="lead">按权限显示可用管理入口。密码重置、直接改密、姓名班级绑定编辑、权限分配、超管交接仅现任超管可用。</p></div><div class="panel status-card"><strong id="statusTitle">管理账号已登录</strong><span id="statusHint">正在读取管理数据…</span></div></section>
+      <section class="hero"><div><p class="eyebrow">ADMIN OVERVIEW</p><h1 data-i18n="pages.adminHub.h1">管理员总览</h1><p class="lead" data-i18n="admin.hubLead">按权限显示可用管理入口。密码重置、直接改密、姓名班级绑定编辑、权限分配、超管交接仅现任超管可用。</p></div><div class="panel status-card"><strong id="statusTitle" data-i18n="admin.statusLoggedIn">管理账号已登录</strong><span id="statusHint" data-i18n="admin.statusLoading">正在读取管理数据…</span></div></section>
       <section class="stats" id="statsSection">
-        <div class="panel stat" data-stat="bindings"><small>已绑定 / 注册</small><strong id="statBindings">--</strong></div>
-        <div class="panel stat" data-stat="resets"><small>待处理重置</small><strong id="statPendingResets">--</strong></div>
-        <div class="panel stat" data-stat="checkin"><small>签到码</small><strong id="statCodes">--</strong></div>
-        <div class="panel stat" data-stat="checkin"><small>课程签到待审</small><strong id="statCourse">--</strong></div>
-        <div class="panel stat" data-stat="points"><small>积分榜人数</small><strong id="statPoints">--</strong></div>
+        <div class="panel stat" data-stat="bindings"><small data-i18n="admin.statBoundReg">已绑定 / 注册</small><strong id="statBindings">--</strong></div>
+        <div class="panel stat" data-stat="resets"><small data-i18n="admin.statPendingResets">待处理重置</small><strong id="statPendingResets">--</strong></div>
+        <div class="panel stat" data-stat="checkin"><small data-i18n="admin.statCodes">签到码</small><strong id="statCodes">--</strong></div>
+        <div class="panel stat" data-stat="checkin"><small data-i18n="admin.statCourse">课程签到待审</small><strong id="statCourse">--</strong></div>
+        <div class="panel stat" data-stat="points"><small data-i18n="admin.statPoints">积分榜人数</small><strong id="statPoints">--</strong></div>
       </section>
-      <section class="panel section"><div class="section-head"><div><h2>管理面板入口</h2><p class="intro">只显示你当前拥有的管理权限对应入口。</p></div><button class="button secondary" id="refreshButton" type="button">刷新概览</button></div><div class="grid" id="entryGrid"></div></section>
+      <section class="panel section"><div class="section-head"><div><h2 data-i18n="admin.panel">管理面板入口</h2><p class="intro" data-i18n="admin.panelIntro">只显示你当前拥有的管理权限对应入口。</p></div><button class="button secondary" id="refreshButton" type="button" data-i18n="admin.refreshOverview">刷新概览</button></div><div class="grid" id="entryGrid"></div></section>
 
       <section class="panel section hidden" id="superAdminsSection">
         <div class="section-head">
           <div>
-            <h2>超管交接</h2>
-            <p class="intro">仅现任超管可见。可把指定账号升级为同级超管，也可撤销他人超管权限；不能撤销自己，且至少保留 1 名超管。</p>
+            <h2 data-i18n="admin.superTitle">超管交接</h2>
+            <p class="intro" data-i18n="admin.superIntro">仅现任超管可见。可把指定账号升级为同级超管，也可撤销他人超管权限；不能撤销自己，且至少保留 1 名超管。</p>
           </div>
-          <button class="button secondary" id="refreshSuperAdminsButton" type="button">刷新超管名单</button>
+          <button class="button secondary" id="refreshSuperAdminsButton" type="button" data-i18n="admin.refreshSuper">刷新超管名单</button>
         </div>
         <form class="form inline" id="superAdminForm">
           <div>
-            <label class="label" for="superAdminUsername">账号名</label>
-            <input class="input" id="superAdminUsername" maxlength="40" required placeholder="例如 aabbcc">
+            <label class="label" for="superAdminUsername" data-i18n="admin.username">账号名</label>
+            <input class="input" id="superAdminUsername" maxlength="40" required placeholder="例如 aabbcc" data-i18n-placeholder="admin.phUsername">
           </div>
           <div>
-            <label class="label" for="superAdminNote">备注（可选）</label>
-            <input class="input" id="superAdminNote" maxlength="200" placeholder="例如：新任社长">
+            <label class="label" for="superAdminNote" data-i18n="admin.noteOptional">备注（可选）</label>
+            <input class="input" id="superAdminNote" maxlength="200" placeholder="例如：新任社长" data-i18n-placeholder="admin.phSuperNote">
           </div>
-          <button class="button" type="submit">升级为超管</button>
+          <button class="button" type="submit" data-i18n="admin.promoteSuper">升级为超管</button>
         </form>
         <p class="message" id="superAdminsMessage" role="status"></p>
-        <div class="table-wrap" id="superAdminsList" style="margin-top:16px"><div class="empty loading">正在读取超管名单…</div></div>
+        <div class="table-wrap" id="superAdminsList" style="margin-top:16px"><div class="empty loading" data-i18n="admin.loadingSuper">正在读取超管名单…</div></div>
       </section>
 
       <section class="panel section hidden" id="permissionsSection">
         <div class="section-head">
           <div>
-            <h2>权限下放</h2>
-            <p class="intro">仅超管可给其他账号选择性开启：签到管理、积分管理、留言箱管理、邀请码管理、活动和公告内容管理、积分商城管理、成员展示管理、报名管理。</p>
+            <h2 data-i18n="admin.permTitle">权限下放</h2>
+            <p class="intro" data-i18n="admin.permIntro">仅超管可给其他账号选择性开启：签到管理、积分管理、留言箱管理、邀请码管理、活动和公告内容管理、积分商城管理、成员展示管理、报名管理。</p>
           </div>
         </div>
         <form class="form perm" id="permissionForm">
           <div>
-            <label class="label" for="permUsername">账号名</label>
-            <input class="input" id="permUsername" maxlength="40" required placeholder="例如 aabbcc">
-            <label class="label" for="permNote" style="display:block;margin-top:12px">备注（可选）</label>
-            <input class="input" id="permNote" maxlength="200" placeholder="例如：负责签到和活动">
+            <label class="label" for="permUsername" data-i18n="admin.username">账号名</label>
+            <input class="input" id="permUsername" maxlength="40" required placeholder="例如 aabbcc" data-i18n-placeholder="admin.phUsername">
+            <label class="label" for="permNote" style="display:block;margin-top:12px" data-i18n="admin.noteOptional">备注（可选）</label>
+            <input class="input" id="permNote" maxlength="200" placeholder="例如：负责签到和活动" data-i18n-placeholder="admin.phPermNote">
           </div>
           <div>
-            <div class="label" style="margin-bottom:8px">可下放权限</div>
+            <div class="label" style="margin-bottom:8px" data-i18n="admin.permChecksTitle">可下放权限</div>
             <div class="checks">
-              <label><input type="checkbox" id="permCheckin"> 签到管理</label>
-              <label><input type="checkbox" id="permPoints"> 积分管理</label>
-              <label><input type="checkbox" id="permMessages"> 留言箱管理</label>
-              <label><input type="checkbox" id="permInvites"> 邀请码管理</label>
-              <label><input type="checkbox" id="permEvents"> 活动与公告</label>
-              <label><input type="checkbox" id="permMall"> 积分商城</label>
-              <label><input type="checkbox" id="permMembers"> 成员展示</label>
-              <label><input type="checkbox" id="permJoin"> 报名管理</label>
+              <label><input type="checkbox" id="permCheckin"> <span data-i18n="admin.permCheckin">签到管理</span></label>
+              <label><input type="checkbox" id="permPoints"> <span data-i18n="admin.permPoints">积分管理</span></label>
+              <label><input type="checkbox" id="permMessages"> <span data-i18n="admin.permMessages">留言箱管理</span></label>
+              <label><input type="checkbox" id="permInvites"> <span data-i18n="admin.permInvites">邀请码管理</span></label>
+              <label><input type="checkbox" id="permEvents"> <span data-i18n="admin.permEvents">活动与公告</span></label>
+              <label><input type="checkbox" id="permMall"> <span data-i18n="admin.permMall">积分商城</span></label>
+              <label><input type="checkbox" id="permMembers"> <span data-i18n="admin.permMembers">成员展示</span></label>
+              <label><input type="checkbox" id="permJoin"> <span data-i18n="admin.permJoin">报名管理</span></label>
             </div>
-            <button class="button" type="submit" style="margin-top:12px;width:100%">保存权限</button>
+            <button class="button" type="submit" style="margin-top:12px;width:100%" data-i18n="admin.savePerm">保存权限</button>
           </div>
         </form>
         <p class="message" id="permissionsMessage" role="status"></p>
-        <div class="table-wrap" id="permissionsList" style="margin-top:16px"><div class="empty loading">正在读取权限列表…</div></div>
+        <div class="table-wrap" id="permissionsList" style="margin-top:16px"><div class="empty loading" data-i18n="admin.loadingPerm">正在读取权限列表…</div></div>
       </section>
 
       <section class="panel section hidden" id="resetsSection">
         <div class="section-head">
           <div>
-            <h2>密码重置申请</h2>
-            <p class="intro">社员提交申请后，超管生成与账号唯一对应的秘钥。秘钥自生成起 24 小时内有效，仅显示一次，请线下告知申请者。</p>
+            <h2 data-i18n="admin.resetsTitle">密码重置申请</h2>
+            <p class="intro" data-i18n="admin.resetsIntro">社员提交申请后，超管生成与账号唯一对应的秘钥。秘钥自生成起 24 小时内有效，仅显示一次，请线下告知申请者。</p>
           </div>
         </div>
-        <div class="table-wrap" id="resetsList"><div class="empty loading">正在读取重置申请…</div></div>
+        <div class="table-wrap" id="resetsList"><div class="empty loading" data-i18n="admin.loadingResets">正在读取重置申请…</div></div>
         <div class="secret-box" id="secretBox"></div>
         <p class="message" id="resetsMessage" role="status"></p>
       </section>
@@ -97,20 +99,20 @@
       <section class="panel section hidden" id="directResetSection">
         <div class="section-head">
           <div>
-            <h2>直接修改账号密码</h2>
-            <p class="intro">不删用户、不清数据。输入账号和新密码后，立即覆盖该账号密码；同时作废该账号未使用的重置申请。</p>
+            <h2 data-i18n="admin.directTitle">直接修改账号密码</h2>
+            <p class="intro" data-i18n="admin.directIntro">不删用户、不清数据。输入账号和新密码后，立即覆盖该账号密码；同时作废该账号未使用的重置申请。</p>
           </div>
         </div>
         <form class="form inline" id="directResetForm">
           <div>
-            <label class="label" for="directUsername">账号名</label>
-            <input class="input" id="directUsername" maxlength="40" required placeholder="例如 aabbcc">
+            <label class="label" for="directUsername" data-i18n="admin.username">账号名</label>
+            <input class="input" id="directUsername" maxlength="40" required placeholder="例如 aabbcc" data-i18n-placeholder="admin.phUsername">
           </div>
           <div>
-            <label class="label" for="directPassword">新密码</label>
+            <label class="label" for="directPassword" data-i18n="admin.newPassword">新密码</label>
             <input class="input" id="directPassword" type="password" minlength="6" required>
           </div>
-          <button class="button" type="submit">直接改密</button>
+          <button class="button" type="submit" data-i18n="admin.directSubmit">直接改密</button>
         </form>
         <p class="message" id="directResetMessage" role="status"></p>
       </section>
@@ -118,28 +120,28 @@
       <section class="panel section hidden" id="bindingsSection">
         <div class="section-head">
           <div>
-            <h2>姓名 · 班级 · 账号绑定</h2>
-            <p class="intro">仅超管可见。这里列出全部已注册账号；未绑定中文姓名和班级时显示「未绑定」。超管可直接编辑任意账号的绑定资料。</p>
+            <h2 data-i18n="admin.bindingsTitle">姓名 · 班级 · 账号绑定</h2>
+            <p class="intro" data-i18n="admin.bindingsIntro">仅超管可见。这里列出全部已注册账号；未绑定中文姓名和班级时显示「未绑定」。超管可直接编辑任意账号的绑定资料。</p>
           </div>
         </div>
         <form class="form perm" id="bindingForm">
           <div>
-            <label class="label" for="bindingUsername">登录账号</label>
-            <input class="input" id="bindingUsername" maxlength="40" required placeholder="例如 aabbcc" readonly>
-            <label class="label" for="bindingMemberName" style="display:block;margin-top:12px">中文姓名</label>
-            <input class="input" id="bindingMemberName" maxlength="20" required placeholder="例如 张三" pattern="[\u4e00-\u9fa5]{2,20}">
-            <label class="label" for="bindingMemberClass" style="display:block;margin-top:12px">班级</label>
-            <input class="input" id="bindingMemberClass" maxlength="40" required placeholder="例如 计科 2401">
+            <label class="label" for="bindingUsername" data-i18n="admin.loginAccount">登录账号</label>
+            <input class="input" id="bindingUsername" maxlength="40" required placeholder="例如 aabbcc" readonly data-i18n-placeholder="admin.phUsername">
+            <label class="label" for="bindingMemberName" style="display:block;margin-top:12px" data-i18n="admin.chineseName">中文姓名</label>
+            <input class="input" id="bindingMemberName" maxlength="20" required placeholder="例如 张三" pattern="[\u4e00-\u9fa5]{2,20}" data-i18n-placeholder="admin.phName">
+            <label class="label" for="bindingMemberClass" style="display:block;margin-top:12px" data-i18n="admin.className">班级</label>
+            <input class="input" id="bindingMemberClass" maxlength="40" required placeholder="例如 计科 2401" data-i18n-placeholder="admin.phClass">
           </div>
           <div>
-            <div class="label" style="margin-bottom:8px">编辑说明</div>
-            <p class="intro" id="bindingFormHint">点击下方列表中的「编辑」载入账号后，可修改姓名与班级并保存。姓名需为 2–20 个连续中文字符。</p>
-            <button class="button" type="submit" style="margin-top:12px;width:100%">保存绑定</button>
-            <button class="button secondary" type="button" id="bindingFormClear" style="margin-top:8px;width:100%">清空表单</button>
+            <div class="label" style="margin-bottom:8px" data-i18n="admin.editHintTitle">编辑说明</div>
+            <p class="intro" id="bindingFormHint" data-i18n="admin.bindingHint">点击下方列表中的「编辑」载入账号后，可修改姓名与班级并保存。姓名需为 2–20 个连续中文字符。</p>
+            <button class="button" type="submit" style="margin-top:12px;width:100%" data-i18n="admin.saveBinding">保存绑定</button>
+            <button class="button secondary" type="button" id="bindingFormClear" style="margin-top:8px;width:100%" data-i18n="common.clearForm">清空表单</button>
           </div>
         </form>
         <p class="message" id="bindingsMessage" role="status"></p>
-        <div class="table-wrap" id="bindingsList" style="margin-top:16px"><div class="empty loading">正在读取绑定资料…</div></div>
+        <div class="table-wrap" id="bindingsList" style="margin-top:16px"><div class="empty loading" data-i18n="admin.loadingBindings">正在读取绑定资料…</div></div>
       </section>
     </div>
   </main>
@@ -153,15 +155,16 @@
     let currentAccess = { isSuperAdmin: false, permissions: window.ClubStaffAccess.emptyPermissions() };
 
     const ENTRY_DEFS = [
-      { key: 'checkin', href: 'member-checkin.html', title: '签到兑换管理', desc: '生成签到码、查看使用记录、处理待处理姓名与课程签到审核。' },
-      { key: 'points', href: 'member-points.html', title: '社员积分管理', desc: '查看积分公示，并维护社员积分、姓名和班级记录。' },
-      { key: 'messages', href: 'member-messages.html', title: '社员留言箱管理', desc: '查看全部留言，编辑或删除不当内容。' },
-      { key: 'invites', href: 'drive.html', title: '社团盘邀请码管理', desc: '在社团盘管理员面板生成并查看邀请码。' },
-      { key: 'events', href: 'events-admin.html', title: '活动与公告管理', desc: '发布社团通知、活动报名、课程安排、比赛信息，并查看报名名单。' },
-      { key: 'mall', href: 'mall-admin.html', title: '积分商城管理', desc: '上架/下架商品、设置价格库存与配图 URL，并处理兑换发货记录。' },
-      { key: 'members', href: 'members-admin.html', title: '成员展示管理', desc: '添加/编辑/移除首页成员卡片，维护姓名、班级、简介与可选图床图片 URL。' },
-      { key: 'join', href: 'join-admin.html', title: '报名管理', desc: '查看官网报名表单，删除未加入或已加入学生的报名记录。' }
+      { key: 'checkin', href: 'member-checkin.html', titleKey: 'admin.entryCheckin', descKey: 'admin.entryCheckinDesc', shortKey: 'admin.entryShortCheckin' },
+      { key: 'points', href: 'member-points.html', titleKey: 'admin.entryPoints', descKey: 'admin.entryPointsDesc', shortKey: 'admin.entryShortPoints' },
+      { key: 'messages', href: 'member-messages.html', titleKey: 'admin.entryMessages', descKey: 'admin.entryMessagesDesc', shortKey: 'admin.entryShortMessages' },
+      { key: 'invites', href: 'drive.html', titleKey: 'admin.entryInvites', descKey: 'admin.entryInvitesDesc', shortKey: 'admin.entryShortInvites' },
+      { key: 'events', href: 'events-admin.html', titleKey: 'admin.entryEvents', descKey: 'admin.entryEventsDesc', shortKey: 'admin.entryShortEvents' },
+      { key: 'mall', href: 'mall-admin.html', titleKey: 'admin.entryMall', descKey: 'admin.entryMallDesc', shortKey: 'admin.entryShortMall' },
+      { key: 'members', href: 'members-admin.html', titleKey: 'admin.entryMembers', descKey: 'admin.entryMembersDesc', shortKey: 'admin.entryShortMembers' },
+      { key: 'join', href: 'join-admin.html', titleKey: 'admin.entryJoin', descKey: 'admin.entryJoinDesc', shortKey: 'admin.entryShortJoin' }
     ];
+    const t = (key, vars) => (window.ClubI18n ? ClubI18n.t(key, vars) : key);
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -176,18 +179,18 @@
 
     function usernameFromSession(session) {
       const email = session?.user?.email || '';
-      return email.includes('@') ? email.split('@')[0] : email || '未命名账号';
+      return email.includes('@') ? email.split('@')[0] : email || t('admin.unnamedAccount');
     }
 
     function statusLabel(status) {
       const map = {
-        pending: '待生成秘钥',
-        approved: '秘钥有效',
-        used: '已使用',
-        cancelled: '已取消',
-        expired: '已过期'
+        pending: 'admin.statusPending',
+        approved: 'admin.statusApproved',
+        used: 'admin.statusUsed',
+        cancelled: 'admin.statusCancelled',
+        expired: 'admin.statusExpired'
       };
-      return map[status] || status || '-';
+      return map[status] ? t(map[status]) : (status || '-');
     }
 
     function setMessage(node, text, type = '') {
@@ -200,7 +203,7 @@
     }
 
     async function call(action, body = {}) {
-      if (!currentSession) throw new Error('请先登录管理账号。');
+      if (!currentSession) throw new Error(t('admin.loginAdminFirst'));
       const response = await fetch(FUNCTION_URL, {
         method: 'POST',
         headers: {
@@ -210,26 +213,26 @@
         body: JSON.stringify({ action, ...body })
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || '请求失败。');
+      if (!response.ok) throw new Error(payload.error || t('admin.requestFailed'));
       return payload;
     }
 
     function renderEntries() {
       const cards = ENTRY_DEFS.filter(item => permOn(item.key)).map(item => `
         <a class="card" href="${item.href}">
-          <strong>${escapeHtml(item.title)}</strong>
-          <p>${escapeHtml(item.desc)}</p>
-          <span>进入 →</span>
+          <strong>${escapeHtml(t(item.titleKey))}</strong>
+          <p>${escapeHtml(t(item.descKey))}</p>
+          <span>${escapeHtml(t('admin.enter'))}</span>
         </a>
       `).join('');
-      $('entryGrid').innerHTML = cards || '<div class="empty">当前账号暂无可用管理入口。</div>';
+      $('entryGrid').innerHTML = cards || `<div class="empty">${escapeHtml(t('admin.noEntries'))}</div>`;
     }
 
     function clearBindingForm() {
       $('bindingUsername').value = '';
       $('bindingMemberName').value = '';
       $('bindingMemberClass').value = '';
-      $('bindingFormHint').textContent = '点击下方列表中的「编辑」载入账号后，可修改姓名与班级并保存。姓名需为 2–20 个连续中文字符。';
+      $('bindingFormHint').textContent = t('admin.bindingHint');
     }
 
     function profileName(item) {
@@ -256,31 +259,31 @@
       $('bindingMemberName').value = nameText;
       $('bindingMemberClass').value = classText;
       $('bindingFormHint').textContent = bound
-        ? `正在编辑账号 ${item.username}（已绑定）。保存后将覆盖原姓名与班级。`
-        : `正在编辑账号 ${item.username}（未绑定）。填写姓名与班级后保存即可完成绑定。`;
+        ? t('admin.editingBound', { username: item.username })
+        : t('admin.editingUnbound', { username: item.username });
       $('bindingMemberName').focus();
-      setMessage($('bindingsMessage'), `已载入账号 ${item.username}，修改后点击保存绑定。`);
+      setMessage($('bindingsMessage'), t('admin.loadedBinding', { username: item.username }));
     }
 
     function renderBindings(profiles) {
       if (!profiles.length) {
-        $('bindingsList').innerHTML = '<div class="empty">暂时还没有已注册账号。</div>';
+        $('bindingsList').innerHTML = `<div class="empty">${escapeHtml(t('admin.emptyBindings'))}</div>`;
         return;
       }
-      $('bindingsList').innerHTML = `<table class="table"><thead><tr><th>登录账号</th><th>中文姓名</th><th>班级</th><th>绑定状态</th><th>邮箱</th><th>更新时间</th><th>操作</th></tr></thead><tbody>${profiles.map(item => {
+      $('bindingsList').innerHTML = `<table class="table"><thead><tr><th>${escapeHtml(t('admin.loginAccount'))}</th><th>${escapeHtml(t('admin.chineseName'))}</th><th>${escapeHtml(t('admin.className'))}</th><th>${escapeHtml(t('admin.colBound'))}</th><th>${escapeHtml(t('admin.colEmail'))}</th><th>${escapeHtml(t('admin.colUpdatedAt'))}</th><th>${escapeHtml(t('admin.colActions'))}</th></tr></thead><tbody>${profiles.map(item => {
         const bound = isProfileBound(item);
-        const nameText = profileName(item) || '未绑定';
-        const classText = profileClass(item) || '未绑定';
+        const nameText = profileName(item) || t('admin.unbound');
+        const classText = profileClass(item) || t('admin.unbound');
         const timeText = bound ? formatTime(item.updated_at || item.registered_at) : formatTime(item.registered_at || item.updated_at);
         return `<tr>
           <td>${escapeHtml(item.username)}</td>
           <td>${escapeHtml(nameText)}</td>
           <td>${escapeHtml(classText)}</td>
-          <td>${bound ? '<span class="badge on">已绑定</span>' : '<span class="badge off">未绑定</span>'}</td>
+          <td>${bound ? `<span class="badge on">${escapeHtml(t('admin.bound'))}</span>` : `<span class="badge off">${escapeHtml(t('admin.unbound'))}</span>`}</td>
           <td>${escapeHtml(item.email || '-')}</td>
           <td>${escapeHtml(timeText)}</td>
           <td class="actions">
-            <button class="button secondary" type="button" data-edit-binding="${escapeHtml(item.username)}">编辑</button>
+            <button class="button secondary" type="button" data-edit-binding="${escapeHtml(item.username)}" data-i18n="common.edit">编辑</button>
           </td>
         </tr>`;
       }).join('')}</tbody></table>`;
@@ -297,10 +300,10 @@
 
     function renderResets(resets) {
       if (!resets.length) {
-        $('resetsList').innerHTML = '<div class="empty">暂时没有密码重置申请。</div>';
+        $('resetsList').innerHTML = `<div class="empty">${escapeHtml(t('admin.emptyResets'))}</div>`;
         return;
       }
-      $('resetsList').innerHTML = `<table class="table"><thead><tr><th>账号</th><th>状态</th><th>申请时间</th><th>秘钥提示</th><th>过期时间</th><th>操作</th></tr></thead><tbody>${resets.map(item => {
+      $('resetsList').innerHTML = `<table class="table"><thead><tr><th>${escapeHtml(t('admin.colAccount'))}</th><th>${escapeHtml(t('admin.colStatus'))}</th><th>${escapeHtml(t('admin.colRequestedAt'))}</th><th>${escapeHtml(t('admin.colSecretHint'))}</th><th>${escapeHtml(t('admin.colExpiresAt'))}</th><th>${escapeHtml(t('admin.colActions'))}</th></tr></thead><tbody>${resets.map(item => {
         const canApprove = item.status === 'pending';
         const canCancel = item.status === 'pending' || item.status === 'approved';
         return `<tr>
@@ -310,20 +313,20 @@
           <td>${escapeHtml(item.secret_hint || '-')}</td>
           <td>${escapeHtml(formatTime(item.expires_at))}</td>
           <td class="actions">
-            ${canApprove ? `<button class="button" type="button" data-approve="${escapeHtml(item.id)}">生成秘钥</button>` : ''}
-            ${canCancel ? `<button class="button danger" type="button" data-cancel="${escapeHtml(item.id)}">取消</button>` : '<span class="badge">无需操作</span>'}
+            ${canApprove ? `<button class="button" type="button" data-approve="${escapeHtml(item.id)}">${escapeHtml(t('admin.genSecret'))}</button>` : ''}
+            ${canCancel ? `<button class="button danger" type="button" data-cancel="${escapeHtml(item.id)}">${escapeHtml(t('common.cancel'))}</button>` : `<span class="badge">${escapeHtml(t('admin.noAction'))}</span>`}
           </td>
         </tr>`;
       }).join('')}</tbody></table>`;
 
       $('resetsList').querySelectorAll('[data-approve]').forEach(button => {
         button.addEventListener('click', async () => {
-          setMessage($('resetsMessage'), '正在生成秘钥…');
+          setMessage($('resetsMessage'), t('admin.generatingSecret'));
           try {
             const payload = await call('admin_password_reset_approve', { requestId: button.getAttribute('data-approve') });
             $('secretBox').classList.add('active');
-            $('secretBox').innerHTML = `账号 <strong>${escapeHtml(payload.request?.username || '')}</strong> 的重置秘钥：<strong>${escapeHtml(payload.secret || '')}</strong><br>有效期至 ${escapeHtml(formatTime(payload.expiresAt))}。请立即线下告知申请者，刷新后将不再显示完整秘钥。`;
-            setMessage($('resetsMessage'), payload.message || '秘钥已生成。', 'success');
+            $('secretBox').innerHTML = t('admin.secretBoxHtml', { username: escapeHtml(payload.request?.username || ''), secret: escapeHtml(payload.secret || ''), expires: escapeHtml(formatTime(payload.expiresAt)) });
+            setMessage($('resetsMessage'), payload.message || t('admin.secretReady'), 'success');
             await refreshOverview({ keepSecret: true });
           } catch (error) {
             setMessage($('resetsMessage'), error.message, 'error');
@@ -333,10 +336,10 @@
 
       $('resetsList').querySelectorAll('[data-cancel]').forEach(button => {
         button.addEventListener('click', async () => {
-          setMessage($('resetsMessage'), '正在取消申请…');
+          setMessage($('resetsMessage'), t('admin.cancellingRequest'));
           try {
             await call('admin_password_reset_cancel', { requestId: button.getAttribute('data-cancel') });
-            setMessage($('resetsMessage'), '申请已取消。', 'success');
+            setMessage($('resetsMessage'), t('admin.cancelledRequest'), 'success');
             await refreshOverview();
           } catch (error) {
             setMessage($('resetsMessage'), error.message, 'error');
@@ -346,19 +349,19 @@
     }
 
     function flagBadge(on) {
-      return on ? '<span class="badge on">开</span>' : '<span class="badge off">关</span>';
+      return on ? `<span class="badge on">${escapeHtml(t('admin.badgeOn'))}</span>` : `<span class="badge off">${escapeHtml(t('admin.badgeOff'))}</span>`;
     }
 
     function renderSuperAdmins(rows) {
       if (!rows.length) {
-        $('superAdminsList').innerHTML = '<div class="empty">暂时没有超管记录。请确认已执行 club-super-admins-schema.sql。</div>';
+        $('superAdminsList').innerHTML = `<div class="empty">${escapeHtml(t('admin.emptySuper'))}</div>`;
         return;
       }
       const selfId = currentSession?.user?.id || '';
-      $('superAdminsList').innerHTML = `<table class="table"><thead><tr><th>账号</th><th>邮箱</th><th>备注</th><th>加入时间</th><th>操作</th></tr></thead><tbody>${rows.map(item => {
+      $('superAdminsList').innerHTML = `<table class="table"><thead><tr><th>${escapeHtml(t('admin.colAccount'))}</th><th>${escapeHtml(t('admin.colEmail'))}</th><th>${escapeHtml(t('admin.colNote'))}</th><th>${escapeHtml(t('admin.colJoinedAt'))}</th><th>${escapeHtml(t('admin.colActions'))}</th></tr></thead><tbody>${rows.map(item => {
         const isSelf = String(item.user_id || '') === String(selfId);
         const revokeDisabled = isSelf || rows.length <= 1;
-        const revokeHint = isSelf ? '不能撤销自己' : (rows.length <= 1 ? '至少保留 1 名超管' : '撤销超管');
+        const revokeHint = isSelf ? t('admin.cannotRevokeSelf') : (rows.length <= 1 ? t('admin.keepOneSuper') : t('admin.revokeSuper'));
         return `
         <tr>
           <td>${escapeHtml(item.username || '-')}</td>
@@ -376,14 +379,14 @@
           if (button.disabled) return;
           const username = button.getAttribute('data-revoke-super');
           if (!username) return;
-          if (!window.confirm(`确认撤销账号 ${username} 的超管权限？`)) return;
-          setMessage($('superAdminsMessage'), `正在撤销 ${username} 的超管权限…`);
+          if (!window.confirm(t('admin.confirmRevokeSuper', { username }))) return;
+          setMessage($('superAdminsMessage'), t('admin.revokingSuper', { username }));
           try {
             const payload = await call('admin_super_admins_revoke', { username });
-            setMessage($('superAdminsMessage'), payload.message || `已撤销 ${username} 的超管权限。`, 'success');
+            setMessage($('superAdminsMessage'), payload.message || t('admin.revokedSuper', { username }), 'success');
             await refreshOverview();
           } catch (error) {
-            setMessage($('superAdminsMessage'), error.message || '撤销失败', 'error');
+            setMessage($('superAdminsMessage'), error.message || t('admin.revokeFailed'), 'error');
           }
         });
       });
@@ -391,25 +394,25 @@
 
     async function refreshSuperAdminsOnly() {
       if (!currentAccess.isSuperAdmin) return;
-      $('superAdminsList').innerHTML = '<div class="empty loading">正在读取超管名单…</div>';
-      setMessage($('superAdminsMessage'), '正在刷新超管名单…');
+      $('superAdminsList').innerHTML = `<div class="empty loading">${escapeHtml(t('admin.loadingSuper'))}</div>`;
+      setMessage($('superAdminsMessage'), t('admin.refreshingSuper'));
       try {
         const payload = await call('admin_super_admins_list');
         const superAdmins = Array.isArray(payload.superAdmins) ? payload.superAdmins : [];
         renderSuperAdmins(superAdmins);
-        setMessage($('superAdminsMessage'), `已刷新，当前超管 ${superAdmins.length} 人。`, 'success');
+        setMessage($('superAdminsMessage'), t('admin.refreshedSuper', { count: superAdmins.length }), 'success');
       } catch (error) {
-        $('superAdminsList').innerHTML = '<div class="empty">暂时无法读取超管名单。</div>';
-        setMessage($('superAdminsMessage'), error.message || '读取失败', 'error');
+        $('superAdminsList').innerHTML = `<div class="empty">${escapeHtml(t('admin.emptySuperFail'))}</div>`;
+        setMessage($('superAdminsMessage'), error.message || t('admin.readFailed'), 'error');
       }
     }
 
     function renderPermissions(rows) {
       if (!rows.length) {
-        $('permissionsList').innerHTML = '<div class="empty">还没有下放给其他账号的权限。</div>';
+        $('permissionsList').innerHTML = `<div class="empty">${escapeHtml(t('admin.emptyPerm'))}</div>`;
         return;
       }
-      $('permissionsList').innerHTML = `<table class="table"><thead><tr><th>账号</th><th>签到</th><th>积分</th><th>留言</th><th>邀请码</th><th>活动公告</th><th>商城</th><th>成员</th><th>报名</th><th>备注</th><th>更新时间</th><th>操作</th></tr></thead><tbody>${rows.map(item => `
+      $('permissionsList').innerHTML = `<table class="table"><thead><tr><th>${escapeHtml(t('admin.colAccount'))}</th><th>${escapeHtml(t('admin.colCheckin'))}</th><th>${escapeHtml(t('admin.colPoints'))}</th><th>${escapeHtml(t('admin.colMessages'))}</th><th>${escapeHtml(t('admin.colInvites'))}</th><th>${escapeHtml(t('admin.colEvents'))}</th><th>${escapeHtml(t('admin.colMall'))}</th><th>${escapeHtml(t('admin.colMembers'))}</th><th>${escapeHtml(t('admin.colJoin'))}</th><th>${escapeHtml(t('admin.colNote'))}</th><th>${escapeHtml(t('admin.colUpdatedAt'))}</th><th>${escapeHtml(t('admin.colActions'))}</th></tr></thead><tbody>${rows.map(item => `
         <tr>
           <td>${escapeHtml(item.username)}</td>
           <td>${flagBadge(item.can_checkin)}</td>
@@ -423,8 +426,8 @@
           <td>${escapeHtml(item.note || '-')}</td>
           <td>${escapeHtml(formatTime(item.updated_at))}</td>
           <td class="actions">
-            <button class="button secondary" type="button" data-edit-perm="${escapeHtml(item.username)}">载入编辑</button>
-            <button class="button danger" type="button" data-delete-perm="${escapeHtml(item.username)}">清除权限</button>
+            <button class="button secondary" type="button" data-edit-perm="${escapeHtml(item.username)}">${escapeHtml(t('admin.loadEdit'))}</button>
+            <button class="button danger" type="button" data-delete-perm="${escapeHtml(item.username)}">${escapeHtml(t('admin.clearPerm'))}</button>
           </td>
         </tr>
       `).join('')}</tbody></table>`;
@@ -444,18 +447,18 @@
           $('permMall').checked = Boolean(row.can_mall);
           $('permMembers').checked = Boolean(row.can_members);
           $('permJoin').checked = Boolean(row.can_join);
-          setMessage($('permissionsMessage'), `已载入账号 ${username}，修改后点击保存。`);
+          setMessage($('permissionsMessage'), t('admin.loadedPerm', { username }));
         });
       });
 
       $('permissionsList').querySelectorAll('[data-delete-perm]').forEach(button => {
         button.addEventListener('click', async () => {
           const username = button.getAttribute('data-delete-perm');
-          if (!window.confirm(`确认清除账号 ${username} 的全部下放权限？`)) return;
-          setMessage($('permissionsMessage'), '正在清除权限…');
+          if (!window.confirm(t('admin.confirmClearPerm', { username }))) return;
+          setMessage($('permissionsMessage'), t('admin.clearingPerm'));
           try {
             await call('admin_staff_permissions_delete', { username });
-            setMessage($('permissionsMessage'), `已清除 ${username} 的权限。`, 'success');
+            setMessage($('permissionsMessage'), t('admin.clearedPerm', { username }), 'success');
             await refreshOverview();
           } catch (error) {
             setMessage($('permissionsMessage'), error.message, 'error');
@@ -494,10 +497,10 @@
       const tasks = [];
       const labels = [];
       if (currentAccess.isSuperAdmin) {
-        $('bindingsList').innerHTML = '<div class="empty loading">正在读取绑定资料…</div>';
-        $('resetsList').innerHTML = '<div class="empty loading">正在读取重置申请…</div>';
-        $('permissionsList').innerHTML = '<div class="empty loading">正在读取权限列表…</div>';
-        $('superAdminsList').innerHTML = '<div class="empty loading">正在读取超管名单…</div>';
+        $('bindingsList').innerHTML = `<div class="empty loading">${escapeHtml(t('admin.loadingBindings'))}</div>`;
+        $('resetsList').innerHTML = `<div class="empty loading">${escapeHtml(t('admin.loadingResets'))}</div>`;
+        $('permissionsList').innerHTML = `<div class="empty loading">${escapeHtml(t('admin.loadingPerm'))}</div>`;
+        $('superAdminsList').innerHTML = `<div class="empty loading">${escapeHtml(t('admin.loadingSuper'))}</div>`;
         tasks.push(
           call('admin_member_profiles_list'),
           call('admin_password_resets_list'),
@@ -518,11 +521,11 @@
       try {
         const results = await Promise.all(tasks.map(promise => promise.catch(error => ({ __error: error }))));
         const byLabel = Object.fromEntries(labels.map((label, index) => [label, results[index]]));
-        let hintParts = [`当前账号：${usernameFromSession(currentSession)}`];
-        if (currentAccess.isSuperAdmin) hintParts.push('超管');
+        let hintParts = [t('admin.accountLabel', { username: usernameFromSession(currentSession) })];
+        if (currentAccess.isSuperAdmin) hintParts.push(t('admin.roleSuper'));
         else {
-          const enabled = ENTRY_DEFS.filter(item => permOn(item.key)).map(item => item.title.replace('管理', ''));
-          hintParts.push(enabled.length ? `权限：${enabled.join(' / ')}` : '无下放权限');
+          const enabled = ENTRY_DEFS.filter(item => permOn(item.key)).map(item => t(item.shortKey));
+          hintParts.push(enabled.length ? t('admin.rolePerms', { list: enabled.join(' / ') }) : t('admin.roleNone'));
         }
 
         if (byLabel.profiles && !byLabel.profiles.__error) {
@@ -533,10 +536,10 @@
             : profiles.filter(isProfileBound).length;
           $('statBindings').textContent = `${boundCount} / ${total}`;
           renderBindings(profiles);
-          hintParts.push(`已绑定 ${boundCount} / 注册 ${total}`);
+          hintParts.push(t('admin.hintBound', { bound: boundCount, total }));
         } else if (currentAccess.isSuperAdmin) {
-          $('bindingsList').innerHTML = '<div class="empty">暂时无法读取绑定资料。</div>';
-          setMessage($('bindingsMessage'), byLabel.profiles?.__error?.message || '读取失败', 'error');
+          $('bindingsList').innerHTML = `<div class="empty">${escapeHtml(t('admin.emptyBindingsFail'))}</div>`;
+          setMessage($('bindingsMessage'), byLabel.profiles?.__error?.message || t('admin.readFailed'), 'error');
         }
 
         if (byLabel.resets && !byLabel.resets.__error) {
@@ -544,27 +547,27 @@
           const pendingResets = resets.filter(item => item.status === 'pending').length;
           $('statPendingResets').textContent = String(pendingResets);
           renderResets(resets);
-          hintParts.push(`待处理重置 ${pendingResets} 条`);
+          hintParts.push(t('admin.hintPendingResets', { count: pendingResets }));
         } else if (currentAccess.isSuperAdmin) {
-          $('resetsList').innerHTML = '<div class="empty">暂时无法读取重置申请。</div>';
-          setMessage($('resetsMessage'), byLabel.resets?.__error?.message || '读取失败', 'error');
+          $('resetsList').innerHTML = `<div class="empty">${escapeHtml(t('admin.emptyResetsFail'))}</div>`;
+          setMessage($('resetsMessage'), byLabel.resets?.__error?.message || t('admin.readFailed'), 'error');
         }
 
         if (byLabel.permissions && !byLabel.permissions.__error) {
           const permissions = Array.isArray(byLabel.permissions.permissions) ? byLabel.permissions.permissions : [];
           renderPermissions(permissions);
         } else if (currentAccess.isSuperAdmin) {
-          $('permissionsList').innerHTML = '<div class="empty">暂时无法读取权限列表。</div>';
-          setMessage($('permissionsMessage'), byLabel.permissions?.__error?.message || '读取失败', 'error');
+          $('permissionsList').innerHTML = `<div class="empty">${escapeHtml(t('admin.emptyPermFail'))}</div>`;
+          setMessage($('permissionsMessage'), byLabel.permissions?.__error?.message || t('admin.readFailed'), 'error');
         }
 
         if (byLabel.superAdmins && !byLabel.superAdmins.__error) {
           const superAdmins = Array.isArray(byLabel.superAdmins.superAdmins) ? byLabel.superAdmins.superAdmins : [];
           renderSuperAdmins(superAdmins);
-          hintParts.push(`超管 ${superAdmins.length} 人`);
+          hintParts.push(t('admin.hintSuperCount', { count: superAdmins.length }));
         } else if (currentAccess.isSuperAdmin) {
-          $('superAdminsList').innerHTML = '<div class="empty">暂时无法读取超管名单。</div>';
-          setMessage($('superAdminsMessage'), byLabel.superAdmins?.__error?.message || '读取失败', 'error');
+          $('superAdminsList').innerHTML = `<div class="empty">${escapeHtml(t('admin.emptySuperFail'))}</div>`;
+          setMessage($('superAdminsMessage'), byLabel.superAdmins?.__error?.message || t('admin.readFailed'), 'error');
         }
 
         if (byLabel.checkin && !byLabel.checkin.__error) {
@@ -602,7 +605,7 @@
       $('content').classList.toggle('hidden', !allowed);
       if (!allowed) return;
 
-      $('statusTitle').textContent = currentAccess.isSuperAdmin ? '超管已登录' : '管理账号已登录';
+      $('statusTitle').textContent = currentAccess.isSuperAdmin ? t('admin.statusSuperLoggedIn') : t('admin.statusLoggedIn');
       await refreshOverview();
     }
 
@@ -611,13 +614,13 @@
 
     $('directResetForm').addEventListener('submit', async (event) => {
       event.preventDefault();
-      setMessage($('directResetMessage'), '正在直接改密…');
+      setMessage($('directResetMessage'), t('admin.settingPassword'));
       try {
         const payload = await call('admin_password_set', {
           username: $('directUsername').value.trim(),
           password: $('directPassword').value
         });
-        setMessage($('directResetMessage'), payload.message || '已直接改密。', 'success');
+        setMessage($('directResetMessage'), payload.message || t('admin.passwordSet'), 'success');
         $('directPassword').value = '';
         await refreshOverview();
       } catch (error) {
@@ -627,7 +630,7 @@
 
     $('permissionForm').addEventListener('submit', async (event) => {
       event.preventDefault();
-      setMessage($('permissionsMessage'), '正在保存权限…');
+      setMessage($('permissionsMessage'), t('admin.savingPerm'));
       try {
         const payload = await call('admin_staff_permissions_save', {
           username: $('permUsername').value.trim(),
@@ -641,7 +644,7 @@
           can_members: $('permMembers').checked,
           can_join: $('permJoin').checked
         });
-        setMessage($('permissionsMessage'), `已保存账号 ${payload.permission?.username || ''} 的权限。`, 'success');
+        setMessage($('permissionsMessage'), t('admin.savedPerm', { username: payload.permission?.username || '' }), 'success');
         await refreshOverview();
       } catch (error) {
         setMessage($('permissionsMessage'), error.message, 'error');
@@ -650,13 +653,13 @@
 
     $('superAdminForm').addEventListener('submit', async (event) => {
       event.preventDefault();
-      setMessage($('superAdminsMessage'), '正在升级超管…');
+      setMessage($('superAdminsMessage'), t('admin.promotingSuper'));
       try {
         const payload = await call('admin_super_admins_promote', {
           username: $('superAdminUsername').value.trim(),
           note: $('superAdminNote').value.trim()
         });
-        setMessage($('superAdminsMessage'), payload.message || `已将 ${payload.superAdmin?.username || ''} 升级为超管。`, 'success');
+        setMessage($('superAdminsMessage'), payload.message || t('admin.promotedSuper', { username: payload.superAdmin?.username || '' }), 'success');
         $('superAdminUsername').value = '';
         $('superAdminNote').value = '';
         await refreshOverview();
@@ -669,17 +672,17 @@
       event.preventDefault();
       const username = $('bindingUsername').value.trim();
       if (!username) {
-        setMessage($('bindingsMessage'), '请先从下方列表点击「编辑」载入账号。', 'error');
+        setMessage($('bindingsMessage'), t('admin.pickBindingFirst'), 'error');
         return;
       }
-      setMessage($('bindingsMessage'), `正在保存账号 ${username} 的绑定…`);
+      setMessage($('bindingsMessage'), t('admin.savingBinding', { username }));
       try {
         const payload = await call('admin_member_profile_bind', {
           username,
           memberName: $('bindingMemberName').value.trim(),
           memberClass: $('bindingMemberClass').value.trim()
         });
-        setMessage($('bindingsMessage'), payload.message || `已更新账号 ${username} 的绑定。`, 'success');
+        setMessage($('bindingsMessage'), payload.message || t('admin.savedBinding', { username }), 'success');
         await refreshOverview();
         const profile = payload.profile;
         if (profile) {
@@ -697,7 +700,15 @@
 
     $('bindingFormClear').addEventListener('click', () => {
       clearBindingForm();
-      setMessage($('bindingsMessage'), '已清空编辑表单。');
+      setMessage($('bindingsMessage'), t('admin.clearedForm'));
+    });
+
+    window.addEventListener('club:langchange', () => {
+      if (window.ClubI18n) ClubI18n.apply(document);
+      if (currentSession && window.ClubStaffAccess?.hasStaffAccess(currentAccess)) {
+        renderEntries();
+        void refreshOverview({ keepSecret: true });
+      }
     });
 
     supabaseClient.auth.onAuthStateChange((_event, session) => { void updateSession(session); });

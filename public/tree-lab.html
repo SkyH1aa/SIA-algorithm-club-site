@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="lab.tree.title">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>二叉树可视化实验室 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js" defer></script>
-  <style>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root {
       font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
       color: #f6fbff;
@@ -463,130 +465,127 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="../index.html" aria-label="返回算法社首页">
+    <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页">
       <span class="brand-mark">A</span>
-      <span><strong>算法社</strong><small>Algorithm Club</small></span>
+      <span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span>
     </a>
     <span class="member-identity" data-member-identity hidden></span>
-    <a class="back-link" href="visualization-lab.html">实验室选择</a>
+    <a class="back-link" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
   </header>
 
   <main>
     <section class="hero" aria-labelledby="pageTitle">
       <div>
         <p class="eyebrow">BINARY TREE LAB · V1</p>
-        <h1 id="pageTitle">二叉树可视化实验室</h1>
-        <p>用 SVG 自动布局观察二叉树结构，演示前序 / 中序 / 后序 / 深搜 / 广搜层序遍历，并按二叉搜索树（BST）规则完成插入与删除。字典序模式展示「中序遍历即有序序列」。</p>
+        <h1 id="pageTitle" data-i18n="lab.tree.h1">二叉树可视化实验室</h1>
+        <p data-i18n="lab.tree.lead">用 SVG 自动布局观察二叉树结构，演示前序 / 中序 / 后序 / 深搜 / 广搜层序遍历，并按二叉搜索树（BST）规则完成插入与删除。字典序模式展示「中序遍历即有序序列」。</p>
       </div>
       <aside class="algorithm-note" id="algorithmNote">
-        <b>前序遍历</b>
-        <span>根 → 左子树 → 右子树。适合复制树结构或做前缀表达式展开。</span>
+        <b data-i18n="lab.tree.preorder">前序遍历</b>
+        <span data-i18n="lab.tree.preDesc">根 → 左子树 → 右子树。适合复制树结构或做前缀表达式展开。</span>
       </aside>
     </section>
 
-    <section class="lab-grid" aria-label="二叉树演示控制台">
+    <section class="lab-grid" data-i18n-aria="lab.tree.consoleAria" aria-label="二叉树演示控制台">
       <form class="panel controls" id="controlForm">
-        <h2>实验设置</h2>
+        <h2 data-i18n="lab.common.settings">实验设置</h2>
 
         <div class="control-group">
-          <label for="mode">算法 / 模式</label>
+          <label for="mode" data-i18n="lab.tree.modeLabel">算法 / 模式</label>
           <select id="mode">
-            <option value="preorder">前序遍历</option>
-            <option value="inorder">中序遍历</option>
-            <option value="postorder">后序遍历</option>
-            <option value="dfs">深搜遍历（DFS ≈ 先序）</option>
-            <option value="bfs">广搜层序遍历</option>
-            <option value="insert">BST 插入</option>
-            <option value="delete">BST 删除</option>
-            <option value="dict">字典序二叉树</option>
+            <option value="preorder" data-i18n="lab.tree.preorder">前序遍历</option>
+            <option value="inorder" data-i18n="lab.tree.inorder">中序遍历</option>
+            <option value="postorder" data-i18n="lab.tree.postorder">后序遍历</option>
+            <option value="dfs" data-i18n="lab.tree.dfs">深搜遍历（DFS ≈ 先序）</option>
+            <option value="bfs" data-i18n="lab.tree.bfs">广搜层序遍历</option>
+            <option value="insert" data-i18n="lab.tree.insert">BST 插入</option>
+            <option value="delete" data-i18n="lab.tree.delete">BST 删除</option>
+            <option value="dict" data-i18n="lab.tree.dict">字典序二叉树</option>
           </select>
         </div>
 
         <div class="control-group" id="valueGroup">
-          <label for="valueInput" id="valueLabel">操作数值</label>
-          <input class="field" id="valueInput" type="text" inputmode="numeric" placeholder="例如：42" maxlength="8" />
-          <p class="hint mode-hint" id="valueHint">插入 / 删除时输入整数；遍历模式可不填。</p>
+          <label for="valueInput" id="valueLabel" data-i18n="lab.tree.valueLabel">操作数值</label>
+          <input class="field" id="valueInput" type="text" inputmode="numeric" data-i18n-placeholder="lab.tree.valuePh" placeholder="例如：42" maxlength="8" />
+          <p class="hint mode-hint" id="valueHint" data-i18n="lab.tree.valueHint">插入 / 删除时输入整数；遍历模式可不填。</p>
           <p class="error" id="inputError" role="alert" aria-live="polite"></p>
         </div>
 
         <div class="control-group" id="seedGroup">
-          <label for="seedInput">示例 / 建树序列</label>
-          <textarea id="seedInput" placeholder="例如：50, 30, 70, 20, 40, 60, 80">50, 30, 70, 20, 40, 60, 80</textarea>
-          <p class="hint">以逗号或空格分隔的整数，按 BST 规则依次插入生成树。</p>
+          <label for="seedInput" data-i18n="lab.tree.seedLabel">示例 / 建树序列</label>
+          <textarea id="seedInput" data-i18n-placeholder="lab.tree.seedPh" placeholder="例如：50, 30, 70, 20, 40, 60, 80">50, 30, 70, 20, 40, 60, 80</textarea>
+          <p class="hint" data-i18n="lab.tree.seedHint">以逗号或空格分隔的整数，按 BST 规则依次插入生成树。</p>
         </div>
 
         <div class="button-stack" id="playPanel">
-          <button class="btn btn-primary" type="button" id="startButton">开始演示</button>
+          <button class="btn btn-primary" type="button" id="startButton" data-i18n="lab.common.start">开始演示</button>
           <div class="btn-row">
-            <button class="btn" type="button" id="stepButton">单步执行</button>
-            <button class="btn btn-warn" type="button" id="resetButton">重置动画</button>
+            <button class="btn" type="button" id="stepButton" data-i18n="lab.common.step">单步执行</button>
+            <button class="btn btn-warn" type="button" id="resetButton" data-i18n="lab.tree.resetAnim">重置动画</button>
           </div>
           <div class="btn-row">
-            <button class="btn" type="button" id="exampleButton">加载示例树</button>
-            <button class="btn" type="button" id="buildButton">按序列建树</button>
+            <button class="btn" type="button" id="exampleButton" data-i18n="lab.tree.loadExample">加载示例树</button>
+            <button class="btn" type="button" id="buildButton" data-i18n="lab.tree.buildSeq">按序列建树</button>
           </div>
         </div>
 
         <div class="button-stack action-panel" id="mutatePanel" hidden>
-          <button class="btn btn-primary" type="button" id="insertButton">执行插入</button>
-          <button class="btn btn-danger" type="button" id="deleteButton">执行删除</button>
+          <button class="btn btn-primary" type="button" id="insertButton" data-i18n="lab.tree.doInsert">执行插入</button>
+          <button class="btn btn-danger" type="button" id="deleteButton" data-i18n="lab.tree.doDelete">执行删除</button>
           <div class="btn-row">
-            <button class="btn" type="button" id="stepMutateButton">单步执行</button>
-            <button class="btn btn-warn" type="button" id="resetMutateButton">重置动画</button>
+            <button class="btn" type="button" id="stepMutateButton" data-i18n="lab.common.step">单步执行</button>
+            <button class="btn btn-warn" type="button" id="resetMutateButton" data-i18n="lab.tree.resetAnim">重置动画</button>
           </div>
           <div class="btn-row">
-            <button class="btn" type="button" id="exampleMutateButton">加载示例树</button>
-            <button class="btn" type="button" id="buildMutateButton">按序列建树</button>
+            <button class="btn" type="button" id="exampleMutateButton" data-i18n="lab.tree.loadExample">加载示例树</button>
+            <button class="btn" type="button" id="buildMutateButton" data-i18n="lab.tree.buildSeq">按序列建树</button>
           </div>
         </div>
 
         <div class="button-stack action-panel" id="dictPanel" hidden>
-          <button class="btn btn-primary" type="button" id="dictExampleButton">一键生成字典序示例</button>
-          <button class="btn" type="button" id="dictInsertButton">按序插入当前值</button>
+          <button class="btn btn-primary" type="button" id="dictExampleButton" data-i18n="lab.tree.dictExample">一键生成字典序示例</button>
+          <button class="btn" type="button" id="dictInsertButton" data-i18n="lab.tree.dictInsert">按序插入当前值</button>
           <div class="btn-row">
-            <button class="btn" type="button" id="dictInorderButton">演示中序（有序）</button>
-            <button class="btn btn-warn" type="button" id="dictResetButton">重置动画</button>
+            <button class="btn" type="button" id="dictInorderButton" data-i18n="lab.tree.dictInorder">演示中序（有序）</button>
+            <button class="btn btn-warn" type="button" id="dictResetButton" data-i18n="lab.tree.resetAnim">重置动画</button>
           </div>
-          <button class="btn" type="button" id="dictBuildButton">按序列建树</button>
+          <button class="btn" type="button" id="dictBuildButton" data-i18n="lab.tree.buildSeq">按序列建树</button>
         </div>
       </form>
 
       <section class="panel visual" aria-labelledby="visualTitle">
         <div class="visual-header">
           <div>
-            <h2 id="visualTitle">二叉树结构</h2>
+            <h2 id="visualTitle" data-i18n="lab.tree.visualTitle">二叉树结构</h2>
             <span class="sr-only" id="announcement" aria-live="polite"></span>
           </div>
-          <span class="status" id="statusText" role="status">就绪 · 等待开始</span>
+          <span class="status" id="statusText" role="status" data-i18n="lab.common.ready">就绪</span>
         </div>
 
         <div class="stage-wrap" id="stageWrap">
-          <svg class="tree-svg" id="treeSvg" role="img" aria-label="二叉树 SVG 可视化"></svg>
+          <svg class="tree-svg" id="treeSvg" role="img" data-i18n-aria="lab.tree.svgAria" aria-label="二叉树 SVG 可视化"></svg>
         </div>
 
-        <div class="path-bar" id="pathBar"><b>访问序列：</b><span id="pathText">—</span></div>
-        <div class="op-log" id="opLog" aria-label="操作日志"><div>日志就绪 · 选择模式后开始操作</div></div>
+        <div class="path-bar" id="pathBar"><b data-i18n="lab.tree.visitSeq">访问序列：</b><span id="pathText">—</span></div>
+        <div class="op-log" id="opLog" data-i18n-aria="lab.tree.logAria" aria-label="操作日志"><div data-i18n="lab.tree.logReady">日志就绪 · 选择模式后开始操作</div></div>
 
         <div class="dict-box" id="dictBox" hidden>
-          <b>字典序 / 数值序 BST</b><br />
-          按数值大小维护二叉搜索树：左子树 &lt; 根 &lt; 右子树。对字典序键（字母 / 字符串）同样适用——比较规则换成字典序即可。<br />
-          关键点：对 BST 做<strong>中序遍历</strong>，得到的访问序列天然有序。示例插入顺序
-          <code>50 → 30 → 70 → 20 → 40 → 60 → 80</code>，中序结果为
-          <code>20, 30, 40, 50, 60, 70, 80</code>。
+          <b data-i18n="lab.tree.dictBoxTitle">字典序 / 数值序 BST</b><br />
+          <span data-i18n="lab.tree.dictBoxBody" data-i18n-mode="html">按数值大小维护二叉搜索树：左子树 &lt; 根 &lt; 右子树。对字典序键（字母 / 字符串）同样适用——比较规则换成字典序即可。<br />关键点：对 BST 做<strong>中序遍历</strong>，得到的访问序列天然有序。示例插入顺序 <code>50 → 30 → 70 → 20 → 40 → 60 → 80</code>，中序结果为 <code>20, 30, 40, 50, 60, 70, 80</code>。</span>
         </div>
 
-        <div class="metrics" aria-label="树指标">
-          <div class="metric"><span>访问节点数</span><strong id="visitedCount">0</strong></div>
-          <div class="metric"><span>当前步骤</span><strong id="stepCount">0</strong></div>
-          <div class="metric"><span>树大小</span><strong id="treeSize">0</strong></div>
-          <div class="metric"><span>树高度</span><strong id="treeHeight">0</strong></div>
+        <div class="metrics" data-i18n-aria="lab.tree.metricsAria" aria-label="树指标">
+          <div class="metric"><span data-i18n="lab.tree.visited">访问节点数</span><strong id="visitedCount">0</strong></div>
+          <div class="metric"><span data-i18n="lab.common.currentStep">当前步骤</span><strong id="stepCount">0</strong></div>
+          <div class="metric"><span data-i18n="lab.tree.treeSize">树大小</span><strong id="treeSize">0</strong></div>
+          <div class="metric"><span data-i18n="lab.tree.treeHeight">树高度</span><strong id="treeHeight">0</strong></div>
         </div>
-        <div class="legend" aria-label="颜色说明">
-          <span><i></i>普通节点</span>
-          <span><i class="l-visit"></i>正在访问</span>
-          <span><i class="l-done"></i>已访问</span>
-          <span><i class="l-delete"></i>删除目标</span>
-          <span><i class="l-successor"></i>后继 / 替换</span>
+        <div class="legend" data-i18n-aria="lab.common.colorLegend" aria-label="颜色说明">
+          <span><i></i><span data-i18n="lab.tree.legNode">普通节点</span></span>
+          <span><i class="l-visit"></i><span data-i18n="lab.tree.legVisit">正在访问</span></span>
+          <span><i class="l-done"></i><span data-i18n="lab.tree.legDone">已访问</span></span>
+          <span><i class="l-delete"></i><span data-i18n="lab.tree.legDelete">删除目标</span></span>
+          <span><i class="l-successor"></i><span data-i18n="lab.tree.legSucc">后继 / 替换</span></span>
         </div>
       </section>
     </section>
@@ -634,16 +633,23 @@
         dictBuild: el('dictBuildButton'),
       };
 
-      const descriptions = {
-        preorder: ['前序遍历', '根 → 左子树 → 右子树。适合复制树结构或做前缀表达式展开。'],
-        inorder: ['中序遍历', '左子树 → 根 → 右子树。在 BST 上中序结果即为升序序列。'],
-        postorder: ['后序遍历', '左子树 → 右子树 → 根。适合释放节点或做后缀表达式求值。'],
-        dfs: ['深搜遍历（DFS）', '递归深度优先：先访问当前节点再深入子树，访问顺序等价于前序遍历。'],
-        bfs: ['广搜层序遍历', '借助队列按层从左到右访问；适合求最短层数、层序序列。'],
-        insert: ['BST 插入', '从根比较：小于走左、大于走右，落到空位后挂接新节点。'],
-        delete: ['BST 删除', '无子直接替换；双子取中序后继（右子树最左）替换后再删后继。'],
-        dict: ['字典序二叉树', '按数值 / 字典序维护的 BST。中序遍历结果天然有序，可用于有序集合。'],
+      const descKeys = {
+        preorder: ['lab.tree.preorder', 'lab.tree.preDesc'],
+        inorder: ['lab.tree.inorder', 'lab.tree.inDesc'],
+        postorder: ['lab.tree.postorder', 'lab.tree.postDesc'],
+        dfs: ['lab.tree.dfs', 'lab.tree.dfsDesc'],
+        bfs: ['lab.tree.bfs', 'lab.tree.bfsDesc'],
+        insert: ['lab.tree.insert', 'lab.tree.insertDesc'],
+        delete: ['lab.tree.delete', 'lab.tree.deleteNote'],
+        dict: ['lab.tree.dict', 'lab.tree.dictDesc'],
       };
+      function getDescriptions() {
+        const o = {};
+        for (const k of Object.keys(descKeys)) {
+          o[k] = [ClubI18n.t(descKeys[k][0]), ClubI18n.t(descKeys[k][1])];
+        }
+        return o;
+      }
 
       const EXAMPLE_SEED = [50, 30, 70, 20, 40, 60, 80];
       const DICT_SEED = [50, 30, 70, 20, 40, 60, 80];
@@ -705,21 +711,21 @@
 
       function parseSeed(text) {
         const raw = String(text || '').trim();
-        if (!raw) throw new Error('请输入至少一个整数。');
+        if (!raw) throw new Error(ClubI18n.t('lab.tree.errNeedInts'));
         const parts = raw.split(/[\s,，;；]+/).filter(Boolean);
-        if (parts.length < 1 || parts.length > 31) throw new Error('请输入 1–31 个整数。');
-        if (parts.some((v) => !/^[-+]?\d+$/.test(v))) throw new Error('只能输入整数，用逗号或空格分隔。');
+        if (parts.length < 1 || parts.length > 31) throw new Error(ClubI18n.t('lab.tree.errCount'));
+        if (parts.some((v) => !/^[-+]?\d+$/.test(v))) throw new Error(ClubI18n.t('lab.tree.errIntsOnly'));
         const nums = parts.map(Number);
-        if (nums.some((n) => n < -9999 || n > 9999)) throw new Error('整数范围应在 -9999 至 9999。');
+        if (nums.some((n) => n < -9999 || n > 9999)) throw new Error(ClubI18n.t('lab.tree.errRange'));
         return nums;
       }
 
       function parseValue() {
         const raw = ui.valueInput.value.trim();
-        if (!raw) throw new Error('请输入要操作的整数。');
-        if (!/^[-+]?\d+$/.test(raw)) throw new Error('操作值必须是整数。');
+        if (!raw) throw new Error(ClubI18n.t('lab.tree.errNeedValue'));
+        if (!/^[-+]?\d+$/.test(raw)) throw new Error(ClubI18n.t('lab.tree.errOpInt'));
         const n = Number(raw);
-        if (n < -9999 || n > 9999) throw new Error('整数范围应在 -9999 至 9999。');
+        if (n < -9999 || n > 9999) throw new Error(ClubI18n.t('lab.tree.errRange'));
         return n;
       }
 
@@ -778,7 +784,7 @@
                 <stop offset="100%" stop-color="rgba(57,94,255,.35)"/>
               </linearGradient>
             </defs>
-            <text x="320" y="190" fill="#8fa3b8" text-anchor="middle" font-size="14">空树 · 请加载示例或插入节点</text>`;
+            <text x="320" y="190" fill="#8fa3b8" text-anchor="middle" font-size="14">${ClubI18n.t('lab.tree.emptyTree')}</text>`;
           return;
         }
 
@@ -912,7 +918,7 @@
           }
         }
         if (!root) {
-          ops.push({ kind: 'message', text: '空树，无法遍历' });
+          ops.push({ kind: 'message', text: ClubI18n.t('lab.tree.emptyNoTrav') });
           return ops;
         }
         if (type === 'preorder' || type === 'dfs') (type === 'dfs' ? dfs : pre)(root);
@@ -927,9 +933,9 @@
       function buildInsertOps(val) {
         const ops = [];
         if (!root) {
-          ops.push({ kind: 'message', text: `插入 ${val} 作为根节点` });
+          ops.push({ kind: 'message', text: ClubI18n.t('lab.tree.insRoot', { v: val }) });
           ops.push({ kind: 'create-root', val });
-          ops.push({ kind: 'done', text: `插入完成 · 树大小 ${treeSize(root) + 1}` });
+          ops.push({ kind: 'done', text: ClubI18n.t('lab.tree.insDoneSize', { n: treeSize(root) + 1 }) });
           return ops;
         }
         let cur = root;
@@ -938,8 +944,8 @@
         while (cur) {
           ops.push({ kind: 'compare', id: cur.id, val: cur.val, target: val });
           if (val === cur.val) {
-            ops.push({ kind: 'message', text: `值 ${val} 已存在，跳过插入` });
-            ops.push({ kind: 'done', text: '未修改树' });
+            ops.push({ kind: 'message', text: ClubI18n.t('lab.tree.skipDup', { v: val }) });
+            ops.push({ kind: 'done', text: ClubI18n.t('lab.tree.unchanged') });
             return ops;
           }
           parent = cur;
@@ -953,9 +959,10 @@
             cur = cur.right;
           }
         }
-        ops.push({ kind: 'message', text: `在 ${parent.val} 的${dir === 'left' ? '左' : '右'}侧插入 ${val}` });
+        const side = ClubI18n.t(dir === 'left' ? 'lab.tree.left' : 'lab.tree.right');
+        ops.push({ kind: 'message', text: ClubI18n.t('lab.tree.insSide', { p: parent.val, side, v: val }) });
         ops.push({ kind: 'attach', parentId: parent.id, dir, val });
-        ops.push({ kind: 'done', text: `插入完成` });
+        ops.push({ kind: 'done', text: ClubI18n.t('lab.tree.insDone') });
         return ops;
       }
 
@@ -968,7 +975,7 @@
       function buildDeleteOps(val) {
         const ops = [];
         if (!root) {
-          ops.push({ kind: 'message', text: '空树，无法删除' });
+          ops.push({ kind: 'message', text: ClubI18n.t('lab.tree.emptyNoDel') });
           ops.push({ kind: 'done' });
           return ops;
         }
@@ -991,8 +998,8 @@
           }
         }
         if (!cur) {
-          ops.push({ kind: 'message', text: `未找到值 ${val}` });
-          ops.push({ kind: 'done', text: '删除取消' });
+          ops.push({ kind: 'message', text: ClubI18n.t('lab.tree.notFound', { v: val }) });
+          ops.push({ kind: 'done', text: ClubI18n.t('lab.tree.delCancel') });
           return ops;
         }
         ops.push({ kind: 'mark-delete', id: cur.id, val: cur.val });
@@ -1001,27 +1008,28 @@
         const hasR = !!cur.right;
 
         if (!hasL && !hasR) {
-          ops.push({ kind: 'message', text: `节点 ${val} 为叶子，直接移除` });
+          ops.push({ kind: 'message', text: ClubI18n.t('lab.tree.delLeaf', { v: val }) });
           ops.push({ kind: 'remove-leaf', parentId: parent ? parent.id : null, dir, id: cur.id });
         } else if (!hasL || !hasR) {
           const child = cur.left || cur.right;
-          ops.push({ kind: 'message', text: `节点 ${val} 仅有一个子节点 ${child.val}，用其子替换` });
+          ops.push({ kind: 'message', text: ClubI18n.t('lab.tree.delOne', { v: val, c: child.val }) });
           ops.push({ kind: 'replace-one', parentId: parent ? parent.id : null, dir, id: cur.id, childId: child.id });
         } else {
           // 双子：找中序后继
-          ops.push({ kind: 'message', text: `节点 ${val} 有两个子节点，寻找中序后继（右子树最左）` });
+          ops.push({ kind: 'message', text: ClubI18n.t('lab.tree.delTwo', { v: val }) });
           ops.push({ kind: 'edge', from: cur.id, to: cur.right.id });
           let succ = cur.right;
           let succParent = cur;
-          ops.push({ kind: 'compare', id: succ.id, val: succ.val, target: '后继' });
+          const succLabel = ClubI18n.t('lab.tree.succ');
+          ops.push({ kind: 'compare', id: succ.id, val: succ.val, target: succLabel });
           while (succ.left) {
             ops.push({ kind: 'edge', from: succ.id, to: succ.left.id });
             succParent = succ;
             succ = succ.left;
-            ops.push({ kind: 'compare', id: succ.id, val: succ.val, target: '后继' });
+            ops.push({ kind: 'compare', id: succ.id, val: succ.val, target: succLabel });
           }
           ops.push({ kind: 'mark-successor', id: succ.id, val: succ.val });
-          ops.push({ kind: 'message', text: `后继为 ${succ.val}，用其值替换 ${val}，再删除后继原位置` });
+          ops.push({ kind: 'message', text: ClubI18n.t('lab.tree.succReplace', { s: succ.val, v: val }) });
           ops.push({
             kind: 'replace-successor',
             targetId: cur.id,
@@ -1031,7 +1039,7 @@
             succIsLeft: succParent.left === succ,
           });
         }
-        ops.push({ kind: 'done', text: `删除完成` });
+        ops.push({ kind: 'done', text: ClubI18n.t('lab.tree.delDone') });
         return ops;
       }
 
@@ -1053,20 +1061,20 @@
           highlight.set(op.id, 'current');
           visitPath.push(op.val);
           visitedCount += 1;
-          log(`访问节点 ${op.val}`);
+          log(ClubI18n.t('lab.tree.visitNode', { v: op.val }));
         } else if (op.kind === 'compare') {
           for (const [id, st] of [...highlight.entries()]) {
             if (st === 'current') highlight.set(id, 'visit');
           }
           highlight.set(op.id, 'current');
           visitedCount += 1;
-          log(`比较节点 ${op.val} 与目标 ${op.target}`);
+          log(ClubI18n.t('lab.tree.cmpNode', { v: op.val, t: op.target }));
         } else if (op.kind === 'message') {
           log(op.text);
         } else if (op.kind === 'create-root') {
           root = new TreeNode(op.val);
           highlight.set(root.id, 'insert');
-          log(`创建根节点 ${op.val}`);
+          log(ClubI18n.t('lab.tree.createRoot', { v: op.val }));
         } else if (op.kind === 'attach') {
           const parent = findById(root, op.parentId);
           const node = new TreeNode(op.val);
@@ -1074,13 +1082,13 @@
           else parent.right = node;
           highlight.set(node.id, 'insert');
           edgeHighlight.add(parent.id + '>' + node.id);
-          log(`挂接新节点 ${op.val}`);
+          log(ClubI18n.t('lab.tree.attach', { v: op.val }));
         } else if (op.kind === 'mark-delete') {
           highlight.set(op.id, 'delete');
-          log(`标记删除目标 ${op.val}`);
+          log(ClubI18n.t('lab.tree.markDel', { v: op.val }));
         } else if (op.kind === 'mark-successor') {
           highlight.set(op.id, 'successor');
-          log(`标记中序后继 ${op.val}`);
+          log(ClubI18n.t('lab.tree.markSucc', { v: op.val }));
         } else if (op.kind === 'remove-leaf') {
           if (!op.parentId) root = null;
           else {
@@ -1089,7 +1097,7 @@
             else p.right = null;
           }
           highlight.delete(op.id);
-          log('移除叶子节点');
+          log(ClubI18n.t('lab.tree.removeLeaf'));
         } else if (op.kind === 'replace-one') {
           const child = findById(root, op.childId);
           if (!op.parentId) root = child;
@@ -1100,7 +1108,7 @@
           }
           highlight.delete(op.id);
           if (child) highlight.set(child.id, 'insert');
-          log('单子节点替换完成');
+          log(ClubI18n.t('lab.tree.oneChildDone'));
         } else if (op.kind === 'replace-successor') {
           const target = findById(root, op.targetId);
           const succParent = findById(root, op.succParentId);
@@ -1113,14 +1121,14 @@
             if (op.succIsLeft) succParent.left = succChild;
             else succParent.right = succChild;
             highlight.delete(op.succId);
-            log(`值替换为 ${op.succVal}，并移除后继原节点`);
+            log(ClubI18n.t('lab.tree.replaceVal', { v: op.succVal }));
           }
         } else if (op.kind === 'done') {
           for (const [id, st] of [...highlight.entries()]) {
             if (st === 'current' || st === 'visit') highlight.set(id, 'done');
           }
-          updateStatus(op.text || `完成 · 访问 ${visitedCount} 个节点`);
-          log(op.text || '演示完成');
+          updateStatus(op.text || ClubI18n.t('lab.tree.doneVisit', { n: visitedCount }));
+          log(op.text || ClubI18n.t('lab.tree.demoDone'));
         }
         render();
       }
@@ -1139,7 +1147,7 @@
         const op = operations[cursor++];
         applyOp(op);
         if (op.kind !== 'done') {
-          updateStatus(`执行中 · ${cursor} / ${operations.length}`);
+          updateStatus(ClubI18n.t('lab.tree.runningOf', { cur: cursor, total: operations.length }));
         }
         if (op.kind === 'done') finish();
         return true;
@@ -1148,7 +1156,7 @@
       function finish() {
         stop();
         render();
-        ui.start.textContent = '重新演示';
+        ui.start.textContent = ClubI18n.t('lab.common.restart');
         takeSnapshot();
       }
 
@@ -1162,14 +1170,14 @@
         const mode = ui.mode.value;
         if (['insert', 'delete', 'dict'].includes(mode)) return;
         if (!root) {
-          ui.inputError.textContent = '请先加载示例树或按序列建树。';
+          ui.inputError.textContent = ClubI18n.t('lab.tree.needExampleOrBuild');
           return;
         }
         ui.inputError.textContent = '';
         if (cursor >= operations.length) prepareTraverse();
         playing = !playing;
-        ui.start.textContent = playing ? '暂停演示' : '继续演示';
-        updateStatus(playing ? '演示进行中' : '已暂停 · 可继续或单步');
+        ui.start.textContent = playing ? ClubI18n.t('lab.common.pause') : ClubI18n.t('lab.common.resume');
+        updateStatus(playing ? ClubI18n.t('lab.common.running') : ClubI18n.t('lab.common.paused'));
         if (playing) loop();
       }
 
@@ -1190,13 +1198,13 @@
           }
         } else if (!operations.length || cursor >= operations.length) {
           if (!root) {
-            ui.inputError.textContent = '请先加载示例树。';
+            ui.inputError.textContent = ClubI18n.t('lab.tree.needExample');
             return;
           }
           prepareTraverse();
         }
         stop();
-        ui.start.textContent = '继续演示';
+        ui.start.textContent = ClubI18n.t('lab.common.resume');
         applyNext();
       }
 
@@ -1209,9 +1217,9 @@
         cursor = 0;
         operations = [];
         render();
-        updateStatus('已重置 · 树结构恢复');
-        ui.start.textContent = '开始演示';
-        log('重置动画与高亮');
+        updateStatus(ClubI18n.t('lab.tree.resetDone'));
+        ui.start.textContent = ClubI18n.t('lab.common.start');
+        log(ClubI18n.t('lab.tree.resetLog'));
         const mode = ui.mode.value;
         if (['preorder', 'inorder', 'postorder', 'dfs', 'bfs'].includes(mode)) prepareTraverse();
       }
@@ -1227,8 +1235,8 @@
         ui.seedInput.value = seq.join(', ');
         takeSnapshot();
         render();
-        updateStatus(`已加载示例树 · ${seq.length} 个节点`);
-        log(`加载示例：${seq.join(', ')}`);
+        updateStatus(ClubI18n.t('lab.tree.loaded', { n: seq.length }));
+        log(ClubI18n.t('lab.tree.loadSeed', { seq: seq.join(', ') }));
         ui.inputError.textContent = '';
         const mode = ui.mode.value;
         if (['preorder', 'inorder', 'postorder', 'dfs', 'bfs'].includes(mode)) prepareTraverse();
@@ -1241,7 +1249,7 @@
           loadExample(seq);
         } catch (err) {
           ui.inputError.textContent = err.message;
-          updateStatus('输入有误 · 请修正建树序列');
+          updateStatus(ClubI18n.t('lab.tree.errFixSeed'));
         }
       }
 
@@ -1262,17 +1270,18 @@
         takeSnapshot();
         operations = kind === 'insert' ? buildInsertOps(val) : buildDeleteOps(val);
         render();
-        updateStatus(`就绪 · ${kind === 'insert' ? '插入' : '删除'} ${val} · ${operations.length} 步`);
-        log(`开始${kind === 'insert' ? '插入' : '删除'} ${val}`);
+        const action = ClubI18n.t(kind === 'insert' ? 'lab.tree.actionIns' : 'lab.tree.actionDel');
+        updateStatus(ClubI18n.t('lab.tree.readyMutate', { action, v: val, n: operations.length }));
+        log(ClubI18n.t('lab.tree.startMutate', { action, v: val }));
         // 自动播放短动画
         playing = true;
-        ui.start.textContent = '暂停演示';
+        ui.start.textContent = ClubI18n.t('lab.common.pause');
         loop();
       }
 
       function stepMutate() {
         if (!operations.length || cursor >= operations.length) {
-          updateStatus('请先点击「执行插入 / 删除」生成步骤');
+          updateStatus(ClubI18n.t('lab.tree.needMutateSteps'));
           return;
         }
         stop();
@@ -1292,8 +1301,8 @@
           ino(n.right);
         })(root);
         ui.pathText.textContent = ordered.join(' → ');
-        updateStatus('字典序示例已生成 · 中序即有序');
-        log(`中序有序序列：${ordered.join(', ')}`);
+        updateStatus(ClubI18n.t('lab.tree.dictReady'));
+        log(ClubI18n.t('lab.tree.inorderSeq', { seq: ordered.join(', ') }));
       }
 
       function dictInsertNow() {
@@ -1302,7 +1311,7 @@
 
       function dictPlayInorder() {
         if (!root) {
-          ui.inputError.textContent = '请先生成示例树。';
+          ui.inputError.textContent = ClubI18n.t('lab.tree.needGenerate');
           return;
         }
         ui.inputError.textContent = '';
@@ -1314,16 +1323,18 @@
         takeSnapshot();
         operations = buildTraverseOps('inorder');
         render();
-        updateStatus(`演示中序 · 共 ${operations.length} 步 · 结果应升序`);
-        log('开始中序遍历（BST 上即有序输出）');
+        updateStatus(ClubI18n.t('lab.tree.demoInorder', { n: operations.length }));
+        log(ClubI18n.t('lab.tree.startInorder'));
         playing = true;
         loop();
       }
 
       function syncPanels() {
         const mode = ui.mode.value;
-        const [name, text] = descriptions[mode];
+        const [name, text] = getDescriptions()[mode];
         ui.note.innerHTML = `<b>${name}</b><span>${text}</span>`;
+        ui.note.querySelector('b')?.removeAttribute('data-i18n');
+        ui.note.querySelector('span')?.removeAttribute('data-i18n');
         ui.dictBox.hidden = mode !== 'dict';
         ui.playPanel.hidden = true;
         ui.mutatePanel.hidden = true;
@@ -1331,21 +1342,23 @@
 
         if (['preorder', 'inorder', 'postorder', 'dfs', 'bfs'].includes(mode)) {
           ui.playPanel.hidden = false;
-          ui.valueHint.textContent = '遍历模式无需填写操作值；可单步或连续播放。';
-          ui.valueLabel.textContent = '操作数值（可选）';
+          ui.valueHint.textContent = ClubI18n.t('lab.tree.valueHintTrav');
+          ui.valueLabel.textContent = ClubI18n.t('lab.tree.valueLabelOpt');
+          ui.valueHint.removeAttribute('data-i18n');
+          ui.valueLabel.removeAttribute('data-i18n');
           if (root) prepareTraverse();
           else {
             operations = [];
             cursor = 0;
-            updateStatus('就绪 · 请先加载示例树');
+            updateStatus(ClubI18n.t('lab.tree.readyLoad'));
             render();
           }
         } else if (mode === 'insert' || mode === 'delete') {
           ui.mutatePanel.hidden = false;
-          ui.valueLabel.textContent = mode === 'insert' ? '插入数值' : '删除数值';
-          ui.valueHint.textContent = mode === 'insert'
-            ? '按 BST 规则插入；已存在则跳过。'
-            : '删除需处理叶子 / 单子 / 双子（后继替换）三种情况。';
+          ui.valueLabel.textContent = ClubI18n.t(mode === 'insert' ? 'lab.tree.valueLabelIns' : 'lab.tree.valueLabelDel');
+          ui.valueHint.textContent = ClubI18n.t(mode === 'insert' ? 'lab.tree.valueHintIns' : 'lab.tree.valueHintDel');
+          ui.valueHint.removeAttribute('data-i18n');
+          ui.valueLabel.removeAttribute('data-i18n');
           ui.insertBtn.hidden = mode !== 'insert';
           ui.deleteBtn.hidden = mode !== 'delete';
           stop();
@@ -1355,13 +1368,15 @@
           cursor = 0;
           operations = [];
           render();
-          updateStatus(mode === 'insert' ? '就绪 · 输入数值后执行插入' : '就绪 · 输入数值后执行删除');
+          updateStatus(ClubI18n.t(mode === 'insert' ? 'lab.tree.readyIns' : 'lab.tree.readyDel'));
         } else {
           ui.insertBtn.hidden = false;
           ui.deleteBtn.hidden = false;
           ui.dictPanel.hidden = false;
-          ui.valueLabel.textContent = '按序插入数值';
-          ui.valueHint.textContent = '字典序 / 数值序 BST：插入后中序遍历即为有序序列。';
+          ui.valueLabel.textContent = ClubI18n.t('lab.tree.valueLabelDict');
+          ui.valueHint.textContent = ClubI18n.t('lab.tree.valueHintDictLong');
+          ui.valueHint.removeAttribute('data-i18n');
+          ui.valueLabel.removeAttribute('data-i18n');
           stop();
           clearHighlights();
           visitPath = [];
@@ -1369,7 +1384,19 @@
           cursor = 0;
           operations = [];
           render();
-          updateStatus('字典序模式 · 可一键生成示例或按序插入');
+          updateStatus(ClubI18n.t('lab.tree.valueHintDict'));
+        }
+      }
+
+      function syncStartLabel() {
+        if (cursor >= operations.length && operations.length) {
+          ui.start.textContent = ClubI18n.t('lab.common.restart');
+        } else if (playing) {
+          ui.start.textContent = ClubI18n.t('lab.common.pause');
+        } else if (cursor > 0) {
+          ui.start.textContent = ClubI18n.t('lab.common.resume');
+        } else {
+          ui.start.textContent = ClubI18n.t('lab.common.start');
         }
       }
 
@@ -1395,6 +1422,46 @@
       ui.dictBuild.addEventListener('click', buildFromInput);
 
       el('controlForm').addEventListener('submit', (e) => e.preventDefault());
+
+      window.addEventListener('club:langchange', () => {
+        const mode = ui.mode.value;
+        const [name, text] = getDescriptions()[mode];
+        ui.note.innerHTML = `<b>${name}</b><span>${text}</span>`;
+        ui.note.querySelector('b')?.removeAttribute('data-i18n');
+        ui.note.querySelector('span')?.removeAttribute('data-i18n');
+
+        if (['preorder', 'inorder', 'postorder', 'dfs', 'bfs'].includes(mode)) {
+          ui.valueHint.textContent = ClubI18n.t('lab.tree.valueHintTrav');
+          ui.valueLabel.textContent = ClubI18n.t('lab.tree.valueLabelOpt');
+        } else if (mode === 'insert' || mode === 'delete') {
+          ui.valueLabel.textContent = ClubI18n.t(mode === 'insert' ? 'lab.tree.valueLabelIns' : 'lab.tree.valueLabelDel');
+          ui.valueHint.textContent = ClubI18n.t(mode === 'insert' ? 'lab.tree.valueHintIns' : 'lab.tree.valueHintDel');
+        } else {
+          ui.valueLabel.textContent = ClubI18n.t('lab.tree.valueLabelDict');
+          ui.valueHint.textContent = ClubI18n.t('lab.tree.valueHintDictLong');
+        }
+        ui.valueHint.removeAttribute('data-i18n');
+        ui.valueLabel.removeAttribute('data-i18n');
+
+        syncStartLabel();
+        if (!playing) {
+          if (cursor > 0 && cursor < operations.length) {
+            updateStatus(ClubI18n.t('lab.tree.runningOf', { cur: cursor, total: operations.length }));
+          } else if (cursor >= operations.length && operations.length) {
+            updateStatus(ClubI18n.t('lab.tree.doneVisit', { n: visitedCount }));
+          } else if (['preorder', 'inorder', 'postorder', 'dfs', 'bfs'].includes(mode)) {
+            updateStatus(root ? ClubI18n.t('lab.common.readyOps', { n: operations.length }) : ClubI18n.t('lab.tree.readyLoad'));
+          } else if (mode === 'insert') {
+            updateStatus(ClubI18n.t('lab.tree.readyIns'));
+          } else if (mode === 'delete') {
+            updateStatus(ClubI18n.t('lab.tree.readyDel'));
+          } else {
+            updateStatus(ClubI18n.t('lab.tree.valueHintDict'));
+          }
+        }
+        if (typeof render === 'function') render();
+        if (typeof ClubI18n?.apply === 'function') ClubI18n.apply(document);
+      });
 
       // Init
       loadExample(EXAMPLE_SEED);

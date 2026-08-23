@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="lab.graph.title">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>图论最短路可视化实验室 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js" defer></script>
-  <style>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root {
       font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
       color: #f6fbff;
@@ -443,20 +445,20 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="../index.html" aria-label="返回算法社首页">
+    <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页">
       <span class="brand-mark">A</span>
-      <span><strong>算法社</strong><small>Algorithm Club</small></span>
+      <span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span>
     </a>
     <span class="member-identity" data-member-identity hidden></span>
-    <a class="back-link" href="visualization-lab.html">实验室选择</a>
+    <a class="back-link" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
   </header>
 
   <main>
     <section class="hero" aria-labelledby="pageTitle">
       <div>
         <p class="eyebrow">GRAPH SHORTEST PATH LAB · V1</p>
-        <h1 id="pageTitle">图论最短路可视化实验室</h1>
-        <p>在加权图上观察松弛、确定距离与回溯路径。支持 Dijkstra、Bellman–Ford、SPFA 与 Floyd–Warshall；可切换预设图，连续演示或单步执行。</p>
+        <h1 id="pageTitle" data-i18n="lab.graph.h1">图论最短路可视化实验室</h1>
+        <p data-i18n="lab.graph.lead">在加权图上观察松弛、确定距离与回溯路径。支持 Dijkstra、Bellman–Ford、SPFA 与 Floyd–Warshall；可切换预设图，连续演示或单步执行。</p>
       </div>
       <aside class="algorithm-note" id="algorithmNote">
         <b>Dijkstra</b>
@@ -464,12 +466,12 @@
       </aside>
     </section>
 
-    <section class="lab-grid" aria-label="最短路演示控制台">
+    <section class="lab-grid" data-i18n-aria="lab.graph.consoleAria" aria-label="最短路演示控制台">
       <form class="panel controls" id="controlForm">
-        <h2>实验设置</h2>
+        <h2 data-i18n="lab.common.settings">实验设置</h2>
 
         <div class="control-group">
-          <label for="algorithm">最短路算法</label>
+          <label for="algorithm" data-i18n="lab.graph.algoLabel">最短路算法</label>
           <select id="algorithm">
             <option value="dijkstra">Dijkstra</option>
             <option value="bellman">Bellman–Ford</option>
@@ -479,49 +481,49 @@
         </div>
 
         <div class="control-group">
-          <label for="preset">预设图</label>
+          <label for="preset" data-i18n="lab.graph.presetLabel">预设图</label>
           <select id="preset">
-            <option value="campus">校园路网（非负权 · 无向）</option>
-            <option value="negative">含负权边（有向）</option>
-            <option value="city">城际干线（非负权 · 有向）</option>
+            <option value="campus" data-i18n="lab.graph.presetCampus">校园路网（非负权 · 无向）</option>
+            <option value="negative" data-i18n="lab.graph.presetNegative">含负权边（有向）</option>
+            <option value="city" data-i18n="lab.graph.presetCity">城际干线（非负权 · 有向）</option>
           </select>
-          <p class="hint" id="presetHint">适合 Dijkstra / Floyd；边权均为非负。</p>
+          <p class="hint" id="presetHint" data-i18n="lab.graph.hintCampus">适合 Dijkstra / Floyd；边权均为非负。</p>
         </div>
 
         <div class="control-group">
           <div class="row-2">
             <div>
-              <label for="sourceNode">起点</label>
+              <label for="sourceNode" data-i18n="lab.graph.source">起点</label>
               <select id="sourceNode"></select>
             </div>
             <div>
-              <label for="targetNode">终点</label>
+              <label for="targetNode" data-i18n="lab.graph.target">终点</label>
               <select id="targetNode"></select>
             </div>
           </div>
-          <p class="hint">Floyd 为全源最短路，仍可用终点高亮回溯路径。</p>
+          <p class="hint" data-i18n="lab.graph.floydHint">Floyd 为全源最短路，仍可用终点高亮回溯路径。</p>
           <p class="error" id="inputError" role="alert" aria-live="polite"></p>
         </div>
 
         <div class="button-stack">
-          <button class="btn btn-primary" type="button" id="startButton">开始演示</button>
-          <button class="btn" type="button" id="stepButton">单步执行</button>
-          <button class="btn btn-warn" type="button" id="resetButton">重置当前图</button>
-          <button class="btn" type="button" id="reloadPreset">切换 / 重载预设</button>
+          <button class="btn btn-primary" type="button" id="startButton" data-i18n="lab.common.start">开始演示</button>
+          <button class="btn" type="button" id="stepButton" data-i18n="lab.common.step">单步执行</button>
+          <button class="btn btn-warn" type="button" id="resetButton" data-i18n="lab.graph.resetGraph">重置当前图</button>
+          <button class="btn" type="button" id="reloadPreset" data-i18n="lab.graph.reloadPreset">切换 / 重载预设</button>
         </div>
       </form>
 
       <section class="panel visual" aria-labelledby="visualTitle">
         <div class="visual-header">
           <div>
-            <h2 id="visualTitle">加权图可视化</h2>
+            <h2 id="visualTitle" data-i18n="lab.graph.visualTitle">加权图可视化</h2>
             <span class="sr-only" id="announcement" aria-live="polite"></span>
           </div>
-          <span class="status" id="statusText" role="status">就绪 · 等待开始</span>
+          <span class="status" id="statusText" role="status" data-i18n="lab.common.ready">就绪</span>
         </div>
 
         <div class="graph-frame">
-          <svg class="graph-svg" id="graphSvg" viewBox="0 0 720 420" role="img" aria-label="加权图演示区域">
+          <svg class="graph-svg" id="graphSvg" viewBox="0 0 720 420" role="img" data-i18n-aria="lab.graph.graphAria" aria-label="加权图演示区域">
             <defs>
               <marker id="arrowHead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
                 <path d="M0,0 L10,4 L0,8 Z" fill="rgba(164,226,255,.75)"></path>
@@ -542,20 +544,20 @@
         </div>
 
         <div class="matrix-wrap" id="matrixWrap" hidden>
-          <p class="matrix-title">Floyd–Warshall 距离矩阵（∞ 表示不可达）</p>
-          <table class="matrix" id="matrixTable" aria-label="距离矩阵"></table>
+          <p class="matrix-title" data-i18n="lab.graph.matrixTitle">Floyd–Warshall 距离矩阵（∞ 表示不可达）</p>
+          <table class="matrix" id="matrixTable" data-i18n-aria="lab.graph.matrixAria" aria-label="距离矩阵"></table>
         </div>
 
-        <div class="metrics" aria-label="最短路计数">
-          <div class="metric"><span>松弛次数</span><strong id="relaxCount">0</strong></div>
-          <div class="metric"><span>访问节点</span><strong id="visitCount">0</strong></div>
-          <div class="metric"><span>当前步骤</span><strong id="steps">0</strong></div>
+        <div class="metrics" data-i18n-aria="lab.graph.metricsAria" aria-label="最短路计数">
+          <div class="metric"><span data-i18n="lab.graph.relaxCount">松弛次数</span><strong id="relaxCount">0</strong></div>
+          <div class="metric"><span data-i18n="lab.graph.visitCount">访问节点</span><strong id="visitCount">0</strong></div>
+          <div class="metric"><span data-i18n="lab.common.currentStep">当前步骤</span><strong id="steps">0</strong></div>
         </div>
-        <div class="legend" aria-label="颜色说明">
-          <span><i></i>起点 / 普通边</span>
-          <span><i class="l-current"></i>当前处理 / 松弛边</span>
-          <span><i class="l-settled"></i>已确定距离</span>
-          <span><i class="l-path"></i>最终最短路</span>
+        <div class="legend" data-i18n-aria="lab.common.colorLegend" aria-label="颜色说明">
+          <span><i></i><span data-i18n="lab.graph.legNormal">起点 / 普通边</span></span>
+          <span><i class="l-current"></i><span data-i18n="lab.graph.legCurrent">当前处理 / 松弛边</span></span>
+          <span><i class="l-settled"></i><span data-i18n="lab.graph.legSettled">已确定距离</span></span>
+          <span><i class="l-path"></i><span data-i18n="lab.graph.legPath">最终最短路</span></span>
         </div>
       </section>
     </section>
@@ -587,22 +589,28 @@
         reloadPreset: el('reloadPreset')
       };
 
-      const descriptions = {
-        dijkstra: ['Dijkstra', '优先扩展当前距离最小的节点，仅适用于非负权图。'],
-        bellman: ['Bellman–Ford', '对所有边重复松弛 |V|-1 轮，可处理负权边并检测负环。'],
-        spfa: ['SPFA', '队列优化的 Bellman–Ford：仅当距离变小时才把邻接点入队。'],
-        floyd: ['Floyd–Warshall', '动态规划枚举中间点，逐步更新全源最短路距离矩阵。']
+      const descKeys = {
+        dijkstra: ['Dijkstra', 'lab.graph.dijkstraDesc'],
+        bellman: ['Bellman–Ford', 'lab.graph.bellmanDesc'],
+        spfa: ['SPFA', 'lab.graph.spfaDesc'],
+        floyd: ['Floyd–Warshall', 'lab.graph.floydDesc']
       };
-
-      const presetMeta = {
-        campus: '适合 Dijkstra / Floyd；边权均为非负。',
-        negative: '含负权，推荐 Bellman–Ford / SPFA；Dijkstra 将提示不可用。',
-        city: '有向非负权，适合 Dijkstra / SPFA / Floyd。'
+      const presetHintKeys = {
+        campus: 'lab.graph.hintCampus',
+        negative: 'lab.graph.hintNegative',
+        city: 'lab.graph.hintCity'
       };
+      function getDescriptions() {
+        const o = {};
+        for (const k of Object.keys(descKeys)) {
+          o[k] = [descKeys[k][0], ClubI18n.t(descKeys[k][1])];
+        }
+        return o;
+      }
 
       const PRESETS = {
         campus: {
-          name: '校园路网',
+          nameKey: 'campus',
           directed: false,
           nodes: [
             { id: 'A', x: 90, y: 210 },
@@ -622,7 +630,7 @@
           target: 'G'
         },
         negative: {
-          name: '含负权边',
+          nameKey: 'negative',
           directed: true,
           nodes: [
             { id: 'S', x: 80, y: 210 },
@@ -641,7 +649,7 @@
           target: 'T'
         },
         city: {
-          name: '城际干线',
+          nameKey: 'city',
           directed: true,
           nodes: [
             { id: 'A', x: 100, y: 120 },
@@ -674,7 +682,7 @@
 
       function cloneGraph(g) {
         return {
-          name: g.name,
+          nameKey: g.nameKey,
           directed: g.directed,
           nodes: g.nodes.map(n => ({ ...n })),
           edges: g.edges.map(e => [...e]),
@@ -706,7 +714,8 @@
       function loadPreset(key = ui.preset.value) {
         graph = cloneGraph(PRESETS[key]);
         fillNodeSelects(graph);
-        ui.presetHint.textContent = presetMeta[key];
+        ui.presetHint.textContent = ClubI18n.t(presetHintKeys[key]);
+        ui.presetHint.setAttribute('data-i18n', presetHintKeys[key]);
         ui.inputError.textContent = '';
         prepare();
       }
@@ -720,10 +729,10 @@
       function validateAlgo() {
         const algo = ui.algorithm.value;
         if (algo === 'dijkstra' && hasNegative(graph)) {
-          throw new Error('Dijkstra 仅支持非负权。请切换预设或改用 Bellman–Ford / SPFA。');
+          throw new Error(ClubI18n.t('lab.graph.errDijkstraNeg'));
         }
         if (graph.source === graph.target && algo !== 'floyd') {
-          throw new Error('起点与终点不能相同。');
+          throw new Error(ClubI18n.t('lab.graph.errSameST'));
         }
       }
 
@@ -754,7 +763,7 @@
         const prev = Object.fromEntries(ids.map(id => [id, null]));
         const settled = new Set();
         dist[source] = 0;
-        add(ops, 'init', { dist: { ...dist }, message: `初始化：dist[${source}]=0` });
+        add(ops, 'init', { dist: { ...dist }, message: ClubI18n.t('lab.graph.initSource', { s: source }) });
 
         const adj = Object.fromEntries(ids.map(id => [id, []]));
         g.edges.forEach(([u, v, w]) => {
@@ -815,7 +824,7 @@
         const dist = Object.fromEntries(ids.map(id => [id, INF]));
         const prev = Object.fromEntries(ids.map(id => [id, null]));
         dist[source] = 0;
-        add(ops, 'init', { dist: { ...dist }, message: `初始化：dist[${source}]=0` });
+        add(ops, 'init', { dist: { ...dist }, message: ClubI18n.t('lab.graph.initSource', { s: source }) });
 
         const edges = [];
         g.edges.forEach(([u, v, w]) => {
@@ -879,7 +888,7 @@
         const queue = [source];
         inQueue[source] = true;
         count[source] = 1;
-        add(ops, 'init', { dist: { ...dist }, queue: [...queue], message: `源点 ${source} 入队` });
+        add(ops, 'init', { dist: { ...dist }, queue: [...queue], message: ClubI18n.t('lab.graph.sourceEnq', { s: source }) });
 
         const adj = Object.fromEntries(ids.map(id => [id, []]));
         g.edges.forEach(([u, v, w]) => {
@@ -957,7 +966,7 @@
         add(ops, 'init', {
           matrix: snapshot(),
           ids: ids.slice(),
-          message: '初始化邻接矩阵'
+          message: ClubI18n.t('lab.graph.initMatrix')
         });
 
         for (let k = 0; k < n; k++) {
@@ -965,7 +974,7 @@
             k: ids[k],
             matrix: snapshot(),
             ids: ids.slice(),
-            message: `枚举中间点 ${ids[k]}`
+            message: ClubI18n.t('lab.graph.enumK', { k: ids[k] })
           });
           for (let i = 0; i < n; i++) {
             for (let j = 0; j < n; j++) {
@@ -1240,6 +1249,51 @@
         }
       }
 
+      function syncStartLabel() {
+        if (cursor >= operations.length && operations.length) {
+          ui.start.textContent = ClubI18n.t('lab.common.restart');
+        } else if (playing) {
+          ui.start.textContent = ClubI18n.t('lab.common.pause');
+        } else if (cursor > 0) {
+          ui.start.textContent = ClubI18n.t('lab.common.resume');
+        } else {
+          ui.start.textContent = ClubI18n.t('lab.common.start');
+        }
+        ui.start.removeAttribute('data-i18n');
+      }
+
+      function refreshStaticStatus() {
+        if (ui.inputError.textContent) {
+          updateStatus(ClubI18n.t('lab.graph.errConfig'));
+          return;
+        }
+        if (playing) {
+          updateStatus(ClubI18n.t('lab.common.running'));
+          return;
+        }
+        if (cursor >= operations.length && operations.length) {
+          const last = operations[operations.length - 1];
+          if (last?.negativeCycle) {
+            updateStatus(ClubI18n.t('lab.graph.doneNeg', { n: cursor }));
+          } else if (last?.found) {
+            updateStatus(ClubI18n.t('lab.graph.donePath', { d: last.distance, n: cursor }));
+          } else {
+            updateStatus(ClubI18n.t('lab.graph.doneUnreach'));
+          }
+          return;
+        }
+        if (cursor > 0) {
+          const op = operations[cursor - 1];
+          updateStatus(ClubI18n.t('lab.common.stepOf', {
+            label: labelFor(op),
+            cur: cursor,
+            total: operations.length
+          }));
+          return;
+        }
+        updateStatus(ClubI18n.t('lab.common.readyOps', { n: operations.length }));
+      }
+
       function prepare() {
         stop();
         syncEndpoints();
@@ -1259,44 +1313,50 @@
             view.matrixIds = operations[0].ids.slice();
           }
           render();
-          updateStatus(`就绪 · 共 ${operations.length} 个操作`);
-          ui.start.textContent = '开始演示';
+          updateStatus(ClubI18n.t('lab.common.readyOps', { n: operations.length }));
+          syncStartLabel();
         } catch (err) {
           operations = [];
           render();
           ui.inputError.textContent = err.message;
-          updateStatus('配置有误 · 请调整算法或预设');
-          ui.start.textContent = '开始演示';
+          updateStatus(ClubI18n.t('lab.graph.errConfig'));
+          syncStartLabel();
         }
       }
 
       function labelFor(op) {
-        const map = {
-          init: '初始化距离',
-          visit: `访问节点 ${op.node || ''}`,
-          settle: `确定节点 ${op.node || ''}`,
-          'relax-check': op.via
-            ? `检查 ${op.from}→${op.to}（经 ${op.via}）`
-            : `检查边 ${op.from}→${op.to}`,
-          relax: op.via
-            ? `松弛更新 ${op.from}→${op.to}（经 ${op.via}）`
-            : `松弛成功 ${op.from}→${op.to}`,
-          enqueue: `节点 ${op.node} 入队`,
-          round: `第 ${op.round} 轮松弛`,
-          'early-stop': `第 ${op.round} 轮无更新，提前结束`,
-          'floyd-k': `枚举中间点 ${op.k}`,
-          'neg-cycle': '检测到负权环',
-          path: '回溯最短路径',
-          complete: op.negativeCycle
-            ? '存在负权环'
-            : (op.found ? `完成 · 距离 ${op.distance}` : '完成 · 不可达')
-        };
-        return map[op.type] || '执行中';
+        if (op.message) return op.message;
+        if (op.type === 'init') return ClubI18n.t('lab.graph.initDist');
+        if (op.type === 'visit') return ClubI18n.t('lab.graph.visitNode', { n: op.node || '' });
+        if (op.type === 'settle') return ClubI18n.t('lab.graph.settleNode', { n: op.node || '' });
+        if (op.type === 'relax-check') {
+          return op.via
+            ? ClubI18n.t('lab.graph.checkVia', { f: op.from, t: op.to, v: op.via })
+            : ClubI18n.t('lab.graph.checkEdge', { f: op.from, t: op.to });
+        }
+        if (op.type === 'relax') {
+          return op.via
+            ? ClubI18n.t('lab.graph.relaxVia', { f: op.from, t: op.to, v: op.via })
+            : ClubI18n.t('lab.graph.relaxOk', { f: op.from, t: op.to });
+        }
+        if (op.type === 'enqueue') return ClubI18n.t('lab.graph.nodeEnq', { n: op.node });
+        if (op.type === 'round') return ClubI18n.t('lab.graph.roundRelax', { r: op.round });
+        if (op.type === 'early-stop') return ClubI18n.t('lab.graph.roundEarly', { r: op.round });
+        if (op.type === 'floyd-k') return ClubI18n.t('lab.graph.enumK', { k: op.k });
+        if (op.type === 'neg-cycle') return ClubI18n.t('lab.graph.negCycle');
+        if (op.type === 'path') return ClubI18n.t('lab.graph.tracePath');
+        if (op.type === 'complete') {
+          if (op.negativeCycle) return ClubI18n.t('lab.graph.negCycle');
+          return op.found
+            ? ClubI18n.t('lab.graph.doneDist', { d: op.distance })
+            : ClubI18n.t('lab.graph.doneUnreachShort');
+        }
+        return ClubI18n.t('lab.common.executing');
       }
 
       function applyNext() {
         if (!operations.length) {
-          updateStatus('无可演示操作 · 请检查配置');
+          updateStatus(ClubI18n.t('lab.graph.errNoOps'));
           return false;
         }
         if (cursor >= operations.length) {
@@ -1312,7 +1372,11 @@
         }
         applyOp(op);
         render();
-        updateStatus(`${labelFor(op)} · ${cursor} / ${operations.length}`);
+        updateStatus(ClubI18n.t('lab.common.stepOf', {
+          label: labelFor(op),
+          cur: cursor,
+          total: operations.length
+        }));
         if (op.type === 'complete') finish(false);
         return true;
       }
@@ -1322,13 +1386,13 @@
         if (renderAgain) render();
         const last = operations[operations.length - 1];
         if (last?.negativeCycle) {
-          updateStatus(`完成 · 检测到负权环（已执行 ${cursor} 步）`);
+          updateStatus(ClubI18n.t('lab.graph.doneNeg', { n: cursor }));
         } else if (last?.found) {
-          updateStatus(`完成 · 最短路长度 ${last.distance}，共 ${cursor} 步`);
+          updateStatus(ClubI18n.t('lab.graph.donePath', { d: last.distance, n: cursor }));
         } else {
-          updateStatus(`完成 · 终点不可达 / 无有效路径`);
+          updateStatus(ClubI18n.t('lab.graph.doneUnreach'));
         }
-        ui.start.textContent = '重新演示';
+        syncStartLabel();
       }
 
       function loop() {
@@ -1349,13 +1413,13 @@
         if (cursor >= operations.length) prepare();
         if (!operations.length) return;
         playing = !playing;
-        ui.start.textContent = playing ? '暂停演示' : '继续演示';
-        updateStatus(playing ? '演示进行中' : '已暂停 · 可继续或单步');
+        syncStartLabel();
+        updateStatus(playing ? ClubI18n.t('lab.common.running') : ClubI18n.t('lab.common.paused'));
         if (playing) loop();
       }
 
       function refreshNote() {
-        const [name, text] = descriptions[ui.algorithm.value];
+        const [name, text] = getDescriptions()[ui.algorithm.value];
         ui.note.innerHTML = `<b>${name}</b><span>${text}</span>`;
       }
 
@@ -1370,12 +1434,28 @@
       ui.step.addEventListener('click', () => {
         stop();
         if (!operations.length) prepare();
-        ui.start.textContent = '继续演示';
+        syncStartLabel();
+        ui.start.textContent = ClubI18n.t('lab.common.resume');
+        ui.start.removeAttribute('data-i18n');
         applyNext();
       });
       ui.reset.addEventListener('click', prepare);
       ui.reloadPreset.addEventListener('click', () => loadPreset(ui.preset.value));
       el('controlForm').addEventListener('submit', e => e.preventDefault());
+
+      window.addEventListener('club:langchange', () => {
+        refreshNote();
+        const key = ui.preset.value;
+        ui.presetHint.textContent = ClubI18n.t(presetHintKeys[key]);
+        ui.presetHint.setAttribute('data-i18n', presetHintKeys[key]);
+        if (cursor === 0 && !playing) {
+          try { prepare(); } catch (_e) { /* keep */ }
+        } else {
+          refreshStaticStatus();
+          syncStartLabel();
+        }
+        if (typeof ClubI18n?.apply === 'function') ClubI18n.apply(document);
+      });
 
       refreshNote();
       loadPreset('campus');

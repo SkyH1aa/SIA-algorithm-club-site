@@ -1,65 +1,67 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-i18n-title-key="pages.mallAdmin.title">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>积分商城管理 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="member-identity.js" defer></script>
-  <style>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
     :root{--bg:#030712;--panel:rgba(9,18,38,.84);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--green:#72f3c2;--danger:#ff718a;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 12% 0,rgba(0,229,255,.14),transparent 28%),radial-gradient(circle at 88% 10%,rgba(146,120,255,.16),transparent 30%),var(--bg)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.82);backdrop-filter:blur(18px)}.topbar-inner{max-width:1200px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted)}main{max-width:1200px;margin:auto;padding:56px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}h1{margin:0 0 12px;font-size:clamp(36px,7vw,64px)}.lead{max-width:780px;color:var(--muted);line-height:1.8;margin:0 0 24px}.panel{padding:22px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);margin-bottom:16px}.panel h2{margin:0 0 8px}.intro{margin:0 0 16px;color:var(--muted);line-height:1.7}.gate,.denied{min-height:240px;display:grid;place-items:center;text-align:center}.hidden{display:none!important}.button{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:rgba(0,229,255,.12);color:var(--text);cursor:pointer;font:inherit}.button.secondary{border-color:var(--line);background:transparent}.button.danger{border-color:rgba(255,113,138,.55);background:rgba(255,113,138,.12)}.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.form{display:grid;gap:10px}.label{color:var(--muted);font-size:13px}.input,.textarea{width:100%;padding:11px 13px;color:var(--text);border:1px solid var(--line);border-radius:8px;background:rgba(2,7,18,.76);outline:none;font:inherit}.textarea{min-height:84px;resize:vertical}.checks{display:flex;flex-wrap:wrap;gap:12px;color:var(--muted);font-size:13px}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:860px}.table th,.table td{padding:11px 8px;border-bottom:1px solid rgba(107,169,224,.14);text-align:left;vertical-align:top}.table th{color:var(--muted);font-size:13px;font-weight:500}.actions{display:flex;gap:8px;flex-wrap:wrap}.thumb{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.25)}.badge{display:inline-flex;padding:3px 8px;border-radius:999px;font-size:12px}.badge.on{color:var(--green);border:1px solid rgba(114,243,194,.35);background:rgba(114,243,194,.08)}.badge.off{color:var(--muted);border:1px solid var(--line)}.message{min-height:22px;margin:10px 0 0;color:var(--muted);font-size:13px}.message.error{color:var(--danger)}.message.success{color:var(--green)}.empty{padding:24px 0;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}.section-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr}.identity{display:none!important}main{padding:42px 16px 70px}}
   </style>
 </head>
 <body>
-  <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong>算法社</strong><small>Mall Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html">返回管理员总览</a></div></header>
+  <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Mall Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a></div></header>
   <main>
-    <section id="gate" class="panel gate"><div><strong>请先登录</strong><p class="intro">积分商城管理需要对应权限。</p><a class="button" href="member-center.html">前往个人中心登录</a></div></section>
-    <section id="denied" class="panel denied hidden"><div><strong>无积分商城管理权限</strong><p class="intro">请联系超管开通「积分商城」权限。</p></div></section>
+    <section id="gate" class="panel gate"><div><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="admin.mallGateLead">积分商城管理需要对应权限。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+    <section id="denied" class="panel denied hidden"><div><strong data-i18n="admin.mallDenied">无积分商城管理权限</strong><p class="intro" data-i18n="admin.mallDeniedLead">请联系超管开通「积分商城」权限。</p></div></section>
     <div id="content" class="hidden">
       <p class="eyebrow">POINTS MALL ADMIN</p>
-      <h1>积分商城管理</h1>
-      <p class="lead">自定义商品名称、兑换积分、库存、上架状态与可选配图 URL。社员兑换后会立即扣积分并减库存；线下发货完成后点「已处理」即可删除该兑换记录。</p>
+      <h1 data-i18n="pages.mallAdmin.h1">积分商城管理</h1>
+      <p class="lead" data-i18n="admin.mallLead">自定义商品名称、兑换积分、库存、上架状态与可选配图 URL。社员兑换后会立即扣积分并减库存；线下发货完成后点「已处理」即可删除该兑换记录。</p>
 
       <section class="panel">
         <div class="section-head">
           <div>
-            <h2>发布 / 编辑商品</h2>
-            <p class="intro">配图只需填写图床图片 URL；留空表示无配图。已上架商品也可直接编辑。</p>
+            <h2 data-i18n="admin.productTitle">发布 / 编辑商品</h2>
+            <p class="intro" data-i18n="admin.productIntro">配图只需填写图床图片 URL；留空表示无配图。已上架商品也可直接编辑。</p>
           </div>
-          <button class="button secondary" type="button" id="refreshProducts">刷新商品</button>
+          <button class="button secondary" type="button" id="refreshProducts" data-i18n="admin.refreshProducts">刷新商品</button>
         </div>
         <form class="form" id="productForm">
           <input type="hidden" id="productId">
           <div class="grid-2">
-            <div><label class="label" for="productName">商品名称</label><input class="input" id="productName" maxlength="80" required placeholder="例如 狼蛛磁轴键盘"></div>
-            <div><label class="label" for="productImageUrl">配图 URL（可选）</label><input class="input" id="productImageUrl" maxlength="500" placeholder="https://... 留空=无配图"></div>
+            <div><label class="label" for="productName" data-i18n="admin.productName">商品名称</label><input class="input" id="productName" maxlength="80" required placeholder="例如 狼蛛磁轴键盘" data-i18n-placeholder="admin.phProductName"></div>
+            <div><label class="label" for="productImageUrl" data-i18n="admin.productImage">配图 URL（可选）</label><input class="input" id="productImageUrl" maxlength="500" placeholder="https://... 留空=无配图" data-i18n-placeholder="admin.phImageUrl"></div>
           </div>
-          <label class="label" for="productDescription">商品说明（可选）</label>
-          <textarea class="textarea" id="productDescription" maxlength="500" placeholder="简要说明规格、领取方式等"></textarea>
+          <label class="label" for="productDescription" data-i18n="admin.productDesc">商品说明（可选）</label>
+          <textarea class="textarea" id="productDescription" maxlength="500" placeholder="简要说明规格、领取方式等" data-i18n-placeholder="admin.phProductDesc"></textarea>
           <div class="grid-3">
-            <div><label class="label" for="productPrice">兑换积分</label><input class="input" id="productPrice" type="number" min="1" max="1000000" required></div>
-            <div><label class="label" for="productStock">库存</label><input class="input" id="productStock" type="number" min="0" max="1000000" required></div>
-            <div><label class="label" for="productSort">排序（越小越靠前）</label><input class="input" id="productSort" type="number" min="0" max="100000" value="0"></div>
+            <div><label class="label" for="productPrice" data-i18n="admin.productPrice">兑换积分</label><input class="input" id="productPrice" type="number" min="1" max="1000000" required></div>
+            <div><label class="label" for="productStock" data-i18n="admin.productStock">库存</label><input class="input" id="productStock" type="number" min="0" max="1000000" required></div>
+            <div><label class="label" for="productSort" data-i18n="admin.productSort">排序（越小越靠前）</label><input class="input" id="productSort" type="number" min="0" max="100000" value="0"></div>
           </div>
-          <div class="checks"><label><input type="checkbox" id="productListed"> 立即上架</label></div>
+          <div class="checks"><label><input type="checkbox" id="productListed"> <span data-i18n="admin.listNow">立即上架</span></label></div>
           <div class="actions">
-            <button class="button" type="submit" id="productSaveButton">保存商品</button>
-            <button class="button secondary" type="button" id="resetProduct">清空表单</button>
+            <button class="button" type="submit" id="productSaveButton" data-i18n="admin.saveProduct">保存商品</button>
+            <button class="button secondary" type="button" id="resetProduct" data-i18n="common.clearForm">清空表单</button>
           </div>
         </form>
         <p class="message" id="productMessage" role="status"></p>
-        <div class="table-wrap" id="productList" style="margin-top:16px"><div class="empty loading">正在读取商品…</div></div>
+        <div class="table-wrap" id="productList" style="margin-top:16px"><div class="empty loading" data-i18n="admin.loadingProducts">正在读取商品…</div></div>
       </section>
 
       <section class="panel">
         <div class="section-head">
           <div>
-            <h2>兑换记录</h2>
-            <p class="intro">展示待线下发放的兑换申请。点「已处理」会删除该条记录。</p>
+            <h2 data-i18n="admin.redemptionTitle">兑换记录</h2>
+            <p class="intro" data-i18n="admin.redemptionIntro">展示待线下发放的兑换申请。点「已处理」会删除该条记录。</p>
           </div>
-          <button class="button secondary" type="button" id="refreshRedemptions">刷新记录</button>
+          <button class="button secondary" type="button" id="refreshRedemptions" data-i18n="admin.refreshRedemptions">刷新记录</button>
         </div>
-        <div class="table-wrap" id="redemptionList"><div class="empty loading">正在读取兑换记录…</div></div>
+        <div class="table-wrap" id="redemptionList"><div class="empty loading" data-i18n="admin.loadingRedemptions">正在读取兑换记录…</div></div>
         <p class="message" id="redemptionMessage" role="status"></p>
       </section>
     </div>
@@ -70,6 +72,7 @@
     const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const $ = id => document.getElementById(id);
+    const t = (key, vars) => (window.ClubI18n ? ClubI18n.t(key, vars) : key);
     let productsCache = [];
 
     function escapeHtml(value) {
@@ -87,7 +90,7 @@
     }
     async function call(action, body = {}) {
       const { data: { session } } = await supabaseClient.auth.getSession();
-      if (!session) throw new Error('请先登录。');
+      if (!session) throw new Error(t('admin.loginPlease'));
       const response = await fetch(FUNCTION_URL, {
         method: 'POST',
         headers: {
@@ -97,7 +100,7 @@
         body: JSON.stringify({ action, ...body })
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || '操作失败。');
+      if (!response.ok) throw new Error(payload.error || t('admin.opFailed'));
       return payload;
     }
 
@@ -106,7 +109,7 @@
       $('productId').value = '';
       $('productSort').value = '0';
       $('productListed').checked = false;
-      $('productSaveButton').textContent = '保存商品';
+      $('productSaveButton').textContent = t('admin.saveProduct');
       setMessage($('productMessage'), '');
     }
 
@@ -121,33 +124,34 @@
       $('productStock').value = product.stock;
       $('productSort').value = product.sort_order ?? 0;
       $('productListed').checked = Boolean(product.is_listed);
-      $('productSaveButton').textContent = '保存修改';
-      setMessage($('productMessage'), `正在编辑「${product.name}」。`, 'success');
+      $('productSaveButton').textContent = t('admin.saveChanges');
+      setMessage($('productMessage'), t('admin.editingProduct', { name: product.name }), 'success');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function renderProducts(products) {
       productsCache = products;
       if (!products.length) {
-        $('productList').innerHTML = '<div class="empty">还没有商品，请先在上方添加。</div>';
+        $('productList').innerHTML = '<div class="empty">' + t('admin.emptyProducts') + '</div>';
         return;
       }
-      $('productList').innerHTML = `<table class="table"><thead><tr><th>配图</th><th>商品</th><th>积分</th><th>库存</th><th>状态</th><th>排序</th><th>更新时间</th><th>操作</th></tr></thead><tbody>${products.map(item => `
+      $('productList').innerHTML = `<table class="table"><thead><tr><th>${t('admin.colImage')}</th><th>${t('admin.colProduct')}</th><th>${t('admin.colPointsValue')}</th><th>${t('admin.colStock')}</th><th>${t('admin.colStatus')}</th><th>${t('admin.colSort')}</th><th>${t('admin.colUpdated')}</th><th>${t('admin.colActions')}</th></tr></thead><tbody>${products.map(item => `
         <tr>
-          <td>${item.image_url ? `<img class="thumb" src="${escapeHtml(item.image_url)}" alt="">` : '<span class="badge off">无配图</span>'}</td>
+          <td>${item.image_url ? `<img class="thumb" src="${escapeHtml(item.image_url)}" alt="">` : `<span class="badge off">${t('admin.noImage')}</span>`}</td>
           <td><strong>${escapeHtml(item.name)}</strong><div style="color:var(--muted);font-size:12px;margin-top:4px;line-height:1.5">${escapeHtml(item.description || '-')}</div></td>
           <td>${escapeHtml(item.price)}</td>
           <td>${escapeHtml(item.stock)}</td>
-          <td><span class="badge ${item.is_listed ? 'on' : 'off'}">${item.is_listed ? '已上架' : '已下架'}</span></td>
+          <td><span class="badge ${item.is_listed ? 'on' : 'off'}">${item.is_listed ? t('admin.listed') : t('admin.unlisted')}</span></td>
           <td>${escapeHtml(item.sort_order ?? 0)}</td>
           <td>${escapeHtml(formatTime(item.updated_at))}</td>
           <td class="actions">
-            <button class="button secondary" type="button" data-edit-product="${escapeHtml(item.id)}">编辑</button>
-            <button class="button danger" type="button" data-delete-product="${escapeHtml(item.id)}">删除</button>
+            <button class="button secondary" type="button" data-edit-product="${escapeHtml(item.id)}" data-i18n="common.edit">编辑</button>
+            <button class="button danger" type="button" data-delete-product="${escapeHtml(item.id)}" data-i18n="common.delete">删除</button>
           </td>
         </tr>
       `).join('')}</tbody></table>`;
 
+      if (window.ClubI18n?.apply) ClubI18n.apply($('productList'));
       $('productList').querySelectorAll('[data-edit-product]').forEach(button => {
         button.addEventListener('click', () => startEditProduct(button.getAttribute('data-edit-product')));
       });
@@ -155,11 +159,11 @@
         button.addEventListener('click', async () => {
           const id = button.getAttribute('data-delete-product');
           const product = productsCache.find(item => item.id === id);
-          if (!window.confirm(`确认删除商品「${product?.name || id}」？`)) return;
-          setMessage($('productMessage'), '正在删除…');
+          if (!window.confirm(t('admin.confirmDeleteProduct', { name: product?.name || id }))) return;
+          setMessage($('productMessage'), t('admin.deleting'));
           try {
             await call('admin_mall_products_delete', { id });
-            setMessage($('productMessage'), '商品已删除。', 'success');
+            setMessage($('productMessage'), t('admin.productDeleted'), 'success');
             if ($('productId').value === id) resetProductForm();
             await refreshProducts();
           } catch (error) {
@@ -171,10 +175,10 @@
 
     function renderRedemptions(rows) {
       if (!rows.length) {
-        $('redemptionList').innerHTML = '<div class="empty">暂无待处理兑换记录。</div>';
+        $('redemptionList').innerHTML = '<div class="empty">' + t('admin.emptyRedemptions') + '</div>';
         return;
       }
-      $('redemptionList').innerHTML = `<table class="table"><thead><tr><th>商品</th><th>消耗积分</th><th>账号</th><th>姓名</th><th>班级</th><th>兑换时间</th><th>操作</th></tr></thead><tbody>${rows.map(item => `
+      $('redemptionList').innerHTML = `<table class="table"><thead><tr><th>${t('admin.colProduct')}</th><th>${t('admin.colSpent')}</th><th>${t('admin.colAccountName')}</th><th>${t('admin.colName')}</th><th>${t('admin.colClass')}</th><th>${t('admin.colRedeemedAt')}</th><th>${t('admin.colActions')}</th></tr></thead><tbody>${rows.map(item => `
         <tr>
           <td>${escapeHtml(item.product_name)}</td>
           <td>${escapeHtml(item.points_spent || item.product_price)}</td>
@@ -182,18 +186,18 @@
           <td>${escapeHtml(item.member_name || '-')}</td>
           <td>${escapeHtml(item.member_class || '-')}</td>
           <td>${escapeHtml(formatTime(item.created_at))}</td>
-          <td class="actions"><button class="button" type="button" data-done-redemption="${escapeHtml(item.id)}">已处理</button></td>
+          <td class="actions"><button class="button" type="button" data-done-redemption="${escapeHtml(item.id)}">${t('admin.markDone')}</button></td>
         </tr>
       `).join('')}</tbody></table>`;
 
       $('redemptionList').querySelectorAll('[data-done-redemption]').forEach(button => {
         button.addEventListener('click', async () => {
           const id = button.getAttribute('data-done-redemption');
-          if (!window.confirm('确认已线下发放？该操作会删除这条兑换记录。')) return;
-          setMessage($('redemptionMessage'), '正在标记已处理…');
+          if (!window.confirm(t('admin.confirmDone'))) return;
+          setMessage($('redemptionMessage'), t('admin.markingDone'));
           try {
             await call('admin_mall_redemption_delete', { id });
-            setMessage($('redemptionMessage'), '已处理并删除该记录。', 'success');
+            setMessage($('redemptionMessage'), t('admin.markedDone'), 'success');
             await refreshRedemptions();
           } catch (error) {
             setMessage($('redemptionMessage'), error.message, 'error');
@@ -203,25 +207,25 @@
     }
 
     async function refreshProducts() {
-      $('productList').innerHTML = '<div class="empty loading">正在读取商品…</div>';
+      $('productList').innerHTML = '<div class="empty loading">' + t('admin.loadingProducts') + '</div>';
       try {
         const payload = await call('admin_mall_products_list');
         renderProducts(payload.products || []);
         setMessage($('productMessage'), '');
       } catch (error) {
-        $('productList').innerHTML = '<div class="empty">暂时无法读取商品。</div>';
+        $('productList').innerHTML = '<div class="empty">' + t('admin.emptyProductsFail') + '</div>';
         setMessage($('productMessage'), error.message, 'error');
       }
     }
 
     async function refreshRedemptions() {
-      $('redemptionList').innerHTML = '<div class="empty loading">正在读取兑换记录…</div>';
+      $('redemptionList').innerHTML = '<div class="empty loading">' + t('admin.loadingRedemptions') + '</div>';
       try {
         const payload = await call('admin_mall_redemptions_list');
         renderRedemptions(payload.redemptions || []);
         setMessage($('redemptionMessage'), '');
       } catch (error) {
-        $('redemptionList').innerHTML = '<div class="empty">暂时无法读取兑换记录。</div>';
+        $('redemptionList').innerHTML = '<div class="empty">' + t('admin.emptyRedemptionsFail') + '</div>';
         setMessage($('redemptionMessage'), error.message, 'error');
       }
     }
@@ -251,7 +255,7 @@
     $('refreshRedemptions').addEventListener('click', refreshRedemptions);
     $('productForm').addEventListener('submit', async (event) => {
       event.preventDefault();
-      setMessage($('productMessage'), '正在保存商品…');
+      setMessage($('productMessage'), t('admin.savingProduct'));
       try {
         const id = $('productId').value.trim();
         await call('admin_mall_products_save', {
@@ -264,7 +268,7 @@
           sortOrder: Number($('productSort').value || 0),
           isListed: $('productListed').checked
         });
-        setMessage($('productMessage'), id ? '商品已更新。' : '商品已添加。', 'success');
+        setMessage($('productMessage'), id ? t('admin.productUpdated') : t('admin.productAdded'), 'success');
         resetProductForm();
         await refreshProducts();
       } catch (error) {
@@ -275,6 +279,13 @@
     let currentSession = null;
     supabaseClient.auth.onAuthStateChange((_event, session) => { void updateView(session); });
     supabaseClient.auth.getSession().then(({ data: { session } }) => updateView(session));
+  
+    window.addEventListener('club:langchange', () => {
+      try {
+        if (window.ClubI18n?.apply) ClubI18n.apply(document);
+        if (currentSession) { void refreshProducts(); void refreshRedemptions(); }
+      } catch (_e) {}
+    });
   </script>
 </body>
 </html>

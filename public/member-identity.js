@@ -109,8 +109,16 @@
     const username = usernameFromSession(session);
 
     document.querySelectorAll('[data-member-identity]').forEach((element) => {
-      element.textContent = username ? `社员：${username}` : '';
-      element.hidden = !username;
+      if (!username) {
+        element.textContent = '';
+        element.hidden = true;
+        return;
+      }
+      const label = (window.ClubI18n && typeof window.ClubI18n.t === 'function')
+        ? window.ClubI18n.t('common.memberLabel', { username })
+        : `社员：${username}`;
+      element.textContent = label;
+      element.hidden = false;
     });
 
     if (!session?.user?.id) {
