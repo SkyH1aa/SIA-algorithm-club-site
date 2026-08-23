@@ -28,6 +28,23 @@
       openNav: '打开导航',
       homeAria: '算法社首页'
     },
+    theme: {
+      title: '外观主题',
+      intro: '未登录时按北京时间自动切换；登录后可自选并同步到云端。亮色：06:00–18:00；暗色：18:00–次日 06:00。',
+      auto: '跟随时间',
+      autoDesc: '按北京时间日夜切换',
+      light: '亮色',
+      lightDesc: '浅色纸感界面',
+      dark: '暗色',
+      darkDesc: '夜间深色界面',
+      hintAutoLight: '当前按北京时间自动切换：现在是亮色时段（06:00–18:00）。',
+      hintAutoDark: '当前按北京时间自动切换：现在是暗色时段（18:00–次日 06:00）。',
+      hintLight: '已固定为亮色主题。',
+      hintDark: '已固定为暗色主题。',
+      guestNote: '访客仅保存在本机；登录后会写入账号偏好。',
+      saved: '主题偏好已保存。',
+      saveFail: '主题已在本机生效，但云端保存失败（可能尚未执行 SQL）。'
+    },
     nav: {
       home: '首页',
       proof: '实力',
@@ -1922,6 +1939,23 @@
       viewDetailsArrow: 'View details →',
       openNav: 'Open navigation',
       homeAria: 'Algorithm Club home'
+    },
+    theme: {
+      title: 'Appearance',
+      intro: 'Guests follow Beijing time automatically. Signed-in members can choose a preference and sync it to the cloud. Light: 06:00–18:00; Dark: 18:00–06:00 next day.',
+      auto: 'Follow time',
+      autoDesc: 'Switch by Beijing day/night',
+      light: 'Light',
+      lightDesc: 'Paper-like light UI',
+      dark: 'Dark',
+      darkDesc: 'Night-friendly dark UI',
+      hintAutoLight: 'Auto by Beijing time: currently in the light window (06:00–18:00).',
+      hintAutoDark: 'Auto by Beijing time: currently in the dark window (18:00–06:00 next day).',
+      hintLight: 'Theme locked to light.',
+      hintDark: 'Theme locked to dark.',
+      guestNote: 'Guests keep the choice on this device only; signing in syncs it to your account.',
+      saved: 'Theme preference saved.',
+      saveFail: 'Theme applied locally, but cloud save failed (SQL may not be deployed yet).'
     },
     nav: {
       home: 'Home',
