@@ -58,6 +58,7 @@
       memberCenter: '个人中心',
       courseCheckin: '课程签到',
       courseCheckinAria: '打开课程签到',
+      course: { checkin: '课程签到', checkinAria: '打开课程签到' },
       admin: '管理员总览'
     },
     home: {
@@ -1992,6 +1993,7 @@
       memberCenter: 'Member Center',
       courseCheckin: 'Course Check-in',
       courseCheckinAria: 'Open course check-in',
+      course: { checkin: 'Course Check-in', checkinAria: 'Open course check-in' },
       admin: 'Admin Hub'
     },
     home: {

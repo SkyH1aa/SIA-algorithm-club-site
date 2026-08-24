@@ -227,6 +227,16 @@
         border-color: rgba(0, 229, 255, 0.62);
         background: rgba(0, 229, 255, 0.16);
       }
+      html[data-theme="light"] .nav a.nav-checkin {
+        border-color: rgba(197, 74, 52, 0.38) !important;
+        background: #F7E8E2 !important;
+        color: #A73A29 !important;
+      }
+      html[data-theme="light"] .nav a.nav-checkin:hover {
+        border-color: #C54A34 !important;
+        background: #F2D9D1 !important;
+        color: #A73A29 !important;
+      }
       .nav a[data-admin-only],
       .nav a[data-admin-only][hidden] { display: none !important; }
       .nav a[data-admin-only].is-visible { display: inline-flex !important; }
@@ -1273,7 +1283,7 @@
         <a href="#join" data-i18n="nav.join">加入</a>
         <a class="nav-emphasis" href="public/club-features.html" data-i18n="nav.features">社团功能</a>
         <a href="public/member-center.html" data-i18n="nav.memberCenter">个人中心</a>
-        <a class="nav-checkin" href="public/member-checkin.html?type=course" data-i18n="nav.courseCheckin" data-i18n-aria="nav.courseCheckinAria" aria-label="打开课程签到">课程签到</a>
+        <a class="nav-checkin" href="public/member-checkin.html?type=course" data-i18n="nav.course.checkin" data-i18n-aria="nav.course.checkinAria" aria-label="打开课程签到">课程签到</a>
         <a href="public/admin-hub.html" data-admin-only hidden data-i18n="nav.admin">管理员总览</a>
         <div id="langSwitcherHost"></div>
       </nav>
@@ -1604,8 +1614,23 @@
         }
       }
 
+      function localizeProject(project) {
+        const keyMap = {
+          'APPMonitor': ['projAppStatus', 'projAppType', 'projAppIntro', 'projViewRelease'],
+          'AI 五子棋': ['projLive', 'projVersus', 'projGomokuIntro', 'projStart', 'projGomokuName'],
+          'AI 俄罗斯方块': ['projLive', 'projVersusAssist', 'projTetrisIntro', 'projStart', 'projTetrisName'],
+          'AI 贪吃蛇': ['projLive', 'projVersusAssist', 'projSnakeIntro', 'projStart', 'projSnakeName'],
+          '算法可视化实验室': ['projLabStatus', 'projTeach', 'projLabIntro', 'projChooseLab', 'projLabName'],
+          '教学资源与 AI Bot 对战平台': ['projOnline', 'projPlatformType', 'projPlatformIntro', 'projEnterFeatures', 'projPlatformName']
+        };
+        const keys = keyMap[project.name];
+        if (!keys || !window.ClubI18n?.t) return project;
+        const [status, type, intro, linkText, name] = keys;
+        return { ...project, status: ClubI18n.t(`home.${status}`), type: ClubI18n.t(`home.${type}`), intro: ClubI18n.t(`home.${intro}`), linkText: ClubI18n.t(`home.${linkText}`), name: name ? ClubI18n.t(`home.${name}`) : project.name };
+      }
+
       function renderProjects(projects) {
-        document.getElementById('projectGrid').innerHTML = projects.map(project => `
+        document.getElementById('projectGrid').innerHTML = projects.map(localizeProject).map(project => `
           <article class="project-card">
             <div class="project-topline"><span class="status-pill">${escapeHtml(project.status)}</span><span>${escapeHtml(project.type)}</span></div>
             <h3>${escapeHtml(project.name)}</h3>
