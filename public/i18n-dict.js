@@ -56,11 +56,14 @@
       join: '加入',
       features: '社团功能',
       memberCenter: '个人中心',
+      courseCheckin: '课程签到',
+      courseCheckinAria: '打开课程签到',
       admin: '管理员总览'
     },
     home: {
       title: '算法社 · Algorithm Club',
       affiliation: '新哲文院·科创未来 · 新哲文院科创部社团',
+      officialLinkReminder: '请牢记算法社官网快捷地址：<a href="https://ada.nz/r/sfs" target="_blank" rel="noopener noreferrer">https://ada.nz/r/sfs</a>',
       heroText: '把算法训练做成可运行的产品与系统：从竞赛基础、可视化实验室，到五子棋 AI 与社团管理系统，用真实作品证明训练价值。',
       joinNow: '立即加入',
       enterLab: '进入算法实验室',
@@ -1987,11 +1990,14 @@
       join: 'Join',
       features: 'Features',
       memberCenter: 'Member Center',
+      courseCheckin: 'Course Check-in',
+      courseCheckinAria: 'Open course check-in',
       admin: 'Admin Hub'
     },
     home: {
       title: 'Algorithm Club',
       affiliation: 'Sendelta · Sci-Tech Future · Sendelta Sci-Tech Club',
+      officialLinkReminder: 'Please remember the Algorithm Club quick site link: <a href="https://ada.nz/r/sfs" target="_blank" rel="noopener noreferrer">https://ada.nz/r/sfs</a>',
       heroText: 'Turn algorithm training into runnable products and systems: from contest fundamentals and visualization labs to Gomoku AI and club operations — prove the value of practice with real work.',
       joinNow: 'Join Now',
       enterLab: 'Enter Algorithm Lab',

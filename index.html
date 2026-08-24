@@ -218,6 +218,15 @@
         border-color: rgba(0, 229, 255, 0.22);
         color: var(--white);
       }
+      .nav a.nav-checkin {
+        border-color: rgba(0, 229, 255, 0.34);
+        background: rgba(0, 229, 255, 0.09);
+        color: var(--cyan);
+      }
+      .nav a.nav-checkin:hover {
+        border-color: rgba(0, 229, 255, 0.62);
+        background: rgba(0, 229, 255, 0.16);
+      }
       .nav a[data-admin-only],
       .nav a[data-admin-only][hidden] { display: none !important; }
       .nav a[data-admin-only].is-visible { display: inline-flex !important; }
@@ -344,6 +353,8 @@
       }
       h3 { margin: 0 0 8px; font-size: 18px; font-weight: 700; line-height: 1.35; }
       .hero-text { max-width: 36em; margin-bottom: 22px; font-size: 16px; color: var(--text); }
+      .official-link-reminder { max-width: 36em; margin: -8px 0 18px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+      .official-link-reminder a { color: var(--cyan); font-family: var(--mono); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 
       .hero {
         width: 100%;
@@ -1262,6 +1273,7 @@
         <a href="#join" data-i18n="nav.join">加入</a>
         <a class="nav-emphasis" href="public/club-features.html" data-i18n="nav.features">社团功能</a>
         <a href="public/member-center.html" data-i18n="nav.memberCenter">个人中心</a>
+        <a class="nav-checkin" href="public/member-checkin.html?type=course" data-i18n="nav.courseCheckin" data-i18n-aria="nav.courseCheckinAria" aria-label="打开课程签到">课程签到</a>
         <a href="public/admin-hub.html" data-admin-only hidden data-i18n="nav.admin">管理员总览</a>
         <div id="langSwitcherHost"></div>
       </nav>
@@ -1274,6 +1286,7 @@
             <p class="eyebrow">Algorithm Club · Productized Training</p>
             <h1><span class="title-glow" data-i18n="common.brand">算法社</span><span class="title-sub">Algorithm Club</span></h1>
             <small class="club-affiliation" data-i18n="home.affiliation">新哲文院·科创未来 · 新哲文院科创部社团</small>
+            <p class="official-link-reminder" data-i18n="home.officialLinkReminder" data-i18n-mode="html">请牢记算法社官网快捷地址：<a href="https://ada.nz/r/sfs" target="_blank" rel="noopener noreferrer">https://ada.nz/r/sfs</a></p>
             <p class="hero-text" data-i18n="home.heroText">把算法训练做成可运行的产品与系统：从竞赛基础、可视化实验室，到五子棋 AI 与社团管理系统，用真实作品证明训练价值。</p>
             <div class="hero-actions">
               <a class="primary-action" href="public/join.html" data-i18n="home.joinNow">立即加入</a>
