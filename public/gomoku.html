@@ -899,7 +899,9 @@
     // 更新状态显示
     function updateStatus() {
       if (gameover) return;
-      
+      // 尚未选择执色时保持「选择执子颜色」界面，不显示 AI 思考
+      if (!playerColor || !aiColor) return;
+
       const statusElement = document.getElementById('status');
       if (currentPlayer === playerColor) {
         statusElement.textContent = ClubI18n.t(playerColor === 1 ? 'gomoku.yourTurnBlack' : 'gomoku.yourTurnWhite');
