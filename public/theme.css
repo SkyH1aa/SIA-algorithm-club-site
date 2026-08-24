@@ -813,3 +813,623 @@ html[data-theme="light"] .theme-option.is-active {
     grid-template-columns: 1fr;
   }
 }
+
+/* ================= 亮色巡检修复（统一橙红口径） ================= */
+
+/* —— 首页：三阶段数字序号(01/02/03) + 能力矩阵/信息卡图标(蓝框紫底) —— */
+html[data-theme="light"] .stage-track .panel-row .icon,
+html[data-theme="light"] .capability-grid .icon,
+html[data-theme="light"] .info-card .icon,
+html[data-theme="light"] .join-card .icon {
+  color: #D65A31 !important;
+  border-color: rgba(224, 122, 95, 0.45) !important;
+  background: rgba(224, 122, 95, 0.1) !important;
+  box-shadow: none !important;
+}
+html[data-theme="light"] .stage-track .panel-row.focus .icon,
+html[data-theme="light"] .panel-row.focus .icon {
+  background: #E07A5F !important;
+  color: #FFFFFF !important;
+  border-color: #E07A5F !important;
+  box-shadow: none !important;
+}
+
+/* —— 首页：AI / GAME THEORY 角标小字蓝改橙 —— */
+html[data-theme="light"] .info-card.featured::after {
+  color: rgba(224, 122, 95, 0.4) !important;
+}
+
+/* —— 首页：三个分组(算法组/前端组/项目组)填充灰改浅橙 —— */
+html[data-theme="light"] .join-list span,
+html[data-theme="light"] .step-list span,
+html[data-theme="light"] .lab-tags span {
+  background: rgba(224, 122, 95, 0.06) !important;
+  border-color: rgba(224, 122, 95, 0.3) !important;
+  color: #1C1C1E !important;
+}
+
+/* —— 首页：立即加入卡图标 + 二维码框蓝改浅 —— */
+html[data-theme="light"] .join-card .icon {
+  background: #E07A5F !important;
+  color: #FFFFFF !important;
+  border-color: #E07A5F !important;
+}
+html[data-theme="light"] .qr-box {
+  border-color: #E5E5EA !important;
+  background: #FFFFFF !important;
+  box-shadow: 0 2px 16px rgba(28, 28, 30, 0.06) !important;
+}
+html[data-theme="light"] .qr-tip {
+  color: #D65A31 !important;
+}
+
+/* —— 全站大标题：清蓝色光晕，日间改深色 —— */
+html[data-theme="light"] .hero h1,
+html[data-theme="light"] .intro h1,
+html[data-theme="light"] .page-header h1,
+html[data-theme="light"] .hero-copy h1 .title-glow,
+html[data-theme="light"] .section-heading h2,
+html[data-theme="light"] .visual-header h2,
+html[data-theme="light"] .controls h2 {
+  color: #1C1C1E !important;
+  text-shadow: none !important;
+}
+html[data-theme="light"] .eyebrow {
+  color: #D65A31 !important;
+}
+
+/* —— 个人中心顶栏品牌框：蓝框蓝光改浅 —— */
+html[data-theme="light"] .brand-mark {
+  background: #FFFFFF !important;
+  border-color: rgba(224, 122, 95, 0.45) !important;
+  color: #E07A5F !important;
+  box-shadow: none !important;
+}
+
+/* —— 算法实验室 hub：深色卡片 -> 白卡，图标/按钮橙 —— */
+html[data-theme="light"] .choice {
+  background: #FFFFFF !important;
+  border-color: #E5E5EA !important;
+  box-shadow: 0 2px 16px rgba(28, 28, 30, 0.06) !important;
+}
+html[data-theme="light"] .choice::before,
+html[data-theme="light"] .choice:hover::before {
+  opacity: 0 !important;
+  box-shadow: none !important;
+}
+html[data-theme="light"] .choice:hover {
+  border-color: rgba(224, 122, 95, 0.5) !important;
+  box-shadow: 0 12px 28px rgba(28, 28, 30, 0.1) !important;
+}
+html[data-theme="light"] .choice-icon {
+  color: #D65A31 !important;
+  border-color: rgba(224, 122, 95, 0.45) !important;
+  background: rgba(224, 122, 95, 0.1) !important;
+}
+html[data-theme="light"] .go {
+  color: #D65A31 !important;
+  border-color: rgba(224, 122, 95, 0.45) !important;
+  background: rgba(224, 122, 95, 0.1) !important;
+}
+html[data-theme="light"] .choice p {
+  color: #48484A !important;
+}
+
+/* —— 实验室内部：面板/控件亮色，文本深色，主按钮橙 —— */
+html[data-theme="light"] .panel,
+html[data-theme="light"] .algorithm-note,
+html[data-theme="light"] .metric {
+  background: #FFFFFF !important;
+  border-color: #E5E5EA !important;
+  box-shadow: 0 2px 14px rgba(28, 28, 30, 0.05) !important;
+}
+html[data-theme="light"] .metric strong,
+html[data-theme="light"] .metric span {
+  color: #1C1C1E !important;
+}
+html[data-theme="light"] .controls h2,
+html[data-theme="light"] .visual-header h2 {
+  color: #1C1C1E !important;
+}
+html[data-theme="light"] .control-group label,
+html[data-theme="light"] .control-group legend,
+html[data-theme="light"] .hint {
+  color: #48484A !important;
+}
+html[data-theme="light"] .field,
+html[data-theme="light"] select.field,
+html[data-theme="light"] textarea {
+  background: #FFFFFF !important;
+  border-color: #E5E5EA !important;
+  color: #1C1C1E !important;
+}
+html[data-theme="light"] select,
+html[data-theme="light"] textarea {
+  background: #FFFFFF !important;
+  border-color: #E5E5EA !important;
+  color: #1C1C1E !important;
+}
+/* —— 各实验室文本框/数字输入：日间必须白底深字，避免页面内嵌灰底 —— */
+html[data-theme="light"] input:not([type="radio"]):not([type="checkbox"]):not([type="range"]),
+html[data-theme="light"] input[type="text"],
+html[data-theme="light"] input[type="number"],
+html[data-theme="light"] textarea {
+  background: #FFFFFF !important;
+  border-color: #E5E5EA !important;
+  color: #1C1C1E !important;
+}
+html[data-theme="light"] input:not([type="radio"]):not([type="checkbox"]):not([type="range"])::placeholder,
+html[data-theme="light"] textarea::placeholder {
+  color: #8A8F98 !important;
+  opacity: 1 !important;
+}
+html[data-theme="light"] .op-log,
+html[data-theme="light"] .log,
+html[data-theme="light"] .formula,
+html[data-theme="light"] .path-bar,
+html[data-theme="light"] .dict-box,
+html[data-theme="light"] .view-box,
+html[data-theme="light"] .item-card {
+  background: #FFFFFF !important;
+  border-color: #E5E5EA !important;
+  color: #1C1C1E !important;
+}
+/* DP 状态转移表：日间表头/表身/首列白底深字 */
+html[data-theme="light"] table.dp th,
+html[data-theme="light"] table.dp td,
+html[data-theme="light"] table.dp td.cell {
+  background: #FFFFFF !important;
+  border-color: #E5E5EA !important;
+  color: #1C1C1E !important;
+  box-shadow: none !important;
+}
+html[data-theme="light"] table.dp th {
+  background: #F0F2F6 !important;
+  color: #1C1C1E !important;
+}
+html[data-theme="light"] table.dp th:first-child,
+html[data-theme="light"] table.dp td:first-child {
+  background: #E4E7EC !important;
+  color: #1C1C1E !important;
+}
+html[data-theme="light"] .table-wrap {
+  background: #FFFFFF !important;
+  border-color: #E5E5EA !important;
+}
+html[data-theme="light"] .metric {
+  background: #FFFFFF !important;
+  border-color: #E5E5EA !important;
+}
+html[data-theme="light"] .radio-row span {
+  border-color: #E5E5EA !important;
+  color: #48484A !important;
+  background: #FFFFFF !important;
+}
+html[data-theme="light"] .radio-row input:checked + span {
+  border-color: #E07A5F !important;
+  background: rgba(224, 122, 95, 0.1) !important;
+  color: #D65A31 !important;
+}
+html[data-theme="light"] .btn {
+  background: #FFFFFF !important;
+  color: #1C1C1E !important;
+  border-color: #E5E5EA !important;
+}
+html[data-theme="light"] .btn:hover:not(:disabled) {
+  border-color: rgba(224, 122, 95, 0.55) !important;
+  color: #D65A31 !important;
+}
+html[data-theme="light"] .btn-primary {
+  background: #E07A5F !important;
+  border-color: #D65A31 !important;
+  color: #FFFFFF !important;
+}
+html[data-theme="light"] .btn-warn {
+  color: #D65A31 !important;
+  border-color: rgba(224, 122, 95, 0.45) !important;
+}
+html[data-theme="light"] .status {
+  color: #D65A31 !important;
+  border-color: rgba(224, 122, 95, 0.4) !important;
+  background: rgba(224, 122, 95, 0.08) !important;
+}
+html[data-theme="light"] .legend {
+  color: #48484A !important;
+}
+html[data-theme="light"] .chart-wrap {
+  border-color: #E5E5EA !important;
+  background: linear-gradient(180deg, #FFFFFF, #F7F8FA) !important;
+}
+
+/* —— 五子棋/游戏：返回链接、排行榜、面板亮色 —— */
+html[data-theme="light"] a.back,
+html[data-theme="light"] .page-header a,
+html[data-theme="light"] .rank,
+html[data-theme="light"] .result {
+  color: #D65A31 !important;
+}
+html[data-theme="light"] .board-card,
+html[data-theme="light"] .game-panel,
+html[data-theme="light"] .panel {
+  background: #FFFFFF !important;
+  border-color: #E5E5EA !important;
+}
+
+/* —— 俄罗斯方块/贪吃蛇：控件亮色，激活态橙 —— */
+html[data-theme="light"] .mode-btn,
+html[data-theme="light"] .action-btn,
+html[data-theme="light"] .lb-tab,
+html[data-theme="light"] .speed-btn,
+html[data-theme="light"] .toggle-opt,
+html[data-theme="light"] .mobile-btn {
+  background: #FFFFFF !important;
+  border-color: #E5E5EA !important;
+  color: #1C1C1E !important;
+  box-shadow: none !important;
+}
+html[data-theme="light"] .mode-btn.active,
+html[data-theme="light"] .lb-tab.active,
+html[data-theme="light"] .speed-btn.active {
+  background: #E07A5F !important;
+  border-color: #D65A31 !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+/* —— 俄罗斯方块/贪吃蛇：棋盘外壳、覆盖层、统计与辅助选项 —— */
+html[data-theme="light"] .board-shell,
+html[data-theme="light"] .board,
+html[data-theme="light"] canvas.board,
+html[data-theme="light"] .snake-board,
+html[data-theme="light"] canvas.snake-board {
+  border-color: #E5E5EA !important;
+  background: #FFFFFF !important;
+  box-shadow: none !important;
+}
+html[data-theme="light"] .overlay {
+  background: rgba(255, 255, 255, 0.92) !important;
+}
+html[data-theme="light"] .overlay h2 {
+  color: #D65A31 !important;
+}
+html[data-theme="light"] .overlay p,
+html[data-theme="light"] .stats,
+html[data-theme="light"] .board-meta,
+html[data-theme="light"] .board-meta label,
+html[data-theme="light"] .hint,
+html[data-theme="light"] .board-title small {
+  color: #48484A !important;
+}
+html[data-theme="light"] .stats strong,
+html[data-theme="light"] .board-title,
+html[data-theme="light"] .board-meta .stat-val {
+  color: #1C1C1E !important;
+}
+html[data-theme="light"] .assist-opts,
+html[data-theme="light"] .versus-ai-opts,
+html[data-theme="light"] .ai-play-opts,
+html[data-theme="light"] .next-box,
+html[data-theme="light"] .score-panel,
+html[data-theme="light"] .controls-panel {
+  background: #FFFFFF !important;
+  border-color: #E5E5EA !important;
+  color: #1C1C1E !important;
+}
+html[data-theme="light"] .assist-opts label,
+html[data-theme="light"] .assist-opts .opt-desc,
+html[data-theme="light"] .versus-ai-opts label,
+html[data-theme="light"] .versus-ai-opts .opt-desc,
+html[data-theme="light"] .ai-play-opts label,
+html[data-theme="light"] .ai-play-opts .opts-title,
+html[data-theme="light"] .next-box .label {
+  color: #1C1C1E !important;
+}
+
+/* —— 积分商城：深色卡片改白 —— */
+html[data-theme="light"] .card,
+html[data-theme="light"] .card-body,
+html[data-theme="light"] .goods-card {
+  background: #FFFFFF !important;
+  border-color: #E5E5EA !important;
+  color: #1C1C1E !important;
+}
+html[data-theme="light"] .cover {
+  background: #F0F2F6 !important;
+  color: #48484A !important;
+}
+
+/* —— 社团盘/商城按钮：主按钮橙，行操作白 —— */
+html[data-theme="light"] .button:not(.secondary):not(.danger) {
+  background: rgba(224, 122, 95, 0.12) !important;
+  border-color: rgba(224, 122, 95, 0.45) !important;
+  color: #D65A31 !important;
+}
+html[data-theme="light"] .button:hover:not(.secondary):not(.danger) {
+  background: rgba(224, 122, 95, 0.22) !important;
+}
+html[data-theme="light"] .row-button {
+  background: #FFFFFF !important;
+  border-color: #E5E5EA !important;
+  color: #1C1C1E !important;
+}
+
+/* ================= 实验室动画区：日间亮色 ================= */
+
+/* 动画容器/画布底色：深蓝 -> 浅色 */
+html[data-theme="light"] .chart-wrap,
+html[data-theme="light"] #bars,
+html[data-theme="light"] .bars,
+html[data-theme="light"] .glyph-stage,
+html[data-theme="light"] .canvas-stage,
+html[data-theme="light"] .heap-viz,
+html[data-theme="light"] .viz-stage {
+  background: #FFFFFF !important;
+  border-color: #E5E5EA !important;
+  box-shadow: none !important;
+}
+
+/* 实验室可视化容器不再用一个规则覆盖所有 SVG / stage；迷宫保持清晰对比 */
+html[data-theme="light"] .maze-frame {
+  background: linear-gradient(180deg, #FFFFFF, #F4F6F9) !important;
+  border-color: #D7DCE4 !important;
+  box-shadow: inset 0 0 0 1px rgba(28, 28, 30, .04) !important;
+}
+html[data-theme="light"] .maze {
+  background: #F4F6F9 !important;
+}
+html[data-theme="light"] .maze .cell {
+  background: #FFFFFF !important;
+  border-color: #B8C1CC !important;
+}
+html[data-theme="light"] .maze .cell.wall {
+  background: #68717D !important;
+  border-color: #4B5563 !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.18) !important;
+}
+html[data-theme="light"] .maze .cell.start { background: #2F9EDE !important; border-color: #1971A8 !important; }
+html[data-theme="light"] .maze .cell.end { background: #D65A8A !important; border-color: #A83B68 !important; }
+html[data-theme="light"] .maze .cell.frontier { background: #F4B942 !important; border-color: #C98900 !important; }
+html[data-theme="light"] .maze .cell.current { background: #FFE08A !important; border-color: #C98900 !important; }
+html[data-theme="light"] .maze .cell.visited { background: #B9D9EA !important; border-color: #72AFCB !important; }
+html[data-theme="light"] .maze .cell.path { background: #75D6AE !important; border-color: #2FA36C !important; }
+
+html[data-theme="light"] .stage,
+html[data-theme="light"] .stage-wrap {
+  background: #F7F8FA !important;
+  border-color: #E5E5EA !important;
+}
+html[data-theme="light"] svg { background: transparent !important; }
+html[data-theme="light"] canvas.snake-board,
+html[data-theme="light"] canvas.board {
+  background: #FFFFFF !important;
+  border-color: #D7DCE4 !important;
+}
+html[data-theme="light"] .board-wrapper,
+html[data-theme="light"] .game-container,
+html[data-theme="light"] .panel {
+  background: #FFFFFF !important;
+  color: #1C1C1E !important;
+  border-color: #D7DCE4 !important;
+}
+html[data-theme="light"] .assist-note,
+html[data-theme="light"] .info-note,
+html[data-theme="light"] .next-preview {
+  background: #F7F8FA !important;
+  color: #48484A !important;
+}
+
+/* 通用坐标/数值/标签文字：浅字 -> 深字 */
+html[data-theme="light"] .bar::before,
+html[data-theme="light"] .bar,
+html[data-theme="light"] .cell-index,
+html[data-theme="light"] .node-label,
+html[data-theme="light"] .node-dist,
+html[data-theme="light"] .heap-label,
+html[data-theme="light"] .tree-label,
+html[data-theme="light"] .stage-slot,
+html[data-theme="light"] .tree-svg .node-text,
+html[data-theme="light"] .tree-svg .status,
+html[data-theme="light"] .status,
+html[data-theme="light"] .node-value,
+html[data-theme="light"] .node-index {
+  fill: #1C1C1E !important;
+  color: #1C1C1E !important;
+}
+
+/* DS / DP / Tree / Heap 的真实控件和文本区域 */
+html[data-theme="light"] .control-group,
+html[data-theme="light"] .control-group label,
+html[data-theme="light"] .control-group legend,
+html[data-theme="light"] .hint,
+html[data-theme="light"] .algorithm-note,
+html[data-theme="light"] .formula,
+html[data-theme="light"] .log,
+html[data-theme="light"] .op-log,
+html[data-theme="light"] .stage-label,
+html[data-theme="light"] .view-title {
+  color: #1C1C1E !important;
+}
+html[data-theme="light"] .control-group textarea,
+html[data-theme="light"] .control-group input,
+html[data-theme="light"] .control-group select,
+html[data-theme="light"] .field,
+html[data-theme="light"] textarea {
+  background: #FFFFFF !important;
+  border-color: #D7DCE4 !important;
+  color: #1C1C1E !important;
+}
+html[data-theme="light"] .stage-label,
+html[data-theme="light"] .status,
+html[data-theme="light"] .op-log,
+html[data-theme="light"] .log {
+  background: #F7F8FA !important;
+}
+
+/* 排序柱状条：深霓虹 -> 浅橙条 */
+html[data-theme="light"] .bar {
+  background: #E8A08C !important;
+  border-color: rgba(224, 122, 95, 0.4) !important;
+}
+html[data-theme="light"] .bar.compare {
+  background: #E07A5F !important;
+  border-color: #D65A31 !important;
+}
+html[data-theme="light"] .bar.pivot {
+  background: #D65A31 !important;
+  border-color: #BF4E28 !important;
+}
+html[data-theme="light"] .bar.move,
+html[data-theme="light"] .bar.select,
+html[data-theme="light"] .bar.bucket {
+  background: #6C8CFF !important;
+  border-color: #5475E8 !important;
+}
+html[data-theme="light"] .bar.sorted {
+  background: #4EC98A !important;
+  border-color: #2FA36C !important;
+}
+
+/* 数据格/节点（search/ds/dp 的 .cell）：深色渐变 -> 白卡 + 橙边 + 深字 */
+html[data-theme="light"] .cell,
+html[data-theme="light"] .heap-cell,
+html[data-theme="light"] .ds-box {
+  background: #FFFFFF !important;
+  border-color: rgba(224, 122, 95, 0.5) !important;
+  color: #1C1C1E !important;
+  box-shadow: none !important;
+}
+html[data-theme="light"] .cell.active {
+  border-color: #E07A5F !important;
+  background: rgba(224, 122, 95, 0.16) !important;
+  color: #1C1C1E !important;
+  box-shadow: 0 0 14px rgba(224, 122, 95, 0.25) !important;
+}
+html[data-theme="light"] .cell.highlight {
+  border-color: #D65A31 !important;
+  background: rgba(224, 122, 95, 0.22) !important;
+  color: #1C1C1E !important;
+}
+html[data-theme="light"] .cell.pointer {
+  border-color: #4EC98A !important;
+  background: rgba(78, 201, 138, 0.14) !important;
+  color: #1C1C1E !important;
+}
+
+/* —— 迷宫(search-lab)：亮色下墙体/通路/各状态必须清晰，避免被通用 .cell 规则刷白 —— */
+html[data-theme="light"] .maze-frame {
+  background: #FFFFFF !important;
+  border-color: #E5E5EA !important;
+  box-shadow: none !important;
+}
+html[data-theme="light"] .maze .cell {
+  background: #EDEFF3 !important;
+  border-color: #DDE1E6 !important;
+  box-shadow: none !important;
+}
+html[data-theme="light"] .maze .cell.wall {
+  background: #7A828C !important;
+  border-color: #5A616B !important;
+  box-shadow: inset 0 0 0 1px rgba(90, 97, 107, .4) !important;
+}
+html[data-theme="light"] .maze .cell.start {
+  background: linear-gradient(135deg, #E07A5F, #D65A31) !important;
+  border-color: #C9604A !important;
+  box-shadow: 0 0 13px rgba(224, 122, 95, .45) !important;
+}
+html[data-theme="light"] .maze .cell.end {
+  background: linear-gradient(135deg, #C9604A, #A63F2A) !important;
+  border-color: #A84630 !important;
+  box-shadow: 0 0 13px rgba(198, 96, 74, .45) !important;
+}
+html[data-theme="light"] .maze .cell.frontier {
+  background: linear-gradient(135deg, #F2C46D, #E8A23B) !important;
+  border-color: #D99232 !important;
+  box-shadow: 0 0 10px rgba(232, 162, 59, .45) !important;
+}
+html[data-theme="light"] .maze .cell.current {
+  background: linear-gradient(135deg, #F6D8A0, #E8A23B) !important;
+  border-color: #D99232 !important;
+  box-shadow: 0 0 14px rgba(232, 162, 59, .6) !important;
+}
+html[data-theme="light"] .maze .cell.visited {
+  background: linear-gradient(135deg, #A9C4E8, #7FA0CC) !important;
+  border-color: #7FA0CC !important;
+  box-shadow: none !important;
+}
+html[data-theme="light"] .maze .cell.path {
+  background: linear-gradient(135deg, #9FD6B8, #5EC08A) !important;
+  border-color: #5EC08A !important;
+  box-shadow: 0 0 11px rgba(94, 192, 138, .45) !important;
+}
+html[data-theme="light"] .maze .legend .l-wall {
+  background: #7A828C !important;
+}
+html[data-theme="light"] .maze .legend {
+  color: #48484A !important;
+}
+
+/* 图/树/堆 SVG 节点与连线 */
+html[data-theme="light"] .node-circle,
+html[data-theme="light"] .tree-node,
+html[data-theme="light"] .heap-node {
+  fill: #FFFFFF !important;
+  stroke: rgba(224, 122, 95, 0.55) !important;
+  filter: none !important;
+}
+html[data-theme="light"] .node-circle.source,
+html[data-theme="light"] .node-circle.current {
+  fill: rgba(224, 122, 95, 0.25) !important;
+  stroke: #E07A5F !important;
+  filter: none !important;
+}
+html[data-theme="light"] .node-circle.target {
+  fill: rgba(224, 122, 95, 0.45) !important;
+  stroke: #D65A31 !important;
+  filter: none !important;
+}
+html[data-theme="light"] .node-circle.visited {
+  fill: #EDEFF3 !important;
+  stroke: #AAB2BD !important;
+  filter: none !important;
+}
+html[data-theme="light"] .node-circle.settled {
+  fill: rgba(78, 201, 138, 0.2) !important;
+  stroke: #2FA36C !important;
+  filter: none !important;
+}
+html[data-theme="light"] .node-label,
+html[data-theme="light"] .node-dist,
+html[data-theme="light"] .heap-val,
+html[data-theme="light"] .tree-val {
+  fill: #1C1C1E !important;
+}
+/* 二叉树/堆实际 SVG 文本类名：必须在亮色下转深色 */
+html[data-theme="light"] .tree-svg .node-text,
+html[data-theme="light"] .tree-svg .node-text tspan {
+  fill: #1C1C1E !important;
+}
+html[data-theme="light"] .tree-svg .node-value {
+  fill: #1C1C1E !important;
+}
+html[data-theme="light"] .tree-svg .node-index {
+  fill: #48484A !important;
+}
+html[data-theme="light"] .tree-svg .node-g.visit .node-text,
+html[data-theme="light"] .tree-svg .node-g.current .node-text,
+html[data-theme="light"] .tree-svg .node-g.done .node-text,
+html[data-theme="light"] .tree-svg .node-g.active .node-text {
+  fill: #1C1C1E !important;
+}
+html[data-theme="light"] .node-dist {
+  fill: #D65A31 !important;
+}
+html[data-theme="light"] .edge,
+html[data-theme="light"] .edge-path,
+html[data-theme="light"] .link-line,
+html[data-theme="light"] .parent-link {
+  stroke: #AEB5BF !important;
+}
+html[data-theme="light"] .edge-active,
+html[data-theme="light"] .edge-path.is-active {
+  stroke: #E07A5F !important;
+}

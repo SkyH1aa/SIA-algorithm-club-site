@@ -217,7 +217,12 @@
   // Auto-init after dictionaries / DOM are ready.
   function boot() {
     if (!window.ClubI18n) return;
-    init({ apply: true });
+    const lang = init({ apply: true });
+    // 首次引导完成后广播一次，触发页面内同步期注册的动态渲染器刷新，
+    // 解决在词典合并前就执行 t() 导致的状态/说明文本空白的竞态。
+    try {
+      window.dispatchEvent(new CustomEvent('club:langchange', { detail: { lang } }));
+    } catch (_error) { /* ignore */ }
   }
 
   if (document.readyState === 'loading') {

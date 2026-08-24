@@ -544,10 +544,11 @@
       const ctx = this.ctx;
       const w = this.canvas.width, h = this.canvas.height;
       const cell = Math.min(w / COLS, h / ROWS);
+      const light = document.documentElement.dataset.theme === 'light';
       ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = '#0b1437';
+      ctx.fillStyle = light ? '#FFFFFF' : '#0b1437';
       ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = '#1e293b';
+      ctx.strokeStyle = light ? '#D7DCE4' : '#1e293b';
       ctx.lineWidth = 1;
       for (let r = 0; r <= ROWS; r++) {
         ctx.beginPath(); ctx.moveTo(0, r * cell); ctx.lineTo(COLS * cell, r * cell); ctx.stroke();
@@ -558,9 +559,9 @@
 
       if (this.assist && this.assistPath.length) {
         for (const p of this.assistPath) {
-          ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+          ctx.fillStyle = light ? 'rgba(148, 163, 184, 0.22)' : 'rgba(15, 23, 42, 0.72)';
           ctx.fillRect(p.x * cell + 2, p.y * cell + 2, cell - 4, cell - 4);
-          ctx.strokeStyle = 'rgba(148, 163, 184, 0.55)';
+          ctx.strokeStyle = light ? 'rgba(100, 116, 139, 0.5)' : 'rgba(148, 163, 184, 0.55)';
           ctx.strokeRect(p.x * cell + 2.5, p.y * cell + 2.5, cell - 5, cell - 5);
         }
       }
@@ -603,15 +604,20 @@
       }
 
       if (this.gameOver) {
-        ctx.fillStyle = 'rgba(0,0,0,.45)';
+        ctx.fillStyle = light ? 'rgba(28, 28, 30, .22)' : 'rgba(0,0,0,.45)';
         ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = '#ff6f00';
+        ctx.fillStyle = light ? '#D65A31' : '#ff6f00';
         ctx.font = `bold ${Math.max(18, cell)}px Arial`;
         ctx.textAlign = 'center';
         ctx.fillText(this.penetrate && !this.food ? 'CLEARED' : 'GAME OVER', w / 2, h / 2);
       }
     }
   }
+
+  window.addEventListener('club:themechange', () => {
+    state.player?.draw();
+    state.ai?.draw();
+  });
 
   const state = {
     mode: 'normal',

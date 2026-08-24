@@ -1484,8 +1484,11 @@
 
     draw() {
       const ctx = this.ctx;
+      const light = document.documentElement.dataset.theme === 'light';
       ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      ctx.strokeStyle = '#1e293b';
+      ctx.fillStyle = light ? '#FFFFFF' : '#07111f';
+      ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      ctx.strokeStyle = light ? '#D7DCE4' : '#1e293b';
       ctx.lineWidth = 0.5;
       for (let r = 0; r <= ROWS; r++) {
         ctx.beginPath(); ctx.moveTo(0, r * BLOCK); ctx.lineTo(this.canvas.width, r * BLOCK); ctx.stroke();
@@ -1513,7 +1516,7 @@
         this.refreshAssist();
         if (this.assistTarget) {
           // 深色阴影建议落点（比半透明更暗）
-          ctx.fillStyle = 'rgba(8, 20, 40, 0.78)';
+          ctx.fillStyle = light ? 'rgba(148, 163, 184, 0.28)' : 'rgba(8, 20, 40, 0.78)';
           for (let r = 0; r < this.assistTarget.shape.length; r++) {
             for (let c = 0; c < this.assistTarget.shape[0].length; c++) {
               if (!this.assistTarget.shape[r][c]) continue;
@@ -1524,7 +1527,7 @@
               );
             }
           }
-          ctx.strokeStyle = 'rgba(56,189,248,0.55)';
+          ctx.strokeStyle = light ? 'rgba(47, 117, 232, 0.7)' : 'rgba(56,189,248,0.55)';
           ctx.lineWidth = 1.5;
           for (let r = 0; r < this.assistTarget.shape.length; r++) {
             for (let c = 0; c < this.assistTarget.shape[0].length; c++) {
@@ -1558,6 +1561,10 @@
   }
 
   // ---------- 页面状态 ----------
+  window.addEventListener('club:themechange', () => {
+    state.player?.draw();
+    state.ai?.draw();
+  });
   const state = {
     mode: 'normal',
     lbTab: 'normal',
