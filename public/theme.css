@@ -1433,3 +1433,240 @@ html[data-theme="light"] .edge-active,
 html[data-theme="light"] .edge-path.is-active {
   stroke: #E07A5F !important;
 }
+
+/* ================= 朱砂日间 V2：暖白工程纸 =================
+ * 日间不再把所有信息都染成同一种橙色：朱砂用于行动与当前状态，
+ * 靛蓝用于算法信息，绿色/金色/红色维持各自状态语义。
+ */
+html[data-theme="light"] {
+  --bg: #F8F5F0;
+  --bg-elevated: #FFFDFC;
+  --panel: #FFFDFC;
+  --white: #2A2421;
+  --text: #493F39;
+  --muted: #6D6058;
+  --line: #E7DDD5;
+  --cyan: #C54A34;
+  --violet: #424E78;
+  --pink: #A74E67;
+  --gold: #A66B17;
+  --ok: #287A5B;
+  --green: #287A5B;
+  --danger: #B4404B;
+  --warn: #A66B17;
+  --shadow: 0 10px 30px rgba(70, 47, 35, 0.08), 0 1px 2px rgba(70, 47, 35, 0.05);
+  --day-paper: #FFFDFC;
+  --day-paper-muted: #F2EDE7;
+  --day-ink: #2A2421;
+  --day-ink-soft: #6D6058;
+  --day-brand: #C54A34;
+  --day-brand-strong: #A73A29;
+  --day-brand-soft: #F7E8E2;
+  --day-indigo: #424E78;
+  --day-indigo-soft: #EBEDF5;
+}
+
+html[data-theme="light"] body {
+  background-color: var(--bg) !important;
+  background-image: radial-gradient(circle at 1px 1px, rgba(118, 77, 55, 0.075) 1px, transparent 1.1px) !important;
+  background-size: 28px 28px !important;
+}
+
+html[data-theme="light"] body::before {
+  opacity: 0.38 !important;
+  background-image: linear-gradient(rgba(121, 79, 56, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(121, 79, 56, 0.035) 1px, transparent 1px) !important;
+  background-size: 84px 84px !important;
+}
+
+html[data-theme="light"] .topbar,
+html[data-theme="light"] header.topbar {
+  background: rgba(255, 253, 252, 0.9) !important;
+  border-bottom-color: var(--line) !important;
+  box-shadow: 0 1px 0 rgba(70, 47, 35, 0.04), 0 8px 24px rgba(70, 47, 35, 0.045) !important;
+}
+
+html[data-theme="light"] .panel,
+html[data-theme="light"] .card,
+html[data-theme="light"] .hero-panel,
+html[data-theme="light"] .flagship-main,
+html[data-theme="light"] .info-card,
+html[data-theme="light"] .project-card,
+html[data-theme="light"] .member-card,
+html[data-theme="light"] .join-card,
+html[data-theme="light"] .timeline-item,
+html[data-theme="light"] .flagship-card,
+html[data-theme="light"] .quick-link,
+html[data-theme="light"] .profile-item {
+  background: var(--day-paper) !important;
+  border-color: var(--line) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+html[data-theme="light"] .info-card:hover,
+html[data-theme="light"] .project-card:hover,
+html[data-theme="light"] .member-card:hover,
+html[data-theme="light"] .join-card:hover,
+html[data-theme="light"] .timeline-item:hover,
+html[data-theme="light"] .flagship-card:hover,
+html[data-theme="light"] .quick-link:hover {
+  border-color: rgba(197, 74, 52, 0.46) !important;
+  box-shadow: 0 16px 34px rgba(70, 47, 35, 0.11), 0 1px 2px rgba(70, 47, 35, 0.06) !important;
+}
+
+html[data-theme="light"] .proof-band,
+html[data-theme="light"] .muted-band,
+html[data-theme="light"] .panel-row,
+html[data-theme="light"] .stage,
+html[data-theme="light"] .stage-wrap,
+html[data-theme="light"] .assist-note,
+html[data-theme="light"] .info-note,
+html[data-theme="light"] .next-preview {
+  background: var(--day-paper-muted) !important;
+  border-color: var(--line) !important;
+}
+
+html[data-theme="light"] h1,
+html[data-theme="light"] h2,
+html[data-theme="light"] h3,
+html[data-theme="light"] .section-title,
+html[data-theme="light"] .brand,
+html[data-theme="light"] .brand strong {
+  color: var(--day-ink) !important;
+}
+
+html[data-theme="light"] p,
+html[data-theme="light"] .muted,
+html[data-theme="light"] .desc,
+html[data-theme="light"] .section-desc,
+html[data-theme="light"] .hero-text,
+html[data-theme="light"] .club-affiliation,
+html[data-theme="light"] .panel-row span,
+html[data-theme="light"] .panel-head span {
+  color: var(--day-ink-soft) !important;
+}
+
+html[data-theme="light"] .eyebrow,
+html[data-theme="light"] .section-kicker,
+html[data-theme="light"] .member-meta,
+html[data-theme="light"] .timeline-date,
+html[data-theme="light"] .hero-metrics strong,
+html[data-theme="light"] .link-accent {
+  color: var(--day-brand) !important;
+}
+
+html[data-theme="light"] .primary-action,
+html[data-theme="light"] .button:not(.secondary):not(.danger),
+html[data-theme="light"] button.button:not(.secondary):not(.danger) {
+  background: var(--day-brand) !important;
+  border-color: var(--day-brand) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 8px 18px rgba(197, 74, 52, 0.18) !important;
+}
+
+html[data-theme="light"] .primary-action:hover,
+html[data-theme="light"] .button:hover:not(.secondary):not(.danger),
+html[data-theme="light"] button.button:hover:not(.secondary):not(.danger) {
+  background: var(--day-brand-strong) !important;
+  border-color: var(--day-brand-strong) !important;
+  box-shadow: 0 12px 24px rgba(167, 58, 41, 0.22) !important;
+}
+
+html[data-theme="light"] .secondary-action,
+html[data-theme="light"] .button.secondary,
+html[data-theme="light"] button.button.secondary,
+html[data-theme="light"] .row-button {
+  background: var(--day-paper) !important;
+  border-color: rgba(66, 78, 120, 0.34) !important;
+  color: var(--day-indigo) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="light"] .secondary-action:hover,
+html[data-theme="light"] .button.secondary:hover,
+html[data-theme="light"] button.button.secondary:hover,
+html[data-theme="light"] .row-button:hover {
+  background: var(--day-indigo-soft) !important;
+  border-color: var(--day-indigo) !important;
+  color: var(--day-indigo) !important;
+}
+
+html[data-theme="light"] .tag,
+html[data-theme="light"] .chip,
+html[data-theme="light"] .status-pill,
+html[data-theme="light"] .lab-tags span,
+html[data-theme="light"] .step-list span {
+  background: var(--day-brand-soft) !important;
+  border-color: rgba(197, 74, 52, 0.28) !important;
+  color: var(--day-brand-strong) !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="light"] .route-strip span,
+html[data-theme="light"] .data-note {
+  background: var(--day-indigo-soft) !important;
+  border-color: rgba(66, 78, 120, 0.2) !important;
+  color: var(--day-indigo) !important;
+}
+
+html[data-theme="light"] .route-strip span.is-active,
+html[data-theme="light"] .panel-row.focus {
+  background: var(--day-brand-soft) !important;
+  border-color: rgba(197, 74, 52, 0.4) !important;
+  box-shadow: inset 3px 0 0 var(--day-brand) !important;
+}
+
+html[data-theme="light"] .brand-mark {
+  background: var(--day-brand-soft) !important;
+  border-color: rgba(197, 74, 52, 0.4) !important;
+  color: var(--day-brand-strong) !important;
+  box-shadow: 0 0 0 4px rgba(197, 74, 52, 0.045) !important;
+}
+
+html[data-theme="light"] .scroll-progress,
+html[data-theme="light"] .progress-bar,
+html[data-theme="light"] .accent-line {
+  background: var(--day-brand) !important;
+  box-shadow: none !important;
+}
+
+/* 图表/实验状态：当前操作朱砂，已访问靛蓝，完成绿色，比较金色。 */
+html[data-theme="light"] .bar {
+  background: #D99988 !important;
+  border-color: #C87763 !important;
+  box-shadow: none !important;
+}
+html[data-theme="light"] .bar.compare,
+html[data-theme="light"] .bar.pivot {
+  background: var(--day-brand) !important;
+  border-color: var(--day-brand-strong) !important;
+}
+html[data-theme="light"] .bar.move,
+html[data-theme="light"] .bar.select,
+html[data-theme="light"] .bar.bucket {
+  background: #6572A5 !important;
+  border-color: var(--day-indigo) !important;
+}
+html[data-theme="light"] .bar.sorted {
+  background: #4C9A78 !important;
+  border-color: #287A5B !important;
+}
+html[data-theme="light"] .maze .cell.visited,
+html[data-theme="light"] .node-circle.visited {
+  background: #DDE2F1 !important;
+  fill: #DDE2F1 !important;
+  border-color: #8995BE !important;
+  stroke: #8995BE !important;
+}
+html[data-theme="light"] .maze .cell.start,
+html[data-theme="light"] .node-circle.source,
+html[data-theme="light"] .node-circle.current {
+  background: var(--day-brand) !important;
+  fill: #F3D7CF !important;
+  border-color: var(--day-brand-strong) !important;
+  stroke: var(--day-brand) !important;
+  box-shadow: none !important;
+}
+html[data-theme="light"] .edge-active,
+html[data-theme="light"] .edge-path.is-active {
+  stroke: var(--day-indigo) !important;
+}
