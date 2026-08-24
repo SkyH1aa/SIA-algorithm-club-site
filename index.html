@@ -221,7 +221,8 @@
       .nav a[data-admin-only],
       .nav a[data-admin-only][hidden] { display: none !important; }
       .nav a[data-admin-only].is-visible { display: inline-flex !important; }
-      .lang-switcher {
+      .lang-switcher,
+      .theme-switcher {
         display: inline-flex;
         align-items: center;
         gap: 2px;
@@ -230,8 +231,10 @@
         border-radius: 999px;
         border: 1px solid rgba(148, 163, 184, 0.28);
         background: rgba(15, 23, 42, 0.45);
+        flex-shrink: 0;
       }
-      .lang-switcher button {
+      .lang-switcher button,
+      .theme-switcher button {
         border: 0;
         background: transparent;
         color: rgba(226, 232, 240, 0.78);
@@ -242,8 +245,11 @@
         padding: 6px 10px;
         border-radius: 999px;
         cursor: pointer;
+        line-height: 1;
+        white-space: nowrap;
       }
-      .lang-switcher button.is-active {
+      .lang-switcher button.is-active,
+      .theme-switcher button.is-active {
         background: linear-gradient(135deg, #22d3ee, #818cf8);
         color: #0f172a;
       }
@@ -1158,7 +1164,8 @@
         .nav.open { display: flex; }
         .nav a { padding: 11px 12px; }
         .nav a[data-admin-only].is-visible { display: flex !important; }
-        .nav .lang-switcher {
+        .nav .lang-switcher,
+        .nav .theme-switcher {
           display: inline-flex;
           align-self: flex-start;
           margin: 8px 4px 4px;
@@ -1862,6 +1869,9 @@
       async function init() {
         if (window.ClubI18n && typeof window.ClubI18n.mountSwitcher === 'function') {
           window.ClubI18n.mountSwitcher(document.getElementById('langSwitcherHost'));
+        }
+        if (window.ClubTheme && typeof window.ClubTheme.autoMountSwitcher === 'function') {
+          window.ClubTheme.autoMountSwitcher();
         }
         const fallbackMembers = getFallbackMembers();
         const fallbackProjects = getFallbackProjects();

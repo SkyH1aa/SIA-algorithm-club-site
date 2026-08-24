@@ -232,6 +232,124 @@
     });
   }
 
+  function shortLabel(mode) {
+    const map = {
+      auto: ['theme.shortAuto', 'Auto'],
+      light: ['theme.shortLight', '日'],
+      dark: ['theme.shortDark', '夜']
+    };
+    const [key, fallback] = map[mode] || map.auto;
+    return window.ClubI18n?.t?.(key) || fallback;
+  }
+
+  function syncSwitcherLabels(wrap) {
+    if (!wrap) return;
+    wrap.querySelectorAll('button[data-theme-mode]').forEach((btn) => {
+      const mode = normalizeMode(btn.getAttribute('data-theme-mode'));
+      btn.textContent = shortLabel(mode);
+      btn.setAttribute('title', window.ClubI18n?.t?.(`theme.${mode}`) || mode);
+    });
+  }
+
+  function mountSwitcher(host, options = {}) {
+    if (!host) return null;
+    if (host.matches?.('[data-theme-switcher]')) {
+      syncSwitcherLabels(host);
+      bindPickerClicks(host);
+      refreshPickerUI();
+      return host;
+    }
+
+    const existing = host.querySelector?.(':scope > [data-theme-switcher]')
+      || (options.after?.parentElement?.querySelector?.(':scope > [data-theme-switcher]'))
+      || null;
+    if (existing) {
+      // 若语言切换已出现，确保主题切换紧跟其后
+      if (options.after && existing.previousElementSibling !== options.after) {
+        options.after.after(existing);
+      }
+      syncSwitcherLabels(existing);
+      bindPickerClicks(existing);
+      refreshPickerUI();
+      return existing;
+    }
+
+    const wrap = document.createElement('div');
+    wrap.className = options.className || 'theme-switcher';
+    wrap.setAttribute('data-theme-switcher', '1');
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', 'Theme');
+
+    MODES.forEach((mode) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.setAttribute('data-theme-mode', mode);
+      btn.textContent = shortLabel(mode);
+      wrap.appendChild(btn);
+    });
+
+    if (typeof options.insert === 'function') {
+      options.insert(wrap, host);
+    } else if (options.after) {
+      options.after.after(wrap);
+    } else {
+      host.appendChild(wrap);
+    }
+
+    syncSwitcherLabels(wrap);
+    bindPickerClicks(wrap);
+    refreshPickerUI();
+    return wrap;
+  }
+
+  function resolveAutoMountHost() {
+    const explicit = document.getElementById('themeSwitcherHost');
+    if (explicit) return { host: explicit, after: null };
+
+    const lang = document.querySelector('[data-lang-switcher]');
+    if (lang?.parentElement) return { host: lang.parentElement, after: lang };
+
+    const langHost = document.getElementById('langSwitcherHost');
+    // 语言尚未注入时挂到 host 后面，避免塞进 host 导致顺序变成「主题 → 中英」
+    if (langHost?.parentElement) {
+      return { host: langHost.parentElement, after: langHost };
+    }
+
+    const topbarInner = document.querySelector('.topbar .topbar-inner, header.topbar .topbar-inner');
+    if (topbarInner) {
+      const back = topbarInner.querySelector('a.back');
+      return {
+        host: topbarInner,
+        after: null,
+        insert: (wrap) => {
+          if (back) topbarInner.insertBefore(wrap, back);
+          else topbarInner.appendChild(wrap);
+        }
+      };
+    }
+
+    const nav = document.querySelector('header.topbar nav.nav, .topbar nav.nav, nav.nav');
+    if (nav) return { host: nav, after: null };
+
+    return null;
+  }
+
+  function autoMountSwitcher() {
+    const target = resolveAutoMountHost();
+    if (!target) {
+      document.querySelectorAll('[data-theme-switcher]').forEach((wrap) => {
+        syncSwitcherLabels(wrap);
+        bindPickerClicks(wrap);
+      });
+      refreshPickerUI();
+      return document.querySelector('[data-theme-switcher]');
+    }
+    return mountSwitcher(target.host, {
+      after: target.after || undefined,
+      insert: target.insert
+    });
+  }
+
   // 尽早应用，减少闪烁
   currentMode = readStoredMode();
   applyTheme(resolveTheme(currentMode), { silent: true });
@@ -247,15 +365,25 @@
     applyCurrent: () => applyTheme(resolveTheme(currentMode)),
     refreshPickerUI,
     bindPickerClicks,
+    mountSwitcher,
+    autoMountSwitcher,
     isRemoteSynced: () => remoteSyncReady
   };
 
   function boot() {
+    autoMountSwitcher();
+    // 语言切换可能稍晚注入，再补挂一次
+    setTimeout(autoMountSwitcher, 0);
+    setTimeout(autoMountSwitcher, 120);
     bindPickerClicks(document);
     refreshPickerUI();
     scheduleAutoTick();
     bindAuthSync();
-    window.addEventListener('club:langchange', () => refreshPickerUI());
+    window.addEventListener('club:langchange', () => {
+      autoMountSwitcher();
+      document.querySelectorAll('[data-theme-switcher]').forEach(syncSwitcherLabels);
+      refreshPickerUI();
+    });
     document.addEventListener('click', (event) => {
       const target = event.target?.closest?.('[data-theme-mode]');
       if (!target || target.__clubThemeBound) return;

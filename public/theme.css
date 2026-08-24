@@ -47,37 +47,161 @@ html[data-theme="light"] body {
 
 /* 首页原深色伪元素网格/光晕：改为极淡点阵肌理 */
 html[data-theme="light"] body::before {
-  opacity: 0.35 !important;
+  opacity: 0.28 !important;
   background-image: radial-gradient(circle at 1px 1px, rgba(224, 122, 95, 0.05) 1px, transparent 0) !important;
   background-size: 40px 40px !important;
   mask-image: none !important;
 }
 
-/* 首页装饰元素：光晕、粒子、网格 — 亮色下隐藏 */
+/* 首页装饰元素：光晕、粒子、网格 — 亮色下隐藏，改用分区静态光效 */
 html[data-theme="light"] .ambient-background,
 html[data-theme="light"] .ambient-orb,
 html[data-theme="light"] .ambient-grid,
 html[data-theme="light"] #particleCanvas,
 html[data-theme="light"] .pointer-glow {
   opacity: 0 !important;
+  animation: none !important;
 }
 
-/* 顶栏 + 科技分割线 */
+/*
+ * 日间首页分区光效（仅首页 section）
+ * 方案一：首页 + 实力 — 中心辐射暖光
+ * 方案二：作品 + 成员 + 项目沉淀 — 双色斜向光带
+ * 方案三：活动进展 + 加入 — 角落光斑
+ */
+html[data-theme="light"] #home,
+html[data-theme="light"] #gomoku,
+html[data-theme="light"] #members,
+html[data-theme="light"] #projects,
+html[data-theme="light"] #activities,
+html[data-theme="light"] #join {
+  position: relative;
+  isolation: isolate;
+}
+
+/* hero 区块默认 overflow:hidden，亮色下放开以免裁切光晕 */
+html[data-theme="light"] #home.section-block.hero-block {
+  overflow: visible;
+}
+
+html[data-theme="light"] #home::before,
+html[data-theme="light"] #gomoku::before,
+html[data-theme="light"] #members::before,
+html[data-theme="light"] #projects::before,
+html[data-theme="light"] #activities::after,
+html[data-theme="light"] #join::after {
+  content: '';
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* 方案一：中心辐射渐变（首页含实力证明带） */
+html[data-theme="light"] #home::before {
+  position: absolute;
+  left: 50%;
+  top: -12%;
+  width: 120vw;
+  height: 118%;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    ellipse 80% 58% at 50% 8%,
+    rgba(224, 122, 95, 0.11) 0%,
+    rgba(224, 122, 95, 0.04) 42%,
+    transparent 72%
+  );
+  animation: day-glow-breathe 8s ease-in-out infinite;
+}
+
+/* 方案二：双色斜向光带 */
+html[data-theme="light"] #gomoku::before,
+html[data-theme="light"] #members::before,
+html[data-theme="light"] #projects::before {
+  position: absolute;
+  inset: -8% -18%;
+  background:
+    linear-gradient(135deg, rgba(224, 122, 95, 0.07) 0%, transparent 34%),
+    linear-gradient(225deg, rgba(108, 99, 255, 0.045) 0%, transparent 36%);
+  animation: day-band-drift 14s ease-in-out infinite alternate;
+}
+
+html[data-theme="light"] #members::before {
+  animation-delay: -4s;
+}
+
+html[data-theme="light"] #projects::before {
+  animation-delay: -8s;
+}
+
+/* 项目沉淀带改为半透明，让斜向光带透出来 */
+html[data-theme="light"] #projects.muted-band {
+  background: rgba(240, 242, 246, 0.72) !important;
+}
+
+/* 方案三：角落光斑（活动 / 加入） */
+html[data-theme="light"] #activities::after,
+html[data-theme="light"] #join::after {
+  position: absolute;
+  width: min(620px, 88vw);
+  height: min(620px, 88vw);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(224, 122, 95, 0.085) 0%, transparent 68%);
+  animation: day-orb-breathe 8s ease-in-out infinite;
+}
+
+html[data-theme="light"] #activities::after {
+  top: -220px;
+  right: -200px;
+}
+
+html[data-theme="light"] #join::after {
+  top: auto;
+  bottom: -240px;
+  left: -220px;
+  right: auto;
+  background: radial-gradient(circle, rgba(214, 90, 49, 0.07) 0%, rgba(108, 99, 255, 0.03) 42%, transparent 70%);
+  animation-delay: -3.5s;
+}
+
+@keyframes day-glow-breathe {
+  0%, 100% { opacity: 0.62; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.04); }
+}
+
+@keyframes day-band-drift {
+  0% { opacity: 0.7; transform: translate3d(-1.2%, 0.6%, 0) scale(1); }
+  100% { opacity: 1; transform: translate3d(1.4%, -0.8%, 0) scale(1.03); }
+}
+
+@keyframes day-orb-breathe {
+  0%, 100% { opacity: 0.55; transform: scale(0.96); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="light"] #home::before,
+  html[data-theme="light"] #gomoku::before,
+  html[data-theme="light"] #members::before,
+  html[data-theme="light"] #projects::before,
+  html[data-theme="light"] #activities::after,
+  html[data-theme="light"] #join::after {
+    animation: none !important;
+    opacity: 0.85 !important;
+    transform: none !important;
+  }
+
+  html[data-theme="light"] #home::before {
+    transform: translateX(-50%) !important;
+  }
+}
+
+/* 顶栏：细分割线，去掉橙红横杠 */
 html[data-theme="light"] .topbar,
 html[data-theme="light"] header.topbar {
   position: sticky;
   background: rgba(255, 255, 255, 0.92) !important;
-  border-bottom-color: transparent !important;
+  border-bottom-color: #E5E5EA !important;
   box-shadow: 0 4px 18px rgba(28, 28, 30, 0.04) !important;
   backdrop-filter: saturate(1.1) blur(10px);
-}
-html[data-theme="light"] .topbar::after,
-html[data-theme="light"] header.topbar::after {
-  content: '';
-  display: block;
-  height: 1px;
-  width: 100%;
-  background: linear-gradient(90deg, transparent, #E07A5F 50%, transparent);
 }
 
 html[data-theme="light"] .panel,
@@ -445,14 +569,17 @@ html[data-theme="light"] .nav a.nav-emphasis {
   background: linear-gradient(135deg, rgba(224, 122, 95, 0.12), rgba(214, 90, 49, 0.08)) !important;
   color: #1C1C1E !important;
 }
-html[data-theme="light"] .lang-switcher {
+html[data-theme="light"] .lang-switcher,
+html[data-theme="light"] .theme-switcher {
   border-color: #E5E5EA !important;
   background: #FFFFFF !important;
 }
-html[data-theme="light"] .lang-switcher button {
+html[data-theme="light"] .lang-switcher button,
+html[data-theme="light"] .theme-switcher button {
   color: #48484A !important;
 }
-html[data-theme="light"] .lang-switcher button.is-active {
+html[data-theme="light"] .lang-switcher button.is-active,
+html[data-theme="light"] .theme-switcher button.is-active {
   background: linear-gradient(135deg, #E07A5F, #D65A31) !important;
   color: #FFFFFF !important;
 }
@@ -570,7 +697,51 @@ html[data-theme="light"] .footer {
   color: #48484A !important;
 }
 
-/* 主题切换控件 */
+/* 顶栏紧凑主题切换（与语言切换同款胶囊） */
+.theme-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(15, 23, 42, 0.45);
+  flex-shrink: 0;
+}
+.theme-switcher button {
+  border: 0;
+  background: transparent;
+  color: rgba(226, 232, 240, 0.78);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  line-height: 1;
+  white-space: nowrap;
+}
+.theme-switcher button.is-active {
+  background: linear-gradient(135deg, #22d3ee, #818cf8);
+  color: #0f172a;
+}
+.nav .theme-switcher {
+  align-self: center;
+}
+@media (max-width: 900px) {
+  .nav .theme-switcher {
+    display: inline-flex;
+    align-self: flex-start;
+    margin: 8px 4px 4px;
+  }
+  .topbar-inner .theme-switcher {
+    margin-left: 0;
+  }
+}
+
+/* 个人中心主题切换控件 */
 .theme-picker {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
