@@ -514,6 +514,15 @@
     .rank { color: #49e7ff; font-weight: bold; }
     .score { color: #ffd166; font-weight: bold; }
     .empty { color: #91a9b8; font-size: 13px; }
+    .explain-panel { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(73,231,255,.16); }
+    .explain-toggle { display:flex; gap:7px; align-items:center; font-size:12px; color:#e7f7ff; }
+    .explain-toggle input { width: 15px; height: 15px; accent-color: #C54A34; }
+    .explain-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:8px; }
+    .explain-grid > div { padding:7px; border:1px solid rgba(73,231,255,.16); border-radius:7px; background:rgba(8,17,38,.45); }
+    .explain-grid span { display:block; color:#91a9b8; font-size:10px; }.explain-grid strong { color:#49e7ff; font-size:12px; }
+    .explain-panel p { color:#91a9b8; font-size:10px; line-height:1.45; }
+    html[data-theme="light"] .explain-panel { border-color:#E7DDD5 !important; } html[data-theme="light"] .explain-grid > div { background:#F2EDE7 !important; border-color:#E7DDD5 !important; } html[data-theme="light"] .explain-grid strong { color:#A73A29 !important; }
+    html[data-theme="light"] .explain-toggle { color:#2A2421 !important; } html[data-theme="light"] .explain-toggle input { accent-color:#C54A34; outline:1px solid rgba(167,58,41,.42); outline-offset:1px; }
     .hidden { display: none !important; }
 
     @media (max-width: 1100px) {
@@ -793,6 +802,10 @@
           <button type="button" class="lb-tab" data-lb="versus" data-i18n="games.versusLb">人机对战榜</button>
         </div>
         <p class="hint" id="lbHint" data-i18n="games.lbNormalHint">普通：昵称 / 局数 / 最高分 · 按最高分降序</p>
+        <div class="explain-panel" id="explainPanel">
+          <label class="explain-toggle"><input type="checkbox" id="explainToggle"><span data-i18n="explain.toggle">显示 AI 决策面板</span></label>
+          <div id="explainPanelBody" hidden><h3 data-i18n="explain.title">AI 决策面板</h3><div class="explain-grid"><div><span data-i18n="explain.target">目标落点</span><strong id="explainTarget">—</strong></div><div><span data-i18n="explain.rotation">旋转</span><strong id="explainRotation">—</strong></div><div><span data-i18n="explain.score">评估分</span><strong id="explainScore">—</strong></div></div><p data-i18n="explain.modeHint">仅在 AI 正在决策或 AI 辅助运行时更新。</p></div>
+        </div>
         <ol class="leaderboard-list" id="leaderboardList"><li class="empty" data-i18n="common.loading">正在读取…</li></ol>
       </aside>
     </div>
@@ -1277,6 +1290,7 @@
         return;
       }
       this.assistTarget = TetrisAI.bestMove(this.board, this.current, this.next);
+      if (this.assistTarget) updateExplain({ target: `x=${this.assistTarget.x}, y=${this.assistTarget.y}`, rotation: `${this.assistTarget.shape.length}×${this.assistTarget.shape[0].length}`, score: TetrisAI.evaluatePlacement(this.board, this.assistTarget).toFixed(1) });
     }
 
     // AI 游玩：旋转/平移后逐步下落再锁定（有降落动画）
@@ -1288,6 +1302,7 @@
         this.triggerGameOver(ClubI18n.t('tetris.aiCannotPlace'));
         return;
       }
+      updateExplain({ target: `x=${best.x}, y=${best.y}`, rotation: `${best.shape.length}×${best.shape[0].length}`, score: TetrisAI.evaluatePlacement(this.board, best).toFixed(1) });
       this.aiBusy = true;
       try {
         // 先旋转对齐（force，绕过 aiBusy 拦截）
@@ -1335,6 +1350,7 @@
       if (!this.aiPlan) {
         this.aiPlan = TetrisAI.bestMove(this.board, this.current, this.next);
         if (!this.aiPlan) return;
+        updateExplain({ target: `x=${this.aiPlan.x}, y=${this.aiPlan.y}`, rotation: `${this.aiPlan.shape.length}×${this.aiPlan.shape[0].length}`, score: TetrisAI.evaluatePlacement(this.board, this.aiPlan).toFixed(1) });
       }
       const target = this.aiPlan;
       const targetKey = target.shape.map(r => r.join(',')).join('|');
@@ -1579,6 +1595,10 @@
     versusAiDrop: 'none', // none | soft | hard
     aiPlayHardDrop: false
   };
+  let explainEnabled = false;
+  const explainToggle = document.getElementById('explainToggle');
+  function updateExplain(data = {}) { if (!explainEnabled) return; document.getElementById('explainTarget').textContent = data.target ?? '—'; document.getElementById('explainRotation').textContent = data.rotation ?? '—'; document.getElementById('explainScore').textContent = data.score ?? '—'; }
+  explainToggle?.addEventListener('change', () => { explainEnabled = explainToggle.checked; document.getElementById('explainPanelBody').hidden = !explainEnabled; });
 
   const els = {
     nickname: document.getElementById('nickname'),

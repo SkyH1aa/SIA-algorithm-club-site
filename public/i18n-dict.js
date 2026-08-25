@@ -48,6 +48,9 @@
       saved: '主题偏好已保存。',
       saveFail: '主题已在本机生效，但云端保存失败（可能尚未执行 SQL）。'
     },
+    explain: {
+      title: 'AI 决策面板', toggle: '显示 AI 决策面板', waiting: '等待 AI 下一次决策…', candidates: '候选动作', depth: '搜索深度', score: '评估分', target: '目标落点', rotation: '旋转', path: '路径长度', apple: '当前苹果', direction: '目标方向', modeHint: '仅在 AI 正在决策或 AI 辅助运行时更新。'
+    },
     nav: {
       home: '首页',
       proof: '实力',
@@ -217,6 +220,7 @@
       actBuildTitle: '算法培训与项目建设',
       actBuildDate: '第二阶段计划',
       actBuildIntro: '开展算法培训、模型建设、软件开发和 AI Bot 对战平台迭代，让社员从训练走向真实项目。'
+      ,explain: { title: 'AI 决策面板', toggle: '显示 AI 决策面板', waiting: '等待 AI 下一次决策…', candidates: '候选动作', depth: '搜索深度', score: '评估分', target: '目标落点', rotation: '旋转', path: '路径长度', apple: '当前苹果', direction: '目标方向', modeHint: '仅在 AI 正在决策或 AI 辅助运行时更新。' }
     },
     features: {
       title: '社团功能 · 算法社',
@@ -1983,6 +1987,9 @@
       saved: 'Theme preference saved.',
       saveFail: 'Theme applied locally, but cloud save failed (SQL may not be deployed yet).'
     },
+    explain: {
+      title: 'AI Decision Panel', toggle: 'Show AI decision panel', waiting: 'Waiting for the next AI decision…', candidates: 'Candidate moves', depth: 'Search depth', score: 'Evaluation', target: 'Target placement', rotation: 'Rotation', path: 'Path length', apple: 'Current apple', direction: 'Target direction', modeHint: 'Updates while the AI is deciding or assisting.'
+    },
     nav: {
       home: 'Home',
       proof: 'Proof',
@@ -2152,6 +2159,7 @@
       actBuildTitle: 'Algorithm training & project building',
       actBuildDate: 'Stage-two plan',
       actBuildIntro: 'Algorithm training, model building, software development, and AI Bot arena iteration — from practice to real projects.'
+      ,explain: { title: 'AI Decision Panel', toggle: 'Show AI decision panel', waiting: 'Waiting for the next AI decision…', candidates: 'Candidate moves', depth: 'Search depth', score: 'Evaluation', target: 'Target placement', rotation: 'Rotation', path: 'Path length', apple: 'Current apple', direction: 'Target direction', modeHint: 'Updates while the AI is deciding or assisting.' }
     },
     features: {
       title: 'Club Features · Algorithm Club',

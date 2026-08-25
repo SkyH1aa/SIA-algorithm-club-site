@@ -40,6 +40,21 @@
     .rank { color: #49e7ff; font-weight: bold; }
     .score { color: #ffd166; font-weight: bold; }
     .empty { color: #91a9b8; font-size: 14px; }
+    .explain-panel { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(73,231,255,.16); }
+    .explain-toggle { display: flex; gap: 8px; align-items: center; color: #e7f7ff; font-size: 13px; }
+    .explain-toggle input { min-width: 16px; width: 16px; height: 16px; margin: 0; accent-color: #C54A34; }
+    .explain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .explain-stat { padding: 8px; border: 1px solid rgba(73,231,255,.16); border-radius: 8px; background: rgba(8,17,38,.45); }
+    .explain-stat span { display: block; color: #91a9b8; font-size: 11px; }
+    .explain-stat strong { color: #49e7ff; font-size: 14px; }
+    .explain-note { color: #91a9b8; font-size: 11px; line-height: 1.5; }
+    html[data-theme="light"] .explain-panel { border-color: #E7DDD5 !important; }
+    html[data-theme="light"] .explain-stat { background: #F2EDE7 !important; border-color: #E7DDD5 !important; }
+    html[data-theme="light"] .explain-stat strong { color: #A73A29 !important; }
+    html[data-theme="light"] .explain-toggle { color: #2A2421 !important; }
+    html[data-theme="light"] .explain-toggle input { accent-color: #C54A34; outline: 1px solid rgba(167, 58, 41, 0.42); outline-offset: 1px; }
+    html[data-theme="light"] .cell.black { background-color: #111111 !important; border-color: #000000 !important; }
+    html[data-theme="light"] .cell.white { background-color: #FFFFFF !important; border-color: #252525 !important; }
     .result { min-height: 20px; margin: 14px 0 0; color: #49e7ff; font-weight: bold; }
     @media (max-width: 860px) { .game-layout { grid-template-columns: 1fr; } }
     @media (max-width: 520px) { .board { transform: scale(.72); transform-origin: top center; margin-bottom: -120px; } }
@@ -131,6 +146,10 @@
           <span class="hint" data-i18n="gomoku.nickSideHint">先填写昵称，再选择执子</span>
         </div>
         <div class="status" id="status"></div>
+        <div class="explain-panel">
+          <label class="explain-toggle"><input type="checkbox" id="explainToggle"><span data-i18n="explain.toggle">显示 AI 决策面板</span></label>
+          <div id="explainPanelBody" hidden><h3 data-i18n="explain.title">AI 决策面板</h3><div class="explain-grid"><div class="explain-stat"><span data-i18n="explain.candidates">候选动作</span><strong id="explainCandidates">—</strong></div><div class="explain-stat"><span data-i18n="explain.depth">搜索深度</span><strong id="explainDepth">—</strong></div><div class="explain-stat"><span data-i18n="explain.score">评估分</span><strong id="explainScore">—</strong></div><div class="explain-stat"><span data-i18n="explain.target">目标落点</span><strong id="explainTarget">—</strong></div></div><p class="explain-note" data-i18n="explain.modeHint">仅在 AI 正在决策或 AI 辅助运行时更新。</p></div>
+        </div>
         <div class="board" id="board"></div>
         <p class="result" id="result" aria-live="polite"></p>
         <button id="gameActionButton" onclick="handleGameAction()" data-i18n="games.restart">重新开始</button>
@@ -158,6 +177,10 @@
     let resultSubmitted = false;
     let gameInProgress = false;
     let gameActionBusy = false;
+    let explainEnabled = false;
+    const explainToggle = document.getElementById('explainToggle');
+    function updateExplain(data = {}) { if (!explainEnabled) return; document.getElementById('explainCandidates').textContent = data.candidates ?? '—'; document.getElementById('explainDepth').textContent = data.depth ?? '—'; document.getElementById('explainScore').textContent = data.score ?? '—'; document.getElementById('explainTarget').textContent = data.target ?? '—'; }
+    explainToggle.addEventListener('change', () => { explainEnabled = explainToggle.checked; document.getElementById('explainPanelBody').hidden = !explainEnabled; });
 
     const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
@@ -412,6 +435,7 @@
       if (moves.some(m => m.score >= SCORE.LIVE_FOUR || m.score >= SCORE.DOUBLE_LIVE_THREE)) {
           currentSearchDepth = BASE_SEARCH_DEPTH + 1; // 增加到 6 步
       }
+      updateExplain({ candidates: moves.length, depth: currentSearchDepth, score: moves[0]?.score ?? '—', target: moves[0] ? `${moves[0].row + 1}, ${moves[0].col + 1}` : '—' });
       
       for (const move of moves) {
         const { row, col } = move;
