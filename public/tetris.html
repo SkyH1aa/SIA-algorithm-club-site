@@ -532,19 +532,20 @@
       .leaderboard.panel { max-height: 280px; }
       canvas.board { height: min(560px, calc(100dvh - 250px)); max-height: calc(100dvh - 250px); }
     }
-    @media (max-width: 760px) {
+    @media (max-width: 1100px) {
       body {
-        overflow: hidden;
-        height: 100dvh;
+        overflow: auto;
+        height: auto;
+        min-height: 100dvh;
         padding: 6px 8px 0;
       }
       .page-shell {
         width: 100%;
-        height: 100dvh;
-        min-height: 0;
+        height: auto;
+        min-height: 100dvh;
         gap: 4px;
         padding-bottom: calc(var(--mobile-controls-h, 96px) + env(safe-area-inset-bottom, 0px));
-        overflow: hidden;
+        overflow: visible;
       }
       .page-header { gap: 4px 8px; }
       .page-header h1 { font-size: 15px; }
@@ -658,7 +659,7 @@
         flex: 0 0 auto;
       }
     }
-    @media (max-width: 760px) and (max-height: 700px) {
+    @media (max-width: 1100px) and (max-height: 700px) {
       canvas.board {
         max-height: calc(100dvh - 250px - env(safe-area-inset-bottom, 0px)) !important;
       }
@@ -1904,7 +1905,7 @@
     const el = els.mobileControls;
     if (!el) return;
     // 仅在可手动操作模式显示：普通 / 辅助 / 人机对战；AI 游玩隐藏
-    const show = state.mode !== 'ai';
+    const show = state.mode !== 'ai' && window.matchMedia('(max-width: 1100px), (pointer: coarse)').matches;
     el.classList.toggle('visible', show);
     const disabled = !show || !state.inProgress || !state.player || !!state.player.gameOver;
     el.querySelectorAll('button[data-action]').forEach((btn) => {
@@ -1941,7 +1942,7 @@
   }
 
   function measureMobileChrome() {
-    if (window.matchMedia('(max-width: 760px)').matches === false) return;
+    if (window.matchMedia('(max-width: 1100px), (pointer: coarse)').matches === false) return;
     const header = document.querySelector('.page-header');
     const toolbar = document.querySelector('.toolbar');
     const footer = document.querySelector('.footer-bar');
