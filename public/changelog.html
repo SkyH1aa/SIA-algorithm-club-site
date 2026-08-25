@@ -37,8 +37,11 @@
           return;
         }
         list.innerHTML = entries.map(entry => {
-          const items = Array.isArray(entry.items) ? entry.items : [];
-          return `<article class="panel entry"><div class="entry-head"><strong class="date">${escapeHtml(entry.date || '')}</strong></div><h2>${escapeHtml(entry.title || ClubI18n.t('changelog.unnamed'))}</h2><ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></article>`;
+          const title = entry.titleKey ? ClubI18n.t(entry.titleKey) : entry.title;
+          const keys = Array.isArray(entry.itemKeys) ? entry.itemKeys : [];
+          const fallback = Array.isArray(entry.items) ? entry.items : [];
+          const items = keys.length ? keys.map(key => ClubI18n.t(key)) : fallback;
+          return `<article class="panel entry"><div class="entry-head"><strong class="date">${escapeHtml(entry.date || '')}</strong></div><h2>${escapeHtml(title || ClubI18n.t('changelog.unnamed'))}</h2><ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></article>`;
         }).join('');
       } catch (error) {
         list.innerHTML = `<div class="panel empty">${escapeHtml(error.message || ClubI18n.t('changelog.loadFail'))}</div>`;

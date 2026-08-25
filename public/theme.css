@@ -1690,3 +1690,71 @@ html[data-theme="light"] .edge-active,
 html[data-theme="light"] .edge-path.is-active {
   stroke: var(--day-indigo) !important;
 }
+
+/* 公共内容页（使用指引、更新日志）日间覆盖 */
+html[data-theme="light"] body:has(.guide-grid),
+html[data-theme="light"] body:has(.timeline) {
+  color: var(--day-ink) !important;
+  background: var(--day-paper) !important;
+  background-image: radial-gradient(circle at 1px 1px, rgba(197, 74, 52, 0.045) 1px, transparent 0) !important;
+  background-size: 40px 40px !important;
+}
+html[data-theme="light"] .topbar {
+  border-color: rgba(197, 74, 52, 0.25) !important;
+  background: rgba(255, 252, 249, 0.9) !important;
+}
+html[data-theme="light"] .panel {
+  border-color: rgba(197, 74, 52, 0.24) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 12px 30px rgba(67, 44, 35, 0.08) !important;
+}
+html[data-theme="light"] .eyebrow,
+html[data-theme="light"] .date,
+html[data-theme="light"] .button {
+  color: var(--day-brand-strong) !important;
+}
+html[data-theme="light"] .lead,
+html[data-theme="light"] .panel p,
+html[data-theme="light"] .entry ul,
+html[data-theme="light"] .back,
+html[data-theme="light"] .brand small {
+  color: var(--day-ink-soft) !important;
+}
+html[data-theme="light"] .button {
+  border-color: rgba(197, 74, 52, 0.42) !important;
+  background: var(--day-brand-soft) !important;
+}
+html[data-theme="light"] .button:hover {
+  background: #f2d9d1 !important;
+}
+html[data-theme="light"] .button.secondary {
+  border-color: rgba(66, 78, 120, 0.34) !important;
+  background: var(--day-paper) !important;
+  color: var(--day-indigo) !important;
+}
+
+.leaderboard-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+  color: var(--muted, #91a8c2);
+  font-size: 12px;
+}
+.leaderboard-pagination button {
+  min-width: 64px;
+  padding: 6px 9px;
+  border: 1px solid var(--line, rgba(107,169,224,.24));
+  border-radius: 7px;
+  background: rgba(0,229,255,.08);
+  color: inherit;
+  cursor: pointer;
+}
+.leaderboard-pagination button:disabled { opacity: .4; cursor: not-allowed; }
+html[data-theme="light"] .leaderboard-pagination { color: var(--day-ink-soft); }
+html[data-theme="light"] .leaderboard-pagination button {
+  border-color: rgba(197, 74, 52, .34);
+  background: var(--day-brand-soft);
+  color: var(--day-brand-strong);
+}

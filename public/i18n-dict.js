@@ -62,6 +62,8 @@
       courseCheckin: '课程签到',
       courseCheckinAria: '打开课程签到',
       course: { checkin: '课程签到', checkinAria: '打开课程签到' },
+      guide: '使用指引',
+      guideAria: '打开使用指引',
       admin: '管理员总览'
     },
     home: {
@@ -266,6 +268,9 @@
       cloudOffline: '云端未连接，当前仅本地游玩。',
       nickCheckFail: '无法校验昵称，请稍后重试。',
       leaderboard: '排行榜',
+      prevPage: '上一页',
+      nextPage: '下一页',
+      pageInfo: '第 {page} / {total} 页',
       normalLb: '普通榜',
       versusLb: '人机对战榜',
       emptyLb: '暂无记录，等你来成为第一名。',
@@ -1934,7 +1939,18 @@
       entryShortEvents: '活动与公告',
       entryShortMall: '积分商城',
       entryShortMembers: '成员展示',
-      entryShortJoin: '报名'
+      entryShortJoin: '报名',
+      guide: {
+        title: '使用指引 · 算法社', h1: '使用指引', lead: '从首页导航进入社团功能、AI 游戏、算法实验室和社员系统。',
+        quickStart: '快速开始', quickStartText: '先用顶栏进入个人中心完成注册与资料绑定，再进入社团功能选择想要使用的模块。',
+        accountTitle: '账号与个人中心', accountText: '使用邀请码注册并登录，可绑定中文姓名与班级；个人中心会集中显示积分、签到和个人资料。',
+        featuresTitle: '社团功能', featuresText: '这里汇总教材下载、算法实验室、五子棋、俄罗斯方块、贪吃蛇、签到兑换、积分、留言和活动入口。',
+        gamesTitle: 'AI 游戏', gamesText: '游戏支持普通游玩、AI 游玩、AI 辅助和人机对战。开启 AI 决策面板后，可查看候选动作、评估分、目标位置或预测路径。',
+        checkinTitle: '签到与课程签到', checkinText: '普通签到使用管理员发布的兑换码；课程签到从顶栏快捷入口进入，默认打开课程签到选项，提交后等待管理员审核。',
+        themeTitle: '语言与主题', themeText: '页面支持中英双语，并可选择自动、日间或暗色主题；自动模式按北京时间 06:00–18:00 使用日间主题。',
+        changelogTitle: '更新日志', changelogText: '查看网站的功能更新和维护记录。', openChangelog: '查看更新日志 →', officialLinkTitle: '官网快捷地址', officialLinkText: '请牢记算法社官网快捷地址：', backHome: '返回首页'
+      },
+      changelog: { entries: { v20260825: { title: 'AI 可解释性面板与课程签到入口优化', item1: '五子棋、俄罗斯方块、贪吃蛇新增可选 AI 决策面板。', item2: '面板展示候选动作、搜索深度、评估分、目标落点或预测路径等信息。', item3: '首页顶栏新增课程签到快捷入口，进入后默认选择课程签到。', item4: '修复日间主题下五子棋黑白棋子颜色和 AI 面板复选框可见性问题。' }, v20260824: { title: '中英双语与日间/暗色双主题完善', item1: '完善首页和公共页面的中英文词典切换。', item2: '增加日间/暗色双主题系统，并支持按北京时间自动切换。', item3: '日间主题采用暖白工程纸与朱砂橙红视觉。', item4: '统一首页、管理页、实验室和 AI 游戏页面的主题适配。' } } }
     }
   };
 
@@ -2001,6 +2017,8 @@
       courseCheckin: 'Course Check-in',
       courseCheckinAria: 'Open course check-in',
       course: { checkin: 'Course Check-in', checkinAria: 'Open course check-in' },
+      guide: 'Usage Guide',
+      guideAria: 'Open usage guide',
       admin: 'Admin Hub'
     },
     home: {
@@ -2205,6 +2223,9 @@
       cloudOffline: 'Cloud offline — local play only.',
       nickCheckFail: 'Could not verify nickname. Try again later.',
       leaderboard: 'Leaderboard',
+      prevPage: 'Previous',
+      nextPage: 'Next',
+      pageInfo: 'Page {page} / {total}',
       normalLb: 'Normal',
       versusLb: 'Versus',
       emptyLb: 'No records yet — be the first.',
@@ -3873,7 +3894,18 @@
       entryShortEvents: 'Events',
       entryShortMall: 'Mall',
       entryShortMembers: 'Showcase',
-      entryShortJoin: 'Join apps'
+      entryShortJoin: 'Join apps',
+      guide: {
+        title: 'Usage Guide · Algorithm Club', h1: 'Usage Guide', lead: 'Use the homepage navigation to enter club features, AI games, algorithm labs, and member tools.',
+        quickStart: 'Quick start', quickStartText: 'Open Member Center from the top bar to register and bind your profile, then choose a module from Club Features.',
+        accountTitle: 'Account and member center', accountText: 'Register with an invite code and bind your Chinese name and class. Your points, check-ins, and profile stay in one place.',
+        featuresTitle: 'Club features', featuresText: 'Find teaching resources, algorithm labs, Gomoku, Tetris, Snake, check-in redemption, points, messages, and activities here.',
+        gamesTitle: 'AI games', gamesText: 'Games offer regular play, AI play, AI assist, and versus modes. Enable the AI decision panel to inspect candidate actions, scores, targets, or predicted paths.',
+        checkinTitle: 'Check-in and course check-in', checkinText: 'Regular check-in uses an administrator code. The top-bar course shortcut opens course check-in by default; submissions wait for administrator review.',
+        themeTitle: 'Language and theme', themeText: 'Switch between Chinese and English, and choose auto, light, or dark themes. Auto uses the light theme from 06:00 to 18:00 Beijing time.',
+        changelogTitle: 'Changelog', changelogText: 'Review feature updates and maintenance records.', openChangelog: 'View changelog →', officialLinkTitle: 'Official quick link', officialLinkText: 'Please remember the Algorithm Club quick site link:', backHome: 'Back to homepage'
+      },
+      changelog: { entries: { v20260825: { title: 'AI explainability panel and course check-in improvements', item1: 'Added optional AI decision panels to Gomoku, Tetris, and Snake.', item2: 'Panels show candidate actions, search depth, evaluation, targets, or predicted paths.', item3: 'Added a course check-in shortcut to the homepage top bar, opening course check-in by default.', item4: 'Fixed light-theme Gomoku stone colors and AI panel checkbox visibility.' }, v20260824: { title: 'Bilingual dictionary and light/dark themes completed', item1: 'Expanded Chinese and English dictionary switching across the homepage and public pages.', item2: 'Added light/dark themes with Beijing-time automatic switching.', item3: 'Built the light theme around warm paper white and cinnabar orange-red accents.', item4: 'Unified theme adaptation across homepage, admin pages, labs, and AI games.' } } }
     }
   };
 

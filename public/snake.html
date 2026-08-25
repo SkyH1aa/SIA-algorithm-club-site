@@ -178,6 +178,7 @@
         </div>
         <p class="hint" id="lbHint" data-i18n="games.lbNormalHint">普通：昵称 / 局数 / 最高分 · 按最高分降序</p>
         <ol class="leaderboard-list" id="leaderboardList"><li class="empty" data-i18n="common.loading">正在读取…</li></ol>
+        <div class="leaderboard-pagination" id="leaderboardPagination" hidden><button type="button" id="leaderboardPrev" class="button secondary" data-i18n="games.prevPage">上一页</button><span id="leaderboardPageInfo"></span><button type="button" id="leaderboardNext" class="button secondary" data-i18n="games.nextPage">下一页</button></div>
       </aside>
     </div>
   </div>
@@ -806,6 +807,27 @@
     }
   }
 
+  let leaderboardRows = [];
+  let leaderboardPage = 1;
+  const LEADERBOARD_PAGE_SIZE = 20;
+  function renderLeaderboard() {
+    const totalPages = Math.max(1, Math.ceil(leaderboardRows.length / LEADERBOARD_PAGE_SIZE));
+    leaderboardPage = Math.min(Math.max(1, leaderboardPage), totalPages);
+    const start = (leaderboardPage - 1) * LEADERBOARD_PAGE_SIZE;
+    els.leaderboardList.innerHTML = leaderboardRows.slice(start, start + LEADERBOARD_PAGE_SIZE).map((item, index) => `
+      <li><span class="rank">${start + index + 1}</span><span>${escapeHtml(item.nickname)}<small> · ${ClubI18n.t('games.gamesUnit', { n: item.games_played || 0 })}</small></span><span class="score">${ClubI18n.t('games.scoreUnit', { n: item.high_score })}</span></li>
+    `).join('');
+    const pagination = document.getElementById('leaderboardPagination');
+    const prev = document.getElementById('leaderboardPrev');
+    const next = document.getElementById('leaderboardNext');
+    pagination.hidden = totalPages <= 1;
+    document.getElementById('leaderboardPageInfo').textContent = ClubI18n.t('games.pageInfo', { page: leaderboardPage, total: totalPages });
+    prev.disabled = leaderboardPage <= 1;
+    next.disabled = leaderboardPage >= totalPages;
+  }
+  document.getElementById('leaderboardPrev').addEventListener('click', () => { leaderboardPage -= 1; renderLeaderboard(); });
+  document.getElementById('leaderboardNext').addEventListener('click', () => { leaderboardPage += 1; renderLeaderboard(); });
+
   async function loadLeaderboard() {
     const isVersus = state.lbTab === 'versus';
     els.lbHint.textContent = isVersus
@@ -820,7 +842,7 @@
           .select('nickname, games_played, high_score, updated_at')
           .order('high_score', { ascending: false })
           .order('updated_at', { ascending: true })
-          .limit(50);
+          ;
         if (!error && Array.isArray(data)) rows = data;
         else els.lbHint.textContent += ClubI18n.t('games.lbCloudOff');
       } catch (_) {
@@ -831,15 +853,12 @@
     }
     if (!rows.length) {
       els.leaderboardList.innerHTML = '<li class="empty">' + ClubI18n.t('games.emptyLb') + '</li>';
+      document.getElementById('leaderboardPagination').hidden = true;
       return;
     }
-    els.leaderboardList.innerHTML = rows.map((item, index) => `
-      <li>
-        <span class="rank">${index + 1}</span>
-        <span>${escapeHtml(item.nickname)}<small> · ${ClubI18n.t('games.gamesUnit', { n: item.games_played || 0 })}</small></span>
-        <span class="score">${ClubI18n.t('games.scoreUnit', { n: item.high_score })}</span>
-      </li>
-    `).join('');
+    leaderboardRows = rows;
+    leaderboardPage = 1;
+    renderLeaderboard();
   }
 
   function updateScores() {

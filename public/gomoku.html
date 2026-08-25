@@ -158,6 +158,7 @@
         <h2 data-i18n="games.leaderboard">排行榜</h2>
         <p class="hint" data-i18n="gomoku.lbHint">按胜利得分排序，平局 1 分，失败 0 分。</p>
         <ol class="leaderboard-list" id="leaderboardList"><li class="empty" data-i18n="common.loading">正在读取…</li></ol>
+        <div class="leaderboard-pagination" id="leaderboardPagination" hidden><button type="button" id="leaderboardPrev" class="button secondary" data-i18n="games.prevPage">上一页</button><span id="leaderboardPageInfo"></span><button type="button" id="leaderboardNext" class="button secondary" data-i18n="games.nextPage">下一页</button></div>
       </aside>
     </div>
   </div>
@@ -298,13 +299,33 @@
       await loadLeaderboard();
     }
 
+    let leaderboardRows = [];
+    let leaderboardPage = 1;
+    const LEADERBOARD_PAGE_SIZE = 20;
+    function renderLeaderboard() {
+      const list = document.getElementById('leaderboardList');
+      const pagination = document.getElementById('leaderboardPagination');
+      const totalPages = Math.max(1, Math.ceil(leaderboardRows.length / LEADERBOARD_PAGE_SIZE));
+      leaderboardPage = Math.min(Math.max(1, leaderboardPage), totalPages);
+      const start = (leaderboardPage - 1) * LEADERBOARD_PAGE_SIZE;
+      list.innerHTML = leaderboardRows.slice(start, start + LEADERBOARD_PAGE_SIZE).map((item, index) => `<li><span class="rank">${start + index + 1}</span><span>${escapeHtml(item.nickname)}<small> · ${ClubI18n.t('gomoku.lbRow', { wins: item.wins, losses: item.losses, draws: item.draws })}</small></span><span class="score">${ClubI18n.t('games.scoreUnit', { n: item.total_score })}</span></li>`).join('');
+      pagination.hidden = totalPages <= 1;
+      document.getElementById('leaderboardPageInfo').textContent = ClubI18n.t('games.pageInfo', { page: leaderboardPage, total: totalPages });
+      document.getElementById('leaderboardPrev').disabled = leaderboardPage <= 1;
+      document.getElementById('leaderboardNext').disabled = leaderboardPage >= totalPages;
+    }
+    document.getElementById('leaderboardPrev').addEventListener('click', () => { leaderboardPage -= 1; renderLeaderboard(); });
+    document.getElementById('leaderboardNext').addEventListener('click', () => { leaderboardPage += 1; renderLeaderboard(); });
+
     async function loadLeaderboard() {
       const list = document.getElementById('leaderboardList');
-      if (!supabaseClient) { list.innerHTML = '<li class="empty">' + ClubI18n.t('gomoku.lbNoInit') + '</li>'; return; }
-      const { data, error } = await supabaseClient.from('gomoku_players').select('nickname, total_score, wins, losses, draws, total_moves').order('total_score', { ascending: false }).order('updated_at', { ascending: true }).limit(20);
-      if (error) { list.innerHTML = '<li class="empty">' + ClubI18n.t('gomoku.lbUnavailable') + '</li>'; return; }
-      if (!data.length) { list.innerHTML = '<li class="empty">' + ClubI18n.t('games.emptyLb') + '</li>'; return; }
-      list.innerHTML = data.map((item, index) => `<li><span class="rank">${index + 1}</span><span>${escapeHtml(item.nickname)}<small> · ${ClubI18n.t('gomoku.lbRow', { wins: item.wins, losses: item.losses, draws: item.draws })}</small></span><span class="score">${ClubI18n.t('games.scoreUnit', { n: item.total_score })}</span></li>`).join('');
+      if (!supabaseClient) { list.innerHTML = '<li class="empty">' + ClubI18n.t('gomoku.lbNoInit') + '</li>'; document.getElementById('leaderboardPagination').hidden = true; return; }
+      const { data, error } = await supabaseClient.from('gomoku_players').select('nickname, total_score, wins, losses, draws, total_moves').order('total_score', { ascending: false }).order('updated_at', { ascending: true });
+      if (error) { list.innerHTML = '<li class="empty">' + ClubI18n.t('gomoku.lbUnavailable') + '</li>'; document.getElementById('leaderboardPagination').hidden = true; return; }
+      if (!data.length) { list.innerHTML = '<li class="empty">' + ClubI18n.t('games.emptyLb') + '</li>'; document.getElementById('leaderboardPagination').hidden = true; return; }
+      leaderboardRows = data;
+      leaderboardPage = 1;
+      renderLeaderboard();
     }
 
     // 置换表缓存 (Transposition Table)

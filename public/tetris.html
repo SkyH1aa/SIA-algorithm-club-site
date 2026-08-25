@@ -807,6 +807,7 @@
           <div id="explainPanelBody" hidden><h3 data-i18n="explain.title">AI 决策面板</h3><div class="explain-grid"><div><span data-i18n="explain.target">目标落点</span><strong id="explainTarget">—</strong></div><div><span data-i18n="explain.rotation">旋转</span><strong id="explainRotation">—</strong></div><div><span data-i18n="explain.score">评估分</span><strong id="explainScore">—</strong></div></div><p data-i18n="explain.modeHint">仅在 AI 正在决策或 AI 辅助运行时更新。</p></div>
         </div>
         <ol class="leaderboard-list" id="leaderboardList"><li class="empty" data-i18n="common.loading">正在读取…</li></ol>
+        <div class="leaderboard-pagination" id="leaderboardPagination" hidden><button type="button" id="leaderboardPrev" class="button secondary" data-i18n="games.prevPage">上一页</button><span id="leaderboardPageInfo"></span><button type="button" id="leaderboardNext" class="button secondary" data-i18n="games.nextPage">下一页</button></div>
       </aside>
     </div>
   </div>
@@ -1770,6 +1771,26 @@
     }
   }
 
+  let leaderboardRows = [];
+  let leaderboardPage = 1;
+  const LEADERBOARD_PAGE_SIZE = 20;
+  function renderLeaderboard() {
+    const totalPages = Math.max(1, Math.ceil(leaderboardRows.length / LEADERBOARD_PAGE_SIZE));
+    leaderboardPage = Math.min(Math.max(1, leaderboardPage), totalPages);
+    const start = (leaderboardPage - 1) * LEADERBOARD_PAGE_SIZE;
+    els.leaderboardList.innerHTML = leaderboardRows.slice(start, start + LEADERBOARD_PAGE_SIZE).map((item, index) => `
+      <li><span class="rank">${start + index + 1}</span><span>${escapeHtml(item.nickname)}<small> · ${ClubI18n.t('games.gamesUnit', { n: item.games_played || 0 })}</small></span><span class="score">${ClubI18n.t('games.scoreUnit', { n: item.high_score })}</span></li>
+    `).join('');
+    const total = Math.max(1, totalPages);
+    const pagination = document.getElementById('leaderboardPagination');
+    pagination.hidden = total <= 1;
+    document.getElementById('leaderboardPageInfo').textContent = ClubI18n.t('games.pageInfo', { page: leaderboardPage, total });
+    document.getElementById('leaderboardPrev').disabled = leaderboardPage <= 1;
+    document.getElementById('leaderboardNext').disabled = leaderboardPage >= total;
+  }
+  document.getElementById('leaderboardPrev').addEventListener('click', () => { leaderboardPage -= 1; renderLeaderboard(); });
+  document.getElementById('leaderboardNext').addEventListener('click', () => { leaderboardPage += 1; renderLeaderboard(); });
+
   async function loadLeaderboard() {
     const isVersus = state.lbTab === 'versus';
     els.lbHint.textContent = isVersus
@@ -1786,7 +1807,7 @@
           .select('nickname, games_played, high_score, updated_at')
           .order('high_score', { ascending: false })
           .order('updated_at', { ascending: true })
-          .limit(20);
+          ;
         if (!error && Array.isArray(data)) {
           rows = data;
           source = 'cloud';
@@ -1807,15 +1828,12 @@
 
     if (!rows.length) {
       els.leaderboardList.innerHTML = '<li class="empty">' + ClubI18n.t('games.emptyLb') + '</li>';
+      document.getElementById('leaderboardPagination').hidden = true;
       return;
     }
-    els.leaderboardList.innerHTML = rows.map((item, index) => `
-      <li>
-        <span class="rank">${index + 1}</span>
-        <span>${escapeHtml(item.nickname)}<small> · ${ClubI18n.t('games.gamesUnit', { n: item.games_played || 0 })}</small></span>
-        <span class="score">${ClubI18n.t('games.scoreUnit', { n: item.high_score })}</span>
-      </li>
-    `).join('');
+    leaderboardRows = rows;
+    leaderboardPage = 1;
+    renderLeaderboard();
   }
 
   function clearLoops() {
