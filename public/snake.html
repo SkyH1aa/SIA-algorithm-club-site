@@ -59,6 +59,7 @@
     .toggle-opt{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid rgba(73,231,255,.28);border-radius:999px;background:#0d1c2f;color:#e7f7ff;font-size:12px;font-weight:700;cursor:pointer;user-select:none}
     .toggle-opt.active{background:#7c3aed;border-color:#a78bfa;box-shadow:0 0 12px rgba(167,139,250,.28)}
     .toggle-opt:disabled,.toggle-opt.is-disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+    .control-method{display:inline-flex;align-items:center;gap:6px;color:#91a9b8;font-size:12px;font-weight:700}.control-method select{padding:5px 8px;border:1px solid rgba(73,231,255,.28);border-radius:7px;background:#0d1c2f;color:#e7f7ff;font:inherit}
     .play-area{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:8px}
     .boards{display:flex;gap:12px;justify-content:center;align-items:flex-start;flex:1 1 auto;min-height:0}
     .board-card{display:flex;flex-direction:column;gap:6px;align-items:center;min-width:0}
@@ -67,7 +68,7 @@
     .board-title{margin:0;font-size:13px;color:#91a9b8;font-weight:700}
     .board-meta{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;font-size:12px;color:#cfefff}
     .board-meta strong{color:#ffd166}
-    canvas.snake-board{display:block;width:min(520px, calc((100vw - 340px) * .48));max-height:min(560px, calc(100dvh - 220px));aspect-ratio:1/1;background:#0b1437;border:1px solid rgba(73,231,255,.28);border-radius:10px;touch-action:none}
+    canvas.snake-board{display:block;width:min(520px, calc((100vw - 340px) * .48), calc(100svh - 300px));height:auto;max-height:calc(100svh - 300px);aspect-ratio:1/1;background:#0b1437;border:1px solid rgba(73,231,255,.28);border-radius:10px;touch-action:none}
     body.is-versus canvas.snake-board{width:min(420px, calc((100vw - 340px) * .42));}
     .versus-diff{font-size:12px;color:#91a9b8}
     .versus-diff strong{color:#ffd166;font-size:14px}
@@ -98,7 +99,7 @@
       .page-shell{height:auto;min-height:calc(100dvh - 12px)}
       .layout{grid-template-columns:1fr}
       .leaderboard{max-height:220px}
-      canvas.snake-board{width:min(520px, calc(100vw - 48px));max-height:min(520px, calc(100dvh - var(--mobile-chrome)));}
+      canvas.snake-board{width:min(520px, calc(100vw - 48px), calc(100svh - 300px));max-height:calc(100svh - 300px);}
       body.is-versus canvas.snake-board{width:min(46vw, calc((100vw - 36px) / 2));max-height:min(46vw, calc(100dvh - var(--mobile-chrome)));}
     }
     @media (max-width: 1100px){
@@ -136,6 +137,7 @@
             <button type="button" class="action-btn primary" id="startBtn" data-i18n="games.start">开始</button>
             <button type="button" class="action-btn" id="stopBtn" hidden data-i18n="games.stop">停止</button>
             <button type="button" class="action-btn danger" id="surrenderBtn" hidden disabled data-i18n="games.surrender">投降</button>
+            <label class="control-method"><span data-i18n="games.controlMethod">操作方式</span><select id="controlMethod"><option value="keyboard" data-i18n="games.keyboardControl">键盘操作</option><option value="buttons" data-i18n="games.buttonControl">按钮操作</option></select></label>
           </div>
           <div class="assist-note" id="assistNote" data-i18n="snake.assistNote">AI 辅助：深色阴影轨迹与转向箭头均来自同一套 AI 决策（逐步模拟至当前苹果）。你仍完全手动操控。</div>
           <div class="mode-opts">
@@ -638,6 +640,7 @@
     surrendered: false,
     speedMult: 1,
     penetrate: false,
+    controlMethod: 'keyboard',
     player: null,
     ai: null
   };
@@ -668,6 +671,7 @@
     leaderboardList: document.getElementById('leaderboardList'),
     mobileControls: document.getElementById('mobileControls'),
     mobilePause: document.getElementById('mobilePause')
+    ,controlMethod: document.getElementById('controlMethod')
   };
   let explainEnabled = false;
   const explainToggle = document.getElementById('explainToggle');
@@ -885,12 +889,17 @@
   }
 
   function syncMobileControlsUI() {
-    const show = state.mode !== 'ai';
-    els.mobileControls.classList.toggle('visible', show && window.matchMedia('(max-width: 1100px), (pointer: coarse)').matches);
+    const show = state.mode !== 'ai' && state.controlMethod === 'buttons';
+    els.mobileControls.classList.toggle('visible', show);
     const disabled = !show || !state.inProgress || !state.player || state.player.gameOver;
     els.mobileControls.querySelectorAll('button[data-dir]').forEach(btn => { btn.disabled = disabled; });
     els.mobilePause.disabled = !state.inProgress || state.mode === 'versus' || !state.player || state.player.gameOver;
   }
+
+  els.controlMethod?.addEventListener('change', () => {
+    state.controlMethod = els.controlMethod.value === 'buttons' ? 'buttons' : 'keyboard';
+    syncMobileControlsUI();
+  });
 
   function applyModeUI() {
     document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -1140,6 +1149,7 @@
   }
 
   document.addEventListener('keydown', (e) => {
+    if (state.controlMethod === 'buttons') return;
     const map = { ArrowRight: 0, ArrowLeft: 1, ArrowUp: 2, ArrowDown: 3 };
     if (e.key === ' ') {
       if (state.mode !== 'versus' && state.player) {

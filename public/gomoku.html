@@ -57,7 +57,7 @@
     html[data-theme="light"] .cell.white { background-color: #FFFFFF !important; border-color: #252525 !important; }
     .result { min-height: 20px; margin: 14px 0 0; color: #49e7ff; font-weight: bold; }
     @media (max-width: 860px) { .game-layout { grid-template-columns: 1fr; } }
-    @media (max-width: 520px) { .board { transform: scale(.72); transform-origin: top center; margin-bottom: -120px; } }
+    @media (max-width: 520px) { .board { margin: 0 auto; } }
     
     .game-container {
       text-align: center;
@@ -65,11 +65,12 @@
     
     .ambient-background{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}.ambient-orb{position:absolute;width:min(48vw,620px);aspect-ratio:1;border-radius:50%;filter:blur(72px);opacity:.18;mix-blend-mode:screen;animation:drift-orb 18s ease-in-out infinite alternate}.orb-cyan{top:-18%;left:-12%;background:#00e5ff}.orb-violet{top:20%;right:-16%;background:#7c4dff;animation-delay:-7s}.ambient-grid{position:absolute;inset:-80px;background-image:linear-gradient(rgba(0,229,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.055) 1px,transparent 1px);background-size:72px 72px;opacity:.45;animation:grid-shift 26s linear infinite}#particleCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:.75}.pointer-glow{position:fixed;z-index:0;width:420px;height:420px;left:var(--pointer-x,50%);top:var(--pointer-y,14%);transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(73,231,255,.1),transparent 68%);pointer-events:none}.page-shell{position:relative;z-index:1}.page-header,.game-layout,.leaderboard,.panel{scroll-snap-align:start}.panel,.page-header{transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease}.panel:hover{border-color:rgba(73,231,255,.45);box-shadow:0 22px 60px rgba(0,0,0,.3),0 0 30px rgba(73,231,255,.08)}@keyframes drift-orb{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(7%,5%,0) scale(1.1)}}@keyframes grid-shift{to{transform:translate3d(72px,72px,0)}}.reveal-ready{opacity:0;transform:translateY(24px);transition:opacity .75s ease,transform .75s ease}.reveal-ready.is-visible{opacity:1;transform:none}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.ambient-orb,.ambient-grid{animation:none}.pointer-glow{display:none}.reveal-ready{opacity:1;transform:none;transition:none}.panel,.page-header{transition:none}}
     .board {
+      --cell-size: 30px;
       display: grid;
-      grid-template-columns: repeat(15, 30px);
-      width: 450px; /* 15 * 30px = 450px */
-      grid-template-rows: repeat(15, 30px);
-      height: 450px; /* 15 * 30px = 450px */
+      grid-template-columns: repeat(15, var(--cell-size));
+      width: calc(var(--cell-size) * 15);
+      grid-template-rows: repeat(15, var(--cell-size));
+      height: calc(var(--cell-size) * 15);
       gap: 0;
       border: 2px solid #333;
       background-color: #deb887;
@@ -77,12 +78,16 @@
     }
     
     .cell {
-      width: 30px;
-      height: 30px;
+      width: var(--cell-size);
+      height: var(--cell-size);
       border: 1px solid #333;
       box-sizing: border-box;
       cursor: pointer;
       position: relative;
+    }
+    @media (max-width: 860px) {
+      .board { --cell-size: min(30px, calc((100vw - 52px) / 15)); }
+      .game-layout { gap: 14px; }
     }
     
     .cell::before {

@@ -137,6 +137,7 @@
     .action-btn.primary { background: #FF6F00; border-color: #FF6F00; }
     .action-btn.danger { background: #7f1d1d; border-color: #ef4444; }
     .action-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .control-method{display:inline-flex;align-items:center;gap:6px;color:#91a9b8;font-size:12px;font-weight:700}.control-method select{padding:5px 8px;border:1px solid rgba(73,231,255,.28);border-radius:7px;background:#0d1c2f;color:#e7f7ff;font:inherit}
 
     .assist-opts {
       display: flex;
@@ -302,6 +303,9 @@
       height: min(600px, calc(100dvh - 210px));
       max-height: calc(100dvh - 210px);
       aspect-ratio: 1 / 2;
+    }
+    @media (max-width: 1100px) {
+      canvas.board { height: auto; width: min(100%, calc(100svh - 310px)); aspect-ratio: 1 / 2; max-height: calc(100svh - 310px); }
     }
     .board-meta {
       grid-area: meta;
@@ -713,6 +717,7 @@
             <button type="button" class="action-btn" id="restartBtn" disabled data-i18n="games.restart">重新开始</button>
             <button type="button" class="action-btn danger hidden" id="stopBtn" disabled data-i18n="games.stop">停止</button>
             <button type="button" class="action-btn danger hidden" id="surrenderBtn" disabled data-i18n="games.surrender">投降</button>
+            <label class="control-method"><span data-i18n="games.controlMethod">操作方式</span><select id="controlMethod"><option value="keyboard" data-i18n="games.keyboardControl">键盘操作</option><option value="buttons" data-i18n="games.buttonControl">按钮操作</option></select></label>
           </div>
 
           <div class="assist-opts" id="assistOpts">
@@ -1596,6 +1601,7 @@
     versusAlignTimer: null,
     versusAiDrop: 'none', // none | soft | hard
     aiPlayHardDrop: false
+    ,controlMethod: 'keyboard'
   };
   let explainEnabled = false;
   const explainToggle = document.getElementById('explainToggle');
@@ -1624,6 +1630,7 @@
     leaderboardList: document.getElementById('leaderboardList'),
     lbHint: document.getElementById('lbHint'),
     mobileControls: document.getElementById('mobileControls')
+    ,controlMethod: document.getElementById('controlMethod')
   };
 
   function modeNeedsNickname(mode = state.mode) {
@@ -1905,7 +1912,7 @@
     const el = els.mobileControls;
     if (!el) return;
     // 仅在可手动操作模式显示：普通 / 辅助 / 人机对战；AI 游玩隐藏
-    const show = state.mode !== 'ai' && window.matchMedia('(max-width: 1100px), (pointer: coarse)').matches;
+    const show = state.mode !== 'ai' && state.controlMethod === 'buttons';
     el.classList.toggle('visible', show);
     const disabled = !show || !state.inProgress || !state.player || !!state.player.gameOver;
     el.querySelectorAll('button[data-action]').forEach((btn) => {
@@ -1940,6 +1947,11 @@
     syncMobileControlsUI();
     scheduleMobileViewportFit();
   }
+
+  els.controlMethod?.addEventListener('change', () => {
+    state.controlMethod = els.controlMethod.value === 'buttons' ? 'buttons' : 'keyboard';
+    syncMobileControlsUI();
+  });
 
   function measureMobileChrome() {
     if (window.matchMedia('(max-width: 1100px), (pointer: coarse)').matches === false) return;
@@ -2333,7 +2345,7 @@
 
 
   function handleMobileAction(action) {
-    if (!state.inProgress || !state.player) return;
+    if (state.controlMethod === 'buttons' || !state.inProgress || !state.player) return;
     if (state.mode === 'ai') return;
     if (state.player.gameOver) return;
     switch (action) {
