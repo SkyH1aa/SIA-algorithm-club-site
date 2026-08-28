@@ -1531,7 +1531,7 @@
           { name: t('home.projTetrisName'), status: t('home.projLive'), type: t('home.projVersusAssist'), intro: t('home.projTetrisIntro'), link: 'public/tetris.html', linkText: t('home.projStart') },
           { name: t('home.projSnakeName'), status: t('home.projLive'), type: t('home.projVersusAssist'), intro: t('home.projSnakeIntro'), link: 'public/snake.html', linkText: t('home.projStart') },
           { name: t('home.projLabName'), status: t('home.projLabStatus'), type: t('home.projTeach'), intro: t('home.projLabIntro'), link: 'public/visualization-lab.html', linkText: t('home.projChooseLab') },
-          { name: t('home.projPlatformName'), status: t('home.projOnline'), type: t('home.projPlatformType'), intro: t('home.projPlatformIntro'), link: 'public/club-features.html', linkText: t('home.projEnterFeatures') }
+          { name: t('home.projPlatformName'), status: t('home.projOnline'), type: t('home.projPlatformType'), intro: t('home.projPlatformIntro'), link: 'public/platformer.html', linkText: t('home.projEnterFeatures') }
         ];
       }
       function getFallbackActivities() {
@@ -1622,12 +1622,16 @@
           'AI 俄罗斯方块': ['projLive', 'projVersusAssist', 'projTetrisIntro', 'projStart', 'projTetrisName'],
           'AI 贪吃蛇': ['projLive', 'projVersusAssist', 'projSnakeIntro', 'projStart', 'projSnakeName'],
           '算法可视化实验室': ['projLabStatus', 'projTeach', 'projLabIntro', 'projChooseLab', 'projLabName'],
-          '教学资源与 AI Bot 对战平台': ['projOnline', 'projPlatformType', 'projPlatformIntro', 'projEnterFeatures', 'projPlatformName']
+          '教学资源与 AI Bot 对战平台': ['projOnline', 'projPlatformType', 'projPlatformIntro', 'projEnterFeatures', 'projPlatformName'],
+          '行于无垠': ['projOnline', 'projPlatformType', 'projPlatformIntro', 'projEnterFeatures', 'projPlatformName'],
+          'Boundless Run': ['projOnline', 'projPlatformType', 'projPlatformIntro', 'projEnterFeatures', 'projPlatformName'],
+          'Teaching resources & AI Bot arena': ['projOnline', 'projPlatformType', 'projPlatformIntro', 'projEnterFeatures', 'projPlatformName']
         };
         const keys = keyMap[project.name];
         if (!keys || !window.ClubI18n?.t) return project;
         const [status, type, intro, linkText, name] = keys;
-        return { ...project, status: ClubI18n.t(`home.${status}`), type: ClubI18n.t(`home.${type}`), intro: ClubI18n.t(`home.${intro}`), linkText: ClubI18n.t(`home.${linkText}`), name: name ? ClubI18n.t(`home.${name}`) : project.name };
+        const isBoundlessRun=project.name==='教学资源与 AI Bot 对战平台'||project.name==='行于无垠'||project.name==='Boundless Run'||project.name==='Teaching resources & AI Bot arena';
+        return { ...project, status: ClubI18n.t(`home.${status}`), type: ClubI18n.t(`home.${type}`), intro: ClubI18n.t(`home.${intro}`), linkText: ClubI18n.t(`home.${linkText}`), name: name ? ClubI18n.t(`home.${name}`) : project.name, link: isBoundlessRun ? 'public/platformer.html' : project.link };
       }
 
       function renderProjects(projects) {

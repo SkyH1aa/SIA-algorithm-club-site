@@ -68,8 +68,8 @@
     .board-title{margin:0;font-size:13px;color:#91a9b8;font-weight:700}
     .board-meta{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;font-size:12px;color:#cfefff}
     .board-meta strong{color:#ffd166}
-    canvas.snake-board{display:block;width:min(520px, calc((100vw - 340px) * .48), calc(100svh - 300px));height:auto;max-height:calc(100svh - 300px);aspect-ratio:1/1;background:#0b1437;border:1px solid rgba(73,231,255,.28);border-radius:10px;touch-action:none}
-    body.is-versus canvas.snake-board{width:min(420px, calc((100vw - 340px) * .42));}
+    canvas.snake-board{display:block;width:min(520px,100%);height:auto;max-height:none;aspect-ratio:1/1;background:#0b1437;border:1px solid rgba(73,231,255,.28);border-radius:10px;touch-action:none}
+    body.is-versus canvas.snake-board{width:min(420px,100%);}
     .versus-diff{font-size:12px;color:#91a9b8}
     .versus-diff strong{color:#ffd166;font-size:14px}
     .result{min-height:18px;margin:0;color:#49e7ff;font-weight:700;font-size:13px}
@@ -99,8 +99,8 @@
       .page-shell{height:auto;min-height:calc(100dvh - 12px)}
       .layout{grid-template-columns:1fr}
       .leaderboard{max-height:220px}
-      canvas.snake-board{width:min(520px, calc(100vw - 48px), calc(100svh - 300px));max-height:calc(100svh - 300px);}
-      body.is-versus canvas.snake-board{width:min(46vw, calc((100vw - 36px) / 2));max-height:min(46vw, calc(100dvh - var(--mobile-chrome)));}
+      canvas.snake-board{width:100%;max-height:none;}
+      body.is-versus canvas.snake-board{width:100%;max-height:none;}
     }
     @media (max-width: 1100px){
       body{padding:6px 8px 96px;overflow:auto}
@@ -896,9 +896,25 @@
     els.mobilePause.disabled = !state.inProgress || state.mode === 'versus' || !state.player || state.player.gameOver;
   }
 
+  function fitSnakeBoards() {
+    const area = document.querySelector('.play-area');
+    const boards = document.getElementById('boards');
+    if (!area || !boards) return;
+    const cards = [...boards.querySelectorAll('.board-card:not(.hidden)')];
+    if (!cards.length) return;
+    const areaRect = area.getBoundingClientRect();
+    const boardRect = boards.getBoundingClientRect();
+    const gap = Number.parseFloat(getComputedStyle(boards).columnGap) || 8;
+    const widthLimit = Math.max(120, (boardRect.width - gap * (cards.length - 1)) / cards.length - 2);
+    const heightLimit = Math.max(120, areaRect.height - 70);
+    const size = Math.max(120, Math.min(520, widthLimit, heightLimit));
+    cards.forEach(card => { const canvas = card.querySelector('canvas.snake-board'); if (canvas) { canvas.style.width = `${Math.floor(size)}px`; canvas.style.height = `${Math.floor(size)}px`; } });
+  }
+
   els.controlMethod?.addEventListener('change', () => {
     state.controlMethod = els.controlMethod.value === 'buttons' ? 'buttons' : 'keyboard';
     syncMobileControlsUI();
+    requestAnimationFrame(fitSnakeBoards);
   });
 
   function applyModeUI() {
@@ -925,6 +941,7 @@
       : ClubI18n.t('games.nickHintDemo');
     syncSpeedUI();
     syncMobileControlsUI();
+    requestAnimationFrame(fitSnakeBoards);
   }
 
   function describeScoreBoost(raw, mult, kind = 'score', opts = {}) {
@@ -1179,7 +1196,9 @@
     setResult(state.player.paused ? ClubI18n.t('games.paused') : ClubI18n.t('games.resumed'));
   });
 
-  window.addEventListener('resize', syncMobileControlsUI);
+  window.addEventListener('resize', () => { syncMobileControlsUI(); requestAnimationFrame(fitSnakeBoards); });
+  window.addEventListener('orientationchange', () => setTimeout(fitSnakeBoards, 80));
+  if (window.ResizeObserver) new ResizeObserver(() => requestAnimationFrame(fitSnakeBoards)).observe(document.querySelector('.play-area'));
 
   window.addEventListener('club:langchange', () => {
     try {
@@ -1192,6 +1211,7 @@
 
   applyModeUI();
   createEngines();
+  requestAnimationFrame(fitSnakeBoards);
   loadLeaderboard();
   els.stopBtn.disabled = true;
 })();
