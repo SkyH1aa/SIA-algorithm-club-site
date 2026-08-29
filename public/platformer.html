@@ -10,12 +10,72 @@
 :root{font-family:"Segoe UI","Microsoft YaHei",sans-serif;color:#f7fbff;background:#080b14}*{box-sizing:border-box}body{margin:0;min-width:320px;min-height:100vh;background:radial-gradient(circle at 50% 0%,#203a56,#080b14 65%)}.shell{width:min(1180px,100%);margin:auto;padding:16px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}h1{margin:0;font-size:clamp(19px,4vw,29px)}a{color:#9fe8ff;text-decoration:none;font-size:14px}.auth-gate,.leaderboard-panel{border:1px solid #2b6980;border-radius:8px;background:#111b32;padding:20px;margin-bottom:12px}.auth-gate h2,.leaderboard-panel h2{margin:0 0 8px;font-size:20px}.auth-form{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.auth-form input{height:38px;width:190px;border:1px solid #476176;border-radius:4px;background:#0b1424;color:#fff;padding:0 10px}.button{height:38px;border:1px solid #3da5c7;border-radius:4px;background:#19334b;color:#fff;padding:0 14px;cursor:pointer}.button.secondary{border-color:#476176;background:#18202e}.auth-message{min-height:20px;margin:10px 0 0;color:#ffd166;font-size:13px}.auth-user{color:#9fe8ff;font-size:13px;margin-right:12px}#game-wrap{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border:1px solid #2b6980;border-radius:8px;background:#111b32;box-shadow:0 20px 80px #0009}#game,#game canvas{width:100%;height:100%}#game canvas{display:block}.game-loading{position:absolute;inset:0;z-index:30;display:grid;place-items:center;background:#111b32;color:#d8f4ff;font-size:16px;letter-spacing:.02em}.game-loading[hidden]{display:none}.help{display:flex;flex-wrap:wrap;gap:8px 18px;margin:10px 2px 0;color:#a6b9ca;font-size:13px}kbd{padding:2px 6px;border:1px solid #476176;border-bottom-width:2px;border-radius:4px;background:#172638;color:#eaf7ff}.notice{margin-top:10px;color:#ffd77a;font-size:12px}.leaderboard-head{display:flex;justify-content:space-between;align-items:center}.leaderboard-list{margin:10px 0 0;padding-left:25px;color:#eaf7ff}.leaderboard-list li{padding:4px 0}.leaderboard-list small{color:#9fb7c9}
 .touch-controls{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:12px 0 0;padding:4px 2px;user-select:none;touch-action:none}.joystick{position:relative;width:132px;height:88px;border:1px solid #476176;border-radius:44px;background:#101d30;box-shadow:inset 0 0 0 1px #203b51;touch-action:none}.joystick::after{content:'左右移动';position:absolute;inset:0;display:grid;place-items:center;color:#9fb7c9;font-size:12px;pointer-events:none}.joystick-knob{position:absolute;z-index:1;left:43px;top:21px;width:44px;height:44px;border-radius:50%;background:#3da5c7;box-shadow:0 4px 16px #0008;touch-action:none}.touch-actions{display:grid;grid-template-columns:repeat(3,minmax(104px,1fr));gap:10px;flex:1}.touch-button{min-width:0;height:54px;border:1px solid #3da5c7;border-radius:8px;background:#19334b;color:#fff;font-weight:600;font-size:14px;line-height:1.2;cursor:pointer;touch-action:none}.touch-button small{color:#9fb7c9;font-size:11px}.touch-button:active{background:#285d78;transform:translateY(1px)}@media (max-width:560px){.touch-controls{align-items:stretch;gap:10px}.joystick{width:104px;height:auto;min-height:118px;border-radius:52px}.joystick-knob{left:30px;top:36px}.touch-actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.touch-button{height:54px;padding:0 4px;font-size:13px}}
 </style>
+<style>
+:root{--ink:#070b13;--panel:#0d1725;--panel-2:#122236;--line:#24435a;--muted:#8fa7ba;--cyan:#62d9ee;--gold:#ffd166;--coral:#ff7b72;--violet:#bd9aff}
+body{background:var(--ink);color:#f3f8fb}
+.shell{padding:22px 20px 30px}
+header{min-height:52px;margin-bottom:16px;padding:0 2px 12px;border-bottom:1px solid #1c3548}
+header h1{letter-spacing:.04em;text-shadow:0 3px 0 #17283a,0 0 22px #62d9ee33}
+header a{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid #2c536b;border-radius:6px;background:#0e1d2d;color:var(--cyan);transition:background .15s,border-color .15s}
+header a:hover{background:#163249;border-color:var(--cyan)}
+.auth-gate,.leaderboard-panel{border:1px solid var(--line);border-radius:8px;background:var(--panel);box-shadow:0 14px 35px #0005}
+.auth-gate{position:relative;overflow:hidden;padding:24px 24px 22px}
+.auth-gate::before{content:"PLAYER ACCESS";position:absolute;right:22px;top:18px;color:#41677b;font-size:11px;letter-spacing:.16em}
+.auth-gate h2{font-size:23px;letter-spacing:.02em;color:#fff}
+.auth-gate p{color:var(--muted)}
+.auth-form input{height:42px;border-color:#2b4c63;background:#09121e;border-radius:5px;transition:border-color .15s,box-shadow .15s}
+.auth-form input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px #62d9ee1c}
+.button{height:42px;border-radius:5px;border-color:#3eafc9;background:#164057;font-weight:600;transition:transform .15s,background .15s,border-color .15s}
+.button:hover{background:#1d5b73;border-color:var(--cyan);transform:translateY(-1px)}
+.button.secondary{background:#15202d;border-color:#385064}.button.secondary:hover{background:#203242;border-color:#718da1}
+#game-wrap{border:1px solid #2b5b74;border-radius:8px;background:#0b1421;box-shadow:0 24px 65px #0009,0 0 0 1px #0d2535;isolation:isolate}
+#game-wrap::after{content:"";position:absolute;inset:0;pointer-events:none;border:1px solid #ffffff0b;border-radius:7px;z-index:24}
+.game-loading{background:#0b1421;color:#dff8ff;letter-spacing:.04em}
+.touch-controls{margin:14px 0 2px;padding:10px 12px;border:1px solid #1e394c;border-radius:8px;background:#0b1420;box-shadow:0 8px 22px #0004}
+.joystick{border-color:#31566b;background:#0d1b2a;box-shadow:inset 0 0 0 1px #203c50,0 4px 12px #0004}
+.joystick-knob{background:var(--cyan);box-shadow:0 0 0 4px #62d9ee22,0 4px 16px #0008}
+.touch-actions{gap:8px}
+.touch-button{border-radius:6px;border-color:#315a72;background:#142c40;box-shadow:inset 0 -3px 0 #07131f,0 4px 10px #0004;transition:transform .12s,filter .12s,background .12s}
+.touch-button:hover{filter:brightness(1.18)}
+.touch-button:active{transform:translateY(2px);box-shadow:inset 0 -1px 0 #07131f}
+#shoot-button{background:#713a35;border-color:#d27668}#jump-button{background:#15546a;border-color:#62d9ee}
+#dash-button{background:#49366f;border-color:#bd9aff}#airstrike-button{background:#633b61;border-color:#ee8cdf}
+#ultimate-button{background:#765526;border-color:#ffd166}#switch-button{background:#263a4b;border-color:#8ea8b8}
+.help{margin:12px 2px 0;color:#9cb3c3;line-height:1.65}.help span{padding:3px 0}
+kbd{border-color:#38546a;background:#122438;color:#eafaff}
+.notice{padding:9px 11px;border-left:3px solid var(--gold);background:#18170f;color:#e7c977;border-radius:0 4px 4px 0}
+.leaderboard-panel{padding:18px 20px}.leaderboard-panel h2{color:#fff}.leaderboard-list li{border-bottom:1px solid #1c3345;padding:8px 0}.leaderboard-list li:last-child{border-bottom:0}
+@media (max-width:700px){.shell{padding:14px 10px 22px}header{min-height:44px}header h1{font-size:24px}.auth-gate::before{display:none}.auth-gate{padding:18px}.auth-form input{width:100%}.auth-form .button{flex:1}.touch-controls{padding:8px}.touch-actions{grid-template-columns:repeat(3,minmax(0,1fr))}.touch-button small{font-size:10px}}
+.play-layout{display:block;min-width:0}
+@media (max-width:700px){
+  #game-wrap{aspect-ratio:16/10}
+  .touch-controls{margin-top:8px}
+}
+@media (max-width:900px) and (orientation:landscape){
+  body{min-height:100svh;overflow-x:hidden}
+  .shell{width:100%;max-width:none;padding:6px 8px 10px}
+  header{min-height:32px;height:32px;margin-bottom:6px;padding-bottom:5px}
+  header h1{font-size:20px}
+  header a{padding:4px 7px;font-size:11px}
+  #game-content{min-width:0}
+  .play-layout{display:grid;grid-template-columns:minmax(0,1fr) 224px;gap:8px;align-items:stretch;height:calc(100svh - 50px);min-height:250px}
+  #game-wrap{height:100%;min-height:0;aspect-ratio:auto}
+  .touch-controls{height:100%;min-height:0;margin:0;padding:7px;display:flex;flex-direction:column;justify-content:flex-start;gap:7px;border-radius:7px}
+  .joystick{width:100%;height:54px;min-height:54px;border-radius:28px;flex:0 0 54px}
+  .joystick-knob{left:calc(50% - 22px);top:5px}
+  .touch-actions{width:100%;height:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;flex:1;align-content:start}
+  .touch-button{height:48px;font-size:12px;padding:0 3px}
+  .touch-button small{font-size:9px}
+  .help,.notice,.leaderboard-panel{display:none}
+}
+</style>
 </head>
 <body>
 <main class="shell">
 <header><h1>行于无垠</h1><div><span id="auth-user" class="auth-user"></span><a href="../index.html">返回官网</a></div></header>
 <section id="auth-gate" class="auth-gate"><h2>登录后开始游戏</h2><p>使用本游戏独立账号，不与社团盘登录系统关联。</p><div class="auth-form"><input id="username-input" type="text" maxlength="32" placeholder="用户名"><input id="password-input" type="password" maxlength="72" placeholder="密码"><button class="button" id="login-button" type="button">登录</button><button class="button secondary" id="register-button" type="button">注册新用户</button></div><p id="auth-message" class="auth-message" role="status"></p></section>
 <section id="game-content" hidden>
+<div class="play-layout">
 <div id="game-wrap" style="touch-action:none"><div id="game"></div><div id="game-loading" class="game-loading">正在加载游戏素材…</div></div>
 <div class="touch-controls" aria-label="触控操作">
   <div class="joystick" id="move-joystick" aria-label="左右移动虚拟摇杆"><div class="joystick-knob" id="joystick-knob"></div></div>
@@ -27,6 +87,7 @@
     <button class="touch-button" id="ultimate-button" type="button">大招<br><small>能量满时释放</small></button>
     <button class="touch-button" id="switch-button" type="button">切换武器<br><small>右键</small></button>
   </div>
+</div>
 </div>
 <div class="help"><span><kbd>A</kbd><kbd>D</kbd> / 方向键移动</span><span><kbd>W</kbd><kbd>↑</kbd><kbd>空格</kbd> 跳跃（二段跳需身法 40 级）</span><span>鼠标左键射击</span><span>手机：左侧摇杆移动，画面按住连射并滑动瞄准</span><span>右键/触控切换武器（冲锋枪/激光枪/狙击枪）</span><span><kbd>Z</kbd> 能量满时释放大招</span><span><kbd>S</kbd> 普通闪身 · <kbd>E</kbd> 追踪闪身 · <kbd>F</kbd> 空袭（70级）</span><span><kbd>ESC</kbd> 暂停 · 顶部“退出本局”直接退出</span><span><kbd>R</kbd> 重开</span></div>
 <div class="notice">紫色技能豆：接下来 3 次射击发射六发扇形散弹；射击 85 级后为 5 次，91-99 级每级再增加 1 发。身法 70 级解锁空袭（F），射击 85 级解锁双环大招；无尽模式每 15 秒刷新一波 15 个敌人。</div>
@@ -220,6 +281,20 @@ LEVELS.push(
   createExtendedLevel(49,'第四十九关 · 复杂度尽头',37400,44,{coinCount:45,beanCount:45,enemyCount:310}),
   createExtendedLevel(50,'第五十关 · 无垠终局',38000,45,{coinCount:45,beanCount:45,enemyCount:320})
 );
+function createLateBossLevel(id,name,w,variant,bossHp,pattern){
+  const terrain=[[0,520,w,80],[260,430,520,24],[980,350,560,24],[1700,260,520,24],[2450,390,620,24],[3300,290,560,24],[4050,430,620,24]];
+  return {id,name,w,worldH:900,yScale:1.6,yBase:520,worldBase:820,terrain,e:[],p:[],boss:['bf',w-420,350,1,bossHp,pattern],f:w-130};
+}
+for(let id=51;id<=100;id++){
+  if(id%5===0){
+    const bossIndex=Math.floor((id-50)/5),patterns=[['fan','扇形散射'],['track','追踪弹'],['wave','地面波'],['laser','激光扫射'],['ring','弹幕环']];
+    const [pattern,label]=patterns[(bossIndex-1)%patterns.length];
+    LEVELS.push(createLateBossLevel(id,`第${id}关 · ${label} Boss`,19000+bossIndex*700,id,15000+(bossIndex-1)*7500,pattern));
+  }else{
+    const span=id-51,length=15000+((span*1300)%15001),enemyCount=100+((span*37)%401),layers=2+(span%3);
+    LEVELS.push(createExtendedLevel(id,`第${id}关 · 无垠领域 ${span+1}`,length,46+span,{coinCount:50,beanCount:50,enemyCount}));
+  }
+}
 const ART={
   heroStandL:'optimized/Main_LeftStand.png',heroStandR:'optimized/Main_RightStand.png',
   heroMoveL:'optimized/Main_LeftMove.png',heroMoveR:'optimized/Main_RightMove.png',
@@ -227,7 +302,8 @@ const ART={
   enemy1L:'optimized/Enemy1_Left.png',enemy1R:'optimized/Enemy1_Right.png',
   enemy2L:'optimized/Enemy2_Left.png',enemy2R:'optimized/Enemy2_Right.png',
   enemy3L:'optimized/Enemy3_Left.png',enemy3R:'optimized/Enemy3_Right.png',
-  coin:'optimized/Coin.png',energy:'optimized/EnergyBean.png',skill:'optimized/SkillBean.png',heart:'optimized/LifeBean.png'
+  coin:'optimized/Coin.png',energy:'optimized/EnergyBean.png',skill:'optimized/SkillBean.png',heart:'optimized/LifeBean.png',
+  weaponPistol:'optimized/weaponPistol.png',weaponShotgun:'optimized/weaponShotgun.png',weaponSmg:'optimized/weaponSmg.png',weaponLaser:'optimized/weaponLaser.png',weaponSniper:'optimized/weaponSniper.png'
 };
 const save=()=>{localStorage.setItem(SAVE_KEY,JSON.stringify(data));if(currentUser)void saveRemoteProfile();};
 function tex(scene,key,color,width,height,radius=0){const g=scene.make.graphics({add:false});g.fillStyle(color,1);g.fillRoundedRect(0,0,width,height,radius);g.generateTexture(key,width,height);g.destroy()}
@@ -376,6 +452,7 @@ class Boot extends Phaser.Scene{
       heroStandL:[0x4da3ff,52,78],heroStandR:[0x4da3ff,52,78],heroMoveL:[0x4da3ff,52,78],heroMoveR:[0x4da3ff,52,78],heroJumpL:[0x4da3ff,52,78],heroJumpR:[0x4da3ff,52,78],
       enemy1L:[0xffd166,72,42],enemy1R:[0xffd166,72,42],enemy2L:[0x63d471,62,56],enemy2R:[0x63d471,62,56],enemy3L:[0xed7be7,72,52],enemy3R:[0xed7be7,72,52],
       coin:[0xffd166,32,32],energy:[0x4da3ff,32,32],skill:[0xb78cff,32,32],heart:[0xff6173,32,32]
+      ,weaponPistol:[0x7bdff2,46,31],weaponShotgun:[0xb78cff,54,20],weaponSmg:[0x62d9ee,52,31],weaponLaser:[0x65e572,58,33],weaponSniper:[0xffd166,60,22]
     };
     Object.entries(fallbackTextures).forEach(([key,[color,width,height]])=>{
       if(failedAssetKeys.has(key)&&this.textures.exists(key))this.textures.remove(key);
@@ -403,15 +480,19 @@ class Menu extends Phaser.Scene{
   constructor(){super('Menu')}
   create(){
     this.cameras.main.setBackgroundColor('#10182d');
-    this.add.text(46,16,'行于无垠',{fontSize:'34px',fontStyle:'bold',color:'#f7fbff'});
-    this.add.text(46,56,'选择关卡',{fontSize:'25px',fontStyle:'bold'});
+    this.add.rectangle(640,360,1280,720,0x070b13).setDepth(-10);
+    this.add.rectangle(640,78,1180,1,0x24435a).setDepth(-9);
+    this.add.rectangle(46,98,5,292,0x62d9ee).setOrigin(.5,0).setDepth(-9);
+    this.add.text(46,16,'行于无垠',{fontSize:'34px',fontStyle:'bold',color:'#f7fbff',shadow:{offsetX:0,offsetY:3,color:'#000',blur:6,stroke:true,fill:true}});
+    this.add.text(48,57,'ALGORITHM SOCIETY · SIDE-SCROLLING ARENA',{fontSize:'11px',letterSpacing:2,color:'#5e91a7'});
+    this.add.text(70,98,'选择关卡',{fontSize:'25px',fontStyle:'bold',color:'#fff'});
     const pageSize=8,pageCount=Math.ceil(LEVELS.length/pageSize);
     levelPage=Phaser.Math.Clamp(levelPage,0,Math.max(0,pageCount-1));
     const pageStart=levelPage*pageSize,pageEnd=Math.min(LEVELS.length,pageStart+pageSize),cardWidth=500;
     for(let index=pageStart;index<pageEnd;index++){
       const definition=LEVELS[index],available=index<data.unlocked,localIndex=index-pageStart,col=localIndex%2,row=Math.floor(localIndex/2),x=32+col*610,y=98+row*70;
-      const button=this.add.rectangle(x,y,cardWidth,48,available?0x19334b:0x18202e).setOrigin(0).setStrokeStyle(2,available?0x3da5c7:0x3a4654);
-      this.add.text(x+12,y+9,`${index+1}. ${definition.name}`,{fontSize:'14px',color:available?'#fff':'#718293'});
+      const button=this.add.rectangle(x,y,cardWidth,48,available?0x122b3d:0x121a24).setOrigin(0).setStrokeStyle(1,available?0x3c89a5:0x263744);
+      this.add.text(x+12,y+9,`${index+1}. ${definition.name}`,{fontSize:'14px',color:available?'#f4fbff':'#718293'});
       this.add.text(x+cardWidth-10,y+17,available?'开始 →':'未解锁',{fontSize:'12px',color:available?'#ffd166':'#718293'}).setOrigin(1,0);
       if(available)button.setInteractive({useHandCursor:true}).on('pointerdown',()=>{level=index;endlessMode=false;this.scene.start('Game')});
     }
@@ -475,7 +556,20 @@ class Game extends Phaser.Scene{
     const worldHeight=this.definition.worldH||600;
     this.physics.world.setBounds(0,0,this.definition.w,worldHeight);
     this.cameras.main.setBounds(0,0,this.definition.w,worldHeight).setBackgroundColor('#111b32');
-    this.hud=this.add.text(18,12,'',{fontSize:'13px',color:'#ffd166',lineSpacing:3,wordWrap:{width:1120,useAdvancedWrap:true}}).setScrollFactor(0).setDepth(20);
+    const backdrop=this.add.graphics().setDepth(-20);
+    backdrop.fillStyle(0x0b1421,1).fillRect(0,0,this.definition.w,worldHeight);
+    backdrop.fillStyle(0x10273a,1).fillRect(0,0,this.definition.w,worldHeight*.56);
+    backdrop.fillStyle(0x163148,1).fillRect(0,worldHeight*.56,this.definition.w,worldHeight*.44);
+    for(let x=0;x<this.definition.w;x+=260){
+      backdrop.fillStyle(0x1c4055,.34).fillRect(x,worldHeight*.56,2,worldHeight*.44);
+      backdrop.fillStyle(0x285269,.28).fillRect(x+52,worldHeight*.56+35,110,3);
+    }
+    for(let i=0;i<Math.ceil(this.definition.w/180);i++){
+      const sx=80+i*180,sy=70+(i*47)%170;
+      backdrop.fillStyle(i%3===0?0xffd166:0x7adff0,.7).fillCircle(sx,sy,2);
+    }
+    this.add.rectangle(18,8,1244,58,0x07111dcc).setOrigin(0).setScrollFactor(0).setDepth(19).setStrokeStyle(1,0x2b5b74);
+    this.hud=this.add.text(30,18,'',{fontSize:'13px',color:'#ffd166',lineSpacing:3,wordWrap:{width:1160,useAdvancedWrap:true}}).setScrollFactor(0).setDepth(20);
     this.pauseButton=this.add.rectangle(1170,14,92,32,0x19334b).setScrollFactor(0).setDepth(21).setStrokeStyle(1,0x3da5c7).setInteractive({useHandCursor:true});
     this.pauseButtonText=this.add.text(1170,14,'退出本局',{fontSize:'13px',color:'#fff'}).setOrigin(.5).setScrollFactor(0).setDepth(22);
     this.pauseButton.on('pointerdown',()=>this.exitWithoutReward());
@@ -489,6 +583,8 @@ class Game extends Phaser.Scene{
     this.player=this.physics.add.sprite(110,this.floorTop-80,'hitPlayer').setVisible(false).setCollideWorldBounds(true);
     this.player.body.setMaxVelocity(320,1100);
     this.playerArt=this.add.image(110,this.floorTop-45,'heroStandR').setOrigin(.5,1).setDisplaySize(52,78).setDepth(4);
+    this.weaponArt=this.add.image(110,this.floorTop-46,'weaponPistol').setOrigin(.12,.5).setDisplaySize(46,31).setDepth(5);
+    this.weaponKey='weaponPistol';
     this.enemies=this.physics.add.group();
     this.definition.e.forEach(spec=>this.spawnEnemy(spec));
     this.bossEnemy=null;
@@ -523,13 +619,13 @@ class Game extends Phaser.Scene{
     });
     this.syncPlayerArt(true);
   }
-  spawnEnemy([type,x,y,waveMultiplier]){
+  spawnEnemy([type,x,y,waveMultiplier,bossHp,bossPattern]){
     y=this.worldY(y);
-     const config=type==='y'?{body:'hitEnemy1',art:'enemy1',size:[72,42],flying:false}:type==='g'?{body:'hitEnemy2',art:'enemy2',size:[62,56],flying:false}:type==='b1'?{body:'hitBoss1',art:'enemy1',size:[154,108],flying:false,boss:true}:type==='b2'?{body:'hitBoss2',art:'enemy2',size:[190,138],flying:false,boss:true}:type==='b'?{body:'hitBoss3',art:'enemy3',size:[150,110],flying:true,boss:true}:type==='e2'?{body:'hitEnemy2',art:'enemy2',size:[92,80],flying:false,elite:true}:{body:'hitEnemy3',art:'enemy3',size:[72,52],flying:true};
+    const config=type==='y'?{body:'hitEnemy1',art:'enemy1',size:[72,42],flying:false}:type==='g'?{body:'hitEnemy2',art:'enemy2',size:[62,56],flying:false}:type==='b1'?{body:'hitBoss1',art:'enemy1',size:[154,108],flying:false,boss:true}:type==='b2'?{body:'hitBoss2',art:'enemy2',size:[190,138],flying:false,boss:true}:type==='b'?{body:'hitBoss3',art:'enemy3',size:[150,110],flying:true,boss:true}:type.startsWith('bf')||type.startsWith('bt')||type.startsWith('bw')||type.startsWith('bl')||type.startsWith('br')?{body:'hitBoss2',art:'enemy2',size:[190,138],flying:false,boss:true}:{body:'hitEnemy3',art:'enemy3',size:[72,52],flying:true};
     const enemy=this.enemies.create(x,y,config.body).setVisible(false).setCollideWorldBounds(true);
-    const baseHp=type==='y'?2:type==='e2'?1000:type==='b1'?10000:type==='b2'?15000:type==='b'?5000:5,baseDamage=type==='y'||type==='b1'?2:type==='b2'?5:type==='b'?4:type==='e2'?2:1;
+    const baseHp=type==='y'?2:type==='e2'?1000:type==='b1'?10000:type==='b2'?15000:type==='b'?5000:type.startsWith('b')?Number(bossHp)||15000:5,baseDamage=type==='y'||type==='b1'?2:type==='b2'?5:type==='b'?4:type.startsWith('b')?5:type==='e2'?2:1;
     const multiplier=Number(waveMultiplier)||this.enemyMultiplier;
-    enemy.type=type;enemy.hp=type==='b1'?10000:type==='b2'?15000:type==='b'?5000:baseHp*multiplier;enemy.maxHp=enemy.hp;enemy.contactDamage=baseDamage*multiplier;enemy.waveMultiplier=multiplier;enemy.wave=this.endlessWave||0;enemy.artBase=config.art;enemy.artSize=config.size;enemy.flying=config.flying;enemy.boss=Boolean(config.boss);enemy.elite=Boolean(config.elite);enemy.shield=type==='e2'?2000:0;enemy.maxShield=enemy.shield;enemy.facingLeft=false;enemy.stunnedUntil=0;enemy.bossStage=type==='b2'?1:0;enemy.spiralActiveUntil=0;enemy.spiralCooldownUntil=0;
+    enemy.type=type;enemy.hp=type==='b1'?10000:type==='b2'?15000:type==='b'?5000:config.boss?baseHp:baseHp*multiplier;enemy.maxHp=enemy.hp;enemy.contactDamage=baseDamage*multiplier;enemy.waveMultiplier=multiplier;enemy.wave=this.endlessWave||0;enemy.artBase=config.art;enemy.artSize=config.size;enemy.flying=config.flying;enemy.boss=Boolean(config.boss);enemy.elite=Boolean(config.elite);enemy.bossPattern=bossPattern||'';enemy.shield=type==='e2'?2000:0;enemy.maxShield=enemy.shield;enemy.facingLeft=false;enemy.stunnedUntil=0;enemy.bossStage=type==='b2'?1:0;enemy.spiralActiveUntil=0;enemy.spiralCooldownUntil=0;
     enemy.art=this.add.image(x,y,config.art+'R').setDisplaySize(config.size[0],config.size[1]).setDepth(4);
     enemy.art.setOrigin(.5,config.flying?.5:1);
     if(config.flying)enemy.body.allowGravity=false;
@@ -553,6 +649,47 @@ class Game extends Phaser.Scene{
     const key=state+(this.leftFace?'L':'R');
     if(force||key!==this.heroKey){this.playerArt.setTexture(key).setDisplaySize(52,78);this.heroKey=key;}
     this.playerArt.setPosition(this.player.x,this.player.body.bottom);
+    this.syncWeaponArt();
+  }
+  getWeaponMuzzle(){
+    const pointer=this.pointer||this.input.activePointer,target=this.cameras.main.getWorldPoint(pointer.x,pointer.y);
+    const handX=this.player.x+(this.leftFace?-13:13),handY=this.player.body.bottom-48;
+    const angle=Math.atan2(target.y-handY,target.x-handX);
+    const length=this.activeWeapon==='pistol'&&this.spreadShots>0?46:this.activeWeapon==='sniper'?52:this.activeWeapon==='laser'?50:this.activeWeapon==='smg'?44:39;
+    return {x:handX+Math.cos(angle)*length,y:handY+Math.sin(angle)*length,angle};
+  }
+  getWeaponTextureKey(){
+    if(this.activeWeapon==='pistol'&&this.spreadShots>0)return 'weaponShotgun';
+    if(this.activeWeapon==='smg')return 'weaponSmg';
+    if(this.activeWeapon==='laser')return 'weaponLaser';
+    if(this.activeWeapon==='sniper')return 'weaponSniper';
+    return 'weaponPistol';
+  }
+  syncWeaponArt(){
+    if(!this.weaponArt||!this.player)return;
+    const key=this.getWeaponTextureKey();
+    const sizes={weaponPistol:[46,31],weaponShotgun:[54,20],weaponSmg:[52,31],weaponLaser:[58,33],weaponSniper:[60,22]};
+    if(this.weaponKey!==key||this.weaponArt.texture?.key!==key){this.weaponArt.setTexture(key).setDisplaySize(...sizes[key]);this.weaponKey=key;}
+    const pointer=this.pointer||this.input.activePointer,target=this.cameras.main.getWorldPoint(pointer.x,pointer.y);
+    const handX=this.player.x+(this.leftFace?-13:13),handY=this.player.body.bottom-48;
+    const angle=Math.atan2(target.y-handY,target.x-handX);
+    this.weaponArt.setPosition(handX,handY).setRotation(angle);
+    this.weaponArt.setFlipY(Math.cos(angle)<0);
+    this.weaponArt.setVisible(true);
+  }
+  burstEffect(x,y,color=0xffffff,scale=1){
+    const ring=this.add.circle(x,y,8,color,0.85).setDepth(12).setStrokeStyle(3,0xffffff,0.8);
+    this.tweens.add({targets:ring,radius:30*scale,alpha:0,duration:260,ease:'Cubic.Out',onComplete:()=>ring.destroy()});
+    const sparks=[];
+    for(let i=0;i<6;i++){
+      const angle=i*Math.PI/3,part=this.add.rectangle(x,y,5,5,color,1).setDepth(12);
+      sparks.push(part);this.tweens.add({targets:part,x:x+Math.cos(angle)*30*scale,y:y+Math.sin(angle)*30*scale,alpha:0,duration:320,ease:'Cubic.Out',onComplete:()=>part.destroy()});
+    }
+  }
+  playerHitEffect(){
+    this.burstEffect(this.player.x,this.player.body.top+this.player.body.height/2,0xff526f,1.2);
+    const flash=this.add.rectangle(640,360,1280,720,0xff526f,0.16).setScrollFactor(0).setDepth(35);
+    this.tweens.add({targets:flash,alpha:0,duration:180,onComplete:()=>flash.destroy()});
   }
   syncEnemyArt(enemy,force=false){
     const key=enemy.artBase+(enemy.facingLeft?'L':'R');
@@ -586,6 +723,7 @@ class Game extends Phaser.Scene{
     if(type==='coin'){this.coins++;this.score+=100}
     if(type==='energy')this.energy=Math.min(100,this.energy+35);
     if(type==='skill')this.spreadShots=data.shot>=85?5:3;
+    this.syncWeaponArt();
     if(type==='heart'){
       const healAmount=10+3*this.enemyMultiplier;
       this.hp=Math.min(this.maxHp,this.hp+healAmount);
@@ -596,6 +734,7 @@ class Game extends Phaser.Scene{
   killEnemy(enemy,source='bullet'){
     if(!enemy?.active)return;
     const now=this.time.now;
+    this.burstEffect(enemy.x,enemy.y,enemy.boss?0xffd166:0xfff4c2,enemy.boss?1.8:1);
     this.kills++;
     if(this.hpKillChance&&Math.random()<this.hpKillChance)this.hp=Math.min(this.maxHp,this.hp+this.hpKillAmount);
     if(this.fireStrikeReadyAt<=now&&this.atkUpgrade>=50){this.fireStrikeMultiplier=this.atkUpgrade>=75?2:1.5;this.fireStrikeReadyAt=now+(this.atkUpgrade>=75?8000:10000);}
@@ -626,6 +765,7 @@ class Game extends Phaser.Scene{
       return;
     }
     this.hp=nextHp;
+    this.playerHitEffect();
     this.invulnerable=true;this.time.delayedCall(900,()=>this.invulnerable=false);
     if(this.hp<=0){this.hp=0;this.failLevel();}
   }
@@ -686,6 +826,7 @@ class Game extends Phaser.Scene{
     this.activeWeapon=weapons[next];
     this.smgFiring=false;this.touchFiring=false;
     if(this.activeWeapon==='laser')this.startLaser(this.time.now);else this.laserLine.clear();
+    this.syncWeaponArt();
   }
   startLaser(time){
     if(this.activeWeapon!=='laser'||time<this.laserCooldownUntil||this.laserActiveUntil>time)return false;
@@ -700,6 +841,52 @@ class Game extends Phaser.Scene{
     let nearest=null,best=Infinity;
     this.enemies.getChildren().forEach(enemy=>{if(!this.isEnemyVisible(enemy))return;const d=Phaser.Math.Distance.Between(this.player.x,this.player.y,enemy.x,enemy.y);if(d<best){best=d;nearest=enemy;}});
     return nearest;
+  }
+  spawnBossBullet(enemy,angle,speed=300,damage=5,options={}){
+    const bullet=this.enemyBullets.create(enemy.x,enemy.body.top+enemy.body.height/2,'redBullet');
+    bullet.setVelocity(Math.cos(angle)*speed,Math.sin(angle)*speed);bullet.body.allowGravity=false;
+    bullet.setData('damage',damage);bullet.setData('owner',enemy);bullet.setData('expires',this.time.now+(options.tracking?4000:4200));
+    if(options.tracking)bullet.setData('tracking',true);
+    if(options.wave)bullet.setData('groundWave',true);
+    if(options.bounce)bullet.setData('bounce',1);
+    return bullet;
+  }
+  updateLateBoss(enemy,time){
+    const ratio=enemy.hp/Math.max(1,enemy.maxHp),stage=ratio>.66?1:ratio>.33?2:3;
+    if(enemy.bossStage!==stage){enemy.bossStage=stage;enemy.setData('nextLateAttack',time+1200);this.enemyBullets.getChildren().forEach(b=>b.destroy());}
+    if(time<=(enemy.getData('nextLateAttack')||0))return;
+    const pattern=enemy.bossPattern||'ring',targetAngle=Math.atan2(this.player.y-enemy.y,this.player.x-enemy.x);
+    const damage=enemy.contactDamage||5;
+    if(pattern==='fan'){
+      const count=[7,11,15][stage-1],spread=stage===1?1.25:stage===2?.9:.7;
+      for(let i=0;i<count;i++)this.spawnBossBullet(enemy,targetAngle+(i-(count-1)/2)*(spread/(count-1)),390,damage);
+      if(stage===3)for(let i=0;i<count;i++)this.spawnBossBullet(enemy,targetAngle+(i-(count-1)/2)*(spread/(count-1)),390,damage);
+      enemy.setData('nextLateAttack',time+2500);
+    }else if(pattern==='track'){
+      const count=[3,5,7][stage-1];for(let i=0;i<count;i++)this.spawnBossBullet(enemy,targetAngle+(i-(count-1)/2)*.2,stage===1?185:stage===2?230:270,damage,{tracking:true,bounce:stage===3});
+      enemy.setData('nextLateAttack',time+5000);
+    }else if(pattern==='wave'){
+      const count=stage===1?1:stage===2?2:3;
+      for(let i=0;i<count;i++){const side=i%2===0?-1:1,b=this.spawnBossBullet(enemy,side>0?Math.PI:0,260,damage,{wave:true});b.setPosition(side>0?this.cameras.main.worldView.right+40:this.cameras.main.worldView.left-40,this.floorTop-20);b.setVelocityX(side>0?-260:260);}
+      enemy.setData('nextLateAttack',time+(stage===3?1000:4000));
+    }else if(pattern==='laser'){
+      const beams=stage===3?2:1;for(let i=0;i<beams;i++){const angle=targetAngle+(stage===1?0:(i?-.85:.85));const b=this.spawnBossBullet(enemy,angle,520,damage*.4);b.setScale(3.5,2.2);b.setData('expires',time+3000);}
+      enemy.setData('nextLateAttack',time+4500);
+    }else{
+      const count=[16,24,32][stage-1];for(let i=0;i<count;i++)this.spawnBossBullet(enemy,i*Math.PI*2/count,300,damage);
+      enemy.setData('nextLateAttack',time+6000);
+    }
+  }
+  updateEnemyBullets(time){
+    const bounds=this.physics.world.bounds;
+    this.enemyBullets.getChildren().forEach(bullet=>{
+      if(!bullet.active)return;
+      if(bullet.getData('tracking')){
+        const dx=this.player.x-bullet.x,dy=this.player.y-bullet.y,len=Math.hypot(dx,dy)||1,speed=Math.max(150,Math.hypot(bullet.body.velocity.x,bullet.body.velocity.y));
+        bullet.setVelocity(dx/len*speed,dy/len*speed);
+      }
+      if(bullet.getData('bounce')&&((bullet.x<bounds.left&&bullet.body.velocity.x<0)||(bullet.x>bounds.right&&bullet.body.velocity.x>0))){bullet.setVelocityX(-bullet.body.velocity.x);bullet.setData('bounce',0);}
+    });
   }
   updateLaser(time){
     this.laserLine.clear();
@@ -733,7 +920,9 @@ class Game extends Phaser.Scene{
     const left=Math.min(startX,targetX),right=Math.max(startX,targetX);let firstEnemy=null;
     if(this.agilityLevel>=20)this.enemies.getChildren().forEach(enemy=>{if(!enemy.active)return;const eb=enemy.body;if(eb.right>=left&&eb.left<=right&&eb.bottom>=this.player.body.top&&eb.top<=this.player.body.bottom){enemy.stunnedUntil=time+this.stunDuration*1000;if(!firstEnemy||Math.abs(enemy.x-startX)<Math.abs(firstEnemy.x-startX))firstEnemy=enemy;}});
     if(firstEnemy&&this.agilityLevel>=30)this.damageEnemy(firstEnemy,20,'dash');
+    this.burstEffect(startX,this.player.body.bottom-35,0xbd9aff,.8);
     this.player.x=targetX;this.player.setVelocityX(0);this.player.body.updateFromGameObject();
+    this.burstEffect(targetX,this.player.body.bottom-35,0xbd9aff,1.1);
     this.dashCharges--;this.dashRechargeAt=time+this.dashCooldown*1000;
   }
   useTrackingDash(time){
@@ -744,8 +933,10 @@ class Game extends Phaser.Scene{
     if(!target)return;
     const half=this.player.body.width/2;
     const behind=target.x+(target.x>=this.player.x?-target.body.width-18:target.body.width+18);
+    const originX=this.player.x;this.burstEffect(originX,this.player.body.bottom-35,0xee8cdf,.9);
     this.player.x=Phaser.Math.Clamp(behind,half,this.definition.w-half);
     this.player.body.updateFromGameObject();
+    this.burstEffect(this.player.x,this.player.body.bottom-35,0xee8cdf,1.2);
     this.damageEnemy(target,this.agilityLevel>=85?350:this.agilityLevel>=70?250:100,'tracking');target.stunnedUntil=time+this.stunDuration*1000;
     if(this.agilityLevel>=85){
       this.advancedDashCharges--;
@@ -795,7 +986,9 @@ class Game extends Phaser.Scene{
     const landing=candidates[0];
     const landingX=landing?Phaser.Math.Clamp(target.x,landing.left+half+4,landing.right-half-4):Phaser.Math.Clamp(target.x,half,this.definition.w-half);
     const landingY=(landing?landing.top:this.floorTop)-this.player.body.height/2-1;
+    this.burstEffect(this.player.x,this.player.body.bottom-35,0xffd166,1);
     this.player.setPosition(landingX,landingY);this.player.body.reset(landingX,landingY);this.player.setVelocity(0,0);
+    this.burstEffect(landingX,landingY+35,0xffd166,1.4);
     if(this.agilityLevel>=85){
       this.airstrikeCharges--;
       if(!this.airstrikeRechargeAt)this.airstrikeRechargeAt=time+this.advancedDashCooldown*1000;
@@ -817,23 +1010,21 @@ class Game extends Phaser.Scene{
     if(this.activeWeapon==='pistol')this.lastShot=this.time.now;
     const pointer=this.pointer||this.input.activePointer;
     const target=this.cameras.main.getWorldPoint(pointer.x,pointer.y);
-    const muzzleX=this.player.x+(this.leftFace?-10:10);
-    const muzzleY=this.player.body.bottom-40;
-    const base=Math.atan2(target.y-muzzleY,target.x-muzzleX);
+    const muzzle=this.getWeaponMuzzle(),muzzleX=muzzle.x,muzzleY=muzzle.y,base=muzzle.angle;
     const sixth=this.activeWeapon==='pistol'&&this.shotUpgrade>=90&&this.pistolShotCounter%6===5;
     const count=this.activeWeapon==='sniper'?1:this.activeWeapon==='smg'?1:this.spreadShots>0?(this.shotUpgrade>=85?9+Math.min(10,Math.max(0,this.shotUpgrade-90)):6):sixth?6:this.pistolBurst;
     const shotDamage=(this.activeWeapon==='sniper'?this.sniperDamage:this.activeWeapon==='smg'?this.smgDamage:this.atk)*this.fireStrikeMultiplier;this.fireStrikeMultiplier=1;
     for(let index=0;index<count;index++){
       const angle=base+(index-(count-1)/2)*.14;
-      const bullet=this.playerBullets.create(muzzleX+Math.cos(angle)*18,muzzleY+Math.sin(angle)*12,'bullet');
+      const bullet=this.playerBullets.create(muzzleX+Math.cos(angle)*5,muzzleY+Math.sin(angle)*5,'bullet');
       bullet.setVelocity(Math.cos(angle)*(this.activeWeapon==='sniper'?980:720),Math.sin(angle)*(this.activeWeapon==='sniper'?980:720));bullet.body.allowGravity=false;bullet.setData('damage',shotDamage);bullet.setData('source',this.activeWeapon==='pistol'?'pistol':this.activeWeapon==='sniper'?'sniper':'smg');bullet.setData('maxHits',this.shotUpgrade>=75?3:1);bullet.setData('hitEnemies',new Set());bullet.setData('expires',this.time.now+1600);
     }
     if(this.activeWeapon==='pistol'&&this.shotUpgrade>=90&&!sixth){this.time.delayedCall(10,()=>{if(!this.done)this.firePistolSecondBurst(muzzleX,muzzleY,base,shotDamage)})}
     if(this.activeWeapon==='pistol')this.pistolShotCounter++;
-    if(this.spreadShots>0)this.spreadShots--;
+    if(this.spreadShots>0){this.spreadShots--;this.syncWeaponArt();}
     if(this.activeWeapon==='smg')this.smgAmmo--;
   }
-  firePistolSecondBurst(x,y,base,damage){for(let index=0;index<3;index++){const angle=base+(index-1)*.14;const bullet=this.playerBullets.create(x+Math.cos(angle)*18,y+Math.sin(angle)*12,'bullet');bullet.setVelocity(Math.cos(angle)*720,Math.sin(angle)*720);bullet.body.allowGravity=false;bullet.setData('damage',damage);bullet.setData('source','pistol');bullet.setData('maxHits',this.shotUpgrade>=75?3:1);bullet.setData('hitEnemies',new Set());bullet.setData('expires',this.time.now+1200)}}
+  firePistolSecondBurst(x,y,base,damage){for(let index=0;index<3;index++){const angle=base+(index-1)*.14;const bullet=this.playerBullets.create(x+Math.cos(angle)*5,y+Math.sin(angle)*5,'bullet');bullet.setVelocity(Math.cos(angle)*720,Math.sin(angle)*720);bullet.body.allowGravity=false;bullet.setData('damage',damage);bullet.setData('source','pistol');bullet.setData('maxHits',this.shotUpgrade>=75?3:1);bullet.setData('hitEnemies',new Set());bullet.setData('expires',this.time.now+1200)}}
   useUltimate(){
     if(this.done||this.energy<100)return;
     this.energy=0;
@@ -878,6 +1069,10 @@ class Game extends Phaser.Scene{
       }
       if(enemy.stunnedUntil>time){enemy.setVelocity(0,0);this.syncEnemyArt(enemy);return;}
       const dx=this.player.x-enemy.x,dy=this.player.y-enemy.y,distance=Math.hypot(dx,dy)||1,direction=Math.sign(dx)||1;
+      if(enemy.bossPattern){
+        const stage=enemy.hp/enemy.maxHp>.66?1:enemy.hp/enemy.maxHp>.33?2:3;
+        enemy.setVelocityX(stage>=2?Math.sin(time/900+enemy.x)*70:0);
+      }
       if(enemy.type==='y'||enemy.type==='b1')enemy.setVelocityX(direction*(enemy.type==='b1'?45:155));
       if(enemy.type==='g'||enemy.type==='e2')enemy.setVelocityX(direction*(enemy.type==='e2'?42:58));
       if(enemy.type==='p'){enemy.setVelocityX(direction*58);enemy.setVelocityY((this.player.y-95-enemy.y)*1.35+Math.sin(time/380+enemy.x)*32);}
@@ -885,7 +1080,9 @@ class Game extends Phaser.Scene{
       if(enemy.body.velocity.x<-1)enemy.facingLeft=true;
       if(enemy.body.velocity.x>1)enemy.facingLeft=false;
       this.syncEnemyArt(enemy);
-      if(enemy.type==='b2'){
+      if(enemy.bossPattern){
+        this.updateLateBoss(enemy,time);
+      }else if(enemy.type==='b2'){
         const stage=enemy.hp>10000?1:enemy.hp>5000?2:3;
         if(stage!==enemy.bossStage){
           enemy.bossStage=stage;enemy.spiralActiveUntil=0;enemy.spiralCooldownUntil=time;
@@ -946,10 +1143,9 @@ class Game extends Phaser.Scene{
   }
   expireBullets(group,time){group.getChildren().forEach(bullet=>{if(bullet.active&&time>=bullet.getData('expires'))bullet.destroy()})}
   drawAimLine(){
-    const pointer=this.pointer||this.input.activePointer,target=this.cameras.main.getWorldPoint(pointer.x,pointer.y);
-    const angle=Math.atan2(target.y-this.player.y,target.x-this.player.x);
+    const muzzle=this.getWeaponMuzzle(),angle=muzzle.angle;
     this.aimLine.clear().lineStyle(2,0xffffff,.72);
-    for(let distance=24;distance<180;distance+=18)this.aimLine.lineBetween(this.player.x+Math.cos(angle)*distance,this.player.y+Math.sin(angle)*distance,this.player.x+Math.cos(angle)*Math.min(distance+9,180),this.player.y+Math.sin(angle)*Math.min(distance+9,180));
+    for(let distance=0;distance<180;distance+=18)this.aimLine.lineBetween(muzzle.x+Math.cos(angle)*distance,muzzle.y+Math.sin(angle)*distance,muzzle.x+Math.cos(angle)*Math.min(distance+9,180),muzzle.y+Math.sin(angle)*Math.min(distance+9,180));
   }
   createPauseOverlay(){
     if(this.pauseOverlay)return;
@@ -998,10 +1194,12 @@ class Game extends Phaser.Scene{
     if(Phaser.Input.Keyboard.JustDown(this.keys.F))this.useAirstrike(time);
     this.rechargeDash(time);
     this.updateSystems(time);
-    if((this.activeWeapon==='smg'&&this.smgFiring)||this.touchFiring)this.shoot();
+    // 鼠标左键、触屏画面按住和触控攻击键都保持持续开火；各武器的实际间隔由 shoot() 控制。
+    if(this.smgFiring||this.touchFiring)this.shoot();
     if(this.player.y>this.floorTop+130)this.failLevel();
     this.syncPlayerArt();
     this.updateEnemies(time);
+    this.updateEnemyBullets(time);
     this.checkEnemyContact();
     this.checkEnemyBulletContact();
     this.updateLaser(time);
@@ -1017,7 +1215,7 @@ class Game extends Phaser.Scene{
     const recoveryText=this.hpRegenPerSecond?`   自愈 ${this.hpRegenPerSecond}/s`:'';
     const emergencyText=this.hpEmergencyHeal?`   紧急恢复 ${Math.max(0,(this.hpEmergencyReadyAt-time)/1000).toFixed(1)}s`:'';
     const finishBlockedText=this.finishBlockedUntil>time?`   旗帜锁定：还需击杀 ${this.finishBlockedCount} 个敌人`:'';
-    this.hud.setText(`生命 ${this.formatHealth(this.hp)}/${this.formatHealth(this.maxHp)}   金币 ${this.coins}   得分 ${this.score}   能量 ${this.energy}%   散弹 ${this.spreadShots}/${this.shotUpgrade>=85?5:3}   ${weaponText}   ${dashText}   射击冷却 ${(this.shotDelay/1000).toFixed(2)}s${recoveryText}${emergencyText}${bossText}${endlessText}${finishBlockedText}`);
+    this.hud.setText(`${this.definition.name}   ·   生命 ${this.formatHealth(this.hp)}/${this.formatHealth(this.maxHp)}   金币 ${this.coins}   得分 ${this.score}   能量 ${this.energy}%   散弹 ${this.spreadShots}/${this.shotUpgrade>=85?5:3}   ${weaponText}   ${dashText}   射击冷却 ${(this.shotDelay/1000).toFixed(2)}s${recoveryText}${emergencyText}${bossText}${endlessText}${finishBlockedText}`);
   }
   getRemainingEnemies(){
     return this.enemies.getChildren().reduce((count,enemy)=>count+(enemy.active?1:0),0);
