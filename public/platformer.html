@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
 <style>
-:root{font-family:"Segoe UI","Microsoft YaHei",sans-serif;color:#f7fbff;background:#080b14}*{box-sizing:border-box}body{margin:0;min-width:320px;min-height:100vh;background:radial-gradient(circle at 50% 0%,#203a56,#080b14 65%)}.shell{width:min(1180px,100%);margin:auto;padding:16px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}h1{margin:0;font-size:clamp(19px,4vw,29px)}a{color:#9fe8ff;text-decoration:none;font-size:14px}.auth-gate,.leaderboard-panel{border:1px solid #2b6980;border-radius:8px;background:#111b32;padding:20px;margin-bottom:12px}.auth-gate h2,.leaderboard-panel h2{margin:0 0 8px;font-size:20px}.auth-form{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.auth-form input{height:38px;width:190px;border:1px solid #476176;border-radius:4px;background:#0b1424;color:#fff;padding:0 10px}.button{height:38px;border:1px solid #3da5c7;border-radius:4px;background:#19334b;color:#fff;padding:0 14px;cursor:pointer}.button.secondary{border-color:#476176;background:#18202e}.auth-message{min-height:20px;margin:10px 0 0;color:#ffd166;font-size:13px}.auth-user{color:#9fe8ff;font-size:13px;margin-right:12px}#game-wrap{width:100%;aspect-ratio:16/9;overflow:hidden;border:1px solid #2b6980;border-radius:8px;background:#111b32;box-shadow:0 20px 80px #0009}#game,#game canvas{width:100%;height:100%}#game canvas{display:block}.help{display:flex;flex-wrap:wrap;gap:8px 18px;margin:10px 2px 0;color:#a6b9ca;font-size:13px}kbd{padding:2px 6px;border:1px solid #476176;border-bottom-width:2px;border-radius:4px;background:#172638;color:#eaf7ff}.notice{margin-top:10px;color:#ffd77a;font-size:12px}.leaderboard-head{display:flex;justify-content:space-between;align-items:center}.leaderboard-list{margin:10px 0 0;padding-left:25px;color:#eaf7ff}.leaderboard-list li{padding:4px 0}.leaderboard-list small{color:#9fb7c9}
+:root{font-family:"Segoe UI","Microsoft YaHei",sans-serif;color:#f7fbff;background:#080b14}*{box-sizing:border-box}body{margin:0;min-width:320px;min-height:100vh;background:radial-gradient(circle at 50% 0%,#203a56,#080b14 65%)}.shell{width:min(1180px,100%);margin:auto;padding:16px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}h1{margin:0;font-size:clamp(19px,4vw,29px)}a{color:#9fe8ff;text-decoration:none;font-size:14px}.auth-gate,.leaderboard-panel{border:1px solid #2b6980;border-radius:8px;background:#111b32;padding:20px;margin-bottom:12px}.auth-gate h2,.leaderboard-panel h2{margin:0 0 8px;font-size:20px}.auth-form{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.auth-form input{height:38px;width:190px;border:1px solid #476176;border-radius:4px;background:#0b1424;color:#fff;padding:0 10px}.button{height:38px;border:1px solid #3da5c7;border-radius:4px;background:#19334b;color:#fff;padding:0 14px;cursor:pointer}.button.secondary{border-color:#476176;background:#18202e}.auth-message{min-height:20px;margin:10px 0 0;color:#ffd166;font-size:13px}.auth-user{color:#9fe8ff;font-size:13px;margin-right:12px}#game-wrap{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border:1px solid #2b6980;border-radius:8px;background:#111b32;box-shadow:0 20px 80px #0009}#game,#game canvas{width:100%;height:100%}#game canvas{display:block}.game-loading{position:absolute;inset:0;z-index:30;display:grid;place-items:center;background:#111b32;color:#d8f4ff;font-size:16px;letter-spacing:.02em}.game-loading[hidden]{display:none}.help{display:flex;flex-wrap:wrap;gap:8px 18px;margin:10px 2px 0;color:#a6b9ca;font-size:13px}kbd{padding:2px 6px;border:1px solid #476176;border-bottom-width:2px;border-radius:4px;background:#172638;color:#eaf7ff}.notice{margin-top:10px;color:#ffd77a;font-size:12px}.leaderboard-head{display:flex;justify-content:space-between;align-items:center}.leaderboard-list{margin:10px 0 0;padding-left:25px;color:#eaf7ff}.leaderboard-list li{padding:4px 0}.leaderboard-list small{color:#9fb7c9}
 .touch-controls{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:12px 0 0;padding:4px 2px;user-select:none;touch-action:none}.joystick{position:relative;width:132px;height:88px;border:1px solid #476176;border-radius:44px;background:#101d30;box-shadow:inset 0 0 0 1px #203b51;touch-action:none}.joystick::after{content:'左右移动';position:absolute;inset:0;display:grid;place-items:center;color:#9fb7c9;font-size:12px;pointer-events:none}.joystick-knob{position:absolute;z-index:1;left:43px;top:21px;width:44px;height:44px;border-radius:50%;background:#3da5c7;box-shadow:0 4px 16px #0008;touch-action:none}.touch-actions{display:flex;gap:10px}.touch-button{min-width:104px;height:54px;border:1px solid #3da5c7;border-radius:8px;background:#19334b;color:#fff;font-weight:600;font-size:14px;line-height:1.2;cursor:pointer;touch-action:none}.touch-button small{color:#9fb7c9;font-size:11px}.touch-button:active{background:#285d78;transform:translateY(1px)}@media (max-width:560px){.touch-controls{align-items:stretch}.joystick{width:116px}.joystick-knob{left:35px}.touch-actions{flex:1}.touch-button{min-width:0;flex:1;padding:0 6px}}
 </style>
 </head>
@@ -16,16 +16,16 @@
 <header><h1>行于无垠</h1><div><span id="auth-user" class="auth-user"></span><a href="../index.html">返回官网</a></div></header>
 <section id="auth-gate" class="auth-gate"><h2>登录后开始游戏</h2><p>使用本游戏独立账号，不与社团盘登录系统关联。</p><div class="auth-form"><input id="username-input" type="text" maxlength="32" placeholder="用户名"><input id="password-input" type="password" maxlength="72" placeholder="密码"><button class="button" id="login-button" type="button">登录</button><button class="button secondary" id="register-button" type="button">注册新用户</button></div><p id="auth-message" class="auth-message" role="status"></p></section>
 <section id="game-content" hidden>
-<div id="game-wrap"><div id="game"></div></div>
+<div id="game-wrap"><div id="game"></div><div id="game-loading" class="game-loading">正在加载游戏素材…</div></div>
 <div class="touch-controls" aria-label="触控操作">
   <div class="joystick" id="move-joystick" aria-label="左右移动虚拟摇杆"><div class="joystick-knob" id="joystick-knob"></div></div>
   <div class="touch-actions">
     <button class="touch-button" id="shoot-button" type="button">攻击<br><small>鼠标左键</small></button>
-    <button class="touch-button" id="dash-button" type="button">闪身<br><small>S</small></button>
+    <button class="touch-button" id="dash-button" type="button">闪身<br><small>S / 长按追踪</small></button>
     <button class="touch-button" id="switch-button" type="button">切换武器<br><small>右键</small></button>
   </div>
 </div>
-<div class="help"><span><kbd>A</kbd><kbd>D</kbd> / 方向键移动</span><span><kbd>W</kbd><kbd>↑</kbd><kbd>空格</kbd> 跳跃</span><span>鼠标左键射击</span><span>右键切换武器（冲锋枪/激光枪）</span><span><kbd>Z</kbd> 能量满时释放大招</span><span><kbd>S</kbd> 闪身（需解锁）</span><span><kbd>R</kbd> 重开</span></div>
+<div class="help"><span><kbd>A</kbd><kbd>D</kbd> / 方向键移动</span><span><kbd>W</kbd><kbd>↑</kbd><kbd>空格</kbd> 跳跃（二段跳需身法 40 级）</span><span>鼠标左键或触控攻击键射击</span><span>右键/触控切换武器（冲锋枪/激光枪）</span><span><kbd>Z</kbd> 能量满时释放大招</span><span><kbd>S</kbd> 普通闪身 · <kbd>E</kbd> 追踪闪身（50级）</span><span><kbd>R</kbd> 重开</span></div>
 <div class="notice">紫色技能豆：接下来 3 次射击均会发射六发扇形散弹；激光枪会自动锁定最近敌人；身法升级后可使用闪身。</div>
 </section>
 <section id="leaderboard-panel" class="leaderboard-panel" hidden><div class="leaderboard-head"><h2>总分排行榜</h2><button class="button secondary" id="leaderboard-refresh" type="button">刷新</button></div><ol id="leaderboard-list" class="leaderboard-list"><li>正在读取…</li></ol></section>
@@ -34,12 +34,14 @@
 const SUPABASE_URL='https://jgezpvmlnhycxslqbwcx.supabase.co';
 const SUPABASE_KEY='sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
 const platformerDb=window.supabase?.createClient(SUPABASE_URL,SUPABASE_KEY);
+const GAME_ASSET_BASE=new URL('GamePictures/',document.baseURI);
 const SAVE_KEY='club-shooter-clean';
 const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{"unlocked":1,"coins":0,"hp":0,"atk":0,"shot":0,"agility":0}');
 data.hp??=0;data.atk??=0;data.shot??=0;data.agility??=0;
 data.claimed??={};
 let currentUser=null,gameInstance=null;
 let touchMoveAxis=0,joystickPointerId=null;
+let levelPage=0;
 let level=0;
 const LEVELS=[
   {
@@ -154,16 +156,30 @@ LEVELS.push(
   createExtendedLevel(17,'第十七关 · 图论高塔',9000,13,{coinCount:40,beanCount:20,enemyCount:78}),
   createExtendedLevel(18,'第十八关 · 动态边界',10000,14,{coinCount:40,beanCount:20,enemyCount:84}),
   createExtendedLevel(19,'第十九关 · 极值风暴',11000,15,{coinCount:40,beanCount:20,enemyCount:92}),
-  createExtendedLevel(20,'第二十关 · 终极复杂度',12000,16,{coinCount:40,beanCount:20,enemyCount:100})
+  createExtendedLevel(20,'第二十关 · 终极复杂度',12000,16,{coinCount:40,beanCount:20,enemyCount:100}),
+  {
+    id:21,name:'第二十一关 · 环形审判',w:1900,worldH:900,yScale:1.6,yBase:520,worldBase:820,
+    terrain:[[0,520,1900,80],[300,430,300,24],[820,340,300,24],[1320,430,300,24]],
+    e:[],p:[],boss:['b1',1500,480],f:1780
+  },
+  createExtendedLevel(22,'第二十二关 · 并行深境',10000,18,{coinCount:25,beanCount:35,enemyCount:80}),
+  createExtendedLevel(23,'第二十三关 · 递推裂谷',10800,19,{coinCount:25,beanCount:35,enemyCount:90}),
+  createExtendedLevel(24,'第二十四关 · 贪心高原',11600,20,{coinCount:25,beanCount:35,enemyCount:100}),
+  createExtendedLevel(25,'第二十五关 · 动态迷宫',12400,21,{coinCount:25,beanCount:35,enemyCount:110}),
+  createExtendedLevel(26,'第二十六关 · 图论风暴',13200,22,{coinCount:25,beanCount:35,enemyCount:120}),
+  createExtendedLevel(27,'第二十七关 · 最短路天堑',14000,23,{coinCount:25,beanCount:35,enemyCount:130}),
+  createExtendedLevel(28,'第二十八关 · 区间裂隙',15000,24,{coinCount:25,beanCount:35,enemyCount:140}),
+  createExtendedLevel(29,'第二十九关 · 并发边界',16000,25,{coinCount:25,beanCount:35,enemyCount:150}),
+  createExtendedLevel(30,'第三十关 · 无垠终局',17000,26,{coinCount:25,beanCount:35,enemyCount:160})
 );
 const ART={
-  heroStandL:'cropped/Main_LeftStand.png',heroStandR:'cropped/Main_RightStand.png',
-  heroMoveL:'cropped/Main_LeftMove.png',heroMoveR:'cropped/Main_RightMove.png',
-  heroJumpL:'cropped/Main_LeftJump.png',heroJumpR:'cropped/Main_RightJump.png',
-  enemy1L:'cropped/Enemy1_Left.png',enemy1R:'cropped/Enemy1_Right.png',
-  enemy2L:'cropped/Enemy2_Left.png',enemy2R:'cropped/Enemy2_Right.png',
-  enemy3L:'cropped/Enemy3_Left.png',enemy3R:'cropped/Enemy3_Right.png',
-  coin:'cropped/Coin.png',energy:'cropped/EnergyBean.png',skill:'cropped/SkillBean.png',heart:'cropped/LifeBean.png'
+  heroStandL:'optimized/Main_LeftStand.png',heroStandR:'optimized/Main_RightStand.png',
+  heroMoveL:'optimized/Main_LeftMove.png',heroMoveR:'optimized/Main_RightMove.png',
+  heroJumpL:'optimized/Main_LeftJump.png',heroJumpR:'optimized/Main_RightJump.png',
+  enemy1L:'optimized/Enemy1_Left.png',enemy1R:'optimized/Enemy1_Right.png',
+  enemy2L:'optimized/Enemy2_Left.png',enemy2R:'optimized/Enemy2_Right.png',
+  enemy3L:'optimized/Enemy3_Left.png',enemy3R:'optimized/Enemy3_Right.png',
+  coin:'optimized/Coin.png',energy:'optimized/EnergyBean.png',skill:'optimized/SkillBean.png',heart:'optimized/LifeBean.png'
 };
 const save=()=>{localStorage.setItem(SAVE_KEY,JSON.stringify(data));if(currentUser)void saveRemoteProfile();};
 function tex(scene,key,color,width,height,radius=0){const g=scene.make.graphics({add:false});g.fillStyle(color,1);g.fillRoundedRect(0,0,width,height,radius);g.generateTexture(key,width,height);g.destroy()}
@@ -176,6 +192,8 @@ const passwordInput=document.getElementById('password-input');
 const authMessage=document.getElementById('auth-message');
 const authUser=document.getElementById('auth-user');
 const leaderboardList=document.getElementById('leaderboard-list');
+const gameLoading=document.getElementById('game-loading');
+const failedAssetKeys=new Set();
 function setAuthMessage(message,isError=false){authMessage.textContent=message;authMessage.style.color=isError?'#ff8794':'#ffd166'}
 function applyProfile(profile){
   data.coins=Number(profile.coins)||0;data.hp=Number(profile.hp_upgrade)||0;data.atk=Number(profile.atk_upgrade)||0;data.shot=Number(profile.shot_upgrade)||0;data.agility=Number(profile.agility_upgrade)||0;
@@ -236,6 +254,7 @@ const joystickKnob=document.getElementById('joystick-knob');
 const shootButton=document.getElementById('shoot-button');
 const dashButton=document.getElementById('dash-button');
 const switchButton=document.getElementById('switch-button');
+let dashPressTimer=null,dashWasLong=false;
 function getActiveGameScene(){return gameInstance?.scene.isActive('Game')?gameInstance.scene.getScene('Game'):null}
 function resetJoystick(){touchMoveAxis=0;joystickPointerId=null;if(joystickKnob)joystickKnob.style.transform='translateX(0)'}
 function updateJoystick(event){
@@ -250,7 +269,19 @@ joystick?.addEventListener('pointermove',event=>{if(event.pointerId===joystickPo
 joystick?.addEventListener('pointerup',resetJoystick);
 joystick?.addEventListener('pointercancel',resetJoystick);
 joystick?.addEventListener('lostpointercapture',resetJoystick);
-dashButton?.addEventListener('pointerdown',event=>{event.preventDefault();const scene=getActiveGameScene();if(scene)scene.useDash(scene.time.now)});
+dashButton?.addEventListener('pointerdown',event=>{
+  event.preventDefault();dashWasLong=false;dashButton.setPointerCapture?.(event.pointerId);
+  const scene=getActiveGameScene();
+  if(!scene)return;
+  scene.touchDashHeld=true;
+  dashPressTimer=setTimeout(()=>{dashWasLong=true;const active=getActiveGameScene();if(active)active.useTrackingDash(active.time.now)},360);
+});
+dashButton?.addEventListener('pointerup',()=>{
+  if(dashPressTimer){clearTimeout(dashPressTimer);dashPressTimer=null}
+  const scene=getActiveGameScene();
+  if(scene){scene.touchDashHeld=false;if(!dashWasLong)scene.useDash(scene.time.now)}
+});
+dashButton?.addEventListener('pointercancel',()=>{if(dashPressTimer){clearTimeout(dashPressTimer);dashPressTimer=null}const scene=getActiveGameScene();if(scene)scene.touchDashHeld=false});
 switchButton?.addEventListener('pointerdown',event=>{event.preventDefault();const scene=getActiveGameScene();if(scene)scene.toggleWeapon()});
 shootButton?.addEventListener('pointerdown',event=>{event.preventDefault();shootButton.setPointerCapture?.(event.pointerId);const scene=getActiveGameScene();if(scene){scene.touchFiring=true;scene.shoot()}});
 shootButton?.addEventListener('pointerup',()=>{const scene=getActiveGameScene();if(scene)scene.touchFiring=false});
@@ -259,13 +290,28 @@ shootButton?.addEventListener('lostpointercapture',()=>{const scene=getActiveGam
 
 class Boot extends Phaser.Scene{
   constructor(){super('Boot')}
-  preload(){Object.entries(ART).forEach(([key,file])=>this.load.image(key,'GamePictures/'+file))}
+  preload(){
+    this.load.on('progress',value=>{if(gameLoading)gameLoading.textContent=`正在加载游戏素材 ${Math.round(value*100)}%`});
+    this.load.on('loaderror',file=>{if(file?.key)failedAssetKeys.add(file.key);if(gameLoading)gameLoading.textContent='部分素材加载失败，正在使用备用图形…';console.warn('游戏素材加载失败',file?.key,file?.src)});
+    Object.entries(ART).forEach(([key,file])=>this.load.image(key,new URL(file,GAME_ASSET_BASE).href));
+  }
   create(){
+    const fallbackTextures={
+      heroStandL:[0x4da3ff,52,78],heroStandR:[0x4da3ff,52,78],heroMoveL:[0x4da3ff,52,78],heroMoveR:[0x4da3ff,52,78],heroJumpL:[0x4da3ff,52,78],heroJumpR:[0x4da3ff,52,78],
+      enemy1L:[0xffd166,72,42],enemy1R:[0xffd166,72,42],enemy2L:[0x63d471,62,56],enemy2R:[0x63d471,62,56],enemy3L:[0xed7be7,72,52],enemy3R:[0xed7be7,72,52],
+      coin:[0xffd166,32,32],energy:[0x4da3ff,32,32],skill:[0xb78cff,32,32],heart:[0xff6173,32,32]
+    };
+    Object.entries(fallbackTextures).forEach(([key,[color,width,height]])=>{
+      if(failedAssetKeys.has(key)&&this.textures.exists(key))this.textures.remove(key);
+      if(!this.textures.exists(key))tex(this,key,color,width,height,4);
+    });
+    if(gameLoading)gameLoading.hidden=true;
     tex(this,'ground',0x315c83,48,42,4);
     tex(this,'hitPlayer',0xffffff,34,70);
     tex(this,'hitEnemy1',0xffffff,54,40);
     tex(this,'hitEnemy2',0xffffff,50,48);
     tex(this,'hitEnemy3',0xffffff,58,38);
+    tex(this,'hitBoss1',0xffffff,112,82);
     tex(this,'hitBoss3',0xffffff,110,80);
     tex(this,'hitItem',0xffffff,28,28);
     tex(this,'bullet',0xfff4c2,12,6,3);
@@ -282,26 +328,35 @@ class Menu extends Phaser.Scene{
     this.cameras.main.setBackgroundColor('#10182d');
     this.add.text(46,16,'行于无垠',{fontSize:'34px',fontStyle:'bold',color:'#f7fbff'});
     this.add.text(46,56,'选择关卡',{fontSize:'25px',fontStyle:'bold'});
-    LEVELS.forEach((definition,index)=>{
-      const available=index<data.unlocked,col=index%4,row=Math.floor(index/4),cardWidth=280,x=32+col*302,y=92+row*58;
+    const pageSize=8,pageCount=Math.ceil(LEVELS.length/pageSize);
+    levelPage=Phaser.Math.Clamp(levelPage,0,Math.max(0,pageCount-1));
+    const pageStart=levelPage*pageSize,pageEnd=Math.min(LEVELS.length,pageStart+pageSize),cardWidth=500;
+    for(let index=pageStart;index<pageEnd;index++){
+      const definition=LEVELS[index],available=index<data.unlocked,localIndex=index-pageStart,col=localIndex%2,row=Math.floor(localIndex/2),x=32+col*610,y=98+row*70;
       const button=this.add.rectangle(x,y,cardWidth,48,available?0x19334b:0x18202e).setOrigin(0).setStrokeStyle(2,available?0x3da5c7:0x3a4654);
       this.add.text(x+12,y+9,`${index+1}. ${definition.name}`,{fontSize:'14px',color:available?'#fff':'#718293'});
       this.add.text(x+cardWidth-10,y+17,available?'开始 →':'未解锁',{fontSize:'12px',color:available?'#ffd166':'#718293'}).setOrigin(1,0);
       if(available)button.setInteractive({useHandCursor:true}).on('pointerdown',()=>{level=index;this.scene.start('Game')});
-    });
+    }
+    const pageLabel=this.add.text(46,405,`第 ${levelPage+1} / ${pageCount} 页`,{fontSize:'16px',color:'#9fb7c9'});
+    const prev=this.add.text(260,400,'上一页',{fontSize:'16px',color:levelPage>0?'#9fe8ff':'#526579',backgroundColor:'#182b40',padding:{x:12,y:7}});
+    const next=this.add.text(390,400,'下一页',{fontSize:'16px',color:levelPage+1<pageCount?'#9fe8ff':'#526579',backgroundColor:'#182b40',padding:{x:12,y:7}});
+    if(levelPage>0)prev.setInteractive({useHandCursor:true}).on('pointerdown',()=>{levelPage--;this.scene.restart()});
+    if(levelPage+1<pageCount)next.setInteractive({useHandCursor:true}).on('pointerdown',()=>{levelPage++;this.scene.restart()});
     const cooldown=Math.max(.2,1-data.shot*.05).toFixed(2);
     const weapon=data.shot>=60?'激光枪已解锁':data.shot>=35?'冲锋枪已解锁':'手枪';
-    this.add.text(48,400,`金币：${data.coins}    生命 Lv.${data.hp}    攻击 Lv.${data.atk}    射击 Lv.${data.shot}（${cooldown}s）    身法 Lv.${data.agility}    ${weapon}`,{fontSize:'16px',color:'#ffd166'});
-    this.add.text(48,430,'局外强化',{fontSize:'18px',fontStyle:'bold',color:'#f7fbff'});
-    this.addUpgrade(48,458,'生命力 +1',data.hp,25+data.hp*15,()=>data.hp++);
-    this.addUpgrade(268,458,'攻击力 +1',data.atk,15+data.atk*10,()=>data.atk++);
+    const upgradeY=570;
+    this.add.text(48,upgradeY-50,`金币：${data.coins}    生命 Lv.${data.hp}    攻击 Lv.${data.atk}    射击 Lv.${data.shot}（${cooldown}s）    身法 Lv.${data.agility}    ${weapon}`,{fontSize:'16px',color:'#ffd166'});
+    this.add.text(48,upgradeY-22,'局外强化',{fontSize:'18px',fontStyle:'bold',color:'#f7fbff'});
+    this.addUpgrade(48,upgradeY,'生命力 +1',data.hp,25+data.hp*15,()=>data.hp++);
+    this.addUpgrade(268,upgradeY,'攻击力 +1',data.atk,15+data.atk*10,()=>data.atk++);
     const shotMax=data.shot>=75;
     const shotLabel=shotMax?'射击升级 · 三目标穿透已解锁':data.shot>=60?'射击升级 · 激光枪已解锁':data.shot>=51?'射击升级 · 穿透 2 个敌人':data.shot>=50?'射击升级 · 三连发已解锁':data.shot>=35?'射击升级 · 冲锋枪已解锁':data.shot>=25?'射击升级 · 二连发已解锁':data.shot>=16?'射击升级 · 冷却 0.2s':'射击升级 · 间隔 -0.05s';
-    this.addUpgrade(488,458,shotLabel,data.shot,35+data.shot*20,()=>data.shot++,shotMax);
-    const agilityMax=data.agility>=30;
-    this.addUpgrade(708,458,'身法 · 闪身/进阶',data.agility,50+data.agility*40,()=>data.agility++,agilityMax);
-    this.add.text(48,535,'射速等级：16级 0.2s · 25级二连发 · 35级冲锋枪 · 50级三连发 · 51级穿透2个 · 75级穿透3个',{fontSize:'13px',color:'#9fb7c9'});
-    this.add.text(48,558,'60级激光枪（右键切换）；身法 1级闪身 · 10级储存 · 20级眩晕 · 30级进阶',{fontSize:'13px',color:'#9fb7c9'});
+    this.addUpgrade(488,upgradeY,shotLabel,data.shot,35+data.shot*20,()=>data.shot++,shotMax);
+    const agilityMax=data.agility>=50;
+    this.addUpgrade(708,upgradeY,'身法 · 闪身/进阶',data.agility,50+data.agility*40,()=>data.agility++,agilityMax);
+    this.add.text(48,upgradeY+68,'射速等级：16级 0.2s · 25级二连发 · 35级冲锋枪 · 50级三连发 · 51级穿透2个 · 75级穿透3个',{fontSize:'13px',color:'#9fb7c9'});
+    this.add.text(48,upgradeY+91,'60级激光枪（右键切换）；身法 1级闪身 · 10级储存 · 20级眩晕 · 30级进阶 · 40级二段跳 · 50级追踪闪身',{fontSize:'13px',color:'#9fb7c9'});
   }
   addUpgrade(x,y,label,upgradeLevel,cost,buy,isMax=false){
     const enabled=!isMax&&data.coins>=cost;
@@ -322,16 +377,17 @@ class Game extends Phaser.Scene{
     this.definition=LEVELS[level];
     this.floorTop=this.worldY(520);
     const hpUpgrade=Math.max(0,Number(data.hp)||0),atkUpgrade=Math.max(0,Number(data.atk)||0);
-    this.score=0;this.coins=0;this.maxHp=25+hpUpgrade;this.hp=this.maxHp;this.atk=1+atkUpgrade;this.invulnerable=false;this.touchFiring=false;
+    this.score=0;this.coins=0;this.maxHp=25+hpUpgrade;this.hp=this.maxHp;this.atk=1+atkUpgrade;this.invulnerable=false;this.touchFiring=false;this.touchDashHeld=false;
     this.energy=0;this.spreadShots=0;this.lastShot=-Infinity;this.shotDelay=Math.max(200,1000-Math.min(16,data.shot)*50);this.done=false;this.leftFace=false;this.heroJumping=false;this.heroKey='';
     this.enemyMultiplier=Math.pow(1.5,Math.floor((this.definition.id-1)/3));
     this.pistolBurst=data.shot>=50?3:data.shot>=25?2:1;this.activeWeapon='pistol';this.smgFiring=false;this.smgAmmo=data.shot>=35?10+Math.min(14,Math.max(0,data.shot-35)):0;
     const laserLevel=Math.max(0,Math.min(14,data.shot-60));
     this.laserDuration=5+laserLevel*.2;this.laserCooldown=15-laserLevel*.1;this.laserDamage=.3+Math.max(0,Number(data.atk)||0);this.laserActiveUntil=0;this.laserCooldownUntil=0;this.laserNextTick=0;this.laserLine=this.add.graphics().setDepth(7);
-    this.agilityLevel=Math.max(0,Math.min(30,Number(data.agility)||0));
+    this.agilityLevel=Math.max(0,Math.min(50,Number(data.agility)||0));
     this.dashMaxCharges=this.agilityLevel>=10?2:1;this.dashCharges=this.dashMaxCharges;this.dashRechargeAt=0;
-    this.dashCooldown=10-Math.min(8,Math.max(0,this.agilityLevel-1))*.5-Math.min(10,Math.max(0,this.agilityLevel-9))*.1;
-    this.dashDistance=this.agilityLevel>=30?55:40;this.stunDuration=2+Math.min(9,Math.max(0,this.agilityLevel-20))*.1;
+    this.dashCooldown=10-Math.min(8,Math.max(0,this.agilityLevel-1))*.5-Math.min(10,Math.max(0,this.agilityLevel-9))*.1-Math.min(9,Math.max(0,this.agilityLevel-30))*.1;
+    this.dashDistance=this.agilityLevel>=30?55+Math.min(9,this.agilityLevel-30)*15:40;this.stunDuration=2+Math.min(9,Math.max(0,this.agilityLevel-20))*.1;
+    this.doubleJumpCooldown=Math.max(2.3,5-Math.min(9,Math.max(0,this.agilityLevel-40))*.3);this.jumpCount=0;this.secondJumpReadyAt=0;this.trackingDashReadyAt=0;
     const worldHeight=this.definition.worldH||600;
     this.physics.world.setBounds(0,0,this.definition.w,worldHeight);
     this.cameras.main.setBounds(0,0,this.definition.w,worldHeight).setBackgroundColor('#111b32');
@@ -363,7 +419,7 @@ class Game extends Phaser.Scene{
     this.physics.add.overlap(this.playerBullets,this.enemies,this.hitEnemy,null,this);
     this.physics.add.overlap(this.player,this.enemyBullets,this.hitPlayer,null,this);
     this.cameras.main.startFollow(this.player,true,.08,.08);
-    this.keys=this.input.keyboard.addKeys('A,D,W,SPACE,LEFT,RIGHT,UP,R,Z,S');
+    this.keys=this.input.keyboard.addKeys('A,D,W,SPACE,LEFT,RIGHT,UP,R,Z,S,E');
     this.pointer=this.input.activePointer;
     this.input.on('pointermove',pointer=>this.pointer=pointer);
     this.input.mouse?.disableContextMenu();
@@ -380,15 +436,15 @@ class Game extends Phaser.Scene{
   }
   spawnEnemy([type,x,y]){
     y=this.worldY(y);
-    const config=type==='y'?{body:'hitEnemy1',art:'enemy1',size:[72,42],flying:false}:type==='g'?{body:'hitEnemy2',art:'enemy2',size:[62,56],flying:false}:type==='b'?{body:'hitBoss3',art:'enemy3',size:[150,110],flying:true,boss:true}:{body:'hitEnemy3',art:'enemy3',size:[72,52],flying:true};
+    const config=type==='y'?{body:'hitEnemy1',art:'enemy1',size:[72,42],flying:false}:type==='g'?{body:'hitEnemy2',art:'enemy2',size:[62,56],flying:false}:type==='b1'?{body:'hitBoss1',art:'enemy1',size:[154,108],flying:false,boss:true}:type==='b'?{body:'hitBoss3',art:'enemy3',size:[150,110],flying:true,boss:true}:{body:'hitEnemy3',art:'enemy3',size:[72,52],flying:true};
     const enemy=this.enemies.create(x,y,config.body).setVisible(false).setCollideWorldBounds(true);
-    const baseHp=type==='y'?2:type==='b'?5000:5,baseDamage=type==='y'?2:type==='b'?4:1;
-    enemy.type=type;enemy.hp=type==='b'?5000:baseHp*this.enemyMultiplier;enemy.maxHp=enemy.hp;enemy.contactDamage=baseDamage*this.enemyMultiplier;enemy.artBase=config.art;enemy.artSize=config.size;enemy.flying=config.flying;enemy.boss=Boolean(config.boss);enemy.facingLeft=false;enemy.stunnedUntil=0;
+    const baseHp=type==='y'?2:type==='b1'?10000:type==='b'?5000:5,baseDamage=type==='y'||type==='b1'?2:type==='b'?4:1;
+    enemy.type=type;enemy.hp=type==='b1'?10000:type==='b'?5000:baseHp*this.enemyMultiplier;enemy.maxHp=enemy.hp;enemy.contactDamage=baseDamage*this.enemyMultiplier;enemy.artBase=config.art;enemy.artSize=config.size;enemy.flying=config.flying;enemy.boss=Boolean(config.boss);enemy.facingLeft=false;enemy.stunnedUntil=0;
     enemy.art=this.add.image(x,y,config.art+'R').setDisplaySize(config.size[0],config.size[1]).setDepth(4);
     enemy.art.setOrigin(.5,config.flying?.5:1);
     if(config.flying)enemy.body.allowGravity=false;
-    enemy.setData('nextShot',this.time.now+(enemy.boss?3000:900+Math.random()*500));
-    enemy.setData('nextSummon',this.time.now+10000);
+    enemy.setData('nextShot',this.time.now+(type==='b1'?7000:enemy.boss?3000:900+Math.random()*500));
+    enemy.setData('nextSummon',this.time.now+(type==='b1'?7000:10000));
     this.syncEnemyArt(enemy,true);
     return enemy;
   }
@@ -546,6 +602,20 @@ class Game extends Phaser.Scene{
     this.player.x=targetX;this.player.setVelocityX(0);this.player.body.updateFromGameObject();
     this.dashCharges--;this.dashRechargeAt=time+this.dashCooldown*1000;
   }
+  useTrackingDash(time){
+    if(this.done||this.agilityLevel<50||time<this.trackingDashReadyAt)return;
+    this.rechargeDash(time);
+    if(this.dashCharges<=0)return;
+    const target=this.findNearestEnemy();
+    if(!target)return;
+    const half=this.player.body.width/2;
+    const behind=target.x+(target.x>=this.player.x?-target.body.width-18:target.body.width+18);
+    this.player.x=Phaser.Math.Clamp(behind,half,this.definition.w-half);
+    this.player.body.updateFromGameObject();
+    target.hp-=100;target.stunnedUntil=time+this.stunDuration*1000;
+    if(target.hp<=0){this.score+=175;target.art.destroy();target.destroy();}
+    this.dashCharges--;this.dashRechargeAt=time+this.dashCooldown*1000;this.trackingDashReadyAt=time+15000;
+  }
   rechargeDash(time){
     if(this.dashCharges>=this.dashMaxCharges||!this.dashRechargeAt||time<this.dashRechargeAt)return;
     const elapsed=Math.floor((time-this.dashRechargeAt)/(this.dashCooldown*1000))+1;
@@ -567,7 +637,7 @@ class Game extends Phaser.Scene{
     for(let index=0;index<count;index++){
       const angle=base+(index-(count-1)/2)*.14;
       const bullet=this.playerBullets.create(muzzleX+Math.cos(angle)*18,muzzleY+Math.sin(angle)*12,'bullet');
-      bullet.setVelocity(Math.cos(angle)*720,Math.sin(angle)*720);bullet.body.allowGravity=false;bullet.setData('damage',this.activeWeapon==='smg'?1:this.atk);bullet.setData('maxHits',data.shot>=75?3:data.shot>=51?2:1);bullet.setData('hitEnemies',new Set());bullet.setData('expires',this.time.now+1200);
+      bullet.setVelocity(Math.cos(angle)*720,Math.sin(angle)*720);bullet.body.allowGravity=false;bullet.setData('damage',this.atk);bullet.setData('maxHits',data.shot>=75?3:data.shot>=51?2:1);bullet.setData('hitEnemies',new Set());bullet.setData('expires',this.time.now+1200);
     }
     if(this.spreadShots>0)this.spreadShots--;
     if(this.activeWeapon==='smg')this.smgAmmo--;
@@ -596,14 +666,31 @@ class Game extends Phaser.Scene{
       }
       if(enemy.stunnedUntil>time){enemy.setVelocity(0,0);this.syncEnemyArt(enemy);return;}
       const dx=this.player.x-enemy.x,dy=this.player.y-enemy.y,distance=Math.hypot(dx,dy)||1,direction=Math.sign(dx)||1;
-      if(enemy.type==='y')enemy.setVelocityX(direction*125);
+      if(enemy.type==='y'||enemy.type==='b1')enemy.setVelocityX(direction*(enemy.type==='b1'?45:125));
       if(enemy.type==='g')enemy.setVelocityX(direction*52);
       if(enemy.type==='p'){enemy.setVelocityX(direction*42);enemy.setVelocityY((this.player.y-95-enemy.y)*1.35+Math.sin(time/380+enemy.x)*32);}
       if(enemy.type==='b'){enemy.setVelocityX(direction*18);enemy.setVelocityY((this.player.y-150-enemy.y)*.45+Math.sin(time/620+enemy.x)*18);}
       if(enemy.body.velocity.x<-1)enemy.facingLeft=true;
       if(enemy.body.velocity.x>1)enemy.facingLeft=false;
       this.syncEnemyArt(enemy);
-      if(enemy.type==='b'){
+      if(enemy.type==='b1'){
+        if(time>=enemy.getData('nextShot')){
+          const phase=enemy.getData('patternPhase')||0;
+          for(let ring=0;ring<2;ring++)for(let index=0;index<60;index++){
+            const angle=phase+ring*Math.PI/60+index*Math.PI*2/60;
+            const bullet=this.enemyBullets.create(enemy.x,enemy.body.top+enemy.body.height/2,'redBullet');
+            bullet.setVelocity(Math.cos(angle)*260,Math.sin(angle)*260);bullet.body.allowGravity=false;bullet.setData('damage',this.enemyMultiplier*2);bullet.setData('expires',time+5200);
+          }
+          enemy.setData('patternPhase',phase+Math.PI/60);enemy.setData('nextShot',time+7000);
+        }
+        if(time>=enemy.getData('nextSummon')){
+          for(let count=0;count<2;count++){
+            const summonX=Phaser.Math.Clamp(enemy.x+(count?120:-120),120,this.definition.w-120);
+            this.spawnEnemy(['y',summonX,480]);
+          }
+          enemy.setData('nextSummon',time+7000);
+        }
+      }else if(enemy.type==='b'){
         if(time>=enemy.getData('nextShot')){
           const phase=enemy.getData('patternPhase')||0;
           for(let index=0;index<20;index++){
@@ -637,11 +724,14 @@ class Game extends Phaser.Scene{
     const left=this.keys.A.isDown||this.keys.LEFT.isDown||touchMoveAxis<0,right=this.keys.D.isDown||this.keys.RIGHT.isDown||touchMoveAxis>0;
     this.player.setVelocityX(left?-230:right?230:0);
     const jumpPressed=Phaser.Input.Keyboard.JustDown(this.keys.W)||Phaser.Input.Keyboard.JustDown(this.keys.UP)||Phaser.Input.Keyboard.JustDown(this.keys.SPACE);
-    if(jumpPressed&&this.player.body.blocked.down){this.player.setVelocityY(-590);this.heroJumping=true;}
-    if(this.player.body.blocked.down&&this.player.body.velocity.y>=0)this.heroJumping=false;
+    const onGround=this.player.body.blocked.down||this.player.body.touching.down;
+    if(onGround&&this.player.body.velocity.y>=0){this.jumpCount=0;this.secondJumpReadyAt=0;this.heroJumping=false;}
+    if(jumpPressed&&onGround){this.player.setVelocityY(-590);this.jumpCount=1;this.heroJumping=true;}
+    else if(jumpPressed&&this.agilityLevel>=40&&this.jumpCount===1&&time>=this.secondJumpReadyAt){this.player.setVelocityY(-590*.75);this.jumpCount=2;this.secondJumpReadyAt=time+this.doubleJumpCooldown*1000;this.heroJumping=true;}
     if(Phaser.Input.Keyboard.JustDown(this.keys.R))this.scene.restart();
     if(Phaser.Input.Keyboard.JustDown(this.keys.Z)&&this.energy>=100)this.useUltimate();
     if(Phaser.Input.Keyboard.JustDown(this.keys.S))this.useDash(time);
+    if(Phaser.Input.Keyboard.JustDown(this.keys.E))this.useTrackingDash(time);
     this.rechargeDash(time);
     if((this.activeWeapon==='smg'&&this.smgFiring)||this.touchFiring)this.shoot();
     if(this.player.y>this.floorTop+130)this.failLevel();
@@ -654,7 +744,7 @@ class Game extends Phaser.Scene{
     this.expireBullets(this.playerBullets,time);this.expireBullets(this.enemyBullets,time);
     this.drawAimLine();
     const weaponText=this.activeWeapon==='smg'?`冲锋枪 ${this.smgAmmo}发`:this.activeWeapon==='laser'?`激光枪 ${this.laserDamage.toFixed(1)}/0.2s ${this.laserActiveUntil>time?`运行 ${((this.laserActiveUntil-time)/1000).toFixed(1)}s`:`冷却 ${Math.max(0,(this.laserCooldownUntil-time)/1000).toFixed(1)}s`}`:`手枪 ${this.pistolBurst}连发 穿透 ${data.shot>=75?3:data.shot>=51?2:1}`;
-    const dashText=this.agilityLevel?`闪身 ${this.dashCharges}/${this.dashMaxCharges}${this.dashCharges<this.dashMaxCharges?` (${Math.max(0,(this.dashRechargeAt-time)/1000).toFixed(1)}s)`:''}`:'闪身未解锁';
+    const dashText=this.agilityLevel?`闪身 ${this.dashCharges}/${this.dashMaxCharges}${this.dashCharges<this.dashMaxCharges?` (${Math.max(0,(this.dashRechargeAt-time)/1000).toFixed(1)}s)`:''}${this.agilityLevel>=50?` 追踪(E) ${Math.max(0,(this.trackingDashReadyAt-time)/1000).toFixed(1)}s`:''}`:'闪身未解锁';
     const bossText=this.bossEnemy?.active?`   Boss HP ${Math.ceil(this.bossEnemy.hp)}`:'';
     this.hud.setText(`生命 ${this.formatHealth(this.hp)}/${this.formatHealth(this.maxHp)}   金币 ${this.coins}   得分 ${this.score}   能量 ${this.energy}%   散弹 ${this.spreadShots}/3   ${weaponText}   ${dashText}   射击冷却 ${(this.shotDelay/1000).toFixed(2)}s${bossText}`);
   }
