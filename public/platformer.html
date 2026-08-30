@@ -40,7 +40,7 @@ header a:hover{background:#163249;border-color:var(--cyan)}
 .touch-button:active{transform:translateY(2px);box-shadow:inset 0 -1px 0 #07131f}
 #shoot-button{background:#713a35;border-color:#d27668}#jump-button{background:#15546a;border-color:#62d9ee}
 #dash-button{background:#49366f;border-color:#bd9aff}#airstrike-button{background:#633b61;border-color:#ee8cdf}
-#ultimate-button{background:#765526;border-color:#ffd166}#switch-button{background:#263a4b;border-color:#8ea8b8}
+#ultimate-button{background:#765526;border-color:#ffd166}#switch-button{background:#263a4b;border-color:#8ea8b8}#mode-button{background:#234c4d;border-color:#62d9ee}
 .help{margin:12px 2px 0;color:#9cb3c3;line-height:1.65}.help span{padding:3px 0}
 kbd{border-color:#38546a;background:#122438;color:#eafaff}
 .notice{padding:9px 11px;border-left:3px solid var(--gold);background:#18170f;color:#e7c977;border-radius:0 4px 4px 0}
@@ -86,11 +86,12 @@ kbd{border-color:#38546a;background:#122438;color:#eafaff}
     <button class="touch-button" id="airstrike-button" type="button">空袭<br><small>F</small></button>
     <button class="touch-button" id="ultimate-button" type="button">大招<br><small>能量满时释放</small></button>
     <button class="touch-button" id="switch-button" type="button">切换武器<br><small>右键</small></button>
+    <button class="touch-button" id="mode-button" type="button">切换模式<br><small>X</small></button>
   </div>
 </div>
 </div>
-<div class="help"><span><kbd>A</kbd><kbd>D</kbd> / 方向键移动</span><span><kbd>W</kbd><kbd>↑</kbd><kbd>空格</kbd> 跳跃（二段跳需身法 40 级）</span><span>鼠标左键射击</span><span>手机：左侧摇杆移动，画面按住连射并滑动瞄准</span><span>右键/触控切换武器（冲锋枪/激光枪/狙击枪）</span><span><kbd>Z</kbd> 能量满时释放大招</span><span><kbd>S</kbd> 普通闪身 · <kbd>E</kbd> 追踪闪身 · <kbd>F</kbd> 空袭（70级）</span><span><kbd>ESC</kbd> 暂停 · 顶部“退出本局”直接退出</span><span><kbd>R</kbd> 重开</span></div>
-<div class="notice">紫色技能豆：接下来 3 次射击发射六发扇形散弹；射击 85 级后为 5 次，91-99 级每级再增加 1 发。身法 70 级解锁空袭（F），射击 85 级解锁双环大招；无尽模式每 15 秒刷新一波 15 个敌人。</div>
+<div class="help"><span><kbd>A</kbd><kbd>D</kbd> / 方向键移动</span><span><kbd>W</kbd><kbd>↑</kbd><kbd>空格</kbd> 跳跃（二段跳需身法 40 级）</span><span>鼠标左键射击/挥刀</span><span><kbd>X</kbd> 切换远程/近战</span><span>手机：左侧摇杆移动，画面按住连射并滑动瞄准</span><span>右键/触控切换当前模式武器</span><span><kbd>Z</kbd> 能量满时释放大招</span><span><kbd>S</kbd> 普通闪身 · <kbd>E</kbd> 追踪闪身 · <kbd>F</kbd> 空袭（70级） · <kbd>V</kbd> 暗杀令（115级）</span><span>身法90级：满高度无冷却二段跳 · 100级：长按跳跃浮空 · 150级：强化暗杀令</span><span><kbd>ESC</kbd> 暂停 · 顶部“退出本局”直接退出</span><span><kbd>R</kbd> 重开</span></div>
+<div class="notice">紫色技能豆：远程获得散弹，近战获得强化斩击；按 X 切换模式、右键切换武器。身法 70 级解锁空袭（F），90 级强化二段跳，100 级解锁浮空，115 级解锁暗杀令（V）。无尽模式每 15 秒刷新一波敌人。</div>
 </section>
 <section id="leaderboard-panel" class="leaderboard-panel" hidden><div class="leaderboard-head"><h2>总分排行榜</h2><button class="button secondary" id="leaderboard-refresh" type="button">刷新</button></div><ol id="leaderboard-list" class="leaderboard-list"><li>正在读取…</li></ol></section>
 </main>
@@ -100,12 +101,15 @@ const SUPABASE_KEY='sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
 const platformerDb=window.supabase?.createClient(SUPABASE_URL,SUPABASE_KEY);
 const GAME_ASSET_BASE=new URL('GamePictures/',document.baseURI);
 const SAVE_KEY='club-shooter-clean';
-const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{"unlocked":1,"coins":0,"hp":0,"atk":0,"shot":0,"agility":0}');
-data.hp??=0;data.atk??=0;data.shot??=0;data.agility??=0;
+const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{"unlocked":1,"coins":0,"hp":0,"atk":0,"shot":0,"agility":0,"melee":0,"ammo":0,"armor":0,"combat":0}');
+data.hp??=0;data.atk??=0;data.shot??=0;data.agility??=0;data.melee??=0;data.ammo??=0;data.armor??=0;data.combat??=0;data.attackEvo??=0;data.armorEvo??=0;
+data.agility=Math.max(0,Math.min(150,Number(data.agility)||0));data.combat=Math.max(0,Math.min(125,Number(data.combat)||0));data.attackEvo=Math.max(0,Number(data.attackEvo)||0);data.armorEvo=Math.max(0,Number(data.armorEvo)||0);
+data.eventEndlessBest??=0;data.eventEndlessClaimed??={};data.eventLevelClaimed??={};data.lifeEvo??=0;
 data.claimed??={};
 let currentUser=null,gameInstance=null;
-let touchMoveAxis=0,joystickPointerId=null;
+let touchMoveAxis=0,joystickPointerId=null,touchJumpHeld=false;
 let levelPage=0;
+let guidePage=0;
 let endlessMode=false;
 let level=0;
 const LEVELS=[
@@ -282,18 +286,27 @@ LEVELS.push(
   createExtendedLevel(50,'第五十关 · 无垠终局',38000,45,{coinCount:45,beanCount:45,enemyCount:320})
 );
 function createLateBossLevel(id,name,w,variant,bossHp,pattern){
-  const terrain=[[0,520,w,80],[260,430,520,24],[980,350,560,24],[1700,260,520,24],[2450,390,620,24],[3300,290,560,24],[4050,430,620,24]];
+  const terrain=[[0,520,w,80],[260,430,520,24],[980,350,560,24],[1700,260,520,24],[2450,390,620,24],[3300,290,560,24],[4050,430,620,24]]
+    .filter(([x])=>x<w).map(([x,y,width,height])=>[x,y,Math.min(width,w-x),height]);
   return {id,name,w,worldH:900,yScale:1.6,yBase:520,worldBase:820,terrain,e:[],p:[],boss:['bf',w-420,350,1,bossHp,pattern],f:w-130};
 }
 for(let id=51;id<=100;id++){
   if(id%5===0){
     const bossIndex=Math.floor((id-50)/5),patterns=[['fan','扇形散射'],['track','追踪弹'],['wave','地面波'],['laser','激光扫射'],['ring','弹幕环']];
     const [pattern,label]=patterns[(bossIndex-1)%patterns.length];
-    LEVELS.push(createLateBossLevel(id,`第${id}关 · ${label} Boss`,19000+bossIndex*700,id,15000+(bossIndex-1)*7500,pattern));
+    // Boss 关是短场地，避免玩家在超长地图里寻找 Boss。
+    LEVELS.push(createLateBossLevel(id,`第${id}关 · ${label} Boss`,1500,id,15000+(bossIndex-1)*7500,pattern));
   }else{
     const span=id-51,length=15000+((span*1300)%15001),enemyCount=100+((span*37)%401),layers=2+(span%3);
     LEVELS.push(createExtendedLevel(id,`第${id}关 · 无垠领域 ${span+1}`,length,46+span,{coinCount:50,beanCount:50,enemyCount}));
   }
+}
+// 101-120：高密度常规关卡，不生成 Boss；长度、敌人数和层数按区间递增。
+for(let id=101;id<=120;id++){
+  const span=id-101;
+  const length=20000+Math.round(span*10000/19);
+  const enemyCount=500+Math.round(span*300/19);
+  LEVELS.push(createExtendedLevel(id,`第${id}关 · 无垠领域 ${span+1}`,length,96+span,{coinCount:60,beanCount:60,enemyCount}));
 }
 const ART={
   heroStandL:'optimized/Main_LeftStand.png',heroStandR:'optimized/Main_RightStand.png',
@@ -303,7 +316,7 @@ const ART={
   enemy2L:'optimized/Enemy2_Left.png',enemy2R:'optimized/Enemy2_Right.png',
   enemy3L:'optimized/Enemy3_Left.png',enemy3R:'optimized/Enemy3_Right.png',
   coin:'optimized/Coin.png',energy:'optimized/EnergyBean.png',skill:'optimized/SkillBean.png',heart:'optimized/LifeBean.png',
-  weaponPistol:'optimized/weaponPistol.png',weaponShotgun:'optimized/weaponShotgun.png',weaponSmg:'optimized/weaponSmg.png',weaponLaser:'optimized/weaponLaser.png',weaponSniper:'optimized/weaponSniper.png'
+  weaponPistol:'optimized/weaponPistol.png',weaponShotgun:'optimized/weaponShotgun.png',weaponSmg:'optimized/weaponSmg.png',weaponLaser:'optimized/weaponLaser.png',weaponSniper:'optimized/weaponSniper.png',weaponDagger:'optimized/weaponDagger.png',weaponBlade:'optimized/weaponBlade.png'
 };
 const save=()=>{localStorage.setItem(SAVE_KEY,JSON.stringify(data));if(currentUser)void saveRemoteProfile();};
 function tex(scene,key,color,width,height,radius=0){const g=scene.make.graphics({add:false});g.fillStyle(color,1);g.fillRoundedRect(0,0,width,height,radius);g.generateTexture(key,width,height);g.destroy()}
@@ -319,15 +332,17 @@ const leaderboardList=document.getElementById('leaderboard-list');
 const gameLoading=document.getElementById('game-loading');
 const failedAssetKeys=new Set();
 function setAuthMessage(message,isError=false){authMessage.textContent=message;authMessage.style.color=isError?'#ff8794':'#ffd166'}
+function isEventActive(){const now=new Date();const start=new Date('2026-08-31T00:00:00+08:00'),end=new Date('2026-09-15T00:00:00+08:00');return now>=start&&now<end}
+function claimEventRewards(){if(!isEventActive())return 0;let reward=0;const best=Number(data.eventEndlessBest||0);for(let wave=1;wave<=best;wave++){if(!data.eventEndlessClaimed[wave]){data.eventEndlessClaimed[wave]=true;reward+=10000*wave;}}const completed=Math.max(0,(Number(data.unlocked)||1)-1),milestones=Math.floor(completed/10);for(let i=1;i<=milestones;i++){if(!data.eventLevelClaimed[i]){data.eventLevelClaimed[i]=true;reward+=30000;}}if(reward){data.coins+=reward;save();}return reward}
 function applyProfile(profile){
-  data.coins=Number(profile.coins)||0;data.hp=Number(profile.hp_upgrade)||0;data.atk=Number(profile.atk_upgrade)||0;data.shot=Number(profile.shot_upgrade)||0;data.agility=Number(profile.agility_upgrade)||0;
+  data.coins=Number(profile.coins)||0;data.hp=Number(profile.hp_upgrade)||0;data.atk=Number(profile.atk_upgrade)||0;data.shot=Number(profile.shot_upgrade)||0;data.agility=Math.max(0,Math.min(150,Number(profile.agility_upgrade)||0));data.melee=Number(profile.melee_upgrade)||0;data.ammo=Number(profile.ammo_upgrade)||0;data.armor=Number(profile.armor_upgrade)||0;data.combat=Math.max(0,Math.min(125,Number(profile.combat_upgrade)||0));data.lifeEvo=Number(profile.life_evo_upgrade)||0;data.attackEvo=Math.max(0,Number(profile.attack_evo_upgrade)||0);data.armorEvo=Math.max(0,Number(profile.armor_evo_upgrade)||0);
   const claimedUnlock=Math.max(1,...Object.keys(data.claimed||{}).map(Number).filter(Number.isFinite).map(id=>id+1));
   data.unlocked=Math.min(LEVELS.length,Math.max(1,Number(profile.unlocked)||1,claimedUnlock));
   localStorage.setItem(SAVE_KEY,JSON.stringify(data));
 }
 function createGame(){
   if(gameInstance)return;
-  gameInstance=new Phaser.Game({type:Phaser.AUTO,parent:'game',width:1280,height:720,physics:{default:'arcade',arcade:{gravity:{y:900},debug:false}},scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:[Boot,Menu,Game,Result]});
+  gameInstance=new Phaser.Game({type:Phaser.AUTO,parent:'game',width:1280,height:720,physics:{default:'arcade',arcade:{gravity:{y:900},debug:false}},scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:[Boot,Menu,Upgrade,ProgressionGuide,Game,Result]});
 }
 function startGame(profile){currentUser={username:profile.username,token:profile.session_token};applyProfile(profile);authGate.hidden=true;gameContent.hidden=false;leaderboardPanel.hidden=false;authUser.textContent=`已登录：${currentUser.username}`;createGame();void loadLeaderboard()}
 async function authenticate(action){
@@ -350,7 +365,7 @@ async function resumeSession(){
 }
 async function saveRemoteProfile(){
   if(!platformerDb||!currentUser)return;
-  const {error}=await platformerDb.rpc('platformer_save_profile',{p_username:currentUser.username,p_token:currentUser.token,p_coins:data.coins,p_hp_upgrade:data.hp,p_atk_upgrade:data.atk,p_shot_upgrade:data.shot,p_agility_upgrade:data.agility,p_unlocked:data.unlocked});
+  const {error}=await platformerDb.rpc('platformer_save_profile',{p_username:currentUser.username,p_token:currentUser.token,p_coins:data.coins,p_hp_upgrade:data.hp,p_atk_upgrade:data.atk,p_shot_upgrade:data.shot,p_agility_upgrade:data.agility,p_melee_upgrade:data.melee,p_ammo_upgrade:data.ammo,p_armor_upgrade:data.armor,p_combat_upgrade:data.combat,p_life_evo_upgrade:data.lifeEvo,p_attack_evo_upgrade:data.attackEvo,p_armor_evo_upgrade:data.armorEvo,p_unlocked:data.unlocked});
   if(error)console.warn('保存游戏资料失败',error.message);
 }
 async function submitScore(levelId,score){
@@ -381,6 +396,7 @@ const dashButton=document.getElementById('dash-button');
 const airstrikeButton=document.getElementById('airstrike-button');
 const ultimateButton=document.getElementById('ultimate-button');
 const switchButton=document.getElementById('switch-button');
+const modeButton=document.getElementById('mode-button');
 let dashPressTimer=null,dashWasLong=false,touchAimPointerId=null;
 function getActiveGameScene(){return gameInstance?.scene.isActive('Game')?gameInstance.scene.getScene('Game'):null}
 function updateTouchAim(event){
@@ -407,7 +423,7 @@ const gameWrap=document.getElementById('game-wrap');
 gameWrap?.addEventListener('pointerdown',event=>{
   if(event.pointerType!=='touch')return;
   event.preventDefault();touchAimPointerId=event.pointerId;gameWrap.setPointerCapture?.(event.pointerId);updateTouchAim(event);
-  const scene=getActiveGameScene();if(scene){scene.touchFiring=true;scene.touchAimActive=true;scene.shoot()}
+  const scene=getActiveGameScene();if(scene){scene.touchFiring=true;scene.touchAimActive=true;if(scene.combatMode==='melee')scene.meleeAttack(scene.time.now);else scene.shoot()}
 });
 gameWrap?.addEventListener('pointermove',event=>{
   if(event.pointerType!=='touch'||event.pointerId!==touchAimPointerId)return;
@@ -418,7 +434,10 @@ function stopTouchAim(event){
   touchAimPointerId=null;const scene=getActiveGameScene();if(scene){scene.touchFiring=false;scene.touchAimActive=false}
 }
 gameWrap?.addEventListener('pointerup',stopTouchAim);gameWrap?.addEventListener('pointercancel',stopTouchAim);
-jumpButton?.addEventListener('pointerdown',event=>{event.preventDefault();const scene=getActiveGameScene();if(scene)scene.jumpRequested=true});
+jumpButton?.addEventListener('pointerdown',event=>{event.preventDefault();touchJumpHeld=true;jumpButton.setPointerCapture?.(event.pointerId);const scene=getActiveGameScene();if(scene){scene.jumpRequested=true;scene.jumpBufferUntil=scene.time.now+220}});
+jumpButton?.addEventListener('pointerup',()=>{touchJumpHeld=false});
+jumpButton?.addEventListener('pointercancel',()=>{touchJumpHeld=false});
+jumpButton?.addEventListener('lostpointercapture',()=>{touchJumpHeld=false});
 dashButton?.addEventListener('pointerdown',event=>{
   event.preventDefault();dashWasLong=false;dashButton.setPointerCapture?.(event.pointerId);
   const scene=getActiveGameScene();
@@ -435,7 +454,8 @@ dashButton?.addEventListener('pointercancel',()=>{if(dashPressTimer){clearTimeou
 airstrikeButton?.addEventListener('pointerdown',event=>{event.preventDefault();const scene=getActiveGameScene();if(scene)scene.useAirstrike(scene.time.now)});
 ultimateButton?.addEventListener('pointerdown',event=>{event.preventDefault();const scene=getActiveGameScene();if(scene)scene.useUltimate()});
 switchButton?.addEventListener('pointerdown',event=>{event.preventDefault();const scene=getActiveGameScene();if(scene)scene.toggleWeapon()});
-shootButton?.addEventListener('pointerdown',event=>{event.preventDefault();shootButton.setPointerCapture?.(event.pointerId);const scene=getActiveGameScene();if(scene){scene.touchFiring=true;scene.shoot()}});
+modeButton?.addEventListener('pointerdown',event=>{event.preventDefault();const scene=getActiveGameScene();if(scene)scene.toggleCombatMode()});
+shootButton?.addEventListener('pointerdown',event=>{event.preventDefault();shootButton.setPointerCapture?.(event.pointerId);const scene=getActiveGameScene();if(scene){scene.touchFiring=true;if(scene.combatMode==='melee')scene.meleeAttack(scene.time.now);else scene.shoot()}});
 shootButton?.addEventListener('pointerup',()=>{const scene=getActiveGameScene();if(scene)scene.touchFiring=false});
 shootButton?.addEventListener('pointercancel',()=>{const scene=getActiveGameScene();if(scene)scene.touchFiring=false});
 shootButton?.addEventListener('lostpointercapture',()=>{const scene=getActiveGameScene();if(scene)scene.touchFiring=false});
@@ -453,6 +473,7 @@ class Boot extends Phaser.Scene{
       enemy1L:[0xffd166,72,42],enemy1R:[0xffd166,72,42],enemy2L:[0x63d471,62,56],enemy2R:[0x63d471,62,56],enemy3L:[0xed7be7,72,52],enemy3R:[0xed7be7,72,52],
       coin:[0xffd166,32,32],energy:[0x4da3ff,32,32],skill:[0xb78cff,32,32],heart:[0xff6173,32,32]
       ,weaponPistol:[0x7bdff2,46,31],weaponShotgun:[0xb78cff,54,20],weaponSmg:[0x62d9ee,52,31],weaponLaser:[0x65e572,58,33],weaponSniper:[0xffd166,60,22]
+      ,weaponDagger:[0xb78cff,56,12],weaponBlade:[0x62d9ee,72,10]
     };
     Object.entries(fallbackTextures).forEach(([key,[color,width,height]])=>{
       if(failedAssetKeys.has(key)&&this.textures.exists(key))this.textures.remove(key);
@@ -486,15 +507,17 @@ class Menu extends Phaser.Scene{
     this.add.text(46,16,'行于无垠',{fontSize:'34px',fontStyle:'bold',color:'#f7fbff',shadow:{offsetX:0,offsetY:3,color:'#000',blur:6,stroke:true,fill:true}});
     this.add.text(48,57,'ALGORITHM SOCIETY · SIDE-SCROLLING ARENA',{fontSize:'11px',letterSpacing:2,color:'#5e91a7'});
     this.add.text(70,98,'选择关卡',{fontSize:'25px',fontStyle:'bold',color:'#fff'});
+    this.add.text(70,130,'完成当前关卡后解锁下一段旅程',{fontSize:'13px',color:'#6e91a4'});
+    this.add.rectangle(32,88,1216,358,0x0b1420,.75).setOrigin(0).setStrokeStyle(1,0x1e394c);
     const pageSize=8,pageCount=Math.ceil(LEVELS.length/pageSize);
     levelPage=Phaser.Math.Clamp(levelPage,0,Math.max(0,pageCount-1));
     const pageStart=levelPage*pageSize,pageEnd=Math.min(LEVELS.length,pageStart+pageSize),cardWidth=500;
     for(let index=pageStart;index<pageEnd;index++){
       const definition=LEVELS[index],available=index<data.unlocked,localIndex=index-pageStart,col=localIndex%2,row=Math.floor(localIndex/2),x=32+col*610,y=98+row*70;
       const button=this.add.rectangle(x,y,cardWidth,48,available?0x122b3d:0x121a24).setOrigin(0).setStrokeStyle(1,available?0x3c89a5:0x263744);
-      this.add.text(x+12,y+9,`${index+1}. ${definition.name}`,{fontSize:'14px',color:available?'#f4fbff':'#718293'});
+      const title=this.add.text(x+12,y+9,`${index+1}. ${definition.name}`,{fontSize:'14px',color:available?'#f4fbff':'#718293'});
       this.add.text(x+cardWidth-10,y+17,available?'开始 →':'未解锁',{fontSize:'12px',color:available?'#ffd166':'#718293'}).setOrigin(1,0);
-      if(available)button.setInteractive({useHandCursor:true}).on('pointerdown',()=>{level=index;endlessMode=false;this.scene.start('Game')});
+      if(available)button.setInteractive({useHandCursor:true}).on('pointerover',()=>{button.setFillStyle(0x1b455d);title.setColor('#fff')}).on('pointerout',()=>{button.setFillStyle(0x122b3d);title.setColor('#f4fbff')}).on('pointerdown',()=>{level=index;endlessMode=false;this.scene.start('Game')});
     }
     const pageLabel=this.add.text(46,405,`第 ${levelPage+1} / ${pageCount} 页`,{fontSize:'16px',color:'#9fb7c9'});
     const prev=this.add.text(260,400,'上一页',{fontSize:'16px',color:levelPage>0?'#9fe8ff':'#526579',backgroundColor:'#182b40',padding:{x:12,y:7}});
@@ -503,28 +526,92 @@ class Menu extends Phaser.Scene{
     if(levelPage+1<pageCount)next.setInteractive({useHandCursor:true}).on('pointerdown',()=>{levelPage++;this.scene.restart()});
     const endless=this.add.text(540,400,'无尽模式 · 赚取金币',{fontSize:'16px',color:'#ffd166',backgroundColor:'#3a2d20',padding:{x:12,y:7}}).setInteractive({useHandCursor:true});
     endless.on('pointerdown',()=>{endlessMode=true;this.scene.start('Game')});
-    const cooldown=Math.max(.08,1-Math.min(16,data.shot)*.05-Math.min(4,Math.max(0,data.shot-85))*.03).toFixed(2);
-    const weapon=data.shot>=60?'激光枪已解锁':data.shot>=35?'冲锋枪已解锁':'手枪';
-    const upgradeY=570;
-    this.add.text(48,upgradeY-50,`金币：${data.coins}    生命 Lv.${data.hp}    攻击 Lv.${data.atk}    射击 Lv.${data.shot}（${cooldown}s）    身法 Lv.${data.agility}    ${weapon}`,{fontSize:'16px',color:'#ffd166'});
-    this.add.text(48,upgradeY-22,'局外强化',{fontSize:'18px',fontStyle:'bold',color:'#f7fbff'});
-    this.addUpgrade(48,upgradeY,'生命力 +1',data.hp,25+data.hp*15,()=>data.hp++);
-    this.addUpgrade(268,upgradeY,'攻击力 +1',data.atk,15+data.atk*10,()=>data.atk++);
-    const shotMax=data.shot>=125;
-    const shotLabel=data.shot>=125?'射击升级 · 军械大师已解锁':data.shot>=101?'射击升级 · 军械强化':data.shot>=100?'射击升级 · 狙击枪已解锁':data.shot>=90?'射击升级 · 综合强化':data.shot>=85?'射击升级 · 双环大招/九发散弹':data.shot>=80?'射击升级 · 再生子弹':data.shot>=76?'射击升级 · 激光/冲锋枪强化':data.shot>=75?'射击升级 · 三目标穿透已解锁':data.shot>=60?'射击升级 · 激光枪已解锁':data.shot>=51?'射击升级 · 穿透 2 个敌人':data.shot>=50?'射击升级 · 三连发已解锁':data.shot>=35?'射击升级 · 冲锋枪已解锁':data.shot>=25?'射击升级 · 二连发已解锁':data.shot>=16?'射击升级 · 冷却 0.2s':'射击升级 · 间隔 -0.05s';
-    this.addUpgrade(488,upgradeY,shotLabel,data.shot,35+data.shot*20,()=>data.shot++,shotMax);
-    const agilityMax=data.agility>=85;
-    this.addUpgrade(708,upgradeY,'身法 · 闪身/进阶',data.agility,50+data.agility*40,()=>data.agility++,agilityMax);
-    this.add.text(48,upgradeY+68,'射击：16级冷却0.2s · 25级二连发 · 35级冲锋枪 · 50级三连发 · 51级穿透2个 · 60级激光枪 · 75级穿透3个',{fontSize:'13px',color:'#9fb7c9'});
-    this.add.text(48,upgradeY+91,'射击 76-79级强化激光/冲锋枪 · 80级再生子弹 · 85级双环大招 · 90级综合强化 · 100级狙击枪 · 125级军械大师；身法 40级二段跳 · 50级追踪(E) · 60级四次储存 · 70级空袭(F) · 85级高级储存',{fontSize:'13px',color:'#9fb7c9',wordWrap:{width:1120}});
-    this.add.text(48,upgradeY+110,'生命 50/65/75级自愈 · 100级紧急恢复 · 120级坚韧 · 150级不屈；攻击 50级火力打击 · 75级覆盖打击（生命力/攻击力可继续升级）',{fontSize:'13px',color:'#9fb7c9',wordWrap:{width:1120}});
+    const upgrade=this.add.text(48,485,'强化升级 →',{fontSize:'18px',color:'#9fe8ff',backgroundColor:'#19334b',padding:{x:16,y:10}}).setInteractive({useHandCursor:true});
+    upgrade.on('pointerdown',()=>this.scene.start('Upgrade'));
+    this.add.text(48,540,`金币：${data.coins}    生命 Lv.${data.hp} · 攻击 Lv.${data.atk} · 射击 Lv.${data.shot} · 身法 Lv.${data.agility} · 近战 Lv.${data.melee} · 弹药 Lv.${data.ammo} · 装甲 Lv.${data.armor} · 狂人 Lv.${data.combat} · 生命进化 Lv.${data.lifeEvo} · 攻击进化 Lv.${data.attackEvo} · 装甲进化 Lv.${data.armorEvo}`,{fontSize:'15px',color:'#ffd166'});
+    const eventText=isEventActive()?'活动开启：无尽波次奖励 + 每通关10关奖励':'活动未开启（有效期：8.31-9.14）';
+    this.add.text(48,575,`${eventText} · 无尽最高波次 ${data.eventEndlessBest||0} · 已领取十关奖励 ${Object.keys(data.eventLevelClaimed||{}).length} 次`,{fontSize:'13px',color:isEventActive()?'#7de3a6':'#718293'});
+    const eventButton=this.add.text(1010,565,isEventActive()?'领取活动奖励':'未开启',{fontSize:'14px',color:isEventActive()?'#fff':'#718293',backgroundColor:isEventActive()?'#31583f':'#18202e',padding:{x:12,y:7}});
+    if(isEventActive())eventButton.setInteractive({useHandCursor:true}).on('pointerdown',()=>{const reward=claimEventRewards();eventButton.setText(reward?`已领取 +${reward}`:'暂无可领取');eventButton.disableInteractive();this.scene.restart();});
   }
-  addUpgrade(x,y,label,upgradeLevel,cost,buy,isMax=false){
+}
+
+class Upgrade extends Phaser.Scene{
+  constructor(){super('Upgrade')}
+  create(){
+    this.cameras.main.setBackgroundColor('#10182d');
+    this.add.rectangle(640,360,1280,720,0x070b13).setDepth(-10);
+    this.add.text(48,28,'强化升级',{fontSize:'30px',fontStyle:'bold',color:'#f7fbff'});
+    this.add.text(49,72,`金币：${data.coins}`,{fontSize:'17px',color:'#ffd166'});
+    const back=this.add.text(820,32,'返回关卡选择',{fontSize:'16px',color:'#9fe8ff',backgroundColor:'#19334b',padding:{x:12,y:8},fixedWidth:170,align:'center'}).setInteractive({useHandCursor:true});
+    back.on('pointerdown',()=>this.scene.start('Menu'));
+    const guide=this.add.text(1180,32,'养成说明',{fontSize:'16px',color:'#ffd166',backgroundColor:'#3a2d20',padding:{x:12,y:8},fixedWidth:120,align:'center'}).setOrigin(1,0).setInteractive({useHandCursor:true});
+    guide.on('pointerdown',()=>this.scene.start('ProgressionGuide'));
+    const ys=[135,245,355,465],xs=[48,358,668,978];
+    const cooldown=Math.max(.08,1-Math.min(16,data.shot)*.05-Math.min(4,Math.max(0,data.shot-85))*.03).toFixed(2);
+    const shotLabel=data.shot>=125?'射击 · 军械大师':data.shot>=100?'射击 · 狙击枪':data.shot>=90?'射击 · 综合强化':data.shot>=85?'射击 · 双环大招':data.shot>=60?'射击 · 激光枪':data.shot>=35?'射击 · 冲锋枪':'射击 · 手枪';
+    const cards=[
+      [xs[0],ys[0],'生命力',data.hp,25+data.hp*15,()=>data.hp++,false],
+      [xs[1],ys[0],'攻击力',data.atk,15+data.atk*10,()=>data.atk++,false],
+      [xs[2],ys[0],`${shotLabel}（${cooldown}s）`,data.shot,35+data.shot*20,()=>data.shot++,data.shot>=125],
+      [xs[3],ys[0],'身法 · 闪身/浮空',data.agility,50+data.agility*40,()=>data.agility++,data.agility>=150],
+      [xs[0],ys[1],'近战 · 匕首/长刀',data.melee,75+data.melee*50,()=>data.melee++,data.melee>=150],
+      [xs[1],ys[1],'弹药强化 · 枪械',data.ammo,100+data.ammo*75,()=>data.ammo++,data.shot<100||data.ammo>=100],
+      [xs[2],ys[1],'装甲强化 · 装甲',data.armor,150+data.armor*125,()=>data.armor++,data.hp<150||data.armor>=100,data.hp<150?'需生命力 Lv.150':'' ],
+      [xs[3],ys[1],'作战狂人 · 综合',data.combat,250+data.combat*125,()=>data.combat++,data.hp<200||data.atk<200||data.combat>=125,data.hp<200||data.atk<200?'需生命力与攻击力 Lv.200':'' ],
+      [xs[0],ys[2],'生命进化 · 上限',data.lifeEvo,560+data.lifeEvo*250,()=>data.lifeEvo++,data.hp<500||data.combat<50,data.hp<500||data.combat<50?'需生命力 Lv.500 + 作战狂人 Lv.50':'' ],
+      [xs[1],ys[2],'攻击进化 · 枪械/近战',data.attackEvo,760+data.attackEvo*550,()=>data.attackEvo++,data.atk<500||data.combat<50,data.atk<500||data.combat<50?'需攻击力 Lv.500 + 作战狂人 Lv.50':'' ],
+      [xs[2],ys[2],'装甲进化 · 装甲/护盾',data.armorEvo,1060+data.armorEvo*750,()=>data.armorEvo++,data.armor<100||data.combat<100,data.armor<100||data.combat<100?'需装甲 Lv.100 + 作战狂人 Lv.100':'' ]
+    ];
+    cards.forEach(card=>this.addUpgrade(...card));
+    this.add.text(48,610,'弹药强化需射击 Lv.100 · 装甲强化需生命力 Lv.150 · 作战狂人需生命力/攻击力 Lv.200 · 生命进化需生命力 Lv.500 + 狂人 Lv.50 · 攻击进化需攻击力 Lv.500 + 狂人 Lv.50 · 装甲进化需装甲 Lv.100 + 狂人 Lv.100',{fontSize:'13px',color:'#9fb7c9',wordWrap:{width:1160,useAdvancedWrap:true},fixedWidth:1160,fixedHeight:42});
+  }
+  addUpgrade(x,y,label,upgradeLevel,cost,buy,isMax=false,lockReason=''){
     const enabled=!isMax&&data.coins>=cost;
-    const card=this.add.rectangle(x,y,200,58,enabled?0x19334b:0x18202e).setOrigin(0).setStrokeStyle(2,enabled?0x3da5c7:0x3a4654);
-    this.add.text(x+12,y+10,label,{fontSize:'15px',color:enabled?'#fff':'#8b98a8'});
-    this.add.text(x+12,y+33,isMax?'已满级':`Lv.${upgradeLevel}  ${cost} 金币`,{fontSize:'13px',color:enabled?'#ffd166':'#718293'});
+    const card=this.add.rectangle(x,y,250,72,enabled?0x19334b:0x18202e).setOrigin(0).setStrokeStyle(2,enabled?0x3da5c7:0x3a4654);
+    this.add.text(x+14,y+11,label,{fontSize:'15px',color:enabled?'#fff':'#8b98a8',wordWrap:{width:220}});
+    this.add.text(x+14,y+43,isMax?(lockReason||'已满级'):`Lv.${upgradeLevel}  ${cost} 金币`,{fontSize:'13px',color:enabled?'#ffd166':'#718293'});
     if(enabled)card.setInteractive({useHandCursor:true}).on('pointerdown',()=>{data.coins-=cost;buy();save();this.scene.restart();});
+  }
+}
+
+class ProgressionGuide extends Phaser.Scene{
+  constructor(){super('ProgressionGuide')}
+  create(){
+    this.cameras.main.setBackgroundColor('#10182d');
+    this.add.rectangle(640,360,1280,720,0x070b13).setDepth(-10);
+    this.add.text(48,28,'养成体系说明',{fontSize:'30px',fontStyle:'bold',color:'#f7fbff'});
+    const back=this.add.text(1110,32,'返回强化',{fontSize:'16px',color:'#9fe8ff',backgroundColor:'#19334b',padding:{x:12,y:8},fixedWidth:120,align:'center'}).setInteractive({useHandCursor:true});
+    back.on('pointerdown',()=>this.scene.start('Upgrade'));
+    const sections=[
+      ['生命力','每级增加最大生命。50/65/75级依次解锁生命恢复与击杀回血；100级紧急恢复，120级减伤10%，150级不屈。\n当前等级不封顶。'],
+      ['攻击力','每级提升基础攻击伤害，并同步强化枪械、激光和狙击枪。\n50级火力打击，75级覆盖打击。当前等级不封顶。'],
+      ['射击升级','降低冷却并解锁二连发、冲锋枪、激光枪、穿透、三连发、狙击枪和军械大师。90级后手枪独立计数：每6次第6次发射6发散射。\n上限125级。'],
+      ['身法','逐步解锁闪身、追踪闪身、空袭、二段跳与浮空；115级解锁 V 暗杀令；116-149级继续缩短暗杀令/闪身冷却，150级强化浮空与暗杀令。\n当前上限150级。'],
+      ['近战',`解锁匕首与长刀，提升近战伤害、范围、减伤和回复。76-99级继续提升双武器伤害；100级万剑归宗；125级狂战士；150级渴血。\n当前上限150级。`],
+      ['弹药强化',`需射击100级开启。当前 ${data.ammo}/100级。46-69级强化伤害、爆裂和矢量弹道；70级独立计数：每10次射击触发风暴（3秒冷却），76-84级增加弹数；75-100级元素、无限弹夹、毁灭、穿甲和超载。\n上限100级。`],
+      ['装甲强化',`需生命力150级后开启。当前 ${data.armor}/100级。装甲优先承受伤害并提供减伤；50级能量护盾，75级溢出恢复，90级 C 键装甲过载，100级杀戮装甲与最终防线。\n当前上限100级。`],
+      ['作战狂人',`需生命力与攻击力均达到200级。当前 ${data.combat}/125级。同步提升生命、枪械/近战攻击、装甲和能量护盾；125级解锁纳米修复。\n当前上限125级。`]
+      ,['生命进化',`需生命力500级、作战狂人50级。当前 ${data.lifeEvo}级：持续提升生命上限，50的倍数级额外成长；50级后每达到100的倍数等级，额外增加10000生命上限。\n当前无等级上限。`]
+      ,['攻击进化',`需攻击力500级、作战狂人50级。当前 ${data.attackEvo}级：同步提升枪械与近战攻击；50倍数等级额外成长，50级后每达到100的倍数等级额外增加10000攻击。\n当前无等级上限。`]
+      ,['装甲进化',`需装甲强化100级、作战狂人100级。当前 ${data.armorEvo}级：同步提升装甲与能量护盾上限；50倍数等级额外成长，50级后每达到100的倍数等级额外增加装甲10000、护盾22500。\n当前无等级上限。`]
+    ];
+    const pageSize=6,pageCount=Math.ceil(sections.length/pageSize);
+    guidePage=Phaser.Math.Clamp(guidePage,0,pageCount-1);
+    const pageStart=guidePage*pageSize,pageEnd=Math.min(sections.length,pageStart+pageSize);
+    for(let index=pageStart;index<pageEnd;index++){
+      const localIndex=index-pageStart,x=localIndex%2?660:48,y=95+Math.floor(localIndex/2)*175;
+      const [title,body]=sections[index];
+      this.add.rectangle(x,y,570,150,0x122b3d).setOrigin(0).setStrokeStyle(1,0x315a72);
+      this.add.text(x+18,y+14,title,{fontSize:'19px',fontStyle:'bold',color:'#ffd166'});
+      const bodyText=this.add.text(x+18,y+52,body,{fontSize:'12px',color:'#d5e7f4',wordWrap:{width:520,useAdvancedWrap:true},lineSpacing:1,fixedWidth:520,fixedHeight:68});
+      bodyText.setFixedSize(520,88);
+    }
+    const pageLabel=this.add.text(48,650,`说明 ${guidePage+1} / ${pageCount}`,{fontSize:'15px',color:'#9fb7c9'});
+    const prev=this.add.text(220,645,'上一页',{fontSize:'15px',color:guidePage>0?'#9fe8ff':'#526579',backgroundColor:'#182b40',padding:{x:12,y:7}});
+    const next=this.add.text(340,645,'下一页',{fontSize:'15px',color:guidePage+1<pageCount?'#9fe8ff':'#526579',backgroundColor:'#182b40',padding:{x:12,y:7}});
+    if(guidePage>0)prev.setInteractive({useHandCursor:true}).on('pointerdown',()=>{guidePage--;this.scene.restart()});
+    if(guidePage+1<pageCount)next.setInteractive({useHandCursor:true}).on('pointerdown',()=>{guidePage++;this.scene.restart()});
   }
 }
 
@@ -538,20 +625,59 @@ class Game extends Phaser.Scene{
     this.definition=endlessMode?{id:0,name:'无尽模式',w:1500,worldH:900,yScale:1.6,yBase:520,worldBase:820,terrain:[[0,520,1500,80],[330,430,300,24],[850,340,300,24]],e:[],p:[],f:1499}:LEVELS[level];
     this.floorTop=this.worldY(520);
     const hpUpgrade=Math.max(0,Number(data.hp)||0),atkUpgrade=Math.max(0,Number(data.atk)||0);
-    this.score=0;this.coins=0;this.maxHp=25+hpUpgrade;this.hp=this.maxHp;this.atk=1+atkUpgrade;this.hpUpgrade=hpUpgrade;this.atkUpgrade=atkUpgrade;this.shotUpgrade=Math.max(0,Number(data.shot)||0);this.invulnerable=false;this.touchFiring=false;this.touchAimActive=false;this.jumpRequested=false;this.touchDashHeld=false;this.kills=0;
+    this.combatLevel=Math.max(0,Math.min(125,Number(data.combat)||0));
+    this.lifeEvoLevel=Math.max(0,Number(data.lifeEvo)||0);
+    const lifeEvoHp=this.lifeEvoLevel>=1?1000+400*Math.min(13,Math.max(0,this.lifeEvoLevel-1))+(this.lifeEvoLevel>=15?1250:0)+600*Math.min(35,Math.max(0,this.lifeEvoLevel-15))+(this.lifeEvoLevel>=50?2250:0)+1000*Math.max(0,this.lifeEvoLevel-50)+6000*Math.floor(Math.max(0,this.lifeEvoLevel-50)/50)+10000*Math.floor(this.lifeEvoLevel/100):0;
+    const combatLife=this.combatLevel>=1?5+3*Math.min(8,Math.max(0,this.combatLevel-1))+(this.combatLevel>=10?20:0)+5*Math.min(19,Math.max(0,this.combatLevel-10))+(this.combatLevel>=30?0:0)+(this.combatLevel>=50?100:0)+50*Math.min(24,Math.max(0,this.combatLevel-50))+(this.combatLevel>=75?500:0):0;
+    const combatGun=this.combatLevel>=1?5+3*Math.min(8,Math.max(0,this.combatLevel-1))+(this.combatLevel>=30?50:0)+5*Math.min(19,Math.max(0,this.combatLevel-30))+(this.combatLevel>=50?100:0)+50*Math.min(24,Math.max(0,this.combatLevel-50))+(this.combatLevel>=75?500:0)+100*Math.min(24,Math.max(0,this.combatLevel-75))+(this.combatLevel>=100?750:0)+125*Math.min(24,Math.max(0,this.combatLevel-100)):0;
+    const combatArmor=this.combatLevel>=10?200+20*Math.min(19,Math.max(0,this.combatLevel-10))+(this.combatLevel>=30?500:0)+10*Math.min(19,Math.max(0,this.combatLevel-30))+(this.combatLevel>=50?500:0)+100*Math.min(24,Math.max(0,this.combatLevel-50))+(this.combatLevel>=75?1250:0)+125*Math.min(24,Math.max(0,this.combatLevel-75))+(this.combatLevel>=100?2250:0)+175*Math.min(24,Math.max(0,this.combatLevel-100)):0;
+    const combatShield=this.combatLevel>=10?250+15*Math.min(19,Math.max(0,this.combatLevel-10))+(this.combatLevel>=30?700:0)+25*Math.min(19,Math.max(0,this.combatLevel-30))+(this.combatLevel>=50?700:0)+200*Math.min(24,Math.max(0,this.combatLevel-50))+(this.combatLevel>=75?2250:0)+225*Math.min(24,Math.max(0,this.combatLevel-75))+(this.combatLevel>=100?4250:0)+275*Math.min(24,Math.max(0,this.combatLevel-100)):0;
+    const attackEvoLevel=Math.max(0,Number(data.attackEvo)||0),attackEvoDamage=attackEvoLevel>=1?100+40*Math.min(13,Math.max(0,attackEvoLevel-1))+(attackEvoLevel>=15?125:0)+60*Math.min(35,Math.max(0,attackEvoLevel-15))+(attackEvoLevel>=50?225:0)+100*Math.max(0,attackEvoLevel-50)+600*Math.floor(attackEvoLevel/50)+10000*Math.floor(attackEvoLevel/100):0;
+    const armorEvoLevel=Math.max(0,Number(data.armorEvo)||0),armorEvoArmor=armorEvoLevel>=1?1000+400*Math.min(13,Math.max(0,armorEvoLevel-1))+(armorEvoLevel>=15?1250:0)+600*Math.min(35,Math.max(0,armorEvoLevel-15))+(armorEvoLevel>=50?2250:0)+1000*Math.max(0,armorEvoLevel-50)+6000*Math.floor(armorEvoLevel/50)+10000*Math.floor(armorEvoLevel/100):0,armorEvoShield=armorEvoLevel>=1?1000+600*Math.min(13,Math.max(0,armorEvoLevel-1))+(armorEvoLevel>=15?2250:0)+1000*Math.min(35,Math.max(0,armorEvoLevel-15))+(armorEvoLevel>=50?4250:0)+2250*Math.max(0,armorEvoLevel-50)+12000*Math.floor(armorEvoLevel/50)+22500*Math.floor(armorEvoLevel/100):0;
+    this.score=0;this.coins=0;this.maxHp=25+hpUpgrade+combatLife+lifeEvoHp;this.hp=this.maxHp;this.atk=1+atkUpgrade+combatGun+attackEvoDamage;this.hpUpgrade=hpUpgrade;this.atkUpgrade=atkUpgrade;this.shotUpgrade=Math.max(0,Number(data.shot)||0);this.ammoLevel=this.shotUpgrade>=100?Math.max(0,Math.min(100,Number(data.ammo)||0)):0;this.invulnerable=false;this.touchFiring=false;this.touchAimActive=false;this.jumpRequested=false;this.touchDashHeld=false;this.kills=0;
     this.hpRegenPerSecond=hpUpgrade>=75?2:hpUpgrade>=65?1:hpUpgrade>=50?.5:0;this.hpKillChance=hpUpgrade>=75?.5:hpUpgrade>=65?.35:0;this.hpKillAmount=hpUpgrade>=75?1.5:hpUpgrade>=65?.5:0;this.hpEmergencyHeal=hpUpgrade>=100;this.hpEmergencyReadyAt=0;this.damageReduction=hpUpgrade>=120?.1:0;this.undyingAvailable=hpUpgrade>=150;this.nextHpRegenAt=0;
+    this.armorLevel=Math.max(0,Math.min(100,Number(data.armor)||0));
+    this.armorMax=(this.armorLevel>=1?100+15*Math.min(8,Math.max(0,this.armorLevel-1))+(this.armorLevel>=10?50:0)+10*Math.min(19,Math.max(0,this.armorLevel-10))+5*Math.min(14,Math.max(0,this.armorLevel-30))+(this.armorLevel>=45?25:0)+10*Math.min(4,Math.max(0,this.armorLevel-45))+(this.armorLevel>=50?150:0)+8*Math.min(9,Math.max(0,this.armorLevel-50))+(this.armorLevel>=60?125:0)+6*Math.min(9,Math.max(0,this.armorLevel-60))+(this.armorLevel>=70?50:0)+(this.armorLevel>=75?150:0)+5*Math.min(9,Math.max(0,this.armorLevel-75))+(this.armorLevel>=85?120:0)+(this.armorLevel>=90?200:0)+12*Math.min(4,Math.max(0,this.armorLevel-90))+(this.armorLevel>=95?150:0)+8*Math.min(4,Math.max(0,this.armorLevel-95))+(this.armorLevel>=100?300:0):0)+combatArmor+armorEvoArmor;
+    this.armor=this.armorMax;
+    this.armorReduction=this.armorLevel>=1?.25+(this.armorLevel>=10?.05:0)+.01*Math.min(19,Math.max(0,this.armorLevel-10))+.005*Math.min(14,Math.max(0,this.armorLevel-30))+.005*Math.min(4,Math.max(0,this.armorLevel-45))+.003*Math.min(9,Math.max(0,this.armorLevel-50))+.004*Math.min(9,Math.max(0,this.armorLevel-60))+.002*Math.min(9,Math.max(0,this.armorLevel-75))+(this.armorLevel>=90?.005:0)+.005*Math.min(4,Math.max(0,this.armorLevel-90))+.003*Math.min(4,Math.max(0,this.armorLevel-95))+(this.armorLevel>=100?.05:0):0;
+    this.armorReflect=this.armorLevel>=45?.25+.01*Math.min(4,Math.max(0,this.armorLevel-45))+.005*Math.min(9,Math.max(0,this.armorLevel-60))+.003*Math.min(9,Math.max(0,this.armorLevel-75))+.01*Math.min(4,Math.max(0,this.armorLevel-90))+.005*Math.min(4,Math.max(0,this.armorLevel-95))+(this.armorLevel>=100?.05:0):0;
+    this.energyShieldMax=(this.armorLevel>=50?this.armorMax*(.2+.01*Math.min(9,Math.max(0,this.armorLevel-50))+.005*Math.min(9,Math.max(0,this.armorLevel-75))+.01*Math.min(4,Math.max(0,this.armorLevel-90))):0)+combatShield+armorEvoShield;
+    this.energyShield=this.energyShieldMax;this.energyShieldRegenReadyAt=this.time.now+1000;
+    this.tempShield=0;this.tempShieldUntil=0;this.armorRegenReadyAt=this.time.now+3000;this.thornsReadyAt=this.time.now+1000;
+    this.armorBreakReadyAt=0;this.finalDefenseUsed=false;this.armorSpeedBoostUntil=0;this.armorOverloadActiveUntil=0;this.armorOverloadReturnAt=0;this.armorOverloadConsumed=0;this.armorOverloadDamageBonus=0;
     this.fireStrikeMultiplier=1;this.fireStrikeReadyAt=0;
-    this.energy=0;this.spreadShots=0;this.lastShot=-Infinity;this.shotDelay=Math.max(80,1000-Math.min(16,data.shot)*50-Math.min(4,Math.max(0,data.shot-85))*30);this.done=false;this.leftFace=false;this.heroJumping=false;this.heroKey='';this.pistolShotCounter=0;this.sniperCooldownUntil=0;
+    this.energy=0;this.spreadShots=0;this.meleeEmpoweredSwings=0;this.meleeUltimateUntil=0;this.meleeUltimateSwords=[];this.lastShot=-Infinity;this.shotDelay=Math.max(80,1000-Math.min(16,data.shot)*50-Math.min(4,Math.max(0,data.shot-85))*30);this.done=false;this.leftFace=false;this.heroJumping=false;this.heroKey='';this.pistolShotCounter=0;this.shotCounter=0;this.bulletStormReadyAt=0;this.sniperCooldownUntil=0;this.overloadUntil=0;this.overloadCapUntil=0;this.destructionActive=false;this.destructionReadyAt=this.time.now+5000;this.lastDamagedAt=this.time.now;
     this.enemyMultiplier=Math.pow(1.5,Math.floor((this.definition.id-1)/3));
-    this.pistolBurst=data.shot>=50?3:data.shot>=25?2:1;this.activeWeapon='pistol';this.smgFiring=false;this.smgAmmoMax=data.shot>=35?10+Math.min(14,Math.max(0,data.shot-35))+2*Math.min(4,Math.max(0,data.shot-75))+(data.shot>=90?12:0)+2*Math.min(24,Math.max(0,data.shot-100)):0;this.smgAmmo=this.smgAmmoMax;this.smgRegenInterval=Math.max(.2,1-.1*Math.min(4,Math.max(0,data.shot-80))-(data.shot>=90?.2:0));this.nextSmgRegenAt=0;this.smgDamage=this.atk+15*Math.min(24,Math.max(0,data.shot-100));this.sniperDamage=100+this.atk+25*Math.min(24,Math.max(0,data.shot-100));this.sniperCooldown=8;
+    const ammo=this.ammoLevel;
+    this.ammoDamageBonus=ammo>=1?5+3*Math.min(13,Math.max(0,ammo-1))+(ammo>=15?25:0)+5*Math.min(14,Math.max(0,ammo-15))+(ammo>=30?50:0)+5*Math.min(14,Math.max(0,ammo-30))+(ammo>=45?75:0)+8*Math.min(4,Math.max(0,ammo-45))+(ammo>=50?100:0)+6*Math.min(9,Math.max(0,ammo-50))+5*Math.min(9,Math.max(0,ammo-60))+(ammo>=70?125:0)+7*Math.min(4,Math.max(0,ammo-70))+(ammo>=75?150:0)+8*Math.min(9,Math.max(0,ammo-75))+(ammo>=90?200:0)+10*Math.min(4,Math.max(0,ammo-90))+12*Math.min(4,Math.max(0,ammo-95))+(ammo>=100?300:0):0;
+    this.explosiveChance=ammo>=15?Math.min(1,.1+.01*Math.min(14,Math.max(0,ammo-15))+.015*Math.min(4,Math.max(0,ammo-45))+.01*Math.min(9,Math.max(0,ammo-50))+.008*Math.min(9,Math.max(0,ammo-60))+.005*Math.min(9,Math.max(0,ammo-75))+.005*Math.min(4,Math.max(0,ammo-95))):0;
+    this.elementChance=ammo>=75?.15+.01*Math.min(9,Math.max(0,ammo-95)):0;
+    this.explosiveMultiplier=ammo>=15?1.5+.05*Math.min(14,Math.max(0,ammo-15))+.075*Math.min(14,Math.max(0,ammo-30))+.05*Math.min(4,Math.max(0,ammo-45))+.04*Math.min(9,Math.max(0,ammo-50))+.05*Math.min(4,Math.max(0,ammo-70))+.08*Math.min(4,Math.max(0,ammo-90)):0;
+    this.pistolBurst=data.shot>=50?3:data.shot>=25?2:1;this.activeWeapon='pistol';this.smgFiring=false;this.smgAmmoMax=data.shot>=35?10+Math.min(14,Math.max(0,data.shot-35))+2*Math.min(4,Math.max(0,data.shot-75))+(data.shot>=90?12:0)+2*Math.min(24,Math.max(0,data.shot-100)):0;this.smgAmmo=this.smgAmmoMax;this.smgRegenInterval=Math.max(.2,1-.1*Math.min(4,Math.max(0,data.shot-80))-(data.shot>=90?.2:0));if(ammo>=85)this.smgRegenInterval*=.5;this.nextSmgRegenAt=0;this.smgDamage=this.atk+15*Math.min(24,Math.max(0,data.shot-100))+this.ammoDamageBonus;this.sniperDamage=100+this.atk+25*Math.min(24,Math.max(0,data.shot-100))+(this.ammoLevel>=45?250:0)+this.ammoDamageBonus;this.sniperCooldown=Math.max(1,(this.ammoLevel>=45?5:8)-.1*Math.min(4,Math.max(0,ammo-70)));
     const laserLevel=Math.max(0,Math.min(14,data.shot-60));
     const laserCooldownReduction=.1*Math.min(14,Math.max(0,data.shot-60))+(data.shot>=90?.6:0);
-    this.laserDuration=5+laserLevel*.2+.4*Math.min(4,Math.max(0,data.shot-75))+(data.shot>=90?1.2:0)+.2*Math.min(24,Math.max(0,data.shot-100));this.laserCooldown=Math.max(1,15-laserCooldownReduction);this.laserDamage=.3+Math.max(0,Number(data.atk)||0)+5*Math.min(24,Math.max(0,data.shot-100));this.laserActiveUntil=0;this.laserCooldownUntil=0;this.laserNextTick=0;this.laserLine=this.add.graphics().setDepth(7);
-    this.agilityLevel=Math.max(0,Math.min(85,Number(data.agility)||0));
+    this.laserDuration=5+laserLevel*.2+.4*Math.min(4,Math.max(0,data.shot-75))+(data.shot>=90?1.2:0)+.2*Math.min(24,Math.max(0,data.shot-100))+(ammo>=30?1.2+.2*Math.min(14,ammo-30):0)+.15*Math.min(9,Math.max(0,ammo-50))+.2*Math.min(9,Math.max(0,ammo-60))+.1*Math.min(9,Math.max(0,ammo-75))+.2*Math.min(4,Math.max(0,ammo-90));this.laserCooldown=Math.max(1,15-laserCooldownReduction);
+    // 高能激光的 1.25 倍作用于完整枪械伤害，避免把弹药强化的固定伤害漏在倍率之外。
+    // 激光枪与其它枪械使用同一套完整攻击力，包含作战狂人的枪械攻击加成。
+    const laserBaseDamage=.3+this.atk+5*Math.min(24,Math.max(0,data.shot-100))+this.ammoDamageBonus;
+    this.laserDamage=laserBaseDamage*(ammo>=30?1.25:1);this.laserActiveUntil=0;this.laserCooldownUntil=0;this.laserNextTick=0;this.laserLine=this.add.graphics().setDepth(7);
+    this.agilityLevel=Math.max(0,Math.min(150,Number(data.agility)||0));
+    this.meleeLevel=Math.max(0,Math.min(150,Number(data.melee)||0));
+    this.combatMode='ranged';this.meleeWeapon='dagger';this.meleeNextAttackAt=0;this.meleeNextRegenAt=0;this.meleeSwinging=false;this.meleeSwingVisualUntil=0;this.meleeSwingStart=0;this.meleeSwingBaseAngle=0;
+    this.meleeDamage=1+(this.meleeLevel>=2?2*Math.min(13,this.meleeLevel-1):0)+(this.meleeLevel>=15?10:0)+(this.meleeLevel>=16?2*Math.min(14,this.meleeLevel-15):0)+(this.meleeLevel>=31?5*Math.min(19,this.meleeLevel-30):0)+(this.meleeLevel>=50?20:0)+(this.meleeLevel>=51?8*Math.min(24,this.meleeLevel-50):0)+(this.meleeLevel>=75?60:0)+50*Math.min(24,Math.max(0,this.meleeLevel-75))+(this.meleeLevel>=100?250:0)+50*Math.min(24,Math.max(0,this.meleeLevel-100))+(this.meleeLevel>=125?0:0)+50*Math.min(24,Math.max(0,this.meleeLevel-125))+(this.meleeLevel>=150?125:0)+combatGun+attackEvoDamage;
+    this.daggerDamage=1+(this.meleeLevel>=2?2*Math.min(13,this.meleeLevel-1):0)+(this.meleeLevel>=15?15:0)+(this.meleeLevel>=16?3*Math.min(14,this.meleeLevel-15):0)+(this.meleeLevel>=31?2*Math.min(19,this.meleeLevel-30):0)+(this.meleeLevel>=50?10:0)+(this.meleeLevel>=51?3*Math.min(24,this.meleeLevel-50):0)+(this.meleeLevel>=75?50:0)+15*Math.min(24,Math.max(0,this.meleeLevel-75));
+    this.bladeDamage=50+(this.meleeLevel>=31?5*Math.min(19,this.meleeLevel-30):0)+(this.meleeLevel>=50?25:0)+(this.meleeLevel>=51?5*Math.min(24,this.meleeLevel-50):0)+(this.meleeLevel>=75?125:0)+25*Math.min(24,Math.max(0,this.meleeLevel-75));
+    this.daggerCooldown=Math.max(.05,1-(this.meleeLevel>=15?.3:0)-.03*Math.max(0,this.meleeLevel-30));
+    this.bladeCooldown=Math.max(.05,1.25-(this.meleeLevel>=50?.35:0)-.03*Math.min(19,Math.max(0,this.meleeLevel-30))-.01*Math.min(24,Math.max(0,this.meleeLevel-50)));
+    this.meleeRegenAmount=(this.meleeLevel>=75?15:5)+(this.meleeLevel>=125?20:0)+2*Math.min(24,Math.max(0,this.meleeLevel-125));
+    this.meleeKillMultiplier=1;
     this.dashMaxCharges=this.agilityLevel>=60?4:this.agilityLevel>=10?2:1;this.dashCharges=this.dashMaxCharges;this.dashRechargeAt=0;
-    this.dashCooldown=10-Math.min(8,Math.max(0,this.agilityLevel-1))*.5-Math.min(10,Math.max(0,this.agilityLevel-9))*.1-Math.min(9,Math.max(0,this.agilityLevel-30))*.1-Math.min(9,Math.max(0,this.agilityLevel-50))*.05-Math.min(9,Math.max(0,this.agilityLevel-60))*.01;
+    this.dashCooldown=Math.max(.2,10-Math.min(8,Math.max(0,this.agilityLevel-1))*.5-Math.min(10,Math.max(0,this.agilityLevel-9))*.1-Math.min(9,Math.max(0,this.agilityLevel-30))*.1-Math.min(9,Math.max(0,this.agilityLevel-50))*.05-Math.min(9,Math.max(0,this.agilityLevel-60))*.01-.05*Math.min(4,Math.max(0,this.agilityLevel-85))-.01*Math.min(34,Math.max(0,this.agilityLevel-115)));
     this.dashDistance=this.agilityLevel>=30?55+Math.min(9,this.agilityLevel-30)*15:40;this.stunDuration=2+Math.min(9,Math.max(0,this.agilityLevel-20))*.1;
-    this.doubleJumpCooldown=Math.max(.5,5-Math.min(9,Math.max(0,this.agilityLevel-40))*.3-Math.min(9,Math.max(0,this.agilityLevel-50))*.1-Math.min(9,Math.max(0,this.agilityLevel-60))*.05);this.jumpCount=0;this.secondJumpReadyAt=0;this.trackingDashReadyAt=0;this.airstrikeReadyAt=0;this.advancedDashCooldown=Math.max(1,15-.5*Math.min(14,Math.max(0,this.agilityLevel-70)));this.advancedDashMax=this.agilityLevel>=85?4:0;this.advancedDashCharges=this.advancedDashMax;this.advancedDashRechargeAt=0;this.airstrikeMaxCharges=this.agilityLevel>=85?2:0;this.airstrikeCharges=this.airstrikeMaxCharges;this.airstrikeRechargeAt=0;
+    this.doubleJumpCooldown=this.agilityLevel>=90?0:Math.max(.5,5-Math.min(9,Math.max(0,this.agilityLevel-40))*.3-Math.min(9,Math.max(0,this.agilityLevel-50))*.1-Math.min(9,Math.max(0,this.agilityLevel-60))*.05);this.jumpCount=0;this.secondJumpReadyAt=0;this.trackingDashReadyAt=0;this.airstrikeReadyAt=0;this.trackingDashCooldown=Math.max(1,15-.5*Math.min(14,Math.max(0,this.agilityLevel-70)));this.airstrikeCooldown=Math.max(1,this.trackingDashCooldown-.05*Math.min(4,Math.max(0,this.agilityLevel-85)));this.advancedDashMax=this.agilityLevel>=85?4:0;this.advancedDashCharges=this.advancedDashMax;this.advancedDashRechargeAt=0;this.airstrikeMaxCharges=this.agilityLevel>=85?2:0;this.airstrikeCharges=this.airstrikeMaxCharges;this.airstrikeRechargeAt=0;
+    this.airborneKillHeal=this.agilityLevel>=90?20+5*Math.min(9,Math.max(0,this.agilityLevel-90)):0;this.airborneKillHealCooldown=Math.max(0,3-.05*Math.min(9,Math.max(0,this.agilityLevel-90)));this.airborneKillHealReadyAt=0;
+    this.floatMaxMs=this.agilityLevel>=100?5000+.5*Math.min(14,Math.max(0,this.agilityLevel-100))*1000+.5*Math.min(34,Math.max(0,this.agilityLevel-115))*1000:0;this.floatMs=this.floatMaxMs;this.floatRechargeDelay=this.agilityLevel>=150?1:Math.max(1.5,3-.03*Math.min(14,Math.max(0,this.agilityLevel-100)));this.floatRechargeAt=this.time.now+this.floatRechargeDelay*1000;this.floatUnlockAt=0;this.floating=false;
+    this.assassinationCharges=this.agilityLevel>=115?2:0;this.assassinationMaxCharges=2;this.assassinationCooldown=Math.max(1,30-.5*Math.min(34,Math.max(0,this.agilityLevel-115)));this.assassinationDamageMultiplier=this.agilityLevel>=150?2.5:1.5;this.assassinationRechargeAt=0;this.assassinationReturnUntil=0;this.assassinationOrigin=null;this.assassinationBuffUntil=0;
     this.endlessWave=0;this.nextWaveAt=endlessMode?this.time.now+15000:Infinity;
     const worldHeight=this.definition.worldH||600;
     this.physics.world.setBounds(0,0,this.definition.w,worldHeight);
@@ -568,8 +694,15 @@ class Game extends Phaser.Scene{
       const sx=80+i*180,sy=70+(i*47)%170;
       backdrop.fillStyle(i%3===0?0xffd166:0x7adff0,.7).fillCircle(sx,sy,2);
     }
-    this.add.rectangle(18,8,1244,58,0x07111dcc).setOrigin(0).setScrollFactor(0).setDepth(19).setStrokeStyle(1,0x2b5b74);
-    this.hud=this.add.text(30,18,'',{fontSize:'13px',color:'#ffd166',lineSpacing:3,wordWrap:{width:1160,useAdvancedWrap:true}}).setScrollFactor(0).setDepth(20);
+    this.hudPanel=this.add.rectangle(18,8,1244,148,0x07111dcc).setOrigin(0).setScrollFactor(0).setDepth(19).setStrokeStyle(1,0x2b5b74);
+    this.hud=this.add.text(30,13,'',{fontSize:'20px',color:'#ffd166',wordWrap:{width:960,useAdvancedWrap:true},fixedWidth:960,fixedHeight:27}).setScrollFactor(0).setDepth(20);
+    this.hudCombat=this.add.text(30,45,'',{fontSize:'16px',color:'#d5e7f4',wordWrap:{width:960,useAdvancedWrap:true},fixedWidth:960,fixedHeight:58,lineSpacing:2}).setScrollFactor(0).setDepth(20);
+    this.hudDefense=this.add.text(30,108,'',{fontSize:'16px',color:'#bfe8f5',wordWrap:{width:960,useAdvancedWrap:true},fixedWidth:960,fixedHeight:27,lineSpacing:1}).setScrollFactor(0).setDepth(20);
+    this.statusDetail=this.add.text(30,145,'',{fontSize:'16px',color:'#d5e7f4',wordWrap:{width:1180,useAdvancedWrap:true},fixedWidth:1180,fixedHeight:72,lineSpacing:3}).setScrollFactor(0).setDepth(20).setVisible(false);
+    this.statusBars=this.add.graphics().setScrollFactor(0).setDepth(21);
+    this.statusToggleButton=this.add.rectangle(1052,14,100,32,0x19334b).setScrollFactor(0).setDepth(21).setStrokeStyle(1,0x3da5c7).setInteractive({useHandCursor:true});
+    this.statusToggleText=this.add.text(1052,14,'展开状态',{fontSize:'12px',color:'#fff'}).setOrigin(.5).setScrollFactor(0).setDepth(22);
+    this.statusExpanded=false;this.statusToggleButton.on('pointerdown',()=>{this.statusExpanded=!this.statusExpanded;this.statusDetail.setVisible(this.statusExpanded);this.statusToggleText.setText(this.statusExpanded?'收起状态':'展开状态');this.hudPanel.setSize(1244,this.statusExpanded?250:148);});
     this.pauseButton=this.add.rectangle(1170,14,92,32,0x19334b).setScrollFactor(0).setDepth(21).setStrokeStyle(1,0x3da5c7).setInteractive({useHandCursor:true});
     this.pauseButtonText=this.add.text(1170,14,'退出本局',{fontSize:'13px',color:'#fff'}).setOrigin(.5).setScrollFactor(0).setDepth(22);
     this.pauseButton.on('pointerdown',()=>this.exitWithoutReward());
@@ -604,16 +737,26 @@ class Game extends Phaser.Scene{
     this.physics.add.overlap(this.playerBullets,this.enemies,this.hitEnemy,null,this);
     this.physics.add.overlap(this.player,this.enemyBullets,this.hitPlayer,null,this);
     this.cameras.main.startFollow(this.player,true,.08,.08);
-    this.keys=this.input.keyboard.addKeys('A,D,W,SPACE,LEFT,RIGHT,UP,R,Z,S,E,F,ESC');
+    this.keys=this.input.keyboard.addKeys('A,D,W,SPACE,LEFT,RIGHT,UP,R,Z,S,E,F,X,C,V,ESC');
+    this.jumpBufferUntil=0;
+    const bufferJump=event=>{if(event?.repeat)return;this.jumpRequested=true;this.jumpBufferUntil=this.time.now+220};
+    this.input.keyboard.on('keydown-W',bufferJump);
+    this.input.keyboard.on('keydown-UP',bufferJump);
+    this.input.keyboard.on('keydown-SPACE',bufferJump);
+    this.input.keyboard.on('keydown',event=>{
+      const code=event?.code||event?.key;
+      if(code==='KeyW'||code==='ArrowUp'||code==='Space'||code==='w'||code==='W'||code==='箭头上')bufferJump(event);
+    });
     this.pointer=this.input.activePointer;
     this.input.on('pointermove',pointer=>this.pointer=pointer);
     this.input.mouse?.disableContextMenu();
-    this.input.on('pointerdown',pointer=>{if(pointer.rightButtonDown()){this.toggleWeapon();return}if(pointer.leftButtonDown()){this.smgFiring=true;this.shoot()}});
+    this.input.on('pointerdown',pointer=>{if(pointer.rightButtonDown()){this.toggleWeapon();return}if(pointer.leftButtonDown()){this.smgFiring=true;if(this.combatMode==='melee')this.meleeAttack(this.time.now);else this.shoot()}});
     this.input.on('pointerup',pointer=>{if(pointer.button===0)this.smgFiring=false});
     this.aimLine=this.add.graphics().setDepth(8);
     this.nearestEnemy=null;
     this.enemyHpBar=this.add.graphics().setDepth(9);
     this.enemyHpText=this.add.text(0,0,'',{fontSize:'13px',fontStyle:'bold',color:'#fff',stroke:'#10182d',strokeThickness:3}).setOrigin(.5).setDepth(10).setVisible(false);
+    this.offscreenArrows=this.add.graphics().setScrollFactor(0).setDepth(30);
     (this.definition.tutorial||[]).forEach(([x,y,text])=>{
       this.add.text(x,y,text,{fontSize:'18px',color:'#d8f4ff',align:'center',backgroundColor:'#10243dcc',padding:{x:8,y:6}}).setOrigin(.5).setDepth(2);
     });
@@ -624,8 +767,9 @@ class Game extends Phaser.Scene{
     const config=type==='y'?{body:'hitEnemy1',art:'enemy1',size:[72,42],flying:false}:type==='g'?{body:'hitEnemy2',art:'enemy2',size:[62,56],flying:false}:type==='b1'?{body:'hitBoss1',art:'enemy1',size:[154,108],flying:false,boss:true}:type==='b2'?{body:'hitBoss2',art:'enemy2',size:[190,138],flying:false,boss:true}:type==='b'?{body:'hitBoss3',art:'enemy3',size:[150,110],flying:true,boss:true}:type.startsWith('bf')||type.startsWith('bt')||type.startsWith('bw')||type.startsWith('bl')||type.startsWith('br')?{body:'hitBoss2',art:'enemy2',size:[190,138],flying:false,boss:true}:{body:'hitEnemy3',art:'enemy3',size:[72,52],flying:true};
     const enemy=this.enemies.create(x,y,config.body).setVisible(false).setCollideWorldBounds(true);
     const baseHp=type==='y'?2:type==='e2'?1000:type==='b1'?10000:type==='b2'?15000:type==='b'?5000:type.startsWith('b')?Number(bossHp)||15000:5,baseDamage=type==='y'||type==='b1'?2:type==='b2'?5:type==='b'?4:type.startsWith('b')?5:type==='e2'?2:1;
-    const multiplier=Number(waveMultiplier)||this.enemyMultiplier;
-    enemy.type=type;enemy.hp=type==='b1'?10000:type==='b2'?15000:type==='b'?5000:config.boss?baseHp:baseHp*multiplier;enemy.maxHp=enemy.hp;enemy.contactDamage=baseDamage*multiplier;enemy.waveMultiplier=multiplier;enemy.wave=this.endlessWave||0;enemy.artBase=config.art;enemy.artSize=config.size;enemy.flying=config.flying;enemy.boss=Boolean(config.boss);enemy.elite=Boolean(config.elite);enemy.bossPattern=bossPattern||'';enemy.shield=type==='e2'?2000:0;enemy.maxShield=enemy.shield;enemy.facingLeft=false;enemy.stunnedUntil=0;enemy.bossStage=type==='b2'?1:0;enemy.spiralActiveUntil=0;enemy.spiralCooldownUntil=0;
+    // Boss 不使用关卡配置里占位的 waveMultiplier=1；其伤害必须基于当前关卡倍率。
+    const multiplier=config.boss?this.enemyMultiplier:(Number(waveMultiplier)||this.enemyMultiplier);
+    enemy.type=type;enemy.hp=type==='b1'?10000:type==='b2'?15000:type==='b'?5000:config.boss?baseHp:baseHp*multiplier;enemy.maxHp=enemy.hp;enemy.contactDamage=(config.boss?5:baseDamage)*multiplier;enemy.waveMultiplier=multiplier;enemy.wave=this.endlessWave||0;enemy.artBase=config.art;enemy.artSize=config.size;enemy.flying=config.flying;enemy.boss=Boolean(config.boss);enemy.elite=Boolean(config.elite);enemy.bossPattern=bossPattern||'';enemy.shield=type==='e2'?2000:0;enemy.maxShield=enemy.shield;enemy.facingLeft=false;enemy.stunnedUntil=0;enemy.bossStage=type==='b2'?1:0;enemy.spiralActiveUntil=0;enemy.spiralCooldownUntil=0;
     enemy.art=this.add.image(x,y,config.art+'R').setDisplaySize(config.size[0],config.size[1]).setDepth(4);
     enemy.art.setOrigin(.5,config.flying?.5:1);
     if(config.flying)enemy.body.allowGravity=false;
@@ -659,6 +803,7 @@ class Game extends Phaser.Scene{
     return {x:handX+Math.cos(angle)*length,y:handY+Math.sin(angle)*length,angle};
   }
   getWeaponTextureKey(){
+    if(this.combatMode==='melee')return this.meleeWeapon==='blade'?'weaponBlade':'weaponDagger';
     if(this.activeWeapon==='pistol'&&this.spreadShots>0)return 'weaponShotgun';
     if(this.activeWeapon==='smg')return 'weaponSmg';
     if(this.activeWeapon==='laser')return 'weaponLaser';
@@ -668,13 +813,20 @@ class Game extends Phaser.Scene{
   syncWeaponArt(){
     if(!this.weaponArt||!this.player)return;
     const key=this.getWeaponTextureKey();
-    const sizes={weaponPistol:[46,31],weaponShotgun:[54,20],weaponSmg:[52,31],weaponLaser:[58,33],weaponSniper:[60,22]};
+    const sizes={weaponPistol:[46,31],weaponShotgun:[54,20],weaponSmg:[52,31],weaponLaser:[58,33],weaponSniper:[60,22],weaponDagger:[28,42],weaponBlade:[32,58]};
     if(this.weaponKey!==key||this.weaponArt.texture?.key!==key){this.weaponArt.setTexture(key).setDisplaySize(...sizes[key]);this.weaponKey=key;}
     const pointer=this.pointer||this.input.activePointer,target=this.cameras.main.getWorldPoint(pointer.x,pointer.y);
     const handX=this.player.x+(this.leftFace?-13:13),handY=this.player.body.bottom-48;
     const angle=Math.atan2(target.y-handY,target.x-handX);
-    this.weaponArt.setPosition(handX,handY).setRotation(angle);
-    this.weaponArt.setFlipY(Math.cos(angle)<0);
+    let displayAngle=angle;
+    if(this.combatMode==='melee'&&this.meleeSwingVisualUntil>this.time.now){
+      const progress=1-(this.meleeSwingVisualUntil-this.time.now)/180;
+      const swingOffset=(progress<.55?progress/.55:1-(progress-.55)/.45)*(this.leftFace?-1:1)*1.15;
+      displayAngle=angle+swingOffset;
+    }
+    if(this.combatMode==='melee')this.weaponArt.setOrigin(.5,.9).setPosition(handX,handY).setRotation(displayAngle+Math.PI/2);
+    else this.weaponArt.setOrigin(.12,.5).setPosition(handX,handY).setRotation(displayAngle);
+    this.weaponArt.setFlipY(this.combatMode==='melee'?false:Math.cos(angle)<0);
     this.weaponArt.setVisible(true);
   }
   burstEffect(x,y,color=0xffffff,scale=1){
@@ -685,6 +837,21 @@ class Game extends Phaser.Scene{
       const angle=i*Math.PI/3,part=this.add.rectangle(x,y,5,5,color,1).setDepth(12);
       sparks.push(part);this.tweens.add({targets:part,x:x+Math.cos(angle)*30*scale,y:y+Math.sin(angle)*30*scale,alpha:0,duration:320,ease:'Cubic.Out',onComplete:()=>part.destroy()});
     }
+  }
+  meleeSlashEffect(angle,range,arc,color){
+    const x=this.player.x,y=this.player.body.bottom-48;
+    const g=this.add.graphics().setDepth(13);
+    g.lineStyle(7,color,.92);g.arc(x,y,range,angle-arc/2,angle+arc/2,false);
+    g.lineStyle(2,0xffffff,.95);g.arc(x,y,range-9,angle-arc/2+.04,angle+arc/2-.04,false);
+    g.lineBetween(x+Math.cos(angle-arc/2)*12,y+Math.sin(angle-arc/2)*12,x+Math.cos(angle-arc/2)*(range+4),y+Math.sin(angle-arc/2)*(range+4));
+    g.lineBetween(x+Math.cos(angle+arc/2)*12,y+Math.sin(angle+arc/2)*12,x+Math.cos(angle+arc/2)*(range+4),y+Math.sin(angle+arc/2)*(range+4));
+    this.tweens.add({targets:g,alpha:0,scaleX:1.08,scaleY:1.08,duration:180,ease:'Cubic.Out',onComplete:()=>g.destroy()});
+  }
+  meleeHitEffect(enemy,color){
+    this.burstEffect(enemy.x,enemy.y,color,0.65);
+    const slash=this.add.graphics().setDepth(14);slash.lineStyle(4,0xffffff,.9);
+    slash.lineBetween(enemy.x-14,enemy.y-14,enemy.x+14,enemy.y+14);slash.lineBetween(enemy.x+14,enemy.y-14,enemy.x-14,enemy.y+14);
+    this.tweens.add({targets:slash,alpha:0,scale:1.5,duration:180,onComplete:()=>slash.destroy()});
   }
   playerHitEffect(){
     this.burstEffect(this.player.x,this.player.body.top+this.player.body.height/2,0xff526f,1.2);
@@ -718,34 +885,61 @@ class Game extends Phaser.Scene{
     this.enemyHpBar.fillStyle(target.boss?0xff4d78:0x65e572,1).fillRoundedRect(barX,barY,width*ratio,height,2);
     this.enemyHpText.setPosition(target.x,barY-10).setText(`${this.formatHealth(target.hp)} / ${this.formatHealth(target.maxHp)}`).setVisible(true);
   }
+  drawOffscreenArrows(){
+    if(!this.offscreenArrows||!this.player)return;const view=this.cameras.main.worldView,targets=this.enemies.getChildren().filter(e=>e.active&&!this.isEnemyVisible(e)).sort((a,b)=>Phaser.Math.Distance.Between(this.player.x,this.player.y,a.x,a.y)-Phaser.Math.Distance.Between(this.player.x,this.player.y,b.x,b.y)).slice(0,3);const sx=1280/this.definition.w,sy=720/(this.definition.worldH||720);this.offscreenArrows.clear();targets.forEach(enemy=>{const px=Phaser.Math.Clamp((enemy.x-view.x)/Math.max(1,view.width)*1280,24,1256),py=Phaser.Math.Clamp((enemy.y-view.y)/Math.max(1,view.height)*720,24,696);let x=px,y=py;if(enemy.x<view.x)x=24;else if(enemy.x>view.right)x=1256;if(enemy.y<view.y)y=24;else if(enemy.y>view.bottom)y=696;const angle=Math.atan2(py-360,px-640);this.offscreenArrows.fillStyle(0xff4255,.95);this.offscreenArrows.beginPath();this.offscreenArrows.moveTo(x+Math.cos(angle)*12,y+Math.sin(angle)*12);this.offscreenArrows.lineTo(x+Math.cos(angle+2.5)*9,y+Math.sin(angle+2.5)*9);this.offscreenArrows.lineTo(x+Math.cos(angle-2.5)*9,y+Math.sin(angle-2.5)*9);this.offscreenArrows.closePath();this.offscreenArrows.fillPath();});
+  }
   pickItem(player,item){
     const type=item.type;item.art.destroy();item.destroy();
     if(type==='coin'){this.coins++;this.score+=100}
     if(type==='energy')this.energy=Math.min(100,this.energy+35);
-    if(type==='skill')this.spreadShots=data.shot>=85?5:3;
+    if(type==='skill'){
+      if(this.combatMode==='melee')this.meleeEmpoweredSwings=3;
+      else this.spreadShots=this.ammoLevel>=100?5:this.shotUpgrade>=85?5:3;
+    }
     this.syncWeaponArt();
     if(type==='heart'){
-      const healAmount=10+3*this.enemyMultiplier;
-      this.hp=Math.min(this.maxHp,this.hp+healAmount);
+      const healAmount=10+3*this.enemyMultiplier,missingBefore=Math.max(0,this.maxHp-this.hp);
+      this.healPlayer(healAmount,this.armorLevel>=75);
     }
   }
   touchEnemy(player,enemy){if(enemy.stunnedUntil>this.time.now)return;this.damage(enemy.contactDamage||1,enemy)}
   hitPlayer(player,bullet){const amount=bullet.getData('damage')||1,owner=bullet.getData('owner');bullet.destroy();this.damage(amount,owner)}
+  healPlayer(amount,allowOverflow=false){
+    const value=Math.max(0,Number(amount)||0)*(this.armorLevel>=95&&this.hp<this.maxHp*.15?2:1),before=this.hp;
+    this.hp=Math.min(this.maxHp,this.hp+value);
+    if(allowOverflow&&this.armorLevel>=75&&value>this.maxHp-before){const overflow=value-(this.maxHp-before),armorBefore=this.armor,armorRoom=Math.max(0,this.armorMax-armorBefore),armorAdded=Math.min(armorRoom,overflow);this.armor=armorBefore+armorAdded;const shieldOverflow=Math.max(0,overflow-armorAdded);this.energyShield=Math.min(this.energyShieldMax,this.energyShield+shieldOverflow);}
+  }
+  restoreNano(amount){
+    let remaining=Math.max(0,Number(amount)||0);
+    const hpAdded=Math.min(Math.max(0,this.maxHp-this.hp),remaining);this.hp+=hpAdded;remaining-=hpAdded;
+    const armorAdded=Math.min(Math.max(0,this.armorMax-this.armor),remaining);this.armor+=armorAdded;remaining-=armorAdded;
+    if(remaining>0)this.energyShield=Math.min(this.energyShieldMax,this.energyShield+remaining);
+  }
   killEnemy(enemy,source='bullet'){
     if(!enemy?.active)return;
     const now=this.time.now;
     this.burstEffect(enemy.x,enemy.y,enemy.boss?0xffd166:0xfff4c2,enemy.boss?1.8:1);
     this.kills++;
-    if(this.hpKillChance&&Math.random()<this.hpKillChance)this.hp=Math.min(this.maxHp,this.hp+this.hpKillAmount);
+    if(this.hpKillChance&&Math.random()<this.hpKillChance)this.healPlayer(this.hpKillAmount);
+    if(this.airborneKillHeal>0&&this.heroJumping&&now>=this.airborneKillHealReadyAt){
+      this.healPlayer(this.airborneKillHeal);
+      this.airborneKillHealReadyAt=now+this.airborneKillHealCooldown*1000;
+    }
+    if((source==='melee'||source==='meleeUltimate')&&this.meleeLevel>=50)this.healPlayer(this.maxHp*.1);
+    if((source==='melee'||source==='meleeUltimate')&&this.meleeLevel>=125)this.healPlayer(20);
+    if((source==='melee'||source==='meleeUltimate')&&this.meleeLevel>=150)this.meleeKillMultiplier*=1.01;
+    if(source==='meleeUltimate'&&this.meleeLevel>=100&&this.meleeUltimateUntil>now)this.meleeUltimateUntil=Math.min(this.meleeUltimateMaxUntil,this.meleeUltimateUntil+1000);
+    if(this.armorLevel>=100){this.armor=Math.min(this.armorMax,this.armor+100);this.energyShield=Math.min(this.energyShieldMax,this.energyShield+200);}
     if(this.fireStrikeReadyAt<=now&&this.atkUpgrade>=50){this.fireStrikeMultiplier=this.atkUpgrade>=75?2:1.5;this.fireStrikeReadyAt=now+(this.atkUpgrade>=75?8000:10000);}
     if(this.shotUpgrade>=85){this.energy=Math.min(100,this.energy+(source==='ultimate'?6:3));}
     if(endlessMode){
       const wave=Math.max(1,enemy.wave||this.endlessWave||1),earned=3*wave;
       this.coins+=earned;this.score+=earned;data.coins+=earned;save();
     }
-    if(source==='laser'&&this.shotUpgrade>=80&&Math.random()<.35)this.laserActiveUntil+=400;
-    if(source==='sniper')this.sniperCooldownUntil=now+3000;
-    if(source==='pistol'&&this.shotUpgrade>=80){const chance=Math.min(.32,.2+.03*Math.min(4,this.shotUpgrade-80));if(Math.random()<chance)this.fireRadial(enemy.x,enemy.y,12,this.atk,'pistolRadial');}
+    if(source==='laser'&&this.shotUpgrade>=80&&Math.random()<(this.ammoLevel>=85?.7:.35))this.laserActiveUntil+=this.ammoLevel>=85?800:400;
+    if(this.overloadUntil>now&&this.overloadUntil<this.overloadCapUntil)this.overloadUntil=Math.min(this.overloadCapUntil,this.overloadUntil+200);
+    if(source==='sniper')this.sniperCooldownUntil=now+(this.ammoLevel>=45?0:3000);
+    if(source==='pistol'&&this.shotUpgrade>=80){const chance=Math.min(.42,.2+.03*Math.min(4,this.shotUpgrade-80)+(this.ammoLevel>=85?.1:0));if(Math.random()<chance)this.fireRadial(enemy.x,enemy.y,12,this.atk+this.ammoDamageBonus,'pistolRadial');}
     if(enemy.type==='g'||enemy.type==='e2'||enemy.type==='b2'){
       const radius=enemy.boss?240:150,dx=this.player.x-enemy.x,dy=this.player.y-enemy.y;
       if(dx*dx+dy*dy<=radius*radius)this.damage(enemy.contactDamage||1,enemy);
@@ -755,20 +949,47 @@ class Game extends Phaser.Scene{
   }
   damage(amount,sourceEnemy=null){
     if(this.invulnerable||this.done)return;
-    const damageAmount=Math.max(0,Number(amount)||0)*(1-this.damageReduction);
+    const meleeReduction=this.combatMode==='melee'&&this.meleeLevel>=1?(this.meleeLevel>=75?.4:this.meleeLevel>=50?.3:this.meleeLevel>=30?.2:.1)+.005*Math.min(24,Math.max(0,this.meleeLevel-100)):0;
+    if(this.armorLevel>=85&&this.armor>0&&Math.random()<.1){this.armorSpeedBoostUntil=this.time.now+1000;return;}
+    const incoming=Math.max(0,Number(amount)||0);
+    const overloadActive=this.armorOverloadActiveUntil>this.time.now;
+    const adjustedIncoming=incoming;
+    const armorWasActive=this.armor>0;
+    const effectiveReduction=overloadActive?.75:this.armorReduction;
+    const totalReduction=Math.min(.9,this.damageReduction+meleeReduction+(armorWasActive?effectiveReduction:0));
+    const damageAmount=adjustedIncoming*(1-totalReduction);
     if(!damageAmount)return;
-    const nextHp=Phaser.Math.Clamp((Number(this.hp)||0)-damageAmount,0,this.maxHp);
+    let hpDamage=damageAmount;
+    if(this.tempShield>0){const absorbed=Math.min(this.tempShield,hpDamage);this.tempShield-=absorbed;hpDamage-=absorbed;}
+    if(this.energyShield>0){const absorbed=Math.min(this.energyShield,hpDamage);this.energyShield-=absorbed;hpDamage-=absorbed;}
+    if(armorWasActive){const absorbed=Math.min(this.armor,hpDamage);this.armor=Math.max(0,this.armor-absorbed);hpDamage=Math.max(0,hpDamage-absorbed);}
+    if(this.getEffectiveArmorReflect()>0&&armorWasActive&&sourceEnemy?.active)this.damageEnemy(sourceEnemy,damageAmount*this.getEffectiveArmorReflect(),'armorReflect');
+    if(this.armor>0&&this.armorLevel>=70&&sourceEnemy?.active)this.damageEnemy(sourceEnemy,this.armorReflect*2,'thornsHit');
+    const armorBroken=armorWasActive&&this.armor<=0;
+    if(armorBroken)this.handleArmorBreak(sourceEnemy);
+    const nextHp=Phaser.Math.Clamp((Number(this.hp)||0)-hpDamage,0,this.maxHp);
     if(nextHp<=0&&this.undyingAvailable){
-      this.undyingAvailable=false;this.hp=Math.min(this.maxHp,this.maxHp*.5);this.invulnerable=true;
+      this.undyingAvailable=false;this.healPlayer(this.maxHp*.5);this.invulnerable=true;
       this.time.delayedCall(900,()=>this.invulnerable=false);
       if(sourceEnemy?.active)this.damageEnemy(sourceEnemy,500,'undying');
       return;
     }
     this.hp=nextHp;
+    this.lastDamagedAt=this.time.now;this.destructionReadyAt=this.time.now+3000;this.destructionActive=false;
     this.playerHitEffect();
     this.invulnerable=true;this.time.delayedCall(900,()=>this.invulnerable=false);
     if(this.hp<=0){this.hp=0;this.failLevel();}
   }
+  handleArmorBreak(sourceEnemy){
+    if(this.armorLevel>=75&&this.time.now>=this.armorBreakReadyAt){this.armorBreakReadyAt=this.time.now+25000;this.burstEffect(this.player.x,this.player.y,0xffd166,1.8);this.enemies.getChildren().forEach(enemy=>{if(enemy.active&&Phaser.Math.Distance.Between(this.player.x,this.player.y,enemy.x,enemy.y)<=120){this.damageEnemy(enemy,this.armorMax,'armorBreak');enemy.setVelocityX(Math.sign(enemy.x-this.player.x)*75);}});}
+    if(this.armorLevel>=100&&!this.finalDefenseUsed&&!this.bossEnemy?.active){this.finalDefenseUsed=true;this.enemies.getChildren().forEach(enemy=>{if(enemy.active&&Phaser.Math.Distance.Between(this.player.x,this.player.y,enemy.x,enemy.y)<=50)this.killEnemy(enemy,'finalDefense');});}
+  }
+  useArmorOverload(){
+    if(this.done||this.armorLevel<90||this.armor<=0||this.armorOverloadActiveUntil>this.time.now)return;
+    const armorBefore=this.armor;this.armorOverloadConsumed=armorBefore*.5;this.armorOverloadBase=armorBefore;this.armor=Math.max(0,armorBefore-this.armorOverloadConsumed);this.armorOverloadActiveUntil=this.time.now+5000;this.armorOverloadDamageBonus=this.armorOverloadConsumed;this.burstEffect(this.player.x,this.player.y,0xffa64d,1.6);this.updateHUD?.(this.time.now);
+  }
+  getEffectiveArmorReduction(time=this.time.now){return this.armorOverloadActiveUntil>time?.75:this.armorReduction}
+  getEffectiveArmorReflect(time=this.time.now){return this.armorOverloadActiveUntil>time?this.armorReflect*2:this.armorReflect}
   checkEnemyContact(){
     if(this.done||this.invulnerable)return;
     this.enemies.getChildren().some(enemy=>{
@@ -804,29 +1025,173 @@ class Game extends Phaser.Scene{
     const hitEnemies=bullet.getData('hitEnemies')||new Set();
     if(hitEnemies.has(enemy))return;
     hitEnemies.add(enemy);bullet.setData('hitEnemies',hitEnemies);
-    let damage=(bullet.getData('damage')||this.atk)*this.masterDamageMultiplier();
+    const originX=Number(bullet.getData('originX')??bullet.x),originY=Number(bullet.getData('originY')??bullet.y);
+    const vectorBonus=this.ammoLevel>=60?1+Math.floor(Math.hypot(bullet.x-originX,bullet.y-originY)/45)*.05:1;
+    let damage=(bullet.getData('damage')||this.atk)*vectorBonus*this.masterDamageMultiplier()*(this.assassinationBuffUntil>this.time.now?1.5:1)+this.armorOverloadDamageBonus;
+    if(bullet.getData('elemental')&&bullet.getData('elementType')==='shock')damage*=1.25;
+    if(bullet.getData('elemental'))this.applyAmmoElement(enemy,bullet.getData('elementType'),damage);
     if(enemy.shield>0){const absorbed=Math.min(enemy.shield,damage);enemy.shield-=absorbed;damage-=absorbed;}
     enemy.hp-=damage;
+    // 弑神穿甲为额外真实伤害，不会被护盾抵消。
+    if(this.ammoLevel>=95)enemy.hp-=enemy.maxHp*.025;
+    if(bullet.getData('dissolve')&&!bullet.getData('dissolveTriggered')&&enemy.active){
+      bullet.setData('dissolveTriggered',true);this.burstEffect(enemy.x,enemy.y,0x171717,1.15);
+      this.damageEnemy(enemy,enemy.maxHp*(this.ammoLevel>=100||this.overloadUntil>this.time.now?0.2:0.12),'dissolve');
+    }
+    if(bullet.getData('explosive')&&!bullet.getData('exploded')){
+      bullet.setData('exploded',true);this.burstEffect(enemy.x,enemy.y,0xff9f1c,1.25);
+      const explosionDamage=Number(bullet.getData('explosionDamage'))||0;
+      this.enemies.getChildren().forEach(other=>{
+        if(other.active&&other!==enemy&&Phaser.Math.Distance.Between(enemy.x,enemy.y,other.x,other.y)<=40)this.damageEnemy(other,explosionDamage,'burst');
+      });
+      if(this.ammoLevel>=50){
+        this.burstEffect(enemy.x,enemy.y,0xff6b22,.9);
+        this.enemies.getChildren().forEach(other=>{
+          if(other.active&&other!==enemy&&Phaser.Math.Distance.Between(enemy.x,enemy.y,other.x,other.y)<=30)this.damageEnemy(other,explosionDamage*.6,'burst2');
+        });
+      }
+    }
     if(hitEnemies.size>=(bullet.getData('maxHits')||1))bullet.destroy();
     if(enemy.hp<=0)this.killEnemy(enemy,bullet.getData('source')||'bullet');
   }
   masterDamageMultiplier(){return this.shotUpgrade>=125?1+this.kills/100:1}
-  damageEnemy(enemy,amount,source='ability'){
+  applyAmmoElement(enemy,type,baseDamage){
+    if(!enemy?.active||!type)return;
+    const bossScale=(enemy.boss||enemy.elite)?0.5:1;
+    if(type==='freeze')enemy.setData('ammoFreezeUntil',this.time.now+(enemy.boss||enemy.elite?1000:2000));
+    if(type==='burn'){
+      const tick=Math.max(0,enemy.maxHp*.05/15*bossScale);
+      for(let i=1;i<=15;i++)this.time.delayedCall(i*200,()=>{if(enemy.active)this.damageEnemy(enemy,tick,'elementBurn',false)});
+    }
+    if(type==='shock'){
+      const other=this.enemies.getChildren().filter(e=>e.active&&e!==enemy&&Phaser.Math.Distance.Between(e.x,e.y,enemy.x,enemy.y)<=120)[0];
+      if(other)this.damageEnemy(other,baseDamage*1.25*bossScale,'elementShock',false);
+    }
+  }
+  damageEnemy(enemy,amount,source='ability',applyMaster=true){
     if(!enemy?.active)return;
-    let damage=Math.max(0,Number(amount)||0)*this.masterDamageMultiplier();
+    let damage=Math.max(0,Number(amount)||0)*(applyMaster?this.masterDamageMultiplier():1)*(this.assassinationBuffUntil>this.time.now?this.assassinationDamageMultiplier:1)+this.armorOverloadDamageBonus;
     if(enemy.shield>0){const absorbed=Math.min(enemy.shield,damage);enemy.shield-=absorbed;damage-=absorbed;}
     enemy.hp-=damage;
+    if(this.combatLevel>=125&&damage>0)this.restoreNano(damage*.15);
     if(enemy.hp<=0)this.killEnemy(enemy,source);
   }
   toggleWeapon(){
     if(this.done)return;
-    if(data.shot<35)return;
-    const weapons=data.shot>=100?['pistol','smg','laser','sniper']:data.shot>=60?['pistol','smg','laser']:['pistol','smg'];
-    const next=(weapons.indexOf(this.activeWeapon)+1)%weapons.length;
-    this.activeWeapon=weapons[next];
+    if(this.combatMode==='melee'){
+      const weapons=this.meleeLevel>=30?['dagger','blade']:['dagger'];
+      const next=(weapons.indexOf(this.meleeWeapon)+1)%weapons.length;this.meleeWeapon=weapons[next];
+    }else{
+      if(data.shot<35)return;
+      const weapons=data.shot>=100?['pistol','smg','laser','sniper']:data.shot>=60?['pistol','smg','laser']:['pistol','smg'];
+      const next=(weapons.indexOf(this.activeWeapon)+1)%weapons.length;this.activeWeapon=weapons[next];
+    }
     this.smgFiring=false;this.touchFiring=false;
-    if(this.activeWeapon==='laser')this.startLaser(this.time.now);else this.laserLine.clear();
+    if(this.combatMode==='ranged'&&this.activeWeapon==='laser')this.startLaser(this.time.now);else this.laserLine.clear();
     this.syncWeaponArt();
+  }
+  toggleCombatMode(){
+    if(this.done||this.meleeLevel<1)return;
+    this.combatMode=this.combatMode==='ranged'?'melee':'ranged';
+    this.smgFiring=false;this.touchFiring=false;this.meleeSwinging=false;
+    if(this.combatMode==='melee'){this.laserActiveUntil=0;this.laserLine.clear();}
+    this.syncWeaponArt();this.drawAimLine();
+  }
+  getMeleeWeaponStats(){
+    const blade=this.meleeWeapon==='blade'&&this.meleeLevel>=30;
+    return {blade,damage:((blade?this.bladeDamage:this.daggerDamage)+this.meleeDamage)*this.meleeKillMultiplier,cooldown:blade?this.bladeCooldown:this.daggerCooldown,range:blade?150:100,arc:blade?Math.PI*.68:Math.PI*.56,key:blade?'weaponBlade':'weaponDagger',color:blade?0x62d9ee:0xbd9aff};
+  }
+  isPointInMeleeArc(px,py,ox,oy,aimAngle,range,halfArc){
+    const dx=px-ox,dy=py-oy,distance=Math.hypot(dx,dy);
+    if(distance>range)return false;
+    return Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(dy,dx)-aimAngle))<=halfArc;
+  }
+  isEnemyInMeleeArc(enemy,ox,oy,aimAngle,range,halfArc){
+    const body=enemy?.body;if(!body)return false;
+    const pad=4;
+    const points=[
+      [body.center.x,body.center.y],
+      [body.left-pad,body.top-pad],[body.right+pad,body.top-pad],
+      [body.left-pad,body.bottom+pad],[body.right+pad,body.bottom+pad]
+    ];
+    return points.some(([x,y])=>this.isPointInMeleeArc(x,y,ox,oy,aimAngle,range,halfArc));
+  }
+  meleeAttack(time){
+    if(this.done||this.meleeLevel<1||this.meleeSwinging)return;
+    const stats=this.getMeleeWeaponStats(),empowered=this.meleeEmpoweredSwings>0;
+    if(time<this.meleeNextAttackAt)return;
+    this.meleeNextAttackAt=time+stats.cooldown*1000;this.meleeSwinging=true;this.meleeSwingVisualUntil=time+180;
+    const muzzle=this.getWeaponMuzzle(),range=stats.range*(empowered?5:1),arc=empowered?Math.min(Math.PI*2,stats.arc*5):stats.arc;
+    if(this.playerArt){const lean=this.leftFace?-5:5;this.tweens.add({targets:this.playerArt,angle:lean,duration:70,yoyo:true,ease:'Sine.InOut'});}
+    this.meleeSlashEffect(muzzle.angle,range,arc,empowered?0xffd166:stats.color);
+    const originX=this.player.x,originY=this.player.body.bottom-48;
+    this.enemies.getChildren().forEach(enemy=>{
+      if(!enemy.active||!this.isEnemyInMeleeArc(enemy,originX,originY,muzzle.angle,range,arc/2))return;
+      {
+        this.damageEnemy(enemy,stats.damage*(empowered?2.5:1),'melee');
+        if(enemy.active&&stats.blade){
+          const pushDirection=Math.sign(enemy.x-originX)||Math.sign(Math.cos(muzzle.angle))||1;
+          enemy.x=Phaser.Math.Clamp(enemy.x+pushDirection*40,enemy.body.width/2,this.definition.w-enemy.body.width/2);
+          enemy.body.updateFromGameObject();enemy.setVelocity(0,0);
+        }
+        this.meleeHitEffect(enemy,empowered?0xffeea7:stats.blade?0x9ef5ff:0xe3b6ff);
+      }
+    });
+    if(empowered)this.meleeEmpoweredSwings--;
+    this.time.delayedCall(150,()=>{this.meleeSwinging=false});
+  }
+  clearMeleeUltimate(){
+    this.meleeUltimateSwords.forEach(sword=>{if(sword.art?.active)sword.art.destroy();});
+    this.meleeUltimateSwords=[];this.meleeUltimateUntil=0;
+  }
+  startMeleeUltimate(time){
+    this.clearMeleeUltimate();const duration=this.meleeLevel>=100?25000:15000;this.meleeUltimateUntil=time+duration;this.meleeUltimateMaxUntil=this.meleeUltimateUntil+(this.meleeLevel>=100?25000:0);
+    for(let index=0;index<12;index++){
+      const angle=index*Math.PI*2/12;
+      const art=this.add.image(this.player.x+Math.cos(angle)*64,this.player.body.bottom-48+Math.sin(angle)*64,this.getMeleeWeaponStats().key).setDepth(11).setAlpha(.95);
+      art.setDisplaySize(this.meleeWeapon==='blade'?30:26,this.meleeWeapon==='blade'?56:40).setOrigin(.5,.9);
+      this.meleeUltimateSwords.push({art,angle,target:null,nextAttackAt:time,index});
+    }
+    this.burstEffect(this.player.x,this.player.body.bottom-44,0xffd166,1.8);
+  }
+  findMeleeUltimateTarget(excluded){
+    // 飞剑只在当前摄像机实际可见范围内索敌，避免跨屏追踪远处敌人。
+    const view=this.cameras.main.worldView;
+    const candidates=this.enemies.getChildren().filter(enemy=>{
+      if(!enemy.active||excluded.has(enemy))return false;
+      const body=enemy.body;
+      return body.right>=view.x&&body.left<=view.right&&body.bottom>=view.y&&body.top<=view.bottom;
+    });
+    if(!candidates.length)return null;
+    return candidates.reduce((best,enemy)=>!best||Phaser.Math.Distance.Between(this.player.x,this.player.y,enemy.x,enemy.y)<Phaser.Math.Distance.Between(this.player.x,this.player.y,best.x,best.y)?enemy:best,null);
+  }
+  updateMeleeUltimate(time){
+    if(!this.meleeUltimateSwords.length)return;
+    if(this.done||time>=this.meleeUltimateUntil){this.clearMeleeUltimate();return;}
+    const claimed=new Set(),stats=this.getMeleeWeaponStats(),orbitX=this.player.x,orbitY=this.player.body.bottom-48;
+    this.meleeUltimateSwords.forEach(sword=>{
+      if(!sword.art?.active)return;
+      sword.art.setTexture(stats.key).setDisplaySize(stats.blade?30:26,stats.blade?56:40);
+      if(!sword.target?.active||claimed.has(sword.target))sword.target=this.findMeleeUltimateTarget(claimed);
+      if(!sword.target){
+        sword.angle+=.055;
+        sword.art.setPosition(orbitX+Math.cos(sword.angle)*66,orbitY+Math.sin(sword.angle)*66).setRotation(sword.angle+Math.PI/2);
+        return;
+      }
+      claimed.add(sword.target);
+      const dx=sword.target.x-sword.art.x,dy=(sword.target.body?.center.y||sword.target.y)-sword.art.y,distance=Math.hypot(dx,dy)||1;
+      sword.art.setRotation(Math.atan2(dy,dx)+Math.PI/2);
+      if(distance>26){const speed=640; sword.art.x+=dx/distance*Math.min(speed/60,distance);sword.art.y+=dy/distance*Math.min(speed/60,distance);return;}
+      if(time<sword.nextAttackAt)return;
+      this.damageEnemy(sword.target,stats.damage*(this.meleeLevel>=100?2:1),'meleeUltimate');
+      if(sword.target.active&&stats.blade){
+        const direction=Math.sign(sword.target.x-sword.art.x)||1;
+        sword.target.x=Phaser.Math.Clamp(sword.target.x+direction*40,sword.target.body.width/2,this.definition.w-sword.target.body.width/2);
+        sword.target.body.updateFromGameObject();sword.target.setVelocity(0,0);
+      }
+      this.meleeHitEffect(sword.target,stats.blade?0x9ef5ff:0xe3b6ff);
+      sword.nextAttackAt=time+stats.cooldown*1000;sword.target=null;
+    });
   }
   startLaser(time){
     if(this.activeWeapon!=='laser'||time<this.laserCooldownUntil||this.laserActiveUntil>time)return false;
@@ -840,6 +1205,11 @@ class Game extends Phaser.Scene{
   findNearestEnemy(){
     let nearest=null,best=Infinity;
     this.enemies.getChildren().forEach(enemy=>{if(!this.isEnemyVisible(enemy))return;const d=Phaser.Math.Distance.Between(this.player.x,this.player.y,enemy.x,enemy.y);if(d<best){best=d;nearest=enemy;}});
+    return nearest;
+  }
+  findNearestEnemyGlobal(){
+    let nearest=null,best=Infinity;
+    this.enemies.getChildren().forEach(enemy=>{if(!enemy?.active)return;const d=Phaser.Math.Distance.Between(this.player.x,this.player.y,enemy.x,enemy.y);if(d<best){best=d;nearest=enemy;}});
     return nearest;
   }
   spawnBossBullet(enemy,angle,speed=300,damage=5,options={}){
@@ -896,12 +1266,12 @@ class Game extends Phaser.Scene{
       if(time>=this.laserCooldownUntil)this.startLaser(time);
     }
     if(this.laserActiveUntil<=time)return;
-    const target=this.findNearestEnemy();
-    if(!target)return;
-    this.laserLine.lineStyle(4,0xff4df3,.9).lineBetween(this.player.x,this.player.body.bottom-40,target.x,target.y);
+    const targetLimit=this.overloadUntil>time?10:this.ammoLevel>=50?5:this.ammoLevel>=30?3:1;
+    const targets=this.enemies.getChildren().filter(enemy=>enemy.active&&this.isEnemyVisible(enemy)).sort((a,b)=>Phaser.Math.Distance.Between(this.player.x,this.player.y,a.x,a.y)-Phaser.Math.Distance.Between(this.player.x,this.player.y,b.x,b.y)).slice(0,targetLimit);
+    if(!targets.length)return;
+    targets.forEach(target=>this.laserLine.lineStyle(4,0xff4df3,.9).lineBetween(this.player.x,this.player.body.bottom-40,target.x,target.y));
     while(time>=this.laserNextTick&&this.laserNextTick<this.laserActiveUntil){
-      this.damageEnemy(target,this.laserDamage,'laser');this.laserNextTick+=200;
-      if(!target.active)break;
+      targets.forEach(target=>{if(target.active)this.damageEnemy(target,this.laserDamage*(this.destructionActive?1.3:1),'laser')});this.laserNextTick+=this.overloadUntil>time?100:200;
     }
   }
   useDash(time){
@@ -924,6 +1294,7 @@ class Game extends Phaser.Scene{
     this.player.x=targetX;this.player.setVelocityX(0);this.player.body.updateFromGameObject();
     this.burstEffect(targetX,this.player.body.bottom-35,0xbd9aff,1.1);
     this.dashCharges--;this.dashRechargeAt=time+this.dashCooldown*1000;
+    if(this.armorLevel>=60){this.tempShield=Math.max(this.tempShield,this.armorMax*.15);this.tempShieldUntil=time+2000;}
   }
   useTrackingDash(time){
     if(this.done||this.agilityLevel<50||(this.agilityLevel<85&&time<this.trackingDashReadyAt))return;
@@ -940,11 +1311,33 @@ class Game extends Phaser.Scene{
     this.damageEnemy(target,this.agilityLevel>=85?350:this.agilityLevel>=70?250:100,'tracking');target.stunnedUntil=time+this.stunDuration*1000;
     if(this.agilityLevel>=85){
       this.advancedDashCharges--;
-      if(!this.advancedDashRechargeAt)this.advancedDashRechargeAt=time+this.advancedDashCooldown*1000;
+      if(!this.advancedDashRechargeAt)this.advancedDashRechargeAt=time+this.trackingDashCooldown*1000;
     }else{
       this.dashCharges--;this.dashRechargeAt=time+this.dashCooldown*1000;
-      this.trackingDashReadyAt=time+this.advancedDashCooldown*1000;
+      this.trackingDashReadyAt=time+this.trackingDashCooldown*1000;
     }
+  }
+  useAssassination(time){
+    if(this.done||this.agilityLevel<115)return;
+    if(this.assassinationReturnUntil>time&&this.assassinationOrigin){const p=this.assassinationOrigin;this.player.x=p.x;this.player.y=p.y;this.player.body.updateFromGameObject();this.assassinationReturnUntil=0;this.assassinationOrigin=null;this.burstEffect(this.player.x,this.player.y,0xff4d78,1.2);return;}
+    if(this.assassinationCharges<=0)return;const target=this.findNearestEnemyGlobal();if(!target)return;
+    const destination=this.findSafeAssassinationLanding(target);
+    if(!destination)return;
+    this.assassinationOrigin={x:this.player.x,y:this.player.y};this.assassinationReturnUntil=time+5000;this.assassinationCharges--;this.assassinationRechargeAt=time+this.assassinationCooldown*1000;this.player.setPosition(destination.x,destination.y);this.player.body.reset(destination.x,destination.y);this.player.setVelocity(0,0);this.tempShield=Math.max(this.tempShield,this.agilityLevel>=150?5000:1250);this.assassinationBuffUntil=time+5000;this.burstEffect(this.player.x,this.player.y,0xff4d78,1.5);
+    if(this.agilityLevel>=150)this.damageEnemy(target,target.maxHp*.2,'assassination');
+  }
+  findSafeAssassinationLanding(target){
+    const halfW=this.player.body.width/2, halfH=this.player.body.height/2;
+    const direction=target.x>=this.player.x?-1:1;
+    const preferred=target.x+direction*(target.body.width/2+halfW+12);
+    const candidates=[];
+    const add=(x,y)=>{x=Phaser.Math.Clamp(x,halfW,this.definition.w-halfW);const box={left:x-halfW,right:x+halfW,top:y-halfH,bottom:y+halfH};if(box.top<0||box.bottom>(this.definition.worldH||900))return;for(const tile of this.platforms.getChildren()){const b=tile.body;if(b&&box.right>b.left+1&&box.left<b.right-1&&box.bottom>b.top+1&&box.top<b.bottom-1)return;}candidates.push({x,y});};
+    add(preferred,target.y);
+    add(target.x-direction*(target.body.width/2+halfW+12),target.y);
+    const platforms=this.platforms.getChildren().map(tile=>tile.body).filter(Boolean).sort((a,b)=>Math.abs(a.top-target.body.bottom)-Math.abs(b.top-target.body.bottom));
+    for(const body of platforms){const y=body.top-halfH-2;add(preferred,y);add(target.x,y);}
+    add(preferred,this.floorTop-halfH-1);
+    return candidates[0]||null;
   }
   rechargeDash(time){
     if(this.dashCharges>=this.dashMaxCharges||!this.dashRechargeAt||time<this.dashRechargeAt)return;
@@ -953,28 +1346,30 @@ class Game extends Phaser.Scene{
     this.dashRechargeAt=this.dashCharges<this.dashMaxCharges?this.dashRechargeAt+elapsed*this.dashCooldown*1000:0;
   }
   rechargeAdvancedAbilities(time){
-    const refill=(charges,max,readyAt)=>{
+    const refill=(charges,max,readyAt,cooldown)=>{
       if(charges>=max||!readyAt||time<readyAt)return [charges,readyAt];
-      const elapsed=Math.floor((time-readyAt)/(this.advancedDashCooldown*1000))+1;
+      const elapsed=Math.floor((time-readyAt)/(cooldown*1000))+1;
       const next=Math.min(max,charges+elapsed);
-      return [next,next<max?readyAt+elapsed*this.advancedDashCooldown*1000:0];
+      return [next,next<max?readyAt+elapsed*cooldown*1000:0];
     };
-    [this.advancedDashCharges,this.advancedDashRechargeAt]=refill(this.advancedDashCharges,this.advancedDashMax,this.advancedDashRechargeAt);
-    [this.airstrikeCharges,this.airstrikeRechargeAt]=refill(this.airstrikeCharges,this.airstrikeMaxCharges,this.airstrikeRechargeAt);
+    [this.advancedDashCharges,this.advancedDashRechargeAt]=refill(this.advancedDashCharges,this.advancedDashMax,this.advancedDashRechargeAt,this.trackingDashCooldown);
+    [this.airstrikeCharges,this.airstrikeRechargeAt]=refill(this.airstrikeCharges,this.airstrikeMaxCharges,this.airstrikeRechargeAt,this.airstrikeCooldown);
   }
   fireRadial(x,y,count,damage,source='radial'){
     for(let index=0;index<count;index++){
       const angle=index*Math.PI*2/count;
       const bullet=this.playerBullets.create(x,y,'bullet');
-      bullet.setVelocity(Math.cos(angle)*520,Math.sin(angle)*520);bullet.body.allowGravity=false;bullet.setData('damage',damage);bullet.setData('source',source);bullet.setData('maxHits',this.shotUpgrade>=75?3:this.shotUpgrade>=51?2:1);bullet.setData('hitEnemies',new Set());bullet.setData('expires',this.time.now+1500);
+      bullet.setVelocity(Math.cos(angle)*520,Math.sin(angle)*520);bullet.body.allowGravity=false;bullet.setData('damage',damage);bullet.setData('originX',x);bullet.setData('originY',y);bullet.setData('source',source);bullet.setData('maxHits',this.shotUpgrade>=75?3:this.shotUpgrade>=51?2:1);bullet.setData('hitEnemies',new Set());bullet.setData('expires',this.time.now+1500);
     }
   }
-  fireSpread(x,y,targetX,targetY,count,damage,source='airstrike'){
+  fireSpread(x,y,targetX,targetY,count,damage,source='airstrike',options={}){
     const base=Math.atan2(targetY-y,targetX-x);
     for(let index=0;index<count;index++){
       const angle=base+(index-(count-1)/2)*.14;
       const bullet=this.playerBullets.create(x+Math.cos(angle)*18,y+Math.sin(angle)*12,'bullet');
-      bullet.setVelocity(Math.cos(angle)*720,Math.sin(angle)*720);bullet.body.allowGravity=false;bullet.setData('damage',damage);bullet.setData('source',source);bullet.setData('maxHits',this.shotUpgrade>=75?3:this.shotUpgrade>=51?2:1);bullet.setData('hitEnemies',new Set());bullet.setData('expires',this.time.now+1400);
+      const elemental=options.forceElemental||Boolean(options.elemental)||Boolean(options.elementChance&&Math.random()<options.elementChance),elementType=elemental?(options.elementType||['burn','freeze','shock'][index%3]):'';
+      const explosive=options.explosiveChance!=null?Math.random()<options.explosiveChance:Boolean(options.explosive),dissolve=Boolean(options.dissolve);
+      bullet.setVelocity(Math.cos(angle)*720,Math.sin(angle)*720);bullet.body.allowGravity=false;bullet.setData('damage',damage);bullet.setData('originX',x);bullet.setData('originY',y);bullet.setData('source',source);bullet.setData('maxHits',options.maxHits||(this.shotUpgrade>=75?3:this.shotUpgrade>=51?2:1));bullet.setData('hitEnemies',new Set());bullet.setData('explosive',explosive);bullet.setData('explosionDamage',options.explosionDamage||damage*.75);bullet.setData('dissolve',dissolve);bullet.setData('elemental',elemental);bullet.setData('elementType',elementType);bullet.setTint(dissolve?0x171717:explosive?0xff9f1c:elemental?(elementType==='burn'?0xff7338:elementType==='freeze'?0x72e6ff:0xffe74c):0xffffff);bullet.setData('expires',this.time.now+(options.lifetime||1400));
     }
   }
   useAirstrike(time){
@@ -991,10 +1386,10 @@ class Game extends Phaser.Scene{
     this.burstEffect(landingX,landingY+35,0xffd166,1.4);
     if(this.agilityLevel>=85){
       this.airstrikeCharges--;
-      if(!this.airstrikeRechargeAt)this.airstrikeRechargeAt=time+this.advancedDashCooldown*1000;
+      if(!this.airstrikeRechargeAt)this.airstrikeRechargeAt=time+this.airstrikeCooldown*1000;
     }else{
       this.dashCharges-=2;this.dashRechargeAt=time+this.dashCooldown*1000;
-      this.airstrikeReadyAt=time+this.advancedDashCooldown*1000;
+      this.airstrikeReadyAt=time+this.airstrikeCooldown*1000;
     }
     const bursts=this.agilityLevel>=85?5:3,fragments=this.agilityLevel>=85?16:9;
     Array.from({length:bursts},(_,index)=>index*140).forEach(delay=>this.time.delayedCall(delay,()=>{if(!this.done&&target.active)this.fireSpread(this.player.x,this.player.y,target.x,target.y,fragments,this.atk,'airstrike')}));
@@ -1005,29 +1400,53 @@ class Game extends Phaser.Scene{
     if(this.activeWeapon==='smg'){
       if(this.smgAmmo<=0)return;
     }else if(this.activeWeapon==='sniper'){
-      this.sniperCooldownUntil=this.time.now+this.sniperCooldown*1000;
-    }else if(this.time.now-this.lastShot<this.shotDelay)return;
+      this.sniperCooldownUntil=this.time.now+this.sniperCooldown*1000/(this.overloadUntil>this.time.now?2:1);
+    }else if(this.time.now-this.lastShot<this.shotDelay/(this.overloadUntil>this.time.now?2:1))return;
     if(this.activeWeapon==='pistol')this.lastShot=this.time.now;
     const pointer=this.pointer||this.input.activePointer;
     const target=this.cameras.main.getWorldPoint(pointer.x,pointer.y);
     const muzzle=this.getWeaponMuzzle(),muzzleX=muzzle.x,muzzleY=muzzle.y,base=muzzle.angle;
+    // 射击升级和弹药强化各自维护独立触发器：前者是手枪六连节奏，后者是每十次射击的额外弹幕。
     const sixth=this.activeWeapon==='pistol'&&this.shotUpgrade>=90&&this.pistolShotCounter%6===5;
-    const count=this.activeWeapon==='sniper'?1:this.activeWeapon==='smg'?1:this.spreadShots>0?(this.shotUpgrade>=85?9+Math.min(10,Math.max(0,this.shotUpgrade-90)):6):sixth?6:this.pistolBurst;
-    const shotDamage=(this.activeWeapon==='sniper'?this.sniperDamage:this.activeWeapon==='smg'?this.smgDamage:this.atk)*this.fireStrikeMultiplier;this.fireStrikeMultiplier=1;
+    const stormShot=this.ammoLevel>=70&&this.shotCounter%10===9&&this.time.now>=this.bulletStormReadyAt;
+    const stormCount=6+Math.min(9,Math.max(0,this.ammoLevel-75));
+    const skillSpread=this.spreadShots>0;
+    const count=this.activeWeapon==='sniper'?1:this.activeWeapon==='smg'?1:skillSpread?(this.ammoLevel>=100?15:this.shotUpgrade>=85?9:6):sixth?6:this.pistolBurst;
+    const normalDamage=(this.activeWeapon==='sniper'?this.sniperDamage:this.activeWeapon==='smg'?this.smgDamage:this.atk+this.ammoDamageBonus)*this.fireStrikeMultiplier;this.fireStrikeMultiplier=1;
+    const canBurst=this.ammoLevel>=15&&(this.activeWeapon==='pistol'||this.activeWeapon==='smg'||this.activeWeapon==='sniper');
+    // 首次需要 5 秒无伤；受伤后 damage() 会将准备时间重置为 3 秒。
+    const destructionBuff=this.ammoLevel>=90&&this.time.now>=this.destructionReadyAt;
+    this.destructionActive=destructionBuff;
+    const overloadActive=this.overloadUntil>this.time.now;
+    const explosiveChance=canBurst?(overloadActive?1:(this.destructionActive?Math.min(1,this.explosiveChance*2):this.explosiveChance)):0;
+    const dissolve=this.activeWeapon==='sniper'&&this.ammoLevel>=45&&Math.random()<(this.ammoLevel>=50?0.2:0.15);
+    const baseShotDamage=normalDamage*(this.destructionActive?1.3:1);
     for(let index=0;index<count;index++){
       const angle=base+(index-(count-1)/2)*.14;
+      const explosive=explosiveChance>0&&Math.random()<explosiveChance;
+      const shotDamage=baseShotDamage*(explosive?this.explosiveMultiplier:1);
       const bullet=this.playerBullets.create(muzzleX+Math.cos(angle)*5,muzzleY+Math.sin(angle)*5,'bullet');
-      bullet.setVelocity(Math.cos(angle)*(this.activeWeapon==='sniper'?980:720),Math.sin(angle)*(this.activeWeapon==='sniper'?980:720));bullet.body.allowGravity=false;bullet.setData('damage',shotDamage);bullet.setData('source',this.activeWeapon==='pistol'?'pistol':this.activeWeapon==='sniper'?'sniper':'smg');bullet.setData('maxHits',this.shotUpgrade>=75?3:1);bullet.setData('hitEnemies',new Set());bullet.setData('expires',this.time.now+1600);
+      // 弹药 100 级时，技能豆赋予的 15 发散弹每一发都必定附带元素；其余普通射击仍按元素概率结算。
+      const bulletElemental=this.ammoLevel>=100&&skillSpread||this.ammoLevel>=75&&Math.random()<this.elementChance;
+      const bulletElement=bulletElemental?['burn','freeze','shock'][index%3]:'';
+      bullet.setVelocity(Math.cos(angle)*(this.activeWeapon==='sniper'?980:720),Math.sin(angle)*(this.activeWeapon==='sniper'?980:720));bullet.body.allowGravity=false;bullet.setData('damage',shotDamage);bullet.setData('originX',muzzleX);bullet.setData('originY',muzzleY);bullet.setData('source',this.activeWeapon==='pistol'?'pistol':this.activeWeapon==='sniper'?'sniper':'smg');bullet.setData('maxHits',this.shotUpgrade>=75?3:1);bullet.setData('hitEnemies',new Set());bullet.setData('explosive',explosive);bullet.setData('explosionDamage',shotDamage*.75);bullet.setData('dissolve',dissolve);bullet.setData('elemental',bulletElemental);bullet.setData('elementType',bulletElement);bullet.setTint(dissolve?0x171717:explosive?0xff9f1c:bulletElemental?(bulletElement==='burn'?0xff7338:bulletElement==='freeze'?0x72e6ff:0xffe74c):0xffffff);bullet.setData('expires',this.time.now+1600);
     }
-    if(this.activeWeapon==='pistol'&&this.shotUpgrade>=90&&!sixth){this.time.delayedCall(10,()=>{if(!this.done)this.firePistolSecondBurst(muzzleX,muzzleY,base,shotDamage)})}
+    if(stormShot){
+      this.fireSpread(muzzleX,muzzleY,target.x,target.y,stormCount,baseShotDamage,'ammoStorm',{explosiveChance,explosionDamage:baseShotDamage*.75,elementChance:this.ammoLevel>=75?this.elementChance:0,forceElemental:this.ammoLevel>=100&&skillSpread});
+      this.bulletStormReadyAt=this.time.now+3000;
+    }
+    if(this.activeWeapon==='pistol'&&this.shotUpgrade>=90&&!sixth){this.time.delayedCall(10,()=>{if(!this.done)this.firePistolSecondBurst(muzzleX,muzzleY,base,baseShotDamage,{explosiveChance,explosionDamage:baseShotDamage*.75,elementChance:this.ammoLevel>=75?this.elementChance:0,forceElemental:this.ammoLevel>=100&&skillSpread})})}
     if(this.activeWeapon==='pistol')this.pistolShotCounter++;
+    this.shotCounter++;
     if(this.spreadShots>0){this.spreadShots--;this.syncWeaponArt();}
     if(this.activeWeapon==='smg')this.smgAmmo--;
   }
-  firePistolSecondBurst(x,y,base,damage){for(let index=0;index<3;index++){const angle=base+(index-1)*.14;const bullet=this.playerBullets.create(x+Math.cos(angle)*5,y+Math.sin(angle)*5,'bullet');bullet.setVelocity(Math.cos(angle)*720,Math.sin(angle)*720);bullet.body.allowGravity=false;bullet.setData('damage',damage);bullet.setData('source','pistol');bullet.setData('maxHits',this.shotUpgrade>=75?3:1);bullet.setData('hitEnemies',new Set());bullet.setData('expires',this.time.now+1200)}}
+  firePistolSecondBurst(x,y,base,damage,options={}){for(let index=0;index<3;index++){const angle=base+(index-1)*.14;const bullet=this.playerBullets.create(x+Math.cos(angle)*5,y+Math.sin(angle)*5,'bullet');const elemental=Boolean(options.forceElemental)||Boolean(options.elemental)||Boolean(options.elementChance&&Math.random()<options.elementChance),elementType=elemental?(options.elementType||['burn','freeze','shock'][index%3]):'';const explosive=options.explosiveChance!=null?Math.random()<options.explosiveChance:Boolean(options.explosive);bullet.setVelocity(Math.cos(angle)*720,Math.sin(angle)*720);bullet.body.allowGravity=false;bullet.setData('damage',damage*(explosive?this.explosiveMultiplier:1));bullet.setData('originX',x);bullet.setData('originY',y);bullet.setData('source','pistol');bullet.setData('maxHits',this.shotUpgrade>=75?3:1);bullet.setData('hitEnemies',new Set());bullet.setData('explosive',explosive);bullet.setData('explosionDamage',options.explosionDamage||damage*.75);bullet.setData('elemental',elemental);bullet.setData('elementType',elementType);bullet.setTint(explosive?0xff9f1c:elemental?(elementType==='burn'?0xff7338:elementType==='freeze'?0x72e6ff:0xffe74c):0xffffff);bullet.setData('expires',this.time.now+1200)}}
   useUltimate(){
     if(this.done||this.energy<100)return;
     this.energy=0;
+    if(this.combatMode==='ranged'&&this.ammoLevel>=100){this.overloadUntil=this.time.now+8000;this.overloadCapUntil=this.time.now+12000;}
+    if(this.combatMode==='melee'){this.startMeleeUltimate(this.time.now);return;}
     const muzzleX=this.player.x, muzzleY=this.player.body.bottom-40;
     const rings=this.shotUpgrade>=85?2:1,count=this.shotUpgrade>=85?86:50;
     for(let ring=0;ring<rings;ring++)for(let index=0;index<count;index++){
@@ -1044,15 +1463,36 @@ class Game extends Phaser.Scene{
       this.spawnEnemy([type,x,y,multiplier]);
     }
     this.nextWaveAt=this.time.now+15000;
+    if(isEventActive()&&this.endlessWave>Number(data.eventEndlessBest||0)){data.eventEndlessBest=this.endlessWave;save();}
   }
   updateSystems(time){
     if(this.done)return;
+    this.destructionActive=this.ammoLevel>=90&&time>=this.destructionReadyAt;
+    // 高级追踪闪身与空袭使用独立储存；持续刷新才能在冷却结束后及时补充 HUD 和可用次数。
+    this.rechargeDash(time);
+    this.rechargeAdvancedAbilities(time);
+    if(this.agilityLevel>=115){
+      if(this.assassinationReturnUntil&&time>=this.assassinationReturnUntil){this.assassinationReturnUntil=0;this.assassinationOrigin=null;}
+      if(this.assassinationCharges<this.assassinationMaxCharges&&this.assassinationRechargeAt&&time>=this.assassinationRechargeAt){this.assassinationCharges++;this.assassinationRechargeAt=this.assassinationCharges<this.assassinationMaxCharges?time+this.assassinationCooldown*1000:0;}
+    }
     if(endlessMode&&time>=this.nextWaveAt)this.spawnEndlessWave();
     if(this.hpEmergencyHeal&&this.hp>0&&this.hp<this.maxHp*.1&&time>=this.hpEmergencyReadyAt){
-      this.hp=Math.min(this.maxHp,this.hp+this.maxHp*.5);
+      this.healPlayer(this.maxHp*.5);
       this.hpEmergencyReadyAt=time+30000;
     }
-    if(this.hpRegenPerSecond>0&&time>=this.nextHpRegenAt){this.hp=Math.min(this.maxHp,this.hp+this.hpRegenPerSecond);this.nextHpRegenAt=time+1000;}
+    if(this.hpRegenPerSecond>0&&time>=this.nextHpRegenAt){this.healPlayer(this.hpRegenPerSecond);this.nextHpRegenAt=time+1000;}
+    if(this.combatMode==='melee'&&this.meleeLevel>=1&&time>=this.meleeNextRegenAt){this.healPlayer(this.meleeRegenAmount);this.meleeNextRegenAt=time+1000;}
+    if(this.armorLevel>=30&&this.armor<this.armorMax&&time>=this.armorRegenReadyAt){this.armor=Math.min(this.armorMax,this.armor+1);this.armorRegenReadyAt=time+3000;}
+    if(this.energyShieldMax>0&&this.energyShield<this.energyShieldMax&&time>=this.energyShieldRegenReadyAt){this.energyShield=Math.min(this.energyShieldMax,this.energyShield+6);this.energyShieldRegenReadyAt=time+1000;}
+    if(this.tempShieldUntil<=time)this.tempShield=0;
+    if(this.armorLevel>=70&&this.armor>0&&time>=this.thornsReadyAt){this.enemies.getChildren().forEach(enemy=>{if(enemy.active){const d=Phaser.Math.Distance.Between(this.player.x,this.player.y,enemy.x,enemy.y);if(d<=60)this.damageEnemy(enemy,this.armorReflect*2*(1+Math.max(0,1-d/60)*2),'thorns');}});this.thornsReadyAt=time+1000;}
+    if(this.armorOverloadActiveUntil&&time>=this.armorOverloadActiveUntil){this.armor=Math.min(this.armorMax,this.armorOverloadBase*.5);this.armorOverloadActiveUntil=0;this.armorOverloadDamageBonus=0;this.armorOverloadBase=0;}
+    if(this.armorLevel>=95&&this.hp<this.maxHp*.15){this.hp=Math.min(this.maxHp,this.hp+0);}
+    if(this.floatMaxMs>0){
+      while(time>=this.floatRechargeAt&&this.floatMs<this.floatMaxMs){this.floatMs=Math.min(this.floatMaxMs,this.floatMs+1000);this.floatRechargeAt+=this.floatRechargeDelay*1000;}
+      if(this.floatMs>=this.floatMaxMs)this.floatRechargeAt=time+this.floatRechargeDelay*1000;
+    }
+    this.updateMeleeUltimate(time);
     if(this.shotUpgrade>=80&&this.activeWeapon==='smg'&&this.smgAmmo<this.smgAmmoMax&&time>=this.nextSmgRegenAt){this.smgAmmo=Math.min(this.smgAmmoMax,this.smgAmmo+1);this.nextSmgRegenAt=time+this.smgRegenInterval*1000;}
   }
   updateEnemies(time){
@@ -1077,6 +1517,7 @@ class Game extends Phaser.Scene{
       if(enemy.type==='g'||enemy.type==='e2')enemy.setVelocityX(direction*(enemy.type==='e2'?42:58));
       if(enemy.type==='p'){enemy.setVelocityX(direction*58);enemy.setVelocityY((this.player.y-95-enemy.y)*1.35+Math.sin(time/380+enemy.x)*32);}
       if(enemy.type==='b'){enemy.setVelocityX(direction*18);enemy.setVelocityY((this.player.y-150-enemy.y)*.45+Math.sin(time/620+enemy.x)*18);}
+      if(enemy.getData('ammoFreezeUntil')>time)enemy.setVelocity(enemy.body.velocity.x*.6,enemy.body.velocity.y*.6);
       if(enemy.body.velocity.x<-1)enemy.facingLeft=true;
       if(enemy.body.velocity.x>1)enemy.facingLeft=false;
       this.syncEnemyArt(enemy);
@@ -1144,12 +1585,26 @@ class Game extends Phaser.Scene{
   expireBullets(group,time){group.getChildren().forEach(bullet=>{if(bullet.active&&time>=bullet.getData('expires'))bullet.destroy()})}
   drawAimLine(){
     const muzzle=this.getWeaponMuzzle(),angle=muzzle.angle;
-    this.aimLine.clear().lineStyle(2,0xffffff,.72);
+    this.aimLine.clear();
+    if(this.combatMode==='melee'){
+      const empowered=this.meleeEmpoweredSwings>0;
+      const baseRange=this.meleeWeapon==='blade'?150:100,baseArc=this.meleeWeapon==='blade'?Math.PI*.68:Math.PI*.56;
+      const range=baseRange*(empowered?5:1),arc=Math.min(Math.PI*2,baseArc*(empowered?5:1));
+      const x=this.player.x,y=this.player.body.bottom-48;
+      this.aimLine.fillStyle(empowered?0xffd166:(this.meleeWeapon==='blade'?0x62d9ee:0xbd9aff),.12).beginPath();
+      this.aimLine.moveTo(x,y);this.aimLine.arc(x,y,range,angle-arc/2,angle+arc/2,false);this.aimLine.closePath();this.aimLine.fillPath();
+      this.aimLine.lineStyle(3,empowered?0xffeea7:(this.meleeWeapon==='blade'?0x9ef5ff:0xe3b6ff),.85).arc(x,y,range,angle-arc/2,angle+arc/2,false);
+      this.aimLine.lineStyle(1,0xffffff,.72).lineBetween(x,y,x+Math.cos(angle-arc/2)*range,y+Math.sin(angle-arc/2)*range).lineBetween(x,y,x+Math.cos(angle+arc/2)*range,y+Math.sin(angle+arc/2)*range);
+      return;
+    }
+    this.aimLine.lineStyle(2,0xffffff,.72);
     for(let distance=0;distance<180;distance+=18)this.aimLine.lineBetween(muzzle.x+Math.cos(angle)*distance,muzzle.y+Math.sin(angle)*distance,muzzle.x+Math.cos(angle)*Math.min(distance+9,180),muzzle.y+Math.sin(angle)*Math.min(distance+9,180));
   }
   createPauseOverlay(){
     if(this.pauseOverlay)return;
     this.pauseOverlay=this.add.rectangle(640,360,1280,720,0x080b14,.86).setScrollFactor(0).setDepth(40);
+    this.pausePanel=this.add.rectangle(640,340,650,300,0x0d1b2a,.98).setScrollFactor(0).setDepth(40).setStrokeStyle(2,0x315a72);
+    this.pauseRule=this.add.rectangle(640,270,520,1,0x315a72).setScrollFactor(0).setDepth(41);
     this.pauseTitle=this.add.text(640,235,'游戏已暂停',{fontSize:'34px',fontStyle:'bold',color:'#f7fbff'}).setOrigin(.5).setScrollFactor(0).setDepth(41);
     this.pauseHint=this.add.text(640,292,'退出本局不会获得通关奖励、失败奖励或本局拾取金币。',{fontSize:'16px',color:'#ffd77a',align:'center'}).setOrigin(.5).setScrollFactor(0).setDepth(41);
     this.pauseResumeButton=this.add.rectangle(540,380,190,52,0x19334b).setScrollFactor(0).setDepth(41).setStrokeStyle(2,0x3da5c7).setInteractive({useHandCursor:true});
@@ -1158,7 +1613,7 @@ class Game extends Phaser.Scene{
     this.pauseExitText=this.add.text(740,380,'退出本局',{fontSize:'18px',color:'#fff'}).setOrigin(.5).setScrollFactor(0).setDepth(42);
     this.pauseResumeButton.on('pointerdown',()=>this.togglePause(false));
     this.pauseExitButton.on('pointerdown',()=>this.exitWithoutReward());
-    [this.pauseOverlay,this.pauseTitle,this.pauseHint,this.pauseResumeButton,this.pauseResumeText,this.pauseExitButton,this.pauseExitText].forEach(object=>object.setVisible(false));
+    [this.pauseOverlay,this.pausePanel,this.pauseRule,this.pauseTitle,this.pauseHint,this.pauseResumeButton,this.pauseResumeText,this.pauseExitButton,this.pauseExitText].forEach(object=>object.setVisible(false));
     this.pauseExitButton.input.enabled=true;this.pauseResumeButton.input.enabled=true;
   }
   togglePause(force){
@@ -1167,7 +1622,7 @@ class Game extends Phaser.Scene{
     this.isPaused=next;
     this.physics.world.isPaused=next;
     if(!this.pauseOverlay)this.createPauseOverlay();
-    [this.pauseOverlay,this.pauseTitle,this.pauseHint,this.pauseResumeButton,this.pauseResumeText,this.pauseExitButton,this.pauseExitText].forEach(object=>object.setVisible(next));
+    [this.pauseOverlay,this.pausePanel,this.pauseRule,this.pauseTitle,this.pauseHint,this.pauseResumeButton,this.pauseResumeText,this.pauseExitButton,this.pauseExitText].forEach(object=>object.setVisible(next));
     this.pauseButton.setVisible(!next);this.pauseButtonText.setVisible(!next);
   }
   exitWithoutReward(){
@@ -1176,26 +1631,46 @@ class Game extends Phaser.Scene{
     this.touchFiring=false;this.smgFiring=false;
     this.scene.start('Menu');
   }
-  update(time){
+  update(time,delta=16){
     if(Phaser.Input.Keyboard.JustDown(this.keys.ESC)){this.togglePause();return;}
     if(this.isPaused)return;
     const left=this.keys.A.isDown||this.keys.LEFT.isDown||touchMoveAxis<0,right=this.keys.D.isDown||this.keys.RIGHT.isDown||touchMoveAxis>0;
-    this.player.setVelocityX(left?-230:right?230:0);
-    const jumpPressed=Phaser.Input.Keyboard.JustDown(this.keys.W)||Phaser.Input.Keyboard.JustDown(this.keys.UP)||Phaser.Input.Keyboard.JustDown(this.keys.SPACE)||this.jumpRequested;
-    this.jumpRequested=false;
-    const onGround=this.player.body.blocked.down||this.player.body.touching.down;
+    const meleeSpeed=this.combatMode==='melee'&&this.meleeLevel>=1?1.1:1;
+    const armorSpeed=this.armorSpeedBoostUntil>time?1.3:1;
+    this.player.setVelocityX((left?-230:right?230:0)*meleeSpeed*armorSpeed);
+    const jumpHeld=this.keys.W.isDown||this.keys.UP.isDown||this.keys.SPACE.isDown||touchJumpHeld;
+    const jumpPressed=Phaser.Input.Keyboard.JustDown(this.keys.W)||Phaser.Input.Keyboard.JustDown(this.keys.UP)||Phaser.Input.Keyboard.JustDown(this.keys.SPACE)||this.jumpRequested||time<this.jumpBufferUntil;
+    const body=this.player.body;
+    // Arcade contact flags can lag one frame on generated static tiles, so also
+    // recognize a player standing directly on a platform top.
+    const platformGrounded=this.platforms.getChildren().some(tile=>{
+      const platformBody=tile.body;
+      return platformBody&&body.bottom>=platformBody.top-6&&body.bottom<=platformBody.top+14&&body.right>platformBody.left+4&&body.left<platformBody.right-4&&body.velocity.y>=-30;
+    });
+    const onGround=Boolean(body.onFloor?.()||body.blocked.down||body.touching.down||platformGrounded);
     if(onGround&&this.player.body.velocity.y>=0){this.jumpCount=0;this.heroJumping=false;}
-    if(jumpPressed&&onGround){this.player.setVelocityY(-590);this.jumpCount=1;this.heroJumping=true;}
-    else if(jumpPressed&&this.agilityLevel>=40&&this.jumpCount===1&&time>=this.secondJumpReadyAt){this.player.setVelocityY(-590*.75);this.jumpCount=2;this.secondJumpReadyAt=time+this.doubleJumpCooldown*1000;this.heroJumping=true;}
+    if(jumpPressed&&onGround){this.player.setVelocityY(-590);this.jumpCount=1;this.heroJumping=true;this.floatUnlockAt=time+260;this.jumpRequested=false;this.jumpBufferUntil=0;}
+    else if(jumpPressed&&this.agilityLevel>=40&&this.jumpCount===1&&(this.agilityLevel>=90||time>=this.secondJumpReadyAt)){this.player.setVelocityY(-590*(this.agilityLevel>=90?1:.75));this.jumpCount=2;this.secondJumpReadyAt=this.agilityLevel>=90?0:time+this.doubleJumpCooldown*1000;this.heroJumping=true;this.floatUnlockAt=time+260;this.jumpRequested=false;this.jumpBufferUntil=0;}
+    else if(time>=this.jumpBufferUntil)this.jumpRequested=false;
+    // Floating is only possible after a successful jump. This prevents a held
+    // key during spawn/landing from swallowing the normal jump impulse.
+    if(this.agilityLevel>=100&&this.heroJumping&&!onGround&&time>=this.floatUnlockAt&&jumpHeld&&this.floatMs>0){
+      this.floating=true;this.player.setVelocityY(0);this.floatMs=Math.max(0,this.floatMs-Math.min(50,delta||16));
+    }else{
+      this.floating=false;
+    }
     if(Phaser.Input.Keyboard.JustDown(this.keys.R))this.scene.restart();
+    if(Phaser.Input.Keyboard.JustDown(this.keys.X))this.toggleCombatMode();
     if(Phaser.Input.Keyboard.JustDown(this.keys.Z)&&this.energy>=100)this.useUltimate();
     if(Phaser.Input.Keyboard.JustDown(this.keys.S))this.useDash(time);
     if(Phaser.Input.Keyboard.JustDown(this.keys.E))this.useTrackingDash(time);
     if(Phaser.Input.Keyboard.JustDown(this.keys.F))this.useAirstrike(time);
+    if(Phaser.Input.Keyboard.JustDown(this.keys.C))this.useArmorOverload();
+    if(Phaser.Input.Keyboard.JustDown(this.keys.V))this.useAssassination(time);
     this.rechargeDash(time);
     this.updateSystems(time);
-    // 鼠标左键、触屏画面按住和触控攻击键都保持持续开火；各武器的实际间隔由 shoot() 控制。
-    if(this.smgFiring||this.touchFiring)this.shoot();
+    // 鼠标左键、触屏画面按住和触控攻击键都保持持续攻击；近战由独立冷却控制。
+    if(this.smgFiring||this.touchFiring){if(this.combatMode==='melee')this.meleeAttack(time);else this.shoot();}
     if(this.player.y>this.floorTop+130)this.failLevel();
     this.syncPlayerArt();
     this.updateEnemies(time);
@@ -1204,18 +1679,50 @@ class Game extends Phaser.Scene{
     this.checkEnemyBulletContact();
     this.updateLaser(time);
     this.updateNearestEnemyHealth();
+    this.drawOffscreenArrows();
     this.expireBullets(this.playerBullets,time);this.expireBullets(this.enemyBullets,time);
     this.drawAimLine();
-    const weaponText=this.activeWeapon==='smg'?`冲锋枪 ${this.smgAmmo}发`:this.activeWeapon==='laser'?`激光枪 ${this.laserDamage.toFixed(1)}/0.2s ${this.laserActiveUntil>time?`运行 ${((this.laserActiveUntil-time)/1000).toFixed(1)}s`:`冷却 ${Math.max(0,(this.laserCooldownUntil-time)/1000).toFixed(1)}s`}`:this.activeWeapon==='sniper'?`狙击枪 ${this.sniperDamage}伤害 冷却 ${Math.max(0,(this.sniperCooldownUntil-time)/1000).toFixed(1)}s`:`手枪 ${this.pistolBurst}连发${data.shot>=90?'·二重':''} 穿透 ${data.shot>=75?3:data.shot>=51?2:1}`;
+    const ammoState=this.ammoLevel?`弹药 ${this.ammoLevel}/100`:'';
+    const overloadState=this.overloadUntil>time?`超载 ${(Math.max(0,this.overloadUntil-time)/1000).toFixed(1)}s`:'';
+    const weaponText=this.combatMode==='melee'?`近战 ${this.meleeWeapon==='blade'?'长刀':'匕首'} ${this.meleeWeapon==='blade'?this.bladeDamage+this.meleeDamage:this.daggerDamage+this.meleeDamage}伤害 冷却 ${(this.meleeWeapon==='blade'?this.bladeCooldown:this.daggerCooldown).toFixed(2)}s${this.meleeEmpoweredSwings?` 强化斩击 ${this.meleeEmpoweredSwings}/3`:''}${this.meleeUltimateSwords.length?` 御刃 ${this.meleeUltimateSwords.length}把`:''}`:this.activeWeapon==='smg'?`冲锋枪 ${this.smgAmmo}发 伤害 ${this.smgDamage}`:this.activeWeapon==='laser'?`激光枪 ${this.laserDamage.toFixed(1)}/0.2s ${this.laserActiveUntil>time?`运行 ${((this.laserActiveUntil-time)/1000).toFixed(1)}s`:`冷却 ${Math.max(0,(this.laserCooldownUntil-time)/1000).toFixed(1)}s`}`:this.activeWeapon==='sniper'?`狙击枪 ${this.sniperDamage}伤害 冷却 ${Math.max(0,(this.sniperCooldownUntil-time)/1000).toFixed(1)}s`:`${this.spreadShots>0?'霰弹枪':'手枪'} ${this.pistolBurst}连发 伤害 ${this.atk+this.ammoDamageBonus}${data.shot>=90?'·二重':''} 穿透 ${data.shot>=75?3:data.shot>=51?2:1}`;
     const trackingStatus=this.agilityLevel>=85?`${this.advancedDashCharges}/${this.advancedDashMax}${this.advancedDashCharges<this.advancedDashMax?` (${Math.max(0,(this.advancedDashRechargeAt-time)/1000).toFixed(1)}s)`:''}`:`${Math.max(0,(this.trackingDashReadyAt-time)/1000).toFixed(1)}s`;
     const airstrikeStatus=this.agilityLevel>=85?`${this.airstrikeCharges}/${this.airstrikeMaxCharges}${this.airstrikeCharges<this.airstrikeMaxCharges?` (${Math.max(0,(this.airstrikeRechargeAt-time)/1000).toFixed(1)}s)`:''}`:`${Math.max(0,(this.airstrikeReadyAt-time)/1000).toFixed(1)}s`;
-    const dashText=this.agilityLevel?`闪身 ${this.dashCharges}/${this.dashMaxCharges}${this.dashCharges<this.dashMaxCharges?` (${Math.max(0,(this.dashRechargeAt-time)/1000).toFixed(1)}s)`:''}${this.agilityLevel>=50?` 追踪(E) ${trackingStatus}`:''}${this.agilityLevel>=70?` 空袭(F) ${airstrikeStatus}`:''}${this.agilityLevel>=40?` 二段跳 ${this.doubleJumpCooldown.toFixed(1)}s`:''}`:'闪身未解锁';
+    const jumpHealText=this.airborneKillHeal>0?` 跳杀回血 ${this.airborneKillHeal}（${this.airborneKillHealReadyAt<=time?'就绪':`${Math.max(0,(this.airborneKillHealReadyAt-time)/1000).toFixed(1)}s`}）`:'';
+    const floatText=this.floatMaxMs>0?` 浮空 ${(this.floatMs/1000).toFixed(1)}/${(this.floatMaxMs/1000).toFixed(1)}s` :'';
+    const jumpText=this.agilityLevel>=40?` 二段跳 ${this.agilityLevel>=90?'无冷却·满高度':`${this.doubleJumpCooldown.toFixed(1)}s`}`:'';
+    const dashText=this.agilityLevel?`闪身 ${this.dashCharges}/${this.dashMaxCharges}${this.dashCharges<this.dashMaxCharges?` (${Math.max(0,(this.dashRechargeAt-time)/1000).toFixed(1)}s)`:''}${this.agilityLevel>=50?` 追踪(E) ${trackingStatus}`:''}${this.agilityLevel>=70?` 空袭(F) ${airstrikeStatus}`:''}${jumpText}${jumpHealText}${floatText}`:'闪身未解锁';
     const bossText=this.bossEnemy?.active?`   Boss HP ${Math.ceil(this.bossEnemy.hp)}`:'';
     const endlessText=endlessMode?`   波次 ${this.endlessWave}   下一波 ${Math.max(0,(this.nextWaveAt-time)/1000).toFixed(1)}s`:'';
     const recoveryText=this.hpRegenPerSecond?`   自愈 ${this.hpRegenPerSecond}/s`:'';
-    const emergencyText=this.hpEmergencyHeal?`   紧急恢复 ${Math.max(0,(this.hpEmergencyReadyAt-time)/1000).toFixed(1)}s`:'';
+    const effectiveReduction=this.getEffectiveArmorReduction(time),effectiveReflect=this.getEffectiveArmorReflect(time);
+    const armorText=this.armorLevel>=1?`装甲 ${this.formatHealth(this.armor)}/${this.formatHealth(this.armorMax)}${this.energyShieldMax>0?` · 能量护盾 ${this.formatHealth(this.energyShield)}/${this.formatHealth(this.energyShieldMax)}`:''}`:'装甲未解锁';
+    const emergencyText=this.hpEmergencyHeal?`   紧急恢复 ${time>=this.hpEmergencyReadyAt?'就绪':`冷却 ${Math.max(0,(this.hpEmergencyReadyAt-time)/1000).toFixed(1)}s`}`:'';
     const finishBlockedText=this.finishBlockedUntil>time?`   旗帜锁定：还需击杀 ${this.finishBlockedCount} 个敌人`:'';
-    this.hud.setText(`${this.definition.name}   ·   生命 ${this.formatHealth(this.hp)}/${this.formatHealth(this.maxHp)}   金币 ${this.coins}   得分 ${this.score}   能量 ${this.energy}%   散弹 ${this.spreadShots}/${this.shotUpgrade>=85?5:3}   ${weaponText}   ${dashText}   射击冷却 ${(this.shotDelay/1000).toFixed(2)}s${recoveryText}${emergencyText}${bossText}${endlessText}${finishBlockedText}`);
+    const stormState=this.ammoLevel>=70?`弹药风暴 ${this.shotCounter%10}/10${this.bulletStormReadyAt>time?` (${Math.max(0,(this.bulletStormReadyAt-time)/1000).toFixed(1)}s)`:''}`:'';
+    const destructionState=this.ammoLevel>=90?(this.destructionActive?'毁灭 +30%':`毁灭准备 ${Math.max(0,(this.destructionReadyAt-time)/1000).toFixed(1)}s`):'';
+    const ammoFeatureState=this.ammoLevel?[this.ammoLevel>=50?'双爆裂':'',this.ammoLevel>=60?'矢量':'',this.ammoLevel>=75?`元素${Math.round(this.elementChance*100)}%`:'',this.ammoLevel>=85?'无限弹夹':'',this.ammoLevel>=95?'穿甲':'',this.ammoLevel>=100?'超载火力':''].filter(Boolean).join(' '):'';
+    const pistolSixthState=this.shotUpgrade>=90?`手枪散射 ${this.pistolShotCounter%6}/6`:'';
+    const movementState=this.agilityLevel?`身法 ${this.agilityLevel}/150 · S ${this.dashCharges}/${this.dashMaxCharges}${this.agilityLevel>=50?` · E ${trackingStatus}`:''}${this.agilityLevel>=70?` · F ${airstrikeStatus}`:''}${this.agilityLevel>=115?` · V暗杀 ${this.assassinationCharges}/2${this.assassinationCharges<this.assassinationMaxCharges&&this.assassinationRechargeAt?` (${Math.max(0,(this.assassinationRechargeAt-time)/1000).toFixed(1)}s)`:''}`:''}${this.agilityLevel>=40?` · 二段跳${this.agilityLevel>=90?'无冷却·满高度':`${this.doubleJumpCooldown.toFixed(1)}s`}`:''}${this.floatMaxMs>0?` · 浮空 ${(this.floatMs/1000).toFixed(1)}/${(this.floatMaxMs/1000).toFixed(1)}s`:''}${this.airborneKillHeal>0?` · 跳杀回${this.airborneKillHeal}`:''}`:'闪身未解锁';
+    // 顶栏固定为两条摘要：基础状态和战斗状态分开，避免高等级效果同时出现时文本被裁切。
+    const primaryLine=`${this.definition.name} · 生命 ${this.formatHealth(this.hp)}/${this.formatHealth(this.maxHp)} · 金币 ${this.coins} · 得分 ${this.score}${this.combatLevel?` · 狂人Lv.${this.combatLevel}`:''}`;
+    const combatLine=[weaponText,ammoState,ammoFeatureState,pistolSixthState,overloadState,stormState,destructionState,movementState,this.combatMode==='ranged'?`冷却 ${(this.shotDelay/1000).toFixed(2)}s`:'X切换远程',recoveryText.trim(),emergencyText.trim(),bossText.trim(),endlessText.trim(),finishBlockedText.trim()].filter(Boolean).join(' · ');
+    const defenseLine=`${armorText} · 临时护盾 ${this.formatHealth(this.tempShield)} · 减伤 ${(effectiveReduction*100).toFixed(1)}% · 反伤 ${(effectiveReflect*100).toFixed(1)}%${this.armorOverloadActiveUntil>time?` · 装甲过载：减伤75% / 反伤 ${(effectiveReflect*100).toFixed(1)}%（剩余 ${(Math.max(0,(this.armorOverloadActiveUntil-time)/1000)).toFixed(1)}s）`:''}`;
+    const detailLine=`完整状态：生命 ${this.formatHealth(this.hp)}/${this.formatHealth(this.maxHp)} · ${armorText} · 临时护盾 ${this.formatHealth(this.tempShield)}\n防御：减伤 ${(effectiveReduction*100).toFixed(1)}% · 反伤 ${(effectiveReflect*100).toFixed(1)}% · 武器伤害 ${this.combatMode==='melee'?((this.meleeWeapon==='blade'?this.bladeDamage+this.meleeDamage:this.daggerDamage+this.meleeDamage)*this.meleeKillMultiplier).toFixed(1):this.activeWeapon==='laser'?this.laserDamage.toFixed(1):this.activeWeapon==='sniper'?this.sniperDamage:this.activeWeapon==='smg'?this.smgDamage:this.atk+this.ammoDamageBonus} · 射击 ${this.shotUpgrade}/125 · 身法 ${this.agilityLevel}/150 · 近战强化 ${this.meleeLevel}/150 · 作战狂人 ${this.combatLevel}/125 · 弹药强化 ${this.ammoLevel}/100 · 装甲强化 ${this.armorLevel}/100 · 生命进化 ${this.lifeEvoLevel} · 攻击进化 ${attackEvoLevel} · 装甲进化 ${armorEvoLevel} · 装甲过载 ${this.armorOverloadActiveUntil>time?`${Math.max(0,(this.armorOverloadActiveUntil-time)/1000).toFixed(1)}s`:'未启动'}`;
+    this.hud.setText(primaryLine);
+    this.hudCombat.setText(combatLine);
+    this.hudDefense.setText(defenseLine);
+    this.statusDetail.setText(detailLine);
+    // 只缩放战斗摘要，生命/金币主信息保持可读的大字号。
+    this.hudCombat.setFontSize(combatLine.length>220?13:16);
+    this.hudDefense.setFontSize(defenseLine.length>160?13:16);
+    const hpRatio=Phaser.Math.Clamp(this.hp/Math.max(1,this.maxHp),0,1);
+    this.statusBars.clear();
+    const barY=this.statusExpanded?232:136;
+    this.statusBars.fillStyle(0x09121d,.95).fillRoundedRect(30,barY,180,6,3).fillStyle(hpRatio<.25?0xff6670:0x65e572,1).fillRoundedRect(30,barY,180*hpRatio,6,3);
+    if(this.armorLevel>=1){const armorRatio=Phaser.Math.Clamp(this.armor/Math.max(1,this.armorMax),0,1);this.statusBars.fillStyle(0x09121d,.95).fillRoundedRect(356,barY,130,6,3).fillStyle(0xbd9aff,1).fillRoundedRect(356,barY,130*armorRatio,6,3);}
+    this.statusBars.fillStyle(0x09121d,.95).fillRoundedRect(218,barY,130,6,3).fillStyle(0x62d9ee,1).fillRoundedRect(218,barY,130*(this.energy/100),6,3);
+    if(this.bossEnemy?.active){const bossRatio=Phaser.Math.Clamp(this.bossEnemy.hp/Math.max(1,this.bossEnemy.maxHp),0,1);this.statusBars.fillStyle(0x09121d,.95).fillRoundedRect(820,barY,300,6,3).fillStyle(0xff5577,1).fillRoundedRect(820,barY,300*bossRatio,6,3);}
+    this.hud.setColor(hpRatio<.25?'#ff9a9f':'#ffd166');
   }
   getRemainingEnemies(){
     return this.enemies.getChildren().reduce((count,enemy)=>count+(enemy.active?1:0),0);
@@ -1235,32 +1742,36 @@ class Game extends Phaser.Scene{
     data.claimed[this.definition.id]=true;
     const reward=first?15+(this.definition.id-1)*10:5;
     data.coins+=this.coins+reward;
+    const milestoneReward=0;
     if(level+1>=data.unlocked)data.unlocked=Math.min(LEVELS.length,level+2);
-    save();this.scene.start('Result',{score:this.score,coins:this.coins,reward,first});
+    save();this.scene.start('Result',{score:this.score,coins:this.coins,reward,first,milestoneReward});
   }
 }
 class Result extends Phaser.Scene{
   constructor(){super('Result')}
   create(result){
     this.cameras.main.setBackgroundColor('#10182d');
+    this.add.rectangle(640,360,1280,720,0x070b13).setDepth(-2);
+    this.add.rectangle(640,360,760,500,0x0d1b2a,.98).setDepth(-1).setStrokeStyle(2,0x315a72);
+    this.add.rectangle(270,155,4,70,result?.failed?0xff6670:0xffd166).setOrigin(.5).setDepth(0);
     if(result?.failed){
-      this.add.text(75,75,'游戏失败',{fontSize:'38px',color:'#ff8794'});
+      this.add.text(300,128,'游戏失败',{fontSize:'38px',fontStyle:'bold',color:'#ff8794'});
       const failName=result.endless?'无尽模式':LEVELS[level].name;
       const failText=result.endless?`生命值已归零，已保留无尽模式击杀金币。\n到达波次：${result.wave||0}，本局金币：${result.coins||0}`:`生命值已归零，本局拾取的 ${result.coins||0} 金币已丢失。\n鼓励奖励：${result.reward??3} 金币`;
-      this.add.text(80,145,`${failName}\n\n${failText}`,{fontSize:'21px',color:'#fff'});
-      const retry=this.add.text(80,350,'重新挑战',{fontSize:'20px',color:'#9fe8ff',backgroundColor:'#19334b',padding:{x:16,y:12}}).setInteractive({useHandCursor:true});
+      this.add.text(300,195,`${failName}\n\n${failText}`,{fontSize:'21px',color:'#fff',lineSpacing:6});
+      const retry=this.add.text(300,390,'重新挑战',{fontSize:'20px',color:'#9fe8ff',backgroundColor:'#19334b',padding:{x:16,y:12}}).setInteractive({useHandCursor:true});
       retry.on('pointerdown',()=>this.scene.start('Game'));
-      const home=this.add.text(80,425,'返回主页',{fontSize:'18px',color:'#f7fbff',backgroundColor:'#2c4050',padding:{x:16,y:10}}).setInteractive({useHandCursor:true});
+      const home=this.add.text(480,390,'返回主页',{fontSize:'18px',color:'#f7fbff',backgroundColor:'#2c4050',padding:{x:16,y:10}}).setInteractive({useHandCursor:true});
       home.on('pointerdown',()=>{endlessMode=false;this.scene.start('Menu')});
       return;
     }
-    this.add.text(75,75,'关卡完成！',{fontSize:'38px',color:'#ffd166'});
+    this.add.text(300,128,'关卡完成！',{fontSize:'38px',fontStyle:'bold',color:'#ffd166'});
     const rewardLabel=result.first===false?'重复挑战奖励':'首次通关奖励';
-    this.add.text(80,145,`${LEVELS[level].name}\n\n得分：${result.score}\n本关拾取金币：${result.coins}\n${rewardLabel}：${result.reward??15} 金币`,{fontSize:'21px',color:'#fff'});
+    this.add.text(300,195,`${LEVELS[level].name}\n\n得分：${result.score}\n本关拾取金币：${result.coins}\n${rewardLabel}：${result.reward??15} 金币${result.milestoneReward?`\n活动奖励：${result.milestoneReward} 金币`:''}`,{fontSize:'21px',color:'#fff',lineSpacing:6});
     const label=level+1<LEVELS.length?'继续下一关 →':'返回关卡选择 →';
-    const button=this.add.text(80,350,label,{fontSize:'20px',color:'#9fe8ff',backgroundColor:'#19334b',padding:{x:16,y:12}}).setInteractive({useHandCursor:true});
+    const button=this.add.text(300,390,label,{fontSize:'20px',color:'#9fe8ff',backgroundColor:'#19334b',padding:{x:16,y:12}}).setInteractive({useHandCursor:true});
     button.on('pointerdown',()=>{if(level+1<LEVELS.length){level++;endlessMode=false;this.scene.start('Game')}else{endlessMode=false;this.scene.start('Menu')}});
-    const home=this.add.text(80,425,'返回主页',{fontSize:'18px',color:'#f7fbff',backgroundColor:'#2c4050',padding:{x:16,y:10}}).setInteractive({useHandCursor:true});
+    const home=this.add.text(480,390,'返回主页',{fontSize:'18px',color:'#f7fbff',backgroundColor:'#2c4050',padding:{x:16,y:10}}).setInteractive({useHandCursor:true});
     home.on('pointerdown',()=>{endlessMode=false;this.scene.start('Menu')});
   }
 }
