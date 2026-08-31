@@ -7,7 +7,7 @@
     const earlyStyle = document.createElement('style');
     earlyStyle.textContent = 'html.club-service-checking body{visibility:hidden!important}';
     (document.head || document.documentElement).appendChild(earlyStyle);
-    setTimeout(() => document.documentElement.classList.remove('club-service-checking'), 8000);
+    setTimeout(() => document.documentElement.classList.remove('club-service-checking'), 30000);
   }
   const getLang = () => (localStorage.getItem('algorithm-club-lang') || 'zh').startsWith('en') ? 'en' : 'zh';
   const getTheme = () => { const mode = localStorage.getItem('algorithm-club-theme-mode') || 'auto'; if (mode === 'light' || mode === 'dark') return mode; const h = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Shanghai', hour: 'numeric', hour12: false }).format(new Date())); return h >= 6 && h < 18 ? 'light' : 'dark'; };
@@ -15,8 +15,16 @@
     if (isAdminHub) return;
     const reveal = () => document.documentElement.classList.remove('club-service-checking');
     try {
-      const res = await fetch(URL, { method: 'POST', headers: { 'content-type': 'application/json', apikey: KEY }, body: JSON.stringify({ action: 'site_service_status' }) });
-      const state = await res.json();
+      let state;
+      try {
+        const res = await fetch(URL, { method: 'POST', headers: { 'content-type': 'application/json', apikey: KEY }, body: JSON.stringify({ action: 'site_service_status' }) });
+        if (!res.ok) throw new Error('service status request failed');
+        state = await res.json();
+        localStorage.setItem('club-site-service-last-state', JSON.stringify(state));
+      } catch (_) {
+        try { state = JSON.parse(localStorage.getItem('club-site-service-last-state') || 'null'); } catch (_error) { state = null; }
+        if (!state) { setTimeout(check, 1200); return; }
+      }
       if (state.enabled !== false) { reveal(); return; }
       const prompts = Array.isArray(window.ClubServicePrompts) ? window.ClubServicePrompts : [];
       const selected = state.random_enabled && prompts.length ? prompts[Math.floor(Math.random() * prompts.length)] : state;
