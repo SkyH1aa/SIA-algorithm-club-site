@@ -44,6 +44,7 @@ header a:hover{background:#163249;border-color:var(--cyan)}
 .help{margin:12px 2px 0;color:#9cb3c3;line-height:1.65}.help span{padding:3px 0}
 kbd{border-color:#38546a;background:#122438;color:#eafaff}
 .notice{padding:9px 11px;border-left:3px solid var(--gold);background:#18170f;color:#e7c977;border-radius:0 4px 4px 0}
+.password-panel{border:1px solid var(--line);border-radius:8px;background:var(--panel);box-shadow:0 14px 35px #0005;padding:18px 20px;margin-bottom:12px}.password-panel h2{margin:0 0 8px;font-size:20px}.password-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.password-form input{height:40px;width:190px;border:1px solid #2b4c63;border-radius:5px;background:#09121e;color:#fff;padding:0 10px}.password-message{min-height:20px;margin:10px 0 0;color:#ffd166;font-size:13px}
 .leaderboard-panel{padding:18px 20px}.leaderboard-panel h2{color:#fff}.leaderboard-list li{border-bottom:1px solid #1c3345;padding:8px 0}.leaderboard-list li:last-child{border-bottom:0}
 @media (max-width:700px){.shell{padding:14px 10px 22px}header{min-height:44px}header h1{font-size:24px}.auth-gate::before{display:none}.auth-gate{padding:18px}.auth-form input{width:100%}.auth-form .button{flex:1}.touch-controls{padding:8px}.touch-actions{grid-template-columns:repeat(3,minmax(0,1fr))}.touch-button small{font-size:10px}}
 .play-layout{display:block;min-width:0}
@@ -69,11 +70,12 @@ kbd{border-color:#38546a;background:#122438;color:#eafaff}
   .help,.notice,.leaderboard-panel{display:none}
 }
 </style>
-</head>
+<script src="service-gate.js"></script></head>
 <body>
 <main class="shell">
-<header><h1>行于无垠</h1><div><span id="auth-user" class="auth-user"></span><a href="../index.html">返回官网</a></div></header>
+<header><h1>行于无垠</h1><div><span id="service-status" class="auth-user">游戏服务：正在检查</span><span id="auth-user" class="auth-user"></span><button class="button secondary" id="change-password-button" type="button" hidden>修改密码</button><button class="button secondary" id="service-toggle" type="button" hidden>关闭游戏服务</button><a href="../index.html">返回官网</a></div></header>
 <section id="auth-gate" class="auth-gate"><h2>登录后开始游戏</h2><p>使用本游戏独立账号，不与社团盘登录系统关联。</p><div class="auth-form"><input id="username-input" type="text" maxlength="32" placeholder="用户名"><input id="password-input" type="password" maxlength="72" placeholder="密码"><button class="button" id="login-button" type="button">登录</button><button class="button secondary" id="register-button" type="button">注册新用户</button></div><p id="auth-message" class="auth-message" role="status"></p></section>
+<section id="password-panel" class="password-panel" hidden><h2>修改密码</h2><div class="password-form"><input id="old-password-input" type="password" maxlength="72" placeholder="当前密码"><input id="new-password-input" type="password" maxlength="72" placeholder="新密码（至少6位）"><input id="confirm-password-input" type="password" maxlength="72" placeholder="确认新密码"><button class="button" id="save-password-button" type="button">保存密码</button><button class="button secondary" id="cancel-password-button" type="button">取消</button></div><p id="password-message" class="password-message" role="status"></p></section>
 <section id="game-content" hidden>
 <div class="play-layout">
 <div id="game-wrap" style="touch-action:none"><div id="game"></div><div id="game-loading" class="game-loading">正在加载游戏素材…</div></div>
@@ -328,6 +330,16 @@ const usernameInput=document.getElementById('username-input');
 const passwordInput=document.getElementById('password-input');
 const authMessage=document.getElementById('auth-message');
 const authUser=document.getElementById('auth-user');
+const serviceStatus=document.getElementById('service-status');
+const serviceToggle=document.getElementById('service-toggle');
+const changePasswordButton=document.getElementById('change-password-button');
+const passwordPanel=document.getElementById('password-panel');
+const oldPasswordInput=document.getElementById('old-password-input');
+const newPasswordInput=document.getElementById('new-password-input');
+const confirmPasswordInput=document.getElementById('confirm-password-input');
+const savePasswordButton=document.getElementById('save-password-button');
+const cancelPasswordButton=document.getElementById('cancel-password-button');
+const passwordMessage=document.getElementById('password-message');
 const leaderboardList=document.getElementById('leaderboard-list');
 const gameLoading=document.getElementById('game-loading');
 const failedAssetKeys=new Set();
@@ -357,9 +369,80 @@ window.addEventListener('error',event=>{
   reportRuntimeError(event.error||event.message,'全局脚本/场景异常');
 });
 window.addEventListener('unhandledrejection',event=>reportRuntimeError(event.reason,'异步请求异常'));
+let serviceEnabled=true,serviceStatusKnown=false,servicePollId=0;
 function setAuthMessage(message,isError=false){authMessage.textContent=message;authMessage.style.color=isError?'#ff8794':'#ffd166'}
+function updateServiceUi(){
+  if(serviceStatus){serviceStatus.textContent=serviceStatusKnown?`游戏服务：${serviceEnabled?'运行中':'已关闭'}`:'游戏服务：正在检查';serviceStatus.style.color=!serviceStatusKnown?'#ffd166':(serviceEnabled?'#7de3a6':'#ff8794');}
+  const isOperator=currentUser?.username==='chm';
+  if(serviceToggle){serviceToggle.hidden=!isOperator;serviceToggle.textContent=serviceEnabled?'关闭游戏服务':'开启游戏服务';serviceToggle.classList.toggle('secondary',serviceEnabled);}
+  const typedName=usernameInput?.value.trim();
+  const maintenance=serviceStatusKnown&&!serviceEnabled;
+  const closedForUser=maintenance&&typedName!=='chm';
+  const loginButton=document.getElementById('login-button'),registerButton=document.getElementById('register-button');
+  if(loginButton)loginButton.disabled=closedForUser;
+  if(loginButton)loginButton.textContent=maintenance?'管理员登录':'登录';
+  if(registerButton){registerButton.disabled=maintenance;registerButton.hidden=maintenance;}
+  if(maintenance&&!isOperator){
+    if(typedName==='chm')setAuthMessage('管理员调试入口：请输入 chm 密码登录。');
+    else setAuthMessage('服务器升级维护中，请稍后再试',true);
+  }
+}
+function setPasswordMessage(message,isError=false){if(passwordMessage){passwordMessage.textContent=message;passwordMessage.style.color=isError?'#ff8794':'#ffd166';}}
+function closePasswordPanel(){if(passwordPanel)passwordPanel.hidden=true;if(oldPasswordInput)oldPasswordInput.value='';if(newPasswordInput)newPasswordInput.value='';if(confirmPasswordInput)confirmPasswordInput.value='';setPasswordMessage('');}
+function openPasswordPanel(){if(!currentUser)return;passwordPanel.hidden=false;setPasswordMessage('请输入当前密码和新密码。');oldPasswordInput?.focus();}
+async function changePassword(){
+  if(!currentUser||!platformerDb){setPasswordMessage('请先登录游戏。',true);return;}
+  const oldPassword=oldPasswordInput.value,newPassword=newPasswordInput.value,confirmation=confirmPasswordInput.value;
+  if(oldPassword.length<6){setPasswordMessage('当前密码至少需要 6 位。',true);return;}
+  if(newPassword.length<6){setPasswordMessage('新密码至少需要 6 位。',true);return;}
+  if(newPassword!==confirmation){setPasswordMessage('两次输入的新密码不一致。',true);return;}
+  savePasswordButton.disabled=true;setPasswordMessage('正在修改密码…');
+  const {data:result,error}=await platformerDb.rpc('platformer_change_password',{p_username:currentUser.username,p_token:currentUser.token,p_old_password:oldPassword,p_new_password:newPassword});
+  savePasswordButton.disabled=false;
+  if(error||!result?.length||!result[0]?.session_token){setPasswordMessage(error?.message||'当前密码不正确，密码未修改。',true);return;}
+  currentUser.token=result[0].session_token;
+  localStorage.setItem('platformer-session',JSON.stringify({username:currentUser.username,token:currentUser.token}));
+  closePasswordPanel();setAuthMessage('密码已修改，新的登录会话已生效。');
+}
+function lockForMaintenance(){
+  if(currentUser?.username==='chm')return;
+  currentUser=null;localStorage.removeItem('platformer-session');
+  gameInstance?.scene.stop('Game');
+  gameContent.hidden=true;leaderboardPanel.hidden=true;authGate.hidden=false;authUser.textContent='';changePasswordButton.hidden=true;closePasswordPanel();
+  updateServiceUi();setAuthMessage('服务器升级维护中，请稍后再试',true);
+}
+async function refreshServiceStatus(enforce=true){
+  if(!platformerDb)return null;
+  const {data:result,error}=await platformerDb.rpc('platformer_service_status');
+  // Keep backward compatibility until the accompanying SQL migration is executed.
+  if(error||!result?.length)return null;
+  serviceEnabled=Boolean(result[0].enabled);serviceStatusKnown=true;updateServiceUi();
+  if(enforce&&!serviceEnabled&&currentUser?.username!=='chm')lockForMaintenance();
+  return serviceEnabled;
+}
+async function toggleService(){
+  if(currentUser?.username!=='chm'||!platformerDb)return;
+  serviceToggle.disabled=true;
+  const next=!serviceEnabled;
+  const {data:result,error}=await platformerDb.rpc('platformer_set_service_enabled',{p_username:currentUser.username,p_token:currentUser.token,p_enabled:next});
+  serviceToggle.disabled=false;
+  if(error||!result){setAuthMessage(error?.message||'服务状态修改失败。',true);return;}
+  serviceEnabled=next;serviceStatusKnown=true;updateServiceUi();
+  setAuthMessage(`游戏服务已${next?'开启':'关闭'}。`);
+}
 function isEventActive(){const now=new Date();const start=new Date('2026-08-31T00:00:00+08:00'),end=new Date('2026-09-15T00:00:00+08:00');return now>=start&&now<end}
-function claimEventRewards(){if(!isEventActive())return 0;let reward=0;const best=Number(data.eventEndlessBest||0);for(let wave=1;wave<=best;wave++){if(!data.eventEndlessClaimed[wave]){data.eventEndlessClaimed[wave]=true;reward+=10000*wave;}}const completed=Math.max(0,(Number(data.unlocked)||1)-1),milestones=Math.floor(completed/10);for(let i=1;i<=milestones;i++){if(!data.eventLevelClaimed[i]){data.eventLevelClaimed[i]=true;reward+=30000;}}if(reward){data.coins+=reward;save();}return reward}
+async function claimEventRewards(){
+  if(!isEventActive()||!currentUser||!platformerDb)return 0;
+  const best=Math.max(0,Math.floor(Number(data.eventEndlessBest)||0));
+  const completed=Math.max(0,Math.floor(Number(data.unlocked)||1)-1);
+  const {data:result,error}=await platformerDb.rpc('platformer_claim_event_rewards',{p_username:currentUser.username,p_token:currentUser.token,p_endless_best:best,p_completed_levels:completed});
+  if(error||!result?.length){setAuthMessage(error?.message||'活动奖励领取失败，请稍后重试。',true);return 0;}
+  const reward=Math.max(0,Number(result[0].reward)||0);
+  for(let wave=1;wave<=best;wave++)data.eventEndlessClaimed[wave]=true;
+  for(let i=1;i<=Math.floor(completed/10);i++)data.eventLevelClaimed[i]=true;
+  if(reward){data.coins+=reward;save();}
+  return reward;
+}
 function applyProfile(profile){
   data.coins=Number(profile.coins)||0;data.hp=Number(profile.hp_upgrade)||0;data.atk=Number(profile.atk_upgrade)||0;data.shot=Number(profile.shot_upgrade)||0;data.agility=Math.max(0,Math.min(150,Number(profile.agility_upgrade)||0));data.melee=Number(profile.melee_upgrade)||0;data.ammo=Number(profile.ammo_upgrade)||0;data.armor=Number(profile.armor_upgrade)||0;data.combat=Math.max(0,Math.min(125,Number(profile.combat_upgrade)||0));data.lifeEvo=Number(profile.life_evo_upgrade)||0;data.attackEvo=Math.max(0,Number(profile.attack_evo_upgrade)||0);data.armorEvo=Math.max(0,Number(profile.armor_evo_upgrade)||0);
   const claimedUnlock=Math.max(1,...Object.keys(data.claimed||{}).map(Number).filter(Number.isFinite).map(id=>id+1));
@@ -370,12 +453,15 @@ function createGame(){
   if(gameInstance)return;
   gameInstance=new Phaser.Game({type:Phaser.AUTO,parent:'game',width:1280,height:720,physics:{default:'arcade',arcade:{gravity:{y:900},debug:false}},scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:[Boot,Menu,Upgrade,ProgressionGuide,Game,Result]});
 }
-function startGame(profile){currentUser={username:profile.username,token:profile.session_token};applyProfile(profile);authGate.hidden=true;gameContent.hidden=false;leaderboardPanel.hidden=false;authUser.textContent=`已登录：${currentUser.username}`;createGame();void loadLeaderboard()}
+function startGame(profile){currentUser={username:profile.username,token:profile.session_token};applyProfile(profile);authGate.hidden=true;gameContent.hidden=false;leaderboardPanel.hidden=false;authUser.textContent=`已登录：${currentUser.username}`;changePasswordButton.hidden=false;updateServiceUi();createGame();void refreshServiceStatus(true);void loadLeaderboard()}
 async function authenticate(action){
   const username=usernameInput.value.trim(),password=passwordInput.value;
   if(!/^[A-Za-z0-9_]{3,32}$/.test(username)){setAuthMessage('用户名需为 3-32 位字母、数字或下划线。',true);return}
   if(password.length<6){setAuthMessage('密码至少需要 6 位。',true);return}
   if(!platformerDb){setAuthMessage('Supabase 客户端未加载。',true);return}
+  if(serviceStatusKnown&&!serviceEnabled&&username!=='chm'){
+    setAuthMessage('服务器升级维护中，请稍后再试',true);return;
+  }
   setAuthMessage(action==='login'?'正在登录…':'正在注册…');
   const rpc=action==='login'?'platformer_login':'platformer_register';
   const {data:result,error}=await platformerDb.rpc(rpc,{p_username:username,p_password:password});
@@ -386,7 +472,11 @@ async function resumeSession(){
   const saved=JSON.parse(localStorage.getItem('platformer-session')||'null');
   if(!saved||!platformerDb)return;
   const {data:result,error}=await platformerDb.rpc('platformer_resume',{p_username:saved.username,p_token:saved.token});
-  if(error||!result?.length){localStorage.removeItem('platformer-session');return}
+  if(error||!result?.length){
+    localStorage.removeItem('platformer-session');
+    if(!error&&await refreshServiceStatus(false)===false)setAuthMessage('服务器升级维护中，请稍后再试',true);
+    return;
+  }
   startGame(result[0]);
 }
 async function saveRemoteProfile(){
@@ -410,6 +500,13 @@ async function loadLeaderboard(){
 function escapeHtml(value){return String(value).replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}
 document.getElementById('login-button').onclick=()=>authenticate('login');
 document.getElementById('register-button').onclick=()=>authenticate('register');
+changePasswordButton?.addEventListener('click',openPasswordPanel);
+savePasswordButton?.addEventListener('click',()=>void changePassword());
+cancelPasswordButton?.addEventListener('click',closePasswordPanel);
+serviceToggle?.addEventListener('click',()=>void toggleService());
+usernameInput?.addEventListener('input',updateServiceUi);
+void refreshServiceStatus(false);
+servicePollId=window.setInterval(()=>void refreshServiceStatus(true),30000);
 document.getElementById('leaderboard-refresh').onclick=()=>void loadLeaderboard();
 usernameInput.addEventListener('keydown',event=>{if(event.key==='Enter')authenticate('login')});
 passwordInput.addEventListener('keydown',event=>{if(event.key==='Enter')authenticate('login')});
@@ -585,7 +682,7 @@ class Menu extends Phaser.Scene{
     const eventText=isEventActive()?'活动开启：无尽波次奖励 + 每通关10关奖励':'活动未开启（有效期：8.31-9.14）';
     this.add.text(48,575,`${eventText} · 无尽最高波次 ${data.eventEndlessBest||0} · 已领取十关奖励 ${Object.keys(data.eventLevelClaimed||{}).length} 次`,{fontSize:'13px',color:isEventActive()?'#7de3a6':'#718293'});
     const eventButton=this.add.text(1010,565,isEventActive()?'领取活动奖励':'未开启',{fontSize:'14px',color:isEventActive()?'#fff':'#718293',backgroundColor:isEventActive()?'#31583f':'#18202e',padding:{x:12,y:7}});
-    if(isEventActive())eventButton.setInteractive({useHandCursor:true}).on('pointerdown',()=>{const reward=claimEventRewards();eventButton.setText(reward?`已领取 +${reward}`:'暂无可领取');eventButton.disableInteractive();this.scene.restart();});
+    if(isEventActive())eventButton.setInteractive({useHandCursor:true}).on('pointerdown',async()=>{eventButton.disableInteractive();eventButton.setText('领取中…');const reward=await claimEventRewards();eventButton.setText(reward?`已领取 +${reward}`:'暂无可领取');this.time.delayedCall(700,()=>this.scene.restart());});
   }
 }
 

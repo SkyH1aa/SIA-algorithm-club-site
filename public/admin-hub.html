@@ -13,7 +13,7 @@
 <style>
     :root{--bg:#030712;--panel:rgba(9,18,38,.84);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--violet:#9278ff;--green:#72f3c2;--danger:#ff718a;--warn:#ffd166;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 10% 0,rgba(0,229,255,.14),transparent 28%),radial-gradient(circle at 90% 8%,rgba(146,120,255,.16),transparent 30%),var(--bg)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.82);backdrop-filter:blur(18px)}.topbar-inner{max-width:1200px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted)}.back:hover{color:var(--cyan)}main{max-width:1200px;margin:auto;padding:56px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}h1{margin:0;font-size:clamp(40px,7vw,74px);letter-spacing:-1.5px;line-height:.98}h2{margin:0 0 8px;font-size:22px}.lead{max-width:760px;color:var(--muted);line-height:1.8;font-size:16px}.panel{border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(16px)}.gate,.denied{min-height:280px;display:grid;place-items:center;text-align:center;padding:28px}.gate strong,.denied strong{display:block;margin-bottom:10px;color:var(--cyan);font-size:24px}.gate p,.denied p{margin:0 0 18px;color:var(--muted);line-height:1.8}.hidden{display:none!important}.button{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:rgba(0,229,255,.12);color:var(--text);cursor:pointer;font:inherit}.button:hover{background:rgba(0,229,255,.22)}.button.secondary{border-color:var(--line);background:transparent}.button.danger{border-color:rgba(255,113,138,.55);background:rgba(255,113,138,.12)}.button:disabled{opacity:.45;cursor:not-allowed;pointer-events:none}.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr);gap:24px;align-items:end;margin:28px 0}.status-card{padding:22px}.status-card strong{display:block;margin-bottom:8px;color:var(--cyan);font-size:20px}.status-card span{color:var(--muted);font-size:13px;line-height:1.7}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}.stat{padding:18px;border:1px solid rgba(107,169,224,.18);border-radius:12px;background:rgba(0,10,28,.45)}.stat small{display:block;margin-bottom:8px;color:var(--muted);font-size:12px}.stat strong{font-size:28px;color:var(--green)}.section{padding:24px;margin-bottom:18px}.section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:16px}.intro{margin:0;color:var(--muted);line-height:1.7}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.card{display:flex;min-height:150px;flex-direction:column;justify-content:space-between;padding:18px;border:1px solid rgba(107,169,224,.2);border-radius:12px;background:linear-gradient(145deg,rgba(0,229,255,.07),rgba(146,120,255,.08));transition:transform .2s ease,border-color .2s ease}.card:hover{transform:translateY(-3px);border-color:rgba(0,229,255,.65)}.card strong{font-size:18px}.card p{margin:10px 0 0;color:var(--muted);line-height:1.65;font-size:14px}.card span{margin-top:16px;color:var(--cyan);font-size:13px}.form{display:grid;gap:12px;max-width:520px}.form.inline{grid-template-columns:1fr 1fr auto;align-items:end;max-width:none}.form.perm{grid-template-columns:1.1fr 1fr;max-width:none;align-items:start}.label{color:var(--muted);font-size:13px}.input{width:100%;padding:12px 14px;color:var(--text);border:1px solid var(--line);border-radius:8px;background:rgba(2,7,18,.76);outline:none}.input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1)}.checks{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;border:1px solid rgba(107,169,224,.18);border-radius:10px;background:rgba(0,10,28,.35)}.checks label{display:flex;gap:8px;align-items:center;color:var(--text);font-size:14px}.secret-box{margin-top:14px;padding:14px 16px;border:1px dashed rgba(0,229,255,.45);border-radius:10px;background:rgba(0,229,255,.08);color:var(--cyan);line-height:1.7;display:none}.secret-box.active{display:block}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:820px}.table th,.table td{padding:12px 8px;border-bottom:1px solid rgba(107,169,224,.14);text-align:left;vertical-align:top}.table th{color:var(--muted);font-size:13px;font-weight:500}.actions{display:flex;gap:8px;flex-wrap:wrap}.badge{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid var(--line);color:var(--muted)}.badge.pending{border-color:rgba(255,209,102,.5);color:var(--warn)}.badge.approved{border-color:rgba(0,229,255,.5);color:var(--cyan)}.badge.used{border-color:rgba(114,243,194,.5);color:var(--green)}.badge.cancelled,.badge.expired{border-color:rgba(255,113,138,.45);color:var(--danger)}.badge.on{border-color:rgba(114,243,194,.5);color:var(--green)}.badge.off{border-color:rgba(145,168,194,.35);color:var(--muted)}.message{min-height:22px;margin:12px 0 0;color:var(--muted);font-size:13px;line-height:1.6}.message.error{color:var(--danger)}.message.success{color:var(--green)}.empty{padding:34px 0;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}.perm-tags{display:flex;flex-wrap:wrap;gap:6px}@media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr)}.form.inline,.form.perm{grid-template-columns:1fr}}@media(max-width:900px){.hero,.stats,.grid{grid-template-columns:1fr 1fr}}@media(max-width:640px){.topbar-inner{padding:13px 16px}.identity{display:none!important}main{padding:42px 16px 70px}.hero,.stats,.grid,.checks{grid-template-columns:1fr}.section{padding:18px}}
   </style>
-</head>
+<script src="service-gate.js"></script></head>
 <body>
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Admin Hub</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
   <main>
@@ -84,6 +84,19 @@
         </form>
         <p class="message" id="permissionsMessage" role="status"></p>
         <div class="table-wrap" id="permissionsList" style="margin-top:16px"><div class="empty loading" data-i18n="admin.loadingPerm">正在读取权限列表…</div></div>
+      </section>
+
+      <section class="panel section hidden" id="siteServiceSection">
+        <div class="section-head"><div><h2 data-i18n="admin.siteServiceTitle">网站服务运行开关</h2><p class="intro" data-i18n="admin.siteServiceIntro">仅超管可用。暂停后所有网站页面将显示不可用提示。</p></div></div>
+        <form class="form" id="siteServiceForm">
+          <label class="label"><input type="checkbox" id="siteServiceEnabled" checked> <span data-i18n="admin.siteServiceRunning">网站服务运行中</span></label>
+          <label class="label"><span data-i18n="admin.siteTitleZh">中文大标题</span><input class="input" id="siteTitleZh" maxlength="200"></label>
+          <label class="label"><span data-i18n="admin.siteSubtitleZh">中文副标题</span><textarea class="input" id="siteSubtitleZh" maxlength="500" rows="2"></textarea></label>
+          <label class="label"><span data-i18n="admin.siteTitleEn">英文大标题</span><input class="input" id="siteTitleEn" maxlength="200"></label>
+          <label class="label"><span data-i18n="admin.siteSubtitleEn">英文副标题</span><textarea class="input" id="siteSubtitleEn" maxlength="500" rows="2"></textarea></label>
+          <button class="button" type="submit" data-i18n="admin.siteServiceSave">保存网站服务设置</button>
+        </form>
+        <p class="message" id="siteServiceMessage" role="status"></p>
       </section>
 
       <section class="panel section hidden" id="resetsSection">
@@ -476,6 +489,7 @@
       $('resetsSection').classList.toggle('hidden', !superAdmin);
       $('directResetSection').classList.toggle('hidden', !superAdmin);
       $('bindingsSection').classList.toggle('hidden', !superAdmin);
+      $('siteServiceSection').classList.toggle('hidden', !superAdmin);
       document.querySelectorAll('#statsSection [data-stat="bindings"], #statsSection [data-stat="resets"]').forEach(node => {
         node.classList.toggle('hidden', !superAdmin);
       });
@@ -507,9 +521,10 @@
           call('admin_member_profiles_list'),
           call('admin_password_resets_list'),
           call('admin_staff_permissions_list'),
-          call('admin_super_admins_list')
+          call('admin_super_admins_list'),
+          call('admin_site_service_get')
         );
-        labels.push('profiles', 'resets', 'permissions', 'superAdmins');
+        labels.push('profiles', 'resets', 'permissions', 'superAdmins', 'siteService');
       }
       if (permOn('checkin')) {
         tasks.push(call('admin_checkin_list'), call('admin_course_checkin_list'));
@@ -571,6 +586,14 @@
           $('superAdminsList').innerHTML = `<div class="empty">${escapeHtml(t('admin.emptySuperFail'))}</div>`;
           setMessage($('superAdminsMessage'), byLabel.superAdmins?.__error?.message || t('admin.readFailed'), 'error');
         }
+        if (byLabel.siteService && !byLabel.siteService.__error) {
+          const s = byLabel.siteService;
+          $('siteServiceEnabled').checked = s.enabled !== false;
+          $('siteTitleZh').value = s.title_zh || '网站暂不可用';
+          $('siteSubtitleZh').value = s.subtitle_zh || '网站暂不可用';
+          $('siteTitleEn').value = s.title_en || 'Website temporarily unavailable';
+          $('siteSubtitleEn').value = s.subtitle_en || 'Website temporarily unavailable';
+        }
 
         if (byLabel.checkin && !byLabel.checkin.__error) {
           const codes = Array.isArray(byLabel.checkin.codes) ? byLabel.checkin.codes : [];
@@ -611,6 +634,20 @@
       await refreshOverview();
     }
 
+    $('siteServiceForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      setMessage($('siteServiceMessage'), t('admin.siteServiceSaving'));
+      try {
+        await call('admin_site_service_set', {
+          enabled: $('siteServiceEnabled').checked,
+          titleZh: $('siteTitleZh').value,
+          subtitleZh: $('siteSubtitleZh').value,
+          titleEn: $('siteTitleEn').value,
+          subtitleEn: $('siteSubtitleEn').value
+        });
+        setMessage($('siteServiceMessage'), t('admin.siteServiceSaved'), 'success');
+      } catch (error) { setMessage($('siteServiceMessage'), error.message, 'error'); }
+    });
     $('refreshButton').onclick = () => void refreshOverview();
     $('refreshSuperAdminsButton').onclick = () => void refreshSuperAdminsOnly();
 
