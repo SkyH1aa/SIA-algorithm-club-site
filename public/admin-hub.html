@@ -625,6 +625,18 @@
       }
 
       currentAccess = await window.ClubStaffAccess.fetchStaffAccess(session);
+      let siteEnabled = true;
+      try {
+        const serviceResponse = await fetch(FUNCTION_URL, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ action: 'site_service_status' }) });
+        const serviceState = await serviceResponse.json().catch(() => ({}));
+        siteEnabled = serviceState.enabled !== false;
+      } catch (_) { /* 状态接口异常时不阻断管理员登录 */ }
+      const debugOnly = new URLSearchParams(location.search).get('serviceDebug') === '1';
+      if ((!siteEnabled || debugOnly) && !currentAccess.isSuperAdmin) {
+        $('denied').classList.remove('hidden');
+        $('content').classList.add('hidden');
+        return;
+      }
       const allowed = window.ClubStaffAccess.hasStaffAccess(currentAccess);
       $('denied').classList.toggle('hidden', allowed);
       $('content').classList.toggle('hidden', !allowed);
