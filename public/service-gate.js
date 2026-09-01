@@ -3,6 +3,23 @@
   const KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
   const isAdminHub = /(?:^|\/)admin-hub\.html$/i.test(location.pathname);
   const isTemporaryLogin = /(?:^|\/)member-center\.html$/i.test(location.pathname) && new URLSearchParams(location.search).get('serviceDebug') === '1';
+  const FEATURE_BY_PATH = { 'member-center.html':'member-center', 'member-points.html':'points', 'points-mall.html':'mall', 'member-messages.html':'messages', 'drive.html':'drive', 'events.html':'events', 'join.html':'join', 'gomoku.html':'gomoku', 'tetris.html':'tetris', 'snake.html':'snake', 'platformer.html':'platformer', 'club-features.html':'club-features', 'visualization-lab.html':'visualization-lab', 'sorting-lab.html':'sorting-lab', 'search-lab.html':'search-lab', 'ds-lab.html':'ds-lab', 'graph-lab.html':'graph-lab', 'dp-lab.html':'dp-lab', 'tree-lab.html':'tree-lab', 'heap-lab.html':'heap-lab', 'resources.html':'resources', 'guide.html':'guide', 'changelog.html':'changelog' };
+  const featureKey = FEATURE_BY_PATH[location.pathname.split('/').pop().toLowerCase()] || null;
+  let latestState = null;
+  window.ClubServiceGate = {
+    getState: () => latestState,
+    getFeature: key => latestState?.feature_settings?.[key] || null,
+    isFeatureEnabled: key => latestState?.enabled !== false && latestState?.feature_settings?.[key]?.enabled !== false,
+    getFeatureMessage: (key, lang = getLang()) => {
+      const feature = latestState?.feature_settings?.[key] || {};
+      const prompts = Array.isArray(window.ClubServicePrompts) ? window.ClubServicePrompts : [];
+      const selected = feature.random && prompts.length ? prompts[Math.floor(Math.random() * prompts.length)] : feature;
+      return {
+        title: lang === 'en' ? (selected.title_en || 'This feature is temporarily unavailable') : (selected.title_zh || '该功能暂不可用'),
+        subtitle: lang === 'en' ? (selected.subtitle_en || 'Please try again later.') : (selected.subtitle_zh || '请稍后再试。')
+      };
+    }
+  };
   if (!isAdminHub && !isTemporaryLogin) {
     document.documentElement.classList.add('club-service-checking');
     const earlyStyle = document.createElement('style');
@@ -58,14 +75,24 @@
         const res = await fetch(URL, { method: 'POST', headers: { 'content-type': 'application/json', apikey: KEY }, body: JSON.stringify({ action: 'site_service_status' }) });
         if (!res.ok) throw new Error('service status request failed');
         state = await res.json();
+        latestState = state;
+        window.dispatchEvent(new CustomEvent('club:servicestate', { detail: state }));
         localStorage.setItem('club-site-service-last-state', JSON.stringify(state));
       } catch (_) {
         try { state = JSON.parse(localStorage.getItem('club-site-service-last-state') || 'null'); } catch (_error) { state = null; }
+        if (state) {
+          latestState = state;
+          window.dispatchEvent(new CustomEvent('club:servicestate', { detail: state }));
+        }
         if (!state) { setTimeout(check, 1200); return; }
       }
-      if (state.enabled !== false) { reveal(); return; }
+      const feature = featureKey && state.feature_settings && state.feature_settings[featureKey];
+      if (state.enabled !== false && (!feature || feature.enabled !== false)) { reveal(); return; }
       const prompts = Array.isArray(window.ClubServicePrompts) ? window.ClubServicePrompts : [];
-      const selected = state.random_enabled && prompts.length ? prompts[Math.floor(Math.random() * prompts.length)] : state;
+      const pausedByFeature = Boolean(feature && feature.enabled === false);
+      const selected = pausedByFeature
+        ? (feature.random && prompts.length ? prompts[Math.floor(Math.random() * prompts.length)] : feature)
+        : (state.random_enabled && prompts.length ? prompts[Math.floor(Math.random() * prompts.length)] : state);
       const lang = getLang();
       const title = lang === 'en' ? (selected.title_en || 'Website temporarily unavailable') : (selected.title_zh || '网站暂不可用');
       const subtitle = lang === 'en' ? (selected.subtitle_en || 'Website temporarily unavailable') : (selected.subtitle_zh || '网站暂不可用');
@@ -75,7 +102,7 @@
       const overlay = document.createElement('div'); overlay.id = 'club-service-overlay'; overlay.innerHTML = '<div><h1></h1><p></p><div class="service-tools"><button type="button" data-report hidden></button><button type="button" data-lang="zh">中文</button><button type="button" data-lang="en">EN</button><button type="button" data-theme>日间</button><a class="service-admin" data-admin></a><a class="service-login" data-login></a></div></div><div class="service-modal" data-modal hidden><article class="service-modal-box"><div data-report-content></div><button class="service-close" type="button" data-close></button></article></div>';
       overlay.querySelector('h1').textContent = title; overlay.querySelector('p').textContent = subtitle;
       const themeBtn = overlay.querySelector('[data-theme]'); const admin = overlay.querySelector('[data-admin]'); const login = overlay.querySelector('[data-login]'); const reportBtn = overlay.querySelector('[data-report]'); const modal = overlay.querySelector('[data-modal]'); const reportContent = overlay.querySelector('[data-report-content]'); const closeBtn = overlay.querySelector('[data-close]');
-      const refresh = () => { const en = getLang() === 'en'; const light = getTheme() === 'light'; const report = en ? state.report_en : state.report_zh; overlay.dataset.theme = light ? 'light' : 'dark'; overlay.querySelector('h1').textContent = en ? (selected.title_en || 'Website temporarily unavailable') : (selected.title_zh || '网站暂不可用'); overlay.querySelector('p').textContent = en ? (selected.subtitle_en || 'Website temporarily unavailable') : (selected.subtitle_zh || '网站暂不可用'); themeBtn.textContent = light ? (en ? 'Dark mode' : '夜间') : (en ? 'Light mode' : '日间'); admin.textContent = en ? 'Administrator debug' : '管理员调试'; login.textContent = en ? 'Super-admin temporary login' : '超管临时登录'; reportBtn.hidden = !String(report || '').trim(); reportBtn.textContent = en ? 'View maintenance details' : '查看维护详情'; closeBtn.textContent = en ? 'Close' : '关闭'; reportContent.innerHTML = renderMarkdown(report); };
+      const refresh = () => { const en = getLang() === 'en'; const light = getTheme() === 'light'; const report = pausedByFeature ? '' : (en ? state.report_en : state.report_zh); overlay.dataset.theme = light ? 'light' : 'dark'; overlay.querySelector('h1').textContent = en ? (selected.title_en || 'Website temporarily unavailable') : (selected.title_zh || '网站暂不可用'); overlay.querySelector('p').textContent = en ? (selected.subtitle_en || 'Website temporarily unavailable') : (selected.subtitle_zh || '网站暂不可用'); themeBtn.textContent = light ? (en ? 'Dark mode' : '夜间') : (en ? 'Light mode' : '日间'); admin.textContent = en ? 'Administrator debug' : '管理员调试'; login.textContent = en ? 'Super-admin temporary login' : '超管临时登录'; reportBtn.hidden = !String(report || '').trim(); reportBtn.textContent = en ? 'View maintenance details' : '查看维护详情'; closeBtn.textContent = en ? 'Close' : '关闭'; reportContent.innerHTML = renderMarkdown(report); };
       overlay.querySelectorAll('[data-lang]').forEach(btn => btn.addEventListener('click', () => { localStorage.setItem('algorithm-club-lang', btn.dataset.lang); refresh(); }));
       themeBtn.addEventListener('click', () => { localStorage.setItem('algorithm-club-theme-mode', getTheme() === 'light' ? 'dark' : 'light'); refresh(); });
       reportBtn.addEventListener('click', () => { modal.hidden = false; });

@@ -97,6 +97,7 @@
           <label class="label"><span data-i18n="admin.siteSubtitleEn">英文副标题</span><textarea class="input" id="siteSubtitleEn" maxlength="500" rows="2"></textarea></label>
           <label class="label"><span data-i18n="admin.siteReportZh">中文维护报告（支持 Markdown）</span><textarea class="input" id="siteReportZh" maxlength="10000" rows="8" placeholder="# 维护说明&#10;&#10;- 当前进度&#10;- 预计恢复时间"></textarea></label>
           <label class="label"><span data-i18n="admin.siteReportEn">English maintenance report (Markdown supported)</span><textarea class="input" id="siteReportEn" maxlength="10000" rows="8" placeholder="# Maintenance details&#10;&#10;- Current progress&#10;- Expected recovery time"></textarea></label>
+          <div id="featureSettingsList"></div>
           <button class="button" type="submit" data-i18n="admin.siteServiceSave">保存网站服务设置</button>
         </form>
         <p class="message" id="siteServiceMessage" role="status"></p>
@@ -183,6 +184,13 @@
       { key: 'join', href: 'join-admin.html', titleKey: 'admin.entryJoin', descKey: 'admin.entryJoinDesc', shortKey: 'admin.entryShortJoin' }
     ];
     const t = (key, vars) => (window.ClubI18n ? ClubI18n.t(key, vars) : key);
+    const FEATURE_DEFS = [
+      ['member-center','admin.featureMemberCenter'],['member-profile','admin.featureMemberProfile'],['checkin','admin.featureCheckin'],['course-checkin','admin.featureCourseCheckin'],['points','admin.featurePoints'],['mall','admin.featureMall'],['messages','admin.featureMessages'],['drive','admin.featureDrive'],['events','admin.featureEvents'],['join','admin.featureJoin'],['gomoku','admin.featureGomoku'],['tetris','admin.featureTetris'],['snake','admin.featureSnake'],['platformer','admin.featurePlatformer'],['club-features','admin.featureClubFeatures'],['visualization-lab','admin.featureVisualizationLab'],['sorting-lab','admin.featureSortingLab'],['search-lab','admin.featureSearchLab'],['ds-lab','admin.featureDsLab'],['graph-lab','admin.featureGraphLab'],['dp-lab','admin.featureDpLab'],['tree-lab','admin.featureTreeLab'],['heap-lab','admin.featureHeapLab'],['resources','admin.featureResources'],['guide','admin.featureGuide'],['changelog','admin.featureChangelog']
+    ];
+    function renderFeatureSettings(values) {
+      $('featureSettingsList').innerHTML = `<h3>${t('admin.featureSettingsTitle')}</h3>` + FEATURE_DEFS.map(([key,labelKey]) => { const item = values[key] || {}; return `<fieldset data-feature="${key}" style="margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:8px"><legend>${escapeHtml(t(labelKey))}</legend><label class="label"><input type="checkbox" data-enabled ${item.enabled !== false ? 'checked' : ''}> ${escapeHtml(t('admin.featureEnabled'))} <input type="checkbox" data-random ${item.random ? 'checked' : ''}> ${escapeHtml(t('admin.featureRandom'))}</label><input class="input" data-title-zh placeholder="${escapeHtml(t('admin.featureTitleZh'))}" value="${escapeHtml(item.title_zh || '')}"><input class="input" data-subtitle-zh placeholder="${escapeHtml(t('admin.featureSubtitleZh'))}" value="${escapeHtml(item.subtitle_zh || '')}"><input class="input" data-title-en placeholder="${escapeHtml(t('admin.featureTitleEn'))}" value="${escapeHtml(item.title_en || '')}"><input class="input" data-subtitle-en placeholder="${escapeHtml(t('admin.featureSubtitleEn'))}" value="${escapeHtml(item.subtitle_en || '')}"></fieldset>`; }).join('');
+    }
+    function collectFeatureSettings() { const values = {}; document.querySelectorAll('[data-feature]').forEach(node => { values[node.dataset.feature] = { enabled: node.querySelector('[data-enabled]').checked, random: node.querySelector('[data-random]').checked, title_zh: node.querySelector('[data-title-zh]').value, subtitle_zh: node.querySelector('[data-subtitle-zh]').value, title_en: node.querySelector('[data-title-en]').value, subtitle_en: node.querySelector('[data-subtitle-en]').value }; }); return values; }
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -599,6 +607,7 @@
           $('siteSubtitleEn').value = s.subtitle_en || 'Website temporarily unavailable';
           $('siteReportZh').value = s.report_zh || '';
           $('siteReportEn').value = s.report_en || '';
+          renderFeatureSettings(s.feature_settings || {});
         }
 
         if (byLabel.checkin && !byLabel.checkin.__error) {
@@ -664,7 +673,8 @@
           titleEn: $('siteTitleEn').value,
           subtitleEn: $('siteSubtitleEn').value,
           reportZh: $('siteReportZh').value,
-          reportEn: $('siteReportEn').value
+          reportEn: $('siteReportEn').value,
+          featureSettings: collectFeatureSettings()
         });
         setMessage($('siteServiceMessage'), t('admin.siteServiceSaved'), 'success');
       } catch (error) { setMessage($('siteServiceMessage'), error.message, 'error'); }

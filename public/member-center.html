@@ -48,7 +48,7 @@
       <section id="driveStatus" class="drive-status warn"><strong id="driveStatusTitle" data-i18n="memberCenter.driveConnecting">社团盘连接中</strong><span id="driveStatusHint" data-i18n="memberCenter.driveHint">登录后会自动连接 123 云盘 WebDAV…</span></section>
       <section id="bindNotice" class="notice"><strong data-i18n="memberCenter.bindNoticeTitle">请先完善社员资料</strong><p data-i18n="memberCenter.bindNoticeBody">你还没有设置中文姓名和班级。设置后，签到兑换会自动填写姓名，社团留言箱会自动填写姓名和班级，积分商城才能扣分兑换。</p></section>
       <section class="panel panel-block"><div class="panel-head"><div><h2 data-i18n="memberCenter.overview">账号概览</h2><p class="intro" data-i18n="memberCenter.overviewIntro">以下信息来自现有登录账号和新的资料绑定表。</p></div></div><div class="profile-grid"><div class="profile-item"><small data-i18n="memberCenter.accountLabel">登录账号</small><strong id="username">读取中…</strong></div><div class="profile-item"><small data-i18n="memberCenter.emailLabel">登录邮箱</small><strong id="email">读取中…</strong></div><div class="profile-item"><small data-i18n="memberCenter.identityLabel">绑定状态</small><strong id="identityState">检查中…</strong></div><div class="profile-item"><small data-i18n="memberCenter.memberNameLabel">中文姓名</small><strong id="memberName">暂未绑定</strong></div><div class="profile-item"><small data-i18n="memberCenter.memberClassLabel">班级</small><strong id="memberClass">暂未匹配</strong></div><div class="profile-item"><small data-i18n="memberCenter.pointsLabel">当前积分</small><strong id="memberPoints" class="accent">--</strong></div></div></section>
-      <section class="panel panel-block"><div class="panel-head"><div><h2 data-i18n="memberCenter.bindTitle">设置姓名与班级</h2><p class="intro" data-i18n="memberCenter.bindIntro">姓名必须是 2 到 20 个连续中文字符。若积分榜已有同名唯一记录，会直接绑定；没有则自动创建积分榜记录并绑定。</p></div></div><form id="bindForm" class="bind-grid"><div class="field"><label for="bindName" data-i18n="memberCenter.memberNameLabel">中文姓名</label><input class="input" id="bindName" maxlength="20" required placeholder="例如：张三"></div><div class="field"><label for="bindClass" data-i18n="memberCenter.memberClassLabel">班级</label><input class="input" id="bindClass" maxlength="40" required placeholder="例如：高一（3）班"></div><button class="button" id="bindButton" type="submit" data-i18n="memberCenter.saveBind">保存并绑定</button></form><p id="bindMessage" class="message" role="status"></p></section>
+      <section class="panel panel-block" id="profileBindingSection"><div class="panel-head"><div><h2 data-i18n="memberCenter.bindTitle">设置姓名与班级</h2><p class="intro" data-i18n="memberCenter.bindIntro">姓名必须是 2 到 20 个连续中文字符。若积分榜已有同名唯一记录，会直接绑定；没有则自动创建积分榜记录并绑定。</p></div></div><form id="bindForm" class="bind-grid"><div class="field"><label for="bindName" data-i18n="memberCenter.memberNameLabel">中文姓名</label><input class="input" id="bindName" maxlength="20" required placeholder="例如：张三"></div><div class="field"><label for="bindClass" data-i18n="memberCenter.memberClassLabel">班级</label><input class="input" id="bindClass" maxlength="40" required placeholder="例如：高一（3）班"></div><button class="button" id="bindButton" type="submit" data-i18n="memberCenter.saveBind">保存并绑定</button></form><p id="bindMessage" class="message" role="status"></p></section>
       <section class="panel panel-block" id="themePanel"><div class="panel-head"><div><h2 data-i18n="theme.title">外观主题</h2><p class="intro" data-i18n="theme.intro">未登录时按北京时间自动切换；登录后可自选并同步到云端。亮色：06:00–18:00；暗色：18:00–次日 06:00。</p></div></div><div class="theme-picker" role="group" aria-label="Theme"><button type="button" class="theme-option" data-theme-mode="auto" aria-pressed="false"><strong data-i18n="theme.auto">跟随时间</strong><span data-i18n="theme.autoDesc">按北京时间日夜切换</span></button><button type="button" class="theme-option" data-theme-mode="light" aria-pressed="false"><strong data-i18n="theme.light">亮色</strong><span data-i18n="theme.lightDesc">浅色纸感界面</span></button><button type="button" class="theme-option" data-theme-mode="dark" aria-pressed="false"><strong data-i18n="theme.dark">暗色</strong><span data-i18n="theme.darkDesc">夜间深色界面</span></button></div><p class="theme-hint" data-theme-hint></p><p id="themeMessage" class="message" role="status"></p></section>
       <section class="panel panel-block"><div class="panel-head"><div><h2 data-i18n="memberCenter.commonEntries">常用入口</h2><p class="intro" data-i18n="memberCenter.entriesIntro">登录入口已统一到个人中心；社团盘改从社团功能进入，登录后会自动连接 WebDAV。</p></div></div><div class="quick-grid"><a class="quick-link" href="club-features.html"><strong data-i18n="memberCenter.qlFeatures">社团功能</strong><span data-i18n="memberCenter.qlFeaturesDesc">算法实验室、五子棋、教学资源、签到兑换、积分商城、留言箱、活动公告、社团盘</span></a><a class="quick-link" href="drive.html"><strong data-i18n="memberCenter.qlDrive">社团盘</strong><span data-i18n="memberCenter.qlDriveDesc">已登录时可直接打开 123 云盘专属目录</span></a><a class="quick-link" href="points-mall.html"><strong data-i18n="memberCenter.qlMall">积分商城</strong><span data-i18n="memberCenter.qlMallDesc">浏览上架商品并用社团积分兑换</span></a><a class="quick-link" href="events.html"><strong data-i18n="memberCenter.qlEvents">活动与公告</strong><span data-i18n="memberCenter.qlEventsDesc">查看通知、课程安排与活动报名</span></a><a class="quick-link" href="member-points.html"><strong data-i18n="memberCenter.qlPoints">积分榜</strong><span data-i18n="memberCenter.qlPointsDesc">查看完整成员积分公示</span></a><a class="quick-link" href="changelog.html"><strong data-i18n="memberCenter.qlChangelog">更新日志</strong><span data-i18n="memberCenter.qlChangelogDesc">查看官网功能更新与维护记录</span></a><a class="quick-link" href="password-reset.html"><strong data-i18n="memberCenter.qlPassword">重置密码</strong><span data-i18n="memberCenter.qlPasswordDesc">提交申请或使用管理员秘钥设置新密码</span></a><a class="quick-link" href="admin-hub.html" data-admin-only hidden><strong data-i18n="memberCenter.qlAdmin">管理员总览</strong><span data-i18n="memberCenter.qlAdminDesc">仅管理员可进入后台汇总面板</span></a></div></section>
       <section class="panel panel-block"><div class="panel-head"><div><h2 data-i18n="memberCenter.pointsSummary">积分公示摘要</h2><p class="intro" data-i18n="memberCenter.pointsIntro">展示当前积分榜，个人积分会在账号概览中优先显示。</p></div><button id="refreshButton" class="button secondary" type="button" data-i18n="common.refresh">刷新数据</button></div><div id="pointsList"><div class="empty loading" data-i18n="memberCenter.loadingPoints">正在读取积分公示…</div></div><p id="pointsMessage" class="message" role="status"></p></section>
@@ -63,6 +63,15 @@
     let currentSession = null;
     let currentProfile = null;
     let authSequence = 0;
+    let serviceState = window.ClubServiceGate?.getState?.() || null;
+    const profileServiceEnabled = () => serviceState?.enabled !== false && serviceState?.feature_settings?.['member-profile']?.enabled !== false;
+    function applyProfileServiceState() {
+      const section = $('profileBindingSection');
+      if (!section) return;
+      const enabled = profileServiceEnabled();
+      section.classList.toggle('hidden', !enabled);
+      if (!enabled) setMessage($('bindMessage'), ClubI18n.t('memberCenter.profileServiceUnavailable'), 'error');
+    }
     const serviceDebug = new URLSearchParams(location.search).get('serviceDebug') === '1';
     function applyServiceDebugCopy() {
       document.querySelector('#authView .hero h1').textContent = ClubI18n.t('memberCenter.serviceDebugTitle');
@@ -259,6 +268,10 @@
 
     $('bindForm').addEventListener('submit', async event => {
       event.preventDefault();
+      if (!profileServiceEnabled()) {
+        setMessage($('bindMessage'), ClubI18n.t('memberCenter.profileServiceUnavailable'), 'error');
+        return;
+      }
       const button = $('bindButton');
       button.disabled = true;
       try {
@@ -286,6 +299,8 @@
       void updateSession(session);
     });
     supabaseClient.auth.getSession().then(({ data: { session } }) => updateSession(session));
+    window.addEventListener('club:servicestate', event => { serviceState = event.detail || null; applyProfileServiceState(); });
+    setTimeout(applyProfileServiceState, 0);
 
     window.addEventListener('club:themesave', (event) => {
       const detail = event.detail || {};
@@ -308,6 +323,7 @@
 
     window.addEventListener('club:langchange', () => {
       updateProfileView();
+      applyProfileServiceState();
       void refreshPoints();
       if (window.ClubI18n) ClubI18n.apply(document);
       if (window.ClubTheme?.refreshPickerUI) window.ClubTheme.refreshPickerUI();
