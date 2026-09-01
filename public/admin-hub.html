@@ -95,6 +95,8 @@
           <label class="label"><span data-i18n="admin.siteSubtitleZh">中文副标题</span><textarea class="input" id="siteSubtitleZh" maxlength="500" rows="2"></textarea></label>
           <label class="label"><span data-i18n="admin.siteTitleEn">英文大标题</span><input class="input" id="siteTitleEn" maxlength="200"></label>
           <label class="label"><span data-i18n="admin.siteSubtitleEn">英文副标题</span><textarea class="input" id="siteSubtitleEn" maxlength="500" rows="2"></textarea></label>
+          <label class="label"><span data-i18n="admin.siteReportZh">中文维护报告（支持 Markdown）</span><textarea class="input" id="siteReportZh" maxlength="10000" rows="8" placeholder="# 维护说明&#10;&#10;- 当前进度&#10;- 预计恢复时间"></textarea></label>
+          <label class="label"><span data-i18n="admin.siteReportEn">English maintenance report (Markdown supported)</span><textarea class="input" id="siteReportEn" maxlength="10000" rows="8" placeholder="# Maintenance details&#10;&#10;- Current progress&#10;- Expected recovery time"></textarea></label>
           <button class="button" type="submit" data-i18n="admin.siteServiceSave">保存网站服务设置</button>
         </form>
         <p class="message" id="siteServiceMessage" role="status"></p>
@@ -595,6 +597,8 @@
           $('siteSubtitleZh').value = s.subtitle_zh || '网站暂不可用';
           $('siteTitleEn').value = s.title_en || 'Website temporarily unavailable';
           $('siteSubtitleEn').value = s.subtitle_en || 'Website temporarily unavailable';
+          $('siteReportZh').value = s.report_zh || '';
+          $('siteReportEn').value = s.report_en || '';
         }
 
         if (byLabel.checkin && !byLabel.checkin.__error) {
@@ -658,7 +662,9 @@
           titleZh: $('siteTitleZh').value,
           subtitleZh: $('siteSubtitleZh').value,
           titleEn: $('siteTitleEn').value,
-          subtitleEn: $('siteSubtitleEn').value
+          subtitleEn: $('siteSubtitleEn').value,
+          reportZh: $('siteReportZh').value,
+          reportEn: $('siteReportEn').value
         });
         setMessage($('siteServiceMessage'), t('admin.siteServiceSaved'), 'success');
       } catch (error) { setMessage($('siteServiceMessage'), error.message, 'error'); }

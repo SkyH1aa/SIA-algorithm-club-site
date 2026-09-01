@@ -63,6 +63,16 @@
     let currentSession = null;
     let currentProfile = null;
     let authSequence = 0;
+    const serviceDebug = new URLSearchParams(location.search).get('serviceDebug') === '1';
+    function applyServiceDebugCopy() {
+      document.querySelector('#authView .hero h1').textContent = ClubI18n.t('memberCenter.serviceDebugTitle');
+      document.querySelector('#authView .hero p').textContent = ClubI18n.t('memberCenter.serviceDebugLead');
+    }
+    if (serviceDebug) {
+      document.querySelector('#signupForm')?.closest('.panel')?.remove();
+      applyServiceDebugCopy();
+      window.addEventListener('club:langchange', applyServiceDebugCopy);
+    }
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -179,7 +189,17 @@
       $('content').classList.toggle('hidden', !logged);
       if (!logged) {
         $('authHeroStatus').textContent = ClubI18n.t('memberCenter.notLoggedIn');
-        $('authHeroHint').textContent = ClubI18n.t('memberCenter.authHint');
+        $('authHeroHint').textContent = serviceDebug ? ClubI18n.t('memberCenter.serviceDebugHint') : ClubI18n.t('memberCenter.authHint');
+        return;
+      }
+      if (serviceDebug) {
+        const access = await window.ClubStaffAccess.fetchStaffAccess(session);
+        if (!access.isSuperAdmin) {
+          await supabaseClient.auth.signOut();
+          setMessage($('authMessage'), ClubI18n.t('memberCenter.serviceDebugDenied'), 'error');
+          return;
+        }
+        location.replace('admin-hub.html?serviceDebug=1');
         return;
       }
       setMessage($('authMessage'), '');
