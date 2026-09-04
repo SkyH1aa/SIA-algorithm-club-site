@@ -81,6 +81,7 @@ kbd{border-color:#38546a;background:#122438;color:#eafaff}
   .help,.notice,.leaderboard-panel{display:none}
 }
 </style>
+<style>#pk-arena canvas{aspect-ratio:16/9}</style>
 <script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
 <body>
 <main class="shell">
@@ -644,9 +645,12 @@ const ultimateButton=document.getElementById('ultimate-button');
 const switchButton=document.getElementById('switch-button');
 const modeButton=document.getElementById('mode-button');
 let dashPressTimer=null,dashWasLong=false,touchAimPointerId=null;
-function getActiveGameScene(){return gameInstance?.scene.isActive('Game')?gameInstance.scene.getScene('Game'):null}
+function getActiveGameScene(){
+  if(gameInstance?.scene.isActive('Game'))return gameInstance.scene.getScene('Game');
+  return window.xingyuPkActiveScene||null;
+}
 function updateTouchAim(event){
-  const scene=getActiveGameScene(),canvas=document.querySelector('#game canvas');
+  const scene=getActiveGameScene(),canvas=document.querySelector('#game canvas, #pk-phaser canvas');
   if(!scene||!canvas)return;
   const rect=canvas.getBoundingClientRect();
   if(!rect.width||!rect.height)return;
@@ -680,6 +684,17 @@ function stopTouchAim(event){
   touchAimPointerId=null;const scene=getActiveGameScene();if(scene){scene.touchFiring=false;scene.touchAimActive=false}
 }
 gameWrap?.addEventListener('pointerup',stopTouchAim);gameWrap?.addEventListener('pointercancel',stopTouchAim);
+const pkArenaElement=document.getElementById('pk-arena');
+pkArenaElement?.addEventListener('pointerdown',event=>{
+  if(event.pointerType!=='touch')return;
+  event.preventDefault();touchAimPointerId=event.pointerId;pkArenaElement.setPointerCapture?.(event.pointerId);updateTouchAim(event);
+  const scene=getActiveGameScene();if(scene){scene.touchFiring=true;scene.touchAimActive=true;scene.shoot?.();}
+});
+pkArenaElement?.addEventListener('pointermove',event=>{
+  if(event.pointerType!=='touch'||event.pointerId!==touchAimPointerId)return;
+  event.preventDefault();updateTouchAim(event);
+});
+pkArenaElement?.addEventListener('pointerup',stopTouchAim);pkArenaElement?.addEventListener('pointercancel',stopTouchAim);
 jumpButton?.addEventListener('pointerdown',event=>{event.preventDefault();touchJumpHeld=true;jumpButton.setPointerCapture?.(event.pointerId);const scene=getActiveGameScene();if(scene){scene.jumpRequested=true;scene.jumpBufferUntil=scene.time.now+220}});
 jumpButton?.addEventListener('pointerup',()=>{touchJumpHeld=false});
 jumpButton?.addEventListener('pointercancel',()=>{touchJumpHeld=false});
@@ -903,7 +918,7 @@ class ProgressionGuide extends Phaser.Scene{
 }
 
 class Game extends Phaser.Scene{
-  constructor(){super('Game')}
+  constructor(sceneKey='Game'){super(sceneKey)}
   worldY(value){
     const d=this.definition;
     return d.yScale?d.worldBase-(d.yBase-value)*d.yScale:value;
@@ -2147,9 +2162,34 @@ class Result extends Phaser.Scene{
     home.on('pointerdown',()=>{endlessMode=false;this.scene.start('Menu')});
   }
 }
+// The arena deliberately reuses this exact scene implementation.  The PK
+// bridge supplies a compact 1500-unit definition and replaces only the enemy
+// AI with the remotely controlled rival; weapons, movement, abilities and
+// defensive calculations remain owned by Game.
+window.xingyuPlatformerCombat={
+  Game,
+  ART,
+  tex,
+  prepareTextures(scene){
+    const fallback={
+      heroStandL:[0x4da3ff,52,78],heroStandR:[0x4da3ff,52,78],heroMoveL:[0x4da3ff,52,78],heroMoveR:[0x4da3ff,52,78],heroJumpL:[0x4da3ff,52,78],heroJumpR:[0x4da3ff,52,78],
+      enemy1L:[0xffd166,72,42],enemy1R:[0xffd166,72,42],enemy2L:[0x63d471,62,56],enemy2R:[0x63d471,62,56],enemy3L:[0xed7be7,72,52],enemy3R:[0xed7be7,72,52],
+      coin:[0xffd166,32,32],energy:[0x4da3ff,32,32],skill:[0xb78cff,32,32],heart:[0xff6173,32,32],
+      weaponPistol:[0x7bdff2,46,31],weaponShotgun:[0xb78cff,54,20],weaponSmg:[0x62d9ee,52,31],weaponLaser:[0x65e572,58,33],weaponSniper:[0xffd166,60,22],weaponDagger:[0xb78cff,56,12],weaponBlade:[0x62d9ee,72,10]
+    };
+    Object.entries(fallback).forEach(([key,[color,width,height]])=>{if(!scene.textures.exists(key))tex(scene,key,color,width,height,4)});
+    tex(scene,'ground',0x315c83,48,42,4);tex(scene,'hitPlayer',0xffffff,34,70);tex(scene,'hitEnemy1',0xffffff,54,40);tex(scene,'hitEnemy2',0xffffff,50,48);tex(scene,'hitEnemy3',0xffffff,58,38);tex(scene,'hitItem',0xffffff,28,28);tex(scene,'bullet',0xfff4c2,12,6,3);tex(scene,'greenBullet',0x6cff88,12,6,3);tex(scene,'redBullet',0xff526f,12,6,3);tex(scene,'flag',0xfff2a6,16,100,4);
+  },
+  createArenaWorld(scene){
+    const arenaDefinition={id:-1,name:'联机竞技场',w:1500,worldH:720,terrain:[[0,520,1500,80],[250,432,270,24],[650,365,250,24],[1040,430,260,24],[1240,295,180,24]],e:[],p:[],f:1498};
+    const originalLevel=level,originalEndless=endlessMode,arenaIndex=LEVELS.length;
+    LEVELS.push(arenaDefinition);level=arenaIndex;endlessMode=false;
+    try{Game.prototype.createWorld.call(scene)}finally{LEVELS.pop();level=originalLevel;endlessMode=originalEndless;}
+  }
+};
 void resumeSession();
 }
 </script>
-<script src="platformer-pk.js?v=20260904-4"></script>
+<script src="platformer-pk.js?v=20260904-5"></script>
 </body>
 </html>
