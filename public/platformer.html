@@ -104,10 +104,10 @@ const platformerDb=window.supabase?.createClient(SUPABASE_URL,SUPABASE_KEY);
 const GAME_ASSET_BASE=new URL('GamePictures/',document.baseURI);
 const SAVE_KEY='club-shooter-clean';
 const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{"unlocked":1,"coins":0,"hp":0,"atk":0,"shot":0,"agility":0,"melee":0,"ammo":0,"armor":0,"combat":0}');
-data.hp??=0;data.atk??=0;data.shot??=0;data.agility??=0;data.melee??=0;data.ammo??=0;data.armor??=0;data.combat??=0;data.attackEvo??=0;data.armorEvo??=0;data.battleGod??=0;
+data.hp??=0;data.atk??=0;data.shot??=0;data.agility??=0;data.melee??=0;data.ammo??=0;data.armor??=0;data.combat??=0;data.attackEvo??=0;data.armorEvo??=0;data.battleGod??=0;data.battleGod2??=0;
 data.agility=Math.max(0,Math.min(150,Number(data.agility)||0));data.combat=Math.max(0,Math.min(125,Number(data.combat)||0));data.attackEvo=Math.max(0,Number(data.attackEvo)||0);data.armorEvo=Math.max(0,Number(data.armorEvo)||0);
 data.eventEndlessBest??=0;data.eventEndlessClaimed??={};data.eventLevelClaimed??={};data.lifeEvo??=0;
-data.claimed??={};data.battleGod=Math.max(0,Number(data.battleGod)||0);
+data.claimed??={};data.battleGod=Math.max(0,Number(data.battleGod)||0);data.battleGod2=Math.max(0,Math.min(750,Number(data.battleGod2)||0));
 let currentUser=null,gameInstance=null;
 let touchMoveAxis=0,joystickPointerId=null,touchJumpHeld=false;
 let levelPage=0;
@@ -451,7 +451,7 @@ async function claimEventRewards(){
   return reward;
 }
 function applyProfile(profile){
-  data.coins=Number(profile.coins)||0;data.hp=Number(profile.hp_upgrade)||0;data.atk=Number(profile.atk_upgrade)||0;data.shot=Number(profile.shot_upgrade)||0;data.agility=Math.max(0,Math.min(150,Number(profile.agility_upgrade)||0));data.melee=Number(profile.melee_upgrade)||0;data.ammo=Number(profile.ammo_upgrade)||0;data.armor=Number(profile.armor_upgrade)||0;data.combat=Math.max(0,Math.min(125,Number(profile.combat_upgrade)||0));data.lifeEvo=Number(profile.life_evo_upgrade)||0;data.attackEvo=Math.max(0,Number(profile.attack_evo_upgrade)||0);data.armorEvo=Math.max(0,Number(profile.armor_evo_upgrade)||0);data.battleGod=Math.max(0,Number(profile.battle_god_upgrade??data.battleGod)||0);
+  data.coins=Number(profile.coins)||0;data.hp=Number(profile.hp_upgrade)||0;data.atk=Number(profile.atk_upgrade)||0;data.shot=Number(profile.shot_upgrade)||0;data.agility=Math.max(0,Math.min(150,Number(profile.agility_upgrade)||0));data.melee=Number(profile.melee_upgrade)||0;data.ammo=Number(profile.ammo_upgrade)||0;data.armor=Number(profile.armor_upgrade)||0;data.combat=Math.max(0,Math.min(125,Number(profile.combat_upgrade)||0));data.lifeEvo=Number(profile.life_evo_upgrade)||0;data.attackEvo=Math.max(0,Number(profile.attack_evo_upgrade)||0);data.armorEvo=Math.max(0,Number(profile.armor_evo_upgrade)||0);data.battleGod=Math.max(0,Number(profile.battle_god_upgrade??data.battleGod)||0);data.battleGod2=Math.max(0,Math.min(750,Number(profile.battle_god_ii_upgrade??data.battleGod2)||0));
   const claimedUnlock=Math.max(1,...Object.keys(data.claimed||{}).map(Number).filter(Number.isFinite).map(id=>id+1));
   data.unlocked=Math.min(LEVELS.length,Math.max(1,Number(profile.unlocked)||1,claimedUnlock));
   localStorage.setItem(SAVE_KEY,JSON.stringify(data));
@@ -461,11 +461,16 @@ async function loadBattleGod(){
   const {data:result,error}=await platformerDb.rpc('platformer_get_battle_god',{p_username:currentUser.username,p_token:currentUser.token});
   if(!error&&result?.length){data.battleGod=Math.max(0,Number(result[0].battle_god_upgrade??result[0].level??0)||0);localStorage.setItem(SAVE_KEY,JSON.stringify(data));}
 }
+async function loadBattleGod2(){
+  if(!platformerDb||!currentUser)return;
+  const {data:result,error}=await platformerDb.rpc('platformer_get_battle_god_ii',{p_username:currentUser.username,p_token:currentUser.token});
+  if(!error&&result?.length){data.battleGod2=Math.max(0,Math.min(750,Number(result[0].battle_god_ii_upgrade??result[0].level??0)||0));localStorage.setItem(SAVE_KEY,JSON.stringify(data));}
+}
 function createGame(){
   if(gameInstance)return;
   gameInstance=new Phaser.Game({type:Phaser.AUTO,parent:'game',width:1280,height:720,physics:{default:'arcade',arcade:{gravity:{y:900},debug:false}},scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:[Boot,Menu,Upgrade,ProgressionGuide,Game,Result]});
 }
-async function startGame(profile){currentUser={username:profile.username,token:profile.session_token};applyProfile(profile);await loadBattleGod();authGate.hidden=true;gameContent.hidden=false;leaderboardPanel.hidden=false;authUser.textContent=`已登录：${currentUser.username}`;changePasswordButton.hidden=false;updateServiceUi();createGame();void refreshServiceStatus(true);void loadLeaderboard()}
+async function startGame(profile){currentUser={username:profile.username,token:profile.session_token};applyProfile(profile);await loadBattleGod();await loadBattleGod2();authGate.hidden=true;gameContent.hidden=false;leaderboardPanel.hidden=false;authUser.textContent=`已登录：${currentUser.username}`;changePasswordButton.hidden=false;updateServiceUi();createGame();void refreshServiceStatus(true);void loadLeaderboard()}
 async function authenticate(action){
   const username=usernameInput.value.trim(),password=passwordInput.value;
   if(!/^[A-Za-z0-9_]{3,32}$/.test(username)){setAuthMessage('用户名需为 3-32 位字母、数字或下划线。',true);return}
@@ -497,6 +502,8 @@ async function saveRemoteProfile(){
   if(error)console.warn('保存游戏资料失败',error.message);
   const {data:godData,error:godError}=await platformerDb.rpc('platformer_save_battle_god',{p_username:currentUser.username,p_token:currentUser.token,p_level:data.battleGod});
   if(godError)console.warn('保存战神等级失败',godError.message);
+  const {error:god2Error}=await platformerDb.rpc('platformer_save_battle_god_ii',{p_username:currentUser.username,p_token:currentUser.token,p_level:data.battleGod2});
+  if(god2Error)console.warn('保存战神II等级失败',god2Error.message);
 }
 async function submitScore(levelId,score){
   if(!platformerDb||!currentUser)return null;
@@ -692,7 +699,7 @@ class Menu extends Phaser.Scene{
     endless.on('pointerdown',()=>{endlessMode=true;this.scene.start('Game')});
     const upgrade=this.add.text(48,485,'强化升级 →',{fontSize:'18px',color:'#9fe8ff',backgroundColor:'#19334b',padding:{x:16,y:10}}).setInteractive({useHandCursor:true});
     upgrade.on('pointerdown',()=>this.scene.start('Upgrade'));
-    this.add.text(48,540,`金币：${data.coins}    生命 Lv.${data.hp} · 攻击 Lv.${data.atk} · 射击 Lv.${data.shot} · 身法 Lv.${data.agility} · 近战 Lv.${data.melee} · 弹药 Lv.${data.ammo} · 装甲 Lv.${data.armor} · 狂人 Lv.${data.combat} · 生命进化 Lv.${data.lifeEvo} · 攻击进化 Lv.${data.attackEvo} · 装甲进化 Lv.${data.armorEvo} · 战神 Lv.${data.battleGod}`,{fontSize:'15px',color:'#ffd166'});
+    this.add.text(48,540,`金币：${data.coins}    生命 Lv.${data.hp} · 攻击 Lv.${data.atk} · 射击 Lv.${data.shot} · 身法 Lv.${data.agility} · 近战 Lv.${data.melee} · 弹药 Lv.${data.ammo} · 装甲 Lv.${data.armor} · 狂人 Lv.${data.combat} · 生命进化 Lv.${data.lifeEvo} · 攻击进化 Lv.${data.attackEvo} · 装甲进化 Lv.${data.armorEvo} · 战神I Lv.${data.battleGod} · 战神II Lv.${data.battleGod2}`,{fontSize:'15px',color:'#ffd166'});
     const eventText=isEventActive()?'活动开启：无尽波次奖励 + 每通关10关奖励':'活动未开启（有效期：8.31-9.14）';
     this.add.text(48,575,`${eventText} · 无尽最高波次 ${data.eventEndlessBest||0} · 已领取十关奖励 ${Object.keys(data.eventLevelClaimed||{}).length} 次`,{fontSize:'13px',color:isEventActive()?'#7de3a6':'#718293'});
     const eventButton=this.add.text(1010,565,isEventActive()?'领取活动奖励':'未开启',{fontSize:'14px',color:isEventActive()?'#fff':'#718293',backgroundColor:isEventActive()?'#31583f':'#18202e',padding:{x:12,y:7}});
@@ -726,10 +733,11 @@ class Upgrade extends Phaser.Scene{
       [xs[0],ys[2],'生命进化 · 上限',data.lifeEvo,560+data.lifeEvo*250,()=>data.lifeEvo++,data.hp<500||data.combat<50,data.hp<500||data.combat<50?'需生命力 Lv.500 + 作战狂人 Lv.50':'' ],
       [xs[1],ys[2],'攻击进化 · 枪械/近战',data.attackEvo,760+data.attackEvo*550,()=>data.attackEvo++,data.atk<500||data.combat<50,data.atk<500||data.combat<50?'需攻击力 Lv.500 + 作战狂人 Lv.50':'' ],
       [xs[2],ys[2],'装甲进化 · 装甲/护盾',data.armorEvo,1060+data.armorEvo*750,()=>data.armorEvo++,data.armor<100||data.combat<100,data.armor<100||data.combat<100?'需装甲 Lv.100 + 作战狂人 Lv.100':'' ],
-      [xs[3],ys[2],'战神 · 全属性',data.battleGod,500+data.battleGod*225,()=>data.battleGod++,data.lifeEvo<500||data.attackEvo<500||data.armorEvo<500,data.lifeEvo<500||data.attackEvo<500||data.armorEvo<500?'需生命/攻击/装甲进化 Lv.500':'' ]
+      [xs[3],ys[2],'战神I · 全属性',data.battleGod,2495+data.battleGod*1285,()=>data.battleGod++,data.lifeEvo<500||data.attackEvo<500||data.armorEvo<500,data.lifeEvo<500||data.attackEvo<500||data.armorEvo<500?'需生命/攻击/装甲进化 Lv.500':'' ],
+      [xs[0],ys[3],'战神II · 百炼',data.battleGod2,4085+data.battleGod2*2495,()=>data.battleGod2++,data.battleGod<250||data.battleGod2>=750,data.battleGod<250?'需战神I Lv.250':data.battleGod2>=750?'已达上限':'' ]
     ];
     cards.forEach(card=>this.addUpgrade(...card));
-    this.add.text(48,610,'弹药强化需射击 Lv.100 · 装甲强化需生命力 Lv.150 · 作战狂人需生命力/攻击力 Lv.200 · 生命进化需生命力 Lv.500 + 狂人 Lv.50 · 攻击进化需攻击力 Lv.500 + 狂人 Lv.50 · 装甲进化需装甲 Lv.100 + 狂人 Lv.100 · 战神需生命/攻击/装甲进化 Lv.500',{fontSize:'13px',color:'#9fb7c9',wordWrap:{width:1160,useAdvancedWrap:true},fixedWidth:1160,fixedHeight:42});
+    this.add.text(48,610,'弹药强化需射击 Lv.100 · 装甲强化需生命力 Lv.150 · 作战狂人需生命力/攻击力 Lv.200 · 生命进化需生命力 Lv.500 + 狂人 Lv.50 · 攻击进化需攻击力 Lv.500 + 狂人 Lv.50 · 装甲进化需装甲 Lv.100 + 狂人 Lv.100 · 战神I需三种进化 Lv.500 · 战神II需战神I Lv.250',{fontSize:'13px',color:'#9fb7c9',wordWrap:{width:1160,useAdvancedWrap:true},fixedWidth:1160,fixedHeight:42});
   }
   addUpgrade(x,y,label,upgradeLevel,cost,buy,isMax=false,lockReason=''){
     const enabled=!isMax&&data.coins>=cost;
@@ -760,7 +768,8 @@ class ProgressionGuide extends Phaser.Scene{
       ,['生命进化',`需生命力500级、作战狂人50级。当前 ${data.lifeEvo}级：持续提升生命上限，50的倍数级额外成长；50级后每达到100的倍数等级，额外增加10000生命上限。\n当前无等级上限。`]
       ,['攻击进化',`需攻击力500级、作战狂人50级。当前 ${data.attackEvo}级：同步提升枪械与近战攻击；50倍数等级额外成长，50级后每达到100的倍数等级额外增加10000攻击。\n当前无等级上限。`]
       ,['装甲进化',`需装甲强化100级、作战狂人100级。当前 ${data.armorEvo}级：同步提升装甲与能量护盾上限；50倍数等级额外成长，50级后每达到100的倍数等级额外增加装甲10000、护盾22500。\n当前无等级上限。`]
-      ,['战神',`需生命进化、攻击进化、装甲进化均达到500级。当前 ${data.battleGod}级：每级增加15000生命、20000装甲、30000护盾、2500枪械伤害和3500近战伤害；每达到50级倍数获得10倍属性，每达到100级倍数获得20倍属性。\n当前无等级上限。`]
+      ,['战神I',`需生命进化、攻击进化、装甲进化均达到500级。当前 ${data.battleGod}级：普通等级按基础属性成长；50级倍数等级该级额外获得10倍基础属性，100级倍数等级该级额外获得20倍基础属性。\n当前无等级上限。`]
+      ,['战神II',`需战神I达到250级。当前 ${data.battleGod2}/750级：每级按最终属性增加生命0.2%、枪械伤害0.1%、近战伤害0.2%、装甲0.3%、能量护盾0.5%；50级倍数等级该级按10倍百分比，100级倍数等级该级按15倍百分比。\n升级费用 4085 + 当前等级×2495。`]
     ];
     const pageSize=6,pageCount=Math.ceil(sections.length/pageSize);
     guidePage=Phaser.Math.Clamp(guidePage,0,pageCount-1);
@@ -814,18 +823,22 @@ class Game extends Phaser.Scene{
     const attackEvoLevel=Math.max(0,Number(data.attackEvo)||0),attackEvoDamage=attackEvoLevel>=1?100+40*Math.min(13,Math.max(0,attackEvoLevel-1))+(attackEvoLevel>=15?125:0)+60*Math.min(35,Math.max(0,attackEvoLevel-15))+(attackEvoLevel>=50?225:0)+100*Math.max(0,attackEvoLevel-50)+600*Math.floor(attackEvoLevel/50)+10000*Math.floor(attackEvoLevel/100):0;
     const armorEvoLevel=Math.max(0,Number(data.armorEvo)||0),armorEvoArmor=armorEvoLevel>=1?1000+400*Math.min(13,Math.max(0,armorEvoLevel-1))+(armorEvoLevel>=15?1250:0)+600*Math.min(35,Math.max(0,armorEvoLevel-15))+(armorEvoLevel>=50?2250:0)+1000*Math.max(0,armorEvoLevel-50)+6000*Math.floor(armorEvoLevel/50)+10000*Math.floor(armorEvoLevel/100):0,armorEvoShield=armorEvoLevel>=1?1000+600*Math.min(13,Math.max(0,armorEvoLevel-1))+(armorEvoLevel>=15?2250:0)+1000*Math.min(35,Math.max(0,armorEvoLevel-15))+(armorEvoLevel>=50?4250:0)+2250*Math.max(0,armorEvoLevel-50)+12000*Math.floor(armorEvoLevel/50)+22500*Math.floor(armorEvoLevel/100):0;
     // 战神成长按当前等级的基础属性累计，并叠加 50/100 级里程碑倍率。
-    const battleGodLevel=Math.max(0,Number(data.battleGod)||0),battleGodMilestones=1+9*Math.floor(battleGodLevel/50)+19*Math.floor(battleGodLevel/100);
-    const battleGodLife=battleGodLevel*15000*battleGodMilestones,battleGodArmor=battleGodLevel*20000*battleGodMilestones,battleGodShield=battleGodLevel*30000*battleGodMilestones,battleGodGun=battleGodLevel*2500*battleGodMilestones,battleGodMelee=battleGodLevel*3500*battleGodMilestones;
+    // 只有里程碑所在的那一级使用额外倍率：50级为10倍基础成长，100级为20倍基础成长。
+    const battleGodLevel=Math.max(0,Number(data.battleGod)||0),battleGodUnits=battleGodLevel+9*(Math.floor(battleGodLevel/50)-Math.floor(battleGodLevel/100))+19*Math.floor(battleGodLevel/100);
+    const battleGodLife=battleGodUnits*15000,battleGodArmor=battleGodUnits*20000,battleGodShield=battleGodUnits*30000,battleGodGun=battleGodUnits*2500,battleGodMelee=battleGodUnits*3500;
+    const battleGod2Level=Math.max(0,Math.min(750,Number(data.battleGod2)||0)),battleGod2Units=battleGod2Level+9*(Math.floor(battleGod2Level/50)-Math.floor(battleGod2Level/100))+14*Math.floor(battleGod2Level/100);
+    const battleGod2HpMultiplier=1+.002*battleGod2Units,battleGod2GunMultiplier=1+.001*battleGod2Units,battleGod2MeleeMultiplier=1+.002*battleGod2Units,battleGod2ArmorMultiplier=1+.003*battleGod2Units,battleGod2ShieldMultiplier=1+.005*battleGod2Units;
     this.attackEvoLevel=attackEvoLevel;this.armorEvoLevel=armorEvoLevel;
-    this.battleGodLevel=battleGodLevel;
-    this.score=0;this.coins=0;this.maxHp=25+hpUpgrade+combatLife+lifeEvoHp+battleGodLife;this.hp=this.maxHp;this.atk=1+atkUpgrade+combatGun+attackEvoDamage+battleGodGun;this.hpUpgrade=hpUpgrade;this.atkUpgrade=atkUpgrade;this.shotUpgrade=Math.max(0,Number(data.shot)||0);this.ammoLevel=this.shotUpgrade>=100?Math.max(0,Math.min(100,Number(data.ammo)||0)):0;this.invulnerable=false;this.touchFiring=false;this.touchAimActive=false;this.jumpRequested=false;this.touchDashHeld=false;this.kills=0;
+    this.battleGodLevel=battleGodLevel;this.battleGod2Level=battleGod2Level;
+    this.score=0;this.coins=0;this.maxHp=(25+hpUpgrade+combatLife+lifeEvoHp+battleGodLife)*battleGod2HpMultiplier;this.hp=this.maxHp;this.atk=(1+atkUpgrade+combatGun+attackEvoDamage+battleGodGun)*battleGod2GunMultiplier;this.hpUpgrade=hpUpgrade;this.atkUpgrade=atkUpgrade;this.shotUpgrade=Math.max(0,Number(data.shot)||0);this.ammoLevel=this.shotUpgrade>=100?Math.max(0,Math.min(100,Number(data.ammo)||0)):0;this.invulnerable=false;this.touchFiring=false;this.touchAimActive=false;this.jumpRequested=false;this.touchDashHeld=false;this.kills=0;
     this.hpRegenPerSecond=hpUpgrade>=75?2:hpUpgrade>=65?1:hpUpgrade>=50?.5:0;this.hpKillChance=hpUpgrade>=75?.5:hpUpgrade>=65?.35:0;this.hpKillAmount=hpUpgrade>=75?1.5:hpUpgrade>=65?.5:0;this.hpEmergencyHeal=hpUpgrade>=100;this.hpEmergencyReadyAt=0;this.damageReduction=hpUpgrade>=120?.1:0;this.undyingAvailable=hpUpgrade>=150;this.nextHpRegenAt=0;
     this.armorLevel=Math.max(0,Math.min(100,Number(data.armor)||0));
     this.armorMax=(this.armorLevel>=1?100+15*Math.min(8,Math.max(0,this.armorLevel-1))+(this.armorLevel>=10?50:0)+10*Math.min(19,Math.max(0,this.armorLevel-10))+5*Math.min(14,Math.max(0,this.armorLevel-30))+(this.armorLevel>=45?25:0)+10*Math.min(4,Math.max(0,this.armorLevel-45))+(this.armorLevel>=50?150:0)+8*Math.min(9,Math.max(0,this.armorLevel-50))+(this.armorLevel>=60?125:0)+6*Math.min(9,Math.max(0,this.armorLevel-60))+(this.armorLevel>=70?50:0)+(this.armorLevel>=75?150:0)+5*Math.min(9,Math.max(0,this.armorLevel-75))+(this.armorLevel>=85?120:0)+(this.armorLevel>=90?200:0)+12*Math.min(4,Math.max(0,this.armorLevel-90))+(this.armorLevel>=95?150:0)+8*Math.min(4,Math.max(0,this.armorLevel-95))+(this.armorLevel>=100?300:0):0)+combatArmor+armorEvoArmor+battleGodArmor;
+    const armorMaxBeforeBattleGod2=this.armorMax;this.armorMax*=battleGod2ArmorMultiplier;
     this.armor=this.armorMax;
     this.armorReduction=this.armorLevel>=1?.25+(this.armorLevel>=10?.05:0)+.01*Math.min(19,Math.max(0,this.armorLevel-10))+.005*Math.min(14,Math.max(0,this.armorLevel-30))+.005*Math.min(4,Math.max(0,this.armorLevel-45))+.003*Math.min(9,Math.max(0,this.armorLevel-50))+.004*Math.min(9,Math.max(0,this.armorLevel-60))+.002*Math.min(9,Math.max(0,this.armorLevel-75))+(this.armorLevel>=90?.005:0)+.005*Math.min(4,Math.max(0,this.armorLevel-90))+.003*Math.min(4,Math.max(0,this.armorLevel-95))+(this.armorLevel>=100?.05:0):0;
     this.armorReflect=this.armorLevel>=45?.25+.01*Math.min(4,Math.max(0,this.armorLevel-45))+.005*Math.min(9,Math.max(0,this.armorLevel-60))+.003*Math.min(9,Math.max(0,this.armorLevel-75))+.01*Math.min(4,Math.max(0,this.armorLevel-90))+.005*Math.min(4,Math.max(0,this.armorLevel-95))+(this.armorLevel>=100?.05:0):0;
-    this.energyShieldMax=(this.armorLevel>=50?this.armorMax*(.2+.01*Math.min(9,Math.max(0,this.armorLevel-50))+.005*Math.min(9,Math.max(0,this.armorLevel-75))+.01*Math.min(4,Math.max(0,this.armorLevel-90))):0)+combatShield+armorEvoShield+battleGodShield;
+    this.energyShieldMax=((this.armorLevel>=50?armorMaxBeforeBattleGod2*(.2+.01*Math.min(9,Math.max(0,this.armorLevel-50))+.005*Math.min(9,Math.max(0,this.armorLevel-75))+.01*Math.min(4,Math.max(0,this.armorLevel-90))):0)+combatShield+armorEvoShield+battleGodShield)*battleGod2ShieldMultiplier;
     this.energyShield=this.energyShieldMax;this.energyShieldRegenReadyAt=this.time.now+1000;
     this.tempShield=0;this.tempShieldUntil=0;this.armorRegenReadyAt=this.time.now+3000;this.thornsReadyAt=this.time.now+1000;
     this.armorBreakReadyAt=0;this.finalDefenseUsed=false;this.armorSpeedBoostUntil=0;this.armorOverloadActiveUntil=0;this.armorOverloadReturnAt=0;this.armorOverloadConsumed=0;this.armorOverloadDamageBonus=0;
@@ -848,7 +861,7 @@ class Game extends Phaser.Scene{
     this.agilityLevel=Math.max(0,Math.min(150,Number(data.agility)||0));
     this.meleeLevel=Math.max(0,Math.min(150,Number(data.melee)||0));
     this.combatMode='ranged';this.meleeWeapon='dagger';this.meleeNextAttackAt=0;this.meleeNextRegenAt=0;this.meleeSwinging=false;this.meleeSwingVisualUntil=0;this.meleeSwingStart=0;this.meleeSwingBaseAngle=0;
-    this.meleeDamage=1+(this.meleeLevel>=2?2*Math.min(13,this.meleeLevel-1):0)+(this.meleeLevel>=15?10:0)+(this.meleeLevel>=16?2*Math.min(14,this.meleeLevel-15):0)+(this.meleeLevel>=31?5*Math.min(19,this.meleeLevel-30):0)+(this.meleeLevel>=50?20:0)+(this.meleeLevel>=51?8*Math.min(24,this.meleeLevel-50):0)+(this.meleeLevel>=75?60:0)+50*Math.min(24,Math.max(0,this.meleeLevel-75))+(this.meleeLevel>=100?250:0)+50*Math.min(24,Math.max(0,this.meleeLevel-100))+(this.meleeLevel>=125?0:0)+50*Math.min(24,Math.max(0,this.meleeLevel-125))+(this.meleeLevel>=150?125:0)+combatGun+attackEvoDamage+battleGodMelee;
+    this.meleeDamage=(1+(this.meleeLevel>=2?2*Math.min(13,this.meleeLevel-1):0)+(this.meleeLevel>=15?10:0)+(this.meleeLevel>=16?2*Math.min(14,this.meleeLevel-15):0)+(this.meleeLevel>=31?5*Math.min(19,this.meleeLevel-30):0)+(this.meleeLevel>=50?20:0)+(this.meleeLevel>=51?8*Math.min(24,this.meleeLevel-50):0)+(this.meleeLevel>=75?60:0)+50*Math.min(24,Math.max(0,this.meleeLevel-75))+(this.meleeLevel>=100?250:0)+50*Math.min(24,Math.max(0,this.meleeLevel-100))+(this.meleeLevel>=125?0:0)+50*Math.min(24,Math.max(0,this.meleeLevel-125))+(this.meleeLevel>=150?125:0)+combatGun+attackEvoDamage+battleGodMelee)*battleGod2MeleeMultiplier;
     this.daggerDamage=1+(this.meleeLevel>=2?2*Math.min(13,this.meleeLevel-1):0)+(this.meleeLevel>=15?15:0)+(this.meleeLevel>=16?3*Math.min(14,this.meleeLevel-15):0)+(this.meleeLevel>=31?2*Math.min(19,this.meleeLevel-30):0)+(this.meleeLevel>=50?10:0)+(this.meleeLevel>=51?3*Math.min(24,this.meleeLevel-50):0)+(this.meleeLevel>=75?50:0)+15*Math.min(24,Math.max(0,this.meleeLevel-75));
     this.bladeDamage=50+(this.meleeLevel>=31?5*Math.min(19,this.meleeLevel-30):0)+(this.meleeLevel>=50?25:0)+(this.meleeLevel>=51?5*Math.min(24,this.meleeLevel-50):0)+(this.meleeLevel>=75?125:0)+25*Math.min(24,Math.max(0,this.meleeLevel-75));
     this.daggerCooldown=Math.max(.05,1-(this.meleeLevel>=15?.3:0)-.03*Math.max(0,this.meleeLevel-30));
@@ -1914,7 +1927,7 @@ class Game extends Phaser.Scene{
     const primaryLine=`${this.definition.name} · 生命 ${this.formatHealth(this.hp)}/${this.formatHealth(this.maxHp)} · 金币 ${this.coins} · 得分 ${this.score}${this.combatLevel?` · 狂人Lv.${this.combatLevel}`:''}${this.battleGodLevel?` · 战神Lv.${this.battleGodLevel}`:''}`;
     const combatLine=[weaponText,ammoState,ammoFeatureState,pistolSixthState,overloadState,stormState,destructionState,movementState,this.combatMode==='ranged'?`冷却 ${(this.shotDelay/1000).toFixed(2)}s`:'X切换远程',recoveryText.trim(),emergencyText.trim(),bossText.trim(),endlessText.trim(),finishBlockedText.trim()].filter(Boolean).join(' · ');
     const defenseLine=`${armorText} · 临时护盾 ${this.formatHealth(this.tempShield)} · 减伤 ${(effectiveReduction*100).toFixed(1)}% · 反伤 ${(effectiveReflect*100).toFixed(1)}%${this.armorOverloadActiveUntil>time?` · 装甲过载：减伤75% / 反伤 ${(effectiveReflect*100).toFixed(1)}%（剩余 ${(Math.max(0,(this.armorOverloadActiveUntil-time)/1000)).toFixed(1)}s）`:''}`;
-    const detailLine=`完整状态：生命 ${this.formatHealth(this.hp)}/${this.formatHealth(this.maxHp)} · ${armorText} · 临时护盾 ${this.formatHealth(this.tempShield)}\n防御：减伤 ${(effectiveReduction*100).toFixed(1)}% · 反伤 ${(effectiveReflect*100).toFixed(1)}% · 武器伤害 ${this.combatMode==='melee'?((this.meleeWeapon==='blade'?this.bladeDamage+this.meleeDamage:this.daggerDamage+this.meleeDamage)*this.meleeKillMultiplier).toFixed(1):this.activeWeapon==='laser'?this.laserDamage.toFixed(1):this.activeWeapon==='sniper'?this.sniperDamage:this.activeWeapon==='smg'?this.smgDamage:this.atk+this.ammoDamageBonus} · 射击 ${this.shotUpgrade}/125 · 身法 ${this.agilityLevel}/150 · 近战强化 ${this.meleeLevel}/150 · 作战狂人 ${this.combatLevel}/125 · 弹药强化 ${this.ammoLevel}/100 · 装甲强化 ${this.armorLevel}/100 · 生命进化 ${this.lifeEvoLevel} · 攻击进化 ${this.attackEvoLevel} · 装甲进化 ${this.armorEvoLevel} · 战神 ${this.battleGodLevel} · 装甲过载 ${this.armorOverloadActiveUntil>time?`${Math.max(0,(this.armorOverloadActiveUntil-time)/1000).toFixed(1)}s`:'未启动'}`;
+    const detailLine=`完整状态：生命 ${this.formatHealth(this.hp)}/${this.formatHealth(this.maxHp)} · ${armorText} · 临时护盾 ${this.formatHealth(this.tempShield)}\n防御：减伤 ${(effectiveReduction*100).toFixed(1)}% · 反伤 ${(effectiveReflect*100).toFixed(1)}% · 武器伤害 ${this.combatMode==='melee'?((this.meleeWeapon==='blade'?this.bladeDamage+this.meleeDamage:this.daggerDamage+this.meleeDamage)*this.meleeKillMultiplier).toFixed(1):this.activeWeapon==='laser'?this.laserDamage.toFixed(1):this.activeWeapon==='sniper'?this.sniperDamage:this.activeWeapon==='smg'?this.smgDamage:this.atk+this.ammoDamageBonus} · 射击 ${this.shotUpgrade}/125 · 身法 ${this.agilityLevel}/150 · 近战强化 ${this.meleeLevel}/150 · 作战狂人 ${this.combatLevel}/125 · 弹药强化 ${this.ammoLevel}/100 · 装甲强化 ${this.armorLevel}/100 · 生命进化 ${this.lifeEvoLevel} · 攻击进化 ${this.attackEvoLevel} · 装甲进化 ${this.armorEvoLevel} · 战神I ${this.battleGodLevel} · 战神II ${this.battleGod2Level} · 装甲过载 ${this.armorOverloadActiveUntil>time?`${Math.max(0,(this.armorOverloadActiveUntil-time)/1000).toFixed(1)}s`:'未启动'}`;
     this.hud.setText(primaryLine);
     this.hudCombat.setText(combatLine);
     this.hudDefense.setText(defenseLine);
