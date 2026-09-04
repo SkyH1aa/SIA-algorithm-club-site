@@ -4,8 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>行于无垠 · 算法社横屏闯关射击</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+<script>
+window.__xingyuExternalScripts=[];
+window.addEventListener('error',event=>{
+  const target=event.target;
+  if(target?.tagName==='SCRIPT')window.__xingyuExternalScripts.push(target.src||'未知外部脚本');
+  if(!target||target===window){
+    window.__xingyuEarlyError={message:event.message||'Script error.',source:event.filename||'',line:event.lineno||0};
+  }
+},true);
+</script>
+<script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="window.__xingyuExternalScripts.push(this.src)"></script>
+<script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js" onerror="window.__xingyuExternalScripts.push(this.src)"></script>
 <style>
 :root{font-family:"Segoe UI","Microsoft YaHei",sans-serif;color:#f7fbff;background:#080b14}*{box-sizing:border-box}body{margin:0;min-width:320px;min-height:100vh;background:radial-gradient(circle at 50% 0%,#203a56,#080b14 65%)}.shell{width:min(1180px,100%);margin:auto;padding:16px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}h1{margin:0;font-size:clamp(19px,4vw,29px)}a{color:#9fe8ff;text-decoration:none;font-size:14px}.auth-gate,.leaderboard-panel{border:1px solid #2b6980;border-radius:8px;background:#111b32;padding:20px;margin-bottom:12px}.auth-gate h2,.leaderboard-panel h2{margin:0 0 8px;font-size:20px}.auth-form{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.auth-form input{height:38px;width:190px;border:1px solid #476176;border-radius:4px;background:#0b1424;color:#fff;padding:0 10px}.button{height:38px;border:1px solid #3da5c7;border-radius:4px;background:#19334b;color:#fff;padding:0 14px;cursor:pointer}.button.secondary{border-color:#476176;background:#18202e}.auth-message{min-height:20px;margin:10px 0 0;color:#ffd166;font-size:13px}.auth-user{color:#9fe8ff;font-size:13px;margin-right:12px}#game-wrap{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border:1px solid #2b6980;border-radius:8px;background:#111b32;box-shadow:0 20px 80px #0009}#game,#game canvas{width:100%;height:100%}#game canvas{display:block}.game-loading{position:absolute;inset:0;z-index:30;display:grid;place-items:center;background:#111b32;color:#d8f4ff;font-size:16px;letter-spacing:.02em}.game-loading[hidden]{display:none}.help{display:flex;flex-wrap:wrap;gap:8px 18px;margin:10px 2px 0;color:#a6b9ca;font-size:13px}kbd{padding:2px 6px;border:1px solid #476176;border-bottom-width:2px;border-radius:4px;background:#172638;color:#eaf7ff}.notice{margin-top:10px;color:#ffd77a;font-size:12px}.leaderboard-head{display:flex;justify-content:space-between;align-items:center}.leaderboard-list{margin:10px 0 0;padding-left:25px;color:#eaf7ff}.leaderboard-list li{padding:4px 0}.leaderboard-list small{color:#9fb7c9}
 .touch-controls{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:12px 0 0;padding:4px 2px;user-select:none;touch-action:none}.joystick{position:relative;width:132px;height:88px;border:1px solid #476176;border-radius:44px;background:#101d30;box-shadow:inset 0 0 0 1px #203b51;touch-action:none}.joystick::after{content:'左右移动';position:absolute;inset:0;display:grid;place-items:center;color:#9fb7c9;font-size:12px;pointer-events:none}.joystick-knob{position:absolute;z-index:1;left:43px;top:21px;width:44px;height:44px;border-radius:50%;background:#3da5c7;box-shadow:0 4px 16px #0008;touch-action:none}.touch-actions{display:grid;grid-template-columns:repeat(3,minmax(104px,1fr));gap:10px;flex:1}.touch-button{min-width:0;height:54px;border:1px solid #3da5c7;border-radius:8px;background:#19334b;color:#fff;font-weight:600;font-size:14px;line-height:1.2;cursor:pointer;touch-action:none}.touch-button small{color:#9fb7c9;font-size:11px}.touch-button:active{background:#285d78;transform:translateY(1px)}@media (max-width:560px){.touch-controls{align-items:stretch;gap:10px}.joystick{width:104px;height:auto;min-height:118px;border-radius:52px}.joystick-knob{left:30px;top:36px}.touch-actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.touch-button{height:54px;padding:0 4px;font-size:13px}}
@@ -32,6 +42,7 @@ header a:hover{background:#163249;border-color:var(--cyan)}
 #game-wrap::after{content:"";position:absolute;inset:0;pointer-events:none;border:1px solid #ffffff0b;border-radius:7px;z-index:24}
 .game-loading{background:#0b1421;color:#dff8ff;letter-spacing:.04em}
 .touch-controls{margin:14px 0 2px;padding:10px 12px;border:1px solid #1e394c;border-radius:8px;background:#0b1420;box-shadow:0 8px 22px #0004}
+.pk-panel{margin:12px 0;border:1px solid #3d6e86;border-radius:8px;background:#0d1725;padding:18px 20px;box-shadow:0 10px 28px #0004}.pk-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.pk-head h2{margin:0;color:#fff;font-size:20px}.pk-form{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.pk-form input{height:38px;width:180px;border:1px solid #476176;border-radius:4px;background:#0b1424;color:#fff;padding:0 10px}.pk-status{min-height:22px;margin:10px 0 0;color:#ffd166;font-size:13px}.pk-room{margin-top:12px;padding:12px;border:1px solid #24435a;border-radius:6px;background:#0b1420}.pk-room-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;color:#d5e7f4;font-size:13px}.pk-room-code{font-size:26px;letter-spacing:.16em;color:#ffd166;font-weight:700}.pk-wager{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}.pk-wager input{width:150px}.pk-arena{margin-top:14px;position:relative;border:1px solid #315a72;border-radius:6px;overflow:hidden;background:#07111d}.pk-arena canvas{display:block;width:100%;height:auto;aspect-ratio:16/7}.pk-arena-hud{position:absolute;left:12px;right:12px;top:8px;display:flex;justify-content:space-between;color:#fff;font-size:13px;text-shadow:0 2px 4px #000}.pk-hidden{display:none!important}
 .joystick{border-color:#31566b;background:#0d1b2a;box-shadow:inset 0 0 0 1px #203c50,0 4px 12px #0004}
 .joystick-knob{background:var(--cyan);box-shadow:0 0 0 4px #62d9ee22,0 4px 16px #0008}
 .touch-actions{gap:8px}
@@ -73,9 +84,21 @@ kbd{border-color:#38546a;background:#122438;color:#eafaff}
 <script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
 <body>
 <main class="shell">
-<header><h1>行于无垠</h1><div><span id="service-status" class="auth-user">游戏服务：正在检查</span><span id="auth-user" class="auth-user"></span><button class="button secondary" id="change-password-button" type="button" hidden>修改密码</button><button class="button secondary" id="service-toggle" type="button" hidden>关闭游戏服务</button><a href="../index.html">返回官网</a></div></header>
+<header><h1>行于无垠</h1><div><span id="service-status" class="auth-user">游戏服务：正在检查</span><span id="auth-user" class="auth-user"></span><button class="button secondary" id="change-password-button" type="button" hidden>修改密码</button><button class="button secondary" id="pk-open-button" type="button" hidden>联机 PK</button><button class="button secondary" id="service-toggle" type="button" hidden>关闭游戏服务</button><a href="../index.html">返回官网</a></div></header>
 <section id="auth-gate" class="auth-gate"><h2>登录后开始游戏</h2><p>使用本游戏独立账号，不与社团盘登录系统关联。</p><div class="auth-form"><input id="username-input" type="text" maxlength="32" placeholder="用户名"><input id="password-input" type="password" maxlength="72" placeholder="密码"><button class="button" id="login-button" type="button">登录</button><button class="button secondary" id="register-button" type="button">注册新用户</button></div><p id="auth-message" class="auth-message" role="status"></p></section>
 <section id="password-panel" class="password-panel" hidden><h2>修改密码</h2><div class="password-form"><input id="old-password-input" type="password" maxlength="72" placeholder="当前密码"><input id="new-password-input" type="password" maxlength="72" placeholder="新密码（至少6位）"><input id="confirm-password-input" type="password" maxlength="72" placeholder="确认新密码"><button class="button" id="save-password-button" type="button">保存密码</button><button class="button secondary" id="cancel-password-button" type="button">取消</button></div><p id="password-message" class="password-message" role="status"></p></section>
+<section id="pk-panel" class="pk-panel" hidden>
+  <div class="pk-head"><h2>联机 PK · 实时对战</h2><button class="button secondary" id="pk-close-button" type="button">关闭</button></div>
+  <p class="pk-status" id="pk-status">创建房间或输入邀请码加入对战。</p>
+  <div class="pk-form"><button class="button" id="pk-create-button" type="button">创建房间</button><input id="pk-code-input" maxlength="8" placeholder="输入邀请码"><button class="button secondary" id="pk-join-button" type="button">加入房间</button></div>
+  <div class="pk-room pk-hidden" id="pk-room">
+    <div class="pk-room-grid"><div>房间状态：<strong id="pk-room-state">等待对手</strong></div><div>在线成员：<strong id="pk-room-presence">1 / 2</strong></div><div>我的准备：<strong id="pk-my-ready">未准备</strong></div><div>对手准备：<strong id="pk-peer-ready">未准备</strong></div></div>
+    <div style="margin-top:10px">邀请码：<span class="pk-room-code" id="pk-room-code">--------</span> <button class="button secondary" id="pk-copy-button" type="button">复制</button></div>
+    <div class="pk-wager"><label for="pk-wager-input">押注金币（0 或 1-1000000）</label><input id="pk-wager-input" type="number" min="0" max="1000000" step="1" value="0"><button class="button secondary" id="pk-accept-button" type="button">接受邀请</button><button class="button" id="pk-wager-button" type="button">锁定押注</button><button class="button secondary" id="pk-ready-button" type="button">准备</button><button class="button secondary" id="pk-leave-button" type="button">退出房间</button></div>
+    <p class="pk-status" id="pk-room-message"></p>
+    <div class="pk-arena pk-hidden" id="pk-arena"><canvas id="pk-canvas" width="1280" height="560"></canvas><div class="pk-arena-hud"><span id="pk-self-hud">我方</span><span id="pk-match-hud">等待开战</span><span id="pk-peer-hud">对手</span></div></div>
+  </div>
+</section>
 <section id="game-content" hidden>
 <div class="play-layout">
 <div id="game-wrap" style="touch-action:none"><div id="game"></div><div id="game-loading" class="game-loading">正在加载游戏素材…</div></div>
@@ -101,6 +124,7 @@ kbd{border-color:#38546a;background:#122438;color:#eafaff}
 const SUPABASE_URL='https://jgezpvmlnhycxslqbwcx.supabase.co';
 const SUPABASE_KEY='sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
 const platformerDb=window.supabase?.createClient(SUPABASE_URL,SUPABASE_KEY);
+window.xingyuPlatformerDb=platformerDb;
 const GAME_ASSET_BASE=new URL('GamePictures/',document.baseURI);
 const SAVE_KEY='club-shooter-clean';
 const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{"unlocked":1,"coins":0,"hp":0,"atk":0,"shot":0,"agility":0,"melee":0,"ammo":0,"armor":0,"combat":0}');
@@ -108,7 +132,20 @@ data.hp??=0;data.atk??=0;data.shot??=0;data.agility??=0;data.melee??=0;data.ammo
 data.agility=Math.max(0,Math.min(150,Number(data.agility)||0));data.combat=Math.max(0,Math.min(125,Number(data.combat)||0));data.attackEvo=Math.max(0,Number(data.attackEvo)||0);data.armorEvo=Math.max(0,Number(data.armorEvo)||0);
 data.eventEndlessBest??=0;data.eventEndlessClaimed??={};data.eventLevelClaimed??={};data.lifeEvo??=0;
 data.claimed??={};data.battleGod=Math.max(0,Number(data.battleGod)||0);data.battleGod2=Math.max(0,Math.min(750,Number(data.battleGod2)||0));
+if(!window.Phaser){
+  const failedScripts=window.__xingyuExternalScripts?.length?`（${window.__xingyuExternalScripts.length} 个外部组件未加载）`:'';
+  const message=`游戏核心组件加载失败${failedScripts}，请检查网络后刷新页面重试。`;
+  const target=document.getElementById('auth-message');
+  if(target){target.textContent=message;target.style.color='#ff8794';}
+  console.error('[行于无垠]',message,window.__xingyuExternalScripts);
+}else{
 let currentUser=null,gameInstance=null;
+window.xingyuGetSession=()=>currentUser;
+// 联机 PK 只读使用当前账号的完整养成快照，不直接修改单机状态。
+window.xingyuGetProgressSnapshot=()=>({
+  hp:data.hp,atk:data.atk,shot:data.shot,agility:data.agility,melee:data.melee,ammo:data.ammo,armor:data.armor,combat:data.combat,
+  lifeEvo:data.lifeEvo,attackEvo:data.attackEvo,armorEvo:data.armorEvo,battleGod:data.battleGod,battleGod2:data.battleGod2
+});
 let touchMoveAxis=0,joystickPointerId=null,touchJumpHeld=false;
 let levelPage=0;
 let guidePage=0;
@@ -352,15 +389,35 @@ const gameLoading=document.getElementById('game-loading');
 const failedAssetKeys=new Set();
 let runtimeStage='页面初始化';
 let gameReady=false;
+let runtimeFaulted=false;
+let opaqueScriptErrorTimer=0;
+let gameStartAttempt=0;
+let reportingRuntimeError=false;
+let gameTransitioning=false;
 function setRuntimeStage(stage){
   runtimeStage=stage;
   window.__xingyuRuntimeStage=stage;
   console.debug('[行于无垠]',stage);
 }
 function reportRuntimeError(error,stage=runtimeStage){
+  // Error handlers must never call themselves recursively. Some browsers emit
+  // a second window error while a Phaser canvas is being torn down; without a
+  // guard that chain can end as "Maximum call stack size exceeded" and hide the
+  // original startup failure.
+  if(reportingRuntimeError){
+    console.error('[行于无垠] 重复运行错误已忽略',stage,error);
+    return;
+  }
+  reportingRuntimeError=true;
+  try{
   const message=error?.message||String(error||'未知错误');
+  window.__xingyuLastRuntimeError={stage,message,stack:error?.stack||'',at:Date.now()};
   console.error('[行于无垠] 运行错误',stage,error);
-  if(gameLoading){
+  // A late async/network exception must not cover an already playable canvas.
+  // Only startup failures are rendered in the blocking loading panel.
+  const startupFailure=!gameReady||/启动|创建|Game\.create|外部运行组件|全局脚本/.test(stage);
+  if(startupFailure)runtimeFaulted=true;
+  if(gameLoading&&startupFailure){
     gameLoading.hidden=false;
     gameLoading.textContent=`游戏启动失败：${stage}（${message}）`;
     gameLoading.style.whiteSpace='pre-wrap';
@@ -368,11 +425,33 @@ function reportRuntimeError(error,stage=runtimeStage){
     gameLoading.style.textAlign='center';
   }
   if(authMessage)authMessage.textContent=`诊断：${stage} · ${message}`;
+  }catch(reportError){
+    console.error('[行于无垠] 错误提示渲染失败',reportError);
+  }finally{
+    reportingRuntimeError=false;
+  }
 }
 window.addEventListener('error',event=>{
   // Ignore image/font resource errors; Boot already has a deliberate fallback
   // texture path for those and they are not a scene-freeze.
   if(event.target&&event.target!==window)return;
+  // Browsers intentionally hide stack traces from a cross-origin script unless
+  // CORS is enabled. Do not immediately replace a healthy game with that opaque
+  // message; wait briefly for the scene watchdog to determine whether startup
+  // actually failed. The CDN tags above opt into CORS so future errors include
+  // their real location whenever the browser supports it.
+  if(event.message==='Script error.'&&!event.error){
+    window.__xingyuLastOpaqueScriptError={stage:runtimeStage,at:Date.now()};
+    console.warn('[行于无垠] 收到无堆栈的第三方脚本异常',window.__xingyuLastOpaqueScriptError);
+    if(gameReady)return;
+    window.clearTimeout(opaqueScriptErrorTimer);
+    opaqueScriptErrorTimer=window.setTimeout(()=>{
+      if(!gameReady&&!runtimeFaulted){
+        reportRuntimeError(new Error(`外部运行组件没有返回详细错误（最后阶段：${runtimeStage}）`),'外部运行组件异常');
+      }
+    },2200);
+    return;
+  }
   reportRuntimeError(event.error||event.message,'全局脚本/场景异常');
 });
 window.addEventListener('unhandledrejection',event=>reportRuntimeError(event.reason,'异步请求异常'));
@@ -467,10 +546,33 @@ async function loadBattleGod2(){
   if(!error&&result?.length){data.battleGod2=Math.max(0,Math.min(750,Number(result[0].battle_god_ii_upgrade??result[0].level??0)||0));localStorage.setItem(SAVE_KEY,JSON.stringify(data));}
 }
 function createGame(){
-  if(gameInstance)return;
-  gameInstance=new Phaser.Game({type:Phaser.AUTO,parent:'game',width:1280,height:720,physics:{default:'arcade',arcade:{gravity:{y:900},debug:false}},scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:[Boot,Menu,Upgrade,ProgressionGuide,Game,Result]});
+  if(gameInstance)return true;
+  runtimeFaulted=false;
+  setRuntimeStage('创建 Phaser 游戏实例');
+  try{
+    if(!window.Phaser||typeof window.Phaser.Game!=='function')throw new Error('Phaser 运行组件未加载完成，请刷新页面后重试。');
+    gameInstance=new Phaser.Game({type:Phaser.AUTO,parent:'game',width:1280,height:720,physics:{default:'arcade',arcade:{gravity:{y:900},debug:false}},scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:[Boot,Menu,Upgrade,ProgressionGuide,Game,Result]});
+    return true;
+  }catch(error){
+    try{gameInstance?.destroy(true)}catch(_){/* The instance may have failed before construction completed. */}
+    gameInstance=null;
+    reportRuntimeError(error,'创建 Phaser 游戏实例');
+    return false;
+  }
 }
-async function startGame(profile){currentUser={username:profile.username,token:profile.session_token};applyProfile(profile);await loadBattleGod();await loadBattleGod2();authGate.hidden=true;gameContent.hidden=false;leaderboardPanel.hidden=false;authUser.textContent=`已登录：${currentUser.username}`;changePasswordButton.hidden=false;updateServiceUi();createGame();void refreshServiceStatus(true);void loadLeaderboard()}
+async function startGame(profile){
+  currentUser={username:profile.username,token:profile.session_token};
+  window.xingyuSession=currentUser;
+  applyProfile(profile);await loadBattleGod();await loadBattleGod2();
+  authGate.hidden=true;gameContent.hidden=false;leaderboardPanel.hidden=false;
+  authUser.textContent=`已登录：${currentUser.username}`;changePasswordButton.hidden=false;updateServiceUi();
+  if(!createGame()){
+    authGate.hidden=false;gameContent.hidden=true;leaderboardPanel.hidden=true;
+    changePasswordButton.hidden=true;return;
+  }
+  void refreshServiceStatus(true);void loadLeaderboard();
+  window.dispatchEvent(new CustomEvent('xingyu:authenticated'));
+}
 async function authenticate(action){
   const username=usernameInput.value.trim(),password=passwordInput.value;
   if(!/^[A-Za-z0-9_]{3,32}$/.test(username)){setAuthMessage('用户名需为 3-32 位字母、数字或下划线。',true);return}
@@ -669,19 +771,29 @@ class Menu extends Phaser.Scene{
       // the canvas size, including local-file previews.
       button.setInteractive(new Phaser.Geom.Rectangle(0,0,cardWidth,48),Phaser.Geom.Rectangle.Contains);
       const enterLevel=()=>{
+        if(gameTransitioning)return;
         if(!available){
           status.setText('需先通关前一关');
           this.time.delayedCall(900,()=>status.setText('未解锁'));
           return;
         }
+        if(runtimeFaulted)return;
+        gameTransitioning=true;
+        const attempt=++gameStartAttempt;
         level=index;endlessMode=false;gameReady=false;setRuntimeStage(`点击关卡 ${index+1} · 请求启动 Game`);
         if(gameLoading){gameLoading.hidden=false;gameLoading.textContent=`正在进入第 ${index+1} 关…`;gameLoading.style.whiteSpace='normal';gameLoading.style.padding='0';}
-        this.scene.start('Game');
+        try{
+          if(!this.scene.isActive('Menu')){gameTransitioning=false;return;}
+          this.scene.start('Game');
+        }catch(error){gameTransitioning=false;reportRuntimeError(error,`启动第 ${index+1} 关`);return;}
         window.setTimeout(()=>{
-          if(gameReady)return;
+          if(attempt!==gameStartAttempt||gameReady||runtimeFaulted)return;
           const active=Boolean(gameInstance?.scene.isActive('Game'));
           reportRuntimeError(new Error(active?'Game 场景未完成首帧初始化':'Game 场景没有激活'),'Game 场景启动超时');
-        },1800);
+        // Later worlds can create more than a thousand physics objects. Give
+        // lower-end phones enough time before treating a slow first frame as a
+        // failed scene startup.
+        },12000);
       };
       button.on('pointerover',()=>{button.setFillStyle(available?0x1b455d:0x1b2530);title.setColor(available?'#fff':'#9aa8b5')});
       button.on('pointerout',()=>{button.setFillStyle(available?0x122b3d:0x121a24);title.setColor(available?'#f4fbff':'#718293')});
@@ -768,7 +880,7 @@ class ProgressionGuide extends Phaser.Scene{
       ,['生命进化',`需生命力500级、作战狂人50级。当前 ${data.lifeEvo}级：持续提升生命上限，50的倍数级额外成长；50级后每达到100的倍数等级，额外增加10000生命上限。\n当前无等级上限。`]
       ,['攻击进化',`需攻击力500级、作战狂人50级。当前 ${data.attackEvo}级：同步提升枪械与近战攻击；50倍数等级额外成长，50级后每达到100的倍数等级额外增加10000攻击。\n当前无等级上限。`]
       ,['装甲进化',`需装甲强化100级、作战狂人100级。当前 ${data.armorEvo}级：同步提升装甲与能量护盾上限；50倍数等级额外成长，50级后每达到100的倍数等级额外增加装甲10000、护盾22500。\n当前无等级上限。`]
-      ,['战神I',`需生命进化、攻击进化、装甲进化均达到500级。当前 ${data.battleGod}级：普通等级按基础属性成长；50级倍数等级该级额外获得10倍基础属性，100级倍数等级该级额外获得20倍基础属性。\n当前无等级上限。`]
+      ,['战神I',`需生命进化、攻击进化、装甲进化均达到500级。当前 ${data.battleGod}级：每级获得基础属性；50的倍数级，该级获得10倍基础属性（例如50级本级获得150000生命）；100的倍数级，该级获得20倍基础属性（例如100级本级获得300000生命）。里程碑只放大当前这一级，不放大此前累计值。\n当前无等级上限。`]
       ,['战神II',`需战神I达到250级。当前 ${data.battleGod2}/750级：每级按最终属性增加生命0.2%、枪械伤害0.1%、近战伤害0.2%、装甲0.3%、能量护盾0.5%；50级倍数等级该级按10倍百分比，100级倍数等级该级按15倍百分比。\n升级费用 4085 + 当前等级×2495。`]
     ];
     const pageSize=6,pageCount=Math.ceil(sections.length/pageSize);
@@ -798,10 +910,11 @@ class Game extends Phaser.Scene{
   }
   create(){
     setRuntimeStage('Game.create 开始');
+    this.runtimeFailed=false;
     try{this.createWorld()}catch(error){
       // Keep the Game canvas visible so the watchdog message identifies the
       // failing initialization stage instead of silently returning to the menu.
-      gameReady=false;this.done=true;this.isPaused=true;this.keys={};
+      this.runtimeFailed=true;gameReady=false;this.done=true;this.isPaused=true;this.keys={};
       reportRuntimeError(error,'Game.create 同步初始化');
     }
   }
@@ -824,9 +937,18 @@ class Game extends Phaser.Scene{
     const armorEvoLevel=Math.max(0,Number(data.armorEvo)||0),armorEvoArmor=armorEvoLevel>=1?1000+400*Math.min(13,Math.max(0,armorEvoLevel-1))+(armorEvoLevel>=15?1250:0)+600*Math.min(35,Math.max(0,armorEvoLevel-15))+(armorEvoLevel>=50?2250:0)+1000*Math.max(0,armorEvoLevel-50)+6000*Math.floor(armorEvoLevel/50)+10000*Math.floor(armorEvoLevel/100):0,armorEvoShield=armorEvoLevel>=1?1000+600*Math.min(13,Math.max(0,armorEvoLevel-1))+(armorEvoLevel>=15?2250:0)+1000*Math.min(35,Math.max(0,armorEvoLevel-15))+(armorEvoLevel>=50?4250:0)+2250*Math.max(0,armorEvoLevel-50)+12000*Math.floor(armorEvoLevel/50)+22500*Math.floor(armorEvoLevel/100):0;
     // 战神成长按当前等级的基础属性累计，并叠加 50/100 级里程碑倍率。
     // 只有里程碑所在的那一级使用额外倍率：50级为10倍基础成长，100级为20倍基础成长。
-    const battleGodLevel=Math.max(0,Number(data.battleGod)||0),battleGodUnits=battleGodLevel+9*(Math.floor(battleGodLevel/50)-Math.floor(battleGodLevel/100))+19*Math.floor(battleGodLevel/100);
+    // 战神 I 的每级基础成长只计算一次：普通级=1 倍，50 倍数级=10 倍，
+    // 100 倍数级=20 倍。100 级不再叠加 50 级的里程碑倍率。
+    const battleGodLevel=Math.max(0,Math.floor(Number(data.battleGod)||0));
+    const battleGodFiftyMilestones=Math.floor(battleGodLevel/50)-Math.floor(battleGodLevel/100);
+    const battleGodHundredMilestones=Math.floor(battleGodLevel/100);
+    const battleGodUnits=battleGodLevel+9*battleGodFiftyMilestones+19*battleGodHundredMilestones;
     const battleGodLife=battleGodUnits*15000,battleGodArmor=battleGodUnits*20000,battleGodShield=battleGodUnits*30000,battleGodGun=battleGodUnits*2500,battleGodMelee=battleGodUnits*3500;
-    const battleGod2Level=Math.max(0,Math.min(750,Number(data.battleGod2)||0)),battleGod2Units=battleGod2Level+9*(Math.floor(battleGod2Level/50)-Math.floor(battleGod2Level/100))+14*Math.floor(battleGod2Level/100);
+    // 战神 II 使用相同的“当前等级基础百分比”规则：50 级=10 倍，100 级=15 倍。
+    const battleGod2Level=Math.max(0,Math.min(750,Math.floor(Number(data.battleGod2)||0)));
+    const battleGod2FiftyMilestones=Math.floor(battleGod2Level/50)-Math.floor(battleGod2Level/100);
+    const battleGod2HundredMilestones=Math.floor(battleGod2Level/100);
+    const battleGod2Units=battleGod2Level+9*battleGod2FiftyMilestones+14*battleGod2HundredMilestones;
     const battleGod2HpMultiplier=1+.002*battleGod2Units,battleGod2GunMultiplier=1+.001*battleGod2Units,battleGod2MeleeMultiplier=1+.002*battleGod2Units,battleGod2ArmorMultiplier=1+.003*battleGod2Units,battleGod2ShieldMultiplier=1+.005*battleGod2Units;
     this.attackEvoLevel=attackEvoLevel;this.armorEvoLevel=armorEvoLevel;
     this.battleGodLevel=battleGodLevel;this.battleGod2Level=battleGod2Level;
@@ -978,6 +1100,7 @@ class Game extends Phaser.Scene{
     });
     this.syncPlayerArt(true);
     gameReady=true;
+    gameTransitioning=false;
     setRuntimeStage('Game 就绪');
     if(gameLoading){gameLoading.hidden=true;gameLoading.style.padding='0';gameLoading.style.whiteSpace='normal';}
   }
@@ -1136,7 +1259,11 @@ class Game extends Phaser.Scene{
     if(remaining>0)this.energyShield=Math.min(this.energyShieldMax,this.energyShield+remaining);
   }
   killEnemy(enemy,source='bullet'){
-    if(!enemy?.active)return;
+    // Lock the death path before the enemy explosion can damage the player.
+    // Reflection/thorns must not hit this same active object and recurse back
+    // into killEnemy.
+    if(!enemy?.active||enemy.dying)return;
+    enemy.dying=true;
     const now=this.time.now;
     this.burstEffect(enemy.x,enemy.y,enemy.boss?0xffd166:0xfff4c2,enemy.boss?1.8:1);
     this.kills++;
@@ -1162,13 +1289,19 @@ class Game extends Phaser.Scene{
     if(source==='pistol'&&this.shotUpgrade>=80){const chance=Math.min(.42,.2+.03*Math.min(4,this.shotUpgrade-80)+(this.ammoLevel>=85?.1:0));if(Math.random()<chance)this.fireRadial(enemy.x,enemy.y,12,this.atk+this.ammoDamageBonus,'pistolRadial');}
     if(enemy.type==='g'||enemy.type==='e2'||enemy.type==='b2'){
       const radius=enemy.boss?240:150,dx=this.player.x-enemy.x,dy=this.player.y-enemy.y;
-      if(dx*dx+dy*dy<=radius*radius)this.damage(enemy.contactDamage||1,enemy);
+      // Death explosions are player-only. Do not pass the dying enemy as a
+      // damage source, otherwise armor reflection/thorns can re-enter the same
+      // death chain while the enemy is still active in Phaser's group.
+      if(dx*dx+dy*dy<=radius*radius)this.damage(enemy.contactDamage||1,null);
     }
     this.score+=175;
     if(enemy.art?.active)enemy.art.destroy();enemy.destroy();
   }
   damage(amount,sourceEnemy=null){
     if(this.invulnerable||this.done)return;
+    this.damageDepth=(this.damageDepth||0)+1;
+    if(this.damageDepth>32){this.damageDepth--;console.warn('[行于无垠] 伤害递归已截断');return;}
+    try{
     const meleeReduction=this.combatMode==='melee'&&this.meleeLevel>=1?(this.meleeLevel>=75?.4:this.meleeLevel>=50?.3:this.meleeLevel>=30?.2:.1)+.005*Math.min(24,Math.max(0,this.meleeLevel-100)):0;
     if(this.armorLevel>=85&&this.armor>0&&Math.random()<.1){this.armorSpeedBoostUntil=this.time.now+1000;return;}
     const incoming=Math.max(0,Number(amount)||0);
@@ -1183,8 +1316,8 @@ class Game extends Phaser.Scene{
     if(this.tempShield>0){const absorbed=Math.min(this.tempShield,hpDamage);this.tempShield-=absorbed;hpDamage-=absorbed;}
     if(this.energyShield>0){const absorbed=Math.min(this.energyShield,hpDamage);this.energyShield-=absorbed;hpDamage-=absorbed;}
     if(armorWasActive){const absorbed=Math.min(this.armor,hpDamage);this.armor=Math.max(0,this.armor-absorbed);hpDamage=Math.max(0,hpDamage-absorbed);}
-    if(this.getEffectiveArmorReflect()>0&&armorWasActive&&sourceEnemy?.active)this.damageEnemy(sourceEnemy,damageAmount*this.getEffectiveArmorReflect(),'armorReflect');
-    if(this.armor>0&&this.armorLevel>=70&&sourceEnemy?.active)this.damageEnemy(sourceEnemy,this.armorReflect*2,'thornsHit');
+    if(this.getEffectiveArmorReflect()>0&&armorWasActive&&sourceEnemy?.active&&!sourceEnemy.dying)this.damageEnemy(sourceEnemy,damageAmount*this.getEffectiveArmorReflect(),'armorReflect');
+    if(this.armor>0&&this.armorLevel>=70&&sourceEnemy?.active&&!sourceEnemy.dying)this.damageEnemy(sourceEnemy,this.armorReflect*2,'thornsHit');
     const armorBroken=armorWasActive&&this.armor<=0;
     if(armorBroken)this.handleArmorBreak(sourceEnemy);
     const nextHp=Phaser.Math.Clamp((Number(this.hp)||0)-hpDamage,0,this.maxHp);
@@ -1199,6 +1332,9 @@ class Game extends Phaser.Scene{
     this.playerHitEffect();
     this.invulnerable=true;this.time.delayedCall(900,()=>this.invulnerable=false);
     if(this.hp<=0){this.hp=0;this.failLevel();}
+    }finally{
+      this.damageDepth=Math.max(0,(this.damageDepth||1)-1);
+    }
   }
   handleArmorBreak(sourceEnemy){
     if(this.armorLevel>=75&&this.time.now>=this.armorBreakReadyAt){this.armorBreakReadyAt=this.time.now+25000;this.burstEffect(this.player.x,this.player.y,0xffd166,1.8);this.enemies.getChildren().forEach(enemy=>{if(enemy.active&&Phaser.Math.Distance.Between(this.player.x,this.player.y,enemy.x,enemy.y)<=120){this.damageEnemy(enemy,this.armorMax,'armorBreak');enemy.setVelocityX(Math.sign(enemy.x-this.player.x)*75);}});}
@@ -1289,12 +1425,18 @@ class Game extends Phaser.Scene{
     }
   }
   damageEnemy(enemy,amount,source='ability',applyMaster=true){
-    if(!enemy?.active)return;
+    if(!enemy?.active||enemy.dying)return;
+    this.damageEnemyDepth=(this.damageEnemyDepth||0)+1;
+    if(this.damageEnemyDepth>32){this.damageEnemyDepth--;console.warn('[行于无垠] 敌人伤害递归已截断');return;}
+    try{
     let damage=Math.max(0,Number(amount)||0)*(applyMaster?this.masterDamageMultiplier():1)*(this.assassinationBuffUntil>this.time.now?this.assassinationDamageMultiplier:1)+this.armorOverloadDamageBonus;
     if(enemy.shield>0){const absorbed=Math.min(enemy.shield,damage);enemy.shield-=absorbed;damage-=absorbed;}
     enemy.hp-=damage;
     if(this.combatLevel>=125&&damage>0)this.restoreNano(damage*.15);
     if(enemy.hp<=0)this.killEnemy(enemy,source);
+    }finally{
+      this.damageEnemyDepth=Math.max(0,(this.damageEnemyDepth||1)-1);
+    }
   }
   toggleWeapon(){
     if(this.done)return;
@@ -1852,6 +1994,16 @@ class Game extends Phaser.Scene{
     this.scene.start('Menu');
   }
   update(time,delta=16){
+    if(this.runtimeFailed)return;
+    try{this.updateWorld(time,delta)}catch(error){
+      this.runtimeFailed=true;
+      this.done=true;
+      this.isPaused=true;
+      if(this.physics?.world)this.physics.world.isPaused=true;
+      reportRuntimeError(error,`Game.update（${runtimeStage}）`);
+    }
+  }
+  updateWorld(time,delta=16){
     if(this.justDown(this.keys.ESC)){this.togglePause();return;}
     if(this.isPaused)return;
     const left=this.keys.A.isDown||this.keys.LEFT.isDown||touchMoveAxis<0,right=this.keys.D.isDown||this.keys.RIGHT.isDown||touchMoveAxis>0;
@@ -1996,6 +2148,8 @@ class Result extends Phaser.Scene{
   }
 }
 void resumeSession();
+}
 </script>
+<script src="platformer-pk.js"></script>
 </body>
 </html>
