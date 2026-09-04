@@ -96,7 +96,7 @@ kbd{border-color:#38546a;background:#122438;color:#eafaff}
     <div style="margin-top:10px">邀请码：<span class="pk-room-code" id="pk-room-code">--------</span> <button class="button secondary" id="pk-copy-button" type="button">复制</button></div>
     <div class="pk-wager"><label for="pk-wager-input">押注金币（0 或 1-1000000）</label><input id="pk-wager-input" type="number" min="0" max="1000000" step="1" value="0"><button class="button secondary" id="pk-accept-button" type="button">接受邀请</button><button class="button" id="pk-wager-button" type="button">锁定押注</button><button class="button secondary" id="pk-ready-button" type="button">准备</button><button class="button secondary" id="pk-leave-button" type="button">退出房间</button></div>
     <p class="pk-status" id="pk-room-message"></p>
-    <div class="pk-arena pk-hidden" id="pk-arena"><canvas id="pk-canvas" width="1280" height="560"></canvas><div class="pk-arena-hud"><span id="pk-self-hud">我方</span><span id="pk-match-hud">等待开战</span><span id="pk-peer-hud">对手</span></div></div>
+    <div class="pk-arena pk-hidden" id="pk-arena"><div id="pk-phaser"></div><div class="pk-arena-hud"><span id="pk-self-hud">我方</span><span id="pk-match-hud">等待开战</span><span id="pk-peer-hud">对手</span></div></div>
   </div>
 </section>
 <section id="game-content" hidden>
