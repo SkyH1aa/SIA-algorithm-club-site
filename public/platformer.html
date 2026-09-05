@@ -25,6 +25,7 @@ window.addEventListener('error',event=>{
 .pk-bottom-hud>div{min-width:0;overflow-wrap:anywhere;word-break:break-word}
 .pk-bottom-hud .pk-side-self{color:#b9f5ff}.pk-bottom-hud .pk-side-peer{color:#ffd0df}
 @media(max-width:700px){.pk-arena{padding-bottom:86px}.pk-bottom-hud{grid-template-columns:1fr;gap:1px;min-height:86px;padding:6px 9px;font-size:11px;line-height:1.35}}
+.game-admin-panel{margin:12px 0;border:1px solid #715c2b;border-radius:8px;background:#171a22;padding:18px 20px;box-shadow:0 10px 28px #0004}.game-admin-panel h2{margin:0 0 8px;color:#ffd166}.game-admin-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.game-admin-card{border:1px solid #3a4655;border-radius:6px;background:#0d1725;padding:12px}.game-admin-card h3{margin:0 0 10px;font-size:15px;color:#dff8ff}.game-admin-card input,.game-admin-card textarea,.game-admin-card select{width:100%;box-sizing:border-box;margin:4px 0 8px;padding:8px;border:1px solid #476176;border-radius:4px;background:#09121e;color:#fff}.game-admin-card textarea{min-height:110px;resize:vertical}.game-admin-actions{display:flex;flex-wrap:wrap;gap:8px}.game-admin-attachment{display:grid;grid-template-columns:minmax(0,1fr) 110px auto;gap:6px;align-items:center;margin:5px 0}.game-admin-attachment input{margin:0}.game-admin-list{max-height:220px;overflow:auto;margin-top:10px}.game-admin-row{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #243344;color:#d5e7f4;font-size:12px}.game-admin-row:last-child{border-bottom:0}.game-admin-message{min-height:20px;margin:8px 0 0;color:#ffd166;font-size:12px}.game-announcement-modal{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:18px;background:#02060dcc}.game-announcement-modal[hidden]{display:none}.game-announcement-card{width:min(580px,100%);max-height:min(80vh,720px);overflow:auto;border:1px solid #3d7792;border-radius:10px;background:linear-gradient(160deg,#12283a,#0c1522);box-shadow:0 24px 80px #000b;padding:22px;color:#eefaff}.game-announcement-card h2{margin:0;color:#62d9ee}.game-announcement-card .announcement-content{margin:14px 0;white-space:pre-wrap;line-height:1.7;color:#d5e7f4}.game-announcement-attachment{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:7px 0;padding:8px 10px;border:1px solid #715c2b;border-radius:5px;background:#211d12;color:#ffd166}.game-announcement-attachment button{height:30px}.game-announcement-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}@media(max-width:760px){.game-admin-grid{grid-template-columns:1fr}.game-admin-attachment{grid-template-columns:minmax(0,1fr) 90px auto}}
 </style>
 <style>
 :root{--ink:#070b13;--panel:#0d1725;--panel-2:#122236;--line:#24435a;--muted:#8fa7ba;--cyan:#62d9ee;--gold:#ffd166;--coral:#ff7b72;--violet:#bd9aff}
@@ -126,6 +127,37 @@ kbd{border-color:#38546a;background:#122438;color:#eafaff}
 <div class="notice">紫色技能豆：远程获得散弹，近战获得强化斩击；按 X 切换模式、右键切换武器。身法 70 级解锁空袭（F），90 级强化二段跳，100 级解锁浮空，115 级解锁暗杀令（V）。无尽模式每 15 秒刷新一波敌人。</div>
 </section>
 <section id="leaderboard-panel" class="leaderboard-panel" hidden><div class="leaderboard-head"><h2>总分排行榜</h2><button class="button secondary" id="leaderboard-refresh" type="button">刷新</button></div><ol id="leaderboard-list" class="leaderboard-list"><li>正在读取…</li></ol></section>
+<section id="game-admin-panel" class="game-admin-panel" hidden>
+  <h2>行于无垠 · 游戏管理员</h2>
+  <p class="game-admin-message" id="game-admin-access-message">正在读取管理员权限…</p>
+  <div class="game-admin-grid">
+    <div class="game-admin-card">
+      <h3>玩家金币调整</h3>
+      <select id="game-admin-player-select"><option value="">正在读取玩家…</option></select>
+      <input id="game-admin-coins-input" type="number" min="0" max="2147483647" step="1" placeholder="修改后的金币数量">
+      <div class="game-admin-actions"><button class="button" id="game-admin-save-coins" type="button">保存金币</button><button class="button secondary" id="game-admin-refresh-players" type="button">刷新玩家</button></div>
+      <p class="game-admin-message" id="game-admin-player-message"></p>
+    </div>
+    <div class="game-admin-card">
+      <h3>编辑游戏弹窗公告</h3>
+      <input id="game-admin-announcement-id" type="hidden">
+      <input id="game-admin-announcement-title" maxlength="120" placeholder="公告标题">
+      <textarea id="game-admin-announcement-content" maxlength="10000" placeholder="公告内容"></textarea>
+      <label><input id="game-admin-announcement-published" type="checkbox" checked> 发布后在游戏内弹窗显示</label>
+      <div style="margin-top:10px;color:#9cb3c3;font-size:12px">金币附件（每个账号每个附件只能领取一次）</div>
+      <div id="game-admin-attachments"></div>
+      <div class="game-admin-actions"><button class="button secondary" id="game-admin-add-attachment" type="button">添加金币附件</button><button class="button" id="game-admin-save-announcement" type="button">发布公告</button><button class="button secondary" id="game-admin-clear-announcement" type="button">清空</button></div>
+      <p class="game-admin-message" id="game-admin-announcement-message"></p>
+      <div class="game-admin-list" id="game-admin-announcement-list"></div>
+    </div>
+  </div>
+</section>
+<div class="game-announcement-modal" id="game-announcement-modal" hidden>
+  <div class="game-announcement-card" role="dialog" aria-modal="true" aria-labelledby="game-announcement-title">
+    <h2 id="game-announcement-title">游戏公告</h2><div class="announcement-content" id="game-announcement-content"></div><div id="game-announcement-attachments"></div>
+    <div class="game-announcement-actions"><button class="button secondary" id="game-announcement-close" type="button">稍后再看</button></div>
+  </div>
+</div>
 </main>
 <script>
 const SUPABASE_URL='https://jgezpvmlnhycxslqbwcx.supabase.co';
@@ -383,6 +415,28 @@ const authMessage=document.getElementById('auth-message');
 const authUser=document.getElementById('auth-user');
 const serviceStatus=document.getElementById('service-status');
 const serviceToggle=document.getElementById('service-toggle');
+const gameAdminPanel=document.getElementById('game-admin-panel');
+const gameAdminAccessMessage=document.getElementById('game-admin-access-message');
+const gameAdminPlayerSelect=document.getElementById('game-admin-player-select');
+const gameAdminCoinsInput=document.getElementById('game-admin-coins-input');
+const gameAdminPlayerMessage=document.getElementById('game-admin-player-message');
+const gameAdminRefreshPlayers=document.getElementById('game-admin-refresh-players');
+const gameAdminSaveCoins=document.getElementById('game-admin-save-coins');
+const gameAdminAnnouncementId=document.getElementById('game-admin-announcement-id');
+const gameAdminAnnouncementTitle=document.getElementById('game-admin-announcement-title');
+const gameAdminAnnouncementContent=document.getElementById('game-admin-announcement-content');
+const gameAdminAnnouncementPublished=document.getElementById('game-admin-announcement-published');
+const gameAdminAttachments=document.getElementById('game-admin-attachments');
+const gameAdminAddAttachment=document.getElementById('game-admin-add-attachment');
+const gameAdminSaveAnnouncement=document.getElementById('game-admin-save-announcement');
+const gameAdminClearAnnouncement=document.getElementById('game-admin-clear-announcement');
+const gameAdminAnnouncementMessage=document.getElementById('game-admin-announcement-message');
+const gameAdminAnnouncementList=document.getElementById('game-admin-announcement-list');
+const gameAnnouncementModal=document.getElementById('game-announcement-modal');
+const gameAnnouncementTitle=document.getElementById('game-announcement-title');
+const gameAnnouncementContent=document.getElementById('game-announcement-content');
+const gameAnnouncementAttachments=document.getElementById('game-announcement-attachments');
+const gameAnnouncementClose=document.getElementById('game-announcement-close');
 const changePasswordButton=document.getElementById('change-password-button');
 const passwordPanel=document.getElementById('password-panel');
 const oldPasswordInput=document.getElementById('old-password-input');
@@ -462,15 +516,20 @@ window.addEventListener('error',event=>{
   reportRuntimeError(event.error||event.message,'全局脚本/场景异常');
 });
 window.addEventListener('unhandledrejection',event=>reportRuntimeError(event.reason,'异步请求异常'));
-let serviceEnabled=true,serviceStatusKnown=false,servicePollId=0;
+let serviceEnabled=true,serviceStatusKnown=false,servicePollId=0,clubSuperAdmin=false,gameAdminPlayers=[],gameAdminAnnouncements=[],gameAnnouncementQueue=[];
+function isGameAdmin(){return Boolean(clubSuperAdmin||currentUser?.username?.toLowerCase()==='chm');}
+function gameAdminArgs(extra={}){return {p_username:currentUser?.username||'',p_token:currentUser?.token||'',...extra};}
+function setGameAdminMessage(target,message,isError=false){if(target){target.textContent=message||'';target.style.color=isError?'#ff8794':'#ffd166';}}
 function setAuthMessage(message,isError=false){authMessage.textContent=message;authMessage.style.color=isError?'#ff8794':'#ffd166'}
 function updateServiceUi(){
   if(serviceStatus){serviceStatus.textContent=serviceStatusKnown?`游戏服务：${serviceEnabled?'运行中':'已关闭'}`:'游戏服务：正在检查';serviceStatus.style.color=!serviceStatusKnown?'#ffd166':(serviceEnabled?'#7de3a6':'#ff8794');}
-  const isOperator=currentUser?.username==='chm';
+  const isOperator=isGameAdmin();
   if(serviceToggle){serviceToggle.hidden=!isOperator;serviceToggle.textContent=serviceEnabled?'关闭游戏服务':'开启游戏服务';serviceToggle.classList.toggle('secondary',serviceEnabled);}
   const typedName=usernameInput?.value.trim();
   const maintenance=serviceStatusKnown&&!serviceEnabled;
   const closedForUser=maintenance&&typedName!=='chm';
+  if(gameAdminPanel)gameAdminPanel.hidden=!isOperator;
+  if(gameAdminAccessMessage&&isOperator)gameAdminAccessMessage.textContent=clubSuperAdmin?'已由社团盘超级管理员身份解锁。':'已由游戏管理员身份解锁。';
   const loginButton=document.getElementById('login-button'),registerButton=document.getElementById('register-button');
   if(loginButton)loginButton.disabled=closedForUser;
   if(loginButton)loginButton.textContent=maintenance?'管理员登录':'登录';
@@ -479,6 +538,16 @@ function updateServiceUi(){
     if(typedName==='chm')setAuthMessage('管理员调试入口：请输入 chm 密码登录。');
     else setAuthMessage('服务器升级维护中，请稍后再试',true);
   }
+}
+async function refreshGameAdminAccess(){
+  if(!platformerDb)return false;
+  try{
+    const {data,error}=await platformerDb.rpc('platformer_club_super_admin');
+    clubSuperAdmin=!error&&(data===true||data?.platformer_club_super_admin===true||data?.[0]?.platformer_club_super_admin===true);
+  }catch(_){clubSuperAdmin=false;}
+  updateServiceUi();
+  if(isGameAdmin()){void loadGameAdminPlayers();void loadGameAdminAnnouncements();}
+  return isGameAdmin();
 }
 function setPasswordMessage(message,isError=false){if(passwordMessage){passwordMessage.textContent=message;passwordMessage.style.color=isError?'#ff8794':'#ffd166';}}
 function closePasswordPanel(){if(passwordPanel)passwordPanel.hidden=true;if(oldPasswordInput)oldPasswordInput.value='';if(newPasswordInput)newPasswordInput.value='';if(confirmPasswordInput)confirmPasswordInput.value='';setPasswordMessage('');}
@@ -514,14 +583,104 @@ async function refreshServiceStatus(enforce=true){
   return serviceEnabled;
 }
 async function toggleService(){
-  if(currentUser?.username!=='chm'||!platformerDb)return;
+  if(!isGameAdmin()||!platformerDb)return;
   serviceToggle.disabled=true;
   const next=!serviceEnabled;
-  const {data:result,error}=await platformerDb.rpc('platformer_set_service_enabled',{p_username:currentUser.username,p_token:currentUser.token,p_enabled:next});
+  const {data:result,error}=await platformerDb.rpc('platformer_set_service_enabled',gameAdminArgs({p_enabled:next}));
   serviceToggle.disabled=false;
   if(error||!result){setAuthMessage(error?.message||'服务状态修改失败。',true);return;}
   serviceEnabled=next;serviceStatusKnown=true;updateServiceUi();
   setAuthMessage(`游戏服务已${next?'开启':'关闭'}。`);
+}
+function renderGameAdminPlayers(rows){
+  gameAdminPlayers=Array.isArray(rows)?rows:[];
+  if(!gameAdminPlayerSelect)return;
+  gameAdminPlayerSelect.innerHTML=gameAdminPlayers.length?gameAdminPlayers.map(row=>`<option value="${escapeHtml(row.username)}">${escapeHtml(row.username)} · ${Number(row.coins)||0} 金币</option>`).join(''):'<option value="">暂无注册玩家</option>';
+  const selected=gameAdminPlayers[0];
+  if(selected&&gameAdminCoinsInput)gameAdminCoinsInput.value=Number(selected.coins)||0;
+}
+async function loadGameAdminPlayers(){
+  if(!isGameAdmin()||!platformerDb)return;
+  const {data:rows,error}=await platformerDb.rpc('platformer_admin_list_players',gameAdminArgs());
+  if(error){setGameAdminMessage(gameAdminPlayerMessage,error.message||'读取玩家失败。',true);return;}
+  renderGameAdminPlayers(rows);
+}
+function addGameAdminAttachment(amount='',label='金币附件'){
+  if(!gameAdminAttachments)return;
+  const row=document.createElement('div');row.className='game-admin-attachment';
+  row.innerHTML=`<input class="game-admin-attachment-label" maxlength="80" placeholder="附件名称" value="${escapeHtml(label)}"><input class="game-admin-attachment-amount" type="number" min="1" max="2147483647" step="1" placeholder="金币数量" value="${Number(amount)>0?Number(amount):''}"><button class="button secondary game-admin-remove-attachment" type="button">移除</button>`;
+  row.querySelector('.game-admin-remove-attachment')?.addEventListener('click',()=>row.remove());
+  gameAdminAttachments.appendChild(row);
+}
+function clearGameAnnouncementEditor(){
+  if(gameAdminAnnouncementId)gameAdminAnnouncementId.value='';
+  if(gameAdminAnnouncementTitle)gameAdminAnnouncementTitle.value='';
+  if(gameAdminAnnouncementContent)gameAdminAnnouncementContent.value='';
+  if(gameAdminAnnouncementPublished)gameAdminAnnouncementPublished.checked=true;
+  if(gameAdminAttachments)gameAdminAttachments.innerHTML='';
+  setGameAdminMessage(gameAdminAnnouncementMessage,'');
+}
+function collectGameAnnouncementAttachments(){
+  return [...(gameAdminAttachments?.querySelectorAll('.game-admin-attachment')||[])].map(row=>({label:row.querySelector('.game-admin-attachment-label')?.value?.trim()||'金币附件',amount:Math.floor(Number(row.querySelector('.game-admin-attachment-amount')?.value)||0)})).filter(item=>item.amount>0);
+}
+function editGameAnnouncement(item){
+  if(!item)return;
+  gameAdminAnnouncementId.value=item.id||'';gameAdminAnnouncementTitle.value=item.title||'';gameAdminAnnouncementContent.value=item.content||'';gameAdminAnnouncementPublished.checked=Boolean(item.is_published);gameAdminAttachments.innerHTML='';
+  (Array.isArray(item.attachments)?item.attachments:[]).forEach(attachment=>addGameAdminAttachment(attachment.amount,attachment.label));
+  gameAdminAnnouncementTitle.focus();
+}
+function renderGameAdminAnnouncements(rows){
+  gameAdminAnnouncements=Array.isArray(rows)?rows:[];
+  if(!gameAdminAnnouncementList)return;
+  gameAdminAnnouncementList.innerHTML=gameAdminAnnouncements.length?gameAdminAnnouncements.map(item=>`<div class="game-admin-row"><span>${escapeHtml(item.title)} · ${item.is_published?'已发布':'草稿'} · ${(Array.isArray(item.attachments)?item.attachments.length:0)} 个附件</span><span class="game-admin-actions"><button class="button secondary" type="button" data-game-announcement-edit="${item.id}">编辑</button><button class="button secondary" type="button" data-game-announcement-delete="${item.id}">删除</button></span></div>`).join(''):'<div class="game-admin-message">还没有游戏公告。</div>';
+}
+async function loadGameAdminAnnouncements(){
+  if(!isGameAdmin()||!platformerDb)return;
+  const {data:rows,error}=await platformerDb.rpc('platformer_admin_list_announcements',gameAdminArgs());
+  if(error){setGameAdminMessage(gameAdminAnnouncementMessage,error.message||'读取公告失败。',true);return;}
+  renderGameAdminAnnouncements(rows);
+}
+async function saveGameAdminAnnouncement(){
+  if(!isGameAdmin()||!platformerDb)return;
+  const title=gameAdminAnnouncementTitle?.value?.trim()||'',content=gameAdminAnnouncementContent?.value?.trim()||'';
+  if(!title||!content){setGameAdminMessage(gameAdminAnnouncementMessage,'公告标题和内容不能为空。',true);return;}
+  gameAdminSaveAnnouncement.disabled=true;setGameAdminMessage(gameAdminAnnouncementMessage,'正在保存公告…');
+  const {data:id,error}=await platformerDb.rpc('platformer_admin_save_announcement',gameAdminArgs({p_id:gameAdminAnnouncementId.value||null,p_title:title,p_content:content,p_is_published:!!gameAdminAnnouncementPublished.checked,p_attachments:collectGameAnnouncementAttachments()}));
+  gameAdminSaveAnnouncement.disabled=false;
+  if(error){setGameAdminMessage(gameAdminAnnouncementMessage,error.message||'保存公告失败。',true);return;}
+  setGameAdminMessage(gameAdminAnnouncementMessage,'公告已保存。');clearGameAnnouncementEditor();await loadGameAdminAnnouncements();
+}
+async function deleteGameAdminAnnouncement(id){
+  if(!isGameAdmin()||!platformerDb||!id||!confirm('确认删除这条游戏公告吗？'))return;
+  const {error}=await platformerDb.rpc('platformer_admin_delete_announcement',gameAdminArgs({p_id:id}));
+  if(error){setGameAdminMessage(gameAdminAnnouncementMessage,error.message||'删除公告失败。',true);return;}
+  clearGameAnnouncementEditor();await loadGameAdminAnnouncements();
+}
+function openGameAnnouncement(item){
+  if(!item||!gameAnnouncementModal)return;
+  gameAnnouncementTitle.textContent=item.title||'游戏公告';gameAnnouncementContent.textContent=item.content||'';gameAnnouncementAttachments.innerHTML='';
+  (Array.isArray(item.attachments)?item.attachments:[]).forEach(attachment=>{
+    const row=document.createElement('div');row.className='game-announcement-attachment';
+    const label=document.createElement('span');label.textContent=`${attachment.label||'金币附件'}：${Number(attachment.amount)||0} 金币`;
+    const button=document.createElement('button');button.className='button secondary';button.type='button';button.textContent=attachment.claimed?'已领取':'领取附件';button.disabled=!!attachment.claimed;
+    button.addEventListener('click',async()=>{button.disabled=true;button.textContent='领取中…';const {data:result,error}=await platformerDb.rpc('platformer_claim_announcement_attachment',gameAdminArgs({p_attachment_id:attachment.id}));const claim=Array.isArray(result)?result[0]:result;if(error){button.disabled=false;button.textContent='领取附件';setAuthMessage(error.message||'领取失败。',true);return}if(!claim?.already_claimed&&Number(claim?.reward)>0){data.coins+=Number(claim.reward);save();}button.textContent=claim?.already_claimed?'已领取':`已领取 +${Number(claim?.reward)||0}`;});row.append(label,button);gameAnnouncementAttachments.appendChild(row);
+  });
+  gameAnnouncementModal.hidden=false;
+}
+function showNextGameAnnouncement(){const next=gameAnnouncementQueue.shift();if(next)openGameAnnouncement(next);else if(gameAnnouncementModal)gameAnnouncementModal.hidden=true;}
+async function loadGameAnnouncements(){
+  if(!currentUser||!platformerDb)return;
+  const {data:rows,error}=await platformerDb.rpc('platformer_announcements_public',gameAdminArgs());
+  if(error||!Array.isArray(rows)||!rows.length)return;
+  gameAnnouncementQueue=rows.slice();showNextGameAnnouncement();
+}
+async function saveGameAdminCoins(){
+  const target=gameAdminPlayerSelect?.value,coins=Math.floor(Number(gameAdminCoinsInput?.value)||0);
+  if(!target){setGameAdminMessage(gameAdminPlayerMessage,'请选择玩家。',true);return}
+  gameAdminSaveCoins.disabled=true;const {error}=await platformerDb.rpc('platformer_admin_set_player_coins',gameAdminArgs({p_target_username:target,p_coins:coins}));gameAdminSaveCoins.disabled=false;
+  if(error){setGameAdminMessage(gameAdminPlayerMessage,error.message||'修改金币失败。',true);return}
+  if(currentUser?.username===target){data.coins=coins;save();}
+  setGameAdminMessage(gameAdminPlayerMessage,`${target} 的金币已修改为 ${coins}。`);await loadGameAdminPlayers();
 }
 function isEventActive(){const now=new Date();const start=new Date('2026-08-31T00:00:00+08:00'),end=new Date('2026-09-15T00:00:00+08:00');return now>=start&&now<end}
 async function claimEventRewards(){
@@ -578,6 +737,7 @@ async function startGame(profile){
     changePasswordButton.hidden=true;return;
   }
   void refreshServiceStatus(true);void loadLeaderboard();
+  void refreshGameAdminAccess();void loadGameAnnouncements();
   window.dispatchEvent(new CustomEvent('xingyu:authenticated'));
 }
 async function authenticate(action){
@@ -634,8 +794,18 @@ changePasswordButton?.addEventListener('click',openPasswordPanel);
 savePasswordButton?.addEventListener('click',()=>void changePassword());
 cancelPasswordButton?.addEventListener('click',closePasswordPanel);
 serviceToggle?.addEventListener('click',()=>void toggleService());
+gameAdminRefreshPlayers?.addEventListener('click',()=>void loadGameAdminPlayers());
+gameAdminSaveCoins?.addEventListener('click',()=>void saveGameAdminCoins());
+gameAdminAddAttachment?.addEventListener('click',()=>addGameAdminAttachment());
+gameAdminSaveAnnouncement?.addEventListener('click',()=>void saveGameAdminAnnouncement());
+gameAdminClearAnnouncement?.addEventListener('click',clearGameAnnouncementEditor);
+gameAdminPlayerSelect?.addEventListener('change',()=>{const row=gameAdminPlayers.find(item=>item.username===gameAdminPlayerSelect.value);if(row&&gameAdminCoinsInput)gameAdminCoinsInput.value=Number(row.coins)||0;});
+gameAdminAnnouncementList?.addEventListener('click',event=>{const edit=event.target.closest('[data-game-announcement-edit]'),remove=event.target.closest('[data-game-announcement-delete]');if(edit)editGameAnnouncement(gameAdminAnnouncements.find(item=>item.id===edit.dataset.gameAnnouncementEdit));if(remove)void deleteGameAdminAnnouncement(remove.dataset.gameAnnouncementDelete);});
+gameAnnouncementClose?.addEventListener('click',showNextGameAnnouncement);
 usernameInput?.addEventListener('input',updateServiceUi);
 void refreshServiceStatus(false);
+void refreshGameAdminAccess();
+platformerDb?.auth?.onAuthStateChange(()=>void refreshGameAdminAccess());
 servicePollId=window.setInterval(()=>void refreshServiceStatus(true),30000);
 document.getElementById('leaderboard-refresh').onclick=()=>void loadLeaderboard();
 usernameInput.addEventListener('keydown',event=>{if(event.key==='Enter')authenticate('login')});
