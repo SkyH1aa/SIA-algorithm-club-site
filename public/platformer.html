@@ -135,7 +135,7 @@ kbd{border-color:#38546a;background:#122438;color:#eafaff}
     <div class="game-admin-card">
       <h3>玩家金币调整</h3>
       <select id="game-admin-player-select"><option value="">正在读取玩家…</option></select>
-      <input id="game-admin-coins-input" type="number" min="0" max="2147483647" step="1" placeholder="修改后的金币数量">
+      <input id="game-admin-coins-input" type="number" min="0" max="9223372036854775807" step="1" placeholder="修改后的金币数量">
       <div class="game-admin-actions"><button class="button" id="game-admin-save-coins" type="button">保存金币</button><button class="button secondary" id="game-admin-refresh-players" type="button">刷新玩家</button></div>
       <p class="game-admin-message" id="game-admin-player-message"></p>
     </div>
@@ -636,7 +636,7 @@ async function loadGameAdminPlayers(){
 function addGameAdminAttachment(amount='',label='金币附件'){
   if(!gameAdminAttachments)return;
   const row=document.createElement('div');row.className='game-admin-attachment';
-  row.innerHTML=`<input class="game-admin-attachment-label" maxlength="80" placeholder="附件名称" value="${escapeHtml(label)}"><input class="game-admin-attachment-amount" type="number" min="1" max="2147483647" step="1" placeholder="金币数量" value="${Number(amount)>0?Number(amount):''}"><button class="button secondary game-admin-remove-attachment" type="button">移除</button>`;
+  row.innerHTML=`<input class="game-admin-attachment-label" maxlength="80" placeholder="附件名称" value="${escapeHtml(label)}"><input class="game-admin-attachment-amount" type="number" min="1" max="9223372036854775807" step="1" placeholder="金币数量" value="${Number(amount)>0?Number(amount):''}"><button class="button secondary game-admin-remove-attachment" type="button">移除</button>`;
   row.querySelector('.game-admin-remove-attachment')?.addEventListener('click',()=>row.remove());
   gameAdminAttachments.appendChild(row);
 }
