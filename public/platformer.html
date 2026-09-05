@@ -19,6 +19,12 @@ window.addEventListener('error',event=>{
 <style>
 :root{font-family:"Segoe UI","Microsoft YaHei",sans-serif;color:#f7fbff;background:#080b14}*{box-sizing:border-box}body{margin:0;min-width:320px;min-height:100vh;background:radial-gradient(circle at 50% 0%,#203a56,#080b14 65%)}.shell{width:min(1180px,100%);margin:auto;padding:16px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}h1{margin:0;font-size:clamp(19px,4vw,29px)}a{color:#9fe8ff;text-decoration:none;font-size:14px}.auth-gate,.leaderboard-panel{border:1px solid #2b6980;border-radius:8px;background:#111b32;padding:20px;margin-bottom:12px}.auth-gate h2,.leaderboard-panel h2{margin:0 0 8px;font-size:20px}.auth-form{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.auth-form input{height:38px;width:190px;border:1px solid #476176;border-radius:4px;background:#0b1424;color:#fff;padding:0 10px}.button{height:38px;border:1px solid #3da5c7;border-radius:4px;background:#19334b;color:#fff;padding:0 14px;cursor:pointer}.button.secondary{border-color:#476176;background:#18202e}.auth-message{min-height:20px;margin:10px 0 0;color:#ffd166;font-size:13px}.auth-user{color:#9fe8ff;font-size:13px;margin-right:12px}#game-wrap{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border:1px solid #2b6980;border-radius:8px;background:#111b32;box-shadow:0 20px 80px #0009}#game,#game canvas{width:100%;height:100%}#game canvas{display:block}.game-loading{position:absolute;inset:0;z-index:30;display:grid;place-items:center;background:#111b32;color:#d8f4ff;font-size:16px;letter-spacing:.02em}.game-loading[hidden]{display:none}.help{display:flex;flex-wrap:wrap;gap:8px 18px;margin:10px 2px 0;color:#a6b9ca;font-size:13px}kbd{padding:2px 6px;border:1px solid #476176;border-bottom-width:2px;border-radius:4px;background:#172638;color:#eaf7ff}.notice{margin-top:10px;color:#ffd77a;font-size:12px}.leaderboard-head{display:flex;justify-content:space-between;align-items:center}.leaderboard-list{margin:10px 0 0;padding-left:25px;color:#eaf7ff}.leaderboard-list li{padding:4px 0}.leaderboard-list small{color:#9fb7c9}
 .touch-controls{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:12px 0 0;padding:4px 2px;user-select:none;touch-action:none}.joystick{position:relative;width:132px;height:88px;border:1px solid #476176;border-radius:44px;background:#101d30;box-shadow:inset 0 0 0 1px #203b51;touch-action:none}.joystick::after{content:'左右移动';position:absolute;inset:0;display:grid;place-items:center;color:#9fb7c9;font-size:12px;pointer-events:none}.joystick-knob{position:absolute;z-index:1;left:43px;top:21px;width:44px;height:44px;border-radius:50%;background:#3da5c7;box-shadow:0 4px 16px #0008;touch-action:none}.touch-actions{display:grid;grid-template-columns:repeat(3,minmax(104px,1fr));gap:10px;flex:1}.touch-button{min-width:0;height:54px;border:1px solid #3da5c7;border-radius:8px;background:#19334b;color:#fff;font-weight:600;font-size:14px;line-height:1.2;cursor:pointer;touch-action:none}.touch-button small{color:#9fb7c9;font-size:11px}.touch-button:active{background:#285d78;transform:translateY(1px)}@media (max-width:560px){.touch-controls{align-items:stretch;gap:10px}.joystick{width:104px;height:auto;min-height:118px;border-radius:52px}.joystick-knob{left:30px;top:36px}.touch-actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.touch-button{height:54px;padding:0 4px;font-size:13px}}
+/* Arena PK bottom status bar */
+.pk-arena{padding-bottom:68px;box-sizing:border-box}
+.pk-bottom-hud{position:absolute;left:0;right:0;bottom:0;min-height:68px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;padding:8px 12px;box-sizing:border-box;background:linear-gradient(180deg,#10283d,#091724);border-top:1px solid #315a72;color:#dff8ff;font-size:13px;line-height:1.45;text-shadow:0 1px 3px #000;pointer-events:none}
+.pk-bottom-hud>div{min-width:0;overflow-wrap:anywhere;word-break:break-word}
+.pk-bottom-hud .pk-side-self{color:#b9f5ff}.pk-bottom-hud .pk-side-peer{color:#ffd0df}
+@media(max-width:700px){.pk-arena{padding-bottom:86px}.pk-bottom-hud{grid-template-columns:1fr;gap:1px;min-height:86px;padding:6px 9px;font-size:11px;line-height:1.35}}
 </style>
 <style>
 :root{--ink:#070b13;--panel:#0d1725;--panel-2:#122236;--line:#24435a;--muted:#8fa7ba;--cyan:#62d9ee;--gold:#ffd166;--coral:#ff7b72;--violet:#bd9aff}
@@ -97,7 +103,7 @@ kbd{border-color:#38546a;background:#122438;color:#eafaff}
     <div style="margin-top:10px">邀请码：<span class="pk-room-code" id="pk-room-code">--------</span> <button class="button secondary" id="pk-copy-button" type="button">复制</button></div>
     <div class="pk-wager"><label for="pk-wager-input">押注金币（0 或 1-1000000）</label><input id="pk-wager-input" type="number" min="0" max="1000000" step="1" value="0"><button class="button secondary" id="pk-accept-button" type="button">接受邀请</button><button class="button" id="pk-wager-button" type="button">锁定押注</button><button class="button secondary" id="pk-ready-button" type="button">准备</button><button class="button secondary" id="pk-leave-button" type="button">退出房间</button></div>
     <p class="pk-status" id="pk-room-message"></p>
-    <div class="pk-arena pk-hidden" id="pk-arena"><div id="pk-phaser"></div><div class="pk-arena-hud"><span id="pk-self-hud">我方</span><span id="pk-match-hud">等待开战</span><span id="pk-peer-hud">对手</span></div></div>
+    <div class="pk-arena pk-hidden" id="pk-arena"><div id="pk-phaser"></div><div class="pk-bottom-hud" aria-label="竞技场双方状态"><div id="pk-self-hud" class="pk-side-self">我方</div><div id="pk-peer-hud" class="pk-side-peer">敌方</div></div></div>
   </div>
 </section>
 <section id="game-content" hidden>
@@ -2194,6 +2200,6 @@ window.xingyuPlatformerCombat={
 void resumeSession();
 }
 </script>
-<script src="platformer-pk.js?v=20260905-10"></script>
+<script src="platformer-pk.js?v=20260905-11"></script>
 </body>
 </html>
