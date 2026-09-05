@@ -93,7 +93,7 @@ kbd{border-color:#38546a;background:#122438;color:#eafaff}
 <script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
 <body>
 <main class="shell">
-<header><h1>行于无垠</h1><div><span id="service-status" class="auth-user">游戏服务：正在检查</span><span id="auth-user" class="auth-user"></span><button class="button secondary" id="change-password-button" type="button" hidden>修改密码</button><button class="button secondary" id="pk-open-button" type="button" hidden>联机 PK</button><button class="button secondary" id="service-toggle" type="button" hidden>关闭游戏服务</button><a href="../index.html">返回官网</a></div></header>
+<header><h1>行于无垠</h1><div><span id="service-status" class="auth-user">游戏服务：正在检查</span><span id="auth-user" class="auth-user"></span><button class="button secondary" id="change-password-button" type="button" hidden>修改密码</button><button class="button secondary" id="pk-open-button" type="button" hidden>联机 PK</button><button class="button secondary" id="service-toggle" type="button" hidden>关闭游戏服务</button><button class="button secondary" id="logout-button" type="button" hidden>退出登录</button><a href="../index.html">返回官网</a></div></header>
 <section id="auth-gate" class="auth-gate"><h2>登录后开始游戏</h2><p>使用本游戏独立账号，不与社团盘登录系统关联。</p><div class="auth-form"><input id="username-input" type="text" maxlength="32" placeholder="用户名"><input id="password-input" type="password" maxlength="72" placeholder="密码"><button class="button" id="login-button" type="button">登录</button><button class="button secondary" id="register-button" type="button">注册新用户</button></div><p id="auth-message" class="auth-message" role="status"></p></section>
 <section id="password-panel" class="password-panel" hidden><h2>修改密码</h2><div class="password-form"><input id="old-password-input" type="password" maxlength="72" placeholder="当前密码"><input id="new-password-input" type="password" maxlength="72" placeholder="新密码（至少6位）"><input id="confirm-password-input" type="password" maxlength="72" placeholder="确认新密码"><button class="button" id="save-password-button" type="button">保存密码</button><button class="button secondary" id="cancel-password-button" type="button">取消</button></div><p id="password-message" class="password-message" role="status"></p></section>
 <section id="pk-panel" class="pk-panel" hidden>
@@ -439,6 +439,7 @@ const gameAnnouncementContent=document.getElementById('game-announcement-content
 const gameAnnouncementAttachments=document.getElementById('game-announcement-attachments');
 const gameAnnouncementClose=document.getElementById('game-announcement-close');
 const changePasswordButton=document.getElementById('change-password-button');
+const logoutButton=document.getElementById('logout-button');
 const passwordPanel=document.getElementById('password-panel');
 const oldPasswordInput=document.getElementById('old-password-input');
 const newPasswordInput=document.getElementById('new-password-input');
@@ -569,10 +570,36 @@ async function changePassword(){
 }
 function lockForMaintenance(){
   if(currentUser?.username==='chm')return;
+  void window.xingyuPkLogout?.();
+  try{gameInstance?.destroy(true)}catch(_){}
+  gameInstance=null;
   currentUser=null;localStorage.removeItem('platformer-session');
-  gameInstance?.scene.stop('Game');
-  gameContent.hidden=true;leaderboardPanel.hidden=true;authGate.hidden=false;authUser.textContent='';changePasswordButton.hidden=true;closePasswordPanel();
+  gameContent.hidden=true;leaderboardPanel.hidden=true;authGate.hidden=false;authUser.textContent='';changePasswordButton.hidden=true;if(logoutButton)logoutButton.hidden=true;closePasswordPanel();
   updateServiceUi();setAuthMessage('服务器升级维护中，请稍后再试',true);
+}
+async function logout(){
+  // Leave the game account only. The club website's Supabase Auth session is
+  // intentionally untouched because the two login systems are independent.
+  logoutButton&&(logoutButton.disabled=true);
+  try{await window.xingyuPkLogout?.()}catch(error){console.warn('[行于无垠] 清理 PK 状态失败',error)}
+  try{gameInstance?.destroy(true)}catch(error){console.warn('[行于无垠] 销毁游戏实例失败',error)}
+  gameInstance=null;
+  try{document.getElementById('game').innerHTML=''}catch(_){/* The game container may already be gone. */}
+  const pkPhaser=document.getElementById('pk-phaser');if(pkPhaser)pkPhaser.innerHTML='';
+  const pkPanel=document.getElementById('pk-panel');if(pkPanel)pkPanel.hidden=true;
+  const pkOpenButton=document.getElementById('pk-open-button');if(pkOpenButton)pkOpenButton.hidden=true;
+  const announcementModal=document.getElementById('game-announcement-modal');if(announcementModal)announcementModal.hidden=true;
+  gameAnnouncementQueue=[];
+  currentUser=null;window.xingyuSession=null;clubSuperAdmin=false;
+  localStorage.removeItem('platformer-session');
+  authGate.hidden=false;gameContent.hidden=true;leaderboardPanel.hidden=true;
+  authUser.textContent='';
+  changePasswordButton.hidden=true;
+  if(logoutButton){logoutButton.hidden=true;logoutButton.disabled=false;}
+  closePasswordPanel();
+  usernameInput.value='';passwordInput.value='';
+  setAuthMessage('已退出登录。');
+  updateServiceUi();
 }
 async function refreshServiceStatus(enforce=true){
   if(!platformerDb)return null;
@@ -733,6 +760,7 @@ async function startGame(profile){
   applyProfile(profile);await loadBattleGod();await loadBattleGod2();
   authGate.hidden=true;gameContent.hidden=false;leaderboardPanel.hidden=false;
   authUser.textContent=`已登录：${currentUser.username}`;changePasswordButton.hidden=false;updateServiceUi();
+  logoutButton.hidden=false;
   if(!createGame()){
     authGate.hidden=false;gameContent.hidden=true;leaderboardPanel.hidden=true;
     changePasswordButton.hidden=true;return;
@@ -792,6 +820,7 @@ function escapeHtml(value){return String(value).replace(/[&<>'"]/g,char=>({'&':'
 document.getElementById('login-button').onclick=()=>authenticate('login');
 document.getElementById('register-button').onclick=()=>authenticate('register');
 changePasswordButton?.addEventListener('click',openPasswordPanel);
+logoutButton?.addEventListener('click',()=>void logout());
 savePasswordButton?.addEventListener('click',()=>void changePassword());
 cancelPasswordButton?.addEventListener('click',closePasswordPanel);
 serviceToggle?.addEventListener('click',()=>void toggleService());
@@ -2371,6 +2400,6 @@ window.xingyuPlatformerCombat={
 void resumeSession();
 }
 </script>
-<script src="platformer-pk.js?v=20260905-12"></script>
+<script src="platformer-pk.js?v=20260905-13"></script>
 </body>
 </html>

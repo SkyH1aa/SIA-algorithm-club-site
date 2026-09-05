@@ -12,7 +12,13 @@
   const send=(event,payload)=>{try{const result=state.channel?.send({type:'broadcast',event,payload});if(result&&typeof result.catch==='function')result.catch(()=>{});}catch(_){} };
   async function rpc(name,args){const client=db(),user=session();if(!client||!user)throw Error('请先登录游戏');try{const result=await client.functions.invoke('platformer-pk',{body:{action:name,username:user.username,token:user.token,args}});if(!result.error)return result.data?.data??result.data}catch(_){}const result=await client.rpc(name,{p_username:user.username,p_token:user.token,...args});if(result.error)throw result.error;return Array.isArray(result.data)?result.data[0]:result.data;}
   function disposeArena(){const old=state.scene;state.scene=null;try{old?.game?.destroy(true)}catch(_){}try{$('pk-phaser').innerHTML=''}catch(_){} }
-  function clearRoom(){try{state.channel?.unsubscribe()}catch(_){}clearInterval(state.poll);state.channel=null;disposeArena();state.room=null;state.match=null;state.peerState=null;state.peerSeq=-1;state.stateSeq=0;state.pendingShots=[];state.pendingSkills=[];state.pendingHits=[];state.finished=false;$('pk-ready-button')?.removeAttribute('disabled');arena.classList.add('pk-hidden');room.classList.add('pk-hidden');}
+  function clearRoom(){try{state.channel?.unsubscribe()}catch(_){}clearInterval(state.poll);state.poll=0;state.channel=null;disposeArena();state.room=null;state.match=null;state.peer=null;state.peerState=null;state.peerSeq=-1;state.stateSeq=0;state.pendingShots=[];state.pendingSkills=[];state.pendingHits=[];state.finished=false;state.ready=false;$('pk-ready-button')?.removeAttribute('disabled');arena.classList.add('pk-hidden');room.classList.add('pk-hidden');}
+  // Logout needs a cleanup path that does not submit a defeat result or award
+  // anything. The page calls this before removing the game session token.
+  window.xingyuPkLogout=async()=>{
+    try{if(state.room){await rpc('platformer_pk_leave_room',{p_room_id:state.room.id})}}catch(error){console.warn('[行于无垠 PK] 退出时清理房间失败',error)}
+    clearRoom();panel.hidden=true;open.hidden=true;
+  };
   function updateRoom(snapshot){
     if(!snapshot)return;room.classList.remove('pk-hidden');code.textContent=snapshot.invite_code||state.room?.invite_code||'--------';roomState.textContent=snapshot.status==='started'?'对战进行中':snapshot.status==='finished'?'对战结束':snapshot.status==='disputed'?'结果争议/已退款':snapshot.status==='cancelled'?'房间已取消':snapshot.status==='paired'?'已匹配对手':'等待对手';
     const members=snapshot.members||[],me=members.find(member=>member.username===session()?.username),other=members.find(member=>member.username!==session()?.username);state.peer=other||state.peer;state.ready=!!me?.ready;mineReady.textContent=state.ready?'已准备':'未准备';peerReady.textContent=other?.ready?'已准备':'未准备';presence.textContent=`${Math.min(2,members.length)} / 2`;
