@@ -968,7 +968,7 @@ class Game extends Phaser.Scene{
     this.attackEvoLevel=attackEvoLevel;this.armorEvoLevel=armorEvoLevel;
     this.battleGodLevel=battleGodLevel;this.battleGod2Level=battleGod2Level;
     this.score=0;this.coins=0;this.maxHp=(25+hpUpgrade+combatLife+lifeEvoHp+battleGodLife)*battleGod2HpMultiplier;this.hp=this.maxHp;this.atk=(1+atkUpgrade+combatGun+attackEvoDamage+battleGodGun)*battleGod2GunMultiplier;this.hpUpgrade=hpUpgrade;this.atkUpgrade=atkUpgrade;this.shotUpgrade=Math.max(0,Number(data.shot)||0);this.ammoLevel=this.shotUpgrade>=100?Math.max(0,Math.min(100,Number(data.ammo)||0)):0;this.invulnerable=false;this.touchFiring=false;this.touchAimActive=false;this.jumpRequested=false;this.touchDashHeld=false;this.kills=0;
-    this.hpRegenPerSecond=hpUpgrade>=75?2:hpUpgrade>=65?1:hpUpgrade>=50?.5:0;this.hpKillChance=hpUpgrade>=75?.5:hpUpgrade>=65?.35:0;this.hpKillAmount=hpUpgrade>=75?1.5:hpUpgrade>=65?.5:0;this.hpEmergencyHeal=hpUpgrade>=100;this.hpEmergencyReadyAt=0;this.damageReduction=hpUpgrade>=120?.1:0;this.undyingAvailable=hpUpgrade>=150;this.nextHpRegenAt=0;
+    this.hpRegenPerSecond=hpUpgrade>=75?2:hpUpgrade>=65?1:hpUpgrade>=50?.5:0;this.hpKillChance=hpUpgrade>=75?.5:hpUpgrade>=65?.35:0;this.hpKillAmount=hpUpgrade>=75?1.5:hpUpgrade>=65?.5:0;this.hpEmergencyHeal=hpUpgrade>=100;this.hpEmergencyReadyAt=0;this.damageReduction=hpUpgrade>=120?.1:0;this.undyingAvailable=hpUpgrade>=150;this.nextHpRegenAt=0;this.damageIFrameUntil=0;
     this.armorLevel=Math.max(0,Math.min(100,Number(data.armor)||0));
     this.armorMax=(this.armorLevel>=1?100+15*Math.min(8,Math.max(0,this.armorLevel-1))+(this.armorLevel>=10?50:0)+10*Math.min(19,Math.max(0,this.armorLevel-10))+5*Math.min(14,Math.max(0,this.armorLevel-30))+(this.armorLevel>=45?25:0)+10*Math.min(4,Math.max(0,this.armorLevel-45))+(this.armorLevel>=50?150:0)+8*Math.min(9,Math.max(0,this.armorLevel-50))+(this.armorLevel>=60?125:0)+6*Math.min(9,Math.max(0,this.armorLevel-60))+(this.armorLevel>=70?50:0)+(this.armorLevel>=75?150:0)+5*Math.min(9,Math.max(0,this.armorLevel-75))+(this.armorLevel>=85?120:0)+(this.armorLevel>=90?200:0)+12*Math.min(4,Math.max(0,this.armorLevel-90))+(this.armorLevel>=95?150:0)+8*Math.min(4,Math.max(0,this.armorLevel-95))+(this.armorLevel>=100?300:0):0)+combatArmor+armorEvoArmor+battleGodArmor;
     const armorMaxBeforeBattleGod2=this.armorMax;this.armorMax*=battleGod2ArmorMultiplier;
@@ -1313,7 +1313,8 @@ class Game extends Phaser.Scene{
     if(enemy.art?.active)enemy.art.destroy();enemy.destroy();
   }
   damage(amount,sourceEnemy=null){
-    if(this.invulnerable||this.done)return;
+    if((this.invulnerable&&this.time.now<this.damageIFrameUntil)||this.done)return;
+    if(this.invulnerable&&this.time.now>=this.damageIFrameUntil)this.invulnerable=false;
     this.damageDepth=(this.damageDepth||0)+1;
     if(this.damageDepth>32){this.damageDepth--;console.warn('[行于无垠] 伤害递归已截断');return;}
     try{
@@ -1337,15 +1338,18 @@ class Game extends Phaser.Scene{
     if(armorBroken)this.handleArmorBreak(sourceEnemy);
     const nextHp=Phaser.Math.Clamp((Number(this.hp)||0)-hpDamage,0,this.maxHp);
     if(nextHp<=0&&this.undyingAvailable){
-      this.undyingAvailable=false;this.healPlayer(this.maxHp*.5);this.invulnerable=true;
-      this.time.delayedCall(900,()=>this.invulnerable=false);
+      this.undyingAvailable=false;this.healPlayer(this.maxHp*.5);this.invulnerable=true;this.damageIFrameUntil=this.time.now+900;
+      this.time.delayedCall(900,()=>{if(this.time.now>=this.damageIFrameUntil)this.invulnerable=false});
       if(sourceEnemy?.active)this.damageEnemy(sourceEnemy,500,'undying');
       return;
     }
     this.hp=nextHp;
     this.lastDamagedAt=this.time.now;this.destructionReadyAt=this.time.now+3000;this.destructionActive=false;
     this.playerHitEffect();
-    this.invulnerable=true;this.time.delayedCall(900,()=>this.invulnerable=false);
+    // Short hit-stop prevents duplicate overlap callbacks from one projectile,
+    // but allows a stream of bullets/enemy hits to deal damage again quickly.
+    const iframeMs=80;this.invulnerable=true;this.damageIFrameUntil=this.time.now+iframeMs;
+    this.time.delayedCall(iframeMs,()=>{if(this.time.now>=this.damageIFrameUntil)this.invulnerable=false});
     if(this.hp<=0){this.hp=0;this.failLevel();}
     }finally{
       this.damageDepth=Math.max(0,(this.damageDepth||1)-1);
@@ -2190,6 +2194,6 @@ window.xingyuPlatformerCombat={
 void resumeSession();
 }
 </script>
-<script src="platformer-pk.js?v=20260905-8"></script>
+<script src="platformer-pk.js?v=20260905-9"></script>
 </body>
 </html>

@@ -11,11 +11,18 @@
   const roomSay=(text,error)=>{message.textContent=text;message.style.color=error?'#ff8794':'#ffd166'};
   const send=(event,payload)=>{try{const result=state.channel?.send({type:'broadcast',event,payload});if(result&&typeof result.catch==='function')result.catch(()=>{});}catch(_){} };
   async function rpc(name,args){const client=db(),user=session();if(!client||!user)throw Error('请先登录游戏');try{const result=await client.functions.invoke('platformer-pk',{body:{action:name,username:user.username,token:user.token,args}});if(!result.error)return result.data?.data??result.data}catch(_){}const result=await client.rpc(name,{p_username:user.username,p_token:user.token,...args});if(result.error)throw result.error;return Array.isArray(result.data)?result.data[0]:result.data;}
-  function clearRoom(){try{state.channel?.unsubscribe()}catch(_){}clearInterval(state.poll);state.channel=null;if(state.scene?.game)state.scene.game.destroy(true);state.scene=null;state.room=null;state.match=null;state.peerState=null;state.peerSeq=-1;state.stateSeq=0;state.pendingShots=[];state.pendingSkills=[];state.pendingHits=[];state.finished=false;arena.classList.add('pk-hidden');room.classList.add('pk-hidden');}
+  function clearRoom(){try{state.channel?.unsubscribe()}catch(_){}clearInterval(state.poll);state.channel=null;if(state.scene?.game)state.scene.game.destroy(true);state.scene=null;state.room=null;state.match=null;state.peerState=null;state.peerSeq=-1;state.stateSeq=0;state.pendingShots=[];state.pendingSkills=[];state.pendingHits=[];state.finished=false;$('pk-ready-button')?.removeAttribute('disabled');arena.classList.add('pk-hidden');room.classList.add('pk-hidden');}
   function updateRoom(snapshot){
-    if(!snapshot)return;room.classList.remove('pk-hidden');code.textContent=snapshot.invite_code||state.room?.invite_code||'--------';roomState.textContent=snapshot.status==='started'?'对战进行中':snapshot.status==='finished'?'对战结束':snapshot.status==='paired'?'已匹配对手':'等待对手';
+    if(!snapshot)return;room.classList.remove('pk-hidden');code.textContent=snapshot.invite_code||state.room?.invite_code||'--------';roomState.textContent=snapshot.status==='started'?'对战进行中':snapshot.status==='finished'?'对战结束':snapshot.status==='disputed'?'结果争议/已退款':snapshot.status==='cancelled'?'房间已取消':snapshot.status==='paired'?'已匹配对手':'等待对手';
     const members=snapshot.members||[],me=members.find(member=>member.username===session()?.username),other=members.find(member=>member.username!==session()?.username);state.peer=other||state.peer;state.ready=!!me?.ready;mineReady.textContent=state.ready?'已准备':'未准备';peerReady.textContent=other?.ready?'已准备':'未准备';presence.textContent=`${Math.min(2,members.length)} / 2`;
     if(snapshot.status==='started'&&snapshot.match_id&&!state.match){state.match={id:snapshot.match_id};startArena();}
+    if(snapshot.status==='finished'||snapshot.status==='disputed'||snapshot.status==='cancelled'){
+      const winner=snapshot.winner_username;
+      if(state.scene&&!state.scene.ended)state.scene.finish(winner===session()?.username,true);
+      roomSay(snapshot.status==='finished'?(winner===session()?.username?'你已获胜，押注已结算。':'你已失败，押注已结算。'):'本局已结束，未进行对战结算。',winner!==session()?.username);
+      if(snapshot.status!=='started'){$('pk-ready-button')?.setAttribute('disabled','disabled');$('pk-leave-button')?.removeAttribute('disabled');}
+      else {$('pk-ready-button')?.removeAttribute('disabled');$('pk-leave-button')?.removeAttribute('disabled');}
+    }
   }
   async function loadRoom(){try{if(state.room)updateRoom(await rpc('platformer_pk_room_snapshot',{p_room_id:state.room.id}))}catch(error){roomSay(error.message||'读取房间失败',true)}}
   function mergePeer(packet){
@@ -29,7 +36,7 @@
   }
   async function connect(){
     const client=db(),user=session();state.channel=client.channel(`pk-room:${state.room.id}`,{config:{broadcast:{self:false},presence:{key:user.username}}});
-    state.channel.on('broadcast',{event:'room'},loadRoom).on('broadcast',{event:'state'},event=>mergePeer(event.payload||{})).on('broadcast',{event:'shot'},event=>{const payload=event.payload||{};if(state.scene?.pvpReady)state.scene.remoteShot(payload);else state.pendingShots.push(payload)}).on('broadcast',{event:'skill'},event=>{const payload=event.payload||{};if(state.scene?.pvpReady)state.scene.remoteSkill(payload);else state.pendingSkills.push(payload)}).on('broadcast',{event:'hit'},event=>{const payload=event.payload||{};if(state.scene?.pvpReady)state.scene.receivePvpHit(payload);else state.pendingHits.push(payload)}).on('broadcast',{event:'result'},event=>{if(!state.finished)state.scene?.finish(event.payload?.winner===state.role,true)}).on('presence',{event:'sync'},()=>presence.textContent=`${Math.min(2,Object.keys(state.channel.presenceState()).length)} / 2`);
+    state.channel.on('broadcast',{event:'room'},loadRoom).on('broadcast',{event:'state'},event=>mergePeer(event.payload||{})).on('broadcast',{event:'shot'},event=>{const payload=event.payload||{};if(state.scene?.pvpReady)state.scene.remoteShot(payload);else state.pendingShots.push(payload)}).on('broadcast',{event:'skill'},event=>{const payload=event.payload||{};if(state.scene?.pvpReady)state.scene.remoteSkill(payload);else state.pendingSkills.push(payload)}).on('broadcast',{event:'hit'},event=>{const payload=event.payload||{};if(state.scene?.pvpReady)state.scene.receivePvpHit(payload);else state.pendingHits.push(payload)}).on('broadcast',{event:'result'},event=>{if(!state.finished)state.scene?.finish(event.payload?.winner===state.role,true);void loadRoom()}).on('presence',{event:'sync'},()=>presence.textContent=`${Math.min(2,Object.keys(state.channel.presenceState()).length)} / 2`);
     await new Promise((resolve,reject)=>state.channel.subscribe(async value=>{if(value!=='SUBSCRIBED')return reject(Error(`实时连接失败：${value}`));await state.channel.track({username:user.username});resolve();}));state.poll=setInterval(loadRoom,5000);await loadRoom();
   }
   async function createRoom(){try{state.room=await rpc('platformer_pk_create_room',{});state.role='host';say('房间已创建，把邀请码发给对手。');await connect()}catch(error){say(error.message||'创建房间失败',true)}}
@@ -37,14 +44,17 @@
   async function accept(){try{await rpc('platformer_pk_accept_invite',{p_room_id:state.room.id});send('room',{});await loadRoom()}catch(error){roomSay(error.message||'接受邀请失败',true)}}
   async function wager(){const amount=Math.floor(Number($('pk-wager-input').value)||0);if(amount<0||amount>1000000)return roomSay('押注范围为 0-1000000 金币。',true);try{await rpc('platformer_pk_lock_wager',{p_room_id:state.room.id,p_amount:amount});send('room',{});await loadRoom()}catch(error){roomSay(error.message||'锁定押注失败',true)}}
   async function ready(){try{await rpc('platformer_pk_set_ready',{p_room_id:state.room.id,p_ready:!state.ready});send('room',{});await loadRoom()}catch(error){roomSay(error.message||'准备失败',true)}}
-  async function leave(){try{await rpc('platformer_pk_leave_room',{p_room_id:state.room.id});clearRoom();say('已退出 PK 房间。')}catch(error){roomSay(error.message||'退出失败',true)}}
+  async function leave(){try{
+    if(state.scene&&!state.scene.ended){state.scene.finish(false);roomSay('已提交退出结果，正在结束对局。');return;}
+    await rpc('platformer_pk_leave_room',{p_room_id:state.room.id});clearRoom();say('已退出 PK 房间。');
+  }catch(error){roomSay(error.message||'退出失败',true)}}
 
   class PkArenaScene extends combat.Game{
     constructor(){super('PkArenaScene');}
     preload(){const base=new URL('GamePictures/',document.baseURI);Object.entries(combat.ART).forEach(([key,file])=>this.load.image(key,new URL(file,base).href));}
     create(){try{combat.prepareTextures(this);combat.createArenaWorld(this);this.configurePvp();}catch(error){roomSay(`竞技场启动失败：${error.message||error}`,true);console.error('[行于无垠 PK]',error);}}
     configurePvp(){
-      this.pvp=true;this.pvpReady=false;this.lastNetAt=0;this.hitSeq=0;this.shotSeq=0;this.outgoingShots=[];this.hitLog=[];this.appliedStateHitIds=new Set();this.receivedHitIds=new Set();this.remoteShotIds=new Set();this.enemyMultiplier=1;this.bossEnemy=null;this.finishZone?.destroy();this.flag?.destroy();this.finishZone=null;this.flag=null;
+      this.pvp=true;this.pvpReady=false;this.resultSubmitted=false;this.lastNetAt=0;this.hitSeq=0;this.shotSeq=0;this.outgoingShots=[];this.hitLog=[];this.appliedStateHitIds=new Set();this.receivedHitIds=new Set();this.remoteShotIds=new Set();this.enemyMultiplier=1;this.bossEnemy=null;this.finishZone?.destroy();this.flag?.destroy();this.finishZone=null;this.flag=null;
       this.player.setPosition(state.role==='host'?190:WORLD_W-190,this.floorTop-this.player.body.height/2-2);this.player.body.reset(this.player.x,this.player.y);
       const peer=state.peerState||{},spawnX=state.role==='host'?WORLD_W-190:190;
       // The remote player uses the exact same invisible physics body as the
@@ -88,6 +98,8 @@
       // race where a Broadcast arrives before the scene is ready or is dropped
       // during a reconnect.
       if(Array.isArray(remote.hits))remote.hits.forEach(hit=>{const id=String(hit?.id||'');if(id&&!this.appliedStateHitIds.has(id)){this.appliedStateHitIds.add(id);this.receivePvpHit(hit);}});
+      if(remote.matchResult&&!state.finished)this.finish(remote.matchResult.winner===state.role,true);
+      else if(Number(remote.hp)<=0&&!state.finished)this.finish(true,true);
       if(Array.isArray(remote.shotEvents)&&remote.shotEvents.length)this.remoteShot({bullets:remote.shotEvents});
       if(Array.isArray(remote.shots)&&remote.shots.length)this.remoteShot({bullets:remote.shots});
       const left=remote.leftFace??(Math.cos(Number(remote.aim)||0)<0),moving=!!remote.moving,jumping=!!remote.jumping;this.rivalArt.setTexture(jumping?(left?'heroJumpL':'heroJumpR'):moving?(left?'heroMoveL':'heroMoveR'):(left?'heroStandL':'heroStandR')).setDisplaySize(52,78).setPosition(this.rival.x,this.rival.body.bottom);
@@ -109,7 +121,23 @@
     sendCreatedBullets(before){const added=(this.playerBullets?.getChildren()||[]).filter(b=>b.active&&b.body&&!before.has(b));if(added.length){const bullets=added.map(b=>{const id=`${state.role}-shot-${++this.shotSeq}`;b.setData('netId',id);return {id,x:b.x,y:b.y,vx:b.body.velocity.x,vy:b.body.velocity.y,angle:b.rotation,damage:Number(b.getData('damage'))||0,tint:b.tintTopLeft||0xfff4c2,expires:Math.max(250,Number(b.getData('expires'))-this.time.now)}});this.outgoingShots.push(...bullets);send('shot',{bullets});}}
     remoteShot(packet){if(this.ended||!this.enemyBullets||!this.player?.body||!Array.isArray(packet.bullets))return;packet.bullets.slice(0,180).forEach(spec=>{const id=String(spec.id||'');if(id&&this.remoteShotIds.has(id))return;if(id){this.remoteShotIds.add(id);if(this.remoteShotIds.size>1200){const keep=[...this.remoteShotIds].slice(-600);this.remoteShotIds=new Set(keep);}}const x=Number(spec.x),y=Number(spec.y),vx=Number(spec.vx),vy=Number(spec.vy);if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(vx)||!Number.isFinite(vy))return;const bullet=this.enemyBullets.create(x,y,'bullet');bullet.setActive(true).setVisible(true).setDepth(6).setAlpha(1);bullet.body.allowGravity=false;bullet.body.setSize(12,6,true);bullet.setVelocity(vx,vy);bullet.setRotation(Number(spec.angle)||0);bullet.setTint(Number(spec.tint)||0xfff4c2);bullet.setData('damage',Math.max(0,Number(spec.damage)||0));bullet.setData('owner','peer');bullet.setData('expires',this.time.now+Math.min(2200,Math.max(80,Number(spec.expires)||1200)));});}
     useDash(time){const before=this.player.x;combat.Game.prototype.useDash.call(this,time);if(this.player.x!==before)send('skill',{kind:'dash',x:this.player.x,y:this.player.y});}useTrackingDash(time){const before=this.player.x;combat.Game.prototype.useTrackingDash.call(this,time);if(this.player.x!==before)send('skill',{kind:'tracking',x:this.player.x,y:this.player.y});}useAirstrike(time){const before=this.player.x;combat.Game.prototype.useAirstrike.call(this,time);if(this.player.x!==before)send('skill',{kind:'airstrike',x:this.player.x,y:this.player.y});}useAssassination(time){const before=this.player.x;combat.Game.prototype.useAssassination.call(this,time);if(this.player.x!==before)send('skill',{kind:'assassination',x:this.player.x,y:this.player.y});}useUltimate(){const energy=this.energy,before=this.playerBullets?.getChildren().length||0;combat.Game.prototype.useUltimate.call(this);if(this.energy!==energy){this.sendCreatedBullets(before);send('skill',{kind:'ultimate',x:this.player.x,y:this.player.y});}}remoteSkill(packet){if(!packet||!this.rivalArt)return;if(packet.kind==='melee'){const g=this.add.graphics().setDepth(14),range=packet.blade?150:100;g.lineStyle(6,packet.blade?0x62d9ee:0xbd9aff,.9).arc(Number(packet.x)||this.rival.x,Number(packet.y)||this.rival.y,range,Number(packet.angle||0)-.5,Number(packet.angle||0)+.5);this.tweens.add({targets:g,alpha:0,duration:180,onComplete:()=>g.destroy()});return;}this.burstEffect(Number(packet.x)||this.rival.x,Number(packet.y)||this.rival.y,packet.kind==='ultimate'?0xffd166:0xbd9aff,1.15);}
-    finish(won,remote=false){if(this.ended)return;this.ended=true;this.done=true;state.finished=true;this.smgFiring=false;this.touchFiring=false;if(!remote)send('result',{winner:won?state.role:(state.role==='host'?'guest':'host')});if(state.match)void rpc('platformer_pk_submit_result',{p_match_id:state.match.id,p_won:won}).then(result=>{if(result?.settled)roomSay(won?'你已获胜，押注已结算。':'你已失败，押注已结算。',!won)}).catch(error=>roomSay(error.message||'对局结果提交失败。',true));roomSay(won?'你已获胜，正在结算押注。':'你已失败，正在结算押注。',!won);}
+    finish(won,remote=false){
+      if(this.ended&&!this.resultSubmitted)return;
+      const outcome={winner:won?state.role:(state.role==='host'?'guest':'host'),at:Date.now()};
+      if(!remote){send('result',outcome);send('state',{seq:++state.stateSeq,x:this.player?.x,y:this.player?.y,hp:0,maxHp:this.maxHp,aim:this.getWeaponMuzzle?.().angle||0,leftFace:this.leftFace,moving:false,jumping:false,weaponArt:this.getWeaponTextureKey?.()||'weaponPistol',mode:this.combatMode,matchResult:outcome,hits:this.hitLog?.slice(-24)||[],shotEvents:[]});}
+      this.ended=true;this.done=true;state.finished=true;this.smgFiring=false;this.touchFiring=false;this.player?.setVelocity(0,0);this.physics?.world&&(this.physics.world.isPaused=true);
+      if(state.match&&!this.resultSubmitted){
+        this.resultSubmitted=true;
+        void rpc('platformer_pk_submit_result',{p_match_id:state.match.id,p_won:won}).then(result=>{
+          if(result?.settled)roomSay(won?'你已获胜，押注已结算。':'你已失败，押注已结算。',!won);
+          else roomSay(won?'你已获胜，等待对手提交结果。':'你已失败，等待结算完成。',!won);
+        }).catch(error=>{
+          this.resultSubmitted=false;
+          roomSay(error.message||'对局结果提交失败，请再次点击退出/结束。',true);
+        });
+      }
+      roomSay(won?'你已获胜，正在结算押注。':'你已失败，正在结算押注。',!won);
+    }
   }
   function startArena(){if(!combat)return roomSay('单机战斗模块尚未加载，请刷新页面后重试。',true);arena.classList.remove('pk-hidden');$('pk-phaser').innerHTML='';state.finished=false;state.peerSeq=-1;state.stateSeq=0;state.peerState=state.peerState||{};const game=new Phaser.Game({type:Phaser.AUTO,parent:'pk-phaser',width:VIEW_W,height:VIEW_H,backgroundColor:'#091724',physics:{default:'arcade',arcade:{gravity:{y:900},debug:false}},scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:PkArenaScene});state.scene=game.scene.getScene('PkArenaScene');}
   open.addEventListener('click',()=>{panel.hidden=false;open.hidden=true});$('pk-close-button')?.addEventListener('click',()=>{panel.hidden=true;open.hidden=false});$('pk-create-button')?.addEventListener('click',createRoom);$('pk-join-button')?.addEventListener('click',join);$('pk-accept-button')?.addEventListener('click',accept);$('pk-wager-button')?.addEventListener('click',wager);$('pk-ready-button')?.addEventListener('click',ready);$('pk-leave-button')?.addEventListener('click',leave);$('pk-copy-button')?.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(code.textContent);roomSay('邀请码已复制。')}catch(_){roomSay('复制失败，请手动复制邀请码。',true)}});window.addEventListener('xingyu:authenticated',()=>open.hidden=false);if(session())open.hidden=false;window.addEventListener('beforeunload',()=>{try{state.channel?.unsubscribe()}catch(_){}});
