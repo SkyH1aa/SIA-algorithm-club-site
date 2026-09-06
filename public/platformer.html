@@ -167,7 +167,9 @@ const platformerDb=window.supabase?.createClient(SUPABASE_URL,SUPABASE_KEY);
 window.xingyuPlatformerDb=platformerDb;
 const GAME_ASSET_BASE=new URL('GamePictures/',document.baseURI);
 const SAVE_KEY='club-shooter-clean';
-const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{"unlocked":1,"coins":0,"hp":0,"atk":0,"shot":0,"agility":0,"melee":0,"ammo":0,"armor":0,"combat":0}');
+const DEFAULT_SAVE='{"unlocked":1,"coins":0,"hp":0,"atk":0,"shot":0,"agility":0,"melee":0,"ammo":0,"armor":0,"combat":0}';
+let profileSaveKey=SAVE_KEY;
+const data=JSON.parse(localStorage.getItem(SAVE_KEY)||DEFAULT_SAVE);
 data.hp??=0;data.atk??=0;data.shot??=0;data.agility??=0;data.melee??=0;data.ammo??=0;data.armor??=0;data.combat??=0;data.attackEvo??=0;data.armorEvo??=0;data.battleGod??=0;data.battleGod2??=0;
 data.agility=Math.max(0,Math.min(150,Number(data.agility)||0));data.combat=Math.max(0,Math.min(125,Number(data.combat)||0));data.attackEvo=Math.max(0,Number(data.attackEvo)||0);data.armorEvo=Math.max(0,Number(data.armorEvo)||0);
 data.eventEndlessBest??=0;data.eventEndlessClaimed??={};data.eventLevelClaimed??={};data.lifeEvo??=0;
@@ -404,7 +406,7 @@ const ART={
   coin:'optimized/Coin.png',energy:'optimized/EnergyBean.png',skill:'optimized/SkillBean.png',heart:'optimized/LifeBean.png',
   weaponPistol:'optimized/weaponPistol.png',weaponShotgun:'optimized/weaponShotgun.png',weaponSmg:'optimized/weaponSmg.png',weaponLaser:'optimized/weaponLaser.png',weaponSniper:'optimized/weaponSniper.png',weaponDagger:'optimized/weaponDagger.png',weaponBlade:'optimized/weaponBlade.png'
 };
-const save=()=>{localStorage.setItem(SAVE_KEY,JSON.stringify(data));if(currentUser)void saveRemoteProfile();};
+const save=()=>{localStorage.setItem(profileSaveKey,JSON.stringify(data));if(currentUser)void saveRemoteProfile();};
 function tex(scene,key,color,width,height,radius=0){const g=scene.make.graphics({add:false});g.fillStyle(color,1);g.fillRoundedRect(0,0,width,height,radius);g.generateTexture(key,width,height);g.destroy()}
 
 const authGate=document.getElementById('auth-gate');
@@ -607,6 +609,7 @@ async function logout(){
   gameAnnouncementQueue=[];
   currentUser=null;window.xingyuSession=null;clubSuperAdmin=false;
   localStorage.removeItem('platformer-session');
+  profileSaveKey=SAVE_KEY;
   authGate.hidden=false;gameContent.hidden=true;leaderboardPanel.hidden=true;
   authUser.textContent='';
   changePasswordButton.hidden=true;
@@ -742,17 +745,17 @@ function applyProfile(profile){
   data.coins=Number(profile.coins)||0;data.hp=Number(profile.hp_upgrade)||0;data.atk=Number(profile.atk_upgrade)||0;data.shot=Number(profile.shot_upgrade)||0;data.agility=Math.max(0,Math.min(150,Number(profile.agility_upgrade)||0));data.melee=Number(profile.melee_upgrade)||0;data.ammo=Number(profile.ammo_upgrade)||0;data.armor=Number(profile.armor_upgrade)||0;data.combat=Math.max(0,Math.min(125,Number(profile.combat_upgrade)||0));data.lifeEvo=Number(profile.life_evo_upgrade)||0;data.attackEvo=Math.max(0,Number(profile.attack_evo_upgrade)||0);data.armorEvo=Math.max(0,Number(profile.armor_evo_upgrade)||0);data.battleGod=Math.max(0,Number(profile.battle_god_upgrade??data.battleGod)||0);data.battleGod2=Math.max(0,Math.min(750,Number(profile.battle_god_ii_upgrade??data.battleGod2)||0));
   const claimedUnlock=Math.max(1,...Object.keys(data.claimed||{}).map(Number).filter(Number.isFinite).map(id=>id+1));
   data.unlocked=Math.min(LEVELS.length,Math.max(1,Number(profile.unlocked)||1,claimedUnlock));
-  localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+  localStorage.setItem(profileSaveKey,JSON.stringify(data));
 }
 async function loadBattleGod(){
   if(!platformerDb||!currentUser)return;
   const {data:result,error}=await platformerDb.rpc('platformer_get_battle_god',{p_username:currentUser.username,p_token:currentUser.token});
-  if(!error&&result?.length){data.battleGod=Math.max(0,Number(result[0].battle_god_upgrade??result[0].level??0)||0);localStorage.setItem(SAVE_KEY,JSON.stringify(data));}
+  if(!error&&result?.length){data.battleGod=Math.max(0,Number(result[0].battle_god_upgrade??result[0].level??0)||0);localStorage.setItem(profileSaveKey,JSON.stringify(data));}
 }
 async function loadBattleGod2(){
   if(!platformerDb||!currentUser)return;
   const {data:result,error}=await platformerDb.rpc('platformer_get_battle_god_ii',{p_username:currentUser.username,p_token:currentUser.token});
-  if(!error&&result?.length){data.battleGod2=Math.max(0,Math.min(750,Number(result[0].battle_god_ii_upgrade??result[0].level??0)||0));localStorage.setItem(SAVE_KEY,JSON.stringify(data));}
+  if(!error&&result?.length){data.battleGod2=Math.max(0,Math.min(750,Number(result[0].battle_god_ii_upgrade??result[0].level??0)||0));localStorage.setItem(profileSaveKey,JSON.stringify(data));}
 }
 function createGame(){
   if(gameInstance)return true;
@@ -772,6 +775,9 @@ function createGame(){
 async function startGame(profile){
   currentUser={username:profile.username,token:profile.session_token};
   window.xingyuSession=currentUser;
+  setProfileSaveKey(currentUser.username);
+  Object.assign(data,JSON.parse(localStorage.getItem(profileSaveKey)||DEFAULT_SAVE));
+  data.eventEndlessBest??=0;data.eventEndlessClaimed??={};data.eventLevelClaimed??={};data.claimed??={};
   applyProfile(profile);await loadBattleGod();await loadBattleGod2();
   authGate.hidden=true;gameContent.hidden=false;leaderboardPanel.hidden=false;
   authUser.textContent=`已登录：${currentUser.username}`;changePasswordButton.hidden=false;updateServiceUi();
@@ -832,6 +838,20 @@ async function loadLeaderboard(){
   leaderboardList.innerHTML=rows.length?rows.map((row,index)=>`<li>${index+1}. ${escapeHtml(row.username)} <small>${row.total_score} 分</small></li>`).join(''):'<li>暂时没有通关成绩。</li>';
 }
 function escapeHtml(value){return String(value).replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}
+function setProfileSaveKey(username){
+  const normalized=(username||'').trim().toLowerCase();
+  profileSaveKey=normalized?`${SAVE_KEY}:${normalized}`:SAVE_KEY;
+  const raw=localStorage.getItem(profileSaveKey);
+  if(raw){
+    try{
+      const parsed=JSON.parse(raw);
+      Object.assign(data,parsed);
+    }catch(_){}
+  }
+}
+function writeProfileSave(){
+  localStorage.setItem(profileSaveKey,JSON.stringify(data));
+}
 document.getElementById('login-button').onclick=()=>authenticate('login');
 document.getElementById('register-button').onclick=()=>authenticate('register');
 changePasswordButton?.addEventListener('click',openPasswordPanel);
