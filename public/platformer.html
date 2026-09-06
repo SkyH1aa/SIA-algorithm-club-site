@@ -94,7 +94,7 @@ kbd{border-color:#38546a;background:#122438;color:#eafaff}
 <body>
 <main class="shell">
 <header><h1>行于无垠</h1><div><span id="service-status" class="auth-user">游戏服务：正在检查</span><span id="auth-user" class="auth-user"></span><button class="button secondary" id="change-password-button" type="button" hidden>修改密码</button><button class="button secondary" id="pk-open-button" type="button" hidden>联机 PK</button><button class="button secondary" id="service-toggle" type="button" hidden>关闭游戏服务</button><button class="button secondary" id="logout-button" type="button" hidden>退出登录</button><a href="../index.html">返回官网</a></div></header>
-<section id="auth-gate" class="auth-gate"><h2>登录后开始游戏</h2><p>使用本游戏独立账号，不与社团盘登录系统关联。</p><div class="auth-form"><input id="username-input" type="text" maxlength="32" placeholder="用户名"><input id="password-input" type="password" maxlength="72" placeholder="密码"><button class="button" id="login-button" type="button">登录</button><button class="button secondary" id="register-button" type="button">注册新用户</button></div><p id="auth-message" class="auth-message" role="status"></p></section>
+<section id="auth-gate" class="auth-gate"><h2>登录后开始游戏</h2><p>使用本游戏独立账号，不与社团盘登录系统关联。</p><div class="auth-form"><input id="username-input" type="text" maxlength="64" placeholder="用户名"><input id="password-input" type="password" maxlength="72" placeholder="密码"><button class="button" id="login-button" type="button">登录</button><button class="button secondary" id="register-button" type="button">注册新用户</button></div><p id="auth-message" class="auth-message" role="status"></p></section>
 <section id="password-panel" class="password-panel" hidden><h2>修改密码</h2><div class="password-form"><input id="old-password-input" type="password" maxlength="72" placeholder="当前密码"><input id="new-password-input" type="password" maxlength="72" placeholder="新密码（至少6位）"><input id="confirm-password-input" type="password" maxlength="72" placeholder="确认新密码"><button class="button" id="save-password-button" type="button">保存密码</button><button class="button secondary" id="cancel-password-button" type="button">取消</button></div><p id="password-message" class="password-message" role="status"></p></section>
 <section id="pk-panel" class="pk-panel" hidden>
   <div class="pk-head"><h2>联机 PK · 实时对战</h2><button class="button secondary" id="pk-close-button" type="button">关闭</button></div>
@@ -771,7 +771,7 @@ async function startGame(profile){
 }
 async function authenticate(action){
   const username=usernameInput.value.trim(),password=passwordInput.value;
-  if(!/^[A-Za-z0-9_]{3,32}$/.test(username)){setAuthMessage('用户名需为 3-32 位字母、数字或下划线。',true);return}
+  if(!/^[A-Za-z0-9\u4e00-\u9fff]{3,64}$/u.test(username)){setAuthMessage('用户名需为 3-64 位中文、英文或数字，不能包含空格和符号。',true);return}
   if(password.length<6){setAuthMessage('密码至少需要 6 位。',true);return}
   if(!platformerDb){setAuthMessage('Supabase 客户端未加载。',true);return}
   if(serviceStatusKnown&&!serviceEnabled&&username!=='chm'){
@@ -1562,7 +1562,7 @@ class Game extends Phaser.Scene{
     }
   }
   handleArmorBreak(sourceEnemy){
-    if(this.armorLevel>=75&&this.time.now>=this.armorBreakReadyAt){this.armorBreakReadyAt=this.time.now+25000;this.burstEffect(this.player.x,this.player.y,0xffd166,1.8);this.enemies.getChildren().forEach(enemy=>{if(enemy.active&&Phaser.Math.Distance.Between(this.player.x,this.player.y,enemy.x,enemy.y)<=120){this.damageEnemy(enemy,this.armorMax,'armorBreak');enemy.setVelocityX(Math.sign(enemy.x-this.player.x)*75);}});}
+    if(this.armorLevel>=75&&this.time.now>=this.armorBreakReadyAt){this.armorBreakReadyAt=this.time.now+25000;this.burstEffect(this.player.x,this.player.y,0xffd166,1.8);this.enemies.getChildren().forEach(enemy=>{if(enemy?.active&&enemy.body&&typeof enemy.setVelocityX==='function'&&Phaser.Math.Distance.Between(this.player.x,this.player.y,enemy.x,enemy.y)<=120){this.damageEnemy(enemy,this.armorMax,'armorBreak');if(enemy?.active&&enemy.body&&typeof enemy.setVelocityX==='function')enemy.setVelocityX(Math.sign(enemy.x-this.player.x)*75);}});}
     if(this.armorLevel>=100&&!this.finalDefenseUsed&&!this.bossEnemy?.active){this.finalDefenseUsed=true;this.enemies.getChildren().forEach(enemy=>{if(enemy.active&&Phaser.Math.Distance.Between(this.player.x,this.player.y,enemy.x,enemy.y)<=50)this.killEnemy(enemy,'finalDefense');});}
   }
   useArmorOverload(){
@@ -1824,7 +1824,7 @@ class Game extends Phaser.Scene{
       enemy.setData('nextLateAttack',time+5000);
     }else if(pattern==='wave'){
       const count=stage===1?1:stage===2?2:3;
-      for(let i=0;i<count;i++){const side=i%2===0?-1:1,b=this.spawnBossBullet(enemy,side>0?Math.PI:0,260,damage,{wave:true});b.setPosition(side>0?this.cameras.main.worldView.right+40:this.cameras.main.worldView.left-40,this.floorTop-20);b.setVelocityX(side>0?-260:260);}
+      for(let i=0;i<count;i++){const side=i%2===0?-1:1,b=this.spawnBossBullet(enemy,side>0?Math.PI:0,260,damage,{wave:true});if(!b?.active||!b.body)continue;b.setPosition(side>0?this.cameras.main.worldView.right+40:this.cameras.main.worldView.left-40,this.floorTop-20);if(typeof b.setVelocityX==='function')b.setVelocityX(side>0?-260:260);}
       enemy.setData('nextLateAttack',time+(stage===3?1000:4000));
     }else if(pattern==='laser'){
       const beams=stage===3?2:1;for(let i=0;i<beams;i++){const angle=targetAngle+(stage===1?0:(i?-.85:.85));const b=this.spawnBossBullet(enemy,angle,520,damage*.4);b.setScale(3.5,2.2);b.setData('expires',time+3000);}
@@ -1838,11 +1838,11 @@ class Game extends Phaser.Scene{
     const bounds=this.physics.world.bounds;
     this.enemyBullets.getChildren().forEach(bullet=>{
       if(!bullet.active)return;
-      if(bullet.getData('tracking')){
+      if(bullet.getData('tracking')&&bullet.body){
         const dx=this.player.x-bullet.x,dy=this.player.y-bullet.y,len=Math.hypot(dx,dy)||1,speed=Math.max(150,Math.hypot(bullet.body.velocity.x,bullet.body.velocity.y));
         bullet.setVelocity(dx/len*speed,dy/len*speed);
       }
-      if(bullet.getData('bounce')&&((bullet.x<bounds.left&&bullet.body.velocity.x<0)||(bullet.x>bounds.right&&bullet.body.velocity.x>0))){bullet.setVelocityX(-bullet.body.velocity.x);bullet.setData('bounce',0);}
+      if(bullet.getData('bounce')&&bullet.body&&((bullet.x<bounds.left&&bullet.body.velocity.x<0)||(bullet.x>bounds.right&&bullet.body.velocity.x>0))){if(typeof bullet.setVelocityX==='function')bullet.setVelocityX(-bullet.body.velocity.x);bullet.setData('bounce',0);}
     });
   }
   updateLaser(time){
@@ -1878,7 +1878,11 @@ class Game extends Phaser.Scene{
     if(this.agilityLevel>=20)this.enemies.getChildren().forEach(enemy=>{if(!enemy.active)return;const eb=enemy.body;if(eb.right>=left&&eb.left<=right&&eb.bottom>=this.player.body.top&&eb.top<=this.player.body.bottom){enemy.stunnedUntil=time+this.stunDuration*1000;if(!firstEnemy||Math.abs(enemy.x-startX)<Math.abs(firstEnemy.x-startX))firstEnemy=enemy;}});
     if(firstEnemy&&this.agilityLevel>=30)this.damageEnemy(firstEnemy,20,'dash');
     this.burstEffect(startX,this.player.body.bottom-35,0xbd9aff,.8);
-    this.player.x=targetX;this.player.setVelocityX(0);this.player.body.updateFromGameObject();
+    const player=this.player;
+    if(!player?.body)return;
+    player.x=targetX;
+    if(typeof player.setVelocityX==='function')player.setVelocityX(0);
+    player.body.updateFromGameObject();
     this.burstEffect(targetX,this.player.body.bottom-35,0xbd9aff,1.1);
     this.dashCharges--;this.dashRechargeAt=time+this.dashCooldown*1000;
     if(this.armorLevel>=60){this.tempShield=Math.max(this.tempShield,this.armorMax*.15);this.tempShieldUntil=time+2000;}
@@ -2085,7 +2089,7 @@ class Game extends Phaser.Scene{
   updateEnemies(time){
     const view=this.cameras.main.worldView,viewMargin=96;
     this.enemies.getChildren().forEach(enemy=>{
-      if(!enemy.active)return;
+      if(!enemy?.active||!enemy.body)return;
       const body=enemy.body;
       const inView=body.right>=view.x-viewMargin&&body.x<=view.right+viewMargin&&body.bottom>=view.y-viewMargin&&body.y<=view.bottom+viewMargin;
       enemy.setData('inView',inView);
@@ -2098,12 +2102,12 @@ class Game extends Phaser.Scene{
       const dx=this.player.x-enemy.x,dy=this.player.y-enemy.y,distance=Math.hypot(dx,dy)||1,direction=Math.sign(dx)||1;
       if(enemy.bossPattern){
         const stage=enemy.hp/enemy.maxHp>.66?1:enemy.hp/enemy.maxHp>.33?2:3;
-        enemy.setVelocityX(stage>=2?Math.sin(time/900+enemy.x)*70:0);
+        if(typeof enemy.setVelocityX==='function')enemy.setVelocityX(stage>=2?Math.sin(time/900+enemy.x)*70:0);
       }
-      if(enemy.type==='y'||enemy.type==='b1')enemy.setVelocityX(direction*(enemy.type==='b1'?45:155));
-      if(enemy.type==='g'||enemy.type==='e2')enemy.setVelocityX(direction*(enemy.type==='e2'?42:58));
-      if(enemy.type==='p'){enemy.setVelocityX(direction*58);enemy.setVelocityY((this.player.y-95-enemy.y)*1.35+Math.sin(time/380+enemy.x)*32);}
-      if(enemy.type==='b'){enemy.setVelocityX(direction*18);enemy.setVelocityY((this.player.y-150-enemy.y)*.45+Math.sin(time/620+enemy.x)*18);}
+      if((enemy.type==='y'||enemy.type==='b1')&&typeof enemy.setVelocityX==='function')enemy.setVelocityX(direction*(enemy.type==='b1'?45:155));
+      if((enemy.type==='g'||enemy.type==='e2')&&typeof enemy.setVelocityX==='function')enemy.setVelocityX(direction*(enemy.type==='e2'?42:58));
+      if(enemy.type==='p'){if(typeof enemy.setVelocityX==='function')enemy.setVelocityX(direction*58);if(typeof enemy.setVelocityY==='function')enemy.setVelocityY((this.player.y-95-enemy.y)*1.35+Math.sin(time/380+enemy.x)*32);}
+      if(enemy.type==='b'){if(typeof enemy.setVelocityX==='function')enemy.setVelocityX(direction*18);if(typeof enemy.setVelocityY==='function')enemy.setVelocityY((this.player.y-150-enemy.y)*.45+Math.sin(time/620+enemy.x)*18);}
       if(enemy.getData('ammoFreezeUntil')>time)enemy.setVelocity(enemy.body.velocity.x*.6,enemy.body.velocity.y*.6);
       if(enemy.body.velocity.x<-1)enemy.facingLeft=true;
       if(enemy.body.velocity.x>1)enemy.facingLeft=false;
@@ -2234,7 +2238,9 @@ class Game extends Phaser.Scene{
     const left=this.keys.A.isDown||this.keys.LEFT.isDown||touchMoveAxis<0,right=this.keys.D.isDown||this.keys.RIGHT.isDown||touchMoveAxis>0;
     const meleeSpeed=this.combatMode==='melee'&&this.meleeLevel>=1?1.1:1;
     const armorSpeed=this.armorSpeedBoostUntil>time?1.3:1;
-    this.player.setVelocityX((left?-230:right?230:0)*meleeSpeed*armorSpeed);
+    const player=this.player;
+    if(!player?.body)return;
+    if(typeof player.setVelocityX==='function')player.setVelocityX((left?-230:right?230:0)*meleeSpeed*armorSpeed);
     const jumpHeld=this.keys.W.isDown||this.keys.UP.isDown||this.keys.SPACE.isDown||touchJumpHeld;
     const jumpPressed=this.justDown(this.keys.W)||this.justDown(this.keys.UP)||this.justDown(this.keys.SPACE)||this.jumpRequested||time<this.jumpBufferUntil;
     const body=this.player.body;
