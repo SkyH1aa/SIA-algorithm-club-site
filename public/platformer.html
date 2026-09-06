@@ -1364,7 +1364,9 @@ class Game extends Phaser.Scene{
   spawnEnemy([type,x,y,waveMultiplier,bossHp,bossPattern]){
     y=this.worldY(y);
     const config=type==='y'?{body:'hitEnemy1',art:'enemy1',size:[72,42],flying:false}:type==='g'?{body:'hitEnemy2',art:'enemy2',size:[62,56],flying:false}:type==='b1'?{body:'hitBoss1',art:'enemy1',size:[154,108],flying:false,boss:true}:type==='b2'?{body:'hitBoss2',art:'enemy2',size:[190,138],flying:false,boss:true}:type==='b'?{body:'hitBoss3',art:'enemy3',size:[150,110],flying:true,boss:true}:type.startsWith('bf')||type.startsWith('bt')||type.startsWith('bw')||type.startsWith('bl')||type.startsWith('br')?{body:'hitBoss2',art:'enemy2',size:[190,138],flying:false,boss:true}:{body:'hitEnemy3',art:'enemy3',size:[72,52],flying:true};
-    const enemy=this.enemies.create(x,y,config.body).setVisible(false).setCollideWorldBounds(true);
+    const enemy=this.enemies.create(x,y,config.body);
+    if(!enemy)return null;
+    enemy.setVisible(false).setCollideWorldBounds(true);
     const baseHp=type==='y'?2:type==='e2'?1000:type==='b1'?10000:type==='b2'?15000:type==='b'?5000:type.startsWith('b')?Number(bossHp)||15000:5,baseDamage=type==='y'||type==='b1'?2:type==='b2'?5:type==='b'?4:type.startsWith('b')?5:type==='e2'?2:1;
     // Boss 不使用关卡配置里占位的 waveMultiplier=1；其伤害必须基于当前关卡倍率。
     const multiplier=config.boss?this.enemyMultiplier:(Number(waveMultiplier)||this.enemyMultiplier);
@@ -1458,6 +1460,7 @@ class Game extends Phaser.Scene{
     this.tweens.add({targets:flash,alpha:0,duration:180,onComplete:()=>flash.destroy()});
   }
   syncEnemyArt(enemy,force=false){
+    if(!this.isPhysicsActive(enemy)||!enemy.art||!enemy.art.active)return;
     const key=enemy.artBase+(enemy.facingLeft?'L':'R');
     if(force||enemy.artKey!==key){enemy.art.setTexture(key).setDisplaySize(enemy.artSize[0],enemy.artSize[1]);enemy.artKey=key;}
     if(enemy.flying)enemy.art.setPosition(enemy.x,enemy.y);else enemy.art.setPosition(enemy.x,enemy.body.bottom);
@@ -1467,6 +1470,40 @@ class Game extends Phaser.Scene{
     return Number.isInteger(rounded)?String(rounded):rounded.toFixed(1);
   }
   justDown(key){return Boolean(key&&key.isDown&&Phaser.Input.Keyboard.JustDown(key));}
+  // Phaser groups can return an object whose body has already been disabled
+  // during the same frame (especially in dense endless-mode waves). Keep all
+  // velocity writes behind one small guard so a stale member cannot crash the
+  // scene update loop.
+  isPhysicsActive(object){
+    return Boolean(object&&object.active&&object.body&&object.body.enable!==false);
+  }
+  safeSetVelocityX(object,value){
+    if(!this.isPhysicsActive(object)||typeof object.setVelocityX!=='function')return false;
+    try{object.setVelocityX(Number(value)||0);return true}catch{return false;}
+  }
+  safeSetVelocityY(object,value){
+    if(!this.isPhysicsActive(object)||typeof object.setVelocityY!=='function')return false;
+    try{object.setVelocityY(Number(value)||0);return true;}catch{return false;}
+  }
+  safeSetVelocity(object,x,y){
+    if(!this.isPhysicsActive(object)||typeof object.setVelocity!=='function')return false;
+    try{object.setVelocity(Number(x)||0,Number(y)||0);return true;}catch{return false;}
+  }
+  createPhysicsBullet(group,x,y,key){
+    if(!group||typeof group.create!=='function')return null;
+    let bullet=null;
+    try{bullet=group.create(x,y,key);}catch{return null;}
+    return this.isPhysicsActive(bullet)?bullet:null;
+  }
+  // Disable first and defer destroy until Arcade Physics finishes this frame's
+  // collision iteration. This prevents stale group members from crashing the
+  // physics step during dense endless-mode waves.
+  deferPhysicsDestroy(object){
+    if(!object)return;
+    try{if(object.body)object.body.enable=false;if(typeof object.setActive==='function')object.setActive(false);if(typeof object.setVisible==='function')object.setVisible(false);}catch{}
+    const destroy=()=>{try{if(object?.destroy)object.destroy();}catch{}};
+    if(this.time?.delayedCall)this.time.delayedCall(0,destroy);else destroy();
+  }
   updateNearestEnemyHealth(){
     let target=null,best=Infinity;
     this.enemies.getChildren().forEach(enemy=>{
@@ -1502,8 +1539,12 @@ class Game extends Phaser.Scene{
       this.healPlayer(healAmount,this.armorLevel>=75);
     }
   }
-  touchEnemy(player,enemy){if(enemy.stunnedUntil>this.time.now)return;this.damage(enemy.contactDamage||1,enemy)}
-  hitPlayer(player,bullet){const amount=bullet.getData('damage')||1,owner=bullet.getData('owner');bullet.destroy();this.damage(amount,owner)}
+  touchEnemy(player,enemy){if(!this.isPhysicsActive(player)||!this.isPhysicsActive(enemy)||enemy.stunnedUntil>this.time.now)return;this.damage(enemy.contactDamage||1,enemy)}
+  hitPlayer(player,bullet){
+    if(!this.isPhysicsActive(player)||!this.isPhysicsActive(bullet))return;
+    const amount=bullet.getData('damage')||1,owner=bullet.getData('owner');
+    this.deferPhysicsDestroy(bullet);this.damage(amount,owner)
+  }
   healPlayer(amount,allowOverflow=false){
     const value=Math.max(0,Number(amount)||0)*(this.armorLevel>=95&&this.hp<this.maxHp*.15?2:1),before=this.hp;
     this.hp=Math.min(this.maxHp,this.hp+value);
@@ -1552,7 +1593,11 @@ class Game extends Phaser.Scene{
       if(dx*dx+dy*dy<=radius*radius)this.damage(enemy.contactDamage||1,null);
     }
     this.score+=175;
-    if(enemy.art?.active)enemy.art.destroy();enemy.destroy();
+    // Disable the body before destroying the display object. Phaser may still
+    // run overlap callbacks for a group member during this frame.
+    if(enemy.body)enemy.body.enable=false;
+    if(enemy.art?.active)enemy.art.destroy();
+    this.deferPhysicsDestroy(enemy);
   }
   damage(amount,sourceEnemy=null){
     if((this.invulnerable&&this.time.now<this.damageIFrameUntil)||this.done)return;
@@ -1598,8 +1643,8 @@ class Game extends Phaser.Scene{
     }
   }
   handleArmorBreak(sourceEnemy){
-    if(this.armorLevel>=75&&this.time.now>=this.armorBreakReadyAt){this.armorBreakReadyAt=this.time.now+25000;this.burstEffect(this.player.x,this.player.y,0xffd166,1.8);this.enemies.getChildren().forEach(enemy=>{if(enemy?.active&&enemy.body&&typeof enemy.setVelocityX==='function'&&Phaser.Math.Distance.Between(this.player.x,this.player.y,enemy.x,enemy.y)<=120){this.damageEnemy(enemy,this.armorMax,'armorBreak');if(enemy?.active&&enemy.body&&typeof enemy.setVelocityX==='function')enemy.setVelocityX(Math.sign(enemy.x-this.player.x)*75);}});}
-    if(this.armorLevel>=100&&!this.finalDefenseUsed&&!this.bossEnemy?.active){this.finalDefenseUsed=true;this.enemies.getChildren().forEach(enemy=>{if(enemy.active&&Phaser.Math.Distance.Between(this.player.x,this.player.y,enemy.x,enemy.y)<=50)this.killEnemy(enemy,'finalDefense');});}
+    if(this.armorLevel>=75&&this.time.now>=this.armorBreakReadyAt){this.armorBreakReadyAt=this.time.now+25000;this.burstEffect(this.player.x,this.player.y,0xffd166,1.8);this.enemies.getChildren().slice().forEach(enemy=>{if(!this.isPhysicsActive(enemy)||Phaser.Math.Distance.Between(this.player.x,this.player.y,enemy.x,enemy.y)>120)return;this.damageEnemy(enemy,this.armorMax,'armorBreak');if(this.isPhysicsActive(enemy))this.safeSetVelocityX(enemy,Math.sign(enemy.x-this.player.x)*75);});}
+    if(this.armorLevel>=100&&!this.finalDefenseUsed&&!this.bossEnemy?.active){this.finalDefenseUsed=true;this.enemies.getChildren().slice().forEach(enemy=>{if(enemy?.active&&Phaser.Math.Distance.Between(this.player.x,this.player.y,enemy.x,enemy.y)<=50)this.killEnemy(enemy,'finalDefense');});}
   }
   useArmorOverload(){
     if(this.done||this.armorLevel<90||this.armor<=0||this.armorOverloadActiveUntil>this.time.now)return;
@@ -1610,8 +1655,9 @@ class Game extends Phaser.Scene{
   checkEnemyContact(){
     if(this.done||this.invulnerable)return;
     this.enemies.getChildren().some(enemy=>{
-      if(!enemy.active||enemy.stunnedUntil>this.time.now)return false;
-      const playerBody=this.player.body,enemyBody=enemy.body;
+      if(!this.isPhysicsActive(enemy)||enemy.stunnedUntil>this.time.now)return false;
+      const playerBody=this.player?.body,enemyBody=enemy.body;
+      if(!playerBody||!enemyBody)return false;
       const overlap=playerBody.x<enemyBody.right&&playerBody.right>enemyBody.x&&playerBody.y<enemyBody.bottom&&playerBody.bottom>enemyBody.y;
       if(overlap){this.damage(enemy.contactDamage||1,enemy);return true;}
       return false;
@@ -1619,10 +1665,12 @@ class Game extends Phaser.Scene{
   }
   checkEnemyBulletContact(){
     if(this.done)return;
-    const playerBody=this.player.body;
+    const playerBody=this.player?.body;
+    if(!playerBody)return;
     this.enemyBullets.getChildren().forEach(bullet=>{
-      if(!bullet.active||this.invulnerable)return;
+      if(!this.isPhysicsActive(bullet)||this.invulnerable)return;
       const body=bullet.body;
+      if(!body)return;
       const overlap=playerBody.x<body.right&&playerBody.right>body.x&&playerBody.y<body.bottom&&playerBody.bottom>body.y;
       if(overlap)this.hitPlayer(this.player,bullet);
     });
@@ -1638,7 +1686,7 @@ class Game extends Phaser.Scene{
     this.scene.start('Result',{failed:true,score:this.score,coins:pickedCoins,reward,endless:endlessMode,wave:this.endlessWave});
   }
   hitEnemy(bullet,enemy){
-    if(!enemy.active)return;
+    if(!this.isPhysicsActive(bullet)||!this.isPhysicsActive(enemy))return;
     const hitEnemies=bullet.getData('hitEnemies')||new Set();
     if(hitEnemies.has(enemy))return;
     hitEnemies.add(enemy);bullet.setData('hitEnemies',hitEnemies);
@@ -1658,17 +1706,17 @@ class Game extends Phaser.Scene{
     if(bullet.getData('explosive')&&!bullet.getData('exploded')){
       bullet.setData('exploded',true);this.burstEffect(enemy.x,enemy.y,0xff9f1c,1.25);
       const explosionDamage=Number(bullet.getData('explosionDamage'))||0;
-      this.enemies.getChildren().forEach(other=>{
-        if(other.active&&other!==enemy&&Phaser.Math.Distance.Between(enemy.x,enemy.y,other.x,other.y)<=40)this.damageEnemy(other,explosionDamage,'burst');
+      this.enemies.getChildren().slice().forEach(other=>{
+        if(other?.active&&other!==enemy&&Phaser.Math.Distance.Between(enemy.x,enemy.y,other.x,other.y)<=40)this.damageEnemy(other,explosionDamage,'burst');
       });
       if(this.ammoLevel>=50){
         this.burstEffect(enemy.x,enemy.y,0xff6b22,.9);
-        this.enemies.getChildren().forEach(other=>{
-          if(other.active&&other!==enemy&&Phaser.Math.Distance.Between(enemy.x,enemy.y,other.x,other.y)<=30)this.damageEnemy(other,explosionDamage*.6,'burst2');
+        this.enemies.getChildren().slice().forEach(other=>{
+          if(other?.active&&other!==enemy&&Phaser.Math.Distance.Between(enemy.x,enemy.y,other.x,other.y)<=30)this.damageEnemy(other,explosionDamage*.6,'burst2');
         });
       }
     }
-    if(hitEnemies.size>=(bullet.getData('maxHits')||1))bullet.destroy();
+    if(hitEnemies.size>=(bullet.getData('maxHits')||1))this.deferPhysicsDestroy(bullet);
     if(enemy.hp<=0)this.killEnemy(enemy,bullet.getData('source')||'bullet');
   }
   masterDamageMultiplier(){return this.shotUpgrade>=125?1+this.kills/100:1}
@@ -1748,16 +1796,16 @@ class Game extends Phaser.Scene{
     if(this.playerArt){const lean=this.leftFace?-5:5;this.tweens.add({targets:this.playerArt,angle:lean,duration:70,yoyo:true,ease:'Sine.InOut'});}
     this.meleeSlashEffect(muzzle.angle,range,arc,empowered?0xffd166:stats.color);
     const originX=this.player.x,originY=this.player.body.bottom-48;
-    this.enemies.getChildren().forEach(enemy=>{
-      if(!enemy.active||!this.isEnemyInMeleeArc(enemy,originX,originY,muzzle.angle,range,arc/2))return;
+    this.enemies.getChildren().slice().forEach(enemy=>{
+      if(!this.isPhysicsActive(enemy)||!this.isEnemyInMeleeArc(enemy,originX,originY,muzzle.angle,range,arc/2))return;
       {
         this.damageEnemy(enemy,stats.damage*(empowered?2.5:1),'melee');
-        if(enemy.active&&stats.blade){
+        if(this.isPhysicsActive(enemy)&&stats.blade){
           const pushDirection=Math.sign(enemy.x-originX)||Math.sign(Math.cos(muzzle.angle))||1;
           enemy.x=Phaser.Math.Clamp(enemy.x+pushDirection*40,enemy.body.width/2,this.definition.w-enemy.body.width/2);
-          enemy.body.updateFromGameObject();enemy.setVelocity(0,0);
+          enemy.body.updateFromGameObject();this.safeSetVelocity(enemy,0,0);
         }
-        this.meleeHitEffect(enemy,empowered?0xffeea7:stats.blade?0x9ef5ff:0xe3b6ff);
+        if(enemy?.active)this.meleeHitEffect(enemy,empowered?0xffeea7:stats.blade?0x9ef5ff:0xe3b6ff);
       }
     });
     if(empowered)this.meleeEmpoweredSwings--;
@@ -1792,7 +1840,7 @@ class Game extends Phaser.Scene{
     if(!this.meleeUltimateSwords.length)return;
     if(this.done||time>=this.meleeUltimateUntil){this.clearMeleeUltimate();return;}
     const claimed=new Set(),stats=this.getMeleeWeaponStats(),orbitX=this.player.x,orbitY=this.player.body.bottom-48;
-    this.meleeUltimateSwords.forEach(sword=>{
+    this.meleeUltimateSwords.slice().forEach(sword=>{
       if(!sword.art?.active)return;
       sword.art.setTexture(stats.key).setDisplaySize(stats.blade?30:26,stats.blade?56:40);
       if(!sword.target?.active||claimed.has(sword.target))sword.target=this.findMeleeUltimateTarget(claimed);
@@ -1807,12 +1855,12 @@ class Game extends Phaser.Scene{
       if(distance>26){const speed=640; sword.art.x+=dx/distance*Math.min(speed/60,distance);sword.art.y+=dy/distance*Math.min(speed/60,distance);return;}
       if(time<sword.nextAttackAt)return;
       this.damageEnemy(sword.target,stats.damage*(this.meleeLevel>=100?2:1),'meleeUltimate');
-      if(sword.target.active&&stats.blade){
+      if(this.isPhysicsActive(sword.target)&&stats.blade){
         const direction=Math.sign(sword.target.x-sword.art.x)||1;
         sword.target.x=Phaser.Math.Clamp(sword.target.x+direction*40,sword.target.body.width/2,this.definition.w-sword.target.body.width/2);
-        sword.target.body.updateFromGameObject();sword.target.setVelocity(0,0);
+        sword.target.body.updateFromGameObject();this.safeSetVelocity(sword.target,0,0);
       }
-      this.meleeHitEffect(sword.target,stats.blade?0x9ef5ff:0xe3b6ff);
+      if(sword.target?.active)this.meleeHitEffect(sword.target,stats.blade?0x9ef5ff:0xe3b6ff);
       sword.nextAttackAt=time+stats.cooldown*1000;sword.target=null;
     });
   }
@@ -1821,7 +1869,7 @@ class Game extends Phaser.Scene{
     this.laserActiveUntil=time+this.laserDuration*1000;this.laserNextTick=time;return true;
   }
   isEnemyVisible(enemy){
-    if(!enemy?.active)return false;
+    if(!this.isPhysicsActive(enemy))return false;
     const view=this.cameras.main.worldView,margin=96,body=enemy.body;
     return body.right>=view.x-margin&&body.x<=view.right+margin&&body.bottom>=view.y-margin&&body.y<=view.bottom+margin;
   }
@@ -1836,8 +1884,10 @@ class Game extends Phaser.Scene{
     return nearest;
   }
   spawnBossBullet(enemy,angle,speed=300,damage=5,options={}){
-    const bullet=this.enemyBullets.create(enemy.x,enemy.body.top+enemy.body.height/2,'redBullet');
-    bullet.setVelocity(Math.cos(angle)*speed,Math.sin(angle)*speed);bullet.body.allowGravity=false;
+    if(!this.isPhysicsActive(enemy))return null;
+    const bullet=this.createPhysicsBullet(this.enemyBullets,enemy.x,enemy.body.top+enemy.body.height/2,'redBullet');
+    if(!bullet)return null;
+    this.safeSetVelocity(bullet,Math.cos(angle)*speed,Math.sin(angle)*speed);bullet.body.allowGravity=false;
     bullet.setData('damage',damage);bullet.setData('owner',enemy);bullet.setData('expires',this.time.now+(options.tracking?4000:4200));
     if(options.tracking)bullet.setData('tracking',true);
     if(options.wave)bullet.setData('groundWave',true);
@@ -1846,7 +1896,8 @@ class Game extends Phaser.Scene{
   }
   updateLateBoss(enemy,time){
     const ratio=enemy.hp/Math.max(1,enemy.maxHp),stage=ratio>.66?1:ratio>.33?2:3;
-    if(enemy.bossStage!==stage){enemy.bossStage=stage;enemy.setData('nextLateAttack',time+1200);this.enemyBullets.getChildren().forEach(b=>b.destroy());}
+    if(!this.isPhysicsActive(enemy))return;
+    if(enemy.bossStage!==stage){enemy.bossStage=stage;enemy.setData('nextLateAttack',time+1200);this.enemyBullets.getChildren().slice().forEach(b=>{if(b?.active)b.destroy();});}
     if(time<=(enemy.getData('nextLateAttack')||0))return;
     const pattern=enemy.bossPattern||'ring',targetAngle=Math.atan2(this.player.y-enemy.y,this.player.x-enemy.x);
     const damage=enemy.contactDamage||5;
@@ -1860,10 +1911,10 @@ class Game extends Phaser.Scene{
       enemy.setData('nextLateAttack',time+5000);
     }else if(pattern==='wave'){
       const count=stage===1?1:stage===2?2:3;
-      for(let i=0;i<count;i++){const side=i%2===0?-1:1,b=this.spawnBossBullet(enemy,side>0?Math.PI:0,260,damage,{wave:true});if(!b?.active||!b.body)continue;b.setPosition(side>0?this.cameras.main.worldView.right+40:this.cameras.main.worldView.left-40,this.floorTop-20);if(typeof b.setVelocityX==='function')b.setVelocityX(side>0?-260:260);}
+      for(let i=0;i<count;i++){const side=i%2===0?-1:1,b=this.spawnBossBullet(enemy,side>0?Math.PI:0,260,damage,{wave:true});if(!this.isPhysicsActive(b))continue;b.setPosition(side>0?this.cameras.main.worldView.right+40:this.cameras.main.worldView.left-40,this.floorTop-20);this.safeSetVelocityX(b,side>0?-260:260);}
       enemy.setData('nextLateAttack',time+(stage===3?1000:4000));
     }else if(pattern==='laser'){
-      const beams=stage===3?2:1;for(let i=0;i<beams;i++){const angle=targetAngle+(stage===1?0:(i?-.85:.85));const b=this.spawnBossBullet(enemy,angle,520,damage*.4);b.setScale(3.5,2.2);b.setData('expires',time+3000);}
+      const beams=stage===3?2:1;for(let i=0;i<beams;i++){const angle=targetAngle+(stage===1?0:(i?-.85:.85));const b=this.spawnBossBullet(enemy,angle,520,damage*.4);if(!b||!this.isPhysicsActive(b))continue;b.setScale(3.5,2.2);b.setData('expires',time+3000);}
       enemy.setData('nextLateAttack',time+4500);
     }else{
       const count=[16,24,32][stage-1];for(let i=0;i<count;i++)this.spawnBossBullet(enemy,i*Math.PI*2/count,300,damage);
@@ -1872,13 +1923,15 @@ class Game extends Phaser.Scene{
   }
   updateEnemyBullets(time){
     const bounds=this.physics.world.bounds;
-    this.enemyBullets.getChildren().forEach(bullet=>{
-      if(!bullet.active)return;
-      if(bullet.getData('tracking')&&bullet.body){
-        const dx=this.player.x-bullet.x,dy=this.player.y-bullet.y,len=Math.hypot(dx,dy)||1,speed=Math.max(150,Math.hypot(bullet.body.velocity.x,bullet.body.velocity.y));
-        bullet.setVelocity(dx/len*speed,dy/len*speed);
+    this.enemyBullets.getChildren().slice().forEach(bullet=>{
+      if(!this.isPhysicsActive(bullet))return;
+      const body=bullet.body;
+      if(!body)return;
+      if(bullet.getData('tracking')){
+        const dx=this.player.x-bullet.x,dy=this.player.y-bullet.y,len=Math.hypot(dx,dy)||1,speed=Math.max(150,Math.hypot(body.velocity?.x||0,body.velocity?.y||0));
+        this.safeSetVelocity(bullet,dx/len*speed,dy/len*speed);
       }
-      if(bullet.getData('bounce')&&bullet.body&&((bullet.x<bounds.left&&bullet.body.velocity.x<0)||(bullet.x>bounds.right&&bullet.body.velocity.x>0))){if(typeof bullet.setVelocityX==='function')bullet.setVelocityX(-bullet.body.velocity.x);bullet.setData('bounce',0);}
+      if(bullet.getData('bounce')&&((bullet.x<bounds.left&&(body.velocity?.x||0)<0)||(bullet.x>bounds.right&&(body.velocity?.x||0)>0))){this.safeSetVelocityX(bullet,-(body.velocity?.x||0));bullet.setData('bounce',0);}
     });
   }
   updateLaser(time){
@@ -1911,13 +1964,13 @@ class Game extends Phaser.Scene{
     });
     const minX=this.player.body.width/2,maxX=this.definition.w-this.player.body.width/2;targetX=Phaser.Math.Clamp(targetX,minX,maxX);
     const left=Math.min(startX,targetX),right=Math.max(startX,targetX);let firstEnemy=null;
-    if(this.agilityLevel>=20)this.enemies.getChildren().forEach(enemy=>{if(!enemy.active)return;const eb=enemy.body;if(eb.right>=left&&eb.left<=right&&eb.bottom>=this.player.body.top&&eb.top<=this.player.body.bottom){enemy.stunnedUntil=time+this.stunDuration*1000;if(!firstEnemy||Math.abs(enemy.x-startX)<Math.abs(firstEnemy.x-startX))firstEnemy=enemy;}});
+    if(this.agilityLevel>=20)this.enemies.getChildren().forEach(enemy=>{if(!this.isPhysicsActive(enemy))return;const eb=enemy.body;if(eb.right>=left&&eb.left<=right&&eb.bottom>=this.player.body.top&&eb.top<=this.player.body.bottom){enemy.stunnedUntil=time+this.stunDuration*1000;if(!firstEnemy||Math.abs(enemy.x-startX)<Math.abs(firstEnemy.x-startX))firstEnemy=enemy;}});
     if(firstEnemy&&this.agilityLevel>=30)this.damageEnemy(firstEnemy,20,'dash');
     this.burstEffect(startX,this.player.body.bottom-35,0xbd9aff,.8);
     const player=this.player;
     if(!player?.body)return;
     player.x=targetX;
-    if(typeof player.setVelocityX==='function')player.setVelocityX(0);
+    this.safeSetVelocityX(player,0);
     player.body.updateFromGameObject();
     this.burstEffect(targetX,this.player.body.bottom-35,0xbd9aff,1.1);
     this.dashCharges--;this.dashRechargeAt=time+this.dashCooldown*1000;
@@ -1950,7 +2003,7 @@ class Game extends Phaser.Scene{
     if(this.assassinationCharges<=0)return;const target=this.findNearestEnemyGlobal();if(!target)return;
     const destination=this.findSafeAssassinationLanding(target);
     if(!destination)return;
-    this.assassinationOrigin={x:this.player.x,y:this.player.y};this.assassinationReturnUntil=time+5000;this.assassinationCharges--;this.assassinationRechargeAt=time+this.assassinationCooldown*1000;this.player.setPosition(destination.x,destination.y);this.player.body.reset(destination.x,destination.y);this.player.setVelocity(0,0);this.tempShield=Math.max(this.tempShield,this.agilityLevel>=150?5000:1250);this.assassinationBuffUntil=time+5000;this.burstEffect(this.player.x,this.player.y,0xff4d78,1.5);
+    this.assassinationOrigin={x:this.player.x,y:this.player.y};this.assassinationReturnUntil=time+5000;this.assassinationCharges--;this.assassinationRechargeAt=time+this.assassinationCooldown*1000;this.player.setPosition(destination.x,destination.y);this.player.body.reset(destination.x,destination.y);this.safeSetVelocity(this.player,0,0);this.tempShield=Math.max(this.tempShield,this.agilityLevel>=150?5000:1250);this.assassinationBuffUntil=time+5000;this.burstEffect(this.player.x,this.player.y,0xff4d78,1.5);
     if(this.agilityLevel>=150)this.damageEnemy(target,target.maxHp*.2,'assassination');
   }
   findSafeAssassinationLanding(target){
@@ -1985,18 +2038,20 @@ class Game extends Phaser.Scene{
   fireRadial(x,y,count,damage,source='radial'){
     for(let index=0;index<count;index++){
       const angle=index*Math.PI*2/count;
-      const bullet=this.playerBullets.create(x,y,'bullet');
-      bullet.setVelocity(Math.cos(angle)*520,Math.sin(angle)*520);bullet.body.allowGravity=false;bullet.setData('damage',damage);bullet.setData('originX',x);bullet.setData('originY',y);bullet.setData('source',source);bullet.setData('maxHits',this.shotUpgrade>=75?3:this.shotUpgrade>=51?2:1);bullet.setData('hitEnemies',new Set());bullet.setData('expires',this.time.now+1500);
+      const bullet=this.createPhysicsBullet(this.playerBullets,x,y,'bullet');
+      if(!bullet)continue;
+      this.safeSetVelocity(bullet,Math.cos(angle)*520,Math.sin(angle)*520);bullet.body.allowGravity=false;bullet.setData('damage',damage);bullet.setData('originX',x);bullet.setData('originY',y);bullet.setData('source',source);bullet.setData('maxHits',this.shotUpgrade>=75?3:this.shotUpgrade>=51?2:1);bullet.setData('hitEnemies',new Set());bullet.setData('expires',this.time.now+1500);
     }
   }
   fireSpread(x,y,targetX,targetY,count,damage,source='airstrike',options={}){
     const base=Math.atan2(targetY-y,targetX-x);
     for(let index=0;index<count;index++){
       const angle=base+(index-(count-1)/2)*.14;
-      const bullet=this.playerBullets.create(x+Math.cos(angle)*18,y+Math.sin(angle)*12,'bullet');
+      const bullet=this.createPhysicsBullet(this.playerBullets,x+Math.cos(angle)*18,y+Math.sin(angle)*12,'bullet');
+      if(!bullet)continue;
       const elemental=options.forceElemental||Boolean(options.elemental)||Boolean(options.elementChance&&Math.random()<options.elementChance),elementType=elemental?(options.elementType||['burn','freeze','shock'][index%3]):'';
       const explosive=options.explosiveChance!=null?Math.random()<options.explosiveChance:Boolean(options.explosive),dissolve=Boolean(options.dissolve);
-      bullet.setVelocity(Math.cos(angle)*720,Math.sin(angle)*720);bullet.body.allowGravity=false;bullet.setData('damage',damage);bullet.setData('originX',x);bullet.setData('originY',y);bullet.setData('source',source);bullet.setData('maxHits',options.maxHits||(this.shotUpgrade>=75?3:this.shotUpgrade>=51?2:1));bullet.setData('hitEnemies',new Set());bullet.setData('explosive',explosive);bullet.setData('explosionDamage',options.explosionDamage||damage*.75);bullet.setData('dissolve',dissolve);bullet.setData('elemental',elemental);bullet.setData('elementType',elementType);bullet.setTint(dissolve?0x171717:explosive?0xff9f1c:elemental?(elementType==='burn'?0xff7338:elementType==='freeze'?0x72e6ff:0xffe74c):0xffffff);bullet.setData('expires',this.time.now+(options.lifetime||1400));
+      this.safeSetVelocity(bullet,Math.cos(angle)*720,Math.sin(angle)*720);bullet.body.allowGravity=false;bullet.setData('damage',damage);bullet.setData('originX',x);bullet.setData('originY',y);bullet.setData('source',source);bullet.setData('maxHits',options.maxHits||(this.shotUpgrade>=75?3:this.shotUpgrade>=51?2:1));bullet.setData('hitEnemies',new Set());bullet.setData('explosive',explosive);bullet.setData('explosionDamage',options.explosionDamage||damage*.75);bullet.setData('dissolve',dissolve);bullet.setData('elemental',elemental);bullet.setData('elementType',elementType);bullet.setTint(dissolve?0x171717:explosive?0xff9f1c:elemental?(elementType==='burn'?0xff7338:elementType==='freeze'?0x72e6ff:0xffe74c):0xffffff);bullet.setData('expires',this.time.now+(options.lifetime||1400));
     }
   }
   useAirstrike(time){
@@ -2009,7 +2064,7 @@ class Game extends Phaser.Scene{
     const landingX=landing?Phaser.Math.Clamp(target.x,landing.left+half+4,landing.right-half-4):Phaser.Math.Clamp(target.x,half,this.definition.w-half);
     const landingY=(landing?landing.top:this.floorTop)-this.player.body.height/2-1;
     this.burstEffect(this.player.x,this.player.body.bottom-35,0xffd166,1);
-    this.player.setPosition(landingX,landingY);this.player.body.reset(landingX,landingY);this.player.setVelocity(0,0);
+    this.player.setPosition(landingX,landingY);this.player.body.reset(landingX,landingY);this.safeSetVelocity(this.player,0,0);
     this.burstEffect(landingX,landingY+35,0xffd166,1.4);
     if(this.agilityLevel>=85){
       this.airstrikeCharges--;
@@ -2052,11 +2107,12 @@ class Game extends Phaser.Scene{
       const angle=base+(index-(count-1)/2)*.14;
       const explosive=explosiveChance>0&&Math.random()<explosiveChance;
       const shotDamage=baseShotDamage*(explosive?this.explosiveMultiplier:1);
-      const bullet=this.playerBullets.create(muzzleX+Math.cos(angle)*5,muzzleY+Math.sin(angle)*5,'bullet');
+      const bullet=this.createPhysicsBullet(this.playerBullets,muzzleX+Math.cos(angle)*5,muzzleY+Math.sin(angle)*5,'bullet');
+      if(!bullet)continue;
       // 弹药 100 级时，技能豆赋予的 15 发散弹每一发都必定附带元素；其余普通射击仍按元素概率结算。
       const bulletElemental=this.ammoLevel>=100&&skillSpread||this.ammoLevel>=75&&Math.random()<this.elementChance;
       const bulletElement=bulletElemental?['burn','freeze','shock'][index%3]:'';
-      bullet.setVelocity(Math.cos(angle)*(this.activeWeapon==='sniper'?980:720),Math.sin(angle)*(this.activeWeapon==='sniper'?980:720));bullet.body.allowGravity=false;bullet.setData('damage',shotDamage);bullet.setData('originX',muzzleX);bullet.setData('originY',muzzleY);bullet.setData('source',this.activeWeapon==='pistol'?'pistol':this.activeWeapon==='sniper'?'sniper':'smg');bullet.setData('maxHits',this.shotUpgrade>=75?3:1);bullet.setData('hitEnemies',new Set());bullet.setData('explosive',explosive);bullet.setData('explosionDamage',shotDamage*.75);bullet.setData('dissolve',dissolve);bullet.setData('elemental',bulletElemental);bullet.setData('elementType',bulletElement);bullet.setTint(dissolve?0x171717:explosive?0xff9f1c:bulletElemental?(bulletElement==='burn'?0xff7338:bulletElement==='freeze'?0x72e6ff:0xffe74c):0xffffff);bullet.setData('expires',this.time.now+1600);
+      this.safeSetVelocity(bullet,Math.cos(angle)*(this.activeWeapon==='sniper'?980:720),Math.sin(angle)*(this.activeWeapon==='sniper'?980:720));bullet.body.allowGravity=false;bullet.setData('damage',shotDamage);bullet.setData('originX',muzzleX);bullet.setData('originY',muzzleY);bullet.setData('source',this.activeWeapon==='pistol'?'pistol':this.activeWeapon==='sniper'?'sniper':'smg');bullet.setData('maxHits',this.shotUpgrade>=75?3:1);bullet.setData('hitEnemies',new Set());bullet.setData('explosive',explosive);bullet.setData('explosionDamage',shotDamage*.75);bullet.setData('dissolve',dissolve);bullet.setData('elemental',bulletElemental);bullet.setData('elementType',bulletElement);bullet.setTint(dissolve?0x171717:explosive?0xff9f1c:bulletElemental?(bulletElement==='burn'?0xff7338:bulletElement==='freeze'?0x72e6ff:0xffe74c):0xffffff);bullet.setData('expires',this.time.now+1600);
     }
     if(stormShot){
       this.fireSpread(muzzleX,muzzleY,target.x,target.y,stormCount,baseShotDamage,'ammoStorm',{explosiveChance,explosionDamage:baseShotDamage*.75,elementChance:this.ammoLevel>=75?this.elementChance:0,forceElemental:this.ammoLevel>=100&&skillSpread});
@@ -2068,7 +2124,7 @@ class Game extends Phaser.Scene{
     if(this.spreadShots>0){this.spreadShots--;this.syncWeaponArt();}
     if(this.activeWeapon==='smg')this.smgAmmo--;
   }
-  firePistolSecondBurst(x,y,base,damage,options={}){for(let index=0;index<3;index++){const angle=base+(index-1)*.14;const bullet=this.playerBullets.create(x+Math.cos(angle)*5,y+Math.sin(angle)*5,'bullet');const elemental=Boolean(options.forceElemental)||Boolean(options.elemental)||Boolean(options.elementChance&&Math.random()<options.elementChance),elementType=elemental?(options.elementType||['burn','freeze','shock'][index%3]):'';const explosive=options.explosiveChance!=null?Math.random()<options.explosiveChance:Boolean(options.explosive);bullet.setVelocity(Math.cos(angle)*720,Math.sin(angle)*720);bullet.body.allowGravity=false;bullet.setData('damage',damage*(explosive?this.explosiveMultiplier:1));bullet.setData('originX',x);bullet.setData('originY',y);bullet.setData('source','pistol');bullet.setData('maxHits',this.shotUpgrade>=75?3:1);bullet.setData('hitEnemies',new Set());bullet.setData('explosive',explosive);bullet.setData('explosionDamage',options.explosionDamage||damage*.75);bullet.setData('elemental',elemental);bullet.setData('elementType',elementType);bullet.setTint(explosive?0xff9f1c:elemental?(elementType==='burn'?0xff7338:elementType==='freeze'?0x72e6ff:0xffe74c):0xffffff);bullet.setData('expires',this.time.now+1200)}}
+  firePistolSecondBurst(x,y,base,damage,options={}){for(let index=0;index<3;index++){const angle=base+(index-1)*.14;const bullet=this.createPhysicsBullet(this.playerBullets,x+Math.cos(angle)*5,y+Math.sin(angle)*5,'bullet');if(!bullet)continue;const elemental=Boolean(options.forceElemental)||Boolean(options.elemental)||Boolean(options.elementChance&&Math.random()<options.elementChance),elementType=elemental?(options.elementType||['burn','freeze','shock'][index%3]):'';const explosive=options.explosiveChance!=null?Math.random()<options.explosiveChance:Boolean(options.explosive);this.safeSetVelocity(bullet,Math.cos(angle)*720,Math.sin(angle)*720);bullet.body.allowGravity=false;bullet.setData('damage',damage*(explosive?this.explosiveMultiplier:1));bullet.setData('originX',x);bullet.setData('originY',y);bullet.setData('source','pistol');bullet.setData('maxHits',this.shotUpgrade>=75?3:1);bullet.setData('hitEnemies',new Set());bullet.setData('explosive',explosive);bullet.setData('explosionDamage',options.explosionDamage||damage*.75);bullet.setData('elemental',elemental);bullet.setData('elementType',elementType);bullet.setTint(explosive?0xff9f1c:elemental?(elementType==='burn'?0xff7338:elementType==='freeze'?0x72e6ff:0xffe74c):0xffffff);bullet.setData('expires',this.time.now+1200)}}
   useUltimate(){
     if(this.done||this.energy<100)return;
     this.energy=0;
@@ -2078,8 +2134,9 @@ class Game extends Phaser.Scene{
     const rings=this.shotUpgrade>=85?2:1,count=this.shotUpgrade>=85?86:50;
     for(let ring=0;ring<rings;ring++)for(let index=0;index<count;index++){
       const angle=index*Math.PI*2/count+ring*Math.PI/count;
-      const bullet=this.playerBullets.create(muzzleX+Math.cos(angle)*18,muzzleY+Math.sin(angle)*18,'bullet');
-      bullet.setVelocity(Math.cos(angle)*520,Math.sin(angle)*520);bullet.body.allowGravity=false;bullet.setData('damage',this.atk);bullet.setData('source','ultimate');bullet.setData('maxHits',this.shotUpgrade>=75?3:this.shotUpgrade>=51?2:1);bullet.setData('hitEnemies',new Set());bullet.setData('expires',this.time.now+1500);
+      const bullet=this.createPhysicsBullet(this.playerBullets,muzzleX+Math.cos(angle)*18,muzzleY+Math.sin(angle)*18,'bullet');
+      if(!bullet)continue;
+      this.safeSetVelocity(bullet,Math.cos(angle)*520,Math.sin(angle)*520);bullet.body.allowGravity=false;bullet.setData('damage',this.atk);bullet.setData('source','ultimate');bullet.setData('maxHits',this.shotUpgrade>=75?3:this.shotUpgrade>=51?2:1);bullet.setData('hitEnemies',new Set());bullet.setData('expires',this.time.now+1500);
     }
   }
   spawnEndlessWave(){
@@ -2124,27 +2181,31 @@ class Game extends Phaser.Scene{
   }
   updateEnemies(time){
     const view=this.cameras.main.worldView,viewMargin=96;
-    this.enemies.getChildren().forEach(enemy=>{
-      if(!enemy?.active||!enemy.body)return;
+    // Work on a snapshot: killEnemy() can remove members while this loop is
+    // running, which otherwise leaves Phaser's group iterator with a stale
+    // object during dense endless waves.
+    this.enemies.getChildren().slice().forEach(enemy=>{
+      if(!this.isPhysicsActive(enemy))return;
       const body=enemy.body;
       const inView=body.right>=view.x-viewMargin&&body.x<=view.right+viewMargin&&body.bottom>=view.y-viewMargin&&body.y<=view.bottom+viewMargin;
       enemy.setData('inView',inView);
       if(!inView){
-        enemy.setVelocity(0,0);
+        this.safeSetVelocity(enemy,0,0);
         this.syncEnemyArt(enemy);
         return;
       }
-      if(enemy.stunnedUntil>time){enemy.setVelocity(0,0);this.syncEnemyArt(enemy);return;}
+      if(enemy.stunnedUntil>time){this.safeSetVelocity(enemy,0,0);this.syncEnemyArt(enemy);return;}
       const dx=this.player.x-enemy.x,dy=this.player.y-enemy.y,distance=Math.hypot(dx,dy)||1,direction=Math.sign(dx)||1;
       if(enemy.bossPattern){
         const stage=enemy.hp/enemy.maxHp>.66?1:enemy.hp/enemy.maxHp>.33?2:3;
-        if(typeof enemy.setVelocityX==='function')enemy.setVelocityX(stage>=2?Math.sin(time/900+enemy.x)*70:0);
+        this.safeSetVelocityX(enemy,stage>=2?Math.sin(time/900+enemy.x)*70:0);
       }
-      if((enemy.type==='y'||enemy.type==='b1')&&typeof enemy.setVelocityX==='function')enemy.setVelocityX(direction*(enemy.type==='b1'?45:155));
-      if((enemy.type==='g'||enemy.type==='e2')&&typeof enemy.setVelocityX==='function')enemy.setVelocityX(direction*(enemy.type==='e2'?42:58));
-      if(enemy.type==='p'){if(typeof enemy.setVelocityX==='function')enemy.setVelocityX(direction*58);if(typeof enemy.setVelocityY==='function')enemy.setVelocityY((this.player.y-95-enemy.y)*1.35+Math.sin(time/380+enemy.x)*32);}
-      if(enemy.type==='b'){if(typeof enemy.setVelocityX==='function')enemy.setVelocityX(direction*18);if(typeof enemy.setVelocityY==='function')enemy.setVelocityY((this.player.y-150-enemy.y)*.45+Math.sin(time/620+enemy.x)*18);}
-      if(enemy.getData('ammoFreezeUntil')>time)enemy.setVelocity(enemy.body.velocity.x*.6,enemy.body.velocity.y*.6);
+      if((enemy.type==='y'||enemy.type==='b1') )this.safeSetVelocityX(enemy,direction*(enemy.type==='b1'?45:155));
+      if((enemy.type==='g'||enemy.type==='e2'))this.safeSetVelocityX(enemy,direction*(enemy.type==='e2'?42:58));
+      if(enemy.type==='p'){this.safeSetVelocityX(enemy,direction*58);this.safeSetVelocityY(enemy,(this.player.y-95-enemy.y)*1.35+Math.sin(time/380+enemy.x)*32);}
+      if(enemy.type==='b'){this.safeSetVelocityX(enemy,direction*18);this.safeSetVelocityY(enemy,(this.player.y-150-enemy.y)*.45+Math.sin(time/620+enemy.x)*18);}
+      if(enemy.getData('ammoFreezeUntil')>time&&this.isPhysicsActive(enemy)){const velocity=enemy.body.velocity;this.safeSetVelocity(enemy,(velocity?.x||0)*.6,(velocity?.y||0)*.6);}
+      if(!this.isPhysicsActive(enemy))return;
       if(enemy.body.velocity.x<-1)enemy.facingLeft=true;
       if(enemy.body.velocity.x>1)enemy.facingLeft=false;
       this.syncEnemyArt(enemy);
@@ -2163,7 +2224,7 @@ class Game extends Phaser.Scene{
             if(enemy.spiralActiveUntil<=time&&time>=enemy.spiralCooldownUntil){enemy.spiralActiveUntil=time+duration;enemy.spiralCooldownUntil=time+duration+cooldown;enemy.setData('spiralPhase',enemy.getData('spiralPhase')||0);}
             if(enemy.spiralActiveUntil>time){
               const phase=enemy.getData('spiralPhase')||0;
-              for(let index=0;index<8;index++){const angle=phase+index*Math.PI/4;const bullet=this.enemyBullets.create(enemy.x,enemy.body.top+enemy.body.height/2,'greenBullet');bullet.setVelocity(Math.cos(angle)*240,Math.sin(angle)*240);bullet.body.allowGravity=false;bullet.setData('damage',enemy.contactDamage);bullet.setData('owner',enemy);bullet.setData('expires',time+4000);}
+              for(let index=0;index<8;index++){const angle=phase+index*Math.PI/4;const bullet=this.createPhysicsBullet(this.enemyBullets,enemy.x,enemy.body.top+enemy.body.height/2,'greenBullet');if(!bullet)continue;this.safeSetVelocity(bullet,Math.cos(angle)*240,Math.sin(angle)*240);bullet.body.allowGravity=false;bullet.setData('damage',enemy.contactDamage);bullet.setData('owner',enemy);bullet.setData('expires',time+4000);}
               enemy.setData('spiralPhase',phase+.18);enemy.setData('spiralNextShot',time+180);
             }else enemy.setData('spiralNextShot',enemy.spiralCooldownUntil);
           }
@@ -2174,8 +2235,8 @@ class Game extends Phaser.Scene{
           const phase=enemy.getData('patternPhase')||0;
           for(let ring=0;ring<2;ring++)for(let index=0;index<60;index++){
             const angle=phase+ring*Math.PI/60+index*Math.PI*2/60;
-            const bullet=this.enemyBullets.create(enemy.x,enemy.body.top+enemy.body.height/2,'redBullet');
-            bullet.setVelocity(Math.cos(angle)*260,Math.sin(angle)*260);bullet.body.allowGravity=false;bullet.setData('damage',this.enemyMultiplier*2);bullet.setData('owner',enemy);bullet.setData('expires',time+5200);
+            const bullet=this.createPhysicsBullet(this.enemyBullets,enemy.x,enemy.body.top+enemy.body.height/2,'redBullet');if(!bullet)continue;
+            this.safeSetVelocity(bullet,Math.cos(angle)*260,Math.sin(angle)*260);bullet.body.allowGravity=false;bullet.setData('damage',this.enemyMultiplier*2);bullet.setData('owner',enemy);bullet.setData('expires',time+5200);
           }
           enemy.setData('patternPhase',phase+Math.PI/60);enemy.setData('nextShot',time+7000);
         }
@@ -2191,8 +2252,8 @@ class Game extends Phaser.Scene{
           const phase=enemy.getData('patternPhase')||0;
           for(let index=0;index<20;index++){
             const angle=phase+index*Math.PI*2/20;
-            const bullet=this.enemyBullets.create(enemy.x,enemy.y,'redBullet');
-            bullet.setVelocity(Math.cos(angle)*250,Math.sin(angle)*250);bullet.body.allowGravity=false;bullet.setData('damage',this.enemyMultiplier*2);bullet.setData('owner',enemy);bullet.setData('expires',time+4200);
+            const bullet=this.createPhysicsBullet(this.enemyBullets,enemy.x,enemy.y,'redBullet');if(!bullet)continue;
+            this.safeSetVelocity(bullet,Math.cos(angle)*250,Math.sin(angle)*250);bullet.body.allowGravity=false;bullet.setData('damage',this.enemyMultiplier*2);bullet.setData('owner',enemy);bullet.setData('expires',time+4200);
           }
           enemy.setData('patternPhase',phase+Math.PI/20);enemy.setData('nextShot',time+3000);
         }
@@ -2202,14 +2263,15 @@ class Game extends Phaser.Scene{
           enemy.setData('nextSummon',time+10000);
         }
       }else if(!['y','b1','b','b2'].includes(enemy.type)&&time>=enemy.getData('nextShot')){
-        const bullet=this.enemyBullets.create(enemy.x,enemy.y,enemy.type==='g'||enemy.type==='e2'?'greenBullet':'redBullet');
+        const bullet=this.createPhysicsBullet(this.enemyBullets,enemy.x,enemy.y,enemy.type==='g'||enemy.type==='e2'?'greenBullet':'redBullet');
+        if(!bullet)return;
         const speed=enemy.type==='g'||enemy.type==='e2'?210:285;
-        bullet.setVelocity(dx/distance*speed,dy/distance*speed);bullet.body.allowGravity=false;bullet.setData('damage',enemy.waveMultiplier||this.enemyMultiplier);bullet.setData('owner',enemy);bullet.setData('expires',time+3200);
+        this.safeSetVelocity(bullet,dx/distance*speed,dy/distance*speed);bullet.body.allowGravity=false;bullet.setData('damage',enemy.waveMultiplier||this.enemyMultiplier);bullet.setData('owner',enemy);bullet.setData('expires',time+3200);
         enemy.setData('nextShot',time+(enemy.type==='g'||enemy.type==='e2'?1800:1350));
       }
     });
   }
-  expireBullets(group,time){group.getChildren().forEach(bullet=>{if(bullet.active&&time>=bullet.getData('expires'))bullet.destroy()})}
+  expireBullets(group,time){group.getChildren().slice().forEach(bullet=>{if(this.isPhysicsActive(bullet)&&time>=bullet.getData('expires'))this.deferPhysicsDestroy(bullet);})}
   drawAimLine(){
     const muzzle=this.getWeaponMuzzle(),angle=muzzle.angle;
     this.aimLine.clear();
@@ -2276,7 +2338,7 @@ class Game extends Phaser.Scene{
     const armorSpeed=this.armorSpeedBoostUntil>time?1.3:1;
     const player=this.player;
     if(!player?.body)return;
-    if(typeof player.setVelocityX==='function')player.setVelocityX((left?-230:right?230:0)*meleeSpeed*armorSpeed);
+    this.safeSetVelocityX(player,(left?-230:right?230:0)*meleeSpeed*armorSpeed);
     const jumpHeld=this.keys.W.isDown||this.keys.UP.isDown||this.keys.SPACE.isDown||touchJumpHeld;
     const jumpPressed=this.justDown(this.keys.W)||this.justDown(this.keys.UP)||this.justDown(this.keys.SPACE)||this.jumpRequested||time<this.jumpBufferUntil;
     const body=this.player.body;
@@ -2288,13 +2350,13 @@ class Game extends Phaser.Scene{
     });
     const onGround=Boolean(body.onFloor?.()||body.blocked.down||body.touching.down||platformGrounded);
     if(onGround&&this.player.body.velocity.y>=0){this.jumpCount=0;this.heroJumping=false;}
-    if(jumpPressed&&onGround){this.player.setVelocityY(-590);this.jumpCount=1;this.heroJumping=true;this.floatUnlockAt=time+260;this.jumpRequested=false;this.jumpBufferUntil=0;}
-    else if(jumpPressed&&this.agilityLevel>=40&&this.jumpCount===1&&(this.agilityLevel>=90||time>=this.secondJumpReadyAt)){this.player.setVelocityY(-590*(this.agilityLevel>=90?1:.75));this.jumpCount=2;this.secondJumpReadyAt=this.agilityLevel>=90?0:time+this.doubleJumpCooldown*1000;this.heroJumping=true;this.floatUnlockAt=time+260;this.jumpRequested=false;this.jumpBufferUntil=0;}
+    if(jumpPressed&&onGround){this.safeSetVelocityY(this.player,-590);this.jumpCount=1;this.heroJumping=true;this.floatUnlockAt=time+260;this.jumpRequested=false;this.jumpBufferUntil=0;}
+    else if(jumpPressed&&this.agilityLevel>=40&&this.jumpCount===1&&(this.agilityLevel>=90||time>=this.secondJumpReadyAt)){this.safeSetVelocityY(this.player,-590*(this.agilityLevel>=90?1:.75));this.jumpCount=2;this.secondJumpReadyAt=this.agilityLevel>=90?0:time+this.doubleJumpCooldown*1000;this.heroJumping=true;this.floatUnlockAt=time+260;this.jumpRequested=false;this.jumpBufferUntil=0;}
     else if(time>=this.jumpBufferUntil)this.jumpRequested=false;
     // Floating is only possible after a successful jump. This prevents a held
     // key during spawn/landing from swallowing the normal jump impulse.
     if(this.agilityLevel>=100&&this.heroJumping&&!onGround&&time>=this.floatUnlockAt&&jumpHeld&&this.floatMs>0){
-      this.floating=true;this.player.setVelocityY(0);this.floatMs=Math.max(0,this.floatMs-Math.min(50,delta||16));
+      this.floating=true;this.safeSetVelocityY(this.player,0);this.floatMs=Math.max(0,this.floatMs-Math.min(50,delta||16));
     }else{
       this.floating=false;
     }
@@ -2312,8 +2374,23 @@ class Game extends Phaser.Scene{
     if(this.smgFiring||this.touchFiring){if(this.combatMode==='melee')this.meleeAttack(time);else this.shoot();}
     if(this.player.y>this.floorTop+130)this.failLevel();
     this.syncPlayerArt();
-    this.updateEnemies(time);
-    this.updateEnemyBullets(time);
+    // A stale Arcade Physics member can occur during a dense wave while an
+    // overlap callback is removing it. Isolate those two maintenance passes
+    // so one malformed object cannot terminate the whole Game scene.
+    try{this.updateEnemies(time)}catch(error){
+      console.warn('[行于无垠] 跳过失效敌人更新',error);
+      // Remove the malformed member that caused the pass to abort, then let
+      // the remaining endless-wave enemies continue on the next frame.
+      this.enemies.getChildren().slice().forEach(enemy=>{
+        if(!enemy?.active||!enemy?.body||enemy.body.enable===false)this.deferPhysicsDestroy(enemy);
+      });
+    }
+    try{this.updateEnemyBullets(time)}catch(error){
+      console.warn('[行于无垠] 跳过失效敌方子弹更新',error);
+      this.enemyBullets.getChildren().slice().forEach(bullet=>{
+        if(!bullet?.active||!bullet?.body||bullet.body.enable===false)this.deferPhysicsDestroy(bullet);
+      });
+    }
     this.checkEnemyContact();
     this.checkEnemyBulletContact();
     this.updateLaser(time);
