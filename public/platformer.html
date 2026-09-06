@@ -93,9 +93,9 @@ kbd{border-color:#38546a;background:#122438;color:#eafaff}
 <script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
 <body>
 <main class="shell">
-<header><h1>行于无垠</h1><div><span id="service-status" class="auth-user">游戏服务：正在检查</span><span id="auth-user" class="auth-user"></span><button class="button secondary" id="change-password-button" type="button" hidden>修改密码</button><button class="button secondary" id="pk-open-button" type="button" hidden>联机 PK</button><button class="button secondary" id="service-toggle" type="button" hidden>关闭游戏服务</button><button class="button secondary" id="logout-button" type="button" hidden>退出登录</button><a href="../index.html">返回官网</a></div></header>
+<header><h1>行于无垠</h1><div><span id="service-status" class="auth-user">游戏服务：正在检查</span><span id="auth-user" class="auth-user"></span><button class="button secondary" id="change-password-button" type="button" hidden>账号设置</button><button class="button secondary" id="pk-open-button" type="button" hidden>联机 PK</button><button class="button secondary" id="service-toggle" type="button" hidden>关闭游戏服务</button><button class="button secondary" id="logout-button" type="button" hidden>退出登录</button><a href="../index.html">返回官网</a></div></header>
 <section id="auth-gate" class="auth-gate"><h2>登录后开始游戏</h2><p>使用本游戏独立账号，不与社团盘登录系统关联。</p><div class="auth-form"><input id="username-input" type="text" maxlength="64" placeholder="用户名"><input id="password-input" type="password" maxlength="72" placeholder="密码"><button class="button" id="login-button" type="button">登录</button><button class="button secondary" id="register-button" type="button">注册新用户</button></div><p id="auth-message" class="auth-message" role="status"></p></section>
-<section id="password-panel" class="password-panel" hidden><h2>修改密码</h2><div class="password-form"><input id="old-password-input" type="password" maxlength="72" placeholder="当前密码"><input id="new-password-input" type="password" maxlength="72" placeholder="新密码（至少6位）"><input id="confirm-password-input" type="password" maxlength="72" placeholder="确认新密码"><button class="button" id="save-password-button" type="button">保存密码</button><button class="button secondary" id="cancel-password-button" type="button">取消</button></div><p id="password-message" class="password-message" role="status"></p></section>
+<section id="password-panel" class="password-panel" hidden><h2>账号设置</h2><div class="password-form"><input id="new-username-input" type="text" maxlength="64" placeholder="新用户名（3-64位中文、英文或数字）"><button class="button" id="save-username-button" type="button">保存用户名</button></div><div class="password-form"><input id="old-password-input" type="password" maxlength="72" placeholder="当前密码"><input id="new-password-input" type="password" maxlength="72" placeholder="新密码（至少6位）"><input id="confirm-password-input" type="password" maxlength="72" placeholder="确认新密码"><button class="button" id="save-password-button" type="button">保存密码</button><button class="button secondary" id="cancel-password-button" type="button">关闭</button></div><p id="password-message" class="password-message" role="status"></p></section>
 <section id="pk-panel" class="pk-panel" hidden>
   <div class="pk-head"><h2>联机 PK · 实时对战</h2><button class="button secondary" id="pk-close-button" type="button">关闭</button></div>
   <p class="pk-status" id="pk-status">创建房间或输入邀请码加入对战。</p>
@@ -444,6 +444,8 @@ const passwordPanel=document.getElementById('password-panel');
 const oldPasswordInput=document.getElementById('old-password-input');
 const newPasswordInput=document.getElementById('new-password-input');
 const confirmPasswordInput=document.getElementById('confirm-password-input');
+const newUsernameInput=document.getElementById('new-username-input');
+const saveUsernameButton=document.getElementById('save-username-button');
 const savePasswordButton=document.getElementById('save-password-button');
 const cancelPasswordButton=document.getElementById('cancel-password-button');
 const passwordMessage=document.getElementById('password-message');
@@ -552,8 +554,21 @@ async function refreshGameAdminAccess(){
   return isGameAdmin();
 }
 function setPasswordMessage(message,isError=false){if(passwordMessage){passwordMessage.textContent=message;passwordMessage.style.color=isError?'#ff8794':'#ffd166';}}
-function closePasswordPanel(){if(passwordPanel)passwordPanel.hidden=true;if(oldPasswordInput)oldPasswordInput.value='';if(newPasswordInput)newPasswordInput.value='';if(confirmPasswordInput)confirmPasswordInput.value='';setPasswordMessage('');}
-function openPasswordPanel(){if(!currentUser)return;passwordPanel.hidden=false;setPasswordMessage('请输入当前密码和新密码。');oldPasswordInput?.focus();}
+function closePasswordPanel(){if(passwordPanel)passwordPanel.hidden=true;if(newUsernameInput)newUsernameInput.value='';if(oldPasswordInput)oldPasswordInput.value='';if(newPasswordInput)newPasswordInput.value='';if(confirmPasswordInput)confirmPasswordInput.value='';setPasswordMessage('');}
+function openPasswordPanel(){if(!currentUser)return;passwordPanel.hidden=false;if(newUsernameInput)newUsernameInput.value=currentUser.username;setPasswordMessage('可修改用户名或密码。');newUsernameInput?.focus();}
+async function changeUsername(){
+  if(!currentUser||!platformerDb){setPasswordMessage('请先登录游戏。',true);return;}
+  const nextUsername=newUsernameInput?.value.trim()||'';
+  if(!/^[A-Za-z0-9\u4e00-\u9fff]{3,64}$/u.test(nextUsername)){setPasswordMessage('用户名需为 3-64 位中文、英文或数字，不能包含空格和符号。',true);return;}
+  if(nextUsername===currentUser.username){setPasswordMessage('新用户名不能与当前用户名相同。',true);return;}
+  saveUsernameButton&&(saveUsernameButton.disabled=true);setPasswordMessage('正在修改用户名…');
+  const {data:result,error}=await platformerDb.rpc('platformer_change_username',{p_username:currentUser.username,p_token:currentUser.token,p_new_username:nextUsername});
+  if(error||!result?.length||!result[0]?.session_token){saveUsernameButton&&(saveUsernameButton.disabled=false);setPasswordMessage(error?.message||'用户名未修改。',true);return;}
+  currentUser.username=result[0].username;currentUser.token=result[0].session_token;window.xingyuSession=currentUser;
+  localStorage.setItem('platformer-session',JSON.stringify({username:currentUser.username,token:currentUser.token}));
+  authUser.textContent=`已登录：${currentUser.username}`;if(newUsernameInput)newUsernameInput.value=currentUser.username;
+  saveUsernameButton&&(saveUsernameButton.disabled=false);setPasswordMessage('用户名修改成功。');
+}
 async function changePassword(){
   if(!currentUser||!platformerDb){setPasswordMessage('请先登录游戏。',true);return;}
   const oldPassword=oldPasswordInput.value,newPassword=newPasswordInput.value,confirmation=confirmPasswordInput.value;
@@ -820,6 +835,7 @@ function escapeHtml(value){return String(value).replace(/[&<>'"]/g,char=>({'&':'
 document.getElementById('login-button').onclick=()=>authenticate('login');
 document.getElementById('register-button').onclick=()=>authenticate('register');
 changePasswordButton?.addEventListener('click',openPasswordPanel);
+saveUsernameButton?.addEventListener('click',()=>void changeUsername());
 logoutButton?.addEventListener('click',()=>void logout());
 savePasswordButton?.addEventListener('click',()=>void changePassword());
 cancelPasswordButton?.addEventListener('click',closePasswordPanel);
