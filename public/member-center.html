@@ -241,7 +241,7 @@
       const username = $('signupUsername').value.trim();
       const password = $('signupPassword').value;
       const inviteCode = $('signupInviteCode').value.trim().toUpperCase();
-      if (!/^[a-zA-Z0-9_-]{3,40}$/.test(username)) {
+      if (!/^[A-Za-z0-9_]{3,64}$/.test(username)) {
         setMessage($('authMessage'), ClubI18n.t('memberCenter.usernameInvalid'), 'error');
         return;
       }

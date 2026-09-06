@@ -95,7 +95,7 @@ kbd{border-color:#38546a;background:#122438;color:#eafaff}
 <main class="shell">
 <header><h1>行于无垠</h1><div><span id="service-status" class="auth-user">游戏服务：正在检查</span><span id="auth-user" class="auth-user"></span><button class="button secondary" id="change-password-button" type="button" hidden>账号设置</button><button class="button secondary" id="pk-open-button" type="button" hidden>联机 PK</button><button class="button secondary" id="service-toggle" type="button" hidden>关闭游戏服务</button><button class="button secondary" id="logout-button" type="button" hidden>退出登录</button><a href="../index.html">返回官网</a></div></header>
 <section id="auth-gate" class="auth-gate"><h2>登录后开始游戏</h2><p>使用本游戏独立账号，不与社团盘登录系统关联。</p><div class="auth-form"><input id="username-input" type="text" maxlength="64" placeholder="用户名"><input id="password-input" type="password" maxlength="72" placeholder="密码"><button class="button" id="login-button" type="button">登录</button><button class="button secondary" id="register-button" type="button">注册新用户</button></div><p id="auth-message" class="auth-message" role="status"></p></section>
-<section id="password-panel" class="password-panel" hidden><h2>账号设置</h2><div class="password-form"><input id="new-username-input" type="text" maxlength="64" placeholder="新用户名（3-64位中文、英文或数字）"><button class="button" id="save-username-button" type="button">保存用户名</button></div><div class="password-form"><input id="old-password-input" type="password" maxlength="72" placeholder="当前密码"><input id="new-password-input" type="password" maxlength="72" placeholder="新密码（至少6位）"><input id="confirm-password-input" type="password" maxlength="72" placeholder="确认新密码"><button class="button" id="save-password-button" type="button">保存密码</button><button class="button secondary" id="cancel-password-button" type="button">关闭</button></div><p id="password-message" class="password-message" role="status"></p></section>
+<section id="password-panel" class="password-panel" hidden><h2>账号设置</h2><div class="password-form"><input id="new-username-input" type="text" maxlength="64" placeholder="新用户名（3-64位中文、英文、数字或下划线）"><button class="button" id="save-username-button" type="button">保存用户名</button></div><div class="password-form"><input id="old-password-input" type="password" maxlength="72" placeholder="当前密码"><input id="new-password-input" type="password" maxlength="72" placeholder="新密码（至少6位）"><input id="confirm-password-input" type="password" maxlength="72" placeholder="确认新密码"><button class="button" id="save-password-button" type="button">保存密码</button><button class="button secondary" id="cancel-password-button" type="button">关闭</button></div><p id="password-message" class="password-message" role="status"></p></section>
 <section id="pk-panel" class="pk-panel" hidden>
   <div class="pk-head"><h2>联机 PK · 实时对战</h2><button class="button secondary" id="pk-close-button" type="button">关闭</button></div>
   <p class="pk-status" id="pk-status">创建房间或输入邀请码加入对战。</p>
@@ -559,7 +559,7 @@ function openPasswordPanel(){if(!currentUser)return;passwordPanel.hidden=false;i
 async function changeUsername(){
   if(!currentUser||!platformerDb){setPasswordMessage('请先登录游戏。',true);return;}
   const nextUsername=newUsernameInput?.value.trim()||'';
-  if(!/^[A-Za-z0-9\u4e00-\u9fff]{3,64}$/u.test(nextUsername)){setPasswordMessage('用户名需为 3-64 位中文、英文或数字，不能包含空格和符号。',true);return;}
+  if(!/^[A-Za-z0-9_\u4e00-\u9fff]{3,64}$/u.test(nextUsername)){setPasswordMessage('用户名需为 3-64 位中文、英文、数字或下划线，不能包含空格和其他符号。',true);return;}
   if(nextUsername===currentUser.username){setPasswordMessage('新用户名不能与当前用户名相同。',true);return;}
   saveUsernameButton&&(saveUsernameButton.disabled=true);setPasswordMessage('正在修改用户名…');
   const {data:result,error}=await platformerDb.rpc('platformer_change_username',{p_username:currentUser.username,p_token:currentUser.token,p_new_username:nextUsername});
@@ -786,7 +786,7 @@ async function startGame(profile){
 }
 async function authenticate(action){
   const username=usernameInput.value.trim(),password=passwordInput.value;
-  if(!/^[A-Za-z0-9\u4e00-\u9fff]{3,64}$/u.test(username)){setAuthMessage('用户名需为 3-64 位中文、英文或数字，不能包含空格和符号。',true);return}
+  if(!/^[A-Za-z0-9_\u4e00-\u9fff]{3,64}$/u.test(username)){setAuthMessage('用户名需为 3-64 位中文、英文、数字或下划线，不能包含空格和其他符号。',true);return}
   if(password.length<6){setAuthMessage('密码至少需要 6 位。',true);return}
   if(!platformerDb){setAuthMessage('Supabase 客户端未加载。',true);return}
   if(serviceStatusKnown&&!serviceEnabled&&username!=='chm'){
