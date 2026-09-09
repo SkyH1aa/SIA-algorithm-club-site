@@ -169,7 +169,10 @@ const GAME_ASSET_BASE=new URL('GamePictures/',document.baseURI);
 const SAVE_KEY='club-shooter-clean';
 const DEFAULT_SAVE='{"unlocked":1,"coins":0,"hp":0,"atk":0,"shot":0,"agility":0,"melee":0,"ammo":0,"armor":0,"combat":0}';
 let profileSaveKey=SAVE_KEY;
-const data=JSON.parse(localStorage.getItem(SAVE_KEY)||DEFAULT_SAVE);
+// Never bootstrap the live state from the legacy shared localStorage key.
+// Account data is loaded from the authenticated Supabase profile in
+// startGame(), so a signed-out page can never expose the previous account.
+const data=JSON.parse(DEFAULT_SAVE);
 data.hp??=0;data.atk??=0;data.shot??=0;data.agility??=0;data.melee??=0;data.ammo??=0;data.armor??=0;data.combat??=0;data.attackEvo??=0;data.armorEvo??=0;data.battleGod??=0;data.battleGod2??=0;
 data.agility=Math.max(0,Math.min(150,Number(data.agility)||0));data.combat=Math.max(0,Math.min(125,Number(data.combat)||0));data.attackEvo=Math.max(0,Number(data.attackEvo)||0);data.armorEvo=Math.max(0,Number(data.armorEvo)||0);
 data.eventEndlessBest??=0;data.eventEndlessClaimed??={};data.eventLevelClaimed??={};data.lifeEvo??=0;
@@ -406,6 +409,7 @@ const ART={
   coin:'optimized/Coin.png',energy:'optimized/EnergyBean.png',skill:'optimized/SkillBean.png',heart:'optimized/LifeBean.png',
   weaponPistol:'optimized/weaponPistol.png',weaponShotgun:'optimized/weaponShotgun.png',weaponSmg:'optimized/weaponSmg.png',weaponLaser:'optimized/weaponLaser.png',weaponSniper:'optimized/weaponSniper.png',weaponDagger:'optimized/weaponDagger.png',weaponBlade:'optimized/weaponBlade.png'
 };
+let authGeneration=0;
 const save=()=>{localStorage.setItem(profileSaveKey,JSON.stringify(data));if(currentUser)void saveRemoteProfile();};
 function tex(scene,key,color,width,height,radius=0){const g=scene.make.graphics({add:false});g.fillStyle(color,1);g.fillRoundedRect(0,0,width,height,radius);g.generateTexture(key,width,height);g.destroy()}
 
@@ -567,6 +571,7 @@ async function changeUsername(){
   const {data:result,error}=await platformerDb.rpc('platformer_change_username',{p_username:currentUser.username,p_token:currentUser.token,p_new_username:nextUsername});
   if(error||!result?.length||!result[0]?.session_token){saveUsernameButton&&(saveUsernameButton.disabled=false);setPasswordMessage(error?.message||'用户名未修改。',true);return;}
   currentUser.username=result[0].username;currentUser.token=result[0].session_token;window.xingyuSession=currentUser;
+  setProfileSaveKey(currentUser.username);
   localStorage.setItem('platformer-session',JSON.stringify({username:currentUser.username,token:currentUser.token}));
   authUser.textContent=`已登录：${currentUser.username}`;if(newUsernameInput)newUsernameInput.value=currentUser.username;
   saveUsernameButton&&(saveUsernameButton.disabled=false);setPasswordMessage('用户名修改成功。');
@@ -587,16 +592,24 @@ async function changePassword(){
 }
 function lockForMaintenance(){
   if(currentUser?.username==='chm')return;
+  authGeneration++;
   void window.xingyuPkLogout?.();
   try{gameInstance?.destroy(true)}catch(_){}
   gameInstance=null;
   currentUser=null;localStorage.removeItem('platformer-session');
   gameContent.hidden=true;leaderboardPanel.hidden=true;authGate.hidden=false;authUser.textContent='';changePasswordButton.hidden=true;if(logoutButton)logoutButton.hidden=true;closePasswordPanel();
+  // Do not leave the previous account's mutable progression in memory while
+  // the signed-out screen is visible. A later registration must start clean.
+  resetSignedOutData();
+  profileSaveKey=SAVE_KEY;
   updateServiceUi();setAuthMessage('服务器升级维护中，请稍后再试',true);
 }
 async function logout(){
   // Leave the game account only. The club website's Supabase Auth session is
   // intentionally untouched because the two login systems are independent.
+  // Invalidate all in-flight authentication/profile requests immediately;
+  // cleanup below may await PK teardown for a short time.
+  authGeneration++;
   logoutButton&&(logoutButton.disabled=true);
   try{await window.xingyuPkLogout?.()}catch(error){console.warn('[行于无垠] 清理 PK 状态失败',error)}
   try{gameInstance?.destroy(true)}catch(error){console.warn('[行于无垠] 销毁游戏实例失败',error)}
@@ -610,6 +623,10 @@ async function logout(){
   currentUser=null;window.xingyuSession=null;clubSuperAdmin=false;
   localStorage.removeItem('platformer-session');
   profileSaveKey=SAVE_KEY;
+  // Clear the live save object as part of logout, before another account can
+  // register or resume. This prevents stale coins/upgrades/unlocks leaking
+  // across accounts even when an async callback is still settling.
+  resetSignedOutData();
   authGate.hidden=false;gameContent.hidden=true;leaderboardPanel.hidden=true;
   authUser.textContent='';
   changePasswordButton.hidden=true;
@@ -742,19 +759,21 @@ async function claimEventRewards(){
   return reward;
 }
 function applyProfile(profile){
-  data.coins=Number(profile.coins)||0;data.hp=Number(profile.hp_upgrade)||0;data.atk=Number(profile.atk_upgrade)||0;data.shot=Number(profile.shot_upgrade)||0;data.agility=Math.max(0,Math.min(150,Number(profile.agility_upgrade)||0));data.melee=Number(profile.melee_upgrade)||0;data.ammo=Number(profile.ammo_upgrade)||0;data.armor=Number(profile.armor_upgrade)||0;data.combat=Math.max(0,Math.min(125,Number(profile.combat_upgrade)||0));data.lifeEvo=Number(profile.life_evo_upgrade)||0;data.attackEvo=Math.max(0,Number(profile.attack_evo_upgrade)||0);data.armorEvo=Math.max(0,Number(profile.armor_evo_upgrade)||0);data.battleGod=Math.max(0,Number(profile.battle_god_upgrade??data.battleGod)||0);data.battleGod2=Math.max(0,Math.min(750,Number(profile.battle_god_ii_upgrade??data.battleGod2)||0));
+  data.coins=Number(profile.coins)||0;data.hp=Number(profile.hp_upgrade)||0;data.atk=Number(profile.atk_upgrade)||0;data.shot=Number(profile.shot_upgrade)||0;data.agility=Math.max(0,Math.min(150,Number(profile.agility_upgrade)||0));data.melee=Number(profile.melee_upgrade)||0;data.ammo=Number(profile.ammo_upgrade)||0;data.armor=Number(profile.armor_upgrade)||0;data.combat=Math.max(0,Math.min(125,Number(profile.combat_upgrade)||0));data.lifeEvo=Number(profile.life_evo_upgrade)||0;data.attackEvo=Math.max(0,Number(profile.attack_evo_upgrade)||0);data.armorEvo=Math.max(0,Number(profile.armor_evo_upgrade)||0);data.battleGod=Math.max(0,Number(profile.battle_god_upgrade)||0);data.battleGod2=Math.max(0,Math.min(750,Number(profile.battle_god_ii_upgrade)||0));
   const claimedUnlock=Math.max(1,...Object.keys(data.claimed||{}).map(Number).filter(Number.isFinite).map(id=>id+1));
   data.unlocked=Math.min(LEVELS.length,Math.max(1,Number(profile.unlocked)||1,claimedUnlock));
   localStorage.setItem(profileSaveKey,JSON.stringify(data));
 }
-async function loadBattleGod(){
-  if(!platformerDb||!currentUser)return;
-  const {data:result,error}=await platformerDb.rpc('platformer_get_battle_god',{p_username:currentUser.username,p_token:currentUser.token});
+async function loadBattleGod(generation=authGeneration,account=currentUser){
+  if(!platformerDb||!account)return;
+  const {data:result,error}=await platformerDb.rpc('platformer_get_battle_god',{p_username:account.username,p_token:account.token});
+  if(generation!==authGeneration||currentUser?.username!==account.username||currentUser?.token!==account.token)return;
   if(!error&&result?.length){data.battleGod=Math.max(0,Number(result[0].battle_god_upgrade??result[0].level??0)||0);localStorage.setItem(profileSaveKey,JSON.stringify(data));}
 }
-async function loadBattleGod2(){
-  if(!platformerDb||!currentUser)return;
-  const {data:result,error}=await platformerDb.rpc('platformer_get_battle_god_ii',{p_username:currentUser.username,p_token:currentUser.token});
+async function loadBattleGod2(generation=authGeneration,account=currentUser){
+  if(!platformerDb||!account)return;
+  const {data:result,error}=await platformerDb.rpc('platformer_get_battle_god_ii',{p_username:account.username,p_token:account.token});
+  if(generation!==authGeneration||currentUser?.username!==account.username||currentUser?.token!==account.token)return;
   if(!error&&result?.length){data.battleGod2=Math.max(0,Math.min(750,Number(result[0].battle_god_ii_upgrade??result[0].level??0)||0));localStorage.setItem(profileSaveKey,JSON.stringify(data));}
 }
 function createGame(){
@@ -773,12 +792,20 @@ function createGame(){
   }
 }
 async function startGame(profile){
+  const generation=++authGeneration;
   currentUser={username:profile.username,token:profile.session_token};
   window.xingyuSession=currentUser;
   setProfileSaveKey(currentUser.username);
-  Object.assign(data,JSON.parse(localStorage.getItem(profileSaveKey)||DEFAULT_SAVE));
-  data.eventEndlessBest??=0;data.eventEndlessClaimed??={};data.eventLevelClaimed??={};data.claimed??={};
-  applyProfile(profile);await loadBattleGod();await loadBattleGod2();
+  // Rebuild the mutable object for every account; do not merge the previous
+  // account's in-memory unlocks, claims, or progression into this one.
+  Object.keys(data).forEach(key=>delete data[key]);
+  // The server response is authoritative. Do not merge the previous browser
+  // save (or another account's stale local cache) into a newly authenticated
+  // profile.
+  Object.assign(data,JSON.parse(DEFAULT_SAVE));
+  data.eventEndlessBest=0;data.eventEndlessClaimed={};data.eventLevelClaimed={};data.claimed={};
+  applyProfile(profile);const account=currentUser;await loadBattleGod(generation,account);await loadBattleGod2(generation,account);
+  if(generation!==authGeneration||currentUser?.username!==profile.username)return;
   authGate.hidden=true;gameContent.hidden=false;leaderboardPanel.hidden=false;
   authUser.textContent=`已登录：${currentUser.username}`;changePasswordButton.hidden=false;updateServiceUi();
   logoutButton.hidden=false;
@@ -799,15 +826,19 @@ async function authenticate(action){
     setAuthMessage('服务器升级维护中，请稍后再试',true);return;
   }
   setAuthMessage(action==='login'?'正在登录…':'正在注册…');
+  const requestGeneration=authGeneration;
   const rpc=action==='login'?'platformer_login':'platformer_register';
   const {data:result,error}=await platformerDb.rpc(rpc,{p_username:username,p_password:password});
+  if(requestGeneration!==authGeneration)return;
   if(error||!result?.length){setAuthMessage(error?.message||'用户名或密码错误。',true);return}
   passwordInput.value='';localStorage.setItem('platformer-session',JSON.stringify({username:result[0].username,token:result[0].session_token}));void startGame(result[0]);
 }
 async function resumeSession(){
   const saved=JSON.parse(localStorage.getItem('platformer-session')||'null');
   if(!saved||!platformerDb)return;
+  const requestGeneration=authGeneration;
   const {data:result,error}=await platformerDb.rpc('platformer_resume',{p_username:saved.username,p_token:saved.token});
+  if(requestGeneration!==authGeneration)return;
   if(error||!result?.length){
     localStorage.removeItem('platformer-session');
     if(!error&&await refreshServiceStatus(false)===false)setAuthMessage('服务器升级维护中，请稍后再试',true);
@@ -817,11 +848,16 @@ async function resumeSession(){
 }
 async function saveRemoteProfile(){
   if(!platformerDb||!currentUser)return;
-  const {error}=await platformerDb.rpc('platformer_save_profile',{p_username:currentUser.username,p_token:currentUser.token,p_coins:data.coins,p_hp_upgrade:data.hp,p_atk_upgrade:data.atk,p_shot_upgrade:data.shot,p_agility_upgrade:data.agility,p_melee_upgrade:data.melee,p_ammo_upgrade:data.ammo,p_armor_upgrade:data.armor,p_combat_upgrade:data.combat,p_life_evo_upgrade:data.lifeEvo,p_attack_evo_upgrade:data.attackEvo,p_armor_evo_upgrade:data.armorEvo,p_unlocked:data.unlocked});
+  // Capture the account and values at call time so an old in-flight save
+  // cannot write its data into the account that logs in afterward.
+  const account={username:currentUser.username,token:currentUser.token};
+  const snapshot={coins:data.coins,hp:data.hp,atk:data.atk,shot:data.shot,agility:data.agility,melee:data.melee,ammo:data.ammo,armor:data.armor,combat:data.combat,lifeEvo:data.lifeEvo,attackEvo:data.attackEvo,armorEvo:data.armorEvo,unlocked:data.unlocked,battleGod:data.battleGod,battleGod2:data.battleGod2};
+  const {error}=await platformerDb.rpc('platformer_save_profile',{p_username:account.username,p_token:account.token,p_coins:snapshot.coins,p_hp_upgrade:snapshot.hp,p_atk_upgrade:snapshot.atk,p_shot_upgrade:snapshot.shot,p_agility_upgrade:snapshot.agility,p_melee_upgrade:snapshot.melee,p_ammo_upgrade:snapshot.ammo,p_armor_upgrade:snapshot.armor,p_combat_upgrade:snapshot.combat,p_life_evo_upgrade:snapshot.lifeEvo,p_attack_evo_upgrade:snapshot.attackEvo,p_armor_evo_upgrade:snapshot.armorEvo,p_unlocked:snapshot.unlocked});
   if(error)console.warn('保存游戏资料失败',error.message);
-  const {data:godData,error:godError}=await platformerDb.rpc('platformer_save_battle_god',{p_username:currentUser.username,p_token:currentUser.token,p_level:data.battleGod});
+  if(currentUser?.username!==account.username||currentUser?.token!==account.token)return;
+  const {data:godData,error:godError}=await platformerDb.rpc('platformer_save_battle_god',{p_username:account.username,p_token:account.token,p_level:snapshot.battleGod});
   if(godError)console.warn('保存战神等级失败',godError.message);
-  const {error:god2Error}=await platformerDb.rpc('platformer_save_battle_god_ii',{p_username:currentUser.username,p_token:currentUser.token,p_level:data.battleGod2});
+  const {error:god2Error}=await platformerDb.rpc('platformer_save_battle_god_ii',{p_username:account.username,p_token:account.token,p_level:snapshot.battleGod2});
   if(god2Error)console.warn('保存战神II等级失败',god2Error.message);
 }
 async function submitScore(levelId,score){
@@ -841,13 +877,11 @@ function escapeHtml(value){return String(value).replace(/[&<>'"]/g,char=>({'&':'
 function setProfileSaveKey(username){
   const normalized=(username||'').trim().toLowerCase();
   profileSaveKey=normalized?`${SAVE_KEY}:${normalized}`:SAVE_KEY;
-  const raw=localStorage.getItem(profileSaveKey);
-  if(raw){
-    try{
-      const parsed=JSON.parse(raw);
-      Object.assign(data,parsed);
-    }catch(_){}
-  }
+}
+function resetSignedOutData(){
+  Object.keys(data).forEach(key=>delete data[key]);
+  Object.assign(data,JSON.parse(DEFAULT_SAVE));
+  data.eventEndlessBest=0;data.eventEndlessClaimed={};data.eventLevelClaimed={};data.claimed={};
 }
 function writeProfileSave(){
   localStorage.setItem(profileSaveKey,JSON.stringify(data));

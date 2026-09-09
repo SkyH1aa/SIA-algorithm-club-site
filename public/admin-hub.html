@@ -103,6 +103,21 @@
         <p class="message" id="siteServiceMessage" role="status"></p>
       </section>
 
+      <section class="panel section hidden" id="appMonitorReleasesSection">
+        <div class="section-head"><div><h2 data-i18n="admin.appmonitorReleasesTitle">APPMonitor 版本发布</h2><p class="intro" data-i18n="admin.appmonitorReleasesIntro">仅超管可编辑。V7.0 及更早版本保留在发布页中；在这里管理 V7.5 及之后的版本。</p></div></div>
+        <form class="form" id="appMonitorReleaseForm">
+          <input type="hidden" id="appMonitorReleaseId">
+          <label class="label"><span data-i18n="admin.appmonitorVersion">版本号</span><input class="input" id="appMonitorVersion" maxlength="40" required placeholder="V7.5"></label>
+          <label class="label"><span data-i18n="admin.appmonitorDate">发布日期</span><input class="input" id="appMonitorReleaseDate" type="date" required></label>
+          <label class="label"><span data-i18n="admin.appmonitorIntroZh">中文简介</span><textarea class="input" id="appMonitorIntroZh" maxlength="5000" rows="5" required></textarea></label>
+          <label class="label"><span data-i18n="admin.appmonitorIntroEn">English description</span><textarea class="input" id="appMonitorIntroEn" maxlength="5000" rows="5" required></textarea></label>
+          <label class="label"><span data-i18n="admin.appmonitorDownloadUrl">下载链接</span><input class="input" id="appMonitorDownloadUrl" type="url" maxlength="1000" required placeholder="https://..."></label>
+          <div class="actions"><button class="button" type="submit" data-i18n="admin.appmonitorSaveRelease">保存版本</button><button class="button secondary" type="button" id="appMonitorReleaseClear" data-i18n="common.clearForm">清空表单</button></div>
+        </form>
+        <p class="message" id="appMonitorReleaseMessage" role="status"></p>
+        <div class="table-wrap" id="appMonitorReleasesList" style="margin-top:16px"></div>
+      </section>
+
       <section class="panel section hidden" id="resetsSection">
         <div class="section-head">
           <div>
@@ -191,6 +206,15 @@
       $('featureSettingsList').innerHTML = `<h3>${t('admin.featureSettingsTitle')}</h3>` + FEATURE_DEFS.map(([key,labelKey]) => { const item = values[key] || {}; return `<fieldset data-feature="${key}" style="margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:8px"><legend>${escapeHtml(t(labelKey))}</legend><label class="label"><input type="checkbox" data-enabled ${item.enabled !== false ? 'checked' : ''}> ${escapeHtml(t('admin.featureEnabled'))} <input type="checkbox" data-random ${item.random ? 'checked' : ''}> ${escapeHtml(t('admin.featureRandom'))}</label><input class="input" data-title-zh placeholder="${escapeHtml(t('admin.featureTitleZh'))}" value="${escapeHtml(item.title_zh || '')}"><input class="input" data-subtitle-zh placeholder="${escapeHtml(t('admin.featureSubtitleZh'))}" value="${escapeHtml(item.subtitle_zh || '')}"><input class="input" data-title-en placeholder="${escapeHtml(t('admin.featureTitleEn'))}" value="${escapeHtml(item.title_en || '')}"><input class="input" data-subtitle-en placeholder="${escapeHtml(t('admin.featureSubtitleEn'))}" value="${escapeHtml(item.subtitle_en || '')}"></fieldset>`; }).join('');
     }
     function collectFeatureSettings() { const values = {}; document.querySelectorAll('[data-feature]').forEach(node => { values[node.dataset.feature] = { enabled: node.querySelector('[data-enabled]').checked, random: node.querySelector('[data-random]').checked, title_zh: node.querySelector('[data-title-zh]').value, subtitle_zh: node.querySelector('[data-subtitle-zh]').value, title_en: node.querySelector('[data-title-en]').value, subtitle_en: node.querySelector('[data-subtitle-en]').value }; }); return values; }
+    let appMonitorReleases = [];
+    function clearAppMonitorReleaseForm() { $('appMonitorReleaseForm').reset(); $('appMonitorReleaseId').value = ''; $('appMonitorReleaseDate').value = new Date().toISOString().slice(0, 10); }
+    function renderAppMonitorReleases(releases) {
+      appMonitorReleases = Array.isArray(releases) ? releases : [];
+      $('appMonitorReleasesList').innerHTML = appMonitorReleases.length ? `<table><thead><tr><th>${escapeHtml(t('admin.appmonitorVersion'))}</th><th>${escapeHtml(t('admin.appmonitorDate'))}</th><th>${escapeHtml(t('admin.appmonitorDownloadUrl'))}</th><th>${escapeHtml(t('admin.actions'))}</th></tr></thead><tbody>${appMonitorReleases.map(item => `<tr><td>${escapeHtml(item.version)}</td><td>${escapeHtml(item.release_date)}</td><td><a href="${escapeHtml(item.download_url)}" target="_blank" rel="noopener">${escapeHtml(t('admin.openLink'))}</a></td><td><button class="button secondary" type="button" data-appmonitor-edit="${escapeHtml(item.id)}">${escapeHtml(t('common.edit'))}</button> <button class="button danger" type="button" data-appmonitor-delete="${escapeHtml(item.id)}">${escapeHtml(t('common.delete'))}</button></td></tr>`).join('')}</tbody></table>` : `<div class="empty">${escapeHtml(t('admin.appmonitorNoReleases'))}</div>`;
+      document.querySelectorAll('[data-appmonitor-edit]').forEach(button => button.onclick = () => { const item = appMonitorReleases.find(entry => entry.id === button.dataset.appmonitorEdit); if (!item) return; $('appMonitorReleaseId').value = item.id; $('appMonitorVersion').value = item.version || ''; $('appMonitorReleaseDate').value = item.release_date || ''; $('appMonitorIntroZh').value = item.intro_zh || ''; $('appMonitorIntroEn').value = item.intro_en || ''; $('appMonitorDownloadUrl').value = item.download_url || ''; window.scrollTo({ top: $('appMonitorReleasesSection').offsetTop - 12, behavior: 'smooth' }); });
+      document.querySelectorAll('[data-appmonitor-delete]').forEach(button => button.onclick = async () => { if (!confirm(t('admin.appmonitorDeleteConfirm'))) return; try { await call('admin_appmonitor_releases_delete', { id: button.dataset.appmonitorDelete }); setMessage($('appMonitorReleaseMessage'), t('admin.appmonitorDeleted'), 'success'); await refreshAppMonitorReleases(); } catch (error) { setMessage($('appMonitorReleaseMessage'), error.message, 'error'); } });
+    }
+    async function refreshAppMonitorReleases() { const result = await call('admin_appmonitor_releases_list'); renderAppMonitorReleases(result.releases); }
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -501,6 +525,7 @@
       $('directResetSection').classList.toggle('hidden', !superAdmin);
       $('bindingsSection').classList.toggle('hidden', !superAdmin);
       $('siteServiceSection').classList.toggle('hidden', !superAdmin);
+      $('appMonitorReleasesSection').classList.toggle('hidden', !superAdmin);
       document.querySelectorAll('#statsSection [data-stat="bindings"], #statsSection [data-stat="resets"]').forEach(node => {
         node.classList.toggle('hidden', !superAdmin);
       });
@@ -533,9 +558,10 @@
           call('admin_password_resets_list'),
           call('admin_staff_permissions_list'),
           call('admin_super_admins_list'),
-          call('admin_site_service_get')
+          call('admin_site_service_get'),
+          call('admin_appmonitor_releases_list')
         );
-        labels.push('profiles', 'resets', 'permissions', 'superAdmins', 'siteService');
+        labels.push('profiles', 'resets', 'permissions', 'superAdmins', 'siteService', 'appmonitorReleases');
       }
       if (permOn('checkin')) {
         tasks.push(call('admin_checkin_list'), call('admin_course_checkin_list'));
@@ -609,6 +635,7 @@
           $('siteReportEn').value = s.report_en || '';
           renderFeatureSettings(s.feature_settings || {});
         }
+        if (byLabel.appmonitorReleases && !byLabel.appmonitorReleases.__error) renderAppMonitorReleases(byLabel.appmonitorReleases.releases);
 
         if (byLabel.checkin && !byLabel.checkin.__error) {
           const codes = Array.isArray(byLabel.checkin.codes) ? byLabel.checkin.codes : [];
@@ -679,6 +706,18 @@
         setMessage($('siteServiceMessage'), t('admin.siteServiceSaved'), 'success');
       } catch (error) { setMessage($('siteServiceMessage'), error.message, 'error'); }
     });
+    $('appMonitorReleaseForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      setMessage($('appMonitorReleaseMessage'), t('admin.appmonitorSaving'));
+      try {
+        await call('admin_appmonitor_releases_save', { id: $('appMonitorReleaseId').value, version: $('appMonitorVersion').value, releaseDate: $('appMonitorReleaseDate').value, introZh: $('appMonitorIntroZh').value, introEn: $('appMonitorIntroEn').value, downloadUrl: $('appMonitorDownloadUrl').value });
+        clearAppMonitorReleaseForm();
+        setMessage($('appMonitorReleaseMessage'), t('admin.appmonitorSaved'), 'success');
+        await refreshAppMonitorReleases();
+      } catch (error) { setMessage($('appMonitorReleaseMessage'), error.message, 'error'); }
+    });
+    $('appMonitorReleaseClear').onclick = clearAppMonitorReleaseForm;
+    clearAppMonitorReleaseForm();
     $('refreshButton').onclick = () => void refreshOverview();
     $('refreshSuperAdminsButton').onclick = () => void refreshSuperAdminsOnly();
 

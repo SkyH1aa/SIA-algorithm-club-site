@@ -70,7 +70,9 @@
     const key = node.getAttribute('data-i18n');
     if (key) {
       const mode = node.getAttribute('data-i18n-mode') || 'text';
-      const value = t(key);
+      let vars;
+      try { vars = JSON.parse(node.getAttribute('data-i18n-vars') || 'null') || undefined; } catch (_error) { vars = undefined; }
+      const value = t(key, vars);
       if (mode === 'html') node.innerHTML = value;
       else node.textContent = value;
     }
