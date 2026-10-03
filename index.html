@@ -6,6 +6,7 @@
   <link rel="stylesheet" href="public/theme.css">
   <script src="public/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
     <title>算法社 · Algorithm Club</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="public/i18n-dict.js"></script>
@@ -77,7 +78,7 @@
         overflow: hidden;
         pointer-events: none;
       }
-      main, .footer { position: relative; z-index: 1; }
+      main, .footer { position: relative; z-index: 2; }
       .topbar { isolation: isolate; }
       .ambient-orb {
         position: absolute;
@@ -105,9 +106,12 @@
         mix-blend-mode: screen;
       }
       #particleCanvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.45; }
-      #algorithmScene { position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; opacity: .82; mix-blend-mode: normal; }
-      html[data-theme="light"] #algorithmScene { opacity: .72; }
+      #algorithmScene { position: fixed; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; opacity: .82; mix-blend-mode: normal; }
+      #shaderField { position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; opacity: .52; }
+      html[data-theme="light"] #algorithmScene { opacity: .9; }
       html[data-theme="dark"] #algorithmScene { opacity: .9; }
+      html[data-theme="light"] #shaderField { opacity: .42; }
+      html[data-theme="dark"] #shaderField { opacity: .62; }
       .scroll-progress {
         position: fixed;
         top: 0;
@@ -1132,7 +1136,7 @@
       }
       .flagship-main { box-shadow: 0 22px 58px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(0, 229, 255, 0.04); }
       .board-shell { box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(184, 242, 255, 0.08); }
-      .muted-band { background: linear-gradient(105deg, rgba(2, 8, 19, 0.80), rgba(8, 5, 25, 0.62)); }
+      .muted-band { background: transparent; }
       .data-note { color: #b8eaf1; border-color: rgba(94, 231, 247, 0.24); }
       .footer { background: rgba(2, 5, 13, 0.90); }
 
@@ -1271,6 +1275,7 @@
       <canvas id="particleCanvas"></canvas>
     </div>
     <canvas id="algorithmScene" aria-hidden="true"></canvas>
+    <canvas id="shaderField" aria-hidden="true"></canvas>
     <div class="pointer-glow" aria-hidden="true"></div>
     <div class="scroll-progress" aria-hidden="true"></div>
 
@@ -2186,23 +2191,108 @@
         window.addEventListener('pagehide', () => window.cancelAnimationFrame(animationFrame), { once: true });
       }
 
-      // Scroll-driven algorithm scene: a small, capped scene keeps the effect smooth on phones.
+      window.useQualityTier = window.useQualityTier || function useQualityTier() {
+        const narrow = Math.min(innerWidth, innerHeight) < 720;
+        const coarse = matchMedia('(pointer: coarse)').matches;
+        const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const memory = navigator.deviceMemory || 4;
+        const cores = navigator.hardwareConcurrency || 4;
+        if (reduced || (narrow && coarse) || memory <= 2 || cores <= 2) return { tier: 'low', particleCount: 2000, pixelRatio: 1, postprocessing: false };
+        if (narrow || memory <= 4 || cores <= 4) return { tier: 'medium', particleCount: 2000, pixelRatio: 1.25, postprocessing: false };
+        return { tier: 'high', particleCount: 8000, pixelRatio: 1.5, postprocessing: true };
+      };
+
+      (() => {
+        const canvas = document.getElementById('shaderField');
+        if (!canvas || !window.THREE || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const THREE = window.THREE;
+        let renderer;
+        try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false, powerPreference: 'high-performance' }); } catch (error) { return; }
+        const quality = window.useQualityTier(); const low = quality.tier === 'low';
+        renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5)); renderer.setSize(innerWidth, innerHeight, false);
+        const scene = new THREE.Scene(); const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        const uniforms = { uTime: { value: 0 }, uScroll: { value: 0 }, uMouse: { value: new THREE.Vector2(.5, .5) }, uTheme: { value: 0 }, uTimeScale: { value: 1 }, uResolution: { value: new THREE.Vector2(innerWidth, innerHeight) } };
+        const material = new THREE.ShaderMaterial({ uniforms, extensions: { derivatives: true }, vertexShader: `uniform float uTime; uniform float uScroll; varying vec2 vUv; varying float vWave; float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);} float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);} void main(){vUv=uv;vec3 p=position;float n=noise(uv*5.0+uTime*.08)+noise(uv*11.0-uTime*.04)*.45;vWave=n; p.z=(n-.5)*.08*(.35+uScroll*1.4); gl_Position=vec4(p,1.0);}`, fragmentShader: `uniform float uTime; uniform float uScroll; uniform vec2 uMouse; uniform float uTheme; uniform float uTimeScale; varying vec2 vUv; varying float vWave; float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);} float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);} void main(){vec2 uv=vUv-.5;float dist=distance(vUv,uMouse);float disturbance=smoothstep(.42,0.0,dist);float t=uTime*uTimeScale+uScroll*6.0;vec2 field=uv*vec2(8.0,5.2);field+=vec2(sin(t*.18),cos(t*.14))*0.7;field+=vec2(disturbance*sin(t+uv.y*8.0),disturbance*cos(t+uv.x*7.0))*.8;float cell=noise(field*1.35+t*.035);float contour=abs(fract((field.x+sin(field.y*1.7+t*.12)*.32+cell*.75)*.5)-.5);float contourWidth=max(fwidth(contour)*1.8,.018);float grid=1.0-smoothstep(contourWidth,contourWidth*2.8,contour);float crossX=abs(fract(field.x)-.5);float crossY=abs(fract(field.y)-.5);float latticeDistance=min(crossX,crossY);float latticeWidth=max(fwidth(latticeDistance)*1.8,.014);float lattice=1.0-smoothstep(latticeWidth,latticeWidth*2.8,latticeDistance);float line=max(grid*.62,lattice*.48);float bands=smoothstep(.35,.86,cell)*(.18+.16*uScroll);float grain=(hash(vUv*vec2(900.0,500.0)+t)-.5)*.045;vec3 day=mix(vec3(.94,.95,.97),vec3(.98,.91,.84),line*.75+bands*.35);vec3 dayLine=mix(vec3(.18,.38,.58),vec3(.92,.39,.12),smoothstep(.15,.8,uScroll));vec3 nightBg=vec3(.008,.014,.04);vec3 nightLine=mix(vec3(.08,.35,.72),vec3(.42,.24,.92),bands+.25);vec3 color=mix(day,nightBg,uTheme);color=mix(color,mix(dayLine,nightLine,uTheme),line+bands*.55);color+=grain*(1.0-uTheme*.35);float edge=smoothstep(.78,.25,length(uv));gl_FragColor=vec4(color,(.22+.38*edge)*(uTheme>.5? .82:.58));}`, transparent: true, depthWrite: false });
+        material.fragmentShader = `uniform float uTime; uniform float uScroll; uniform vec2 uMouse; uniform float uTheme; uniform float uTimeScale; uniform vec2 uResolution; varying vec2 vUv; varying float vWave;
+          float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+          float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x),mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x),f.y);}
+          void main(){
+            vec2 p=(vUv-.5); p.x*=uResolution.x/max(uResolution.y,1.0);
+            vec2 pole=(uMouse-.5)*vec2(uResolution.x/max(uResolution.y,1.0),1.0)*.72;
+            vec2 r=p-pole; float rr=max(dot(r,r),.012); float radius=sqrt(rr);
+            vec2 moment=normalize(vec2(.35+sin(uTime*.16)*.18,1.0));
+            float flux=dot(moment,vec2(-r.y,r.x))/rr;
+            float fieldScale=5.0+uScroll*3.2;
+            float phase=flux*fieldScale+uTime*uTimeScale*.085;
+            float lineDistance=abs(fract(phase)-.5);
+            float lineWidth=max(fwidth(phase)*1.7,.012);
+            float lines=1.0-smoothstep(lineWidth,lineWidth*3.4,lineDistance);
+            float nearPole=smoothstep(.34,.015,radius);
+            float fieldNoise=noise(p*8.0+vec2(uTime*.025,-uTime*.018))*.06;
+            float contour=1.0-smoothstep(.01,.06,abs(fract((radius*3.0+fieldNoise+uScroll*.7))-.5));
+            lines=max(lines,contour*.12*(1.0-nearPole));
+            float glow=smoothstep(.32,.0,abs(lineDistance))*(.18+.12*uScroll);
+            vec3 dayBase=vec3(.96,.95,.92); vec3 dayLine=mix(vec3(.36,.25,.18),vec3(.94,.36,.08),.55+uScroll*.35);
+            vec3 nightBase=vec3(.006,.012,.035); vec3 nightLine=mix(vec3(.10,.38,.82),vec3(.48,.28,.96),.45+uScroll*.35);
+            vec3 base=mix(dayBase,nightBase,uTheme); vec3 ink=mix(dayLine,nightLine,uTheme);
+            vec3 color=mix(base,ink,lines*.78+glow*.28); color+=ink*nearPole*.18; color+=(hash(vUv*uResolution+uTime)-.5)*.018;
+            float edge=smoothstep(.82,.22,length(p)); gl_FragColor=vec4(color,(.18+.36*edge)*(uTheme>.5?.84:.56));
+          }`;
+        material.needsUpdate = true;
+        const plane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2, low ? 8 : 32, low ? 8 : 32), material); scene.add(plane);
+        let scrollProgress = 0, scrollTarget = 0, frame; const pointer = new THREE.Vector2(.5, .5), pointerTarget = new THREE.Vector2(.5, .5);
+        const updateScroll = () => { const max = document.documentElement.scrollHeight - innerHeight; scrollTarget = max > 0 ? THREE.MathUtils.clamp(scrollY / max, 0, 1) : 0; }; addEventListener('scroll', updateScroll, { passive: true }); updateScroll();
+        addEventListener('pointermove', e => pointerTarget.set(e.clientX / innerWidth, 1 - e.clientY / innerHeight), { passive: true }); addEventListener('club:themechange', e => { uniforms.uTheme.value = e.detail?.theme === 'dark' ? 1 : 0; }); uniforms.uTheme.value = document.documentElement.dataset.theme === 'dark' ? 1 : 0;
+        const clock = new THREE.Clock(); const draw = () => { if (document.hidden) return; const delta = Math.min(clock.getDelta(), .033); uniforms.uTime.value += delta; scrollProgress += (scrollTarget - scrollProgress) * .075; pointer.lerp(pointerTarget, .055); uniforms.uScroll.value = scrollProgress; uniforms.uMouse.value.copy(pointer); uniforms.uTimeScale.value = .55 + scrollProgress * 1.6; renderer.render(scene, camera); frame = requestAnimationFrame(draw); }; draw(); addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight, false); uniforms.uResolution.value.set(innerWidth, innerHeight); updateScroll(); }, { passive: true }); document.addEventListener('visibilitychange', () => { cancelAnimationFrame(frame); if (!document.hidden) draw(); });
+      })();
+
+      // Scroll-driven algorithm scene with optional GPU-computed particle simulation.
       (() => {
         const canvas = document.getElementById('algorithmScene');
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (!canvas || !window.THREE || reduced) return;
-        const isMobile = matchMedia('(max-width: 700px)').matches;
         const THREE = window.THREE;
-        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: !isMobile, powerPreference: 'high-performance' });
-        renderer.setPixelRatio(Math.min(devicePixelRatio || 1, isMobile ? 1 : 1.5));
+        const quality = window.useQualityTier?.() || { tier: 'medium', particleCount: 4096, pixelRatio: 1.25, postprocessing: false };
+        const isMobile = quality.tier === 'low' || matchMedia('(max-width: 700px)').matches;
+        let renderer;
+        try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: !isMobile, powerPreference: 'high-performance' }); }
+        catch (error) { console.warn('3D background unavailable; keeping CSS background active', error); return; }
+        renderer.setPixelRatio(Math.min(devicePixelRatio || 1, quality.pixelRatio || 1.5, isMobile ? 1.5 : 1.75));
         renderer.setSize(innerWidth, innerHeight, false);
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(34, innerWidth / innerHeight, .1, 100);
         camera.position.set(0, 0, 6.6);
         const group = new THREE.Group(); scene.add(group);
         const geometry = new THREE.IcosahedronGeometry(1.35, isMobile ? 1 : 2);
-        const core = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0x8ddfff, roughness: .32, metalness: .08, transparent: true, opacity: .28, wireframe: true }));
+        const coreMaterial = new THREE.ShaderMaterial({
+          uniforms: { uTime: { value: 0 }, uProgress: { value: 0 }, uNight: { value: 0 } },
+          vertexShader: `uniform float uTime; uniform float uProgress; varying vec3 vNormal; varying vec3 vPosition; void main(){ vNormal=normalize(normalMatrix*normal); vPosition=position; float wave=sin(position.y*5.0+uTime*1.4)*0.035*(0.35+uProgress); vec3 p=position+normal*wave; gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0); }`,
+          fragmentShader: `uniform float uTime; uniform float uProgress; uniform float uNight; varying vec3 vNormal; varying vec3 vPosition; void main(){ float fresnel=pow(1.0-max(dot(normalize(vNormal),vec3(0.0,0.0,1.0)),0.0),4.0); vec3 day=vec3(0.45,0.76,0.98); vec3 night=vec3(0.30,0.43,0.95); vec3 c=mix(day,night,uNight); float pulse=0.94+0.06*sin(uTime*1.5+length(vPosition)*4.0+uProgress*4.0); float alpha=fresnel*(0.11+0.06*uNight)*pulse; gl_FragColor=vec4(c,alpha); }`,
+          transparent: true, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending
+        });
+        const core = new THREE.Mesh(geometry, coreMaterial);
+        core.visible = false;
         group.add(core);
+        const prismEdges = new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 12), new THREE.LineBasicMaterial({ color: 0x8bdcff, transparent: true, opacity: .76, blending: THREE.AdditiveBlending, depthWrite: false }));
+        group.add(prismEdges);
+        const innerEdges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(0.92, 1), 18), new THREE.LineBasicMaterial({ color: 0x6366f1, transparent: true, opacity: .34, blending: THREE.AdditiveBlending, depthWrite: false }));
+        innerEdges.rotation.set(.28, .5, .12); group.add(innerEdges);
+        const orbitRings = [
+          { radius: 1.82, tube: .009, tilt: [.2, .1, .25], speed: .14 },
+          { radius: 2.08, tube: .006, tilt: [1.05, .28, -.45], speed: -.1 },
+          { radius: 1.62, tube: .005, tilt: [.72, 1.1, .2], speed: .08 }
+        ].map((ring, i) => {
+          const mesh = new THREE.Mesh(new THREE.TorusGeometry(ring.radius, ring.tube, 5, isMobile ? 96 : 160), new THREE.MeshBasicMaterial({ color: i === 1 ? 0x818cf8 : 0x7dd3fc, transparent: true, opacity: .42 - i * .07, blending: THREE.AdditiveBlending, depthWrite: false }));
+          mesh.rotation.set(...ring.tilt); mesh.userData = ring; group.add(mesh); return mesh;
+        });
+        const orbitDots = Array.from({ length: isMobile ? 20 : 36 }, (_, i) => {
+          const dot = new THREE.Mesh(new THREE.IcosahedronGeometry(isMobile ? .018 : .024, 0), new THREE.MeshBasicMaterial({ color: i % 3 ? 0xc2410c : 0xea580c, transparent: true, opacity: .86, blending: THREE.AdditiveBlending }));
+          group.add(dot); return { mesh: dot, ring: i % orbitRings.length, phase: i * 2.39996 };
+        });
+        const dustCount = isMobile ? 64 : 150;
+        const dustData = Array.from({ length: dustCount }, () => ({ angle: Math.random() * Math.PI * 2, radius: 2.25 + Math.random() * 1.15, y: (Math.random() - .5) * 3.8, speed: .04 + Math.random() * .12, phase: Math.random() * Math.PI * 2 }));
+        const dust = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: isMobile ? .018 : .024, color: 0x8aa9df, transparent: true, opacity: .46, sizeAttenuation: true, depthWrite: false }));
+        dust.geometry.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(dustCount * 3), 3)); scene.add(dust);
         const nodes = Array.from({ length: isMobile ? 18 : 28 }, (_, i) => {
           const a = i * 2.39996, r = 1.05 + (i % 5) * .12;
           return new THREE.Vector3(Math.cos(a) * r, Math.sin(a * 1.47) * r * .7, Math.sin(a) * r);
@@ -2210,28 +2300,96 @@
         const nodeMesh = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: isMobile ? .065 : .085, color: 0x38bdf8, transparent: true, opacity: .9, sizeAttenuation: true }));
         nodeMesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute(nodes.flatMap(v => v.toArray()), 3)); group.add(nodeMesh);
         const linePositions = new Float32Array((nodes.length - 1) * 6);
-        const lines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: .22 }));
+        const lines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: .22, blending: THREE.AdditiveBlending }));
         lines.geometry.setAttribute('position', new THREE.BufferAttribute(linePositions, 3)); group.add(lines);
-        const stream = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: .045, color: 0xa78bfa, transparent: true, opacity: .85 }));
+        const stream = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: isMobile ? .028 : .038, color: 0x9a3412, transparent: true, opacity: .82, blending: THREE.AdditiveBlending, depthWrite: false }));
         const streamCount = isMobile ? 40 : 90; const streamData = Array.from({ length: streamCount }, (_, i) => ({ edge: i % Math.max(1, nodes.length - 1), t: Math.random() }));
         stream.geometry.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(streamCount * 3), 3)); group.add(stream);
-        const hemi = new THREE.HemisphereLight(0xeaf6ff, 0x223b64, 2.2); const key = new THREE.DirectionalLight(0xffffff, 2.1); key.position.set(3, 4, 5); scene.add(hemi, key);
+        let gpuParticleSystem = null;
+        const loadGpuParticles = async () => {
+          if (!quality || !THREE.WebGLRenderTarget) return;
+          try {
+            const mod = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/misc/GPUComputationRenderer.js');
+            const GPUComputationRenderer = mod.GPUComputationRenderer;
+            const side = Math.max(32, Math.ceil(Math.sqrt(quality.particleCount)));
+            const count = side * side;
+            const gpu = new GPUComputationRenderer(side, side, renderer);
+            const positionTexture = gpu.createTexture(); const velocityTexture = gpu.createTexture();
+            const seedPosition = positionTexture.image.data; const seedVelocity = velocityTexture.image.data;
+            for (let i = 0; i < count; i++) { const k = i * 4; const r = Math.pow(Math.random(), .45) * 3.9; const a = Math.random() * Math.PI * 2; seedPosition[k] = Math.cos(a) * r; seedPosition[k + 1] = (Math.random() - .5) * 3.2; seedPosition[k + 2] = Math.sin(a) * r; seedPosition[k + 3] = 1; seedVelocity[k] = seedVelocity[k + 1] = seedVelocity[k + 2] = 0; seedVelocity[k + 3] = 1; }
+            const velocityShader = `uniform float uTime; uniform float uDelta; uniform float uProgress; uniform vec3 uMouse; uniform float uNight; vec3 curl(vec3 p){ float n1=sin(p.y*1.7+uTime*.24)+cos(p.z*1.3-uTime*.19); float n2=sin(p.z*1.5+uTime*.21)+cos(p.x*1.2+uTime*.17); float n3=sin(p.x*1.4-uTime*.23)+cos(p.y*1.1-uTime*.13); return normalize(vec3(n1-n2,n2-n3,n3-n1)); } vec3 shapeCloud(vec3 p){return p;} vec3 shapeKnot(vec3 p){float t=atan(p.z,p.x); return vec3((1.0+.42*cos(3.0*t))*cos(t)*1.7, .42*sin(3.0*t)+sin(2.0*t)*.28, (1.0+.42*cos(3.0*t))*sin(t)*1.7);} vec3 shapeGrid(vec3 p){return vec3(floor(p.x*2.5)/2.5, floor(p.y*2.5)/2.5, floor(p.z*2.5)/2.5)*1.15;} vec3 shapeTree(vec3 p){float y=clamp((p.y+1.9)/3.8,0.0,1.0); float branch=sin(p.y*4.0+uProgress*2.0)*(.25+.55*y); return vec3(p.x*.25+branch,p.y,p.z*.25+cos(p.y*3.0)*(.25+.4*y));} vec3 shapeLattice(vec3 p){float a=atan(p.z,p.x); float r=1.35+.18*sin(a*6.0+uProgress*5.0); return vec3(cos(a)*r,p.y*.34,sin(a)*r);} vec3 shapeAt(float id,vec3 p){if(id<.5)return shapeCloud(p);if(id<1.5)return shapeKnot(p);if(id<2.5)return shapeGrid(p);if(id<3.5)return shapeTree(p);return shapeLattice(p);} vec3 targetShape(vec3 p){float x=clamp(uProgress*4.0,0.0,3.999);float stage=floor(x);float t=fract(x);float eased=t*t*(3.0-2.0*t);return mix(shapeAt(stage,p),shapeAt(stage+1.0,p),eased);} void main(){vec2 uv=gl_FragCoord.xy/resolution.xy; vec3 pos=texture2D(texturePosition,uv).xyz; vec3 vel=texture2D(textureVelocity,uv).xyz; vec3 goal=targetShape(pos); vec3 curlForce=curl(pos)*(.12+.2*uProgress); vec3 attract=(goal-pos)*(.19+.22*uProgress); vec3 mouse=pos-uMouse; float md=max(dot(mouse,mouse),.04); vec3 repel=normalize(mouse)/md*.018; vel+= (curlForce+attract+repel)*uDelta; vel*=pow(.925,uDelta*60.0); gl_FragColor=vec4(vel,1.0);}`;
+            const positionShader = `uniform float uDelta; void main(){vec2 uv=gl_FragCoord.xy/resolution.xy; vec3 p=texture2D(texturePosition,uv).xyz; vec3 v=texture2D(textureVelocity,uv).xyz; p+=v*uDelta; if(length(p)>6.0)p*=.92; gl_FragColor=vec4(p,1.0);}`;
+            const velocityVariable = gpu.addVariable('textureVelocity', velocityShader, velocityTexture); const positionVariable = gpu.addVariable('texturePosition', positionShader, positionTexture);
+            gpu.setVariableDependencies(velocityVariable, [velocityVariable, positionVariable]); gpu.setVariableDependencies(positionVariable, [velocityVariable, positionVariable]);
+            velocityVariable.material.uniforms.uTime = { value: 0 }; velocityVariable.material.uniforms.uDelta = { value: 0.016 }; velocityVariable.material.uniforms.uProgress = { value: 0 }; velocityVariable.material.uniforms.uMouse = { value: new THREE.Vector3() }; velocityVariable.material.uniforms.uNight = { value: 0 };
+            positionVariable.material.uniforms.uDelta = { value: 0.016 };
+            const error = gpu.init(); if (error) throw new Error(error);
+            const particleGeometry = new THREE.BufferGeometry(); const refs = new Float32Array(count * 2); for (let i = 0; i < count; i++) { refs[i * 2] = (i % side + .5) / side; refs[i * 2 + 1] = (Math.floor(i / side) + .5) / side; } particleGeometry.setAttribute('reference', new THREE.BufferAttribute(refs, 2));
+            const particleMaterial = new THREE.ShaderMaterial({ uniforms: { texturePosition: { value: null }, uPointSize: { value: isMobile ? 1.3 : 1.8 }, uNight: { value: 0 }, uProgress: { value: 0 } }, vertexShader: `uniform sampler2D texturePosition; uniform float uPointSize; varying float vDepth; void main(){vec3 p=texture2D(texturePosition,reference).xyz; vec4 mv=modelViewMatrix*vec4(p,1.0); vDepth=clamp(1.0/-mv.z,0.0,1.0); gl_PointSize=uPointSize*(1.0+vDepth*2.0); gl_Position=projectionMatrix*mv;}`, fragmentShader: `uniform float uNight; uniform float uProgress; varying float vDepth; void main(){vec2 uv=gl_PointCoord-.5; float d=dot(uv,uv); if(d>.25)discard; vec3 day=vec3(.25,.68,.94); vec3 night=vec3(.38,.32,.95); vec3 c=mix(day,night,uNight); gl_FragColor=vec4(c,(.25+vDepth*.7)*(1.0-d*3.4));}`, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+            const particleMesh = new THREE.Points(particleGeometry, particleMaterial); particleMesh.geometry.setDrawRange(0, count); scene.add(particleMesh);
+            gpuParticleSystem = { gpu, velocityVariable, positionVariable, particleMaterial, particleMesh, count, side };
+          } catch (error) { console.warn('GPU particle layer unavailable', error); }
+        };
+        loadGpuParticles().catch(error => console.warn('GPU particle initialization skipped', error));
+        const hemi = new THREE.HemisphereLight(0xeaf6ff, 0x223b64, 2.2); const key = new THREE.DirectionalLight(0xffffff, 2.1); key.position.set(3, 4, 5); const rim = new THREE.PointLight(0x7c5cff, 1.8, 8); rim.position.set(-3, 1, 3); scene.add(hemi, key, rim);
         let progress = 0, target = 0, night = document.documentElement.dataset.theme !== 'light';
-        const scroll = () => { const max = document.documentElement.scrollHeight - innerHeight; target = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0; };
+        const pointer = new THREE.Vector2(), pointerTarget = new THREE.Vector2();
+        let pointerInside = false;
+        let composer = null, bloomPass = null, composerLoading = false;
+        const setPostprocessing = async enabled => {
+          if (!enabled || isMobile || !quality.postprocessing || composer || composerLoading) return;
+          composerLoading = true;
+          try {
+            const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }] = await Promise.all([
+              import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/EffectComposer.js'),
+              import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/RenderPass.js'),
+              import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js')
+            ]);
+            composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera)); bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), .42, .55, .82); composer.addPass(bloomPass);
+          } catch (error) { console.warn('Bloom unavailable', error); }
+          finally { composerLoading = false; }
+        };
+        addEventListener('pointermove', e => { pointerTarget.set((e.clientX / innerWidth - .5) * 2, -(e.clientY / innerHeight - .5) * 2); pointerInside = true; }, { passive: true });
+        addEventListener('pointerleave', () => { pointerTarget.set(0, 0); pointerInside = false; }, { passive: true });
+        const scroll = () => { const raw = getComputedStyle(document.documentElement).getPropertyValue('--scroll-progress'); const cssProgress = Number.parseFloat(raw); const max = document.documentElement.scrollHeight - innerHeight; target = Number.isFinite(cssProgress) && (raw || '').trim() ? THREE.MathUtils.clamp(cssProgress, 0, 1) : max > 0 ? THREE.MathUtils.clamp(window.scrollY / max, 0, 1) : 0; };
         addEventListener('scroll', scroll, { passive: true }); scroll();
-        addEventListener('club:themechange', e => { night = e.detail?.theme === 'dark'; });
-        const resize = () => { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }; addEventListener('resize', resize, { passive: true });
+        const resize = () => { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); composer?.setSize(innerWidth, innerHeight); bloomPass?.setSize(innerWidth, innerHeight); }; addEventListener('resize', resize, { passive: true });
         const clock = new THREE.Clock(); let frame;
+        let gpuFrameSkip = 0;
+        setPostprocessing(night);
+        addEventListener('club:themechange', e => { night = e.detail?.theme === 'dark'; setPostprocessing(night); });
         function draw() {
-          progress += (target - progress) * .075; const time = clock.getElapsedTime();
-          const nightColor = night ? 0x38bdf8 : 0x38bdf8; nodeMesh.material.color.setHex(night ? 0x34d399 : 0x38bdf8); lines.material.color.setHex(night ? 0xa78bfa : 0x7dd3fc); core.material.color.setHex(night ? 0x7c8cff : 0x8ddfff);
-          core.rotation.x += .0018; core.rotation.y += .0025; core.scale.setScalar(1 + progress * .13);
-          group.rotation.y = time * .055 + progress * Math.PI * .9; group.rotation.x = progress * .28;
-          const p = lines.geometry.attributes.position.array; nodes.forEach((v, i) => { const j = (i + 1) % nodes.length; const w = nodes[j]; const k = i * 6; p[k] = v.x; p[k + 1] = v.y; p[k + 2] = v.z; p[k + 3] = THREE.MathUtils.lerp(v.x, w.x, Math.min(1, progress * 1.8)); p[k + 4] = THREE.MathUtils.lerp(v.y, w.y, Math.min(1, progress * 1.8)); p[k + 5] = THREE.MathUtils.lerp(v.z, w.z, Math.min(1, progress * 1.8)); }); lines.geometry.attributes.position.needsUpdate = true; lines.material.opacity = .12 + progress * .38;
-          const sp = stream.geometry.attributes.position.array; streamData.forEach((s, i) => { const a = nodes[s.edge], b = nodes[(s.edge + 1) % nodes.length]; s.t = (s.t + .0025 + progress * .008) % 1; const k = i * 3; sp[k] = THREE.MathUtils.lerp(a.x, b.x, s.t); sp[k + 1] = THREE.MathUtils.lerp(a.y, b.y, s.t); sp[k + 2] = THREE.MathUtils.lerp(a.z, b.z, s.t); }); stream.geometry.attributes.position.needsUpdate = true; stream.material.opacity = progress > .55 ? .85 : progress * 1.4;
-          camera.position.z += ((6.6 + progress * 1.2) - camera.position.z) * .06; camera.position.x += ((night ? .18 : -.12) - camera.position.x) * .03; renderer.render(scene, camera); frame = requestAnimationFrame(draw);
+          if (document.hidden) return;
+          try {
+          progress += (target - progress) * .075;
+          const delta = Math.min(clock.getDelta(), .033); const time = clock.elapsedTime;
+          nodeMesh.material.color.setHex(night ? 0x60a5fa : 0xc2410c); lines.material.color.setHex(night ? 0x818cf8 : 0xb45309); stream.material.color.setHex(night ? 0xa5b4fc : 0x9a3412); prismEdges.material.color.setHex(night ? 0x93c5fd : 0xb45309); prismEdges.material.opacity = night ? .9 : .94; innerEdges.material.color.setHex(night ? 0x6366f1 : 0x9a3412); rim.color.setHex(night ? 0x4f46e5 : 0xc2410c); coreMaterial.uniforms.uTime.value = time; coreMaterial.uniforms.uProgress.value = progress; coreMaterial.uniforms.uNight.value += ((night ? 1 : 0) - coreMaterial.uniforms.uNight.value) * .06;
+          core.rotation.x += .0018; core.rotation.y += .0025; innerEdges.rotation.y -= .0032; innerEdges.rotation.x += .0011; core.scale.setScalar(1 + progress * .13);
+          pointer.lerp(pointerTarget, .045);
+          group.rotation.y = time * .055 + progress * Math.PI * 1.45 + pointer.x * .2; group.rotation.x = progress * .52 - pointer.y * .16;
+          group.position.x += ((pointer.x * .2) - group.position.x) * .035; group.position.y += ((pointer.y * .14 + progress * .08) - group.position.y) * .035;
+          const spread = Math.sin(progress * Math.PI) * .34 + progress * .2;
+          orbitRings.forEach((ring, i) => { const cfg = ring.userData; ring.material.color.setHex(night ? (i === 1 ? 0x818cf8 : 0x7dd3fc) : (i === 1 ? 0x9a3412 : 0xb45309)); ring.rotation.x = cfg.tilt[0] + Math.sin(time * cfg.speed + i) * .09 + progress * (i % 2 ? -.48 : .42); ring.rotation.y = cfg.tilt[1] + time * cfg.speed + pointer.x * .08; ring.rotation.z = cfg.tilt[2] + progress * (i - 1) * .32; ring.scale.setScalar(1 + spread * (i % 2 ? 1 : -.45)); ring.material.opacity = night ? .24 + Math.abs(Math.sin(time * .5 + i)) * .14 + progress * .1 : .46 + Math.abs(Math.sin(time * .5 + i)) * .18 + progress * .12; });
+          orbitDots.forEach(({ mesh, ring, phase }) => { const cfg = orbitRings[ring].userData; const a = phase + time * cfg.speed * 1.8; const r = cfg.radius * orbitRings[ring].scale.x; mesh.position.set(Math.cos(a) * r, Math.sin(a) * r * .32, Math.sin(a) * r); mesh.scale.setScalar(1 + .28 * Math.sin(time * 2 + phase)); });
+          const p = lines.geometry.attributes.position.array; nodes.forEach((v, i) => { const j = (i + 1) % nodes.length; const w = nodes[j]; const k = i * 6; const depthWave = Math.sin(time * .65 + i * .8) * .08; p[k] = v.x; p[k + 1] = v.y; p[k + 2] = v.z + depthWave; const blend = Math.min(1, progress * 2.8); p[k + 3] = THREE.MathUtils.lerp(v.x, w.x, blend); p[k + 4] = THREE.MathUtils.lerp(v.y, w.y, blend); p[k + 5] = THREE.MathUtils.lerp(v.z + depthWave, w.z, blend); }); lines.geometry.attributes.position.needsUpdate = true; lines.material.opacity = .08 + progress * .55;
+          const dp = dust.geometry.attributes.position.array; dustData.forEach((d, i) => { d.angle += d.speed * .002 * (1 + progress); const r = d.radius - progress * .28; const k = i * 3; dp[k] = Math.cos(d.angle) * r + pointer.x * .09; dp[k + 1] = d.y + Math.sin(time * .18 + d.phase) * .06 + pointer.y * .06; dp[k + 2] = Math.sin(d.angle) * r; }); dust.geometry.attributes.position.needsUpdate = true; dust.material.color.setHex(night ? 0x818cf8 : 0xc2410c);
+          const sp = stream.geometry.attributes.position.array; streamData.forEach((s, i) => { const a = nodes[s.edge], b = nodes[(s.edge + 1) % nodes.length]; s.t = (s.t + .0025 + progress * .008) % 1; const k = i * 3; sp[k] = THREE.MathUtils.lerp(a.x, b.x, s.t); sp[k + 1] = THREE.MathUtils.lerp(a.y, b.y, s.t); sp[k + 2] = THREE.MathUtils.lerp(a.z, b.z, s.t); }); stream.geometry.attributes.position.needsUpdate = true; stream.material.opacity = progress > .55 ? .68 : progress * 1.05;
+          if (gpuParticleSystem) {
+            const system = gpuParticleSystem; const uniforms = system.velocityVariable.material.uniforms;
+            uniforms.uTime.value = time; uniforms.uDelta.value = delta; uniforms.uProgress.value = progress; uniforms.uMouse.value.set(pointer.x * 2.2, pointer.y * 1.5, 0); uniforms.uNight.value = night ? 1 : 0; system.positionVariable.material.uniforms.uDelta.value = delta;
+            const dayKeep = night ? 1 : .3; system.particleMesh.visible = true; system.particleMesh.geometry.setDrawRange(0, Math.floor(system.count * dayKeep)); system.particleMaterial.uniforms.uNight.value = night ? 1 : 0; system.particleMaterial.uniforms.uProgress.value = progress; system.particleMaterial.uniforms.uPointSize.value = (isMobile ? 1.2 : 1.7) * Math.min(1.25, renderer.getPixelRatio());
+            if (gpuFrameSkip++ % 1 === 0) { system.gpu.compute(); system.particleMaterial.uniforms.texturePosition.value = system.gpu.getCurrentRenderTarget(system.positionVariable).texture; }
+          }
+          camera.position.z += ((6.3 + progress * 2.2 + Math.abs(pointer.y) * .18) - camera.position.z) * .045; camera.position.x += ((pointer.x * .28 + (night ? .18 : -.12)) - camera.position.x) * .035; camera.position.y += ((pointer.y * .18 + Math.sin(progress * Math.PI) * .12) - camera.position.y) * .035; camera.lookAt(pointer.x * .12, pointer.y * .08, 0); if (night && composer) composer.render(); else renderer.render(scene, camera);
+          } catch (error) {
+            if (gpuParticleSystem) { console.warn('Disabling failed GPU particle layer', error); scene.remove(gpuParticleSystem.particleMesh); gpuParticleSystem = null; }
+            if (composer) { console.warn('Disabling failed bloom pass', error); composer = null; bloomPass = null; }
+            try { renderer.render(scene, camera); } catch (renderError) { console.error('3D scene render failed', renderError); }
+          }
+          frame = requestAnimationFrame(draw);
         }
-        draw(); addEventListener('pagehide', () => cancelAnimationFrame(frame), { once: true });
+        addEventListener('scroll', scroll, { passive: true }); addEventListener('resize', scroll, { passive: true }); scroll();
+        draw(); document.addEventListener('visibilitychange', () => { cancelAnimationFrame(frame); if (!document.hidden) draw(); }); addEventListener('pagehide', () => cancelAnimationFrame(frame), { once: true });
       })();
 
       init();
