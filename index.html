@@ -3,8 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="public/theme.css">
-    <script src="public/theme.js"></script>
+  <link rel="stylesheet" href="public/theme.css">
+  <script src="public/theme.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
     <title>算法社 · Algorithm Club</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="public/i18n-dict.js"></script>
@@ -104,6 +105,9 @@
         mix-blend-mode: screen;
       }
       #particleCanvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.45; }
+      #algorithmScene { position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; opacity: .82; mix-blend-mode: normal; }
+      html[data-theme="light"] #algorithmScene { opacity: .72; }
+      html[data-theme="dark"] #algorithmScene { opacity: .9; }
       .scroll-progress {
         position: fixed;
         top: 0;
@@ -1248,6 +1252,7 @@
       @media (prefers-reduced-motion: reduce) {
         html { scroll-behavior: auto; scroll-snap-type: none; }
         .ambient-orb, .ambient-grid, #particleCanvas { animation: none; }
+        #algorithmScene { opacity: .48; }
         .pointer-glow { display: none; }
         .hero-copy, .hero-panel { animation: none; }
         .reveal-ready { opacity: 1; transform: none; transition: none; }
@@ -1265,6 +1270,7 @@
       <div class="ambient-grid"></div>
       <canvas id="particleCanvas"></canvas>
     </div>
+    <canvas id="algorithmScene" aria-hidden="true"></canvas>
     <div class="pointer-glow" aria-hidden="true"></div>
     <div class="scroll-progress" aria-hidden="true"></div>
 
@@ -2179,6 +2185,54 @@
         window.addEventListener('resize', resizeCanvas, { passive: true });
         window.addEventListener('pagehide', () => window.cancelAnimationFrame(animationFrame), { once: true });
       }
+
+      // Scroll-driven algorithm scene: a small, capped scene keeps the effect smooth on phones.
+      (() => {
+        const canvas = document.getElementById('algorithmScene');
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!canvas || !window.THREE || reduced) return;
+        const isMobile = matchMedia('(max-width: 700px)').matches;
+        const THREE = window.THREE;
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: !isMobile, powerPreference: 'high-performance' });
+        renderer.setPixelRatio(Math.min(devicePixelRatio || 1, isMobile ? 1 : 1.5));
+        renderer.setSize(innerWidth, innerHeight, false);
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(34, innerWidth / innerHeight, .1, 100);
+        camera.position.set(0, 0, 6.6);
+        const group = new THREE.Group(); scene.add(group);
+        const geometry = new THREE.IcosahedronGeometry(1.35, isMobile ? 1 : 2);
+        const core = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0x8ddfff, roughness: .32, metalness: .08, transparent: true, opacity: .28, wireframe: true }));
+        group.add(core);
+        const nodes = Array.from({ length: isMobile ? 18 : 28 }, (_, i) => {
+          const a = i * 2.39996, r = 1.05 + (i % 5) * .12;
+          return new THREE.Vector3(Math.cos(a) * r, Math.sin(a * 1.47) * r * .7, Math.sin(a) * r);
+        });
+        const nodeMesh = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: isMobile ? .065 : .085, color: 0x38bdf8, transparent: true, opacity: .9, sizeAttenuation: true }));
+        nodeMesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute(nodes.flatMap(v => v.toArray()), 3)); group.add(nodeMesh);
+        const linePositions = new Float32Array((nodes.length - 1) * 6);
+        const lines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: .22 }));
+        lines.geometry.setAttribute('position', new THREE.BufferAttribute(linePositions, 3)); group.add(lines);
+        const stream = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: .045, color: 0xa78bfa, transparent: true, opacity: .85 }));
+        const streamCount = isMobile ? 40 : 90; const streamData = Array.from({ length: streamCount }, (_, i) => ({ edge: i % Math.max(1, nodes.length - 1), t: Math.random() }));
+        stream.geometry.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(streamCount * 3), 3)); group.add(stream);
+        const hemi = new THREE.HemisphereLight(0xeaf6ff, 0x223b64, 2.2); const key = new THREE.DirectionalLight(0xffffff, 2.1); key.position.set(3, 4, 5); scene.add(hemi, key);
+        let progress = 0, target = 0, night = document.documentElement.dataset.theme !== 'light';
+        const scroll = () => { const max = document.documentElement.scrollHeight - innerHeight; target = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0; };
+        addEventListener('scroll', scroll, { passive: true }); scroll();
+        addEventListener('club:themechange', e => { night = e.detail?.theme === 'dark'; });
+        const resize = () => { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }; addEventListener('resize', resize, { passive: true });
+        const clock = new THREE.Clock(); let frame;
+        function draw() {
+          progress += (target - progress) * .075; const time = clock.getElapsedTime();
+          const nightColor = night ? 0x38bdf8 : 0x38bdf8; nodeMesh.material.color.setHex(night ? 0x34d399 : 0x38bdf8); lines.material.color.setHex(night ? 0xa78bfa : 0x7dd3fc); core.material.color.setHex(night ? 0x7c8cff : 0x8ddfff);
+          core.rotation.x += .0018; core.rotation.y += .0025; core.scale.setScalar(1 + progress * .13);
+          group.rotation.y = time * .055 + progress * Math.PI * .9; group.rotation.x = progress * .28;
+          const p = lines.geometry.attributes.position.array; nodes.forEach((v, i) => { const j = (i + 1) % nodes.length; const w = nodes[j]; const k = i * 6; p[k] = v.x; p[k + 1] = v.y; p[k + 2] = v.z; p[k + 3] = THREE.MathUtils.lerp(v.x, w.x, Math.min(1, progress * 1.8)); p[k + 4] = THREE.MathUtils.lerp(v.y, w.y, Math.min(1, progress * 1.8)); p[k + 5] = THREE.MathUtils.lerp(v.z, w.z, Math.min(1, progress * 1.8)); }); lines.geometry.attributes.position.needsUpdate = true; lines.material.opacity = .12 + progress * .38;
+          const sp = stream.geometry.attributes.position.array; streamData.forEach((s, i) => { const a = nodes[s.edge], b = nodes[(s.edge + 1) % nodes.length]; s.t = (s.t + .0025 + progress * .008) % 1; const k = i * 3; sp[k] = THREE.MathUtils.lerp(a.x, b.x, s.t); sp[k + 1] = THREE.MathUtils.lerp(a.y, b.y, s.t); sp[k + 2] = THREE.MathUtils.lerp(a.z, b.z, s.t); }); stream.geometry.attributes.position.needsUpdate = true; stream.material.opacity = progress > .55 ? .85 : progress * 1.4;
+          camera.position.z += ((6.6 + progress * 1.2) - camera.position.z) * .06; camera.position.x += ((night ? .18 : -.12) - camera.position.x) * .03; renderer.render(scene, camera); frame = requestAnimationFrame(draw);
+        }
+        draw(); addEventListener('pagehide', () => cancelAnimationFrame(frame), { once: true });
+      })();
 
       init();
     
