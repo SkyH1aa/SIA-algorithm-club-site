@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="public/theme.css?v=20261004-evolution-v2">
+  <link rel="stylesheet" href="public/theme.css?v=20261004-particle-transition-v2">
   <script src="public/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
-  <script src="public/SceneDirector.js?v=20261004-evolution-v2"></script>
+  <script src="public/SceneDirector.js?v=20261004-particle-transition-v2"></script>
     <title>算法社 · Algorithm Club</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="public/i18n-dict.js"></script>
@@ -116,6 +116,11 @@
       #particleCanvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.45; }
       #algorithmScene { position: fixed; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; opacity: .82; mix-blend-mode: normal; }
       #shaderField { position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; opacity: .52; }
+      #chapterParticleCanvas { position: fixed; inset: 0; z-index: 5; display: none; width: 100%; height: 100%; pointer-events: none; opacity: .84; mix-blend-mode: screen; }
+      body.chapter-flight #chapterParticleCanvas { display: block; }
+      @media (max-width: 900px), (prefers-reduced-motion: reduce) {
+        #chapterParticleCanvas { display: none !important; }
+      }
       /* The background is a line/particle composition. Never allow browser
          filters or canvas shadows to introduce a dark centre spot. */
       #algorithmScene, #shaderField { filter: none !important; box-shadow: none !important; }
@@ -1389,6 +1394,7 @@
     </div>
     <canvas id="algorithmScene" aria-hidden="true"></canvas>
     <canvas id="shaderField" aria-hidden="true"></canvas>
+    <canvas id="chapterParticleCanvas" aria-hidden="true"></canvas>
     <div class="pointer-glow" aria-hidden="true"></div>
     <div class="scroll-progress" aria-hidden="true"></div>
 
@@ -2478,6 +2484,142 @@
         group.add(prismEdges);
         const innerEdges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(0.92, 1), 18), new THREE.LineBasicMaterial({ color: scenePalette.galaxyAlt, transparent: true, opacity: .34, blending: night ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: false }));
         innerEdges.rotation.set(.28, .5, .12); group.add(innerEdges);
+        // The central object is a chapter-morphing mathematical wireframe.
+        // Every geometry is built once; scrolling only changes weights,
+        // rotation and scale in the render loop.
+        const lineGeometry = values => {
+          const line = new THREE.BufferGeometry();
+          line.setAttribute('position', new THREE.Float32BufferAttribute(values, 3));
+          return line;
+        };
+        const pushSegment = (values, a, b) => { values.push(a[0], a[1], a[2], b[0], b[1], b[2]); };
+        const buildMobius = (uSteps, vSteps) => {
+          const values = [];
+          const point = (u, v) => { const radius = 1.03 + .30 * Math.cos(v * .5); return [radius * Math.cos(u), .30 * Math.sin(v * .5), radius * Math.sin(u)]; };
+          for (let i = 0; i < uSteps; i++) {
+            const u0 = i / uSteps * Math.PI * 2, u1 = (i + 1) / uSteps * Math.PI * 2;
+            for (let j = 0; j < vSteps; j++) {
+              const v0 = -Math.PI + j / vSteps * Math.PI * 2, v1 = -Math.PI + (j + 1) / vSteps * Math.PI * 2;
+              pushSegment(values, point(u0, v0), point(u1, v0));
+              pushSegment(values, point(u0, v0), point(u0, v1));
+            }
+          }
+          return lineGeometry(values);
+        };
+        const buildKlein = (uSteps, vSteps) => {
+          const values = [];
+          const point = (u, v) => {
+            const radius = 1.52 + Math.cos(u * .5) * Math.sin(v) - Math.sin(u * .5) * Math.sin(2 * v);
+            return [.46 * radius * Math.cos(u), .46 * radius * Math.sin(u), .46 * (Math.sin(u * .5) * Math.sin(v) + Math.cos(u * .5) * Math.sin(2 * v))];
+          };
+          for (let i = 0; i < uSteps; i++) {
+            const u0 = i / uSteps * Math.PI * 2, u1 = (i + 1) / uSteps * Math.PI * 2;
+            for (let j = 0; j < vSteps; j++) {
+              const v0 = j / vSteps * Math.PI * 2, v1 = (j + 1) / vSteps * Math.PI * 2;
+              pushSegment(values, point(u0, v0), point(u1, v0));
+              pushSegment(values, point(u0, v0), point(u0, v1));
+            }
+          }
+          return lineGeometry(values);
+        };
+        const buildTesseract = () => {
+          const edges = [], base = new Float32Array(16 * 4);
+          for (let i = 0; i < 16; i++) {
+            base[i * 4] = (i & 1) ? 1 : -1; base[i * 4 + 1] = (i & 2) ? 1 : -1;
+            base[i * 4 + 2] = (i & 4) ? 1 : -1; base[i * 4 + 3] = (i & 8) ? 1 : -1;
+            for (let bit = 0; bit < 4; bit++) { const next = i ^ (1 << bit); if (next > i) edges.push([i, next]); }
+          }
+          const projected = new Float32Array(16 * 3), positions = new Float32Array(edges.length * 6);
+          const update = angle => {
+            const c1 = Math.cos(angle), s1 = Math.sin(angle), c2 = Math.cos(angle * .73), s2 = Math.sin(angle * .73);
+            for (let i = 0; i < 16; i++) {
+              let x = base[i * 4], y = base[i * 4 + 1], z = base[i * 4 + 2], w = base[i * 4 + 3];
+              let nx = x * c1 - w * s1, nw = x * s1 + w * c1; x = nx; w = nw;
+              let nz = z * c2 - w * s2; w = z * s2 + w * c2; z = nz;
+              const perspective = 2.75 / (3.35 - w * .72);
+              projected[i * 3] = x * perspective * .72; projected[i * 3 + 1] = y * perspective * .72; projected[i * 3 + 2] = z * perspective * .72;
+            }
+            edges.forEach((edge, i) => { const a = edge[0] * 3, b = edge[1] * 3, k = i * 6; positions[k] = projected[a]; positions[k + 1] = projected[a + 1]; positions[k + 2] = projected[a + 2]; positions[k + 3] = projected[b]; positions[k + 4] = projected[b + 1]; positions[k + 5] = projected[b + 2]; });
+          };
+          update(0);
+          return { geometry: lineGeometry(positions), update };
+        };
+        const buildVoronoiLattice = () => {
+          const sites = [], values = [];
+          for (let z = -1; z <= 1; z++) for (let y = -1; y <= 1; y++) for (let x = -1; x <= 1; x++) {
+            const n = sites.length; sites.push([x * .52 + Math.sin(n * 2.3) * .08, y * .52 + Math.cos(n * 1.7) * .08, z * .52 + Math.sin(n * 1.1) * .07]);
+          }
+          for (let i = 0; i < sites.length; i++) {
+            const nearest = sites.map((site, j) => ({ j, d: j === i ? 99 : (site[0] - sites[i][0]) ** 2 + (site[1] - sites[i][1]) ** 2 + (site[2] - sites[i][2]) ** 2 })).sort((a, b) => a.d - b.d);
+            nearest.slice(0, 4).forEach(item => { if (i < item.j) pushSegment(values, sites[i], sites[item.j]); });
+          }
+          return lineGeometry(values);
+        };
+        const buildSchlegel = () => {
+          const values = [], outer = [], inner = [[0, .56, .20], [-.52, -.22, .20], [.52, -.22, .20], [0, -.22, -.60]];
+          for (let i = 0; i < 8; i++) outer.push([(i & 1) ? 1.08 : -1.08, (i & 2) ? 1.08 : -1.08, (i & 4) ? 1.08 : -1.08]);
+          for (let i = 0; i < 8; i++) for (let bit = 0; bit < 3; bit++) { const next = i ^ (1 << bit); if (next > i) pushSegment(values, outer[i], outer[next]); }
+          for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) pushSegment(values, inner[i], inner[j]);
+          outer.forEach((point, i) => pushSegment(values, point, inner[i % 4]));
+          return lineGeometry(values);
+        };
+        const buildZome = () => {
+          const phi = (1 + Math.sqrt(5)) * .5, raw = [];
+          [[0, 1, phi], [0, -1, phi], [0, 1, -phi], [0, -1, -phi], [1, phi, 0], [-1, phi, 0], [1, -phi, 0], [-1, -phi, 0], [phi, 0, 1], [phi, 0, -1], [-phi, 0, 1], [-phi, 0, -1]].forEach(v => raw.push(v));
+          const length = Math.hypot(raw[0][0], raw[0][1], raw[0][2]), outer = raw.map(v => v.map(n => n / length * 1.12)), inner = outer.map(v => v.map(n => n / phi * .92));
+          const values = [], edgeLimit = 1.22;
+          for (let i = 0; i < outer.length; i++) for (let j = i + 1; j < outer.length; j++) {
+            const dx = outer[i][0] - outer[j][0], dy = outer[i][1] - outer[j][1], dz = outer[i][2] - outer[j][2];
+            if (Math.hypot(dx, dy, dz) < edgeLimit) pushSegment(values, outer[i], outer[j]);
+          }
+          for (let i = 0; i < inner.length; i++) {
+            pushSegment(values, outer[i], inner[i]);
+            pushSegment(values, outer[i], inner[(i + 5) % inner.length]);
+          }
+          for (let i = 0; i < inner.length; i++) for (let j = i + 1; j < inner.length; j++) {
+            const dx = inner[i][0] - inner[j][0], dy = inner[i][1] - inner[j][1], dz = inner[i][2] - inner[j][2];
+            if (Math.hypot(dx, dy, dz) < edgeLimit / phi * 1.5) pushSegment(values, inner[i], inner[j]);
+          }
+          return lineGeometry(values);
+        };
+        const buildGyroid = (grid, slices) => {
+          const values = [], extent = 1.22;
+          const field = (x, y, z) => Math.sin(x) * Math.cos(y) + Math.sin(y) * Math.cos(z) + Math.sin(z) * Math.cos(x);
+          const point = (x, y, z) => [x, y, z];
+          for (let k = 0; k < slices; k++) {
+            const z = -extent + (k + .5) / slices * extent * 2;
+            for (let i = 0; i < grid; i++) for (let j = 0; j < grid; j++) {
+              const x0 = -extent + i / grid * extent * 2, x1 = -extent + (i + 1) / grid * extent * 2;
+              const y0 = -extent + j / grid * extent * 2, y1 = -extent + (j + 1) / grid * extent * 2;
+              const corners = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]], valuesAt = corners.map(c => field(c[0], c[1], z)), hits = [];
+              for (let e = 0; e < 4; e++) { const n = (e + 1) % 4, a = valuesAt[e], b = valuesAt[n]; if ((a < 0) !== (b < 0)) { const t = a / (a - b); hits.push(point(corners[e][0] + (corners[n][0] - corners[e][0]) * t, corners[e][1] + (corners[n][1] - corners[e][1]) * t, z)); } }
+              for (let h = 0; h + 1 < hits.length; h += 2) pushSegment(values, hits[h], hits[h + 1]);
+            }
+          }
+          return lineGeometry(values);
+        };
+        const knotGeometry = new THREE.TorusKnotGeometry(1.02, .20, isMobile ? 48 : 72, 6, 2, 3);
+        const tesseract = buildTesseract();
+        const mobiusGeometry = buildMobius(isMobile ? 32 : 54, isMobile ? 6 : 9);
+        const kleinGeometry = buildKlein(isMobile ? 28 : 48, isMobile ? 7 : 11);
+        const schlegelGeometry = buildSchlegel();
+        const zomeGeometry = buildZome();
+        const makeCoreWire = (source, color, opacity, mode, direct = false) => {
+          const wire = new THREE.LineSegments(direct ? source : new THREE.WireframeGeometry(source), new THREE.LineBasicMaterial({ color, transparent: true, opacity, blending: night ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: false }));
+          wire.userData.morphMode = mode;
+          group.add(wire);
+          return wire;
+        };
+        const coreShapeModels = [
+          { mesh: prismEdges, material: prismEdges.material, palette: 'beam', size: 1.00, base: [0, 0, 0] },
+          { mesh: makeCoreWire(knotGeometry, scenePalette.galaxyAlt, 0, 'trefoil-knot', false), material: null, palette: 'galaxyAlt', size: 1.10, base: [.10, .16, .08] },
+          { mesh: makeCoreWire(mobiusGeometry, scenePalette.beam, 0, 'mobius', true), material: null, palette: 'beam', size: 1.05, base: [.04, .12, .08] },
+          { mesh: makeCoreWire(tesseract.geometry, scenePalette.galaxyAlt, 0, 'tesseract', true), material: null, palette: 'galaxyAlt', size: 1.22, base: [.18, .24, .10] },
+          { mesh: makeCoreWire(kleinGeometry, scenePalette.beam, 0, 'klein-bottle', true), material: null, palette: 'beam', size: 1.02, base: [.12, -.18, .16] },
+          { mesh: makeCoreWire(schlegelGeometry, scenePalette.galaxyAlt, 0, 'schlegel', true), material: null, palette: 'galaxyAlt', size: 1.00, base: [.20, .08, -.12] },
+          { mesh: makeCoreWire(zomeGeometry, scenePalette.beam, 0, 'zome-golden-truss', true), material: null, palette: 'beam', size: 1.06, base: [.10, .30, .18] }
+        ];
+        coreShapeModels.forEach(model => { model.material = model.material || model.mesh.material; });
         const orbitRings = [
           { radius: 1.82, tube: .009, tilt: [.2, .1, .25], speed: .14 },
           { radius: 2.08, tube: .006, tilt: [1.05, .28, -.45], speed: -.1 },
@@ -2564,7 +2706,10 @@
         const clock = new THREE.Clock(); let sceneTime = 0; let frame;
         let gpuFrameSkip = 0, slowFrames = 0;
         const chapterProfiles = {
-          morph: [0, .33, .66, 1, .22, .72, 1],
+          morph: [0, 0, .30, .50, .68, .84, 1],
+          // Core silhouettes: icosahedron, trefoil knot, Mobius, Tesseract,
+          // Klein bottle, Schlegel diagram, and Zome golden-ratio truss.
+          coreShape: [0, 1, 2, 3, 4, 5, 6],
           arms: [3, 4, 5, 6, 4, 5, 6],
           ringShape: [0, .24, .56, .90, .42, .78, 1],
           ringCount: [3, 5, 6, 7, 5, 6, 7],
@@ -2612,6 +2757,11 @@
           prismEdges.material.needsUpdate = true;
           innerEdges.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
           innerEdges.material.needsUpdate = true;
+          coreShapeModels.forEach(model => {
+            model.material.color.set(model.palette === 'beam' ? scenePalette.beam : scenePalette.galaxyAlt);
+            model.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
+            model.material.needsUpdate = true;
+          });
           orbitRings.forEach(ring => { ring.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending; ring.material.needsUpdate = true; });
           orbitDots.forEach(({ mesh }) => { mesh.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending; mesh.material.needsUpdate = true; });
           if (gpuParticleSystem) {
@@ -2627,18 +2777,33 @@
           const sceneState = window.useSceneState?.(); const zoneIndex = sceneState?.sectionIndex ?? 0; const zoneLocal = sceneState?.sectionProgress ?? progress;
           const chapterValue = progress * 6;
           const chapterMorph = sampleChapter(chapterProfiles.morph, chapterValue);
+          const chapterCoreShape = sampleChapter(chapterProfiles.coreShape, chapterValue);
           const chapterArms = sampleChapter(chapterProfiles.arms, chapterValue);
           const chapterRingShape = sampleChapter(chapterProfiles.ringShape, chapterValue);
           const chapterRingCount = sampleChapter(chapterProfiles.ringCount, chapterValue);
           const chapterTopology = sampleChapter(chapterProfiles.topology, chapterValue);
           const chapterFlow = sampleChapter(chapterProfiles.flow, chapterValue);
           const chapterDensity = sampleChapter(chapterProfiles.density, chapterValue);
-          nodeMesh.material.color.set(scenePalette.galaxy); lines.material.color.set(scenePalette.galaxyAlt); stream.material.color.set(scenePalette.stream); prismEdges.material.color.set(scenePalette.beam); prismEdges.material.opacity = night ? .86 : .84; innerEdges.material.color.set(scenePalette.galaxyAlt); rim.color.set(scenePalette.beam); coreMaterial.uniforms.uTime.value = time; coreMaterial.uniforms.uProgress.value = progress; coreMaterial.uniforms.uNight.value += ((night ? 1 : 0) - coreMaterial.uniforms.uNight.value) * .06;
+          nodeMesh.material.color.set(scenePalette.galaxy); lines.material.color.set(scenePalette.galaxyAlt); stream.material.color.set(scenePalette.stream); prismEdges.material.color.set(scenePalette.beam); innerEdges.material.color.set(scenePalette.galaxyAlt); rim.color.set(scenePalette.beam); coreMaterial.uniforms.uTime.value = time; coreMaterial.uniforms.uProgress.value = progress; coreMaterial.uniforms.uNight.value += ((night ? 1 : 0) - coreMaterial.uniforms.uNight.value) * .06;
           core.rotation.x += .0018 * delta * 60; core.rotation.y += .0025 * delta * 60; innerEdges.rotation.y -= .0032 * delta * 60; innerEdges.rotation.x += .0011 * delta * 60;
           core.scale.setScalar(1 + progress * .13);
-          prismEdges.scale.setScalar(THREE.MathUtils.damp(prismEdges.scale.x, .92 + chapterMorph * .16 + chapterDensity * .03, 3.2, delta));
+          tesseract.update(time * .45 + progress * Math.PI * 1.2 + chapterFlow * .35);
+          const coreShapeT = Math.min(5.999, Math.max(0, chapterCoreShape));
+          coreShapeModels.forEach((model, index) => {
+            const weight = Math.max(0, 1 - Math.abs(coreShapeT - index));
+            const targetOpacity = (night ? .88 : .84) * weight;
+            model.material.opacity = THREE.MathUtils.damp(model.material.opacity, targetOpacity, 5.0, delta);
+            model.mesh.visible = model.material.opacity > .004;
+            const targetScale = (.92 + chapterDensity * .08 + weight * .08) * model.size;
+            model.mesh.scale.setScalar(THREE.MathUtils.damp(model.mesh.scale.x, targetScale, 4.2, delta));
+            const base = model.base;
+            model.mesh.rotation.x = THREE.MathUtils.damp(model.mesh.rotation.x, base[0] + time * (.018 + index * .004) + chapterFlow * .05, 3.8, delta);
+            model.mesh.rotation.y = THREE.MathUtils.damp(model.mesh.rotation.y, base[1] + time * (.026 + index * .005) + chapterMorph * .16, 3.8, delta);
+            model.mesh.rotation.z = THREE.MathUtils.damp(model.mesh.rotation.z, base[2] + chapterFlow * .10 + progress * .04, 3.8, delta);
+          });
+          const innerTargetOpacity = (night ? .34 : .30) * (.24 + .76 * Math.max(0, 1 - chapterCoreShape));
+          innerEdges.material.opacity = THREE.MathUtils.damp(innerEdges.material.opacity, innerTargetOpacity, 4.2, delta);
           innerEdges.scale.setScalar(THREE.MathUtils.damp(innerEdges.scale.x, .88 + chapterMorph * .20, 3.4, delta));
-          prismEdges.rotation.z = THREE.MathUtils.damp(prismEdges.rotation.z, chapterMorph * .12 + chapterFlow * .04, 3.0, delta);
           pointer.x = THREE.MathUtils.damp(pointer.x, pointerTarget.x, 5.5, delta); pointer.y = THREE.MathUtils.damp(pointer.y, pointerTarget.y, 5.5, delta);
           const chapterPhase = progress * 6;
           // Keep the chapter turn continuous at every boundary. A per-chapter
@@ -2755,6 +2920,195 @@
         });
         const flightQuery = matchMedia('(min-width: 901px) and (min-height: 650px)');
         const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        // Desktop-only outline particles: old chapter frames collapse into
+        // the star-chart core while the next chapter is reconstructed from it.
+        const particleConductor = (() => {
+          const canvas = document.getElementById('chapterParticleCanvas');
+          const context = canvas?.getContext('2d');
+          const particles = [];
+          const enabled = Boolean(canvas && context && flightQuery.matches && !reducedMotion);
+          let frame = 0, width = innerWidth, height = innerHeight, color = '#60a5fa';
+          const clamp = value => Math.max(0, Math.min(1, value));
+          const easeOut = value => 1 - Math.pow(1 - clamp(value), 3);
+          const random = (seed => () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; })(0x9e3779b9);
+          const resize = () => {
+            if (!enabled) return;
+            const ratio = Math.min(devicePixelRatio || 1, 1.5);
+            width = innerWidth; height = innerHeight;
+            canvas.width = Math.floor(width * ratio); canvas.height = Math.floor(height * ratio);
+            canvas.style.width = `${width}px`; canvas.style.height = `${height}px`;
+            context.setTransform(ratio, 0, 0, ratio, 0, 0);
+          };
+          const readColor = () => {
+            const name = document.documentElement.dataset.theme === 'light' ? '--scene-beam' : '--scene-galaxy';
+            color = getComputedStyle(document.documentElement).getPropertyValue(name).trim() || (name === '--scene-beam' ? '#7c2d12' : '#60a5fa');
+            context.globalCompositeOperation = document.documentElement.dataset.theme === 'light' ? 'source-over' : 'lighter';
+          };
+          const capture = section => {
+            if (!section) return [];
+            const stage = section.firstElementChild || section;
+            const selector = '.section-heading, .hero, .hero-copy, .hero-panel, .hero-metrics, .orbit-matrix, .orbit-visual, .axis-item, .matrix-output, .planet-system, .planet-row, .planet-copy, .planet-meta, .member-grid, .member-card, .project-grid, .project-card, .timeline, .timeline-item, .join-section, .join-card, .qr-box, .proof-band';
+            const points = [];
+            const addFrame = (element, density = 10, inset = 0) => {
+              if (!element) return;
+              const source = element.getBoundingClientRect();
+              const rect = {
+                left: source.left + inset,
+                top: source.top + inset,
+                right: source.right - inset,
+                bottom: source.bottom - inset,
+                width: source.width - inset * 2,
+                height: source.height - inset * 2
+              };
+              if (rect.width < 24 || rect.height < 12 || rect.bottom < -20 || rect.top > height + 20) return;
+              const perimeter = Math.max(14, Math.ceil((rect.width + rect.height) / density));
+              for (let i = 0; i < perimeter; i++) {
+                const t = i / perimeter;
+                const point = { x: 0, y: 0, element, u: t, inset };
+                if (t < .25) { point.x = rect.left + rect.width * (t * 4); point.y = rect.top; }
+                else if (t < .5) { point.x = rect.right; point.y = rect.top + rect.height * ((t - .25) * 4); }
+                else if (t < .75) { point.x = rect.right - rect.width * ((t - .5) * 4); point.y = rect.bottom; }
+                else { point.x = rect.left; point.y = rect.bottom - rect.height * ((t - .75) * 4); }
+                points.push(point);
+              }
+            };
+            // Close the full chapter frame first, then draw semantic panel frames.
+            addFrame(stage, 16, 3);
+            stage.querySelectorAll(selector).forEach(element => addFrame(element, 10, 0));
+            return points;
+          };
+          const pick = (points, limit) => {
+            if (points.length <= limit) return points;
+            const stride = Math.ceil(points.length / limit), picked = [];
+            for (let i = 0; i < points.length; i += stride) picked.push(points[i]);
+            return picked;
+          };
+          const rectCache = new Map();
+          let activeTransition = null;
+          let lastTransitionKey = '', lastTransitionAt = 0;
+          const syncPoints = points => {
+            rectCache.clear();
+            points.forEach(point => {
+              let rect = rectCache.get(point.element);
+              if (!rect) { rect = point.element.getBoundingClientRect(); rectCache.set(point.element, rect); }
+              const inset = point.inset || 0;
+              const left = rect.left + inset;
+              const top = rect.top + inset;
+              const right = rect.right - inset;
+              const bottom = rect.bottom - inset;
+              const width = rect.width - inset * 2;
+              const height = rect.height - inset * 2;
+              const t = point.u;
+              if (t < .25) { point.x = left + width * (t * 4); point.y = top; }
+              else if (t < .5) { point.x = right; point.y = top + height * ((t - .25) * 4); }
+              else if (t < .75) { point.x = right - width * ((t - .5) * 4); point.y = bottom; }
+              else { point.x = left; point.y = bottom - height * ((t - .75) * 4); }
+            });
+          };
+          const transition = (oldSection, newSection, flowDirection = 1) => {
+            if (!enabled) return;
+            const key = `${oldSection?.id || ''}->${newSection?.id || ''}`;
+            const now = performance.now();
+            if (activeTransition?.key === key || (lastTransitionKey === key && now - lastTransitionAt < 1800)) return;
+            readColor(); resize(); particles.length = 0;
+            const started = now;
+            const directionSign = flowDirection >= 0 ? 1 : -1;
+            const oldPoints = pick(capture(oldSection), 840), newPoints = pick(capture(newSection), 980);
+            syncPoints(oldPoints); syncPoints(newPoints);
+            const coreX = width * .5, coreY = height * .50;
+            oldPoints.forEach(point => particles.push({ anchor: point, sx: point.x, sy: point.y, tx: coreX + (random() - .5) * 34, ty: coreY + (random() - .5) * 34, burstX: (random() - .5) * 230 + directionSign * (100 + random() * 150), burstY: (random() - .5) * 190, direction: directionSign, start: started, delay: random() * 70, duration: 1180 + random() * 300, mode: 1, seed: random() * Math.PI * 2, size: 1.25 + random() * 1.05, coreX, coreY }));
+            newPoints.forEach(point => particles.push({ anchor: point, sx: coreX + (random() - .5) * 110, sy: coreY + (random() - .5) * 110, tx: point.x, ty: point.y, direction: directionSign, start: started, delay: random() * 120, duration: 1240 + random() * 320, mode: 0, seed: random() * Math.PI * 2, size: 1.1 + random() * .95, coreX, coreY }));
+            activeTransition = { key, oldPoints, newPoints, lastSync: started };
+            lastTransitionKey = key; lastTransitionAt = started;
+            particleConductor.core = { x: coreX, y: coreY, started };
+            if (!frame) frame = requestAnimationFrame(animate);
+          };
+          const animate = now => {
+            frame = 0;
+            if (!enabled || !particles.length) return;
+            context.clearRect(0, 0, width, height);
+            let active = 0;
+            context.fillStyle = color;
+            const core = particleConductor.core;
+            if (activeTransition && now - activeTransition.lastSync > 16) {
+              syncPoints(activeTransition.oldPoints); syncPoints(activeTransition.newPoints); activeTransition.lastSync = now;
+            }
+            particles.forEach(particle => {
+              const raw = (now - particle.start - particle.delay) / particle.duration;
+              if (raw <= 0) { active++; return; }
+              if (raw < 1) active++;
+              if (particle.anchor && (particle.mode ? raw < .34 : raw < 1)) {
+                if (particle.mode) { particle.sx = particle.anchor.x; particle.sy = particle.anchor.y; }
+                else { particle.tx = particle.anchor.x; particle.ty = particle.anchor.y; }
+              }
+              let x, y, alpha;
+              if (particle.mode) {
+                // Fragments travel with the chapter direction, then spiral back
+                // into the core before the incoming frame is assembled.
+                const breakT = easeOut(raw / .30);
+                const collapseT = easeOut((raw - .30) / .70);
+                const brokenX = particle.sx + particle.burstX * Math.min(1, breakT);
+                const brokenY = particle.sy + particle.burstY * Math.min(1, breakT);
+                const settle = clamp((raw - .30) / .70);
+                const sourceAngle = Math.atan2(particle.sy - particle.coreY, particle.sx - particle.coreX);
+                const sourceRadius = Math.hypot(particle.sx - particle.coreX, particle.sy - particle.coreY);
+                const spiralAngle = sourceAngle + particle.direction * (.35 + settle * 2.45);
+                const spiralRadius = sourceRadius * (1 - settle * .92) + 10 * settle;
+                const spiralX = particle.coreX + Math.cos(spiralAngle) * spiralRadius;
+                const spiralY = particle.coreY + Math.sin(spiralAngle) * spiralRadius;
+                x = raw < .30 ? brokenX : brokenX + (spiralX - brokenX) * collapseT;
+                y = raw < .30 ? brokenY : brokenY + (spiralY - brokenY) * collapseT;
+                const swirl = Math.sin(particle.seed + raw * 9.0) * (1 - settle) * 30;
+                x += Math.cos(particle.seed + raw * 5.5) * swirl + particle.direction * (1 - settle) * 30;
+                y += Math.sin(particle.seed + raw * 5.5) * swirl;
+                alpha = .95 * (raw < .72 ? 1 : Math.max(0, 1 - (raw - .72) / .28));
+              } else {
+                // New frames spiral out from the core, then lock to each edge point.
+                const assembleT = easeOut(raw / .84);
+                const orbit = (1 - clamp(raw / .84)) * 165;
+                const angle = particle.seed + particle.direction * raw * 7.1;
+                const orbitX = core.x + Math.cos(angle) * orbit;
+                const orbitY = core.y + Math.sin(angle) * orbit;
+                x = orbitX + (particle.tx - orbitX) * assembleT;
+                y = orbitY + (particle.ty - orbitY) * assembleT;
+                const settle = 1 - clamp((raw - .84) / .16);
+                x += Math.cos(angle * 1.7) * settle * 8; y += Math.sin(angle * 1.7) * settle * 8;
+                alpha = .86 * (raw < 1 ? 1 : Math.max(0, 1 - (raw - 1) * 3));
+              }
+              context.globalAlpha = alpha;
+              const size = particle.size * (particle.mode ? 1.12 : 1);
+              if (particle.seed > Math.PI) {
+                context.fillRect(x - size * .5, y - size * .5, size, size);
+              } else {
+                context.beginPath(); context.arc(x, y, size * .52, 0, Math.PI * 2); context.fill();
+              }
+              if (particle.mode && raw < .42) {
+                context.globalAlpha = alpha * .55;
+                context.fillRect(x + particle.direction * 3.8, y - size * .35, Math.max(.65, size * .42), Math.max(.65, size * .42));
+              }
+            });
+            if (core && now - core.started < 1450) {
+              const ringT = clamp((now - core.started) / 1200);
+              context.strokeStyle = color;
+              context.globalAlpha = .48 * (1 - ringT);
+              context.lineWidth = 1;
+              context.beginPath(); context.arc(core.x, core.y, 12 + ringT * 150, 0, Math.PI * 2); context.stroke();
+              context.globalAlpha = .70 * (1 - ringT);
+              context.beginPath(); context.arc(core.x, core.y, 3 + ringT * 18, 0, Math.PI * 2); context.stroke();
+              active++;
+            }
+            context.globalAlpha = 1;
+            if (active) {
+              frame = requestAnimationFrame(animate);
+            } else {
+              activeTransition = null;
+              context.clearRect(0, 0, width, height);
+            }
+          };
+          resize();
+          return { enabled, resize, transition };
+        })();
+        addEventListener('resize', () => particleConductor.resize(), { passive: true });
         let flight = false, target = 0, display = 0, lastFrame = performance.now(), frame = 0, lastActive = -1;
         let snapTimer = 0, snapLock = false, direction = 1, lastTarget = 0;
         const routeWheelToChapters = event => {
@@ -2772,6 +3126,11 @@
           const currentMax = Math.max(1, root.scrollHeight - innerHeight);
           const currentChapter = Math.round(display * (zones.length - 1));
           const nextChapter = Math.max(0, Math.min(zones.length - 1, currentChapter + (event.deltaY > 0 ? 1 : -1)));
+          if (nextChapter !== currentChapter && particleConductor.enabled) {
+            // Start the particle dissolve at the same moment the chapter
+            // spring starts, so the incoming frame is drawn during its reveal.
+            particleConductor.transition(sections[currentChapter], sections[nextChapter], nextChapter > currentChapter ? 1 : -1);
+          }
           const snapTop = nextChapter / (zones.length - 1) * currentMax;
           direction = nextChapter >= currentChapter ? 1 : -1;
           snapLock = true;
@@ -2809,6 +3168,7 @@
           state.transition = local < .02 || local > .98 ? 'idle' : 'turning';
           state.theme = root.dataset.theme || 'dark';
           if (active !== lastActive) {
+            if (lastActive >= 0 && particleConductor.enabled) particleConductor.transition(sections[lastActive], sections[active], direction);
             root.dataset.activeChapter = state.chapter;
             if (readout) readout.textContent = `${zones[active].code} / ${zones[active].name}`;
             index?.querySelectorAll('button').forEach((button, i) => button.classList.toggle('is-active', i === active));
@@ -2855,6 +3215,13 @@
           target = clamp(scrollY / max);
           if (target !== lastTarget) direction = target >= lastTarget ? 1 : -1;
           lastTarget = target;
+          if (flight && particleConductor.enabled) {
+            const displayChapter = Math.max(0, Math.min(zones.length - 1, Math.round(display * (zones.length - 1))));
+            const targetChapter = Math.max(0, Math.min(zones.length - 1, Math.round(target * (zones.length - 1))));
+            if (targetChapter !== displayChapter) {
+              particleConductor.transition(sections[displayChapter], sections[targetChapter], targetChapter > displayChapter ? 1 : -1);
+            }
+          }
           if (!flight) display = target;
           requestTick();
           if (flight && !reducedMotion && !snapLock) {
@@ -2883,6 +3250,10 @@
           const at = zones.findIndex(zone => zone.id === id || (id === 'proof' && zone.id === 'home'));
           if (at < 0) return false;
           if (flight) {
+            const fromChapter = Math.max(0, Math.min(zones.length - 1, Math.round(display * (zones.length - 1))));
+            if (fromChapter !== at && particleConductor.enabled) {
+              particleConductor.transition(sections[fromChapter], sections[at], at > fromChapter ? 1 : -1);
+            }
             snapLock = true;
             scrollTo({ top: (at / (zones.length - 1)) * Math.max(1, root.scrollHeight - innerHeight), behavior: 'smooth' });
             setTimeout(() => { snapLock = false; }, 650);

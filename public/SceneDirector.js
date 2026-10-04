@@ -90,7 +90,7 @@
       return mix(v5, v6, t);
     }
     float chapterValue(){ return clamp(uScroll * 6.0, 0.0, 5.999); }
-    float coreMorph(){ return chapterKey(chapterValue(), 0.0, 0.33, 0.66, 1.0, 0.22, 0.72, 1.0); }
+    float coreMorph(){ return chapterKey(chapterValue(), 0.0, 0.33, 0.52, 0.68, 0.78, 0.90, 1.0); }
     float armCount(){ return chapterKey(chapterValue(), 3.0, 4.0, 5.0, 6.0, 4.0, 5.0, 6.0); }
     float ringShape(){ return chapterKey(chapterValue(), 0.0, 0.24, 0.56, 0.90, 0.42, 0.78, 1.0); }
     float ringCount(){ return chapterKey(chapterValue(), 3.0, 5.0, 6.0, 7.0, 5.0, 6.0, 7.0); }

@@ -1853,3 +1853,28 @@ html[data-theme="light"] .leaderboard-pagination button {
   background: var(--day-brand-soft);
   color: var(--day-brand-strong);
 }
+
+/* Desktop chapter particles need contrast on the paper theme. */
+html[data-theme="light"] #chapterParticleCanvas {
+  mix-blend-mode: multiply;
+  opacity: .74;
+}
+
+/* Match the capability matrix's translucent blueprint panels on day mode. */
+html[data-theme="light"] .member-card,
+html[data-theme="light"] .project-card,
+html[data-theme="light"] .timeline-item,
+html[data-theme="light"] .join-card .qr-box {
+  background: rgba(255, 255, 255, .66) !important;
+  border-color: rgba(194, 65, 12, .20) !important;
+  box-shadow: 0 10px 26px rgba(70, 47, 35, .055) !important;
+  backdrop-filter: blur(10px);
+}
+
+html[data-theme="light"] .member-card:hover,
+html[data-theme="light"] .project-card:hover,
+html[data-theme="light"] .timeline-item:hover,
+html[data-theme="light"] .join-card .qr-box:hover {
+  background: rgba(255, 255, 255, .74) !important;
+  border-color: rgba(194, 65, 12, .34) !important;
+}
