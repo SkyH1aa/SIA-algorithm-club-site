@@ -3,10 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="public/theme.css">
+  <link rel="stylesheet" href="public/theme.css?v=20261004-evolution-v2">
   <script src="public/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+  <script src="public/SceneDirector.js?v=20261004-evolution-v2"></script>
     <title>算法社 · Algorithm Club</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="public/i18n-dict.js"></script>
@@ -41,7 +42,7 @@
       html {
         scroll-behavior: smooth;
         scroll-padding-top: 76px;
-        scroll-snap-type: y mandatory;
+        scroll-snap-type: none;
       }
       body {
         position: relative;
@@ -80,6 +81,13 @@
       }
       main, .footer { position: relative; z-index: 2; }
       .topbar { isolation: isolate; }
+      .zone-readout { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; color: var(--muted); font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+      .zone-readout strong { color: var(--cyan); font-weight: 700; }
+      .section-index { position: fixed; top: 50%; right: clamp(12px, 2.4vw, 34px); z-index: 25; display: grid; gap: 8px; transform: translateY(-50%); }
+      .section-index button { display: grid; grid-template-columns: 22px 0fr; align-items: center; width: 26px; min-height: 24px; overflow: hidden; padding: 0 2px; border: 0; border-left: 1px solid rgba(115,221,255,.28); background: transparent; color: var(--muted); font: 11px var(--mono); text-align: left; cursor: pointer; transition: width .24s ease, color .24s ease, border-color .24s ease; }
+      .section-index button span { opacity: 0; white-space: nowrap; transition: opacity .2s ease; }
+      .section-index button:hover, .section-index button.is-active { width: 112px; color: var(--cyan); border-color: var(--cyan); }
+      .section-index button:hover span, .section-index button.is-active span { opacity: 1; }
       .ambient-orb {
         position: absolute;
         width: min(42vw, 520px);
@@ -108,10 +116,10 @@
       #particleCanvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.45; }
       #algorithmScene { position: fixed; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; opacity: .82; mix-blend-mode: normal; }
       #shaderField { position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; opacity: .52; }
-      html[data-theme="light"] #algorithmScene { opacity: .9; }
-      html[data-theme="dark"] #algorithmScene { opacity: .9; }
-      html[data-theme="light"] #shaderField { opacity: .42; }
-      html[data-theme="dark"] #shaderField { opacity: .62; }
+      /* The background is a line/particle composition. Never allow browser
+         filters or canvas shadows to introduce a dark centre spot. */
+      #algorithmScene, #shaderField { filter: none !important; box-shadow: none !important; }
+      .ambient-orb { display: none !important; }
       .scroll-progress {
         position: fixed;
         top: 0;
@@ -584,6 +592,64 @@
         grid-template-rows: auto auto;
         gap: 14px;
       }
+      .orbit-matrix { display: grid; grid-template-columns: minmax(190px, .5fr) minmax(300px, 1fr) minmax(220px, .58fr); gap: 24px; align-items: center; min-height: 420px; }
+      .axis-list { display: grid; gap: 3px; border-left: 1px solid rgba(115,221,255,.22); }
+      .axis-item { position: relative; display: grid; gap: 3px; padding: 15px 16px 15px 22px; border: 0; border-left: 2px solid transparent; background: transparent; color: var(--muted); font: inherit; text-align: left; cursor: pointer; transition: color .2s ease, border-color .2s ease, transform .2s ease; }
+      .axis-item::before { content: ''; position: absolute; left: -4px; top: 21px; width: 6px; height: 6px; border: 1px solid currentColor; border-radius: 50%; background: var(--bg); }
+      .axis-item strong { color: inherit; font: 700 13px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+      .axis-item small { font-size: 12px; line-height: 1.45; }
+      .axis-item:hover, .axis-item.is-active { border-color: var(--cyan); color: var(--white); transform: translateX(7px); }
+      .axis-item.is-active::before { background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+      .orbit-visual { position: relative; min-height: 390px; display: grid; place-items: center; border: 1px solid rgba(115,221,255,.18); background: radial-gradient(circle at center, rgba(0,229,255,.09), transparent 55%); overflow: hidden; }
+      .orbit-visual::before, .orbit-visual::after { content: ''; position: absolute; width: 72%; aspect-ratio: 1; border: 1px solid rgba(115,221,255,.25); border-radius: 50%; transform: rotate(28deg) scaleY(.35); }
+      .orbit-visual::after { width: 52%; transform: rotate(-34deg) scaleY(.42); border-color: rgba(124,77,255,.4); }
+      .orbit-core { position: relative; z-index: 1; width: 108px; aspect-ratio: 1; border: 1px solid rgba(0,229,255,.85); border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.9) 0 5%, rgba(0,229,255,.4) 16%, transparent 66%); box-shadow: 0 0 42px rgba(0,229,255,.35); }
+      .orbit-core::before, .orbit-core::after { content: ''; position: absolute; inset: 12px -50px; border: 1px solid rgba(0,229,255,.36); border-radius: 50%; transform: rotate(26deg); }
+      .orbit-core::after { inset: -40px 12px; transform: rotate(-38deg); border-color: rgba(124,77,255,.34); }
+      .matrix-output { min-height: 220px; padding: 18px 0 18px 18px; border-left: 1px solid rgba(115,221,255,.18); }
+      .matrix-output .mono-label { color: var(--cyan); font: 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+      .matrix-output h3 { margin: 16px 0 10px; font-size: 25px; }
+      .matrix-output p { color: var(--muted); font-size: 14px; line-height: 1.75; }
+      .matrix-output code { color: var(--gold); font: 12px var(--mono); }
+      .planet-system { position: relative; display: grid; gap: 12px; padding: 34px clamp(18px, 4vw, 58px); margin-inline: calc(-1 * clamp(18px, 4vw, 58px)); overflow: visible; }
+      .planet-system::before { content: ''; position: absolute; left: 3%; right: 3%; top: 50%; border-top: 1px dashed rgba(115,221,255,.32); pointer-events: none; }
+      .planet-row { position: relative; z-index: 1; display: grid; grid-template-columns: 110px minmax(0, 1fr) 120px; gap: 22px; align-items: center; padding: 22px 0; border-bottom: 1px solid rgba(115,221,255,.12); overflow: visible; }
+      .planet-row > div:first-child { position: relative; z-index: 5; overflow: visible; }
+      .planet-orb { width: 84px; aspect-ratio: 1; border: 1px solid rgba(0,229,255,.5); border-radius: 50%; background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.85), rgba(0,229,255,.22) 18%, transparent 65%); box-shadow: 0 0 28px rgba(0,229,255,.15); transition: transform .35s ease, box-shadow .35s ease; }
+      .planet-row:hover .planet-orb { transform: scale(1.18); box-shadow: 0 0 42px rgba(0,229,255,.42); }
+      .planet-index { color: var(--cyan); font: 12px var(--mono); letter-spacing: .1em; }
+      .planet-copy h3 { margin-bottom: 6px; font-size: 23px; }
+      .planet-copy p { max-width: 650px; margin: 0; color: var(--muted); line-height: 1.7; }
+      .planet-meta { color: var(--muted); font: 11px/1.7 var(--mono); text-align: right; text-transform: uppercase; }
+      .planet-meta strong { display: block; color: var(--gold); font-size: 13px; }
+      @media(max-width:900px){.zone-readout{display:none}.section-index{display:none}.orbit-matrix{grid-template-columns:1fr}.orbit-visual{min-height:300px}.matrix-output{border-left:0;border-top:1px solid rgba(115,221,255,.18);padding:18px 0}.planet-system{padding-inline:10px;margin-inline:-10px}.planet-row{grid-template-columns:72px minmax(0,1fr)}.planet-meta{grid-column:2;text-align:left}.planet-orb{width:58px}}
+      html[data-theme="light"] .axis-item:hover, html[data-theme="light"] .axis-item.is-active { color: #7c2d12; border-color: #c2410c; }
+      html[data-theme="light"] .axis-item::before { background: #f7f8fb; }
+      html[data-theme="light"] .axis-item.is-active::before { background: #c2410c; box-shadow: 0 0 12px rgba(194,65,12,.36); }
+      html[data-theme="light"] .orbit-visual { border-color: rgba(194,65,12,.22); background: radial-gradient(circle at center, rgba(234,88,12,.08), transparent 58%); }
+      html[data-theme="light"] .orbit-visual::before { border-color: rgba(194,65,12,.3); }
+      html[data-theme="light"] .orbit-visual::after { border-color: rgba(180,83,9,.28); }
+      html[data-theme="light"] .orbit-core { border-color: #c2410c; background: radial-gradient(circle, rgba(255,255,255,.95) 0 5%, rgba(234,88,12,.34) 18%, transparent 68%); box-shadow: 0 0 38px rgba(194,65,12,.24); }
+      html[data-theme="light"] .orbit-core { box-shadow: none; }
+      html[data-theme="light"] .matrix-output { border-color: rgba(194,65,12,.22); }
+      html[data-theme="light"] .matrix-output .mono-label { color: #9a3412; }
+      html[data-theme="light"] .matrix-output code, html[data-theme="light"] .planet-meta strong { color: #9a3412; }
+      html[data-theme="light"] .planet-system::before { border-color: rgba(194,65,12,.32); }
+      html[data-theme="light"] .planet-row { border-color: rgba(194,65,12,.18); }
+      html[data-theme="light"] .planet-orb { border-color: rgba(194,65,12,.56); background: radial-gradient(circle at 35% 30%, #fff 0 10%, rgba(234,88,12,.34) 22%, transparent 68%); box-shadow: 0 0 24px rgba(194,65,12,.18); }
+      html[data-theme="light"] .planet-row:hover .planet-orb { border-color: rgba(194,65,12,.8); box-shadow: 0 0 42px rgba(194,65,12,.34); }
+      html[data-theme="light"] .axis-item,
+      html[data-theme="light"] .matrix-output,
+      html[data-theme="light"] .planet-copy,
+      html[data-theme="light"] .planet-copy h3,
+      html[data-theme="light"] .planet-copy p,
+      html[data-theme="light"] .planet-meta { color: #39231b !important; }
+      html[data-theme="dark"] .axis-item,
+      html[data-theme="dark"] .matrix-output,
+      html[data-theme="dark"] .planet-copy,
+      html[data-theme="dark"] .planet-copy h3,
+      html[data-theme="dark"] .planet-copy p,
+      html[data-theme="dark"] .planet-meta { color: #d8e5f4 !important; }
       .info-card, .project-card, .member-card, .join-card, .timeline-item, .flagship-card {
         position: relative;
         border: 1px solid rgba(0, 229, 255, 0.16);
@@ -995,8 +1061,53 @@
       .pc-tip-dismiss:hover { background: rgba(0, 229, 255, 0.12); }
       body.pc-tip-open { overflow: hidden; }
 
-      .reveal-ready { opacity: 0; transform: translateY(12px); transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.2, 0.75, 0.25, 1); }
-      .reveal-ready.is-visible { opacity: 1; transform: translateY(0); }
+      /* The document is the scroll track; the two adjacent chapters share a
+         fixed stage and are composed from one reversible scroll value. */
+      body.chapter-flight main { height: 700svh; padding: 0; }
+      body.chapter-flight .section-block {
+        position: fixed; top: 70px; right: 0; left: 0; z-index: 3;
+        width: 100%; max-width: none;
+        height: calc(100svh - 78px); min-height: 0; margin: 0;
+        padding: 20px var(--pad-x) 36px; overflow: auto; overscroll-behavior: auto;
+        scrollbar-width: thin; visibility: hidden; pointer-events: none;
+        overscroll-behavior: auto;
+        scroll-snap-align: none;
+      }
+      body.chapter-flight .section-block.hero-block {
+        display: block; height: calc(100svh - 78px); padding-top: 8px;
+        overflow: auto;
+      }
+      body.chapter-flight .chapter-stage {
+        --chapter-reveal: 0;
+        min-height: 100%; opacity: calc(.86 + var(--chapter-reveal) * .14);
+        display: flex; flex-direction: column; justify-content: center;
+        position: relative; z-index: 1;
+        transform-origin: 50% 50%;
+        transform: perspective(1300px) rotateY(var(--chapter-y, 15deg)) rotateX(var(--chapter-x, 8deg)) translate3d(var(--chapter-shift, 0px), 0, var(--chapter-depth, -100px)) scale(var(--chapter-scale, .9));
+        clip-path: circle(calc(var(--chapter-reveal) * 120%) at 50% 50%);
+        will-change: transform, opacity;
+      }
+      body.chapter-flight .hero-block .chapter-stage { display: flex; flex-direction: column; justify-content: space-between; gap: 14px; }
+      body.chapter-flight .chapter-stage { width: min(100%, var(--max)); margin: 0 auto; }
+      body.chapter-flight .hero-block .chapter-stage > .hero { flex: 1 1 auto; min-height: 0; align-content: center; }
+      body.chapter-flight .chapter-stage > .section-heading,
+      body.chapter-flight .chapter-stage > .hero,
+      body.chapter-flight .chapter-stage > .orbit-matrix,
+      body.chapter-flight .chapter-stage > .planet-system,
+      body.chapter-flight .chapter-stage > .member-grid,
+      body.chapter-flight .chapter-stage > .project-grid,
+      body.chapter-flight .chapter-stage > .timeline,
+      body.chapter-flight .chapter-stage > .join-card {
+        opacity: 1;
+        transform: translate3d(calc((1 - var(--chapter-reveal)) * 18px), 0, 0);
+        filter: blur(calc((1 - var(--chapter-reveal)) * 3px));
+      }
+      body.chapter-flight .chapter-stage > .section-heading { opacity: 1; }
+      body.chapter-flight .chapter-stage > .planet-system,
+      body.chapter-flight .chapter-stage > .member-grid,
+      body.chapter-flight .chapter-stage > .project-grid,
+      body.chapter-flight .chapter-stage > .timeline { opacity: 1; }
+      body.chapter-flight .planet-row { overflow: visible; }
 
       /* Precision workstation polish: depth comes from structure, not louder glow. */
       body {
@@ -1137,6 +1248,8 @@
       .flagship-main { box-shadow: 0 22px 58px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(0, 229, 255, 0.04); }
       .board-shell { box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(184, 242, 255, 0.08); }
       .muted-band { background: transparent; }
+      html[data-theme="light"] #projects::before { display: none !important; background: none !important; animation: none !important; }
+      html[data-theme="light"] #projects.muted-band { background: transparent !important; }
       .data-note { color: #b8eaf1; border-color: rgba(94, 231, 247, 0.24); }
       .footer { background: rgba(2, 5, 13, 0.90); }
 
@@ -1200,7 +1313,7 @@
           margin: 8px 4px 4px;
         }
         main { padding-left: 18px; padding-right: 18px; }
-        html { scroll-snap-type: y proximity; }
+        html { scroll-snap-type: none; }
         .section-block, .muted-band { padding-top: 52px; padding-bottom: 52px; min-height: auto; }
         .section-block.hero-block {
           height: auto;
@@ -1284,6 +1397,7 @@
         <span class="brand-mark">A</span>
         <span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span>
       </a>
+      <div class="zone-readout" aria-live="polite"><span>ZONE</span><strong id="zoneReadout">01 / CORE</strong></div>
       <span class="member-identity" data-member-identity hidden></span>
       <button class="menu-button" type="button" id="menuButton" data-i18n-aria="common.openNav" aria-label="打开导航">☰</button>
       <nav class="nav" id="nav">
@@ -1301,8 +1415,18 @@
       </nav>
     </header>
 
+    <nav class="section-index" id="sectionIndex" aria-label="星区导航">
+      <button class="is-active" type="button" data-zone-target="home"><b>01</b><span>CORE / Hero</span></button>
+      <button type="button" data-zone-target="capabilities"><b>02</b><span>ORBIT / Matrix</span></button>
+      <button type="button" data-zone-target="gomoku"><b>03</b><span>PLANETS / Works</span></button>
+      <button type="button" data-zone-target="members"><b>04</b><span>ASTEROIDS / Members</span></button>
+      <button type="button" data-zone-target="projects"><b>05</b><span>ARCHIVE / Projects</span></button>
+      <button type="button" data-zone-target="activities"><b>06</b><span>COMET / Activity</span></button>
+      <button type="button" data-zone-target="join"><b>07</b><span>GATE / Join</span></button>
+    </nav>
+
     <main>
-      <section id="home" class="section-block hero-block">
+      <section id="home" class="section-block hero-block" data-scene-zone="core">
         <div class="hero">
           <div class="hero-copy">
             <p class="eyebrow">Algorithm Club · Productized Training</p>
@@ -1341,90 +1465,39 @@
         </div>
       </section>
 
-      <section id="capabilities" class="section-block direction-section">
+      <section id="capabilities" class="section-block direction-section" data-scene-zone="orbit">
         <div class="section-heading">
           <p class="eyebrow">Capability Matrix</p>
           <h2 data-i18n="home.capTitle">能力矩阵</h2>
           <p data-i18n="home.capLead">竞赛、AI、工程与教学资源协同运转——训练不止于题单，最终沉淀为可访问的作品与系统。</p>
         </div>
-        <div class="capability-grid direction-grid">
-          <article class="info-card featured">
-            <div>
-              <span class="icon">AI</span>
-              <h3 data-i18n="home.capAi">AI 博弈</h3>
-              <p data-i18n="home.capAiDesc">以五子棋、俄罗斯方块与贪吃蛇为载体，贯通评估函数、搜索剪枝、局面特征与决策可视化，并把模型接进可挑战、可辅助、可人机对战的产品形态。</p>
-            </div>
-            <div class="card-links">
-              <a class="secondary-action card-link" href="public/gomoku.html" data-i18n="home.enterGomoku">进入五子棋挑战 →</a>
-              <a class="secondary-action card-link" href="public/tetris.html" data-i18n="home.enterTetris">进入俄罗斯方块 →</a>
-              <a class="secondary-action card-link" href="public/snake.html" data-i18n="home.enterSnake">进入贪吃蛇挑战 →</a>
-            </div>
-          </article>
-          <article class="info-card"><span class="icon">CP</span><h3 data-i18n="home.capCp">竞赛算法</h3><p data-i18n="home.capCpDesc">搜索、图论、DP 与数据结构系统训练，服务校内竞赛与长期能力建设。</p></article>
-          <article class="info-card"><span class="icon">WEB</span><h3 data-i18n="home.capWeb">工程实践</h3><p data-i18n="home.capWebDesc">把算法作品做成可访问网页，沉淀成员、活动、项目与管理闭环。</p></article>
-          <article class="info-card"><span class="icon">DOC</span><h3 data-i18n="home.capDoc">教学资源</h3><p data-i18n="home.capDocDesc">Python / C++ 教材与解析集中开放，支持在线学习与完整下载。</p><a class="secondary-action card-link" href="public/resources.html" data-i18n="home.enterResources">进入资源中心 →</a></article>
+        <div class="orbit-matrix" data-matrix>
+          <div class="axis-list" role="tablist" aria-label="能力轴">
+            <button class="axis-item is-active" type="button" data-axis="ai"><strong>01 / COMPETITIVE</strong><small data-i18n="home.capCpDesc">搜索、图论、DP 与数据结构系统训练，服务校内竞赛与长期能力建设。</small></button>
+            <button class="axis-item" type="button" data-axis="systems"><strong>02 / SYSTEMS</strong><small data-i18n="home.capWebDesc">把算法作品做成可访问网页，沉淀成员、活动、项目与管理闭环。</small></button>
+            <button class="axis-item" type="button" data-axis="ai-lab"><strong>03 / AI LAB</strong><small data-i18n="home.capAiDesc">以五子棋、俄罗斯方块与贪吃蛇贯通评估、搜索和决策可视化。</small></button>
+            <button class="axis-item" type="button" data-axis="math"><strong>04 / MATH</strong><small>从概率、图结构到复杂度，建立可解释的算法直觉。</small></button>
+            <button class="axis-item" type="button" data-axis="resources"><strong>05 / TOOLCHAIN</strong><small data-i18n="home.capDocDesc">Python / C++ 教材与解析集中开放，支持在线学习与完整下载。</small></button>
+          </div>
+          <div class="orbit-visual" aria-hidden="true"><div class="orbit-core"></div></div>
+          <div class="matrix-output"><span class="mono-label">ACTIVE ORBIT / <span data-matrix-label>COMPETITIVE</span></span><h3 data-matrix-title data-i18n="home.capCp">竞赛算法</h3><p data-matrix-copy data-i18n="home.capCpDesc">搜索、图论、DP 与数据结构系统训练，服务校内竞赛与长期能力建设。</p><code data-matrix-code>graph.search → dp.state → proof</code></div>
         </div>
       </section>
 
-      <section id="gomoku" class="section-block">
+      <section id="gomoku" class="section-block" data-scene-zone="planets">
         <div class="section-heading">
           <p class="eyebrow">Flagship Works</p>
           <h2 data-i18n="home.worksTitle">旗舰作品</h2>
           <p data-i18n="home.worksLead">首页情绪高峰留给真正跑起来的产品：五子棋、俄罗斯方块与贪吃蛇 AI、APPMonitor，以及七大算法实验室。</p>
         </div>
-        <div class="flagship-grid">
-          <div class="flagship-main">
-            <div class="gomoku-copy">
-              <p class="eyebrow">GOMOKU AI BATTLE SYSTEM</p>
-              <h2 data-i18n="home.gomokuReady">AI 五子棋已接入</h2>
-              <p data-i18n="home.gomokuDesc">浏览器端人机挑战、昵称提交与 Supabase 排行榜已打通，可直接对战、可复盘成绩。</p>
-              <div class="step-list"><span data-i18n="home.tagShape">棋型识别</span><span>Minimax</span><span>Alpha-Beta</span><span data-i18n="home.tagChallenge">人机挑战</span><span data-i18n="home.tagSave">成绩保存</span><span data-i18n="home.tagLb">排行榜</span></div>
-              <a class="primary-action" href="public/gomoku.html" data-i18n="home.startGomoku">开始挑战 AI 五子棋 →</a>
-            </div>
-            <div class="board-shell"><div class="board-preview" id="boardPreview" aria-label="五子棋预览"></div></div>
-          </div>
-          <div class="flagship-side-grid">
-            <article class="flagship-card lab-card">
-              <p class="eyebrow">TETRIS AI SYSTEM</p>
-              <h3 data-i18n="home.tetrisTitle">AI 俄罗斯方块</h3>
-              <p data-i18n="home.tetrisDesc">支持正常游玩、AI 演示、AI 辅助阴影与公平人机对战；双方同序列，AI 仅自然降落，双榜可记录。</p>
-              <div class="lab-tags">
-                <span data-i18n="home.tagNormal">正常游玩</span><span data-i18n="home.tagAiDemo">AI 演示</span><span data-i18n="home.tagAssistShadow">辅助阴影</span><span data-i18n="home.tagVersus">人机对战</span><span data-i18n="home.tagDualLb">双排行榜</span>
-              </div>
-              <a class="secondary-action" href="public/tetris.html" data-i18n="home.enterTetris">进入俄罗斯方块 →</a>
-            </article>
-            <article class="flagship-card lab-card">
-              <p class="eyebrow">SNAKE AI SYSTEM</p>
-              <h3 data-i18n="home.snakeTitle">AI 贪吃蛇</h3>
-              <p data-i18n="home.snakeDesc">支持正常游玩、AI 演示、AI 辅助深色轨迹与转向提醒、双窗人机对战；AI 仅看当前苹果，普通榜与对战榜可记录。</p>
-              <div class="lab-tags">
-                <span data-i18n="home.tagNormal">正常游玩</span><span data-i18n="home.tagAiDemo">AI 演示</span><span data-i18n="home.tagAssistTrail">辅助轨迹</span><span data-i18n="home.tagVersus">人机对战</span><span data-i18n="home.tagDualLb">双排行榜</span>
-              </div>
-              <a class="secondary-action" href="public/snake.html" data-i18n="home.enterSnake">进入贪吃蛇挑战 →</a>
-            </article>
-            <article class="flagship-card lab-card">
-              <p class="eyebrow">WINDOWS SOFTWARE</p>
-              <h3 data-i18n="home.appTitle">APPMonitor</h3>
-              <p data-i18n="home.appDesc">由算法社社长鼎力开发。Windows 软件管控与网络监控工具，持续加入自律助手、使用统计、USB 管控和高级防护能力。当前 V7.0。</p>
-              <div class="lab-tags">
-                <span data-i18n="home.tagSoft">软件管控</span><span data-i18n="home.tagSelf">自律助手</span><span data-i18n="home.tagNet">网络监控</span><span data-i18n="home.tagUsb">USB 管控</span><span>V7.0</span>
-              </div>
-              <a class="secondary-action" href="public/appmonitor.html" data-i18n="home.viewRelease">查看发布页 →</a>
-            </article>
-            <article class="flagship-card lab-card">
-              <p class="eyebrow">VISUALIZATION LAB</p>
-              <h3 data-i18n="home.labTitle">算法实验室 · 七入口</h3>
-              <p data-i18n="home.labDesc">排序、搜索、数据结构、图论、动态规划、二叉树与堆——连续演示与单步推演并存。</p>
-              <div class="lab-tags">
-                <span data-i18n="home.tagSort">排序</span><span data-i18n="home.tagSearch">搜索</span><span data-i18n="home.tagDs">数据结构</span><span data-i18n="home.tagGraph">图论</span><span>DP</span><span data-i18n="home.tagTree">二叉树</span><span data-i18n="home.tagHeap">堆</span>
-              </div>
-              <a class="secondary-action" href="public/visualization-lab.html" data-i18n="home.chooseLab">选择实验室 →</a>
-            </article>
-          </div>
+        <div class="planet-system">
+          <article class="planet-row" data-scene-focus="gomoku"><div><span class="planet-index">P-01</span><div class="planet-orb"></div></div><div class="planet-copy"><p class="eyebrow">GOMOKU AI BATTLE SYSTEM</p><h3 data-i18n="home.gomokuReady">AI 五子棋已接入</h3><p data-i18n="home.gomokuDesc">浏览器端人机挑战、昵称提交与 Supabase 排行榜已打通，可直接对战、可复盘成绩。</p><div class="step-list"><span>Minimax</span><span>Alpha-Beta</span><span data-i18n="home.tagChallenge">人机挑战</span></div></div><div class="planet-meta"><strong>CORE PLANET</strong>search / eval<br><a class="secondary-action" href="public/gomoku.html" data-i18n="home.startGomoku">开始挑战 AI 五子棋 →</a></div></article>
+          <article class="planet-row"><div><span class="planet-index">P-02</span><div class="planet-orb"></div></div><div class="planet-copy"><p class="eyebrow">TETRIS AI SYSTEM</p><h3 data-i18n="home.tetrisTitle">AI 俄罗斯方块</h3><p data-i18n="home.tetrisDesc">支持正常游玩、AI 演示、AI 辅助阴影与公平人机对战；双方同序列，AI 仅自然降落，双榜可记录。</p><div class="step-list"><span data-i18n="home.tagAiDemo">AI 演示</span><span data-i18n="home.tagAssistShadow">辅助阴影</span></div></div><div class="planet-meta"><strong>ORBITAL LAB</strong>heuristic / play<br><a class="secondary-action" href="public/tetris.html" data-i18n="home.enterTetris">进入俄罗斯方块 →</a></div></article>
+          <article class="planet-row"><div><span class="planet-index">P-03</span><div class="planet-orb"></div></div><div class="planet-copy"><p class="eyebrow">SNAKE AI SYSTEM</p><h3 data-i18n="home.snakeTitle">AI 贪吃蛇</h3><p data-i18n="home.snakeDesc">支持正常游玩、AI 演示、AI 辅助深色轨迹与转向提醒、双窗人机对战。</p><div class="step-list"><span data-i18n="home.tagAiDemo">AI 演示</span><span data-i18n="home.tagAssistTrail">辅助轨迹</span></div></div><div class="planet-meta"><strong>VECTOR MOON</strong>path / policy<br><a class="secondary-action" href="public/snake.html" data-i18n="home.enterSnake">进入贪吃蛇挑战 →</a></div></article>
         </div>
       </section>
 
-      <section id="members" class="section-block">
+      <section id="members" class="section-block" data-scene-zone="asteroids">
         <div class="section-heading inline-heading">
           <div>
             <p class="eyebrow">People</p>
@@ -1436,7 +1509,7 @@
         <div class="member-grid" id="memberGrid"></div>
       </section>
 
-      <section id="projects" class="section-block muted-band">
+      <section id="projects" class="section-block muted-band" data-scene-zone="archive">
         <div class="section-heading">
           <p class="eyebrow">Momentum</p>
           <h2 data-i18n="home.projectsTitle">项目沉淀</h2>
@@ -1445,7 +1518,7 @@
         <div class="project-grid" id="projectGrid"></div>
       </section>
 
-      <section id="activities" class="section-block">
+      <section id="activities" class="section-block" data-scene-zone="comet">
         <div class="section-heading inline-heading">
           <div>
             <p class="eyebrow">Progress</p>
@@ -1462,7 +1535,7 @@
         <div class="timeline" id="activityList"></div>
       </section>
 
-      <section id="join" class="section-block join-section">
+      <section id="join" class="section-block join-section" data-scene-zone="gate">
         <div>
           <p class="eyebrow">Join</p>
           <h2 data-i18n="home.joinTitle">准备好把训练变成作品了吗</h2>
@@ -1910,6 +1983,8 @@
       }
 
       function renderBoard() {
+        const board = document.getElementById('boardPreview');
+        if (!board) return;
         const black = [21, 31, 41, 51, 52];
         const white = [23, 32, 40, 49, 58];
         const cells = Array.from({ length: 81 }, (_, index) => {
@@ -1917,7 +1992,7 @@
           const cls = black.includes(cell) ? 'preview-cell black' : white.includes(cell) ? 'preview-cell white' : 'preview-cell';
           return `<div class="${cls}"></div>`;
         }).join('');
-        document.getElementById('boardPreview').innerHTML = cells;
+        board.innerHTML = cells;
       }
 
       async function init() {
@@ -1946,7 +2021,6 @@
         renderProjects(usingFallbackProjects ? getFallbackProjects() : projects);
         renderActivities(feedResult.items);
         renderBoard();
-        observeRevealItems();
         setupCardInteractions();
         // 自动推荐弹窗只在确认已登录后触发，避免访客看到弹窗
         if (homeAuthReady && homeMemberLoggedIn) showHomeRecommendation();
@@ -1986,23 +2060,10 @@
       });
 
       const motionQuery = window.matchMedia('(prefers-reduced-motion: no-preference)');
-      let revealObserver;
-      function observeRevealItems() {
-        if (!motionQuery.matches || !('IntersectionObserver' in window)) return;
-        const revealItems = document.querySelectorAll('#home, .direction-section, #members, #projects, #activities, #join, #gomoku, .info-card, .project-card, .member-card, .timeline-item');
-        revealItems.forEach(item => {
-          if (!item.classList.contains('reveal-ready')) {
-            item.classList.add('reveal-ready');
-            revealObserver.observe(item);
-          }
-        });
-      }
-      if (motionQuery.matches && 'IntersectionObserver' in window) {
-        revealObserver = new IntersectionObserver(entries => {
-          entries.forEach(entry => entry.target.classList.toggle('is-visible', entry.isIntersecting));
-        }, { threshold: 0.12 });
-        observeRevealItems();
-      }
+      // Chapter reveal is driven by the shared RAF progress bus. Intersection
+      // Observer is only used to mark the active chapter, so scroll never
+      // performs layout work or starts independent animations.
+      document.querySelectorAll('[data-scene-zone]').forEach(section => section.classList.add('chapter-content'));
 
       const pointerQuery = window.matchMedia('(pointer: fine) and (prefers-reduced-motion: no-preference)');
       if (pointerQuery.matches) {
@@ -2173,6 +2234,10 @@
             alpha: Math.random() * 0.42 + 0.18
           }));
         }
+        let particleRgb = document.documentElement.dataset.theme === 'light' ? '194, 65, 12' : '0, 229, 255';
+        window.addEventListener('club:themechange', event => {
+          particleRgb = event.detail?.theme === 'light' ? '194, 65, 12' : '0, 229, 255';
+        });
         function drawParticles() {
           context.clearRect(0, 0, window.innerWidth, window.innerHeight);
           particles.forEach(particle => {
@@ -2180,7 +2245,7 @@
             if (particle.y < -4) particle.y = window.innerHeight + 4;
             context.beginPath();
             context.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
-            context.fillStyle = `rgba(0, 229, 255, ${particle.alpha})`;
+            context.fillStyle = `rgba(${particleRgb}, ${particle.alpha})`;
             context.fill();
           });
           animationFrame = window.requestAnimationFrame(drawParticles);
@@ -2197,12 +2262,13 @@
         const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
         const memory = navigator.deviceMemory || 4;
         const cores = navigator.hardwareConcurrency || 4;
-        if (reduced || (narrow && coarse) || memory <= 2 || cores <= 2) return { tier: 'low', particleCount: 2000, pixelRatio: 1, postprocessing: false };
-        if (narrow || memory <= 4 || cores <= 4) return { tier: 'medium', particleCount: 2000, pixelRatio: 1.25, postprocessing: false };
-        return { tier: 'high', particleCount: 8000, pixelRatio: 1.5, postprocessing: true };
+        if (reduced || (narrow && coarse) || memory <= 2 || cores <= 2) return { tier: 'low', particleCount: 768, pixelRatio: 1, postprocessing: false };
+        if (narrow || memory <= 4 || cores <= 4) return { tier: 'medium', particleCount: 1024, pixelRatio: 1.1, postprocessing: false };
+        return { tier: 'high', particleCount: 1536, pixelRatio: 1.15, postprocessing: false };
       };
 
       (() => {
+        if (window.SceneDirector?.mount) { window.SceneDirector.mount(document.getElementById('shaderField')); return; }
         const canvas = document.getElementById('shaderField');
         if (!canvas || !window.THREE || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
         const THREE = window.THREE;
@@ -2232,7 +2298,7 @@
             float contour=1.0-smoothstep(.01,.06,abs(fract((radius*3.0+fieldNoise+uScroll*.7))-.5));
             lines=max(lines,contour*.12*(1.0-nearPole));
             float glow=smoothstep(.32,.0,abs(lineDistance))*(.18+.12*uScroll);
-            vec3 dayBase=vec3(.96,.95,.92); vec3 dayLine=mix(vec3(.36,.25,.18),vec3(.94,.36,.08),.55+uScroll*.35);
+            vec3 dayBase=vec3(.96,.95,.92); vec3 dayLine=mix(vec3(.36,.16,.08),vec3(.94,.36,.08),.55+uScroll*.35);
             vec3 nightBase=vec3(.006,.012,.035); vec3 nightLine=mix(vec3(.10,.38,.82),vec3(.48,.28,.96),.45+uScroll*.35);
             vec3 base=mix(dayBase,nightBase,uTheme); vec3 ink=mix(dayLine,nightLine,uTheme);
             vec3 color=mix(base,ink,lines*.78+glow*.28); color+=ink*nearPole*.18; color+=(hash(vUv*uResolution+uTime)-.5)*.018;
@@ -2243,7 +2309,22 @@
         let scrollProgress = 0, scrollTarget = 0, frame; const pointer = new THREE.Vector2(.5, .5), pointerTarget = new THREE.Vector2(.5, .5);
         const updateScroll = () => { const max = document.documentElement.scrollHeight - innerHeight; scrollTarget = max > 0 ? THREE.MathUtils.clamp(scrollY / max, 0, 1) : 0; }; addEventListener('scroll', updateScroll, { passive: true }); updateScroll();
         addEventListener('pointermove', e => pointerTarget.set(e.clientX / innerWidth, 1 - e.clientY / innerHeight), { passive: true }); addEventListener('club:themechange', e => { uniforms.uTheme.value = e.detail?.theme === 'dark' ? 1 : 0; }); uniforms.uTheme.value = document.documentElement.dataset.theme === 'dark' ? 1 : 0;
-        const clock = new THREE.Clock(); const draw = () => { if (document.hidden) return; const delta = Math.min(clock.getDelta(), .033); uniforms.uTime.value += delta; scrollProgress += (scrollTarget - scrollProgress) * .075; pointer.lerp(pointerTarget, .055); uniforms.uScroll.value = scrollProgress; uniforms.uMouse.value.copy(pointer); uniforms.uTimeScale.value = .55 + scrollProgress * 1.6; renderer.render(scene, camera); frame = requestAnimationFrame(draw); }; draw(); addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight, false); uniforms.uResolution.value.set(innerWidth, innerHeight); updateScroll(); }, { passive: true }); document.addEventListener('visibilitychange', () => { cancelAnimationFrame(frame); if (!document.hidden) draw(); });
+        const clock = new THREE.Clock(); let fieldTime = 0;
+        const draw = () => {
+          if (document.hidden) return;
+          const delta = Math.min(clock.getDelta(), .033);
+          fieldTime += delta;
+          uniforms.uTime.value = fieldTime;
+          scrollProgress = THREE.MathUtils.damp(scrollProgress, scrollTarget, 4.6, delta);
+          pointer.x = THREE.MathUtils.damp(pointer.x, pointerTarget.x, 5.2, delta);
+          pointer.y = THREE.MathUtils.damp(pointer.y, pointerTarget.y, 5.2, delta);
+          uniforms.uScroll.value = scrollProgress;
+          uniforms.uMouse.value.copy(pointer);
+          uniforms.uTimeScale.value = .55 + scrollProgress * 1.6;
+          renderer.render(scene, camera);
+          frame = requestAnimationFrame(draw);
+        };
+        draw(); addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight, false); uniforms.uResolution.value.set(innerWidth, innerHeight); updateScroll(); }, { passive: true }); document.addEventListener('visibilitychange', () => { cancelAnimationFrame(frame); if (!document.hidden) draw(); });
       })();
 
       // Scroll-driven algorithm scene with optional GPU-computed particle simulation.
@@ -2254,39 +2335,159 @@
         const THREE = window.THREE;
         const quality = window.useQualityTier?.() || { tier: 'medium', particleCount: 4096, pixelRatio: 1.25, postprocessing: false };
         const isMobile = quality.tier === 'low' || matchMedia('(max-width: 700px)').matches;
+        // Theme state must exist before any galaxy buffers are seeded. Keeping
+        // it here prevents a temporal-dead-zone error during scene startup.
+        let night = document.documentElement.dataset.theme !== 'light';
+        const cssSceneColor = (name, fallback) => {
+          const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+          return new THREE.Color(value || fallback);
+        };
+        const scenePalette = {
+          galaxy: cssSceneColor('--scene-galaxy', night ? '#60a5fa' : '#c2410c'),
+          galaxyAlt: cssSceneColor('--scene-galaxy-alt', night ? '#818cf8' : '#b45309'),
+          beam: cssSceneColor('--scene-beam', night ? '#60a5fa' : '#9a3412'),
+          stream: cssSceneColor('--scene-stream', night ? '#a5b4fc' : '#9a3412'),
+          ring: cssSceneColor('--scene-ring', night ? '#46b9c7' : '#c2410c'),
+          ringAlt: cssSceneColor('--scene-ring-alt', night ? '#818cf8' : '#9a3412')
+        };
+        const refreshScenePalette = () => {
+          scenePalette.galaxy = cssSceneColor('--scene-galaxy', night ? '#60a5fa' : '#c2410c');
+          scenePalette.galaxyAlt = cssSceneColor('--scene-galaxy-alt', night ? '#818cf8' : '#b45309');
+          scenePalette.beam = cssSceneColor('--scene-beam', night ? '#60a5fa' : '#9a3412');
+          scenePalette.stream = cssSceneColor('--scene-stream', night ? '#a5b4fc' : '#9a3412');
+          scenePalette.ring = cssSceneColor('--scene-ring', night ? '#46b9c7' : '#c2410c');
+          scenePalette.ringAlt = cssSceneColor('--scene-ring-alt', night ? '#818cf8' : '#9a3412');
+        };
         let renderer;
-        try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: !isMobile, powerPreference: 'high-performance' }); }
+        try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false, powerPreference: 'high-performance' }); }
         catch (error) { console.warn('3D background unavailable; keeping CSS background active', error); return; }
+        renderer.shadowMap.enabled = false;
         renderer.setPixelRatio(Math.min(devicePixelRatio || 1, quality.pixelRatio || 1.5, isMobile ? 1.5 : 1.75));
         renderer.setSize(innerWidth, innerHeight, false);
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(34, innerWidth / innerHeight, .1, 100);
         camera.position.set(0, 0, 6.6);
+        const cameraPath = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(-.18, .12, 7.8), new THREE.Vector3(.12, .04, 6.6), new THREE.Vector3(-.28, -.08, 5.8),
+          new THREE.Vector3(.22, .1, 6.4), new THREE.Vector3(-.12, .16, 7.1), new THREE.Vector3(.08, -.04, 7.8)
+        ], false, 'catmullrom', .55);
         const group = new THREE.Group(); scene.add(group);
-        const geometry = new THREE.IcosahedronGeometry(1.35, isMobile ? 1 : 2);
+        // Algorithm Galaxy: one point cloud for the disc/halo and one merged
+        // line buffer for the spiral arms. No per-frame allocations.
+        const galaxyGroup = new THREE.Group(); scene.add(galaxyGroup);
+        const galaxyCount = isMobile ? 1800 : quality.tier === 'medium' ? 4200 : 7600;
+        const galaxyPositions = new Float32Array(galaxyCount * 3);
+        const galaxyColors = new Float32Array(galaxyCount * 3);
+        const galaxyColor = new THREE.Color();
+        for (let i = 0; i < galaxyCount; i++) {
+          const family = i % 10;
+          let radius, angle, centerX = 0, centerZ = 0, flatten = .58;
+          if (family < 7) {
+            const arm = i % 4;
+            radius = Math.pow(Math.random(), .62) * 5.5 + .35;
+            angle = arm * (Math.PI * 2 / 4) + radius * 1.08 + (Math.random() - .5) * (.28 + radius * .05);
+          } else if (family < 9) {
+            const companion = i % 2;
+            const arm = i % 2;
+            radius = Math.pow(Math.random(), .7) * 1.7 + .2;
+            angle = arm * Math.PI + radius * 1.7 + (Math.random() - .5) * .5;
+            centerX = companion ? 2.05 : -2.0;
+            centerZ = companion ? -1.0 : -.85;
+            flatten = .72;
+          } else {
+            const cluster = i % 12;
+            const clusterAngle = cluster / 12 * Math.PI * 2;
+            const clusterRadius = 4.4 + (cluster % 3) * .45;
+            centerX = Math.cos(clusterAngle) * clusterRadius;
+            centerZ = Math.sin(clusterAngle) * clusterRadius * .58;
+            radius = Math.pow(Math.random(), 1.8) * .48 + .04;
+            angle = Math.random() * Math.PI * 2;
+            flatten = .9;
+          }
+          const k = i * 3;
+          galaxyPositions[k] = centerX + Math.cos(angle) * radius;
+          galaxyPositions[k + 1] = (Math.random() - .5) * (.14 + radius * .08);
+          galaxyPositions[k + 2] = centerZ + Math.sin(angle) * radius * flatten;
+        }
+        const paintGalaxy = () => {
+          for (let i = 0; i < galaxyCount; i++) {
+            const k = i * 3, variation = (i * .61803398875) % 1;
+            const family = i % 10;
+            galaxyColor.copy(family < 7 ? scenePalette.galaxy : scenePalette.galaxyAlt);
+            galaxyColor.offsetHSL((variation - .5) * .035, night ? .04 : .015, (variation - .5) * .12);
+            if (family >= 7) galaxyColor.multiplyScalar(night ? .62 : .72);
+            galaxyColors[k] = galaxyColor.r; galaxyColors[k + 1] = galaxyColor.g; galaxyColors[k + 2] = galaxyColor.b;
+          }
+          if (galaxyGeometry.getAttribute('color')) galaxyGeometry.getAttribute('color').needsUpdate = true;
+        };
+        const galaxyGeometry = new THREE.BufferGeometry();
+        galaxyGeometry.setAttribute('position', new THREE.BufferAttribute(galaxyPositions, 3));
+        galaxyGeometry.setAttribute('color', new THREE.BufferAttribute(galaxyColors, 3));
+        paintGalaxy();
+        const galaxyPoints = new THREE.Points(galaxyGeometry, new THREE.PointsMaterial({ size: isMobile ? .035 : .05, vertexColors: true, transparent: true, opacity: .68, depthWrite: false, blending: night ? THREE.AdditiveBlending : THREE.NormalBlending, sizeAttenuation: true }));
+        galaxyGroup.add(galaxyPoints);
+        // Companion galaxies are explicit low-poly residents of the same
+        // scene layer, so the multi-galaxy structure remains visible above
+        // the fullscreen field without adding a second renderer or scene.
+        const companionGroup = new THREE.Group();
+        const companionCoreMaterial = new THREE.LineBasicMaterial({ color: scenePalette.galaxyAlt, transparent: true, opacity: night ? .48 : .82, depthWrite: false, depthTest: false, blending: night ? THREE.AdditiveBlending : THREE.NormalBlending });
+        const companionRingMaterial = new THREE.MeshBasicMaterial({ color: scenePalette.ringAlt, transparent: true, opacity: night ? .30 : .56, depthWrite: false, depthTest: false, blending: night ? THREE.AdditiveBlending : THREE.NormalBlending });
+        const companionCoreGeometry = new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(1, 1), 12);
+        const companionRingGeometry = new THREE.TorusGeometry(1, .014, 5, isMobile ? 36 : 56);
+        const companionBodies = [
+          { base: new THREE.Vector3(-2.18, .42, -1.05), scale: .58, phase: .4, ring: 1.35 },
+          { base: new THREE.Vector3(2.22, -.48, -1.30), scale: .46, phase: 2.2, ring: 1.28 }
+        ].map((cfg, index) => {
+          const coreMesh = new THREE.LineSegments(companionCoreGeometry, companionCoreMaterial);
+          const ringMesh = new THREE.Mesh(companionRingGeometry, companionRingMaterial);
+          coreMesh.scale.setScalar(cfg.scale);
+          ringMesh.scale.setScalar(cfg.scale * cfg.ring);
+          ringMesh.rotation.set(Math.PI / 2 + index * .28, index * .55, index * .32);
+          companionGroup.add(coreMesh, ringMesh);
+          return { ...cfg, coreMesh, ringMesh };
+        });
+        companionGroup.renderOrder = 4;
+        scene.add(companionGroup);
+        const ringSpecs = [2.15, 2.9, 3.7, 4.55, 5.25];
+        const galaxyRings = [];
+        ringSpecs.forEach((radius, index) => {
+          const ring = new THREE.LineLoop(new THREE.CircleGeometry(radius, isMobile ? 48 : 96), new THREE.LineBasicMaterial({ color: index % 2 ? scenePalette.ringAlt : scenePalette.ring, transparent: true, opacity: night ? .16 : .32, depthWrite: false, blending: night ? THREE.AdditiveBlending : THREE.NormalBlending }));
+          ring.rotation.x = Math.PI / 2 + (index - 2) * .07; ring.rotation.z = index * .21; ring.userData.baseRotation = ring.rotation.z; galaxyGroup.add(ring); galaxyRings.push(ring);
+        });
+        const rayPositions = new Float32Array(20 * 6);
+        for (let i = 0; i < 20; i++) {
+          const angle = i * Math.PI * 2 / 20, k = i * 6;
+          rayPositions[k] = Math.cos(angle) * .26; rayPositions[k + 1] = Math.sin(angle * 2) * .12; rayPositions[k + 2] = Math.sin(angle) * .26;
+          rayPositions[k + 3] = Math.cos(angle) * (2.4 + i % 3 * .35);
+          rayPositions[k + 4] = Math.sin(angle * 2) * .42;
+          rayPositions[k + 5] = Math.sin(angle) * (2.4 + i % 3 * .35);
+        }
+        const coreRays = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: scenePalette.beam, transparent: true, opacity: night ? .25 : .27, depthWrite: false, blending: night ? THREE.AdditiveBlending : THREE.NormalBlending }));
+        coreRays.geometry.setAttribute('position', new THREE.BufferAttribute(rayPositions, 3)); group.add(coreRays);
+        const geometry = new THREE.IcosahedronGeometry(1.35, 1);
         const coreMaterial = new THREE.ShaderMaterial({
-          uniforms: { uTime: { value: 0 }, uProgress: { value: 0 }, uNight: { value: 0 } },
+          uniforms: { uTime: { value: 0 }, uProgress: { value: 0 }, uNight: { value: night ? 1 : 0 } },
           vertexShader: `uniform float uTime; uniform float uProgress; varying vec3 vNormal; varying vec3 vPosition; void main(){ vNormal=normalize(normalMatrix*normal); vPosition=position; float wave=sin(position.y*5.0+uTime*1.4)*0.035*(0.35+uProgress); vec3 p=position+normal*wave; gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0); }`,
-          fragmentShader: `uniform float uTime; uniform float uProgress; uniform float uNight; varying vec3 vNormal; varying vec3 vPosition; void main(){ float fresnel=pow(1.0-max(dot(normalize(vNormal),vec3(0.0,0.0,1.0)),0.0),4.0); vec3 day=vec3(0.45,0.76,0.98); vec3 night=vec3(0.30,0.43,0.95); vec3 c=mix(day,night,uNight); float pulse=0.94+0.06*sin(uTime*1.5+length(vPosition)*4.0+uProgress*4.0); float alpha=fresnel*(0.11+0.06*uNight)*pulse; gl_FragColor=vec4(c,alpha); }`,
+          fragmentShader: `uniform float uTime; uniform float uProgress; uniform float uNight; varying vec3 vNormal; varying vec3 vPosition; void main(){ float fresnel=pow(1.0-max(dot(normalize(vNormal),vec3(0.0,0.0,1.0)),0.0),4.0); vec3 day=vec3(0.74,0.20,0.045); vec3 night=vec3(0.18,0.46,0.94); vec3 c=mix(day,night,uNight); float pulse=0.94+0.06*sin(uTime*1.5+length(vPosition)*4.0+uProgress*4.0); float alpha=fresnel*(0.11+0.06*uNight)*pulse; gl_FragColor=vec4(c,alpha); }`,
           transparent: true, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending
         });
         const core = new THREE.Mesh(geometry, coreMaterial);
         core.visible = false;
         group.add(core);
-        const prismEdges = new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 12), new THREE.LineBasicMaterial({ color: 0x8bdcff, transparent: true, opacity: .76, blending: THREE.AdditiveBlending, depthWrite: false }));
+        const prismEdges = new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 12), new THREE.LineBasicMaterial({ color: scenePalette.beam, transparent: true, opacity: .76, blending: night ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: false }));
         group.add(prismEdges);
-        const innerEdges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(0.92, 1), 18), new THREE.LineBasicMaterial({ color: 0x6366f1, transparent: true, opacity: .34, blending: THREE.AdditiveBlending, depthWrite: false }));
+        const innerEdges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(0.92, 1), 18), new THREE.LineBasicMaterial({ color: scenePalette.galaxyAlt, transparent: true, opacity: .34, blending: night ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: false }));
         innerEdges.rotation.set(.28, .5, .12); group.add(innerEdges);
         const orbitRings = [
           { radius: 1.82, tube: .009, tilt: [.2, .1, .25], speed: .14 },
           { radius: 2.08, tube: .006, tilt: [1.05, .28, -.45], speed: -.1 },
           { radius: 1.62, tube: .005, tilt: [.72, 1.1, .2], speed: .08 }
         ].map((ring, i) => {
-          const mesh = new THREE.Mesh(new THREE.TorusGeometry(ring.radius, ring.tube, 5, isMobile ? 96 : 160), new THREE.MeshBasicMaterial({ color: i === 1 ? 0x818cf8 : 0x7dd3fc, transparent: true, opacity: .42 - i * .07, blending: THREE.AdditiveBlending, depthWrite: false }));
+          const mesh = new THREE.Mesh(new THREE.TorusGeometry(ring.radius, ring.tube, 5, isMobile ? 48 : 72), new THREE.MeshBasicMaterial({ color: i === 1 ? scenePalette.ringAlt : scenePalette.ring, transparent: true, opacity: .42 - i * .07, blending: night ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: false }));
           mesh.rotation.set(...ring.tilt); mesh.userData = ring; group.add(mesh); return mesh;
         });
         const orbitDots = Array.from({ length: isMobile ? 20 : 36 }, (_, i) => {
-          const dot = new THREE.Mesh(new THREE.IcosahedronGeometry(isMobile ? .018 : .024, 0), new THREE.MeshBasicMaterial({ color: i % 3 ? 0xc2410c : 0xea580c, transparent: true, opacity: .86, blending: THREE.AdditiveBlending }));
+          const dot = new THREE.Mesh(new THREE.IcosahedronGeometry(isMobile ? .018 : .024, 0), new THREE.MeshBasicMaterial({ color: scenePalette.galaxy, transparent: true, opacity: .86, blending: night ? THREE.AdditiveBlending : THREE.NormalBlending }));
           group.add(dot); return { mesh: dot, ring: i % orbitRings.length, phase: i * 2.39996 };
         });
         const dustCount = isMobile ? 64 : 150;
@@ -2298,11 +2499,13 @@
           return new THREE.Vector3(Math.cos(a) * r, Math.sin(a * 1.47) * r * .7, Math.sin(a) * r);
         });
         const nodeMesh = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: isMobile ? .065 : .085, color: 0x38bdf8, transparent: true, opacity: .9, sizeAttenuation: true }));
-        nodeMesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute(nodes.flatMap(v => v.toArray()), 3)); group.add(nodeMesh);
+        nodeMesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute(nodes.flatMap(v => v.toArray()), 3));
+        const nodePositions = nodeMesh.geometry.attributes.position.array;
+        group.add(nodeMesh);
         const linePositions = new Float32Array((nodes.length - 1) * 6);
         const lines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: .22, blending: THREE.AdditiveBlending }));
         lines.geometry.setAttribute('position', new THREE.BufferAttribute(linePositions, 3)); group.add(lines);
-        const stream = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: isMobile ? .028 : .038, color: 0x9a3412, transparent: true, opacity: .82, blending: THREE.AdditiveBlending, depthWrite: false }));
+        const stream = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: isMobile ? .028 : .038, color: scenePalette.stream, transparent: true, opacity: .82, blending: THREE.AdditiveBlending, depthWrite: false }));
         const streamCount = isMobile ? 40 : 90; const streamData = Array.from({ length: streamCount }, (_, i) => ({ edge: i % Math.max(1, nodes.length - 1), t: Math.random() }));
         stream.geometry.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(streamCount * 3), 3)); group.add(stream);
         let gpuParticleSystem = null;
@@ -2320,67 +2523,208 @@
             const velocityShader = `uniform float uTime; uniform float uDelta; uniform float uProgress; uniform vec3 uMouse; uniform float uNight; vec3 curl(vec3 p){ float n1=sin(p.y*1.7+uTime*.24)+cos(p.z*1.3-uTime*.19); float n2=sin(p.z*1.5+uTime*.21)+cos(p.x*1.2+uTime*.17); float n3=sin(p.x*1.4-uTime*.23)+cos(p.y*1.1-uTime*.13); return normalize(vec3(n1-n2,n2-n3,n3-n1)); } vec3 shapeCloud(vec3 p){return p;} vec3 shapeKnot(vec3 p){float t=atan(p.z,p.x); return vec3((1.0+.42*cos(3.0*t))*cos(t)*1.7, .42*sin(3.0*t)+sin(2.0*t)*.28, (1.0+.42*cos(3.0*t))*sin(t)*1.7);} vec3 shapeGrid(vec3 p){return vec3(floor(p.x*2.5)/2.5, floor(p.y*2.5)/2.5, floor(p.z*2.5)/2.5)*1.15;} vec3 shapeTree(vec3 p){float y=clamp((p.y+1.9)/3.8,0.0,1.0); float branch=sin(p.y*4.0+uProgress*2.0)*(.25+.55*y); return vec3(p.x*.25+branch,p.y,p.z*.25+cos(p.y*3.0)*(.25+.4*y));} vec3 shapeLattice(vec3 p){float a=atan(p.z,p.x); float r=1.35+.18*sin(a*6.0+uProgress*5.0); return vec3(cos(a)*r,p.y*.34,sin(a)*r);} vec3 shapeAt(float id,vec3 p){if(id<.5)return shapeCloud(p);if(id<1.5)return shapeKnot(p);if(id<2.5)return shapeGrid(p);if(id<3.5)return shapeTree(p);return shapeLattice(p);} vec3 targetShape(vec3 p){float x=clamp(uProgress*4.0,0.0,3.999);float stage=floor(x);float t=fract(x);float eased=t*t*(3.0-2.0*t);return mix(shapeAt(stage,p),shapeAt(stage+1.0,p),eased);} void main(){vec2 uv=gl_FragCoord.xy/resolution.xy; vec3 pos=texture2D(texturePosition,uv).xyz; vec3 vel=texture2D(textureVelocity,uv).xyz; vec3 goal=targetShape(pos); vec3 curlForce=curl(pos)*(.12+.2*uProgress); vec3 attract=(goal-pos)*(.19+.22*uProgress); vec3 mouse=pos-uMouse; float md=max(dot(mouse,mouse),.04); vec3 repel=normalize(mouse)/md*.018; vel+= (curlForce+attract+repel)*uDelta; vel*=pow(.925,uDelta*60.0); gl_FragColor=vec4(vel,1.0);}`;
             const positionShader = `uniform float uDelta; void main(){vec2 uv=gl_FragCoord.xy/resolution.xy; vec3 p=texture2D(texturePosition,uv).xyz; vec3 v=texture2D(textureVelocity,uv).xyz; p+=v*uDelta; if(length(p)>6.0)p*=.92; gl_FragColor=vec4(p,1.0);}`;
             const velocityVariable = gpu.addVariable('textureVelocity', velocityShader, velocityTexture); const positionVariable = gpu.addVariable('texturePosition', positionShader, positionTexture);
+            const flowSource = 'vec3 curlForce=curl(pos)*(.12+.2*uProgress); vec3 attract=(goal-pos)*(.19+.22*uProgress);';
+            // Keep the FBO flow profile aligned with the seven chapter states
+            // used by the foreground galaxy and the fullscreen field.
+            const flowReplacement = 'float chapter=clamp(uProgress*6.0,0.0,5.999); float seg=floor(chapter); float local=fract(chapter); float mode=seg<0.5?mix(0.0,.65,local):seg<1.5?mix(.65,.34,local):seg<2.5?mix(.34,1.0,local):seg<3.5?mix(1.0,.50,local):seg<4.5?mix(.50,.68,local):mix(.68,1.0,local); vec3 curlForce=curl(pos)*(.12+.2*uProgress); vec3 radial=normalize(pos+vec3(.001))*(mode>.72?-.16:.16); vec3 vortex=vec3(-pos.z,0.0,pos.x)*(.10+mode*.12); vec3 flowForce=mix(curlForce,radial,smoothstep(0.0,.34,mode)); flowForce=mix(flowForce,vortex,smoothstep(.28,.70,mode)); vec3 attract=(goal-pos)*(.19+.22*uProgress)+flowForce;';
+            const flowShaderSource = velocityVariable.material.fragmentShader;
+            if (!flowShaderSource.includes(flowSource)) console.warn('GPU flow shader patch did not match');
+            velocityVariable.material.fragmentShader = flowShaderSource.replace(flowSource, flowReplacement);
+            velocityVariable.material.needsUpdate = true;
             gpu.setVariableDependencies(velocityVariable, [velocityVariable, positionVariable]); gpu.setVariableDependencies(positionVariable, [velocityVariable, positionVariable]);
             velocityVariable.material.uniforms.uTime = { value: 0 }; velocityVariable.material.uniforms.uDelta = { value: 0.016 }; velocityVariable.material.uniforms.uProgress = { value: 0 }; velocityVariable.material.uniforms.uMouse = { value: new THREE.Vector3() }; velocityVariable.material.uniforms.uNight = { value: 0 };
             positionVariable.material.uniforms.uDelta = { value: 0.016 };
             const error = gpu.init(); if (error) throw new Error(error);
             const particleGeometry = new THREE.BufferGeometry(); const refs = new Float32Array(count * 2); for (let i = 0; i < count; i++) { refs[i * 2] = (i % side + .5) / side; refs[i * 2 + 1] = (Math.floor(i / side) + .5) / side; } particleGeometry.setAttribute('reference', new THREE.BufferAttribute(refs, 2));
-            const particleMaterial = new THREE.ShaderMaterial({ uniforms: { texturePosition: { value: null }, uPointSize: { value: isMobile ? 1.3 : 1.8 }, uNight: { value: 0 }, uProgress: { value: 0 } }, vertexShader: `uniform sampler2D texturePosition; uniform float uPointSize; varying float vDepth; void main(){vec3 p=texture2D(texturePosition,reference).xyz; vec4 mv=modelViewMatrix*vec4(p,1.0); vDepth=clamp(1.0/-mv.z,0.0,1.0); gl_PointSize=uPointSize*(1.0+vDepth*2.0); gl_Position=projectionMatrix*mv;}`, fragmentShader: `uniform float uNight; uniform float uProgress; varying float vDepth; void main(){vec2 uv=gl_PointCoord-.5; float d=dot(uv,uv); if(d>.25)discard; vec3 day=vec3(.25,.68,.94); vec3 night=vec3(.38,.32,.95); vec3 c=mix(day,night,uNight); gl_FragColor=vec4(c,(.25+vDepth*.7)*(1.0-d*3.4));}`, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+            const particleMaterial = new THREE.ShaderMaterial({ uniforms: { texturePosition: { value: null }, uPointSize: { value: isMobile ? 1.3 : 1.8 }, uNight: { value: night ? 1 : 0 }, uProgress: { value: 0 } }, vertexShader: `uniform sampler2D texturePosition; uniform float uPointSize; varying float vDepth; void main(){vec3 p=texture2D(texturePosition,reference).xyz; vec4 mv=modelViewMatrix*vec4(p,1.0); vDepth=clamp(1.0/-mv.z,0.0,1.0); gl_PointSize=uPointSize*(1.0+vDepth*2.0); gl_Position=projectionMatrix*mv;}`, fragmentShader: `uniform float uNight; uniform float uProgress; varying float vDepth; void main(){vec2 uv=gl_PointCoord-.5; float d=dot(uv,uv); if(d>.25)discard; vec3 day=vec3(.72,.20,.025); vec3 night=vec3(.22,.56,.95); vec3 c=mix(day,night,uNight); gl_FragColor=vec4(c,(.35+vDepth*.6)*(1.0-d*3.4));}`, transparent: true, depthWrite: false, blending: night ? THREE.AdditiveBlending : THREE.NormalBlending });
             const particleMesh = new THREE.Points(particleGeometry, particleMaterial); particleMesh.geometry.setDrawRange(0, count); scene.add(particleMesh);
             gpuParticleSystem = { gpu, velocityVariable, positionVariable, particleMaterial, particleMesh, count, side };
           } catch (error) { console.warn('GPU particle layer unavailable', error); }
         };
         loadGpuParticles().catch(error => console.warn('GPU particle initialization skipped', error));
-        const hemi = new THREE.HemisphereLight(0xeaf6ff, 0x223b64, 2.2); const key = new THREE.DirectionalLight(0xffffff, 2.1); key.position.set(3, 4, 5); const rim = new THREE.PointLight(0x7c5cff, 1.8, 8); rim.position.set(-3, 1, 3); scene.add(hemi, key, rim);
-        let progress = 0, target = 0, night = document.documentElement.dataset.theme !== 'light';
+        // All background materials are unlit line/point materials or custom
+        // shaders. Do not create lights or shadow-capable objects here: they
+        // add work without changing the image and can create a false centre
+        // shadow on some drivers.
+        const rim = { color: { setHex() {}, set() {} } };
+        let progress = 0, target = 0;
         const pointer = new THREE.Vector2(), pointerTarget = new THREE.Vector2();
+        let cameraLookX = 0, cameraLookY = 0;
         let pointerInside = false;
         let composer = null, bloomPass = null, composerLoading = false;
-        const setPostprocessing = async enabled => {
-          if (!enabled || isMobile || !quality.postprocessing || composer || composerLoading) return;
-          composerLoading = true;
-          try {
-            const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }] = await Promise.all([
-              import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/EffectComposer.js'),
-              import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/RenderPass.js'),
-              import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js')
-            ]);
-            composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera)); bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), .42, .55, .82); composer.addPass(bloomPass);
-          } catch (error) { console.warn('Bloom unavailable', error); }
-          finally { composerLoading = false; }
-        };
+        // Postprocessing is intentionally disabled. The scene already uses
+        // additive line materials; bloom doubled fill cost and caused drops.
+        const setPostprocessing = async () => {};
         addEventListener('pointermove', e => { pointerTarget.set((e.clientX / innerWidth - .5) * 2, -(e.clientY / innerHeight - .5) * 2); pointerInside = true; }, { passive: true });
         addEventListener('pointerleave', () => { pointerTarget.set(0, 0); pointerInside = false; }, { passive: true });
         const scroll = () => { const raw = getComputedStyle(document.documentElement).getPropertyValue('--scroll-progress'); const cssProgress = Number.parseFloat(raw); const max = document.documentElement.scrollHeight - innerHeight; target = Number.isFinite(cssProgress) && (raw || '').trim() ? THREE.MathUtils.clamp(cssProgress, 0, 1) : max > 0 ? THREE.MathUtils.clamp(window.scrollY / max, 0, 1) : 0; };
+        addEventListener('club:sceneprogress', event => { if (Number.isFinite(event.detail?.progress)) target = THREE.MathUtils.clamp(event.detail.progress, 0, 1); });
         addEventListener('scroll', scroll, { passive: true }); scroll();
         const resize = () => { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); composer?.setSize(innerWidth, innerHeight); bloomPass?.setSize(innerWidth, innerHeight); }; addEventListener('resize', resize, { passive: true });
-        const clock = new THREE.Clock(); let frame;
-        let gpuFrameSkip = 0;
-        setPostprocessing(night);
-        addEventListener('club:themechange', e => { night = e.detail?.theme === 'dark'; setPostprocessing(night); });
+        const clock = new THREE.Clock(); let sceneTime = 0; let frame;
+        let gpuFrameSkip = 0, slowFrames = 0;
+        const chapterProfiles = {
+          morph: [0, .33, .66, 1, .22, .72, 1],
+          arms: [3, 4, 5, 6, 4, 5, 6],
+          ringShape: [0, .24, .56, .90, .42, .78, 1],
+          ringCount: [3, 5, 6, 7, 5, 6, 7],
+          topology: [0, .33, .66, 1, .34, .66, 1],
+          flow: [0, .65, .34, 1, .50, .68, 1],
+          density: [.58, .72, .84, .68, .78, .90, .96]
+        };
+        const sampleChapter = (values, value) => {
+          const x = THREE.MathUtils.clamp(value, 0, 5.999);
+          const index = Math.min(5, Math.floor(x));
+          const t = x - index;
+          const eased = t * t * (3 - 2 * t);
+          return values[index] + (values[index + 1] - values[index]) * eased;
+        };
+        setPostprocessing(false);
+        addEventListener('club:themechange', e => {
+          night = e.detail?.theme === 'dark';
+          refreshScenePalette();
+          paintGalaxy();
+          galaxyPoints.material.color?.set(scenePalette.galaxy);
+          orbitDots.forEach(({ mesh }) => mesh.material.color.set(scenePalette.galaxy));
+          stream.material.color.set(scenePalette.stream);
+          dust.material.color.set(scenePalette.galaxyAlt);
+          companionCoreMaterial.color.set(scenePalette.galaxyAlt);
+          companionRingMaterial.color.set(scenePalette.ringAlt);
+          companionCoreMaterial.opacity = night ? .48 : .82;
+          companionRingMaterial.opacity = night ? .30 : .56;
+          companionCoreMaterial.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
+          companionRingMaterial.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
+          companionCoreMaterial.needsUpdate = true;
+          companionRingMaterial.needsUpdate = true;
+          galaxyPoints.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
+          galaxyPoints.material.needsUpdate = true;
+          galaxyRings.forEach((ring, i) => {
+            ring.material.color.set(i % 2 ? scenePalette.ringAlt : scenePalette.ring);
+            ring.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
+            ring.material.opacity = night ? .16 : .32;
+            ring.material.needsUpdate = true;
+          });
+          coreRays.material.color.set(scenePalette.beam);
+          coreRays.material.opacity = night ? .25 : .27;
+          coreRays.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
+          coreRays.material.needsUpdate = true;
+          prismEdges.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
+          prismEdges.material.needsUpdate = true;
+          innerEdges.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
+          innerEdges.material.needsUpdate = true;
+          orbitRings.forEach(ring => { ring.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending; ring.material.needsUpdate = true; });
+          orbitDots.forEach(({ mesh }) => { mesh.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending; mesh.material.needsUpdate = true; });
+          if (gpuParticleSystem) {
+            gpuParticleSystem.particleMaterial.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
+            gpuParticleSystem.particleMaterial.needsUpdate = true;
+          }
+        });
         function draw() {
           if (document.hidden) return;
           try {
-          progress += (target - progress) * .075;
-          const delta = Math.min(clock.getDelta(), .033); const time = clock.elapsedTime;
-          nodeMesh.material.color.setHex(night ? 0x60a5fa : 0xc2410c); lines.material.color.setHex(night ? 0x818cf8 : 0xb45309); stream.material.color.setHex(night ? 0xa5b4fc : 0x9a3412); prismEdges.material.color.setHex(night ? 0x93c5fd : 0xb45309); prismEdges.material.opacity = night ? .9 : .94; innerEdges.material.color.setHex(night ? 0x6366f1 : 0x9a3412); rim.color.setHex(night ? 0x4f46e5 : 0xc2410c); coreMaterial.uniforms.uTime.value = time; coreMaterial.uniforms.uProgress.value = progress; coreMaterial.uniforms.uNight.value += ((night ? 1 : 0) - coreMaterial.uniforms.uNight.value) * .06;
-          core.rotation.x += .0018; core.rotation.y += .0025; innerEdges.rotation.y -= .0032; innerEdges.rotation.x += .0011; core.scale.setScalar(1 + progress * .13);
-          pointer.lerp(pointerTarget, .045);
-          group.rotation.y = time * .055 + progress * Math.PI * 1.45 + pointer.x * .2; group.rotation.x = progress * .52 - pointer.y * .16;
-          group.position.x += ((pointer.x * .2) - group.position.x) * .035; group.position.y += ((pointer.y * .14 + progress * .08) - group.position.y) * .035;
+          const delta = Math.min(clock.getDelta(), .033); sceneTime += delta; const time = sceneTime;
+          progress = THREE.MathUtils.damp(progress, target, 4.6, delta);
+          const sceneState = window.useSceneState?.(); const zoneIndex = sceneState?.sectionIndex ?? 0; const zoneLocal = sceneState?.sectionProgress ?? progress;
+          const chapterValue = progress * 6;
+          const chapterMorph = sampleChapter(chapterProfiles.morph, chapterValue);
+          const chapterArms = sampleChapter(chapterProfiles.arms, chapterValue);
+          const chapterRingShape = sampleChapter(chapterProfiles.ringShape, chapterValue);
+          const chapterRingCount = sampleChapter(chapterProfiles.ringCount, chapterValue);
+          const chapterTopology = sampleChapter(chapterProfiles.topology, chapterValue);
+          const chapterFlow = sampleChapter(chapterProfiles.flow, chapterValue);
+          const chapterDensity = sampleChapter(chapterProfiles.density, chapterValue);
+          nodeMesh.material.color.set(scenePalette.galaxy); lines.material.color.set(scenePalette.galaxyAlt); stream.material.color.set(scenePalette.stream); prismEdges.material.color.set(scenePalette.beam); prismEdges.material.opacity = night ? .86 : .84; innerEdges.material.color.set(scenePalette.galaxyAlt); rim.color.set(scenePalette.beam); coreMaterial.uniforms.uTime.value = time; coreMaterial.uniforms.uProgress.value = progress; coreMaterial.uniforms.uNight.value += ((night ? 1 : 0) - coreMaterial.uniforms.uNight.value) * .06;
+          core.rotation.x += .0018 * delta * 60; core.rotation.y += .0025 * delta * 60; innerEdges.rotation.y -= .0032 * delta * 60; innerEdges.rotation.x += .0011 * delta * 60;
+          core.scale.setScalar(1 + progress * .13);
+          prismEdges.scale.setScalar(THREE.MathUtils.damp(prismEdges.scale.x, .92 + chapterMorph * .16 + chapterDensity * .03, 3.2, delta));
+          innerEdges.scale.setScalar(THREE.MathUtils.damp(innerEdges.scale.x, .88 + chapterMorph * .20, 3.4, delta));
+          prismEdges.rotation.z = THREE.MathUtils.damp(prismEdges.rotation.z, chapterMorph * .12 + chapterFlow * .04, 3.0, delta);
+          pointer.x = THREE.MathUtils.damp(pointer.x, pointerTarget.x, 5.5, delta); pointer.y = THREE.MathUtils.damp(pointer.y, pointerTarget.y, 5.5, delta);
+          const chapterPhase = progress * 6;
+          // Keep the chapter turn continuous at every boundary. A per-chapter
+          // modulo sine has a cusp at 0/1 and visibly snaps the star chart back.
+          const chapterTurn = (1 - Math.cos(chapterPhase * Math.PI * 2)) * .20;
+          const chapterPulse = .5 - .5 * Math.cos(chapterPhase * Math.PI * 2);
+          const groupYaw = time * .012 + progress * Math.PI * 1.45 + chapterTurn + pointer.x * .08;
+          const galaxyYaw = time * .006 + progress * Math.PI * 1.1 + chapterTurn * .7;
+          group.rotation.y = THREE.MathUtils.damp(group.rotation.y, groupYaw, 3.8, delta);
+          group.rotation.x = THREE.MathUtils.damp(group.rotation.x, progress * .28 - pointer.y * .04, 3.8, delta);
+          galaxyGroup.rotation.y = THREE.MathUtils.damp(galaxyGroup.rotation.y, galaxyYaw, 3.4, delta);
+          galaxyGroup.rotation.z = THREE.MathUtils.damp(galaxyGroup.rotation.z, Math.sin(progress * Math.PI * 2) * .035, 3.4, delta);
+          galaxyGroup.scale.setScalar(THREE.MathUtils.damp(galaxyGroup.scale.x, 1 + chapterPulse * .035, 3.4, delta));
+          companionGroup.rotation.y = THREE.MathUtils.damp(companionGroup.rotation.y, time * .004 + progress * .16, 2.6, delta);
+          companionGroup.rotation.z = THREE.MathUtils.damp(companionGroup.rotation.z, Math.sin(time * .08) * .018, 2.6, delta);
+          companionGroup.scale.setScalar(THREE.MathUtils.damp(companionGroup.scale.x, .96 + chapterPulse * .10, 3.0, delta));
+          companionBodies.forEach(body => {
+            const orbit = time * .022 + body.phase;
+            const sway = Math.sin(time * .17 + body.phase) * .035;
+            body.coreMesh.position.set(body.base.x + Math.cos(orbit) * .10, body.base.y + sway, body.base.z + Math.sin(orbit) * .08);
+            body.ringMesh.position.copy(body.coreMesh.position);
+            body.coreMesh.rotation.x += delta * (.10 + body.scale * .04);
+            body.coreMesh.rotation.y -= delta * (.14 + body.scale * .06);
+            body.ringMesh.rotation.z += delta * (.08 + body.scale * .03);
+          });
+          galaxyPoints.material.opacity = (night ? .58 : .88) + chapterPulse * .08;
+          coreRays.material.opacity = (night ? .24 : .27) + chapterPulse * .06 + (chapterArms - 3) * .012;
+          group.position.x = THREE.MathUtils.damp(group.position.x, pointer.x * .2, 3.8, delta); group.position.y = THREE.MathUtils.damp(group.position.y, pointer.y * .14 + progress * .08, 3.8, delta);
           const spread = Math.sin(progress * Math.PI) * .34 + progress * .2;
-          orbitRings.forEach((ring, i) => { const cfg = ring.userData; ring.material.color.setHex(night ? (i === 1 ? 0x818cf8 : 0x7dd3fc) : (i === 1 ? 0x9a3412 : 0xb45309)); ring.rotation.x = cfg.tilt[0] + Math.sin(time * cfg.speed + i) * .09 + progress * (i % 2 ? -.48 : .42); ring.rotation.y = cfg.tilt[1] + time * cfg.speed + pointer.x * .08; ring.rotation.z = cfg.tilt[2] + progress * (i - 1) * .32; ring.scale.setScalar(1 + spread * (i % 2 ? 1 : -.45)); ring.material.opacity = night ? .24 + Math.abs(Math.sin(time * .5 + i)) * .14 + progress * .1 : .46 + Math.abs(Math.sin(time * .5 + i)) * .18 + progress * .12; });
-          orbitDots.forEach(({ mesh, ring, phase }) => { const cfg = orbitRings[ring].userData; const a = phase + time * cfg.speed * 1.8; const r = cfg.radius * orbitRings[ring].scale.x; mesh.position.set(Math.cos(a) * r, Math.sin(a) * r * .32, Math.sin(a) * r); mesh.scale.setScalar(1 + .28 * Math.sin(time * 2 + phase)); });
-          const p = lines.geometry.attributes.position.array; nodes.forEach((v, i) => { const j = (i + 1) % nodes.length; const w = nodes[j]; const k = i * 6; const depthWave = Math.sin(time * .65 + i * .8) * .08; p[k] = v.x; p[k + 1] = v.y; p[k + 2] = v.z + depthWave; const blend = Math.min(1, progress * 2.8); p[k + 3] = THREE.MathUtils.lerp(v.x, w.x, blend); p[k + 4] = THREE.MathUtils.lerp(v.y, w.y, blend); p[k + 5] = THREE.MathUtils.lerp(v.z + depthWave, w.z, blend); }); lines.geometry.attributes.position.needsUpdate = true; lines.material.opacity = .08 + progress * .55;
-          const dp = dust.geometry.attributes.position.array; dustData.forEach((d, i) => { d.angle += d.speed * .002 * (1 + progress); const r = d.radius - progress * .28; const k = i * 3; dp[k] = Math.cos(d.angle) * r + pointer.x * .09; dp[k + 1] = d.y + Math.sin(time * .18 + d.phase) * .06 + pointer.y * .06; dp[k + 2] = Math.sin(d.angle) * r; }); dust.geometry.attributes.position.needsUpdate = true; dust.material.color.setHex(night ? 0x818cf8 : 0xc2410c);
-          const sp = stream.geometry.attributes.position.array; streamData.forEach((s, i) => { const a = nodes[s.edge], b = nodes[(s.edge + 1) % nodes.length]; s.t = (s.t + .0025 + progress * .008) % 1; const k = i * 3; sp[k] = THREE.MathUtils.lerp(a.x, b.x, s.t); sp[k + 1] = THREE.MathUtils.lerp(a.y, b.y, s.t); sp[k + 2] = THREE.MathUtils.lerp(a.z, b.z, s.t); }); stream.geometry.attributes.position.needsUpdate = true; stream.material.opacity = progress > .55 ? .68 : progress * 1.05;
+          orbitRings.forEach((ring, i) => {
+            const cfg = ring.userData;
+            ring.material.color.set(i === 1 ? scenePalette.ringAlt : scenePalette.ring);
+            const resonance = Math.sin(time * (cfg.speed * (1 + chapterRingShape * 1.8)) + i * .8) * chapterRingShape * .12;
+            const targetX = cfg.tilt[0] + Math.sin(time * cfg.speed + i) * (.06 + chapterRingShape * .08) + progress * (i % 2 ? -.48 : .42) + chapterRingShape * (i - 1) * .08;
+            const targetY = cfg.tilt[1] + time * cfg.speed + pointer.x * .08 + chapterRingShape * .18;
+            const targetZ = cfg.tilt[2] + progress * (i - 1) * .32 + resonance;
+            ring.rotation.x = THREE.MathUtils.damp(ring.rotation.x, targetX, 4.4, delta);
+            ring.rotation.y = THREE.MathUtils.damp(ring.rotation.y, targetY, 4.4, delta);
+            ring.rotation.z = THREE.MathUtils.damp(ring.rotation.z, targetZ, 4.4, delta);
+            ring.scale.setScalar(THREE.MathUtils.damp(ring.scale.x, 1 + spread * (i % 2 ? 1 : -.45) + chapterRingShape * (i + 1) * .035, 4.4, delta));
+            const zoneBoost = zoneIndex === 1 ? 1.25 : zoneIndex >= 2 ? .82 : 1;
+            ring.material.opacity = (night ? .24 + Math.abs(Math.sin(time * .5 + i)) * .14 + progress * .1 : .62 + Math.abs(Math.sin(time * .5 + i)) * .2 + progress * .12) * (0.74 + chapterRingShape * .32) * zoneBoost * (zoneLocal < .18 ? .72 + zoneLocal * 1.5 : 1);
+          });
+          orbitDots.forEach(({ mesh, ring, phase }) => { const cfg = orbitRings[ring].userData; const a = phase + time * cfg.speed * (1.8 + chapterFlow * .8); const r = cfg.radius * orbitRings[ring].scale.x * (1 + chapterRingShape * .08); mesh.position.set(Math.cos(a) * r, Math.sin(a) * r * (.32 + chapterRingShape * .12), Math.sin(a) * r); mesh.material.color.set(ring === 1 ? scenePalette.galaxyAlt : scenePalette.galaxy); mesh.material.opacity = (night ? .78 : .88) * (.72 + Math.min(1, chapterRingCount / 7) * .28); mesh.scale.setScalar(1 + .28 * Math.sin(time * (2 + chapterFlow) + phase)); });
+          nodes.forEach((v, i) => {
+            const fi = i;
+            const a = fi * 2.39996 + time * (.08 + chapterFlow * .12);
+            const gridX = (fi % 4 - 1.5) * .46, gridY = (Math.floor(fi / 4) - .5) * .48, gridZ = Math.sin(fi + time) * .05;
+            const graphX = Math.cos(a * 1.7) * .72, graphY = Math.sin(fi * 2.1 + time) * .30, graphZ = Math.sin(a * 1.7) * .38;
+            const treeX = (fi % 2 - .5) * (.34 + Math.floor(fi / 2) * .08), treeY = (Math.floor(fi / 2) - 1.5) * .34, treeZ = Math.sin(fi * 1.3 + time) * .08;
+            const ringX = Math.cos(a) * 1.42, ringY = Math.sin(fi * 1.7 + time) * .22, ringZ = Math.sin(a) * .88;
+            let x = THREE.MathUtils.lerp(gridX, graphX, Math.min(1, chapterTopology / .33));
+            let y = THREE.MathUtils.lerp(gridY, graphY, Math.min(1, chapterTopology / .33));
+            let z = THREE.MathUtils.lerp(gridZ, graphZ, Math.min(1, chapterTopology / .33));
+            const treeMix = THREE.MathUtils.clamp((chapterTopology - .26) / .40, 0, 1);
+            x = THREE.MathUtils.lerp(x, treeX, treeMix); y = THREE.MathUtils.lerp(y, treeY, treeMix); z = THREE.MathUtils.lerp(z, treeZ, treeMix);
+            const ringMix = THREE.MathUtils.clamp((chapterTopology - .58) / .42, 0, 1);
+            x = THREE.MathUtils.lerp(x, ringX, ringMix); y = THREE.MathUtils.lerp(y, ringY, ringMix); z = THREE.MathUtils.lerp(z, ringZ, ringMix);
+            const spreadScale = .74 + chapterDensity * .36;
+            v.set(x * spreadScale, y * spreadScale, z * spreadScale);
+            const nk = i * 3; nodePositions[nk] = v.x; nodePositions[nk + 1] = v.y; nodePositions[nk + 2] = v.z;
+          });
+          nodeMesh.geometry.attributes.position.needsUpdate = true;
+          const p = lines.geometry.attributes.position.array; nodes.forEach((v, i) => { const j = (i + 1) % nodes.length; const w = nodes[j]; const k = i * 6; const depthWave = Math.sin(time * (.65 + chapterFlow * .4) + i * .8) * .08; p[k] = v.x; p[k + 1] = v.y; p[k + 2] = v.z + depthWave; const blend = Math.min(1, progress * 2.8); p[k + 3] = THREE.MathUtils.lerp(v.x, w.x, blend); p[k + 4] = THREE.MathUtils.lerp(v.y, w.y, blend); p[k + 5] = THREE.MathUtils.lerp(v.z + depthWave, w.z, blend); }); lines.geometry.attributes.position.needsUpdate = true; lines.material.opacity = (.08 + progress * .55) * (.72 + chapterDensity * .38);
+          const dp = dust.geometry.attributes.position.array; dustData.forEach((d, i) => { d.angle += d.speed * delta * 2.0 * (1 + progress); const r = d.radius - progress * .28; const k = i * 3; dp[k] = Math.cos(d.angle) * r + pointer.x * .09; dp[k + 1] = d.y + Math.sin(time * .18 + d.phase) * .06 + pointer.y * .06; dp[k + 2] = Math.sin(d.angle) * r; }); dust.geometry.attributes.position.needsUpdate = true; dust.material.color.set(scenePalette.galaxyAlt);
+          const sp = stream.geometry.attributes.position.array; streamData.forEach((s, i) => { const a = nodes[s.edge], b = nodes[(s.edge + 1) % nodes.length]; s.t = (s.t + delta * (.15 + progress * .48)) % 1; const k = i * 3; sp[k] = THREE.MathUtils.lerp(a.x, b.x, s.t); sp[k + 1] = THREE.MathUtils.lerp(a.y, b.y, s.t); sp[k + 2] = THREE.MathUtils.lerp(a.z, b.z, s.t); }); stream.geometry.attributes.position.needsUpdate = true; stream.material.opacity = progress > .55 ? .68 : progress * 1.05;
           if (gpuParticleSystem) {
             const system = gpuParticleSystem; const uniforms = system.velocityVariable.material.uniforms;
             uniforms.uTime.value = time; uniforms.uDelta.value = delta; uniforms.uProgress.value = progress; uniforms.uMouse.value.set(pointer.x * 2.2, pointer.y * 1.5, 0); uniforms.uNight.value = night ? 1 : 0; system.positionVariable.material.uniforms.uDelta.value = delta;
-            const dayKeep = night ? 1 : .3; system.particleMesh.visible = true; system.particleMesh.geometry.setDrawRange(0, Math.floor(system.count * dayKeep)); system.particleMaterial.uniforms.uNight.value = night ? 1 : 0; system.particleMaterial.uniforms.uProgress.value = progress; system.particleMaterial.uniforms.uPointSize.value = (isMobile ? 1.2 : 1.7) * Math.min(1.25, renderer.getPixelRatio());
-            if (gpuFrameSkip++ % 1 === 0) { system.gpu.compute(); system.particleMaterial.uniforms.texturePosition.value = system.gpu.getCurrentRenderTarget(system.positionVariable).texture; }
+            const dayKeep = night ? 1 : .6; system.particleMesh.visible = true; system.particleMesh.geometry.setDrawRange(0, Math.floor(system.count * dayKeep)); system.particleMaterial.uniforms.uNight.value = night ? 1 : 0; system.particleMaterial.uniforms.uProgress.value = progress; system.particleMaterial.uniforms.uPointSize.value = (isMobile ? 1.6 : 2.1) * Math.min(1.25, renderer.getPixelRatio());
+            // FBO simulation is intentionally amortized. The visible points
+            // remain smooth while compute work is limited to every other
+            // frame, leaving headroom for scrolling and DOM interaction.
+            if (gpuFrameSkip++ % 2 === 0) { system.gpu.compute(); system.particleMaterial.uniforms.texturePosition.value = system.gpu.getCurrentRenderTarget(system.positionVariable).texture; }
           }
-          camera.position.z += ((6.3 + progress * 2.2 + Math.abs(pointer.y) * .18) - camera.position.z) * .045; camera.position.x += ((pointer.x * .28 + (night ? .18 : -.12)) - camera.position.x) * .035; camera.position.y += ((pointer.y * .18 + Math.sin(progress * Math.PI) * .12) - camera.position.y) * .035; camera.lookAt(pointer.x * .12, pointer.y * .08, 0); if (night && composer) composer.render(); else renderer.render(scene, camera);
+          if (delta > .026) slowFrames++; else slowFrames = Math.max(0, slowFrames - 2); if (slowFrames > 18 && bloomPass) bloomPass.enabled = false;
+          const cameraZ = 6.7 + Math.sin(progress * Math.PI * 12) * .12 + Math.abs(pointer.y) * .06;
+          const cameraX = pointer.x * .12 + (night ? .08 : -.08);
+          const cameraY = pointer.y * .08;
+          camera.position.z = THREE.MathUtils.damp(camera.position.z, cameraZ, 3.8, delta);
+          camera.position.x = THREE.MathUtils.damp(camera.position.x, cameraX, 3.8, delta);
+          camera.position.y = THREE.MathUtils.damp(camera.position.y, cameraY, 3.8, delta);
+          cameraLookX = THREE.MathUtils.damp(cameraLookX, pointer.x * .04, 4.8, delta);
+          cameraLookY = THREE.MathUtils.damp(cameraLookY, pointer.y * .03, 4.8, delta);
+          camera.lookAt(cameraLookX, cameraLookY, 0);
+          renderer.render(scene, camera);
           } catch (error) {
             if (gpuParticleSystem) { console.warn('Disabling failed GPU particle layer', error); scene.remove(gpuParticleSystem.particleMesh); gpuParticleSystem = null; }
             if (composer) { console.warn('Disabling failed bloom pass', error); composer = null; bloomPass = null; }
@@ -2390,6 +2734,174 @@
         }
         addEventListener('scroll', scroll, { passive: true }); addEventListener('resize', scroll, { passive: true }); scroll();
         draw(); document.addEventListener('visibilitychange', () => { cancelAnimationFrame(frame); if (!document.hidden) draw(); }); addEventListener('pagehide', () => cancelAnimationFrame(frame), { once: true });
+      })();
+
+      (() => {
+        const zones = [
+          { id: 'home', code: '01', name: 'CORE' }, { id: 'capabilities', code: '02', name: 'ORBIT' }, { id: 'gomoku', code: '03', name: 'PLANETS' },
+          { id: 'members', code: '04', name: 'ASTEROIDS' }, { id: 'projects', code: '05', name: 'ARCHIVE' }, { id: 'activities', code: '06', name: 'COMET' }, { id: 'join', code: '07', name: 'GATE' }
+        ];
+        const state = { progress: 0, smoothProgress: 0, chapter: 'core', chapterIndex: 0, chapterProgress: 0, t: 0, reveal: 1, transition: 'idle', section: 'home', sectionIndex: 0, mouseX: .5, mouseY: .5, theme: document.documentElement.dataset.theme || 'dark' };
+        window.__galaxy = state;
+        window.useSceneState = () => state;
+        window.ScrollBus = { state, subscribe(fn) { const handler = e => fn(e.detail || state); addEventListener('club:sceneprogress', handler); return () => removeEventListener('club:sceneprogress', handler); } };
+        const root = document.documentElement; const readout = document.getElementById('zoneReadout'); const index = document.getElementById('sectionIndex');
+        const sections = zones.map(zone => document.getElementById(zone.id));
+        sections.forEach(section => {
+          if (!section) return;
+          const stage = document.createElement('div'); stage.className = 'chapter-stage';
+          while (section.firstChild) stage.appendChild(section.firstChild);
+          section.appendChild(stage);
+        });
+        const flightQuery = matchMedia('(min-width: 901px) and (min-height: 650px)');
+        const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        let flight = false, target = 0, display = 0, lastFrame = performance.now(), frame = 0, lastActive = -1;
+        let snapTimer = 0, snapLock = false, direction = 1, lastTarget = 0;
+        const routeWheelToChapters = event => {
+          if (!flight || Math.abs(event.deltaY) < 1) return;
+          const flagship = sections.find(section => section?.id === 'gomoku');
+          if (flagship && event.target instanceof Node && flagship.contains(event.target)) {
+            const maxInnerScroll = Math.max(0, flagship.scrollHeight - flagship.clientHeight);
+            const atTop = flagship.scrollTop <= 1;
+            const atBottom = flagship.scrollTop >= maxInnerScroll - 1;
+            const innerCanConsume = event.deltaY > 0 ? !atBottom : !atTop;
+            if (maxInnerScroll > 1 && innerCanConsume) return;
+          }
+          event.preventDefault();
+          if (snapLock) return;
+          const currentMax = Math.max(1, root.scrollHeight - innerHeight);
+          const currentChapter = Math.round(display * (zones.length - 1));
+          const nextChapter = Math.max(0, Math.min(zones.length - 1, currentChapter + (event.deltaY > 0 ? 1 : -1)));
+          const snapTop = nextChapter / (zones.length - 1) * currentMax;
+          direction = nextChapter >= currentChapter ? 1 : -1;
+          snapLock = true;
+          scrollTo({ top: snapTop, behavior: 'smooth' });
+          setTimeout(() => { snapLock = false; }, 820);
+        };
+        sections.forEach(section => section?.addEventListener('wheel', routeWheelToChapters, { passive: false }));
+        const clamp = value => Math.max(0, Math.min(1, value));
+        const ease = value => { const t = clamp(value); return t * t * (3 - 2 * t); };
+        const setChapter = (section, amount, entering) => {
+          if (!section) return;
+          const stage = section.firstElementChild;
+          const visible = amount > .002;
+          section.style.visibility = visible ? 'visible' : 'hidden';
+          section.style.pointerEvents = amount > .7 ? 'auto' : 'none';
+          if (!visible) return;
+          const missing = 1 - amount;
+          section.style.zIndex = amount > .5 ? '4' : '3';
+          stage.style.setProperty('--chapter-reveal', amount.toFixed(4));
+          const fromLeft = direction > 0;
+          stage.style.setProperty('--chapter-y', `${(entering ? (fromLeft ? 16 : -16) : (fromLeft ? -16 : 16)) * missing}deg`);
+          stage.style.setProperty('--chapter-x', `${(entering ? (fromLeft ? -8 : 8) : (fromLeft ? 9 : -9)) * missing}deg`);
+          stage.style.setProperty('--chapter-depth', `${(entering ? -85 : -120) * missing}px`);
+          stage.style.setProperty('--chapter-shift', `${(entering ? (fromLeft ? -54 : 54) : (fromLeft ? 54 : -54)) * missing}px`);
+          stage.style.setProperty('--chapter-scale', (1 - missing * (entering ? .1 : .07)).toFixed(4));
+          stage.style.opacity = amount < .2 ? (amount / .2).toFixed(4) : '1';
+        };
+        const publish = (value, current, local) => {
+          const active = Math.min(zones.length - 1, Math.round(value));
+          state.progress = display; state.smoothProgress = display;
+          state.chapterIndex = current; state.chapterProgress = local; state.t = local;
+          state.reveal = ease((local - .22) / .78); state.sectionProgress = local;
+          state.sectionIndex = active; state.section = zones[active].id;
+          state.chapter = zones[active].name.toLowerCase();
+          state.transition = local < .02 || local > .98 ? 'idle' : 'turning';
+          state.theme = root.dataset.theme || 'dark';
+          if (active !== lastActive) {
+            root.dataset.activeChapter = state.chapter;
+            if (readout) readout.textContent = `${zones[active].code} / ${zones[active].name}`;
+            index?.querySelectorAll('button').forEach((button, i) => button.classList.toggle('is-active', i === active));
+            lastActive = active;
+          }
+          root.style.setProperty('--section-progress', display.toFixed(4));
+          dispatchEvent(new CustomEvent('club:sceneprogress', { detail: { ...state, zone: zones[active] } }));
+        };
+        const tick = now => {
+          frame = 0;
+          const dt = Math.min((now - lastFrame) / 1000, 1 / 30); lastFrame = now;
+          if (reducedMotion) display = target;
+          else display += (target - display) * (1 - Math.exp(-2.7 * dt));
+          if (Math.abs(target - display) < .00015) display = target;
+          if (flight) {
+            const value = display * (zones.length - 1);
+            const current = Math.min(zones.length - 1, Math.floor(value));
+            const local = value - current;
+            sections.forEach((section, i) => {
+              if (!section) return;
+              const distance = i - value;
+              const amount = clamp(1 - Math.abs(distance));
+              if (amount > .002) {
+                const incoming = direction > 0 ? distance > 0 : distance < 0;
+                setChapter(section, ease(amount), incoming);
+              } else {
+                section.style.visibility = 'hidden';
+                section.style.pointerEvents = 'none';
+                section.firstElementChild?.style.setProperty('opacity', '0');
+              }
+            });
+            publish(value, current, local);
+          } else {
+            const center = scrollY + innerHeight * .42;
+            let active = 0;
+            sections.forEach((section, i) => { if (section && center >= section.offsetTop) active = i; });
+            publish(active, active, 0);
+          }
+          if (display !== target) frame = requestAnimationFrame(tick);
+        };
+        const requestTick = () => { if (!frame) frame = requestAnimationFrame(tick); };
+        const update = () => {
+          const max = Math.max(1, root.scrollHeight - innerHeight);
+          target = clamp(scrollY / max);
+          if (target !== lastTarget) direction = target >= lastTarget ? 1 : -1;
+          lastTarget = target;
+          if (!flight) display = target;
+          requestTick();
+          if (flight && !reducedMotion && !snapLock) {
+            clearTimeout(snapTimer);
+            snapTimer = setTimeout(() => {
+              const currentMax = Math.max(1, root.scrollHeight - innerHeight);
+              const chapter = Math.round((scrollY / currentMax) * (zones.length - 1));
+              const snapTop = chapter / (zones.length - 1) * currentMax;
+              if (Math.abs(scrollY - snapTop) < 2) return;
+              snapLock = true;
+              scrollTo({ top: snapTop, behavior: 'smooth' });
+              setTimeout(() => { snapLock = false; }, 650);
+            }, 140);
+          }
+        };
+        const configure = () => {
+          const next = flightQuery.matches;
+          if (next !== flight) {
+            flight = next; document.body.classList.toggle('chapter-flight', flight);
+            sections.forEach(section => { if (section) { section.style.visibility = ''; section.style.pointerEvents = ''; section.style.zIndex = ''; section.firstElementChild?.style.removeProperty('opacity'); } });
+            if (flight) { target = clamp(scrollY / Math.max(1, root.scrollHeight - innerHeight)); display = target; }
+          }
+          update();
+        };
+        const goToZone = id => {
+          const at = zones.findIndex(zone => zone.id === id || (id === 'proof' && zone.id === 'home'));
+          if (at < 0) return false;
+          if (flight) {
+            snapLock = true;
+            scrollTo({ top: (at / (zones.length - 1)) * Math.max(1, root.scrollHeight - innerHeight), behavior: 'smooth' });
+            setTimeout(() => { snapLock = false; }, 650);
+            if (id === 'proof') sections[0].scrollTop = document.getElementById('proof').offsetTop;
+          } else document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return true;
+        };
+        addEventListener('scroll', update, { passive: true }); addEventListener('resize', configure, { passive: true });
+        flightQuery.addEventListener('change', configure);
+        configure();
+        document.querySelectorAll('a[href^="#"]').forEach(link => link.addEventListener('click', event => {
+          if (goToZone(link.hash.slice(1))) { event.preventDefault(); history.pushState(null, '', link.hash); }
+        }));
+        index?.addEventListener('click', event => { const button = event.target.closest('[data-zone-target]'); if (button) goToZone(button.dataset.zoneTarget); });
+        if (location.hash) requestAnimationFrame(() => goToZone(location.hash.slice(1)));
+        addEventListener('pointermove', event => { state.mouseX = event.clientX / innerWidth; state.mouseY = event.clientY / innerHeight; }, { passive: true });
+        document.querySelectorAll('[data-matrix] .axis-item').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('[data-matrix] .axis-item').forEach(item => item.classList.toggle('is-active', item === button)); const title = document.querySelector('[data-matrix-title]'); const copy = document.querySelector('[data-matrix-copy]'); const label = document.querySelector('[data-matrix-label]'); const code = document.querySelector('[data-matrix-code]'); const en = window.ClubI18n?.getLang?.() === 'en'; const values = { ai: [en ? 'Competitive algorithms' : '竞赛算法', en ? 'Systematic training in search, graph theory, DP, and data structures for long-term competition growth.' : '搜索、图论、DP 与数据结构系统训练，服务校内竞赛与长期能力建设。', 'COMPETITIVE', 'graph.search → dp.state → proof'], systems: [en ? 'Engineering practice' : '工程实践', en ? 'Turn algorithms into accessible products and close the loop across members, events, projects, and operations.' : '把算法作品做成可访问网页，沉淀成员、活动、项目与管理闭环。', 'SYSTEMS', 'ship.build → deploy → observe'], 'ai-lab': [en ? 'AI game systems' : 'AI 博弈', en ? 'Gomoku, Tetris, and Snake connect evaluation, search, and decision visualization.' : '以五子棋、俄罗斯方块与贪吃蛇贯通评估、搜索和决策可视化。', 'AI LAB', 'evaluate → prune → decide'], math: [en ? 'Mathematical structures' : '数学结构', en ? 'Build explainable intuition from probability, graphs, and complexity.' : '从概率、图结构到复杂度，建立可解释的算法直觉。', 'MATH', 'model → invariant → proof'], resources: [en ? 'Teaching toolchain' : '教学资源', en ? 'Open Python and C++ textbooks with solutions for focused practice.' : 'Python / C++ 教材与解析集中开放，支持在线学习与完整下载。', 'TOOLCHAIN', 'read → test → iterate'] }; const value = values[button.dataset.axis] || values.ai; if (title) title.textContent = value[0]; if (copy) copy.textContent = value[1]; if (label) label.textContent = value[2]; if (code) code.textContent = value[3]; }));
+        addEventListener('club:langchange', () => document.querySelector('[data-matrix] .axis-item.is-active')?.click());
+        document.querySelectorAll('.planet-row').forEach((row, index) => { row.dataset.sceneFocus = ['gomoku', 'tetris', 'snake'][index] || `work-${index + 1}`; row.addEventListener('pointerenter', () => dispatchEvent(new CustomEvent('zone:focus', { detail: { kind: 'work', id: row.dataset.sceneFocus } })), { passive: true }); row.addEventListener('pointerleave', () => dispatchEvent(new CustomEvent('zone:focus', { detail: { kind: 'work', id: '' } })), { passive: true }); });
       })();
 
       init();
