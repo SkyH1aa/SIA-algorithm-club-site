@@ -15,6 +15,8 @@
     <script src="public/member-identity.js" defer></script>
     <style>
       :root {
+        --nav-height: 78px;
+        --viewport-height: 100svh;
         font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
         color: #f6fbff;
         background: #020409;
@@ -220,7 +222,7 @@
         .ambient-grid { animation: none !important; }
         .ambient-background { display: none !important; }
         body.chapter-flight { overscroll-behavior: none; }
-        body.chapter-flight .section-block { touch-action: none; }
+      body.chapter-flight .section-block { touch-action: pan-y; }
         body.chapter-flight #gomoku { touch-action: pan-y; }
         html[data-theme="light"] #home::before,
         html[data-theme="light"] #gomoku::before,
@@ -1149,7 +1151,7 @@
          fixed stage and are composed from one reversible scroll value. */
       body.chapter-flight main { height: 700svh; padding: 0; }
       body.chapter-flight .section-block {
-        position: fixed; top: 70px; right: 0; left: 0; z-index: 3;
+        position: fixed; top: var(--nav-height, 78px); right: 0; left: 0; z-index: 3;
         width: 100%; max-width: none;
         height: calc(var(--viewport-height, 100svh) - var(--nav-height, 78px)); min-height: 0; margin: 0;
         padding: 20px var(--pad-x) 36px; overflow: auto; overscroll-behavior: auto;
@@ -1161,9 +1163,27 @@
         display: block; height: calc(var(--viewport-height, 100svh) - var(--nav-height, 78px)); padding-top: 8px;
         overflow: auto;
       }
+      body.chapter-flight .section-block {
+        -webkit-overflow-scrolling: touch;
+      }
+      @media (max-height: 720px) {
+        body.chapter-flight .section-block {
+          padding-top: 12px;
+          padding-bottom: 24px;
+        }
+        body.chapter-flight .chapter-stage,
+        body.chapter-flight .hero-block .chapter-stage {
+          justify-content: flex-start;
+          padding-top: 8px;
+          padding-bottom: 24px;
+        }
+        body.chapter-flight .hero-block .chapter-stage > .hero {
+          flex: 0 0 auto;
+        }
+      }
       body.chapter-flight .chapter-stage {
         --chapter-reveal: 0;
-        min-height: 100%; opacity: calc(.86 + var(--chapter-reveal) * .14);
+        min-height: max(100%, max-content); opacity: calc(.86 + var(--chapter-reveal) * .14);
         display: flex; flex-direction: column; justify-content: center;
         position: relative; z-index: 1;
         transform-origin: 50% 50%;
@@ -1173,7 +1193,10 @@
       }
       body.chapter-flight .hero-block .chapter-stage { display: flex; flex-direction: column; justify-content: space-between; gap: 14px; }
       body.chapter-flight .chapter-stage { width: min(100%, var(--max)); margin: 0 auto; }
+      body.chapter-flight .hero-block .chapter-stage { min-height: 100%; padding-top: clamp(24px, 5vh, 64px); }
+      body.chapter-flight .hero-block .chapter-stage { box-sizing: border-box; }
       body.chapter-flight .hero-block .chapter-stage > .hero { flex: 1 1 auto; min-height: 0; align-content: center; }
+      body.chapter-flight .hero-block .hero-proof { margin-top: 0; }
       body.chapter-flight .chapter-stage > .section-heading,
       body.chapter-flight .chapter-stage > .hero,
       body.chapter-flight .chapter-stage > .orbit-matrix,
@@ -1477,6 +1500,15 @@
         }
         body.chapter-flight.touch-device .section-block:not(#gomoku) {
           overflow: auto;
+        }
+        body.chapter-flight.touch-device .section-block {
+          touch-action: pan-y;
+          -webkit-overflow-scrolling: touch;
+        }
+        body.chapter-flight.touch-device .chapter-stage {
+          min-height: max(100%, max-content);
+          justify-content: flex-start;
+          padding-bottom: 28px;
         }
       }
     </style>
@@ -3049,7 +3081,9 @@
         const userAgent = String(navigator.userAgent || '').toLowerCase();
         const touchDevice = /ipad/.test(userAgent) || (navigator.maxTouchPoints > 1 && /macintosh/.test(userAgent));
         const phoneDevice = /iphone|ipod|android.*mobile|windows phone/.test(userAgent);
-        const flightQuery = matchMedia('(min-height: 650px)');
+        // Desktop and iPad keep the chapter compositor at every window height;
+        // the chapter surface itself becomes scrollable when space is tight.
+        const flightQuery = { matches: true, addEventListener() {} };
         const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
         const updateViewportVars = () => {
           const viewport = window.visualViewport;
@@ -3306,12 +3340,14 @@
           const modeScale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
           const delta = Number(event.deltaY) * modeScale;
           if (!Number.isFinite(delta) || Math.abs(delta) < .25) return;
-          const flagship = sections.find(section => section?.id === 'gomoku');
-          if (flagship && event.target instanceof Node && flagship.contains(event.target)) {
-            const maxInnerScroll = Math.max(0, flagship.scrollHeight - flagship.clientHeight);
-            const atTop = flagship.scrollTop <= 1;
-            const atBottom = flagship.scrollTop >= maxInnerScroll - 1;
+          const owner = event.target instanceof Element ? event.target.closest('.section-block') : null;
+          if (owner) {
+            const maxInnerScroll = Math.max(0, owner.scrollHeight - owner.clientHeight);
+            const atTop = owner.scrollTop <= 1;
+            const atBottom = owner.scrollTop >= maxInnerScroll - 1;
             const innerCanConsume = delta > 0 ? !atBottom : !atTop;
+            // Let the active chapter consume wheel/trackpad input first.
+            // Chapter navigation only takes over at the relevant scroll edge.
             if (maxInnerScroll > 1 && innerCanConsume) return;
           }
           event.preventDefault();
@@ -3560,6 +3596,17 @@
               return;
             }
           }
+          const owner = touchGesture.target instanceof Element ? touchGesture.target.closest('.section-block') : null;
+          if (owner && owner !== flagship) {
+            const maxScroll = Math.max(0, owner.scrollHeight - owner.clientHeight);
+            const atTop = owner.scrollTop <= 1;
+            const atBottom = owner.scrollTop >= maxScroll - 1;
+            const canScroll = maxScroll > 1 && (dy > 0 ? !atBottom : !atTop);
+            if (canScroll) {
+              touchGesture.innerConsumed = true;
+              return;
+            }
+          }
           // This gesture belongs to chapter navigation. Prevent Safari's
           // document momentum from running alongside the chapter spring.
           event.preventDefault();
@@ -3583,7 +3630,8 @@
         addEventListener('touchend', onTouchEnd, { passive: false, capture: true });
         addEventListener('touchcancel', () => { touchGesture = null; }, { passive: true, capture: true });
         addEventListener('scroll', update, { passive: true }); addEventListener('resize', configure, { passive: true });
-        flightQuery.addEventListener('change', configure);
+        // Window resize is handled by configure; flight remains enabled for
+        // desktop/iPad and phones retain native document flow.
         configure();
         document.querySelectorAll('a[href^="#"]').forEach(link => link.addEventListener('click', event => {
           if (goToZone(link.hash.slice(1))) { event.preventDefault(); history.pushState(null, '', link.hash); }
