@@ -1151,14 +1151,14 @@
       body.chapter-flight .section-block {
         position: fixed; top: 70px; right: 0; left: 0; z-index: 3;
         width: 100%; max-width: none;
-        height: calc(100svh - 78px); min-height: 0; margin: 0;
+        height: calc(var(--viewport-height, 100svh) - var(--nav-height, 78px)); min-height: 0; margin: 0;
         padding: 20px var(--pad-x) 36px; overflow: auto; overscroll-behavior: auto;
         scrollbar-width: thin; visibility: hidden; pointer-events: none;
         overscroll-behavior: auto;
         scroll-snap-align: none;
       }
       body.chapter-flight .section-block.hero-block {
-        display: block; height: calc(100svh - 78px); padding-top: 8px;
+        display: block; height: calc(var(--viewport-height, 100svh) - var(--nav-height, 78px)); padding-top: 8px;
         overflow: auto;
       }
       body.chapter-flight .chapter-stage {
@@ -1467,16 +1467,16 @@
       @media (min-height: 650px) {
         body.chapter-flight .section-block {
           min-height: 0;
-          height: calc(100svh - 78px);
+          height: calc(var(--viewport-height, 100svh) - var(--nav-height, 78px));
           padding: 20px var(--pad-x) 36px;
         }
         body.chapter-flight .section-block.hero-block {
-          height: calc(100svh - 78px);
+          height: calc(var(--viewport-height, 100svh) - var(--nav-height, 78px));
           min-height: 0;
           padding-top: 8px;
         }
         body.chapter-flight.touch-device .section-block:not(#gomoku) {
-          overflow: hidden;
+          overflow: auto;
         }
       }
     </style>
@@ -3051,6 +3051,18 @@
         const phoneDevice = /iphone|ipod|android.*mobile|windows phone/.test(userAgent);
         const flightQuery = matchMedia('(min-height: 650px)');
         const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const updateViewportVars = () => {
+          const viewport = window.visualViewport;
+          const height = Math.round(viewport?.height || window.innerHeight);
+          const nav = document.querySelector('.site-header, header, .topbar');
+          const navHeight = Math.max(0, Math.round(nav?.getBoundingClientRect?.().height || 78));
+          document.documentElement.style.setProperty('--viewport-height', `${height}px`);
+          document.documentElement.style.setProperty('--nav-height', `${navHeight}px`);
+        };
+        updateViewportVars();
+        addEventListener('resize', updateViewportVars, { passive: true });
+        addEventListener('orientationchange', () => setTimeout(updateViewportVars, 120), { passive: true });
+        window.visualViewport?.addEventListener('resize', updateViewportVars, { passive: true });
         // Mark the surface before the first compositor paint so optional
         // desktop-only canvases never flash on a touch device.
         document.body.classList.toggle('touch-device', phoneDevice);
