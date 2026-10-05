@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="public/theme.css?v=20261005-ipad-compositor-v6">
+  <link rel="stylesheet" href="public/theme.css?v=20261005-ipad-flow-v7">
   <script src="public/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
-  <script src="public/SceneDirector.js?v=20261005-ipad-compositor-v6"></script>
+  <script src="public/SceneDirector.js?v=20261005-ipad-flow-v7"></script>
     <title>算法社 · Algorithm Club</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="public/i18n-dict.js"></script>
@@ -3459,7 +3459,10 @@
           }
         };
         const configure = () => {
-          const next = flightQuery.matches && !phoneDevice;
+          // iPad WebKit keeps stale fixed-layer tiles during chapter swaps.
+          // Use normal document flow on touch surfaces; desktop retains the
+          // full fixed star-chart flight compositor.
+          const next = flightQuery.matches && !phoneDevice && !touchDevice;
           if (next !== flight) {
             flight = next;
             document.body.classList.toggle('chapter-flight', flight);
