@@ -176,6 +176,12 @@
            Algorithm Galaxy. Its transparent backing tile is the source of the
            iPad-only flashing color rectangle, so remove it on touch surfaces. */
         #particleCanvas { display: none !important; opacity: 0 !important; }
+        /* iPadOS/WebKit is prone to flashing retained tiles when a fullscreen
+           transparent WebGL canvas is composited over fixed DOM content. The
+           3D scene remains enabled on desktop; touch surfaces use the stable
+           CSS background below instead of creating a WebGL context. */
+        /* The main scene stays available here; the script applies the
+           iPad-specific fallback class only after reliable platform detection. */
         /* Keep each iPad chapter in its own bounded paint surface. This
            prevents a fixed, transformed panel from being retained as a
            stale WebKit tile after the chapter leaves the viewport. */
@@ -2365,7 +2371,9 @@
       };
 
       (() => {
-        const touchSurface = navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+        const ua = String(navigator.userAgent || '').toLowerCase();
+        const isIPadOS = /ipad/.test(ua) || (navigator.maxTouchPoints > 1 && /macintosh/.test(ua));
+        const touchSurface = isIPadOS;
         if (window.SceneDirector?.mount && !touchSurface) { window.SceneDirector.mount(document.getElementById('shaderField')); return; }
         const canvas = document.getElementById('shaderField');
         if (touchSurface || !canvas || !window.THREE || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -2429,11 +2437,15 @@
       (() => {
         const canvas = document.getElementById('algorithmScene');
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (!canvas || !window.THREE || reduced) return;
+        const ua = String(navigator.userAgent || '').toLowerCase();
+        const touchSurface = /ipad|iphone|ipod/.test(ua) || (navigator.maxTouchPoints > 1 && /macintosh/.test(ua));
+        // Avoid WebGL/FBO initialization on touch devices. iPad WebKit can
+        // retain transparent GPU tiles during scrolling, causing high-frequency
+        // flashing rectangles even when the canvas is otherwise cleared.
+        if (!canvas || !window.THREE || reduced || touchSurface) return;
         const THREE = window.THREE;
         const quality = window.useQualityTier?.() || { tier: 'medium', particleCount: 4096, pixelRatio: 1.25, postprocessing: false };
         const isMobile = quality.tier === 'low' || matchMedia('(max-width: 700px)').matches;
-        const touchSurface = navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
         // Theme state must exist before any galaxy buffers are seeded. Keeping
         // it here prevents a temporal-dead-zone error during scene startup.
         let night = document.documentElement.dataset.theme !== 'light';
@@ -3031,7 +3043,7 @@
         // the fixed chapter compositor, while phone-sized touch devices use
         // normal document flow and native vertical scrolling.
         const userAgent = String(navigator.userAgent || '').toLowerCase();
-        const touchDevice = navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+        const touchDevice = /ipad|iphone|ipod/.test(userAgent) || (navigator.maxTouchPoints > 1 && /macintosh/.test(userAgent));
         const phoneDevice = /iphone|ipod|android.*mobile|windows phone/.test(userAgent) || (touchDevice && innerWidth < 620);
         const flightQuery = matchMedia('(min-height: 650px)');
         const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
