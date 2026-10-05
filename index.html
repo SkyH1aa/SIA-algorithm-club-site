@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="public/theme.css?v=20261005-touch-scroll-v3">
+  <link rel="stylesheet" href="public/theme.css?v=20261005-ipad-compositor-v4">
   <script src="public/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
-  <script src="public/SceneDirector.js?v=20261005-touch-scroll-v3"></script>
+  <script src="public/SceneDirector.js?v=20261005-ipad-compositor-v4"></script>
     <title>算法社 · Algorithm Club</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="public/i18n-dict.js"></script>
@@ -172,6 +172,26 @@
            screen field is disabled because WebKit can composite its animated
            transparent quad as a flashing corner tile during touch scrolling. */
         #shaderField { display: none !important; }
+        /* Keep each iPad chapter in its own bounded paint surface. This
+           prevents a fixed, transformed panel from being retained as a
+           stale WebKit tile after the chapter leaves the viewport. */
+        body.chapter-flight.touch-device .section-block {
+          -webkit-backface-visibility: hidden;
+          backface-visibility: hidden;
+          contain: paint;
+          isolation: isolate;
+        }
+        body.touch-device .hero-panel,
+        body.touch-device .hero-panel::before,
+        body.touch-device .hero-panel::after {
+          -webkit-backface-visibility: hidden;
+          backface-visibility: hidden;
+          will-change: auto !important;
+        }
+        body.touch-device .hero-panel {
+          -webkit-animation: none !important;
+          animation: none !important;
+        }
         .ambient-grid { animation: none !important; }
         body.chapter-flight { overscroll-behavior: none; }
         body.chapter-flight .section-block { touch-action: none; }
@@ -2392,6 +2412,7 @@
         const THREE = window.THREE;
         const quality = window.useQualityTier?.() || { tier: 'medium', particleCount: 4096, pixelRatio: 1.25, postprocessing: false };
         const isMobile = quality.tier === 'low' || matchMedia('(max-width: 700px)').matches;
+        const touchSurface = navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
         // Theme state must exist before any galaxy buffers are seeded. Keeping
         // it here prevents a temporal-dead-zone error during scene startup.
         let night = document.documentElement.dataset.theme !== 'light';
@@ -2418,6 +2439,12 @@
         let renderer;
         try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false, powerPreference: 'high-performance' }); }
         catch (error) { console.warn('3D background unavailable; keeping CSS background active', error); return; }
+        // iPad WebKit can retain transparent tiles from a fixed canvas when
+        // other fixed layers are scrolling. An opaque, theme-matched clear
+        // color makes every tile deterministic while leaving the main galaxy
+        // and chapter compositor intact.
+        const touchClearColor = () => renderer.setClearColor(night ? 0x020409 : 0xf0f2f6, touchSurface ? 1 : 0);
+        touchClearColor();
         renderer.shadowMap.enabled = false;
         renderer.setPixelRatio(Math.min(devicePixelRatio || 1, quality.pixelRatio || 1.5, isMobile ? 1.5 : 1.75));
         renderer.setSize(innerWidth, innerHeight, false);
@@ -2792,6 +2819,7 @@
           companionRingMaterial.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
           companionCoreMaterial.needsUpdate = true;
           companionRingMaterial.needsUpdate = true;
+          touchClearColor();
           galaxyPoints.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
           galaxyPoints.material.needsUpdate = true;
           galaxyRings.forEach((ring, i) => {
@@ -3276,22 +3304,41 @@
             // transformed fixed section as a stale rectangular tile after a
             // touch-driven chapter change.
             section.style.opacity = '0';
-            section.style.transform = 'none';
+            section.style.transform = 'translate3d(-200vw, 0, 0)';
+            section.style.webkitTransform = 'translate3d(-200vw, 0, 0)';
             section.style.filter = 'none';
             if (stage) {
               stage.style.opacity = '0';
-              stage.style.transform = 'none';
-              stage.style.clipPath = 'none';
+              stage.style.transform = 'translate3d(-200vw, 0, 0)';
+              stage.style.webkitTransform = 'translate3d(-200vw, 0, 0)';
+              stage.style.clipPath = 'inset(100%)';
+              stage.style.webkitClipPath = 'inset(100%)';
               stage.style.willChange = 'auto';
+            }
+            if (touchDevice) {
+              // Make WebKit repaint the layer off-screen before removing it.
+              section.style.display = 'block';
+              void section.offsetHeight;
+              section.style.display = 'none';
             }
             return;
           }
           section.style.removeProperty('opacity');
           section.style.removeProperty('transform');
+          section.style.removeProperty('-webkit-transform');
           section.style.removeProperty('filter');
           stage.style.removeProperty('transform');
+          stage.style.removeProperty('-webkit-transform');
           stage.style.removeProperty('clip-path');
+          stage.style.removeProperty('-webkit-clip-path');
           stage.style.removeProperty('will-change');
+          if (touchDevice) {
+            // Keep iPad's 3D translate/opacity motion but avoid clip/filter
+            // tiles that WebKit may retain as a flashing rectangle.
+            stage.style.setProperty('clip-path', 'none');
+            stage.style.setProperty('-webkit-clip-path', 'none');
+            stage.style.setProperty('filter', 'none');
+          }
           const missing = 1 - amount;
           section.style.zIndex = amount > .5 ? '4' : '3';
           stage.style.setProperty('--chapter-reveal', amount.toFixed(4));
@@ -3344,13 +3391,21 @@
                 section.style.display = 'none';
                 section.style.pointerEvents = 'none';
                 section.style.opacity = '0';
-                section.style.transform = 'none';
+                section.style.transform = 'translate3d(-200vw, 0, 0)';
+                section.style.webkitTransform = 'translate3d(-200vw, 0, 0)';
                 section.style.filter = 'none';
                 const stage = section.firstElementChild;
                 stage?.style.setProperty('opacity', '0');
-                stage?.style.setProperty('transform', 'none');
-                stage?.style.setProperty('clip-path', 'none');
+                stage?.style.setProperty('transform', 'translate3d(-200vw, 0, 0)');
+                stage?.style.setProperty('-webkit-transform', 'translate3d(-200vw, 0, 0)');
+                stage?.style.setProperty('clip-path', 'inset(100%)');
+                stage?.style.setProperty('-webkit-clip-path', 'inset(100%)');
                 stage?.style.setProperty('will-change', 'auto');
+                if (touchDevice) {
+                  section.style.display = 'block';
+                  void section.offsetHeight;
+                  section.style.display = 'none';
+                }
               }
             });
             publish(value, current, local);
@@ -3405,11 +3460,14 @@
               section.style.zIndex = '';
               section.style.opacity = '';
               section.style.transform = '';
+              section.style.webkitTransform = '';
               section.style.filter = '';
               const stage = section.firstElementChild;
               stage?.style.removeProperty('opacity');
               stage?.style.removeProperty('transform');
+              stage?.style.removeProperty('-webkit-transform');
               stage?.style.removeProperty('clip-path');
+              stage?.style.removeProperty('-webkit-clip-path');
               stage?.style.removeProperty('will-change');
             });
             if (flight) { target = clamp(scrollY / Math.max(1, root.scrollHeight - innerHeight)); display = target; }
