@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="public/theme.css?v=20261004-particle-transition-v2">
+  <link rel="stylesheet" href="public/theme.css?v=20261005-touch-scroll-v1">
   <script src="public/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
-  <script src="public/SceneDirector.js?v=20261004-particle-transition-v2"></script>
+  <script src="public/SceneDirector.js?v=20261005-touch-scroll-v1"></script>
     <title>算法社 · Algorithm Club</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="public/i18n-dict.js"></script>
@@ -43,6 +43,7 @@
         scroll-behavior: smooth;
         scroll-padding-top: 76px;
         scroll-snap-type: none;
+        touch-action: pan-y;
       }
       body {
         position: relative;
@@ -118,7 +119,13 @@
       #shaderField { position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; opacity: .52; }
       #chapterParticleCanvas { position: fixed; inset: 0; z-index: 5; display: none; width: 100%; height: 100%; pointer-events: none; opacity: .84; mix-blend-mode: screen; }
       body.chapter-flight #chapterParticleCanvas { display: block; }
-      @media (max-width: 900px), (prefers-reduced-motion: reduce) {
+      body.phone-device #chapterParticleCanvas { display: none !important; }
+      body.touch-device .pointer-glow { display: none !important; }
+      body.chapter-flight.touch-device .section-block { touch-action: none; }
+      body.chapter-flight.touch-device #gomoku { touch-action: pan-y; }
+      body.touch-device .section-block::before,
+      body.touch-device .section-block::after { animation: none !important; }
+      @media (max-width: 620px), (prefers-reduced-motion: reduce) {
         #chapterParticleCanvas { display: none !important; }
       }
       /* The background is a line/particle composition. Never allow browser
@@ -151,6 +158,23 @@
         background: radial-gradient(circle, rgba(0, 229, 255, 0.07), transparent 68%);
         pointer-events: none;
         transition: left 0.22s ease-out, top 0.22s ease-out;
+      }
+      /* Touch chapter navigation has one gesture owner. Phones are switched
+         to native document flow by the script; iPad keeps the chapter stage. */
+      @media (pointer: coarse), (hover: none) {
+        .pointer-glow { display: none !important; }
+        .ambient-grid { animation: none !important; }
+        body.chapter-flight { overscroll-behavior: none; }
+        body.chapter-flight .section-block { touch-action: none; }
+        body.chapter-flight #gomoku { touch-action: pan-y; }
+        html[data-theme="light"] #home::before,
+        html[data-theme="light"] #gomoku::before,
+        html[data-theme="light"] #members::before,
+        html[data-theme="light"] #projects::before,
+        html[data-theme="light"] #activities::after,
+        html[data-theme="light"] #join::after {
+          animation: none !important;
+        }
       }
       @keyframes drift-orb {
         from { transform: translate3d(-2%, -1%, 0) scale(1); }
@@ -1383,6 +1407,23 @@
         .info-card::before, .project-card::before, .member-card::before, .join-card::before, .timeline-item::before, .flagship-card::before { display: none; }
         .info-card:hover, .project-card:hover, .member-card:hover, .join-card:hover, .timeline-item:hover, .flagship-card:hover { transform: none; }
       }
+      /* Re-assert the fixed chapter geometry after the small-screen rules so
+         iPad portrait widths keep the same full-frame composition as desktop. */
+      @media (min-height: 650px) {
+        body.chapter-flight .section-block {
+          min-height: 0;
+          height: calc(100svh - 78px);
+          padding: 20px var(--pad-x) 36px;
+        }
+        body.chapter-flight .section-block.hero-block {
+          height: calc(100svh - 78px);
+          min-height: 0;
+          padding-top: 8px;
+        }
+        body.chapter-flight.touch-device .section-block:not(#gomoku) {
+          overflow: hidden;
+        }
+      }
     </style>
   <script src="public/service-prompts.js"></script><script src="public/service-gate.js"></script></head>
   <body>
@@ -2314,7 +2355,7 @@
         const plane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2, low ? 8 : 32, low ? 8 : 32), material); scene.add(plane);
         let scrollProgress = 0, scrollTarget = 0, frame; const pointer = new THREE.Vector2(.5, .5), pointerTarget = new THREE.Vector2(.5, .5);
         const updateScroll = () => { const max = document.documentElement.scrollHeight - innerHeight; scrollTarget = max > 0 ? THREE.MathUtils.clamp(scrollY / max, 0, 1) : 0; }; addEventListener('scroll', updateScroll, { passive: true }); updateScroll();
-        addEventListener('pointermove', e => pointerTarget.set(e.clientX / innerWidth, 1 - e.clientY / innerHeight), { passive: true }); addEventListener('club:themechange', e => { uniforms.uTheme.value = e.detail?.theme === 'dark' ? 1 : 0; }); uniforms.uTheme.value = document.documentElement.dataset.theme === 'dark' ? 1 : 0;
+        addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; pointerTarget.set(e.clientX / innerWidth, 1 - e.clientY / innerHeight); }, { passive: true }); addEventListener('club:themechange', e => { uniforms.uTheme.value = e.detail?.theme === 'dark' ? 1 : 0; }); uniforms.uTheme.value = document.documentElement.dataset.theme === 'dark' ? 1 : 0;
         const clock = new THREE.Clock(); let fieldTime = 0;
         const draw = () => {
           if (document.hidden) return;
@@ -2697,7 +2738,7 @@
         // Postprocessing is intentionally disabled. The scene already uses
         // additive line materials; bloom doubled fill cost and caused drops.
         const setPostprocessing = async () => {};
-        addEventListener('pointermove', e => { pointerTarget.set((e.clientX / innerWidth - .5) * 2, -(e.clientY / innerHeight - .5) * 2); pointerInside = true; }, { passive: true });
+        addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; pointerTarget.set((e.clientX / innerWidth - .5) * 2, -(e.clientY / innerHeight - .5) * 2); pointerInside = true; }, { passive: true });
         addEventListener('pointerleave', () => { pointerTarget.set(0, 0); pointerInside = false; }, { passive: true });
         const scroll = () => { const raw = getComputedStyle(document.documentElement).getPropertyValue('--scroll-progress'); const cssProgress = Number.parseFloat(raw); const max = document.documentElement.scrollHeight - innerHeight; target = Number.isFinite(cssProgress) && (raw || '').trim() ? THREE.MathUtils.clamp(cssProgress, 0, 1) : max > 0 ? THREE.MathUtils.clamp(window.scrollY / max, 0, 1) : 0; };
         addEventListener('club:sceneprogress', event => { if (Number.isFinite(event.detail?.progress)) target = THREE.MathUtils.clamp(event.detail.progress, 0, 1); });
@@ -2918,7 +2959,13 @@
           while (section.firstChild) stage.appendChild(section.firstChild);
           section.appendChild(stage);
         });
-        const flightQuery = matchMedia('(min-width: 901px) and (min-height: 650px)');
+        // iPadOS can report a desktop-sized CSS viewport in landscape. It keeps
+        // the fixed chapter compositor, while phone-sized touch devices use
+        // normal document flow and native vertical scrolling.
+        const userAgent = String(navigator.userAgent || '').toLowerCase();
+        const touchDevice = navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+        const phoneDevice = /iphone|ipod|android.*mobile|windows phone/.test(userAgent) || (touchDevice && innerWidth < 620);
+        const flightQuery = matchMedia('(min-height: 650px)');
         const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
         // Desktop-only outline particles: old chapter frames collapse into
         // the star-chart core while the next chapter is reconstructed from it.
@@ -2926,7 +2973,7 @@
           const canvas = document.getElementById('chapterParticleCanvas');
           const context = canvas?.getContext('2d');
           const particles = [];
-          const enabled = Boolean(canvas && context && flightQuery.matches && !reducedMotion);
+          const enabled = Boolean(canvas && context && flightQuery.matches && !phoneDevice && !reducedMotion);
           let frame = 0, width = innerWidth, height = innerHeight, color = '#60a5fa';
           const clamp = value => Math.max(0, Math.min(1, value));
           const easeOut = value => 1 - Math.pow(1 - clamp(value), 3);
@@ -3111,6 +3158,27 @@
         addEventListener('resize', () => particleConductor.resize(), { passive: true });
         let flight = false, target = 0, display = 0, lastFrame = performance.now(), frame = 0, lastActive = -1;
         let snapTimer = 0, snapLock = false, direction = 1, lastTarget = 0;
+        let wheelUnlockTimer = 0;
+        let touchGesture = null;
+        let pointerGesture = null;
+        const chapterAtDisplay = () => Math.max(0, Math.min(zones.length - 1, Math.round(display * (zones.length - 1))));
+        const snapToChapter = (chapter, flowDirection) => {
+          const currentChapter = chapterAtDisplay();
+          const nextChapter = Math.max(0, Math.min(zones.length - 1, chapter));
+          if (nextChapter === currentChapter) return false;
+          const currentMax = Math.max(1, root.scrollHeight - innerHeight);
+          direction = flowDirection ?? (nextChapter > currentChapter ? 1 : -1);
+          if (particleConductor.enabled) {
+            particleConductor.transition(sections[currentChapter], sections[nextChapter], direction);
+          }
+          snapLock = true;
+          clearTimeout(wheelUnlockTimer);
+          // The chapter RAF provides the visual easing. Jump the scroll track
+          // immediately so native momentum cannot animate a second time.
+          scrollTo({ top: nextChapter / (zones.length - 1) * currentMax, behavior: 'auto' });
+          wheelUnlockTimer = setTimeout(() => { snapLock = false; }, touchDevice ? 680 : 900);
+          return true;
+        };
         const routeWheelToChapters = event => {
           if (!flight || Math.abs(event.deltaY) < 1) return;
           const flagship = sections.find(section => section?.id === 'gomoku');
@@ -3122,22 +3190,18 @@
             if (maxInnerScroll > 1 && innerCanConsume) return;
           }
           event.preventDefault();
-          if (snapLock) return;
-          const currentMax = Math.max(1, root.scrollHeight - innerHeight);
-          const currentChapter = Math.round(display * (zones.length - 1));
-          const nextChapter = Math.max(0, Math.min(zones.length - 1, currentChapter + (event.deltaY > 0 ? 1 : -1)));
-          if (nextChapter !== currentChapter && particleConductor.enabled) {
-            // Start the particle dissolve at the same moment the chapter
-            // spring starts, so the incoming frame is drawn during its reveal.
-            particleConductor.transition(sections[currentChapter], sections[nextChapter], nextChapter > currentChapter ? 1 : -1);
+          // Trackpads emit a stream of inertial wheel events. Keep one lock
+          // for the whole stream, extending it on every event, so one swipe
+          // can never advance several chapters.
+          if (snapLock) {
+            clearTimeout(wheelUnlockTimer);
+            wheelUnlockTimer = setTimeout(() => { snapLock = false; }, touchDevice ? 680 : 900);
+            return;
           }
-          const snapTop = nextChapter / (zones.length - 1) * currentMax;
-          direction = nextChapter >= currentChapter ? 1 : -1;
-          snapLock = true;
-          scrollTo({ top: snapTop, behavior: 'smooth' });
-          setTimeout(() => { snapLock = false; }, 820);
+          const currentChapter = chapterAtDisplay();
+          snapToChapter(currentChapter + (event.deltaY > 0 ? 1 : -1));
         };
-        sections.forEach(section => section?.addEventListener('wheel', routeWheelToChapters, { passive: false }));
+        addEventListener('wheel', routeWheelToChapters, { passive: false, capture: true });
         const clamp = value => Math.max(0, Math.min(1, value));
         const ease = value => { const t = clamp(value); return t * t * (3 - 2 * t); };
         const setChapter = (section, amount, entering) => {
@@ -3238,9 +3302,12 @@
           }
         };
         const configure = () => {
-          const next = flightQuery.matches;
+          const next = flightQuery.matches && !phoneDevice;
           if (next !== flight) {
-            flight = next; document.body.classList.toggle('chapter-flight', flight);
+            flight = next;
+            document.body.classList.toggle('chapter-flight', flight);
+            document.body.classList.toggle('touch-device', touchDevice);
+            document.body.classList.toggle('phone-device', phoneDevice);
             sections.forEach(section => { if (section) { section.style.visibility = ''; section.style.pointerEvents = ''; section.style.zIndex = ''; section.firstElementChild?.style.removeProperty('opacity'); } });
             if (flight) { target = clamp(scrollY / Math.max(1, root.scrollHeight - innerHeight)); display = target; }
           }
@@ -3250,17 +3317,71 @@
           const at = zones.findIndex(zone => zone.id === id || (id === 'proof' && zone.id === 'home'));
           if (at < 0) return false;
           if (flight) {
-            const fromChapter = Math.max(0, Math.min(zones.length - 1, Math.round(display * (zones.length - 1))));
-            if (fromChapter !== at && particleConductor.enabled) {
-              particleConductor.transition(sections[fromChapter], sections[at], at > fromChapter ? 1 : -1);
+            if (at !== chapterAtDisplay()) {
+              const currentMax = Math.max(1, root.scrollHeight - innerHeight);
+              direction = at > chapterAtDisplay() ? 1 : -1;
+              if (particleConductor.enabled) particleConductor.transition(sections[chapterAtDisplay()], sections[at], direction);
+              snapLock = true;
+              clearTimeout(wheelUnlockTimer);
+              scrollTo({ top: (at / (zones.length - 1)) * currentMax, behavior: 'smooth' });
+              wheelUnlockTimer = setTimeout(() => { snapLock = false; }, 980);
             }
-            snapLock = true;
-            scrollTo({ top: (at / (zones.length - 1)) * Math.max(1, root.scrollHeight - innerHeight), behavior: 'smooth' });
-            setTimeout(() => { snapLock = false; }, 650);
             if (id === 'proof') sections[0].scrollTop = document.getElementById('proof').offsetTop;
           } else document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
           return true;
         };
+        const getTouchPoint = event => event.touches?.[0] || event.changedTouches?.[0] || null;
+        const onTouchStart = event => {
+          if (!flight || !touchDevice || event.touches.length !== 1) return;
+          const point = getTouchPoint(event);
+          if (!point) return;
+          touchGesture = {
+            x: point.clientX,
+            y: point.clientY,
+            target: event.target,
+            innerConsumed: false,
+            startedAt: performance.now()
+          };
+        };
+        const onTouchMove = event => {
+          if (!flight || !touchGesture || event.touches.length !== 1) return;
+          const point = getTouchPoint(event);
+          if (!point) return;
+          const dy = touchGesture.y - point.clientY;
+          if (Math.abs(dy) < 10) return;
+          const flagship = sections.find(section => section?.id === 'gomoku');
+          if (flagship && touchGesture.target instanceof Node && flagship.contains(touchGesture.target)) {
+            const maxInnerScroll = Math.max(0, flagship.scrollHeight - flagship.clientHeight);
+            const atTop = flagship.scrollTop <= 1;
+            const atBottom = flagship.scrollTop >= maxInnerScroll - 1;
+            const innerCanConsume = dy > 0 ? !atBottom : !atTop;
+            if (maxInnerScroll > 1 && innerCanConsume) {
+              touchGesture.innerConsumed = true;
+              return;
+            }
+          }
+          // This gesture belongs to chapter navigation. Prevent Safari's
+          // document momentum from running alongside the chapter spring.
+          event.preventDefault();
+        };
+        const onTouchEnd = event => {
+          if (!flight || !touchGesture) return;
+          const point = getTouchPoint(event);
+          const gesture = touchGesture;
+          touchGesture = null;
+          if (!point || gesture.innerConsumed) return;
+          if (gesture.target instanceof Element && gesture.target.closest('a,button,input,textarea,select')) return;
+          const dy = gesture.y - point.clientY;
+          const dx = point.clientX - gesture.x;
+          if (Math.abs(dy) < 36 || Math.abs(dy) < Math.abs(dx) * 1.12) return;
+          event.preventDefault();
+          if (snapLock) return;
+          snapToChapter(chapterAtDisplay() + (dy > 0 ? 1 : -1), dy > 0 ? 1 : -1);
+        };
+        addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
+        addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
+        addEventListener('touchend', onTouchEnd, { passive: false, capture: true });
+        addEventListener('touchcancel', () => { touchGesture = null; }, { passive: true, capture: true });
         addEventListener('scroll', update, { passive: true }); addEventListener('resize', configure, { passive: true });
         flightQuery.addEventListener('change', configure);
         configure();

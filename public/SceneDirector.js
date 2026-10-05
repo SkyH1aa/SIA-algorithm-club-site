@@ -450,7 +450,7 @@
       };
       addEventListener('scroll', this.onScroll, { passive: true });
       this.onScroll();
-      addEventListener('pointermove', e => this.targetMouse.set(e.clientX / innerWidth, 1 - e.clientY / innerHeight), { passive: true });
+      addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; this.targetMouse.set(e.clientX / innerWidth, 1 - e.clientY / innerHeight); }, { passive: true });
       addEventListener('club:sceneprogress', e => {
         const detail = e.detail || {};
         if (Number.isFinite(detail.progress)) this.targetProgress = detail.progress;

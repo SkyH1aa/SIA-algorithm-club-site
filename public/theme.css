@@ -289,6 +289,25 @@ html[data-theme="light"] #join::after {
   }
 }
 
+/* iPadOS and other touch browsers use native momentum scrolling. Keep the
+ * decorative corner fields static and quiet there so a composited gradient
+ * cannot appear as a flashing block while the viewport is moving. */
+@media (pointer: coarse), (hover: none) {
+  html[data-theme="light"] #home::before,
+  html[data-theme="light"] #gomoku::before,
+  html[data-theme="light"] #members::before,
+  html[data-theme="light"] #projects::before,
+  html[data-theme="light"] #activities::after,
+  html[data-theme="light"] #join::after {
+    animation: none !important;
+    transform: none !important;
+  }
+  html[data-theme="light"] #activities::after,
+  html[data-theme="light"] #join::after {
+    display: none !important;
+  }
+}
+
 /* 顶栏：细分割线，去掉橙红横杠 */
 html[data-theme="light"] .topbar,
 html[data-theme="light"] header.topbar {
