@@ -2446,7 +2446,7 @@
         // Avoid WebGL/FBO initialization on touch devices. iPad WebKit can
         // retain transparent GPU tiles during scrolling, causing high-frequency
         // flashing rectangles even when the canvas is otherwise cleared.
-        if (!canvas || !window.THREE || reduced || touchSurface) return;
+        if (!canvas || !window.THREE || reduced) return;
         const THREE = window.THREE;
         const quality = window.useQualityTier?.() || { tier: 'medium', particleCount: 4096, pixelRatio: 1.25, postprocessing: false };
         const isMobile = quality.tier === 'low' || matchMedia('(max-width: 700px)').matches;
