@@ -2582,6 +2582,34 @@
         paintGalaxy();
         const galaxyPoints = new THREE.Points(galaxyGeometry, new THREE.PointsMaterial({ size: isMobile ? .035 : .05, vertexColors: true, transparent: true, opacity: .68, depthWrite: false, blending: night ? THREE.AdditiveBlending : THREE.NormalBlending, sizeAttenuation: true }));
         galaxyGroup.add(galaxyPoints);
+        // Low-cost depth layers: two static point clouds add parallax and
+        // spatial separation without a post-processing pass or per-particle
+        // animation. They are deliberately capped for touch/mobile devices.
+        const depthGroup = new THREE.Group();
+        const constrained = isMobile || touchSurface;
+        const makeDepthLayer = (count, spreadX, spreadY, zMin, zMax, size, opacity, seed) => {
+          const positions = new Float32Array(count * 3);
+          let state = seed >>> 0;
+          const random = () => { state = (state * 1664525 + 1013904223) >>> 0; return state / 4294967296; };
+          for (let i = 0; i < count; i++) {
+            const k = i * 3;
+            positions[k] = (random() - .5) * spreadX;
+            positions[k + 1] = (random() - .5) * spreadY;
+            positions[k + 2] = zMin + random() * (zMax - zMin);
+          }
+          const geometry = new THREE.BufferGeometry();
+          geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+          const material = new THREE.PointsMaterial({ size, color: scenePalette.galaxyAlt, transparent: true, opacity, depthWrite: false, blending: night ? THREE.AdditiveBlending : THREE.NormalBlending, sizeAttenuation: true });
+          const points = new THREE.Points(geometry, material);
+          depthGroup.add(points);
+          return { points, material };
+        };
+        const depthLayers = [
+          makeDepthLayer(constrained ? 140 : quality.tier === 'medium' ? 360 : 620, 13, 8, -8, -2, constrained ? .018 : .024, constrained ? .16 : .22, 0x51f2a31),
+          makeDepthLayer(constrained ? 46 : quality.tier === 'medium' ? 110 : 180, 9, 5.5, -2, 1.5, constrained ? .028 : .038, constrained ? .22 : .30, 0x9e3779b9)
+        ];
+        depthGroup.renderOrder = -2;
+        scene.add(depthGroup);
         // Companion galaxies are explicit low-poly residents of the same
         // scene layer, so the multi-galaxy structure remains visible above
         // the fullscreen field without adding a second renderer or scene.
@@ -2800,9 +2828,19 @@
         const stream = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: isMobile ? .028 : .038, color: scenePalette.stream, transparent: true, opacity: .82, blending: THREE.AdditiveBlending, depthWrite: false }));
         const streamCount = isMobile ? 40 : 90; const streamData = Array.from({ length: streamCount }, (_, i) => ({ edge: i % Math.max(1, nodes.length - 1), t: Math.random() }));
         stream.geometry.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(streamCount * 3), 3)); group.add(stream);
+        const signalCount = constrained ? 10 : quality.tier === 'medium' ? 18 : 28;
+        const signalPositions = new Float32Array(signalCount * 3);
+        const signalData = Array.from({ length: signalCount }, (_, i) => ({ edge: i % Math.max(1, nodes.length - 1), t: (i * .137) % 1, speed: .24 + (i % 4) * .035 }));
+        const signal = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: constrained ? .045 : .06, color: scenePalette.beam, transparent: true, opacity: .78, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true }));
+        signal.geometry.setAttribute('position', new THREE.BufferAttribute(signalPositions, 3));
+        group.add(signal);
+        const enableGpuParticles = false;
         let gpuParticleSystem = null;
         const loadGpuParticles = async () => {
-          if (touchSurface || !quality || !THREE.WebGLRenderTarget) return;
+          // The CPU-updated signal layer below supplies visible data flow at
+          // a fraction of the cost. Skip the optional FBO simulation, which
+          // is unreliable on several WebGL drivers and competes for frame time.
+          if (!enableGpuParticles || touchSurface || !quality || !THREE.WebGLRenderTarget) return;
           try {
             const mod = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/misc/GPUComputationRenderer.js');
             const GPUComputationRenderer = mod.GPUComputationRenderer;
@@ -2883,6 +2921,14 @@
           orbitDots.forEach(({ mesh }) => mesh.material.color.set(scenePalette.galaxy));
           stream.material.color.set(scenePalette.stream);
           dust.material.color.set(scenePalette.galaxyAlt);
+          depthLayers.forEach(layer => {
+            layer.material.color.set(scenePalette.galaxyAlt);
+            layer.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
+            layer.material.needsUpdate = true;
+          });
+          signal.material.color.set(scenePalette.beam);
+          signal.material.blending = night ? THREE.AdditiveBlending : THREE.NormalBlending;
+          signal.material.needsUpdate = true;
           companionCoreMaterial.color.set(scenePalette.galaxyAlt);
           companionRingMaterial.color.set(scenePalette.ringAlt);
           companionCoreMaterial.opacity = night ? .48 : .82;
@@ -3021,6 +3067,19 @@
           const p = lines.geometry.attributes.position.array; nodes.forEach((v, i) => { const j = (i + 1) % nodes.length; const w = nodes[j]; const k = i * 6; const depthWave = Math.sin(time * (.65 + chapterFlow * .4) + i * .8) * .08; p[k] = v.x; p[k + 1] = v.y; p[k + 2] = v.z + depthWave; const blend = Math.min(1, progress * 2.8); p[k + 3] = THREE.MathUtils.lerp(v.x, w.x, blend); p[k + 4] = THREE.MathUtils.lerp(v.y, w.y, blend); p[k + 5] = THREE.MathUtils.lerp(v.z + depthWave, w.z, blend); }); lines.geometry.attributes.position.needsUpdate = true; lines.material.opacity = (.08 + progress * .55) * (.72 + chapterDensity * .38);
           const dp = dust.geometry.attributes.position.array; dustData.forEach((d, i) => { d.angle += d.speed * delta * 2.0 * (1 + progress); const r = d.radius - progress * .28; const k = i * 3; dp[k] = Math.cos(d.angle) * r + pointer.x * .09; dp[k + 1] = d.y + Math.sin(time * .18 + d.phase) * .06 + pointer.y * .06; dp[k + 2] = Math.sin(d.angle) * r; }); dust.geometry.attributes.position.needsUpdate = true; dust.material.color.set(scenePalette.galaxyAlt);
           const sp = stream.geometry.attributes.position.array; streamData.forEach((s, i) => { const a = nodes[s.edge], b = nodes[(s.edge + 1) % nodes.length]; s.t = (s.t + delta * (.15 + progress * .48)) % 1; const k = i * 3; sp[k] = THREE.MathUtils.lerp(a.x, b.x, s.t); sp[k + 1] = THREE.MathUtils.lerp(a.y, b.y, s.t); sp[k + 2] = THREE.MathUtils.lerp(a.z, b.z, s.t); }); stream.geometry.attributes.position.needsUpdate = true; stream.material.opacity = progress > .55 ? .68 : progress * 1.05;
+          const sig = signal.geometry.attributes.position.array;
+          signalData.forEach((s, i) => {
+            const a = nodes[s.edge], b = nodes[(s.edge + 1) % nodes.length];
+            s.t = (s.t + delta * s.speed * (.72 + chapterFlow * .55)) % 1;
+            const k = i * 3;
+            sig[k] = THREE.MathUtils.lerp(a.x, b.x, s.t);
+            sig[k + 1] = THREE.MathUtils.lerp(a.y, b.y, s.t);
+            sig[k + 2] = THREE.MathUtils.lerp(a.z, b.z, s.t);
+          });
+          signal.geometry.attributes.position.needsUpdate = true;
+          signal.material.opacity = (.42 + chapterPulse * .34) * (progress > .08 ? 1 : progress * 8);
+          depthGroup.rotation.y = THREE.MathUtils.damp(depthGroup.rotation.y, pointer.x * .018 + time * .0015, 1.8, delta);
+          depthGroup.rotation.x = THREE.MathUtils.damp(depthGroup.rotation.x, pointer.y * .012, 1.8, delta);
           if (gpuParticleSystem) {
             const system = gpuParticleSystem; const uniforms = system.velocityVariable.material.uniforms;
             uniforms.uTime.value = time; uniforms.uDelta.value = delta; uniforms.uProgress.value = progress; uniforms.uMouse.value.set(pointer.x * 2.2, pointer.y * 1.5, 0); uniforms.uNight.value = night ? 1 : 0; system.positionVariable.material.uniforms.uDelta.value = delta;
@@ -3030,7 +3089,10 @@
             // frame, leaving headroom for scrolling and DOM interaction.
             if (gpuFrameSkip++ % 2 === 0) { system.gpu.compute(); system.particleMaterial.uniforms.texturePosition.value = system.gpu.getCurrentRenderTarget(system.positionVariable).texture; }
           }
-          if (delta > .026) slowFrames++; else slowFrames = Math.max(0, slowFrames - 2); if (slowFrames > 18 && bloomPass) bloomPass.enabled = false;
+          if (delta > .026) slowFrames++; else slowFrames = Math.max(0, slowFrames - 2);
+          if (slowFrames > 14) { depthGroup.visible = false; signal.visible = false; }
+          else if (slowFrames < 3) { depthGroup.visible = true; signal.visible = true; }
+          if (slowFrames > 18 && bloomPass) bloomPass.enabled = false;
           const cameraZ = 6.7 + Math.sin(progress * Math.PI * 12) * .12 + Math.abs(pointer.y) * .06;
           const cameraX = pointer.x * .12 + (night ? .08 : -.08);
           const cameraY = pointer.y * .08;
