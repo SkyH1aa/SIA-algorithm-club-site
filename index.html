@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="public/theme.css?v=20261005-ipad-compositor-v5">
+  <link rel="stylesheet" href="public/theme.css?v=20261005-ipad-compositor-v6">
   <script src="public/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
-  <script src="public/SceneDirector.js?v=20261005-ipad-compositor-v5"></script>
+  <script src="public/SceneDirector.js?v=20261005-ipad-compositor-v6"></script>
     <title>算法社 · Algorithm Club</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="public/i18n-dict.js"></script>
@@ -172,6 +172,10 @@
            screen field is disabled because WebKit can composite its animated
            transparent quad as a flashing corner tile during touch scrolling. */
         #shaderField { display: none !important; }
+        /* Legacy ambient particle canvas is a separate 2D animation from the
+           Algorithm Galaxy. Its transparent backing tile is the source of the
+           iPad-only flashing color rectangle, so remove it on touch surfaces. */
+        #particleCanvas { display: none !important; opacity: 0 !important; }
         /* Keep each iPad chapter in its own bounded paint surface. This
            prevents a fixed, transformed panel from being retained as a
            stale WebKit tile after the chapter leaves the viewport. */
@@ -208,6 +212,7 @@
           animation: none !important;
         }
         .ambient-grid { animation: none !important; }
+        .ambient-background { display: none !important; }
         body.chapter-flight { overscroll-behavior: none; }
         body.chapter-flight .section-block { touch-action: none; }
         body.chapter-flight #gomoku { touch-action: pan-y; }
@@ -2307,7 +2312,8 @@
 
       const canvas = document.getElementById('particleCanvas');
       const particleQuery = window.matchMedia('(prefers-reduced-motion: no-preference)');
-      if (canvas && particleQuery.matches) {
+      const particleTouchSurface = navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+      if (canvas && particleQuery.matches && !particleTouchSurface) {
         const context = canvas.getContext('2d');
         let particles = [];
         let animationFrame;
@@ -2458,7 +2464,10 @@
         // other fixed layers are scrolling. An opaque, theme-matched clear
         // color makes every tile deterministic while leaving the main galaxy
         // and chapter compositor intact.
-        const touchClearColor = () => renderer.setClearColor(night ? 0x020409 : 0xf0f2f6, touchSurface ? 1 : 0);
+        const touchClearColor = () => {
+          renderer.setClearColor(night ? 0x020409 : 0xf0f2f6, touchSurface ? 1 : 0);
+          renderer.autoClear = true;
+        };
         touchClearColor();
         renderer.shadowMap.enabled = false;
         renderer.setPixelRatio(Math.min(devicePixelRatio || 1, quality.pixelRatio || 1.5, isMobile ? 1.5 : 1.75));
