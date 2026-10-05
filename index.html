@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="public/theme.css?v=20261005-touch-scroll-v1">
+  <link rel="stylesheet" href="public/theme.css?v=20261005-touch-scroll-v2">
   <script src="public/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
-  <script src="public/SceneDirector.js?v=20261005-touch-scroll-v1"></script>
+  <script src="public/SceneDirector.js?v=20261005-touch-scroll-v2"></script>
     <title>算法社 · Algorithm Club</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="public/i18n-dict.js"></script>
@@ -163,6 +163,10 @@
          to native document flow by the script; iPad keeps the chapter stage. */
       @media (pointer: coarse), (hover: none) {
         .pointer-glow { display: none !important; }
+        /* iPad keeps the main Algorithm Galaxy canvas. The secondary full
+           screen field is disabled because WebKit can composite its animated
+           transparent quad as a flashing corner tile during touch scrolling. */
+        #shaderField { display: none !important; }
         .ambient-grid { animation: none !important; }
         body.chapter-flight { overscroll-behavior: none; }
         body.chapter-flight .section-block { touch-action: none; }
@@ -2315,9 +2319,10 @@
       };
 
       (() => {
-        if (window.SceneDirector?.mount) { window.SceneDirector.mount(document.getElementById('shaderField')); return; }
+        const touchSurface = navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+        if (window.SceneDirector?.mount && !touchSurface) { window.SceneDirector.mount(document.getElementById('shaderField')); return; }
         const canvas = document.getElementById('shaderField');
-        if (!canvas || !window.THREE || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        if (touchSurface || !canvas || !window.THREE || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
         const THREE = window.THREE;
         let renderer;
         try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false, powerPreference: 'high-performance' }); } catch (error) { return; }
