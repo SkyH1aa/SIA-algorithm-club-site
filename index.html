@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="public/theme.css?v=20261005-touch-scroll-v2">
+  <link rel="stylesheet" href="public/theme.css?v=20261005-touch-scroll-v3">
   <script src="public/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
-  <script src="public/SceneDirector.js?v=20261005-touch-scroll-v2"></script>
+  <script src="public/SceneDirector.js?v=20261005-touch-scroll-v3"></script>
     <title>算法社 · Algorithm Club</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="public/i18n-dict.js"></script>
@@ -118,7 +118,7 @@
       #algorithmScene { position: fixed; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; opacity: .82; mix-blend-mode: normal; }
       #shaderField { position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; opacity: .52; }
       #chapterParticleCanvas { position: fixed; inset: 0; z-index: 5; display: none; width: 100%; height: 100%; pointer-events: none; opacity: .84; mix-blend-mode: screen; }
-      body.chapter-flight #chapterParticleCanvas { display: block; }
+      body.chapter-flight:not(.touch-device) #chapterParticleCanvas { display: block; }
       body.phone-device #chapterParticleCanvas { display: none !important; }
       body.touch-device .pointer-glow { display: none !important; }
       body.chapter-flight.touch-device .section-block { touch-action: none; }
@@ -163,6 +163,11 @@
          to native document flow by the script; iPad keeps the chapter stage. */
       @media (pointer: coarse), (hover: none) {
         .pointer-glow { display: none !important; }
+        /* The chapter outline compositor is a desktop-only transition layer.
+           WebKit on iPad can retain additive canvas tiles while a touch
+           gesture is composited; keep the main 3D scene, but remove this
+           optional overlay from the touch compositor entirely. */
+        #chapterParticleCanvas { display: none !important; opacity: 0 !important; }
         /* iPad keeps the main Algorithm Galaxy canvas. The secondary full
            screen field is disabled because WebKit can composite its animated
            transparent quad as a flashing corner tile during touch scrolling. */
@@ -2935,6 +2940,12 @@
           cameraLookX = THREE.MathUtils.damp(cameraLookX, pointer.x * .04, 4.8, delta);
           cameraLookY = THREE.MathUtils.damp(cameraLookY, pointer.y * .03, 4.8, delta);
           camera.lookAt(cameraLookX, cameraLookY, 0);
+          // Reset the full drawing surface before every frame. This is
+          // intentionally explicit because iPad WebKit can preserve a
+          // partial transparent canvas tile after fixed-layer scrolling.
+          renderer.setScissorTest(false);
+          renderer.setViewport(0, 0, renderer.domElement.width, renderer.domElement.height);
+          renderer.clear(true, true, true);
           renderer.render(scene, camera);
           } catch (error) {
             if (gpuParticleSystem) { console.warn('Disabling failed GPU particle layer', error); scene.remove(gpuParticleSystem.particleMesh); gpuParticleSystem = null; }
@@ -2972,13 +2983,17 @@
         const phoneDevice = /iphone|ipod|android.*mobile|windows phone/.test(userAgent) || (touchDevice && innerWidth < 620);
         const flightQuery = matchMedia('(min-height: 650px)');
         const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        // Mark the surface before the first compositor paint so optional
+        // desktop-only canvases never flash on a touch device.
+        document.body.classList.toggle('touch-device', touchDevice);
+        document.body.classList.toggle('phone-device', phoneDevice);
         // Desktop-only outline particles: old chapter frames collapse into
         // the star-chart core while the next chapter is reconstructed from it.
         const particleConductor = (() => {
           const canvas = document.getElementById('chapterParticleCanvas');
           const context = canvas?.getContext('2d');
           const particles = [];
-          const enabled = Boolean(canvas && context && flightQuery.matches && !phoneDevice && !reducedMotion);
+          const enabled = Boolean(canvas && context && flightQuery.matches && !touchDevice && !phoneDevice && !reducedMotion);
           let frame = 0, width = innerWidth, height = innerHeight, color = '#60a5fa';
           const clamp = value => Math.max(0, Math.min(1, value));
           const easeOut = value => 1 - Math.pow(1 - clamp(value), 3);
@@ -3078,7 +3093,13 @@
           const animate = now => {
             frame = 0;
             if (!enabled || !particles.length) return;
-            context.clearRect(0, 0, width, height);
+            // Clear in backing-store coordinates. This also avoids a stale
+            // additive tile on WebKit when the canvas has a scaled transform.
+            context.save();
+            context.globalCompositeOperation = 'copy';
+            context.setTransform(1, 0, 0, 1, 0, 0);
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.restore();
             let active = 0;
             context.fillStyle = color;
             const core = particleConductor.core;
@@ -3164,9 +3185,22 @@
         let flight = false, target = 0, display = 0, lastFrame = performance.now(), frame = 0, lastActive = -1;
         let snapTimer = 0, snapLock = false, direction = 1, lastTarget = 0;
         let wheelUnlockTimer = 0;
+        let wheelLastAt = 0;
+        let wheelAccum = 0;
         let touchGesture = null;
         let pointerGesture = null;
         const chapterAtDisplay = () => Math.max(0, Math.min(zones.length - 1, Math.round(display * (zones.length - 1))));
+        const wheelQuietWindow = touchDevice ? 150 : 165;
+        const wheelBurstGap = touchDevice ? 180 : 195;
+        const releaseWheelLock = () => {
+          const elapsed = performance.now() - wheelLastAt;
+          if (wheelLastAt && elapsed < wheelQuietWindow) {
+            wheelUnlockTimer = setTimeout(releaseWheelLock, wheelQuietWindow - elapsed);
+            return;
+          }
+          snapLock = false;
+          wheelAccum = 0;
+        };
         const snapToChapter = (chapter, flowDirection) => {
           const currentChapter = chapterAtDisplay();
           const nextChapter = Math.max(0, Math.min(zones.length - 1, chapter));
@@ -3181,30 +3215,51 @@
           // The chapter RAF provides the visual easing. Jump the scroll track
           // immediately so native momentum cannot animate a second time.
           scrollTo({ top: nextChapter / (zones.length - 1) * currentMax, behavior: 'auto' });
-          wheelUnlockTimer = setTimeout(() => { snapLock = false; }, touchDevice ? 680 : 900);
+          clearTimeout(wheelUnlockTimer);
+          // Do not hold a desktop trackpad for the entire visual transition:
+          // a second deliberate swipe can start once its first burst is over.
+          wheelUnlockTimer = setTimeout(releaseWheelLock, touchDevice ? 360 : 300);
           return true;
         };
         const routeWheelToChapters = event => {
-          if (!flight || Math.abs(event.deltaY) < 1) return;
+          if (!flight || event.ctrlKey) return;
+          const modeScale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
+          const delta = Number(event.deltaY) * modeScale;
+          if (!Number.isFinite(delta) || Math.abs(delta) < .25) return;
           const flagship = sections.find(section => section?.id === 'gomoku');
           if (flagship && event.target instanceof Node && flagship.contains(event.target)) {
             const maxInnerScroll = Math.max(0, flagship.scrollHeight - flagship.clientHeight);
             const atTop = flagship.scrollTop <= 1;
             const atBottom = flagship.scrollTop >= maxInnerScroll - 1;
-            const innerCanConsume = event.deltaY > 0 ? !atBottom : !atTop;
+            const innerCanConsume = delta > 0 ? !atBottom : !atTop;
             if (maxInnerScroll > 1 && innerCanConsume) return;
           }
           event.preventDefault();
-          // Trackpads emit a stream of inertial wheel events. Keep one lock
-          // for the whole stream, extending it on every event, so one swipe
-          // can never advance several chapters.
+          const now = performance.now();
+          // A slow two-finger drag can have wider gaps than the final
+          // momentum tail. Keep the accumulator through that gap, while the
+          // burst gap below controls when a new gesture starts.
+          if (now - wheelLastAt > 360) wheelAccum = 0;
+          const gap = wheelLastAt ? now - wheelLastAt : Infinity;
+          wheelLastAt = now;
+          // Trackpads emit many small inertial events. While a chapter is
+          // moving, consume the same burst without extending the transition
+          // lock. A clear quiet gap is a new gesture and is allowed through.
           if (snapLock) {
+            if (gap < wheelBurstGap) return;
+            snapLock = false;
             clearTimeout(wheelUnlockTimer);
-            wheelUnlockTimer = setTimeout(() => { snapLock = false; }, touchDevice ? 680 : 900);
-            return;
+            wheelAccum = 0;
           }
+          wheelAccum += delta;
+          // A small threshold makes slow two-finger drags reliable while a
+          // mouse wheel's larger delta still responds on its first event.
+          const threshold = Math.max(3, Math.min(20, innerHeight * .008));
+          if (Math.abs(wheelAccum) < threshold) return;
+          const wheelDirection = wheelAccum > 0 ? 1 : -1;
+          wheelAccum = 0;
           const currentChapter = chapterAtDisplay();
-          snapToChapter(currentChapter + (event.deltaY > 0 ? 1 : -1));
+          snapToChapter(currentChapter + wheelDirection, wheelDirection);
         };
         addEventListener('wheel', routeWheelToChapters, { passive: false, capture: true });
         const clamp = value => Math.max(0, Math.min(1, value));
@@ -3214,8 +3269,29 @@
           const stage = section.firstElementChild;
           const visible = amount > .002;
           section.style.visibility = visible ? 'visible' : 'hidden';
+          section.style.display = visible ? 'block' : 'none';
           section.style.pointerEvents = amount > .7 ? 'auto' : 'none';
-          if (!visible) return;
+          if (!visible) {
+            // Fully retire the composited layer. WebKit may otherwise keep a
+            // transformed fixed section as a stale rectangular tile after a
+            // touch-driven chapter change.
+            section.style.opacity = '0';
+            section.style.transform = 'none';
+            section.style.filter = 'none';
+            if (stage) {
+              stage.style.opacity = '0';
+              stage.style.transform = 'none';
+              stage.style.clipPath = 'none';
+              stage.style.willChange = 'auto';
+            }
+            return;
+          }
+          section.style.removeProperty('opacity');
+          section.style.removeProperty('transform');
+          section.style.removeProperty('filter');
+          stage.style.removeProperty('transform');
+          stage.style.removeProperty('clip-path');
+          stage.style.removeProperty('will-change');
           const missing = 1 - amount;
           section.style.zIndex = amount > .5 ? '4' : '3';
           stage.style.setProperty('--chapter-reveal', amount.toFixed(4));
@@ -3265,8 +3341,16 @@
                 setChapter(section, ease(amount), incoming);
               } else {
                 section.style.visibility = 'hidden';
+                section.style.display = 'none';
                 section.style.pointerEvents = 'none';
-                section.firstElementChild?.style.setProperty('opacity', '0');
+                section.style.opacity = '0';
+                section.style.transform = 'none';
+                section.style.filter = 'none';
+                const stage = section.firstElementChild;
+                stage?.style.setProperty('opacity', '0');
+                stage?.style.setProperty('transform', 'none');
+                stage?.style.setProperty('clip-path', 'none');
+                stage?.style.setProperty('will-change', 'auto');
               }
             });
             publish(value, current, local);
@@ -3313,7 +3397,21 @@
             document.body.classList.toggle('chapter-flight', flight);
             document.body.classList.toggle('touch-device', touchDevice);
             document.body.classList.toggle('phone-device', phoneDevice);
-            sections.forEach(section => { if (section) { section.style.visibility = ''; section.style.pointerEvents = ''; section.style.zIndex = ''; section.firstElementChild?.style.removeProperty('opacity'); } });
+            sections.forEach(section => {
+              if (!section) return;
+              section.style.visibility = '';
+              section.style.display = '';
+              section.style.pointerEvents = '';
+              section.style.zIndex = '';
+              section.style.opacity = '';
+              section.style.transform = '';
+              section.style.filter = '';
+              const stage = section.firstElementChild;
+              stage?.style.removeProperty('opacity');
+              stage?.style.removeProperty('transform');
+              stage?.style.removeProperty('clip-path');
+              stage?.style.removeProperty('will-change');
+            });
             if (flight) { target = clamp(scrollY / Math.max(1, root.scrollHeight - innerHeight)); display = target; }
           }
           update();
