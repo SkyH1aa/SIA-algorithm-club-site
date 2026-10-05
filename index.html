@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="public/theme.css?v=20261005-ipad-compositor-v4">
+  <link rel="stylesheet" href="public/theme.css?v=20261005-ipad-compositor-v5">
   <script src="public/theme.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
-  <script src="public/SceneDirector.js?v=20261005-ipad-compositor-v4"></script>
+  <script src="public/SceneDirector.js?v=20261005-ipad-compositor-v5"></script>
     <title>算法社 · Algorithm Club</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="public/i18n-dict.js"></script>
@@ -180,6 +180,21 @@
           backface-visibility: hidden;
           contain: paint;
           isolation: isolate;
+          /* WebKit can preserve a transformed fixed subtree as a stale
+             rectangle. iPad keeps the galaxy motion, while DOM chapters use
+             opacity/visibility composition only. */
+          transform: none !important;
+          -webkit-transform: none !important;
+          filter: none !important;
+          will-change: auto !important;
+        }
+        body.chapter-flight.touch-device .chapter-stage {
+          transform: none !important;
+          -webkit-transform: none !important;
+          clip-path: none !important;
+          -webkit-clip-path: none !important;
+          filter: none !important;
+          will-change: auto !important;
         }
         body.touch-device .hero-panel,
         body.touch-device .hero-panel::before,
@@ -3315,12 +3330,6 @@
               stage.style.webkitClipPath = 'inset(100%)';
               stage.style.willChange = 'auto';
             }
-            if (touchDevice) {
-              // Make WebKit repaint the layer off-screen before removing it.
-              section.style.display = 'block';
-              void section.offsetHeight;
-              section.style.display = 'none';
-            }
             return;
           }
           section.style.removeProperty('opacity');
@@ -3401,11 +3410,6 @@
                 stage?.style.setProperty('clip-path', 'inset(100%)');
                 stage?.style.setProperty('-webkit-clip-path', 'inset(100%)');
                 stage?.style.setProperty('will-change', 'auto');
-                if (touchDevice) {
-                  section.style.display = 'block';
-                  void section.offsetHeight;
-                  section.style.display = 'none';
-                }
               }
             });
             publish(value, current, local);
