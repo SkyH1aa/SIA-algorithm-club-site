@@ -2374,6 +2374,10 @@
         const ua = String(navigator.userAgent || '').toLowerCase();
         const isIPadOS = /ipad/.test(ua) || (navigator.maxTouchPoints > 1 && /macintosh/.test(ua));
         const touchSurface = isIPadOS;
+        // The main algorithmScene supplies the iPad 3D experience. The
+        // secondary fullscreen shader is intentionally desktop-only because
+        // WebKit can flash retained transparent tiles while scrolling.
+        if (touchSurface) return;
         if (window.SceneDirector?.mount && !touchSurface) { window.SceneDirector.mount(document.getElementById('shaderField')); return; }
         const canvas = document.getElementById('shaderField');
         if (touchSurface || !canvas || !window.THREE || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -2438,7 +2442,7 @@
         const canvas = document.getElementById('algorithmScene');
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const ua = String(navigator.userAgent || '').toLowerCase();
-        const touchSurface = false;
+        const touchSurface = /ipad|iphone|ipod/.test(ua) || (navigator.maxTouchPoints > 1 && /macintosh/.test(ua));
         // Avoid WebGL/FBO initialization on touch devices. iPad WebKit can
         // retain transparent GPU tiles during scrolling, causing high-frequency
         // flashing rectangles even when the canvas is otherwise cleared.
@@ -2766,7 +2770,7 @@
         stream.geometry.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(streamCount * 3), 3)); group.add(stream);
         let gpuParticleSystem = null;
         const loadGpuParticles = async () => {
-          if (!quality || !THREE.WebGLRenderTarget) return;
+          if (touchSurface || !quality || !THREE.WebGLRenderTarget) return;
           try {
             const mod = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/misc/GPUComputationRenderer.js');
             const GPUComputationRenderer = mod.GPUComputationRenderer;
