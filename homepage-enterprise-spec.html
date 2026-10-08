@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>算法社首页 · 企业级深色霓虹设计规格</title>
+  <style>
+    :root {
+      --bg: #020409;
+      --bg-elevated: #070b16;
+      --panel: rgba(8, 13, 30, 0.88);
+      --cyan: #00e5ff;
+      --violet: #7c4dff;
+      --pink: #ff5fc8;
+      --gold: #ffd166;
+      --white: #f6fbff;
+      --text: #c8d4e2;
+      --muted: #8fa3b8;
+      --line: rgba(115, 221, 255, 0.18);
+      --ok: #3dd68c;
+      --warn: #ffd166;
+      --danger: #ff6b8a;
+      --radius: 14px;
+      --shadow: 0 24px 80px rgba(0, 229, 255, 0.08);
+      --mono: ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace;
+      --sans: "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      color: var(--white);
+      background:
+        radial-gradient(ellipse 60% 40% at 12% 0%, rgba(0, 229, 255, 0.12), transparent 55%),
+        radial-gradient(ellipse 50% 35% at 90% 8%, rgba(124, 77, 255, 0.16), transparent 60%),
+        linear-gradient(180deg, #020409 0%, #050917 50%, #020409 100%);
+      line-height: 1.7;
+    }
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 20px 80px; }
+    .hero-banner {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 36px 32px;
+      background:
+        linear-gradient(135deg, rgba(0, 229, 255, 0.08), transparent 42%),
+        linear-gradient(225deg, rgba(124, 77, 255, 0.12), transparent 48%),
+        var(--panel);
+      box-shadow: var(--shadow);
+      margin-bottom: 28px;
+    }
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--cyan);
+      font: 12px/1 var(--mono);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.2;
+      letter-spacing: 0.02em;
+    }
+    h1 span { color: var(--cyan); text-shadow: 0 0 28px rgba(0, 229, 255, 0.35); }
+    .lede { margin: 0; max-width: 720px; color: var(--text); font-size: 16px; }
+    .meta-row {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px;
+    }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(0, 229, 255, 0.06);
+      color: var(--text);
+      font-size: 13px;
+    }
+    .chip strong { color: var(--cyan); font-weight: 700; }
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin: 0 0 28px;
+    }
+    .toc a {
+      display: block;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(8, 13, 30, 0.7);
+      color: var(--white);
+      text-decoration: none;
+      font-size: 14px;
+      transition: border-color .2s, background .2s;
+    }
+    .toc a:hover { border-color: rgba(0, 229, 255, 0.45); background: rgba(0, 229, 255, 0.08); text-decoration: none; }
+    .toc a small { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
+    section.spec {
+      margin-bottom: 22px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(7, 11, 22, 0.82);
+      overflow: hidden;
+    }
+    section.spec > header {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(90deg, rgba(0, 229, 255, 0.06), transparent 55%);
+    }
+    section.spec > header h2 {
+      margin: 0;
+      font-size: 20px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    section.spec > header h2 .num {
+      display: inline-grid; place-items: center;
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 229, 255, 0.4);
+      color: var(--cyan);
+      font: 700 12px/1 var(--mono);
+      background: rgba(0, 229, 255, 0.08);
+    }
+    section.spec > header p { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+    .body { padding: 20px 22px 24px; }
+    h3 { margin: 22px 0 10px; font-size: 16px; color: var(--white); }
+    h3:first-child { margin-top: 0; }
+    p, li { color: var(--text); font-size: 15px; }
+    ul, ol { padding-left: 1.2em; margin: 8px 0 0; }
+    li + li { margin-top: 6px; }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 16px;
+      background: rgba(0, 0, 0, 0.22);
+    }
+    .card h4 { margin: 0 0 8px; font-size: 14px; color: var(--cyan); }
+    .card p, .card li { margin: 0; font-size: 13px; line-height: 1.65; }
+    .keep { border-color: rgba(61, 214, 140, 0.35); }
+    .change { border-color: rgba(0, 229, 255, 0.35); }
+    .cut { border-color: rgba(255, 107, 138, 0.35); }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font: 11px/1.6 var(--mono);
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+    .tag-keep { background: rgba(61, 214, 140, 0.12); color: var(--ok); }
+    .tag-change { background: rgba(0, 229, 255, 0.12); color: var(--cyan); }
+    .tag-cut { background: rgba(255, 107, 138, 0.12); color: var(--danger); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: rgba(0, 229, 255, 0.07);
+      color: var(--cyan);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    td code, p code, li code {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--gold);
+      background: rgba(255, 209, 102, 0.08);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .swatch-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+    .swatch {
+      width: 132px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+    }
+    .swatch .color { height: 42px; }
+    .swatch .label { padding: 8px 10px; font-size: 12px; color: var(--text); }
+    .swatch .label strong { display: block; color: var(--white); font-size: 12px; }
+    .flow {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .flow-item {
+      display: grid;
+      grid-template-columns: 56px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.18);
+    }
+    .flow-item .step {
+      color: var(--cyan);
+      font: 700 18px/1 var(--mono);
+    }
+    .flow-item strong { display: block; color: var(--white); margin-bottom: 4px; }
+    .flow-item span { color: var(--muted); font-size: 13px; }
+    .wire {
+      border: 1px dashed rgba(0, 229, 255, 0.28);
+      border-radius: 14px;
+      padding: 16px;
+      background:
+        linear-gradient(180deg, rgba(0, 229, 255, 0.04), transparent),
+        rgba(0, 0, 0, 0.25);
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      white-space: pre-wrap;
+      line-height: 1.55;
+    }
+    .decision {
+      margin-top: 18px;
+      padding: 16px 18px;
+      border-radius: 14px;
+      border: 1px solid rgba(0, 229, 255, 0.35);
+      background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(124, 77, 255, 0.08));
+    }
+    .decision h3 { margin: 0 0 8px; color: var(--cyan); }
+    .checklist { list-style: none; padding: 0; margin: 10px 0 0; }
+    .checklist li {
+      position: relative;
+      padding: 8px 10px 8px 34px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      margin-top: 8px;
+      background: rgba(0, 0, 0, 0.18);
+    }
+    .checklist li::before {
+      content: "□";
+      position: absolute;
+      left: 12px;
+      top: 8px;
+      color: var(--cyan);
+      font-family: var(--mono);
+    }
+    .footer-note {
+      margin-top: 28px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+    @media (max-width: 820px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .hero-banner { padding: 24px 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero-banner">
+      <p class="eyebrow">DESIGN SPEC · V1 · 待确认</p>
+      <h1>算法社首页 · <span>企业级深色霓虹</span> 设计规格</h1>
+      <p class="lede">
+        延用现有深色霓虹基因（<code>#020409</code> / cyan / violet），把首页从「好看的社团页」升级为「一眼能读出实力的企业级技术官网」。
+        本规格只覆盖首页外观与信息架构；功能页保持功能性，暂不做视觉大改。
+      </p>
+      <div class="meta-row">
+        <span class="chip"><strong>风格</strong> Kinetic Minimal × 克制企业霓虹</span>
+        <span class="chip"><strong>范围</strong> 仅首页 index.html</span>
+        <span class="chip"><strong>主 CTA</strong> 立即加入</span>
+        <span class="chip"><strong>状态</strong> 等待你确认后落地</span>
+      </div>
+    </div>
+
+    <nav class="toc" aria-label="规格目录">
+      <a href="#s1">01 诊断与目标<small>为什么第一眼还行随后没感觉</small></a>
+      <a href="#s2">02 设计原则<small>企业级 ≠ 更多霓虹</small></a>
+      <a href="#s3">03 Token 升级<small>颜色 / 字体 / 间距 / 光效</small></a>
+      <a href="#s4">04 论证顺序<small>新首页区块叙事链</small></a>
+      <a href="#s5">05 分区规格<small>首屏到页脚逐段定义</small></a>
+      <a href="#s6">06 动效与边界<small>克制规则 + 明确不做</small></a>
+      <a href="#s7">07 确认清单<small>你拍板后我开始改代码</small></a>
+    </nav>
+
+    <section class="spec" id="s1">
+      <header>
+        <h2><span class="num">01</span> 诊断与目标</h2>
+        <p>对应当前首页：霓虹氛围够，但证明链弱、CTA 竞争、区块节奏同质。</p>
+      </header>
+      <div class="body">
+        <div class="grid-3">
+          <div class="card cut">
+            <span class="tag tag-cut">问题 P0</span>
+            <h4>首屏三 CTA 互相抢戏</h4>
+            <p>「立即加入 / 算法实验室 / APPMonitor」并列，第一动作不清晰，企业站应只有一个主行动。</p>
+          </div>
+          <div class="card cut">
+            <span class="tag tag-cut">问题 P0</span>
+            <h4>证明靠后、氛围靠前</h4>
+            <p>访客先看到装饰与口号，五子棋 AI、实验室、管理系统等实力证据出现太晚。</p>
+          </div>
+          <div class="card cut">
+            <span class="tag tag-cut">问题 P1</span>
+            <h4>卡片节奏重复</h4>
+            <p>方向四卡、成员卡、项目卡视觉语法接近，滚动后「还行但没感觉」。</p>
+          </div>
+        </div>
+
+        <h3>改造目标（验收标准）</h3>
+        <ul>
+          <li>5 秒内能回答：这是谁、做什么、为什么值得加入/信任。</li>
+          <li>全页只有一个主 CTA 文案：<strong>立即加入</strong>；其余为次级入口。</li>
+          <li>保留深色霓虹识别度，但光效服务于层级，不抢内容。</li>
+          <li>滚动节奏有「呼吸」：密—疏—密，避免连续同构卡片墙。</li>
+          <li>功能页链接保留可达，但不在首页视觉上抢戏。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="spec" id="s2">
+      <header>
+        <h2><span class="num">02</span> 设计原则</h2>
+        <p>一句话：用排版、证明与产品叙事建立高级感；霓虹只做品牌签名。</p>
+      </header>
+      <div class="body">
+        <div class="grid-2">
+          <div class="card keep">
+            <span class="tag tag-keep">保留</span>
+            <h4>深色霓虹基因</h4>
+            <ul>
+              <li>背景 <code>#020409</code> 与 cyan/violet 主辅色</li>
+              <li>细网格 + 极淡光晕环境层（降不透明度）</li>
+              <li>品牌方标、等宽数字/标签气质</li>
+              <li>现有数据驱动区块（成员 / 项目 / 活动 JSON）</li>
+            </ul>
+          </div>
+          <div class="card change">
+            <span class="tag tag-change">升级</span>
+            <h4>企业级表达</h4>
+            <ul>
+              <li>更强字重层级与字距控制</li>
+              <li>证明带前置（数字 / 能力 / 作品）</li>
+              <li>区块形态差异化（轨道、矩阵、时间线、双栏）</li>
+              <li>光效预算：每屏最多 1 个高光焦点</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>风格定位</h3>
+        <p>
+          <strong>Kinetic Minimal × 克制企业霓虹</strong>：像顶尖开发者工具官网——深色、精准、有实时产品感；
+          不是赛博朋克海报墙，也不是普通社团招新页。
+        </p>
+
+        <h3>信息架构原则</h3>
+        <ol>
+          <li><strong>Claim</strong>：我们是谁 / 交付什么价值</li>
+          <li><strong>Proof</strong>：用真实能力与作品证明</li>
+          <li><strong>Mechanism</strong>：训练体系与产品矩阵怎么运转</li>
+          <li><strong>People &amp; Momentum</strong>：谁在做、正在发生什么</li>
+          <li><strong>Close</strong>：加入路径清晰、低摩擦</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="spec" id="s3">
+      <header>
+        <h2><span class="num">03</span> Design Token 升级</h2>
+        <p>不换色系，只收紧用途与对比；让 cyan 专属于「可交互 / 关键数字」。</p>
+      </header>
+      <div class="body">
+        <h3>色彩角色锁定</h3>
+        <div class="swatch-row">
+          <div class="swatch"><div class="color" style="background:#020409"></div><div class="label"><strong>BG</strong>#020409 主背景</div></div>
+          <div class="swatch"><div class="color" style="background:#070b16"></div><div class="label"><strong>Surface</strong>#070b16 抬升面</div></div>
+          <div class="swatch"><div class="color" style="background:#00e5ff"></div><div class="label"><strong>Cyan</strong>主交互 / 数字</div></div>
+          <div class="swatch"><div class="color" style="background:#7c4dff"></div><div class="label"><strong>Violet</strong>次强调 / 阶段</div></div>
+          <div class="swatch"><div class="color" style="background:#f6fbff"></div><div class="label"><strong>White</strong>标题</div></div>
+          <div class="swatch"><div class="color" style="background:#8fa3b8"></div><div class="label"><strong>Muted</strong>辅助说明</div></div>
+        </div>
+        <ul>
+          <li><strong>Cyan</strong>：按钮主色、关键数字、焦点边框、活动态。正文不用大面积 cyan。</li>
+          <li><strong>Violet</strong>：阶段轨道、次级高亮、渐变边，不与 cyan 同时抢同一焦点。</li>
+          <li><strong>Pink / Gold</strong>：仅作稀缺点缀（状态标签、里程碑），首页不超过 2 处。</li>
+          <li>面板边框统一 <code>rgba(115,221,255,0.14~0.22)</code>；阴影降到「几乎看不见的深度」。</li>
+        </ul>
+
+        <h3>字体与字阶</h3>
+        <table>
+          <thead>
+            <tr><th>角色</th><th>规格</th><th>用途</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Display</td><td>40–56 / 800 / 紧字距</td><td>首屏主标题「算法社」</td></tr>
+            <tr><td>H2</td><td>28–34 / 700</td><td>各区块标题</td></tr>
+            <tr><td>H3</td><td>18–20 / 700</td><td>卡片 / 能力名</td></tr>
+            <tr><td>Body</td><td>15–16 / 400 / 1.75</td><td>说明文案，行宽 ≤ 36em</td></tr>
+            <tr><td>Mono Label</td><td>11–12 / 600 / 0.12em</td><td>eyebrow、阶段号、数据注记</td></tr>
+            <tr><td>Metric</td><td>28–36 / 800 / mono</td><td>证明带数字</td></tr>
+          </tbody>
+        </table>
+        <p>中文继续系统黑体栈；英文/数字标签用等宽，形成「工程精密感」，而不是换一套花哨展示字体。</p>
+
+        <h3>间距与容器</h3>
+        <ul>
+          <li>内容最大宽 <code>1200px</code>；左右 <code>clamp(18px, 5vw, 72px)</code> 保持现状手感。</li>
+          <li>区块垂直节奏改为：首屏满视口 → 证明带紧凑（短）→ 能力/矩阵中等 → 成员/项目疏 → 加入收束。</li>
+          <li><strong>取消强制每屏 <code>100vh + scroll-snap</code></strong>：企业站应允许自然滚动；仅首屏与加入区保留较强停顿感。</li>
+          <li>圆角统一：控件 10 / 卡片 14 / 大面板 18；避免又圆又霓虹的「玩具感」。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="spec" id="s4">
+      <header>
+        <h2><span class="num">04</span> 首页论证顺序</h2>
+        <p>把现有区块重排为「说服链」，而不是功能目录平铺。</p>
+      </header>
+      <div class="body">
+        <div class="flow">
+          <div class="flow-item"><div class="step">01</div><div><strong>Topbar</strong><span>品牌 + 精简导航 + 单一入口感；功能链接收入「社团功能」或次级。</span></div></div>
+          <div class="flow-item"><div class="step">02</div><div><strong>Hero 主张</strong><span>一句话价值 + 一个主 CTA + 右侧「实力面板」（阶段/能力摘要），去掉三 CTA 并列。</span></div></div>
+          <div class="flow-item"><div class="step">03</div><div><strong>实力证明带</strong><span>横条指标：8 代 AI / 7 大实验室 / 管理系统 / 开源部署等真实数字，紧贴首屏下方。</span></div></div>
+          <div class="flow-item"><div class="step">04</div><div><strong>能力矩阵</strong><span>原 direction 四卡升级为非对称矩阵（竞赛 / AI / 工程 / 教学），其中一项可突出深链。</span></div></div>
+          <div class="flow-item"><div class="step">05</div><div><strong>旗舰作品</strong><span>五子棋 AI + 算法实验室双旗舰，产品叙事优先于普通项目列表。</span></div></div>
+          <div class="flow-item"><div class="step">06</div><div><strong>成员与项目</strong><span>保留数据驱动，但视觉降噪：成员强调角色，项目强调状态标签。</span></div></div>
+          <div class="flow-item"><div class="step">07</div><div><strong>动态与路线</strong><span>活动时间线 + 三阶段路线合并为「进展」叙事，避免两套时间语言打架。</span></div></div>
+          <div class="flow-item"><div class="step">08</div><div><strong>加入收束</strong><span>主 CTA 再现 + 二维码 + 三个方向说明；页脚极简企业信息。</span></div></div>
+        </div>
+
+        <h3>与现状映射</h3>
+        <table>
+          <thead><tr><th>现区块</th><th>新角色</th><th>动作</th></tr></thead>
+          <tbody>
+            <tr><td>Hero 三 CTA + 三阶段面板</td><td>Hero 主张 + 实力面板</td><td>改结构 / 保文案内核</td></tr>
+            <tr><td>direction 四卡</td><td>能力矩阵</td><td>改布局与层级</td></tr>
+            <tr><td>members / projects</td><td>团队与沉淀</td><td>视觉降噪，逻辑保留</td></tr>
+            <tr><td>activities</td><td>进展时间线</td><td>并入证明链后段</td></tr>
+            <tr><td>gomoku 独立大段</td><td>旗舰作品之一</td><td>前移，与实验室并列</td></tr>
+            <tr><td>join</td><td>最终收束</td><td>强化单一主 CTA</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="spec" id="s5">
+      <header>
+        <h2><span class="num">05</span> 分区详细规格</h2>
+        <p>以下为落地时的「忠实执行说明书」。确认后按此改 <code>index.html</code>。</p>
+      </header>
+      <div class="body">
+        <h3>A. Topbar</h3>
+        <div class="grid-2">
+          <div class="card change">
+            <span class="tag tag-change">结构</span>
+            <h4>桌面</h4>
+            <ul>
+              <li>左：品牌标 + 中英名</li>
+              <li>中：首页锚点精简为 首页 / 实力 / 作品 / 成员 / 加入</li>
+              <li>右：个人中心（次级）+ 登录态身份条</li>
+              <li>管理员入口继续权限显隐，不进主视觉</li>
+            </ul>
+          </div>
+          <div class="card keep">
+            <span class="tag tag-keep">视觉</span>
+            <h4>克制玻璃</h4>
+            <ul>
+              <li>半透明深底 + 轻 blur</li>
+              <li>底边 1px cyan 线，无大光晕</li>
+              <li>Hover 仅边框/字色变化</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>B. Hero（第一屏）</h3>
+        <div class="wire">[TOPBAR]
+┌──────────────────────────────┬─────────────────────────┐
+│  ALGORITHM CLUB              │  01 官网已上线           │
+│  算法社                      │  02 五子棋+管理系统      │
+│  新哲文院·科创未来            │  03 投入社团正常使用     │
+│                              │                         │
+│  一句话主张（更锋利）         │  能力摘要 / 阶段轨道     │
+│  支持句 2 行内                │  （原三阶段面板升级）    │
+│                              │                         │
+│  [立即加入]  进入实验室 →     │                         │
+│  （APPMonitor 降为面板内链）  │                         │
+│                              │                         │
+│  8代AI · 7实验室 · 开源部署   │                         │
+└──────────────────────────────┴─────────────────────────┘</div>
+        <ul>
+          <li><strong>主标题</strong>：保留「算法社」大字 + 英文副标；去掉或弱化装饰性 eyebrow 抢戏（若保留，仅作 mono 标签）。</li>
+          <li><strong>主张文案建议方向</strong>（可微调，确认时定稿）：强调「把算法训练做成可运行的产品与系统」，而非泛泛「研究与实践」。</li>
+          <li><strong>主按钮</strong>：实心 cyan「立即加入」；<strong>次按钮</strong>：幽灵描边「进入算法实验室」。</li>
+          <li><strong>APPMonitor</strong>：移入右侧面板或证明带的文字链，不再与主 CTA 并列。</li>
+          <li>右侧面板：三阶段改为垂直轨道（01/02/03），当前阶段轻微 violet 高亮；可附 1 条产品深链。</li>
+        </ul>
+
+        <h3>C. 实力证明带（新增紧凑带）</h3>
+        <p>紧贴 Hero 下方，高度约 88–120px，四格指标横滑/网格：</p>
+        <div class="grid-2">
+          <div class="card"><h4>建议指标</h4><p>8 代五子棋 AI 迭代 · 7 大算法实验室 · 全套社团管理系统 · GitHub Pages 开源部署</p></div>
+          <div class="card"><h4>视觉</h4><p>大号 mono 数字 + 小号说明；无卡片阴影堆叠；仅顶部分割线与极淡底。</p></div>
+        </div>
+
+        <h3>D. 能力矩阵（原 direction）</h3>
+        <ul>
+          <li>布局改为 <strong>2×2 非对称</strong> 或「1 大 + 3 小」：教学资源或 AI 博弈可作大卡（带入口）。</li>
+          <li>去掉四卡完全同构的 icon-in-box；图标改为细线几何 + 等宽代号（CP / AI / WEB / DOC）。</li>
+          <li>每卡：短标题 + 一行结果导向描述 + 可选深链；不要四段同样长度的散文。</li>
+        </ul>
+
+        <h3>E. 旗舰作品（gomoku + lab 前移合并）</h3>
+        <ul>
+          <li>左文右预览：五子棋棋盘预览保留，文案强调「已接入 / 可挑战 / 有排行榜」。</li>
+          <li>算法实验室用「七入口缩略」或能力标签云，而不是再开一套大卡栅格。</li>
+          <li>此区是首页情绪高峰：允许一处受控光效（棋盘或实验室预览边缘）。</li>
+        </ul>
+
+        <h3>F. 成员 / 项目</h3>
+        <ul>
+          <li>成员：保留 JSON；卡片去厚重 glow，强调姓名/职务/方向；头像圆形或切角方形二选一，统一。</li>
+          <li>项目：状态用小标签（进行中 / 已开放 / 规划中）；首项可轻微强调，但不彩虹描边。</li>
+          <li>区块标题旁的 <code>public/data/*.json</code> 注记改为更隐蔽的 mono 角标，避免「开发者调试感」过强。</li>
+        </ul>
+
+        <h3>G. 活动与三阶段</h3>
+        <ul>
+          <li>活动时间线保留；列表更像企业 changelog：日期 mono + 标题 + 一行摘要。</li>
+          <li>三阶段若已在 Hero 面板出现，后文不再大段重复；可在活动区上方用一条「路线进度」细条呼应。</li>
+        </ul>
+
+        <h3>H. 加入我们 + Footer</h3>
+        <ul>
+          <li>双栏：左主张与三个方向（算法 / 前端 / 内容），右二维码卡。</li>
+          <li>主按钮再次出现，文案仍为「立即加入」。</li>
+          <li>Footer：品牌 · 归属单位 · 一句话技术栈；去掉堆砌式功能列表。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="spec" id="s6">
+      <header>
+        <h2><span class="num">06</span> 动效、响应式与明确不做</h2>
+        <p>高级感来自克制。动效只服务层级与状态，不服务「炫」。</p>
+      </header>
+      <div class="body">
+        <div class="grid-2">
+          <div class="card change">
+            <span class="tag tag-change">允许</span>
+            <h4>动效预算</h4>
+            <ul>
+              <li>首屏一次 stagger 淡入（&lt; 600ms）</li>
+              <li>滚动 reveal 仅 opacity + 8–12px 位移</li>
+              <li>按钮 hover：亮度/边框，无弹跳</li>
+              <li>环境光晕降速、降不透明度；尊重 <code>prefers-reduced-motion</code></li>
+            </ul>
+          </div>
+          <div class="card cut">
+            <span class="tag tag-cut">禁止</span>
+            <h4>明确不做</h4>
+            <ul>
+              <li>不再增加粒子密度或第二套网格</li>
+              <li>不做滚动劫持式强 snap 全页</li>
+              <li>不引入紫色渐变大字标题万能模板</li>
+              <li>不把功能页（商城/盘/积分）做成首页霓虹广告墙</li>
+              <li>不改后端逻辑；本次纯外观与信息架构</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>响应式</h3>
+        <ul>
+          <li>≥1200：双栏 Hero + 矩阵/旗舰完整形态</li>
+          <li>768–1199：Hero 上下堆叠，证明带 2×2</li>
+          <li>≤767：单列；导航抽屉；主 CTA 全宽；棋盘预览缩略但不删除</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="spec" id="s7">
+      <header>
+        <h2><span class="num">07</span> 确认清单</h2>
+        <p>你确认下列决策后，我将直接改 <code>index.html</code> 外观并做浏览器验收。</p>
+      </header>
+      <div class="body">
+        <ul class="checklist">
+          <li>风格：深色霓虹基因保留 + Kinetic Minimal 企业克制（不换亮色主题）</li>
+          <li>范围：只翻新首页；功能页暂不突出</li>
+          <li>主 CTA：全页统一「立即加入」；实验室为次级；APPMonitor 降级为面板/证明链入口</li>
+          <li>结构：Hero → 证明带 → 能力矩阵 → 旗舰作品 → 成员/项目 → 活动进展 → 加入</li>
+          <li>技术：取消全页强制 scroll-snap；保留 JSON 数据驱动与现有弹窗/鉴权逻辑</li>
+          <li>文案：三阶段目标沿用你已定稿的三句；Hero 主张句可在落地时按「产品化社团」略 sharpen</li>
+        </ul>
+
+        <div class="decision">
+          <h3>请你拍板</h3>
+          <p style="margin:0 0 8px;color:var(--text)">回复例如：</p>
+          <ul>
+            <li><strong>「确认，按此规格改首页」</strong> — 我立即开始改 <code>index.html</code></li>
+            <li><strong>「确认，但…」</strong> — 指出要改的条款（例如保留三 CTA / 不要动 snap / Hero 文案要用某句）</li>
+            <li><strong>「先改某一段」</strong> — 例如只先做 Hero + 证明带</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer-note">算法社 · Homepage Enterprise Spec V1 · 深色霓虹企业级外观 · 待确认后落地</p>
+  </div>
+</body>
+</html>

@@ -11,7 +11,7 @@
     <script src="i18n-dict.js"></script>
   <script src="i18n.js"></script>
 <style>
-    :root { color-scheme: dark; }
+    :root { color-scheme: dark; --board-highlight: #00e5ff; --board-highlight-shadow: rgba(0, 229, 255, .48); }
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; scroll-snap-type: y proximity; scroll-padding-top: 72px; }
     body {
@@ -75,6 +75,9 @@
       border: 2px solid #333;
       background-color: #deb887;
       position: relative;
+      margin: 0 auto;
+      justify-self: center;
+      max-width: 100%;
     }
     
     .cell {
@@ -111,6 +114,18 @@
       background-color: #fff;
       border-radius: 50%;
       border: 1px solid #000;
+    }
+
+    .cell.last-ai-move {
+      outline: 3px solid var(--board-highlight);
+      outline-offset: 1px;
+      box-shadow: 0 0 0 4px var(--board-highlight-shadow), 0 0 16px var(--board-highlight-shadow);
+      z-index: 2;
+    }
+
+    html[data-theme="light"] {
+      --board-highlight: #c2410c;
+      --board-highlight-shadow: rgba(194, 65, 12, .38);
     }
     
     .status {
@@ -365,6 +380,30 @@
         'FOUR_THREE': 500000000, // 活四活三 (分数再次提高)
         'DOUBLE_FOUR': 500000000, // 双四 (分数再次提高)
     };
+
+    // 从 17 局玩家胜局中提取的 AI 开局落点频率。
+    // 键为“AI 第几手:行,列”，只在 AI 前 4 手参与排序，战术必胜/必防始终优先。
+    const TRAINING_OPENING_PRIORS = new Map([
+      ['1:6,6', 8], ['1:5,6', 4], ['1:5,5', 2], ['1:7,8', 2], ['1:4,11', 1],
+      ['2:7,6', 6], ['2:6,5', 2], ['2:6,7', 3], ['2:3,6', 2], ['2:7,5', 1], ['2:8,9', 2],
+      ['3:5,7', 5], ['3:6,5', 2], ['3:6,4', 3], ['3:4,5', 1], ['3:5,10', 1], ['3:3,7', 2], ['3:7,4', 1],
+      ['4:5,6', 4], ['4:3,5', 3], ['4:4,6', 3], ['4:4,10', 1], ['4:5,4', 1], ['4:5,9', 1], ['4:3,7', 1], ['4:7,11', 1]
+    ]);
+
+    function getBoardMoveCount() {
+      let count = 0;
+      for (const row of board) for (const cell of row) if (cell !== 0) count++;
+      return count;
+    }
+
+    function getTrainingPrior(row, col, player, nextMoveNumber) {
+      if (player !== aiColor) return 0;
+      const aiMoveNumber = aiColor === 1
+        ? Math.ceil(nextMoveNumber / 2)
+        : Math.floor(nextMoveNumber / 2);
+      if (aiMoveNumber < 1 || aiMoveNumber > 4) return 0;
+      return TRAINING_OPENING_PRIORS.get(`${aiMoveNumber}:${row},${col}`) || 0;
+    }
 
     // 初始化棋盘
     function initBoard() {
@@ -637,6 +676,7 @@
     // 筛选最有潜力的落子点 (用于 Minimax 搜索)
     function getFilteredMoves(player = aiColor) {
         const allMoves = getPossibleMoves();
+        const nextMoveNumber = getBoardMoveCount() + 1;
         
         // 1. 检查是否有必胜/必防的棋
         for (const move of allMoves) {
@@ -674,7 +714,9 @@
             board[row][col] = 0;
             
             // 综合评分：进攻价值 + 防守价值 (进一步提高防守权重)
-            const score = aiScore * 1.5 + playerScore * 1.5; 
+            const trainingPrior = getTrainingPrior(row, col, player, nextMoveNumber);
+            // 训练频率是开局微调项，避免压过活四、冲四等硬战术。
+            const score = aiScore * 1.5 + playerScore * 1.5 + trainingPrior * 18000;
             
             return { ...move, score };
         });
@@ -887,11 +929,21 @@
     }
 
     // 放置棋子
+    let lastAiMove = null;
+
     function placePiece(row, col, player) {
       board[row][col] = player;
       gameMoves.push({ row, col, player });
       const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
       cell.classList.add(player === 1 ? 'black' : 'white');
+      if (player === aiColor) {
+        if (lastAiMove) {
+          const previous = document.querySelector(`.cell[data-row="${lastAiMove.row}"][data-col="${lastAiMove.col}"]`);
+          previous?.classList.remove('last-ai-move');
+        }
+        cell.classList.add('last-ai-move');
+        lastAiMove = { row, col };
+      }
     }
 
     // 检查棋盘是否已满（平局）
@@ -993,6 +1045,7 @@
       gameMoves = [];
       gameStartedAt = null;
       resultSubmitted = false;
+      lastAiMove = null;
       document.getElementById('result').textContent = '';
       transpositionTable.clear();
       initBoard();

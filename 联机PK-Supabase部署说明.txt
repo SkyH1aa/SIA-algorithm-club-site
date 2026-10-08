@@ -1,0 +1,136 @@
+《行于无垠》联机 PK 部署说明
+
+一、需要上传的文件
+
+GitHub Pages 的 public 文件夹中新增/更新：
+
+  public/platformer.html
+  public/platformer-pk.js
+
+Supabase 目录中新增：
+
+  supabase/platformer-pk-migration.sql
+  supabase/functions/platformer-pk/index.ts
+
+二、执行 Supabase 数据库迁移
+
+1. 打开 Supabase Dashboard。
+2. 选择项目 jgezpvmlnhycxslqbwcx。
+3. 左侧进入 SQL Editor，点击 New query。
+4. 确认已经执行过：
+   - supabase/platformer-schema.sql
+   - supabase/platformer-service-control-migration.sql
+5. 将 supabase/platformer-pk-migration.sql 全部复制到 SQL Editor。
+6. 点击 Run，等待执行完成。
+
+这个迁移会创建：
+  platformer_pk_rooms
+  platformer_pk_members
+  platformer_pk_matches
+  platformer_pk_coin_ledger
+
+不要只执行某一个函数片段。文件可以重复执行，Realtime 表注册部分已经做了重复保护。
+
+三、确认 Realtime
+
+进入 Supabase Dashboard：
+
+  Database -> Publications -> supabase_realtime
+
+确认以下表已加入：
+
+  platformer_pk_rooms
+  platformer_pk_members
+  platformer_pk_matches
+
+如果项目没有显示 supabase_realtime，先进入：
+
+  Project Settings -> Realtime
+
+确认 Realtime 服务已启用，然后重新执行 SQL 文件最后的部分。
+
+四、部署 Edge Function
+
+重要：这里要部署的是服务端 TypeScript 文件，不是浏览器文件。
+
+  正确：supabase/functions/platformer-pk/index.ts
+  错误：public/platformer-pk.js
+
+`public/platformer-pk.js` 会使用 document、window、canvas，只能随 GitHub Pages 发布。
+如果把它粘到 Edge Function，日志会出现 “document is not defined”，所有房间 RPC 都会失败。
+
+推荐在项目根目录打开终端，执行：
+
+  supabase login
+  supabase link --project-ref jgezpvmlnhycxslqbwcx
+  supabase functions deploy platformer-pk --no-verify-jwt
+
+函数文件位置必须是：
+
+  supabase/functions/platformer-pk/index.ts
+
+当前函数使用项目默认的 SUPABASE_URL 和 SUPABASE_SERVICE_ROLE_KEY，不要把 service role key 写入 HTML，也不要提交到 GitHub。
+
+Dashboard 中可以在：
+
+  Edge Functions -> platformer-pk -> Logs
+
+没有 Supabase CLI 时，在 Dashboard 的 Edge Functions 页面创建/打开
+`platformer-pk`，粘贴 `supabase/functions/platformer-pk/index.ts` 的完整内容后 Deploy。
+如果页面只支持 GitHub 部署，则把包含 `supabase/functions/platformer-pk/index.ts` 的仓库连接到项目，
+函数名仍必须是 `platformer-pk`，并在函数设置中关闭 JWT Verification（当前账号体系使用自建 session_token）。
+
+查看房间创建、加入、押注、结算请求的错误日志。
+
+五、前端发布
+
+1. 将 public/platformer.html 和 public/platformer-pk.js 一起提交到 GitHub。
+2. 确认两个文件位于同一个 public 目录中。
+3. GitHub Pages 发布后，访问：
+
+  https://你的用户名.github.io/仓库名/platformer.html
+
+4. 登录游戏后，主页右上角会出现“联机 PK”按钮。
+
+六、测试流程
+
+1. 使用两个浏览器窗口登录两个不同游戏账号。
+2. 第一个账号点击“联机 PK -> 创建房间”。
+3. 复制 8 位邀请码。
+4. 第二个账号输入邀请码并点击“加入房间”。
+5. 第二个账号点击“接受邀请”。
+6. 双方分别输入押注金额并点击“锁定押注”。
+7. 双方点击“准备”。
+8. 两边都会进入实时 PK 竞技场。
+9. 使用 A/D 移动，W 或空格跳跃，鼠标左键持续射击。
+10. 结束后双方提交结果，胜者获得双方押注总和。
+
+七、押注规则
+
+  0 金币表示不押注。
+  非零押注范围为 1 到 1000000 金币。
+  锁定押注时由服务端原子扣除金币。
+  开战前退出会退款。
+  双方都报告失败时视为平局并退款。
+  双方都报告胜利时进入 disputed 状态并退款，不会自动发奖。
+  对战开始后不能直接退出房间。
+
+八、重要安全说明
+
+联机 PK 的房间、押注、金币和结算都经过 SQL SECURITY DEFINER RPC；客户端不能直接修改这些表。
+
+第一版的移动和射击表现通过 Broadcast 传输，适合原型和小规模测试。正式上线前建议继续增加：
+
+  - Supabase Auth/JWT 身份桥接，让 Realtime 私有频道可以使用严格 RLS。
+  - 服务端事件序号、射击冷却和位置边界校验。
+  - 断线心跳与超时判负。
+  - 对战回放校验，避免客户端伪造胜负。
+  - 独立权威游戏中继服务器，避免高频物理逻辑完全依赖浏览器。
+
+九、出现问题时的排查位置
+
+  登录失败：Authentication 无关，先检查 platformer_login RPC。
+  邀请码失败：Database -> Logs -> Postgres Logs。
+  实时不更新：Database -> Publications、浏览器控制台和 Realtime 日志。
+  押注不到账：检查 platformer_pk_coin_ledger 和 platformer_users.coins。
+  结算失败：Edge Functions -> platformer-pk -> Logs，以及 platformer_pk_matches.status。

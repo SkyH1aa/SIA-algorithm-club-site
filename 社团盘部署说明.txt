@@ -1,0 +1,40 @@
+社团盘部署说明
+
+一、Supabase SQL
+1. 打开 Supabase 项目的 SQL Editor。
+2. 执行 supabase/club-drive-schema.sql。
+3. 在 Authentication > Providers > Email 中确认 Email provider 已启用。
+4. 打开 Authentication > Settings，在 Email provider 设置中关闭 Confirm email（不验证邮箱，注册后直接创建会话）。
+5. 当前使用“用户名映射邮箱”的低成本方案：网页会把用户名转换为 username@club.local，仅用于 Supabase Auth 内部识别，不会发送邮件。
+
+二、创建 Edge Function
+1. 使用 Supabase CLI 在项目目录部署 supabase/functions/club-drive/index.ts。
+2. 为函数配置以下 Secrets，不能写入网页、JSON 或 GitHub：
+   WEBDAV_BASE_URL=https://webdav.123pan.cn/webdav
+   WEBDAV_USERNAME=你的123云盘WebDAV账号
+   WEBDAV_PASSWORD=你的123云盘WebDAV密码
+3. Supabase_URL、Supabase_Anon_Key 会由 Supabase 运行环境提供；如果部署环境没有自动提供，请在函数设置中补充对应项目值。
+
+三、前端页面
+入口文件：public/drive.html
+首页入口：导航栏“社团盘”
+前端只保存 Supabase 登录会话，不保存 WebDAV 主账号密码。
+
+四、目录规则
+每个 Supabase 用户对应一个独立目录：
+/社团盘/user_<Supabase用户UUID>/
+
+不要改成直接使用用户输入的用户名作为目录名，避免重名、特殊字符和路径穿越问题。
+
+五、当前功能
+- 用户名+密码注册
+- 用户名+密码登录
+- Supabase Auth 会话管理
+- 当前账号专属目录读取
+- 退出登录
+- Edge Function 路径隔离
+- 新建文件夹、删除操作的后端接口已预留
+
+六、重要提醒
+不要把 WebDAV 账号、密码和服务器配置中的密码提交到 GitHub。
+如果 WebDAV 凭据曾经出现在聊天记录、截图、提交记录或网页源代码中，建议修改后再部署。

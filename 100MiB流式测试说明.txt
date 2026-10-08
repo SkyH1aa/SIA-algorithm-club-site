@@ -1,0 +1,73 @@
+100MiB 流式测试说明
+
+一、测试范围
+
+本测试只验证：浏览器 ↔ Supabase Edge Function 的二进制请求和响应。
+
+测试函数不会读取 WebDAV Secrets，不会调用 123 云盘，也不会访问或修改正式社团盘数据。
+正式文件 supabase/functions/club-drive/index.ts 和 public/drive.html 不需要修改。
+
+二、部署测试函数
+
+在项目根目录执行：
+
+supabase functions deploy stream-100m-test --no-verify-jwt
+
+本测试页面没有使用 Supabase Auth，--no-verify-jwt 只是为了避免 JWT 校验干扰纯传输测试；测试函数本身不处理任何用户数据。
+
+部署成功后，函数地址为：
+
+https://jgezpvmlnhycxslqbwcx.supabase.co/functions/v1/stream-100m-test
+
+三、打开测试页
+
+将 public/stream-100m-test.html 发布到 GitHub Pages 后打开，或者直接使用本地静态服务器访问。
+
+页面提供三个操作：
+
+1. 生成 100MiB 测试文件：在浏览器本地生成固定字节模式的二进制文件。
+2. 上传并统计：使用 file.stream() 作为 fetch body，POST 到 Edge Function。
+3. 下载 100MiB 并校验：GET 流式响应，读取字节总数并下载文件。
+
+四、推荐测试顺序
+
+1. 先点击“下载 100MiB 并校验”。
+2. 结果中应看到 status 为 200、receivedBytes 和 expectedBytes 都是 104857600、ok 为 true。
+3. 点击“生成 100MiB 测试文件”，等待浏览器下载完成。
+4. 选择生成的文件，点击“上传并统计”。
+5. 结果中应看到 status 为 200、clientBytes 和 server.bytes 都是 104857600。
+
+五、通过标准
+
+下载通过条件：
+
+- HTTP 状态码为 200。
+- receivedBytes 等于 104857600。
+- expectedBytes 等于 104857600。
+- ok 为 true。
+
+上传通过条件：
+
+- HTTP 状态码为 200。
+- clientBytes 等于 104857600。
+- server.bytes 等于 104857600。
+- 没有出现 413、连接中断或 Edge Function 超时。
+
+六、失败时如何判断
+
+- 413：请求大小限制或运行时拒绝了请求。
+- 504、网关超时或连接中断：需要记录耗时和浏览器控制台信息，再判断是客户端、网络还是 Edge Function 时限。
+- 上传 clientBytes 正确但 server.bytes 较小：请求流在到达函数前被截断。
+- 下载 expectedBytes 正确但 receivedBytes 较小：响应流在函数或浏览器侧被截断。
+- 浏览器出现 CORS 错误：检查函数是否重新部署，以及 OPTIONS 响应是否正常。
+
+七、重要说明
+
+这个测试成功，只能证明 Supabase Edge Function 可以承载 100MiB 的二进制请求和响应；它还不能证明 123 WebDAV 的 100MiB PUT/GET 代理已经成功。
+
+测试成功后，下一步才是复制同样的二进制流模式到正式社团盘：
+
+File.stream() → Edge Function request.body → WebDAV PUT
+WebDAV GET response.body → Edge Function Response → 浏览器
+
+123 WebDAV 不支持断点续传，因此正式实现只能提供单次上传；失败后从头重试，不应显示虚假的断点续传状态。

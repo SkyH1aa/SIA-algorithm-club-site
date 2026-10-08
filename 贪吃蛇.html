@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>贪吃蛇 · 专家系统 AI v17 (当前苹果生存前瞻)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0b1437; color: #e2e8f0; font-family: system-ui,-apple-system,sans-serif;
+    display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+  .container { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; align-items: flex-start; max-width: 960px; }
+  .board-area { position: relative; border: 2px solid #38bdf8; border-radius: 8px;
+    box-shadow: 0 0 24px rgba(56,189,248,0.25); background: #0b1437; }
+  canvas#board { display: block; width: 432px; height: 432px; }
+  #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(11,20,55,0.88); backdrop-filter: blur(4px);
+    display: flex; justify-content: center; align-items: center; flex-direction: column;
+    border-radius: 6px; z-index: 10; gap: 16px; }
+  #overlay.hidden { display: none; }
+  #overlay h1 { color: #38bdf8; font-size: 40px; letter-spacing: 2px; }
+  #overlay .sub { color: #94a3b8; font-size: 16px; }
+  #overlay .big-btn { padding: 14px 48px; background: #FF6F00; border: none; border-radius: 60px;
+    color: white; font-weight: 700; font-size: 20px; cursor: pointer; transition: 0.2s; }
+  #overlay .big-btn:hover { transform: scale(1.05); box-shadow: 0 6px 24px #FF6F00; }
+  #overlay .final-score { color: #FF6F00; font-size: 28px; font-weight: 700; }
+  .panel { min-width: 230px; background: #11142a; padding: 20px 18px; border-radius: 12px; border: 1px solid #2a3db8; }
+  .panel h3 { color: #38bdf8; font-weight: 500; font-size: 18px; margin-bottom: 14px; letter-spacing: 1px; }
+  .stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1e2448; font-size: 14px; }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-row span:first-child { color: #94a3b8; }
+  .stat-row span:last-child { color: #e2e8f0; font-weight: 600; }
+  .log-box { margin-top: 14px; background: #0b1437; border-radius: 6px; padding: 10px;
+    max-height: 200px; overflow-y: auto; font-size: 12px; color: #64748b; line-height: 1.6; border: 1px solid #1e293b; }
+  .log-box div { border-bottom: 1px solid #1a1f3a; padding: 2px 0; }
+  .log-box div:last-child { border-bottom: none; }
+  .log-box .eat { color: #66bb6a; }
+  .log-box .avoid { color: #ef5350; }
+  .log-box .info { color: #38bdf8; }
+  .controls { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .controls button { padding: 8px 16px; border: none; border-radius: 40px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s; flex: 1; }
+  #resetBtn { background: #FF6F00; color: white; }
+  #resetBtn:hover { box-shadow: 0 4px 16px #FF6F00; }
+  #pauseBtn { background: #334155; color: #e2e8f0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="board-area">
+    <canvas id="board" width="432" height="432"></canvas>
+    <div id="overlay">
+      <h1>🐍 贪吃蛇</h1>
+  <div class="sub">玩家模式 · 方向键 / WASD · 12×12</div>
+      <button class="big-btn" id="startBtn">开 始 游 戏</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>🤖 专家系统 v17</h3>
+    <div class="stat-row"><span>🏆 得分</span><span id="scoreVal">0</span></div>
+    <div class="stat-row"><span>🐍 蛇长</span><span id="lenVal">3</span></div>
+    <div class="stat-row"><span>🎮 操作</span><span id="decisionVal">等待开始</span></div>
+    <div class="stat-row"><span>📊 自由度</span><span id="freeVal">-</span></div>
+    <div class="stat-row"><span>🍎 苹果</span><span id="foodVal">安全</span></div>
+    <div class="controls">
+      <button id="pauseBtn">⏸ 暂停</button>
+      <button id="resetBtn">⟳ 新一局</button>
+    </div>
+    <div class="log-box" id="logBox"><div class="info">AI 就绪</div></div>
+  </div>
+</div>
+<script>
+// ============================================================
+// 贪吃蛇 · 专家系统 AI v16 (统一逃生检测)
+// 核心: AI决策与苹果刷新共用同一套逃生检测,
+//       检测到吃完会死则坚决不吃,走避险路线
+// ============================================================
+const COLS = 12, ROWS = 12, CELL = 36;
+const DIRS = [{dx:1,dy:0,n:'RIGHT'},{dx:-1,dy:0,n:'LEFT'},{dx:0,dy:-1,n:'UP'},{dx:0,dy:1,n:'DOWN'}];
+
+let board = Array.from({length:ROWS},()=>Array(COLS).fill(0));
+let snake = [], food = {x:0,y:0}, dirIdx = 0, userDir = -1;
+let score = 0, gameOver = false, paused = false, started = false;
+// 基础节奏：500ms/格，每个苹果提速 7.5ms，最快 200ms/格。
+let loopId = null, speedMs = 500;
+let logLines = [];
+
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+
+// -------- 初始化 --------
+function initGame() {
+  snake = [{x:6,y:6},{x:5,y:6},{x:4,y:6}];
+  dirIdx = 0; userDir = -1; score = 0; gameOver = false; paused = false; started = true; speedMs = 500;
+  board = Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  snake.forEach(s=>board[s.y][s.x]=1);
+  spawnFood();
+  logLines = [];
+  addLog('info','新游戏开始 · 统一逃生检测');
+  draw(); updatePanel();
+}
+
+// -------- BFS 工具 --------
+function bfsReach(start, blockedSet) {
+  const visited=new Set([`${start.x},${start.y}`]); const q=[start];
+  while(q.length){const c=q.shift(); for(const d of DIRS){const nx=c.x+d.dx,ny=c.y+d.dy,k=`${nx},${ny}`;
+    if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS&&!blockedSet.has(k)&&!visited.has(k)){visited.add(k);q.push({x:nx,y:ny});}}}
+  return visited;
+}
+function bfsHasPath(start, goal, blockedSet) {
+  if(start.x===goal.x&&start.y===goal.y) return true;
+  const visited=new Set([`${start.x},${start.y}`]); const q=[start];
+  while(q.length){const c=q.shift(); for(const d of DIRS){const nx=c.x+d.dx,ny=c.y+d.dy,k=`${nx},${ny}`;
+    if(nx===goal.x&&ny===goal.y) return true;
+    if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS&&!blockedSet.has(k)&&!visited.has(k)){visited.add(k);q.push({x:nx,y:ny});}}}
+  return false;
+}
+function bfsPath(start, goal, blockedSet) {
+  if(start.x===goal.x&&start.y===goal.y) return [start];
+  const visited=new Set([`${start.x},${start.y}`]); const parent=new Map(); const q=[start];
+  while(q.length){const c=q.shift(); for(const d of DIRS){const nx=c.x+d.dx,ny=c.y+d.dy,k=`${nx},${ny}`;
+    if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS&&!blockedSet.has(k)&&!visited.has(k)){visited.add(k);parent.set(k,c);
+      if(nx===goal.x&&ny===goal.y){const p=[];let cur={x:nx,y:ny};while(cur){p.unshift(cur);cur=parent.get(`${cur.x},${cur.y}`);}return p;}
+      q.push({x:nx,y:ny});}}}
+  return null;
+}
+
+// -------- 统一逃生检测 (供苹果刷新和AI决策共用) --------
+// 模拟蛇吃完苹果后,连续走 maxSteps 步(每步尾巴缩短一格),
+// 如果能存活 maxSteps 步,返回 true; 否则返回 false
+function canEscapeAfterEating(foodPos, maxSteps, baseSnake=snake) {
+  let sim = [{x:foodPos.x, y:foodPos.y}, ...baseSnake.map(s=>({...s}))];
+  for(let step=0; step<maxSteps; step++) {
+    const head = sim[0];
+    const bodySet = new Set(sim.slice(1).map(s=>`${s.x},${s.y}`));
+    // 找所有合法邻格
+    let moves = [];
+    for(const d of DIRS) {
+      const nx=head.x+d.dx, ny=head.y+d.dy;
+      if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS && !bodySet.has(`${nx},${ny}`)) {
+        moves.push({nx,ny});
+      }
+    }
+    if(moves.length === 0) return false; // 无路可走
+    // 选能最大化后续可达空间的邻格
+    let bestMove = moves[0], bestReach = -1;
+    for(const m of moves) {
+      const testBody = new Set(sim.slice(1).map(s=>`${s.x},${s.y}`));
+      testBody.delete(`${sim[sim.length-1].x},${sim[sim.length-1].y}`); // 尾离开
+      testBody.add(`${m.nx},${m.ny}`); // 新头
+      const reach = bfsReach({x:m.nx,y:m.ny}, testBody);
+      if(reach.size > bestReach) { bestReach=reach.size; bestMove=m; }
+    }
+    // 执行一步
+    sim = [{x:bestMove.nx,y:bestMove.ny}, ...sim];
+    sim.pop(); // 尾离开
+  }
+  return true;
+}
+
+// 验证候选苹果是否能沿一条实际可执行的路线抵达。
+// 每一步都按真实规则移动尾巴，避免静态 BFS 把“会消失的通道”误判为可达。
+function hasSafeFoodRoute(cell) {
+  let sim=snake.map(s=>({...s}));
+  const maxDepth=COLS*ROWS;
+  for(let step=0;step<maxDepth;step++) {
+    const h=sim[0];
+    if(h.x===cell.x&&h.y===cell.y) return canEscapeAfterEating(cell, Math.min(sim.length+5,18), sim.slice(1));
+    const blocked=new Set(sim.slice(1,-1).map(s=>`${s.x},${s.y}`));
+    const path=bfsPath(h,cell,blocked);
+    if(!path||path.length<2) return false;
+    const next=path[1];
+    const ate=next.x===cell.x&&next.y===cell.y;
+    const check=ate?sim:sim.slice(0,-1);
+    if(check.some(s=>s.x===next.x&&s.y===next.y)) return false;
+    sim=[{x:next.x,y:next.y},...sim];
+    if(!ate) sim.pop();
+  }
+  return false;
+}
+
+// -------- 当前苹果的多步生存前瞻 --------
+// 注意：吃到当前苹果后目标置空，不读取或猜测下一只苹果。
+function simulateMove(state, dir) {
+  const h=state.snake[0], nx=h.x+DIRS[dir].dx, ny=h.y+DIRS[dir].dy;
+  if(nx<0||nx>=COLS||ny<0||ny>=ROWS) return null;
+  const ate=!!state.food && nx===state.food.x&&ny===state.food.y;
+  const occupied=ate?state.snake:state.snake.slice(0,-1);
+  if(occupied.some(s=>s.x===nx&&s.y===ny)) return null;
+  const ns=[{x:nx,y:ny},...state.snake.map(s=>({...s}))];
+  if(!ate) ns.pop();
+  return {snake:ns, food:ate?null:state.food, ate};
+}
+
+function stateScore(state, firstDir) {
+  const h=state.snake[0], body=new Set(state.snake.slice(1).map(s=>`${s.x},${s.y}`));
+  const reachable=bfsReach(h,body);
+  const reach=reachable.size;
+  let legal=0;
+  for(const d of DIRS){const nx=h.x+d.dx,ny=h.y+d.dy;if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS&&!body.has(`${nx},${ny}`))legal++;}
+  // Tail reachability is a strong anti-trap signal.
+  const tail=state.snake[state.snake.length-1];
+  const tailBody=new Set(state.snake.slice(1,-1).map(s=>`${s.x},${s.y}`));
+  const tailPath=bfsHasPath(h,tail,tailBody);
+  const dist=state.food?Math.abs(h.x-state.food.x)+Math.abs(h.y-state.food.y):0;
+  // Penalize states whose reachable region is mostly one-cell corridors.
+  let tight=0;
+  for(const key of reachable) {
+    const [x,y]=key.split(',').map(Number); let exits=0;
+    for(const d of DIRS){const nx=x+d.dx,ny=y+d.dy;if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS&&!body.has(`${nx},${ny}`)) exits++;}
+    if(exits<=1) tight++;
+  }
+  const cramped = Math.max(0, state.snake.length + 2 - reach);
+  return reach*8 + legal*18 + (tailPath?45:-80) - tight*0.9 - cramped*35 - dist*1.8 + (state.ate?90:0);
+}
+
+function lookaheadBestMove() {
+  const root={snake:snake.map(s=>({...s})),food:{...food},ate:false};
+  let best=-1,bestScore=-Infinity;
+  for(let d=0;d<4;d++) {
+    const s1=simulateMove(root,d); if(!s1) continue;
+    if(s1.ate && !canEscapeAfterEating(food, Math.min(snake.length+5, 18))) continue;
+    let frontier=[s1], peak=stateScore(s1,d);
+    // Beam search keeps several alternatives, avoiding greedy corridors.
+    const horizon=Math.min(11, Math.max(7, snake.length+2));
+    for(let depth=1;depth<horizon;depth++) {
+      const next=[];
+      for(const st of frontier) for(let nd=0;nd<4;nd++){const ns=simulateMove(st,nd);if(ns) next.push(ns);}
+      if(!next.length) { peak-=500; break; }
+      next.sort((a,b)=>stateScore(b,d)-stateScore(a,d));
+      frontier=next.slice(0,6);
+      peak=Math.max(peak,...frontier.map(st=>stateScore(st,d)-depth*2));
+    }
+    if(peak>bestScore){bestScore=peak;best=d;}
+  }
+  return best;
+}
+
+// -------- 安全苹果生成 (统一逃生检测) --------
+function spawnFood() {
+  const head = snake[0];
+  const bodySet = new Set(snake.slice(1).map(s=>`${s.x},${s.y}`));
+  const emptyCells = [];
+  for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+    if(!snake.some(s=>s.x===x&&s.y===y)) emptyCells.push({x,y});
+  }
+  // 打乱
+  for(let i=emptyCells.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [emptyCells[i],emptyCells[j]]=[emptyCells[j],emptyCells[i]];
+  }
+  const candidates = emptyCells.slice(0, Math.min(45, emptyCells.length));
+  
+  const SIM_STEPS = snake.length + 5; // 模拟蛇长+5步
+  let safeCells = [];
+  
+  for(const cell of candidates) {
+    if(hasSafeFoodRoute(cell)) safeCells.push(cell);
+  }
+  
+  const fv = document.getElementById('foodVal');
+  if(safeCells.length > 0) {
+    // 保持原有随机性，避免固定偏向远处苹果导致路线过长。
+    food = safeCells[Math.floor(Math.random() * safeCells.length)];
+    if(fv) fv.textContent = `安全(${safeCells.length}可选)`;
+    addLog('info', `苹果生成 (${food.x},${food.y}) 安全可选${safeCells.length}个`);
+    return;
+  }
+  
+  // 兜底: 没有完全安全的格子,选逃生步数最多的
+  let bestCell = null, bestSurvive = -1;
+  for(const cell of candidates) {
+    if(!hasSafeFoodRoute(cell)) continue;
+    let sim = [{x:cell.x, y:cell.y}, ...snake.map(s=>({...s}))];
+    let survived = 0;
+    for(let step=0; step<SIM_STEPS; step++) {
+      const h = sim[0];
+      const bs = new Set(sim.slice(1).map(s=>`${s.x},${s.y}`));
+      let hasMove = false;
+      for(const d of DIRS) {
+        const nx=h.x+d.dx, ny=h.y+d.dy;
+        if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS && !bs.has(`${nx},${ny}`)) { hasMove=true; break; }
+      }
+      if(!hasMove) break;
+      // 随便走一步
+      for(const d of DIRS) {
+        const nx=h.x+d.dx, ny=h.y+d.dy;
+        if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS && !bs.has(`${nx},${ny}`)) {
+          sim = [{x:nx,y:ny}, ...sim]; sim.pop(); survived++; break;
+        }
+      }
+    }
+    if(survived > bestSurvive) { bestSurvive=survived; bestCell=cell; }
+  }
+  
+  if(bestCell) {
+    food = bestCell;
+    if(fv) fv.textContent = `风险(${bestSurvive}/${SIM_STEPS})`;
+    addLog('avoid', `苹果勉强生成 (${food.x},${food.y}) 仅能存活${bestSurvive}步`);
+    return;
+  }
+  
+  // 必须保证吃掉一个后生成下一个苹果，安全候选不足时使用保底空位。
+  const fallback = emptyCells.find(cell=>bfsHasPath(head, cell, bodySet)) || emptyCells[0];
+  if(fallback) {
+    food = fallback;
+    if(fv) fv.textContent = '保底生成';
+    addLog('avoid', `安全候选不足,保底生成 (${food.x},${food.y})`);
+  } else {
+    gameOver = true;
+    if(fv) fv.textContent = '无空位';
+    addLog('avoid', '棋盘已填满,游戏结束');
+  }
+}
+
+// -------- AI 决策 (严格遵循逃生检测) --------
+function aiDecide() {
+  if(gameOver||snake.length===0) return -1;
+  const head=snake[0];
+  const bodySet=new Set(snake.slice(1).map(s=>`${s.x},${s.y}`));
+  const distToFood = Math.abs(head.x-food.x)+Math.abs(head.y-food.y);
+  const SIM_STEPS = snake.length + 5;
+
+  // 苹果在嘴边: 严格检测吃完后能否逃生
+  if(distToFood===1) {
+    for(let i=0;i<4;i++) {
+      const nx=head.x+DIRS[i].dx, ny=head.y+DIRS[i].dy;
+      if(nx===food.x && ny===food.y) {
+        if(canEscapeAfterEating(food, SIM_STEPS)) {
+          addLog('eat', `吃 ${DIRS[i].n} (逃生验证通过)`);
+          return i;
+        } else {
+          addLog('avoid', `苹果在嘴边但吃完会困死,拒绝吃,转向避险`);
+          return emergencyEscape(head, bodySet);
+        }
+      }
+    }
+  }
+
+  // 多步前瞻优先：在苹果路线和追尾巴之间选择长期可生存分支
+  const planned=lookaheadBestMove();
+  if(planned>=0) {
+    const nx=head.x+DIRS[planned].dx, ny=head.y+DIRS[planned].dy;
+    if(nx===food.x&&ny===food.y) addLog('eat',`当前苹果生存验证 ${DIRS[planned].n}`);
+    else addLog('info',`当前苹果路线前瞻 ${DIRS[planned].n}`);
+    return planned;
+  }
+
+  // 备用路径规划: 找到一条安全路径到苹果
+  const path=bfsPath(head,food,bodySet);
+  if(path&&path.length>1){
+    // 模拟沿路径走,并在吃苹果那一步验证逃生
+    let simSnake = snake.map(s=>({...s}));
+    let safe = true;
+    let ateIndex = -1;
+    
+    for(let i=1;i<path.length;i++) {
+      const nh = path[i];
+      const ate = (nh.x===food.x && nh.y===food.y);
+      
+      if(ate) {
+        // 检查吃完后能否逃生
+        if(!canEscapeAfterEating(food, SIM_STEPS)) {
+          safe = false;
+          addLog('avoid', `路径到苹果但吃完会困死`);
+          break;
+        }
+        ateIndex = i;
+        break;
+      }
+      
+      // 非吃步: 检查是否撞身
+      const chk = simSnake.slice(0,-1);
+      if(chk.slice(1).some(s=>s.x===nh.x&&s.y===nh.y)) {
+        safe = false;
+        break;
+      }
+      
+      simSnake = [nh, ...simSnake];
+      simSnake.pop();
+    }
+    
+    if(safe && path.length > 1) {
+      const step = path[1];
+      const dx = step.x - head.x, dy = step.y - head.y;
+      for(let i=0;i<4;i++) {
+        if(DIRS[i].dx===dx && DIRS[i].dy===dy) {
+          addLog('eat', `安全路径 ${DIRS[i].n}`);
+          return i;
+        }
+      }
+    }
+  } else {
+    addLog('avoid', '无BFS路径到苹果');
+  }
+
+  // 避险: 选逃生空间最大的方向
+  return emergencyEscape(head, bodySet);
+}
+
+// -------- 增强避险 (逃生空间评估) --------
+function emergencyEscape(head, bodySet) {
+  let bestDir = -1, bestScore = -Infinity;
+  
+  for(let i=0;i<4;i++) {
+    const nx=head.x+DIRS[i].dx, ny=head.y+DIRS[i].dy;
+    const nk=`${nx},${ny}`;
+    
+    if(nx<0||nx>=COLS||ny<0||ny>=ROWS) continue;
+    if(bodySet.has(nk)) continue;
+    if(snake.length>1 && nx===snake[1].x && ny===snake[1].y) continue;
+    
+    // 模拟移动后的状态
+    const newSnake = [{x:nx,y:ny}, ...snake.slice(0,-1)];
+    const newBodySet = new Set(newSnake.slice(1).map(s=>`${s.x},${s.y}`));
+    const reach = bfsReach(newSnake[0], newBodySet);
+    
+    // 逃生空间 = 可达空格数
+    let escapeSize = 0;
+    for(const s of reach) {
+      if(!newBodySet.has(s)) escapeSize++;
+    }
+    
+    // 必须有至少1个空格可去
+    if(escapeSize <= 0) continue;
+    
+    // 评分: 逃生空间越大越好,同时稍微偏向靠近食物
+    const nd = Math.abs(nx-food.x)+Math.abs(ny-food.y);
+    const curDist = Math.abs(head.x-food.x)+Math.abs(head.y-food.y);
+    const foodBonus = (curDist - nd) * 3;
+    
+    const score = escapeSize * 5 + foodBonus;
+    
+    if(score > bestScore) {
+      bestScore = score;
+      bestDir = i;
+    }
+  }
+  
+  if(bestDir >= 0) {
+    addLog('avoid', `避险 ${DIRS[bestDir].n} (逃生空间评估)`);
+    return bestDir;
+  }
+  
+  // 兜底: 所有方向都无逃生空间,选一个不撞墙的方向
+  for(let i=0;i<4;i++) {
+    const nx=head.x+DIRS[i].dx, ny=head.y+DIRS[i].dy;
+    if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS && !bodySet.has(`${nx},${ny}`)
+       && !(snake.length>1 && nx===snake[1].x && ny===snake[1].y)) {
+      addLog('avoid', `兜底 ${DIRS[i].n}`);
+      return i;
+    }
+  }
+  
+  return -1;
+}
+
+// -------- 游戏步进 --------
+function step() {
+  if(gameOver||paused||!started) return;
+  let dir;
+  // 玩家模式：没有新输入时保持当前方向，不再调用 AI 决策。
+  if(userDir>=0 && !(userDir===0&&dirIdx===1||userDir===1&&dirIdx===0||userDir===2&&dirIdx===3||userDir===3&&dirIdx===2)){
+    dir=userDir; userDir=-1;
+  } else { dir=dirIdx; }
+  if(dir<0){gameOver=true;draw();updatePanel();showOverlay();return;}
+  dirIdx=dir;
+  const head=snake[0], nx=head.x+DIRS[dir].dx, ny=head.y+DIRS[dir].dy;
+  if(nx<0||nx>=COLS||ny<0||ny>=ROWS){gameOver=true;draw();updatePanel();showOverlay();return;}
+  const ate=(nx===food.x&&ny===food.y), newHead={x:nx,y:ny};
+  const bodyCheck=ate?snake:snake.slice(0,-1);
+  if(bodyCheck.some(s=>s.x===nx&&s.y===ny)){gameOver=true;draw();updatePanel();showOverlay();return;}
+  // 先记录并移除尾巴，再写入新头；否则“追尾”时清尾会误擦除新头。
+  const oldTail = snake[snake.length - 1];
+  if(!ate) {
+    snake.pop();
+    if(oldTail.x!==nx || oldTail.y!==ny) board[oldTail.y][oldTail.x]=0;
+  }
+  snake.unshift(newHead); board[ny][nx]=1;
+  if(ate){
+    score++;
+    speedMs=Math.max(200,speedMs-7.5);
+    spawnFood();
+    if(gameOver){draw();updatePanel();showOverlay();return;}
+    restartLoop();
+  }
+  draw();updatePanel();
+}
+
+// -------- 绘制 --------
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle='#1e293b';ctx.lineWidth=0.5;
+  for(let r=0;r<=ROWS;r++){ctx.beginPath();ctx.moveTo(0,r*CELL);ctx.lineTo(canvas.width,r*CELL);ctx.stroke();}
+  for(let c=0;c<=COLS;c++){ctx.beginPath();ctx.moveTo(c*CELL,0);ctx.lineTo(c*CELL,canvas.height);ctx.stroke();}
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(board[r][c]){
+    const isHead=snake.length>0&&snake[0].x===c&&snake[0].y===r;
+    ctx.fillStyle=isHead?'#22c55e':'#166534';
+    ctx.shadowColor=isHead?'rgba(34,197,94,0.4)':'transparent';ctx.shadowBlur=isHead?12:0;
+    ctx.fillRect(c*CELL+2,r*CELL+2,CELL-4,CELL-4);
+  }
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#ef4444';ctx.shadowColor='rgba(239,68,68,0.5)';ctx.shadowBlur=14;
+  ctx.beginPath();ctx.arc(food.x*CELL+CELL/2,food.y*CELL+CELL/2,CELL/2-6,0,2*Math.PI);ctx.fill();ctx.shadowBlur=0;
+  if(snake.length>0&&!gameOver){const h=snake[0];ctx.fillStyle='#fff';const d=DIRS[dirIdx];
+    if(d.dx!==0){ctx.fillRect(h.x*CELL+12,h.y*CELL+8,6,8);ctx.fillRect(h.x*CELL+12,h.y*CELL+24,6,8);
+      ctx.fillStyle='#0b1437';ctx.fillRect(h.x*CELL+14,h.y*CELL+10,3,4);ctx.fillRect(h.x*CELL+14,h.y*CELL+27,3,4);}
+    else{ctx.fillRect(h.x*CELL+8,h.y*CELL+12,8,6);ctx.fillRect(h.x*CELL+24,h.y*CELL+12,8,6);
+      ctx.fillStyle='#0b1437';ctx.fillRect(h.x*CELL+10,h.y*CELL+14,4,3);ctx.fillRect(h.x*CELL+27,h.y*CELL+14,4,3);}
+  }
+}
+function updatePanel(){document.getElementById('scoreVal').textContent=score;document.getElementById('lenVal').textContent=snake.length;
+  document.getElementById('decisionVal').textContent=gameOver?'GAME OVER':DIRS[dirIdx].n;
+  document.getElementById('freeVal').textContent=bfsReach(snake[0],new Set(snake.slice(1).map(s=>`${s.x},${s.y}`))).size;}
+function addLog(type,msg){logLines.push({type,msg});if(logLines.length>50)logLines.shift();
+  document.getElementById('logBox').innerHTML=logLines.map(l=>`<div class="${l.type}">${l.msg}</div>`).join('');}
+function showOverlay(){overlay.classList.remove('hidden');overlay.innerHTML=`<h1 style="color:#FF6F00">GAME OVER</h1><div class="final-score">🏆 ${score} 分</div><div class="sub">蛇长 ${snake.length}</div><button class="big-btn" id="restartOverlayBtn">⟳ 再来一局</button>`;
+  document.getElementById('restartOverlayBtn').addEventListener('click',()=>{overlay.classList.add('hidden');resetGame();});}
+function resetGame(){if(loopId){clearInterval(loopId);loopId=null;}initGame();if(started)loopId=setInterval(step,speedMs);}
+function restartLoop(){
+  if(!started||paused||gameOver) return;
+  if(loopId) clearInterval(loopId);
+  loopId=setInterval(step,speedMs);
+}
+
+// v18 决策器：每步重规划，优先当前苹果，失败时追尾巴，最后最大化生存空间。
+function aiDecideV2() {
+  if(gameOver||!snake.length) return -1;
+  const head=snake[0];
+  const legal=[];
+  for(let i=0;i<4;i++) {
+    const nx=head.x+DIRS[i].dx,ny=head.y+DIRS[i].dy;
+    if(nx<0||nx>=COLS||ny<0||ny>=ROWS) continue;
+    const ate=nx===food.x&&ny===food.y;
+    const blocked=ate?snake:snake.slice(0,-1);
+    if(blocked.some(s=>s.x===nx&&s.y===ny)) continue;
+    legal.push(i);
+  }
+  if(!legal.length) return -1;
+  const body=new Set(snake.slice(1).map(s=>`${s.x},${s.y}`));
+  const tail=snake[snake.length-1];
+  const tailPath=bfsPath(head,tail,new Set(snake.slice(1,-1).map(s=>`${s.x},${s.y}`)));
+  let best=-Infinity,bestDir=legal[0];
+  for(const d of legal) {
+    const nx=head.x+DIRS[d].dx,ny=head.y+DIRS[d].dy,ate=nx===food.x&&ny===food.y;
+    if(ate&&!canEscapeAfterEating(food,Math.min(snake.length+5,18))) continue;
+    const ns=[{x:nx,y:ny},...snake.map(s=>({...s}))]; if(!ate) ns.pop();
+    const nb=new Set(ns.slice(1).map(s=>`${s.x},${s.y}`));
+    const area=bfsReach(ns[0],nb).size;
+    const exits=DIRS.filter(q=>{const x=nx+q.dx,y=ny+q.dy;return x>=0&&x<COLS&&y>=0&&y<ROWS&&!nb.has(`${x},${y}`)}).length;
+    const targetPath=bfsPath(ns[0],food,new Set(ns.slice(1,-1).map(s=>`${s.x},${s.y}`)));
+    const tailReach=bfsHasPath(ns[0],ns[ns.length-1],new Set(ns.slice(1,-1).map(s=>`${s.x},${s.y}`)));
+    const currentDist=Math.abs(head.x-food.x)+Math.abs(head.y-food.y);
+    const nextDist=Math.abs(nx-food.x)+Math.abs(ny-food.y);
+    // 有可行苹果路线时，接近苹果必须压过单纯绕圈的空间收益。
+    const foodProgress=(currentDist-nextDist)*42;
+    const followsFoodPath=targetPath&&targetPath.length>1&&targetPath[1].x===nx&&targetPath[1].y===ny;
+    let value=area*5+exits*14+(tailReach?55:-90)+(targetPath?120:0)+(followsFoodPath?180:0)+foodProgress;
+    if(ate)value+=120;
+    if(value>best){best=value;bestDir=d;}
+  }
+  addLog('info',`重规划 ${DIRS[bestDir].n}`);
+  return bestDir;
+}
+function togglePause(){if(!started||gameOver)return;paused=!paused;document.getElementById('pauseBtn').textContent=paused?'▶ 继续':'⏸ 暂停';}
+
+document.getElementById('startBtn').addEventListener('click', function() {
+  if (loopId) { clearInterval(loopId); loopId = null; }
+  overlay.classList.add('hidden');
+  initGame();
+  loopId = setInterval(step, speedMs);
+});
+
+document.getElementById('resetBtn').addEventListener('click', resetGame);
+document.getElementById('pauseBtn').addEventListener('click', togglePause);
+document.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','w','a','s','d','W','A','S','D'].includes(e.key))e.preventDefault();
+  if(e.key===' '){togglePause();return;}if(!started||paused||gameOver)return;
+  const map={'ArrowRight':0,'ArrowLeft':1,'ArrowUp':2,'ArrowDown':3,'d':0,'D':0,'a':1,'A':1,'w':2,'W':2,'s':3,'S':3};if(map[e.key]!==undefined){userDir=map[e.key];}});
+
+started = false;
+initGame();
+started = false;
+</script>
+</body>
+</html>

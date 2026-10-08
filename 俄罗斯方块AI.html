@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>算法社 · 俄罗斯方块 AI (信息对等版)</title>
+<style>
+  html[data-theme="light"] body { background:#F0F2F6; color:#1C1C1E; }
+  html[data-theme="light"] .board-wrapper { background:#FFFFFF; border-color:#D7DCE4; box-shadow:0 0 24px rgba(28,28,30,.1); }
+  html[data-theme="light"] #overlay { background:rgba(28,28,30,.22); }
+  html[data-theme="light"] #overlay p, html[data-theme="light"] .mode-tag, html[data-theme="light"] .info-note { color:#48484A; }
+  html[data-theme="light"] .panel { background:#FFFFFF; border-color:#D7DCE4; color:#1C1C1E; }
+  html[data-theme="light"] .next-preview { background:#F7F8FA; border-color:#D7DCE4; }
+  html[data-theme="light"] .stat-row { border-bottom-color:#E5E5EA; }
+  html[data-theme="light"] .stat-row span:first-child { color:#48484A; }
+  html[data-theme="light"] .stat-row span:last-child { color:#1C1C1E; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0b1437;
+    color: #e2e8f0;
+    font-family: system-ui, -apple-system, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .container {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 900px;
+  }
+  .board-wrapper {
+    position: relative;
+    border: 2px solid #38bdf8;
+    border-radius: 8px;
+    box-shadow: 0 0 24px rgba(56,189,248,0.25);
+    background: #0b1437;
+  }
+  canvas#board { display: block; width: 360px; height: 720px; }
+  #overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(11,20,55,0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    border-radius: 6px;
+    z-index: 10;
+  }
+  #overlay.active { display: flex; }
+  #overlay h1 { color: #FF6F00; font-size: 52px; margin-bottom: 8px; letter-spacing: 2px; }
+  #overlay p { color: #94a3b8; font-size: 18px; }
+  .panel {
+    min-width: 240px;
+    background: #11142a;
+    padding: 24px 20px;
+    border-radius: 12px;
+    border: 1px solid #2a3db8;
+  }
+  .panel h3 { color: #38bdf8; font-weight: 500; font-size: 20px; margin-bottom: 18px; letter-spacing: 1px; }
+  .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e2448; font-size: 15px; }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-row span:first-child { color: #94a3b8; }
+  .stat-row span:last-child { color: #e2e8f0; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .next-preview {
+    margin: 14px 0;
+    padding: 12px;
+    background: #0b1437;
+    border-radius: 8px;
+    border: 1px solid #1e293b;
+    text-align: center;
+  }
+  .next-preview .label { font-size: 13px; color: #64748b; margin-bottom: 6px; }
+  .next-preview canvas { display: block; margin: 0 auto; }
+  .controls { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+  .controls button {
+    padding: 12px 0;
+    border: none;
+    border-radius: 60px;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.5px;
+  }
+  .controls button:hover { transform: scale(1.02); }
+  #autoBtn { background: #0284c7; color: white; }
+  #autoBtn:hover { box-shadow: 0 4px 20px #0284c7; }
+  #stepBtn { background: #334155; color: #e2e8f0; }
+  #pvpBtn { background: #7c3aed; color: white; }
+  #pvpBtn:hover { box-shadow: 0 4px 20px #7c3aed; }
+  #resetBtn { background: #FF6F00; color: white; }
+  #resetBtn:hover { box-shadow: 0 4px 20px #FF6F00; }
+  .mode-tag { margin-top: 14px; text-align: center; font-size: 12px; color: #64748b; line-height: 1.6; }
+  .mode-tag .highlight { color: #38bdf8; font-weight: 600; }
+  .info-note { margin-top: 10px; padding: 10px; background: #0b1437; border-radius: 8px; font-size: 12px; color: #475569; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="board-wrapper">
+    <canvas id="board" width="360" height="720"></canvas>
+    <div id="overlay"><h1>GAME OVER</h1><p id="goReason">AI 无法继续放置</p></div>
+  </div>
+  <div class="panel">
+    <h3>⚙ 专家系统 AI</h3>
+    <div class="stat-row"><span>🏆 得分</span><span id="scoreVal">0</span></div>
+    <div class="stat-row"><span>🧹 消行</span><span id="linesVal">0</span></div>
+    <div class="stat-row"><span>📈 等级</span><span id="levelVal">0</span></div>
+    <div class="stat-row"><span>🔍 评估节点</span><span id="nodesVal">0</span></div>
+    <div class="stat-row"><span>⏱ 思考耗时</span><span id="timeVal">0 ms</span></div>
+    
+    <div class="next-preview">
+      <div class="label">NEXT 预览 (AI 可见)</div>
+      <canvas id="nextCanvas" width="120" height="80"></canvas>
+    </div>
+    
+    <div class="controls">
+      <button id="autoBtn">▶ AI 自动运行</button>
+      <button id="stepBtn">⤳ 单步思考</button>
+      <button id="pvpBtn">🎮 人机对战 (你 vs AI)</button>
+      <button id="resetBtn">⟳ 重新开局</button>
+    </div>
+    <div class="mode-tag">信息对等 · AI 仅可见当前块 + Next<br>无 Bag 偷看 · 无虚拟方块生成</div>
+    <div class="info-note">💡 人机对战模式：你控制当前方块，AI 仅负责"建议落点"高亮显示，由你决定是否采纳。</div>
+  </div>
+</div>
+<script>
+// =============================================================
+// 俄罗斯方块 · 信息对等专家系统 AI
+// 原则: AI 仅能访问与人类玩家相同的信息
+//   - 可见: 当前方块 + Next 预览 + 已锁定棋盘
+//   - 不可见: 7-bag 后续队列 / 未来方块
+// =============================================================
+const COLS = 10, ROWS = 20, BS = 36;
+
+const SHAPES = [
+  [[1,1,1,1]],
+  [[1,1],[1,1]],
+  [[0,1,0],[1,1,1]],
+  [[0,1,1],[1,1,0]],
+  [[1,1,0],[0,1,1]],
+  [[1,0,0],[1,1,1]],
+  [[0,0,1],[1,1,1]]
+];
+const COLORS = ['#00BCD4','#FFEB3B','#AB47BC','#66BB6A','#EF5350','#FF8A65','#42A5F5'];
+
+let board = Array.from({length:ROWS}, () => Array(COLS).fill(0));
+let currentPiece = null, nextPiece = null;
+let bag = [];
+let score = 0, lines = 0, level = 0;
+let gameOver = false, autoMode = false, pvpMode = false;
+let evalNodes = 0, lastThinkTime = 0;
+let autoInterval = null;
+
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const nextCanvas = document.getElementById('nextCanvas');
+const nextCtx = nextCanvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+
+// -------- 7-bag (仅用于生成方块序列, AI 不可访问队列) --------
+function genBag() {
+  let a = [0,1,2,3,4,5,6];
+  for(let i=6;i>0;i--){ let j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function popBag(){
+  if(bag.length===0) bag=genBag();
+  return bag.pop();
+}
+
+// -------- 方块操作 --------
+function cloneMat(m){ return m.map(r=>[...r]); }
+function rotMat(mat){
+  let rows=mat.length, cols=mat[0].length;
+  return Array.from({length:cols}, (_,c)=>Array.from({length:rows}, (_,r)=>mat[rows-1-r][c]));
+}
+function getAllRotations(mat){
+  let seen=new Set(), rots=[];
+  let cur=cloneMat(mat);
+  for(let i=0;i<4;i++){
+    let key=cur.map(r=>r.join(',')).join('|');
+    if(!seen.has(key)){ seen.add(key); rots.push(cloneMat(cur)); }
+    cur=rotMat(cur);
+  }
+  return rots;
+}
+function createPiece(ti){
+  let shape=cloneMat(SHAPES[ti]);
+  return { shape, x:Math.floor((COLS-shape[0].length)/2), y:0, ti };
+}
+
+// -------- 碰撞检测 --------
+function collides(shape, ox, oy){
+  for(let r=0;r<shape.length;r++) for(let c=0;c<shape[0].length;c++){
+    if(shape[r][c]){
+      let bx=ox+c, by=oy+r;
+      if(bx<0||bx>=COLS||by>=ROWS) return true;
+      if(by>=0&&board[by][bx]!==0) return true;
+    }
+  }
+  return false;
+}
+function hardDropPos(shape, sx, sy){
+  let y=sy;
+  while(!collides(shape,sx,y+1)) y++;
+  return y;
+}
+
+// -------- 锁定与消行 --------
+function lockPiece(piece){
+  let {shape,x,y,ti}=piece;
+  for(let r=0;r<shape.length;r++) for(let c=0;c<shape[0].length;c++)
+    if(shape[r][c]){ let by=y+r, bx=x+c; if(by>=0&&by<ROWS&&bx>=0&&bx<COLS) board[by][bx]=ti+1; }
+  clearRows();
+  spawnNext();
+  if(collides(currentPiece.shape,currentPiece.x,currentPiece.y)){ gameOver=true; stopAll(); }
+}
+function clearRows(){
+  let removed=0;
+  for(let r=ROWS-1;r>=0;){
+    let full=true;
+    for(let c=0;c<COLS;c++) if(board[r][c]===0){ full=false; break; }
+    if(full){
+      for(let rr=r;rr>0;rr--) board[rr]=[...board[rr-1]];
+      board[0]=Array(COLS).fill(0);
+      removed++;
+    } else r--;
+  }
+  if(removed>0){
+    let pts=[0,100,300,500,800];
+    score+=pts[Math.min(removed,4)];
+    lines+=removed;
+    let nl=Math.floor(lines/10);
+    if(nl>level) level=nl;
+  }
+}
+function spawnNext(){
+  if(nextPiece===null){
+    currentPiece=createPiece(popBag());
+    nextPiece=createPiece(popBag());
+  } else {
+    currentPiece=nextPiece;
+    nextPiece=createPiece(popBag());
+  }
+  currentPiece.x=Math.floor((COLS-currentPiece.shape[0].length)/2);
+  currentPiece.y=0;
+}
+
+// =============================================================
+// 特征提取 (仅基于已锁定棋盘 + 当前放置)
+// =============================================================
+function simulateLock(board, placement){
+  let sim=board.map(r=>[...r]);
+  let {shape,x,y,ti}=placement;
+  for(let r=0;r<shape.length;r++) for(let c=0;c<shape[0].length;c++)
+    if(shape[r][c]){ let by=y+r, bx=x+c; if(by>=0&&by<ROWS&&bx>=0&&bx<COLS) sim[by][bx]=ti+1; }
+  let cleared=0;
+  for(let r=ROWS-1;r>=0;){
+    let full=true;
+    for(let c=0;c<COLS;c++) if(sim[r][c]===0){ full=false; break; }
+    if(full){ cleared++; for(let rr=r;rr>0;rr--) sim[rr]=[...sim[rr-1]]; sim[0]=Array(COLS).fill(0); }
+    else r--;
+  }
+  return {sim, cleared};
+}
+
+function evaluatePlacement(placement){
+  let {sim, cleared} = simulateLock(board, placement);
+  let {y} = placement;
+  
+  // 列高
+  let heights=Array(COLS).fill(0);
+  for(let c=0;c<COLS;c++){ for(let r=0;r<ROWS;r++) if(sim[r][c]!==0){ heights[c]=ROWS-r; break; } }
+  
+  // 1. landing_height: 落点越低(行号越大)越好
+  let lh = y;
+  
+  // 2. eroded_cells
+  let ec = cleared * 10;
+  
+  // 3. row_transitions
+  let rt=0;
+  for(let r=0;r<ROWS;r++){
+    let prev=1;
+    for(let c=0;c<COLS;c++){
+      let cur=sim[r][c]!==0?1:0;
+      if(cur!==prev) rt++;
+      prev=cur;
+    }
+    if(prev!==1) rt++;
+  }
+  
+  // 4. column_transitions
+  let ct=0;
+  for(let c=0;c<COLS;c++){
+    let prev=1;
+    for(let r=0;r<ROWS;r++){
+      let cur=sim[r][c]!==0?1:0;
+      if(cur!==prev) ct++;
+      prev=cur;
+    }
+    if(prev!==1) ct++;
+  }
+  
+  // 5. holes
+  let holes=0;
+  for(let c=0;c<COLS;c++){
+    let blocked=false;
+    for(let r=0;r<ROWS;r++){
+      if(sim[r][c]!==0) blocked=true;
+      else if(blocked) holes++;
+    }
+  }
+  
+  // 6. well_sums
+  let ws=0;
+  for(let c=0;c<COLS;c++){
+    let depth=0;
+    for(let r=ROWS-1;r>=0;r--){
+      if(sim[r][c]===0&&(c===0||sim[r][c-1]!==0)&&(c===COLS-1||sim[r][c+1]!==0)) depth++;
+      else break;
+    }
+    ws+=depth*depth;
+  }
+  
+  // 权重 (Dellacherie 修正版, 符号已校准)
+  return 4.500*lh + 3.418*ec - 3.217*rt - 9.348*ct - 7.899*holes - 3.385*ws;
+}
+
+// =============================================================
+// AI 决策: 仅基于当前方块 + Next 预览 (信息对等)
+// - 主评分: 对当前方块所有合法落点贪心评分
+// - Next 提示: 仅用 Next 类型做"是否为 Next 留出平坦表面"的轻量奖励
+//   (不模拟 Next 的放置, 不递归展开)
+// =============================================================
+function getAllPlacements(piece){
+  let rots=getAllRotations(piece.shape);
+  let placements=[];
+  for(let rot of rots){
+    for(let x=0;x<COLS;x++){
+      if(!collides(rot,x,0)){
+        let y=hardDropPos(rot,x,0);
+        placements.push({shape:rot, x, y, ti:piece.ti});
+      }
+    }
+  }
+  return placements;
+}
+
+function aiBestMove(){
+  if(gameOver||!currentPiece) return null;
+  let start=performance.now();
+  evalNodes=0;
+  
+  let placements = getAllPlacements(currentPiece);
+  if(placements.length===0) return null;
+  
+  let best=null, bestScore=-Infinity;
+  
+  for(let p of placements){
+    evalNodes++;
+    let scoreVal = evaluatePlacement(p);
+    
+    // Next 轻量提示: 如果 Next 是 I 块, 轻微奖励"在中间列留 4 格宽平坦区"
+    if(nextPiece && nextPiece.ti===0){ // I 块
+      let surfaceFlat = isSurfaceFlatForI(p);
+      scoreVal += surfaceFlat * 1.5; // 轻量奖励, 不主导决策
+    }
+    
+    if(scoreVal > bestScore || (Math.abs(scoreVal-bestScore)<1e-6 && p.y > (best?best.y:-1))){
+      bestScore = scoreVal;
+      best = p;
+    }
+  }
+  
+  lastThinkTime = performance.now()-start;
+  return best;
+}
+
+// 判断放置后表面是否为 I 块留出平坦通道 (轻量 Next 提示, 非模拟)
+function isSurfaceFlatForI(placement){
+  let sim = simulateLock(board, placement).sim;
+  // 计算每列高度
+  let heights=Array(COLS).fill(0);
+  for(let c=0;c<COLS;c++){ for(let r=0;r<ROWS;r++) if(sim[r][c]!==0){ heights[c]=ROWS-r; break; } }
+  // 检查是否存在连续 4 列高度差 <= 1 (I 块可横向放置的平坦区)
+  let maxFlat=1;
+  let curFlat=1;
+  for(let c=1;c<COLS;c++){
+    if(Math.abs(heights[c]-heights[c-1])<=1){
+      curFlat++;
+      maxFlat=Math.max(maxFlat,curFlat);
+    } else curFlat=1;
+  }
+  return maxFlat>=4 ? 1 : 0;
+}
+
+// -------- 执行 AI 动作 --------
+function doAiStep(){
+  if(gameOver||!currentPiece) return;
+  let best=aiBestMove();
+  if(!best){
+    gameOver=true; stopAll(); draw(); overlay.classList.add('active'); return;
+  }
+  currentPiece.shape=best.shape;
+  currentPiece.x=best.x;
+  currentPiece.y=best.y;
+  lockPiece(currentPiece);
+  draw(); updateStats();
+  if(gameOver){ stopAll(); overlay.classList.add('active'); }
+}
+
+// -------- 绘制 --------
+function draw(){
+  const light = document.documentElement.dataset.theme === 'light';
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = light ? '#FFFFFF' : '#0b1437';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle = light ? '#D7DCE4' : '#1e293b'; ctx.lineWidth=0.5;
+  for(let r=0;r<=ROWS;r++){ ctx.beginPath(); ctx.moveTo(0,r*BS); ctx.lineTo(canvas.width,r*BS); ctx.stroke(); }
+  for(let c=0;c<=COLS;c++){ ctx.beginPath(); ctx.moveTo(c*BS,0); ctx.lineTo(c*BS,canvas.height); ctx.stroke(); }
+  
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    if(board[r][c]){
+      ctx.fillStyle=COLORS[board[r][c]-1];
+      ctx.fillRect(c*BS+1,r*BS+1,BS-2,BS-2);
+      ctx.fillStyle=light ? 'rgba(28,28,30,0.06)' : 'rgba(255,255,255,0.08)';
+      ctx.fillRect(c*BS+1,r*BS+1,BS-2,4);
+    }
+  }
+  
+  // AI 建议落点预览 (半透明)
+  if(currentPiece&&!gameOver&&(autoMode||pvpMode)){
+    let best=aiBestMove();
+    if(best){
+      ctx.globalAlpha=0.25;
+      ctx.fillStyle='#38bdf8';
+      for(let r=0;r<best.shape.length;r++) for(let c=0;c<best.shape[0].length;c++)
+        if(best.shape[r][c]) ctx.fillRect((best.x+c)*BS+1,(best.y+r)*BS+1,BS-2,BS-2);
+      ctx.globalAlpha=1;
+    }
+  }
+  
+  // 当前方块
+  if(currentPiece&&!gameOver){
+    let {shape,x,y,ti}=currentPiece;
+    ctx.globalAlpha=0.85;
+    ctx.fillStyle=COLORS[ti];
+    for(let r=0;r<shape.length;r++) for(let c=0;c<shape[0].length;c++)
+      if(shape[r][c]) ctx.fillRect((x+c)*BS+1,(y+r)*BS+1,BS-2,BS-2);
+    ctx.globalAlpha=1;
+  }
+  
+  drawNextPreview();
+}
+
+function drawNextPreview(){
+  nextCtx.clearRect(0,0,nextCanvas.width,nextCanvas.height);
+  if(!nextPiece) return;
+  let {shape,ti}=nextPiece;
+  let rows=shape.length, cols=shape[0].length;
+  let cellSize=16;
+  let offX=(nextCanvas.width-cols*cellSize)/2;
+  let offY=(nextCanvas.height-rows*cellSize)/2;
+  nextCtx.fillStyle=COLORS[ti];
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++)
+    if(shape[r][c]) nextCtx.fillRect(offX+c*cellSize,offY+r*cellSize,cellSize-1,cellSize-1);
+}
+
+function updateStats(){
+  document.getElementById('scoreVal').textContent=score;
+  document.getElementById('linesVal').textContent=lines;
+  document.getElementById('levelVal').textContent=level;
+  document.getElementById('nodesVal').textContent=evalNodes;
+  document.getElementById('timeVal').textContent=Math.round(lastThinkTime)+' ms';
+}
+
+function stopAll(){
+  autoMode=false; pvpMode=false;
+  if(autoInterval){ clearInterval(autoInterval); autoInterval=null; }
+  document.getElementById('autoBtn').textContent='▶ AI 自动运行';
+  document.getElementById('pvpBtn').textContent='🎮 人机对战 (你 vs AI)';
+}
+
+function resetGame(){
+  stopAll();
+  board=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  bag=[]; score=0; lines=0; level=0; gameOver=false; evalNodes=0; lastThinkTime=0;
+  nextPiece=null;
+  spawnNext();
+  overlay.classList.remove('active');
+  draw(); updateStats();
+}
+
+// -------- 控制 --------
+document.getElementById('autoBtn').addEventListener('click', function(){
+  if(gameOver) resetGame();
+  if(autoMode){ stopAll(); return; }
+  autoMode=true; this.textContent='⏸ 暂停 AI';
+  autoInterval=setInterval(()=>{
+    if(!gameOver&&autoMode) doAiStep();
+    else if(gameOver) stopAll();
+  }, 300);
+});
+
+document.getElementById('stepBtn').addEventListener('click', function(){
+  if(gameOver) resetGame();
+  doAiStep();
+});
+
+document.getElementById('pvpBtn').addEventListener('click', function(){
+  if(gameOver) resetGame();
+  if(pvpMode){ stopAll(); return; }
+  pvpMode=true; this.textContent='⏸ 退出对战';
+  draw();
+});
+
+document.getElementById('resetBtn').addEventListener('click', resetGame);
+
+// -------- 键盘 (人机对战/手动模式) --------
+document.addEventListener('keydown', e=>{
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+  if(gameOver) return;
+  if(!currentPiece) return;
+  // 自动模式下禁止手动
+  if(autoMode) return;
+  
+  let moved=false;
+  if(e.key==='ArrowLeft'&&!collides(currentPiece.shape,currentPiece.x-1,currentPiece.y))
+    { currentPiece.x--; moved=true; }
+  else if(e.key==='ArrowRight'&&!collides(currentPiece.shape,currentPiece.x+1,currentPiece.y))
+    { currentPiece.x++; moved=true; }
+  else if(e.key==='ArrowDown'&&!collides(currentPiece.shape,currentPiece.x,currentPiece.y+1))
+    { currentPiece.y++; moved=true; }
+  else if(e.key==='ArrowUp'){
+    let rot=rotMat(currentPiece.shape);
+    if(!collides(rot,currentPiece.x,currentPiece.y)){ currentPiece.shape=rot; moved=true; }
+  } else if(e.key===' '){
+    let y=hardDropPos(currentPiece.shape,currentPiece.x,currentPiece.y);
+    currentPiece.y=y; lockPiece(currentPiece); moved=true;
+  }
+  if(moved){ draw(); updateStats(); if(gameOver) overlay.classList.add('active'); }
+});
+
+// -------- 启动 --------
+resetGame();
+</script>
+</body>
+</html>

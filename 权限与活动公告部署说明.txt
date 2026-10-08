@@ -1,0 +1,89 @@
+权限下放 + 活动公告系统 + 超管交接 + 积分商城部署说明
+
+一、先执行 SQL（独立新表，不改旧表）
+1. 打开 Supabase SQL Editor。
+2. 执行 supabase/club-permissions-events-schema.sql（含 can_mall 列）。
+3. 若尚未部署密码重置，再执行 supabase/club-password-reset-schema.sql。
+4. 执行 supabase/club-super-admins-schema.sql（动态超管名单，并种子写入初始 Haimingadmin / Collen）。
+5. 执行 supabase/club-mall-schema.sql（积分商城商品表、兑换记录表、兑换 RPC；并确保 can_mall 存在）。
+
+二、部署 Edge Function
+1. 重新部署 supabase/functions/club-drive/index.ts。
+2. 保持现有 WebDAV Secrets 不变。
+3. 部署后确认这些 action 可用：
+   - staff_access_get
+   - admin_staff_permissions_list / save / delete（仅超管）
+   - admin_super_admins_list / promote / revoke（仅超管）
+   - public_home_feed
+   - announcements_list / events_list / event_signup
+   - admin_announcements_* / admin_events_* / admin_event_signups_list（需 can_events）
+   - admin_announcements_repush_home / admin_events_repush_home（需 can_events，仅已发布）
+   - mall_products_list / mall_redeem（社员）
+   - admin_mall_products_list / save / delete（需 can_mall）
+   - admin_mall_redemptions_list / admin_mall_redemption_delete（需 can_mall）
+
+三、前端页面
+1. 管理员总览：public/admin-hub.html
+   - 有任一管理权限即可进入
+   - 权限下放、密码重置、直接改密、绑定查看、超管交接仅现任超管可见
+   - 权限下放新增「积分商城」勾选（can_mall）
+2. 管理页门禁已按权限切换：
+   - member-checkin.html -> can_checkin
+   - member-points.html -> can_points
+   - member-messages.html -> can_messages
+   - drive.html 邀请码管理 -> can_invites
+   - events-admin.html -> can_events
+   - mall-admin.html -> can_mall
+3. 活动公告后台：
+   - 已发布的公告/活动，除编辑和删除外，新增“再次推送主页”
+   - 再次推送会强制 is_featured=true，并刷新 featured_push_at
+4. 积分商城：
+   - public/mall-admin.html：商品 CRUD（名称、说明、价格、库存、排序、上架、可选配图 URL）、兑换记录「已处理」= 删除记录
+   - public/points-mall.html：社员浏览上架有库存商品并兑换；兑换前需绑定姓名班级
+   - 社团功能页 / 个人中心已加入积分商城入口
+5. 公开页：
+   - public/events.html 活动与公告
+   - 首页活动区会优先读取 public_home_feed，失败时回退 activities.json
+   - 公告和活动均可在后台勾选“首页推荐”
+   - 首页推荐仅弹出已勾选的公告/活动；点叉只跳过当前条并继续下一条
+   - “显示不再提醒”按推送版本记录；普通情况下永久关闭当前条
+   - 管理员再次推送后，此前点过“不再提醒”的用户会再弹一次；未点过的用户本来就会看到，行为不变
+
+四、验收清单
+1. 用现任超管登录（初始为 Haimingadmin / Collen）：
+   - 管理员总览可见
+   - 可给其他账号勾选六项权限（含积分商城）
+   - 可处理密码重置申请、直接改密、查看姓名班级绑定
+   - 可在“超管交接”中升级指定账号，并撤销他人超管（不能撤自己，至少留 1 人）
+   - 可进入积分商城管理，上架商品并查看兑换记录
+2. 用新升级的超管登录：
+   - 同样可见超管交接与全部超管专属功能
+3. 用被授权账号登录：
+   - 仅显示被授权的管理入口（含 can_mall 时的积分商城管理）
+   - 看不到权限下放 / 改密 / 绑定查看 / 超管交接
+4. 用普通社员登录：
+   - 不显示管理员总览
+   - 可浏览活动公告并报名
+   - 可打开积分商城；未绑定姓名班级时提示先去个人中心绑定
+   - 绑定后积分足够可兑换，积分与库存立即减少
+5. 未登录访客：
+   - 首页能看到最新公告/活动摘要
+   - 可打开活动与公告页浏览公开内容
+6. 再次推送主页：
+   - 未发布项不显示“再次推送主页”按钮
+   - 对已点“不再提醒”的推荐执行再次推送后，刷新首页应再弹一次
+   - 未点“不再提醒”的用户行为不变
+7. 积分商城发货：
+   - 管理端兑换记录点「已处理」后该记录消失
+
+五、注意
+- 超管身份改由 club_super_admins 表维护，不再在服务器端写死邮箱做永久判定
+- BOOTSTRAP_SUPER_ADMIN_EMAILS 仅在超管表为空、表未创建或读失败时临时兜底初始超管邮箱
+- 若已部署 SQL 仍看不到入口：请重新部署最新 club-drive。此前 getSuperAdminRow 误用了 PostgREST or=(user_id=eq.x) 语法，表有数据时会查不到超管；现已改为按 user_id / email 精确查询
+- 再次推送依赖 club_announcements / club_events 的 featured_push_at；请先执行最新 schema SQL，再部署最新 club-drive，并强制刷新前端
+- 积分商城依赖 club_mall_products / club_mall_redemptions 与 redeem_club_mall_product；请先执行 club-mall-schema.sql，并确认权限表已有 can_mall
+- 兑换会立即扣积分榜分数；未绑定姓名班级无法兑换
+- 商品配图只存图床 URL，不走社团盘 / Storage；留空表示无配图；已上架商品可编辑
+- 前端 member-identity.js 对初始超管仍有临时兜底；请强制刷新后再试
+- 不要把 service role key 或 WebDAV 密码写进前端
+- 旧表结构保持不动，新功能全部走独立表
