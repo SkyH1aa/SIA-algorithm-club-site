@@ -53,7 +53,7 @@ begin
   if p_result not in ('win', 'loss', 'draw') then
     raise exception '无效的对局结果';
   end if;
-  if p_win_points not between 1 and 10 then
+  if p_win_points not between 1 and 11 then
     raise exception '无效的获胜积分';
   end if;
   if p_moves not between 1 and 500 then

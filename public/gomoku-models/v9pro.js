@@ -72,7 +72,11 @@
     const prior = GOMOKU_TRAINING_MODEL.priors[keys.sort()[0]];
     if (!prior) return 0;
     const total = prior.win + prior.loss + (prior.draw || 0);
-    return total ? 300 * (prior.win - prior.loss) / (total + 4) : 0;
+    // Opening samples are sparse and currently combine several historical
+    // model generations. Keep them as a small ordering hint so an empirical
+    // prior cannot overturn the expert evaluator or a tactical move.
+    if (total < 2) return 0;
+    return Math.max(-60, Math.min(60, 80 * (prior.win - prior.loss) / (total + 6)));
   }
   
   
@@ -103,11 +107,29 @@
       });
       return forcedMove;
     }
+    const forcingMove = findDoubleThreatMove(aiColor);
+    if (forcingMove) {
+      updateExplain({
+        candidates: 2,
+        depth: 'FORCE',
+        score: SCORE.FIVE - 2,
+        target: `${forcingMove.row + 1}, ${forcingMove.col + 1}`
+      });
+      return forcingMove;
+    }
     const urgentBlocks = getImmediateWinningMoves(playerColor);
     if (urgentBlocks.length) {
       const block = urgentBlocks[0];
       updateExplain({ candidates: urgentBlocks.length, depth: 0, score: SCORE.CHONG_FOUR, target: `${block.row + 1}, ${block.col + 1}` });
       return block;
+    }
+    // A fork is one move away from two separate wins. Block the fork creator
+    // before ordinary evaluation, otherwise a quiet-looking defense can lose
+    // even when no single opponent winning move exists yet.
+    const forkBlock = findDoubleThreatMove(playerColor);
+    if (forkBlock) {
+      updateExplain({ candidates: 2, depth: 'FORK-BLOCK', score: SCORE.CHONG_FOUR, target: `${forkBlock.row + 1}, ${forkBlock.col + 1}` });
+      return forkBlock;
     }
     const threatMove = findVcfWin(aiColor);
     if (threatMove) {
@@ -174,7 +196,7 @@
     const currentTurn = isMaximizingPlayer ? aiColor : playerColor;
     const key = getBoardKey(depth, isMaximizingPlayer);
     const cached = transpositionTable.get(key);
-    if (cached) {
+    if (cached && cached.depth >= depth) {
       if (cached.bound === 'exact') return cached.score;
       if (cached.bound === 'lower') alpha = Math.max(alpha, cached.score);
       else if (cached.bound === 'upper') beta = Math.min(beta, cached.score);
@@ -256,7 +278,9 @@
     if (searchAborted || !Number.isFinite(result)) return 0;
     const bound = result <= originalAlpha ? 'upper' : result >= originalBeta ? 'lower' : 'exact';
     if (transpositionTable.size > 50000) transpositionTable.clear();
-    transpositionTable.set(key, { score: result, bound, move: bestMove });
+    if (!cached || cached.depth <= depth) {
+      transpositionTable.set(key, { score: result, bound, move: bestMove, depth });
+    }
     return result;
   }
 
@@ -527,6 +551,22 @@
           board[row][col] = 0;
       }
       return winningMoves;
+  }
+
+  // A move that creates two independent immediate wins is a forced attack.
+  // Check this before defensive ordering so a winning continuation is not
+  // discarded merely because the opponent also has a developing threat.
+  function findDoubleThreatMove(player) {
+      const deadline = Math.min(searchDeadline, performance.now() + 1500);
+      for (const move of getPossibleMoves()) {
+          if (performance.now() >= deadline) break;
+          board[move.row][move.col] = player;
+          const opponentWins = getImmediateWinningMoves(3 - player);
+          const winningReplies = opponentWins.length ? [] : getImmediateWinningMoves(player);
+          board[move.row][move.col] = 0;
+          if (!opponentWins.length && winningReplies.length >= 2) return move;
+      }
+      return null;
   }
   
   // Generate urgent wins and blocks first, then order remaining moves for either color.

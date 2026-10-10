@@ -1,7 +1,8 @@
 (function installThinkerEngine() {
+  // Four axes are sufficient because win checks count both sides. The old
+  // eight-direction list evaluated every line twice.
   const directions = [
-    [-1, 0], [1, 0], [0, -1], [0, 1],
-    [-1, -1], [1, 1], [1, -1], [-1, 1]
+    [-1, 0], [0, -1], [-1, -1], [-1, 1]
   ];
   const MAX_SEARCH_DEPTH = 7;
   const MAX_MOVES_TO_SEARCH = 14;
@@ -18,8 +19,14 @@
   const lineCache = new Map();
   const threatCache = new Map();
   const patternCache = new Map();
+  const moveScoreCache = new Map();
   const boardLines = [];
   const cellLines = Array.from({ length: 225 }, () => []);
+  const neighborCounts = new Uint8Array(225);
+  const candidateCells = [];
+  const candidatePositions = new Int16Array(225).fill(-1);
+  const moveObjects = Array.from({ length: 225 }, (_unused, cell) => ({ row: Math.floor(cell / 15), col: cell % 15 }));
+  let occupiedCount = 0;
   let lineValues = [];
   let totalLineValue = 0;
   let hashA = 0;
@@ -73,23 +80,112 @@
   }
   function initializePosition() {
     hashA = hashB = 0;
+    occupiedCount = 0;
+    candidateCells.length = 0;
+    candidatePositions.fill(-1);
+    neighborCounts.fill(0);
     for (let row = 0; row < 15; row++) for (let col = 0; col < 15; col++) {
       const stone = board[row][col];
       if (stone) {
+        occupiedCount++;
         hashA ^= zobrist[row * 15 + col][stone][0];
         hashB ^= zobrist[row * 15 + col][stone][1];
       }
     }
+    for (let row = 0; row < 15; row++) for (let col = 0; col < 15; col++) {
+      if (!board[row][col]) continue;
+      for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) {
+        if (!dr && !dc) continue;
+        const nextRow = row + dr;
+        const nextCol = col + dc;
+        if (nextRow < 0 || nextRow >= 15 || nextCol < 0 || nextCol >= 15) continue;
+        const cell = nextRow * 15 + nextCol;
+        neighborCounts[cell]++;
+      }
+    }
+    rebuildCandidateCells();
     lineValues = boardLines.map((_line, index) => lineValue(index));
     totalLineValue = lineValues.reduce((sum, value) => sum + value, 0);
+  }
+
+  function rebuildCandidateCells() {
+    candidateCells.length = 0;
+    candidatePositions.fill(-1);
+    if (!occupiedCount) {
+      const center = 7 * 15 + 7;
+      candidatePositions[center] = 0;
+      candidateCells.push(center);
+      return;
+    }
+    for (let cell = 0; cell < 225; cell++) {
+      if (!board[Math.floor(cell / 15)][cell % 15] && neighborCounts[cell]) {
+        candidatePositions[cell] = candidateCells.length;
+        candidateCells.push(cell);
+      }
+    }
+  }
+
+  function updateNeighborCounts(row, col, delta) {
+    for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) {
+      if (!dr && !dc) continue;
+      const nextRow = row + dr;
+      const nextCol = col + dc;
+      if (nextRow < 0 || nextRow >= 15 || nextCol < 0 || nextCol >= 15) continue;
+      const cell = nextRow * 15 + nextCol;
+      neighborCounts[cell] = Math.max(0, neighborCounts[cell] + delta);
+      if (board[nextRow][nextCol] || !neighborCounts[cell]) {
+        const position = candidatePositions[cell];
+        if (position >= 0) {
+          const last = candidateCells.pop();
+          candidatePositions[cell] = -1;
+          if (last !== cell) {
+            candidateCells[position] = last;
+            candidatePositions[last] = position;
+          }
+        }
+      } else if (candidatePositions[cell] < 0) {
+        candidatePositions[cell] = candidateCells.length;
+        candidateCells.push(cell);
+      }
+    }
+  }
+
+  function refreshCandidateCell(cell) {
+    const row = Math.floor(cell / 15);
+    const col = cell % 15;
+    const shouldInclude = !board[row][col] && neighborCounts[cell] > 0;
+    const position = candidatePositions[cell];
+    if (shouldInclude && position < 0) {
+      candidatePositions[cell] = candidateCells.length;
+      candidateCells.push(cell);
+    } else if (!shouldInclude && position >= 0) {
+      const last = candidateCells.pop();
+      candidatePositions[cell] = -1;
+      if (last !== cell) {
+        candidateCells[position] = last;
+        candidatePositions[last] = position;
+      }
+    }
   }
   function setPiece(row, col, stone) {
     const cell = row * 15 + col;
     const previous = board[row][col];
     if (previous === stone) return;
-    if (previous) { hashA ^= zobrist[cell][previous][0]; hashB ^= zobrist[cell][previous][1]; }
-    if (stone) { hashA ^= zobrist[cell][stone][0]; hashB ^= zobrist[cell][stone][1]; }
+    if (previous) {
+      hashA ^= zobrist[cell][previous][0];
+      hashB ^= zobrist[cell][previous][1];
+      occupiedCount--;
+      updateNeighborCounts(row, col, -1);
+    }
     board[row][col] = stone;
+    if (stone) {
+      hashA ^= zobrist[cell][stone][0];
+      hashB ^= zobrist[cell][stone][1];
+      occupiedCount++;
+      updateNeighborCounts(row, col, 1);
+    }
+    refreshCandidateCell(cell);
+    if (!stone && !occupiedCount) rebuildCandidateCells();
     for (const index of cellLines[cell]) {
       totalLineValue -= lineValues[index];
       lineValues[index] = lineValue(index);
@@ -125,7 +221,7 @@
   
   // V9Thinker keeps the V9 prior boundary. New V9Pro-only periods must not
   // silently change this model's opening behavior.
-  const GOMOKU_TRAINING_MODEL = window.GOMOKU_V9_TRAINING_MODEL || { priors: {} };
+  const GOMOKU_TRAINING_MODEL = window.GOMOKU_V9THINKER_TRAINING_MODEL || window.GOMOKU_V9_TRAINING_MODEL || { priors: {} };
   
   function transformTrainingCoordinate(row, col, rotation, reflected) {
     let r = row;
@@ -152,7 +248,10 @@
     const prior = GOMOKU_TRAINING_MODEL.priors[keys.sort()[0]];
     if (!prior) return 0;
     const total = prior.win + prior.loss + (prior.draw || 0);
-    return total ? 300 * (prior.win - prior.loss) / (total + 4) : 0;
+    // Opening samples are sparse and may mix different model generations.
+    // Keep them as a bounded ordering hint, never as a tactical override.
+    if (total < 2) return 0;
+    return Math.max(-60, Math.min(60, 80 * (prior.win - prior.loss) / (total + 6)));
   }
   
   
@@ -171,6 +270,7 @@
     transpositionTable.clear();
     evaluationCache.clear();
     threatCache.clear();
+    moveScoreCache.clear();
     initializePosition();
     killerMoves.forEach(moves => moves.length = 0);
     historyScores.clear();
@@ -186,11 +286,27 @@
       });
       return forcedMove;
     }
+    const forcingMove = findDoubleThreatMove(aiColor);
+    if (forcingMove) {
+      updateExplain({
+        candidates: 2,
+        depth: 'FORCE',
+        score: SCORE.FIVE - 2,
+        target: `${forcingMove.row + 1}, ${forcingMove.col + 1}`
+      });
+      return forcingMove;
+    }
     const urgentBlocks = getImmediateWinningMoves(playerColor);
     if (urgentBlocks.length) {
       const block = urgentBlocks[0];
       updateExplain({ candidates: urgentBlocks.length, depth: 0, score: SCORE.CHONG_FOUR, target: `${block.row + 1}, ${block.col + 1}` });
       return block;
+    }
+    // Prevent an opponent fork even when it is not yet an immediate win.
+    const forkBlock = findDoubleThreatMove(playerColor);
+    if (forkBlock) {
+      updateExplain({ candidates: 2, depth: 'FORK-BLOCK', score: SCORE.CHONG_FOUR, target: `${forkBlock.row + 1}, ${forkBlock.col + 1}` });
+      return forkBlock;
     }
     const threatMove = findVcfWin(aiColor);
     if (threatMove) {
@@ -549,43 +665,25 @@
     const positionKey = getPositionKey();
     const cachedEvaluation = evaluationCache.get(positionKey);
     if (cachedEvaluation !== undefined) return cachedEvaluation;
-    let aiTotalScore = 0;
-    let playerTotalScore = 0;
-    let hasPieces = false;
-    
-    // 只遍历已落子的位置，跳过空位
-    for (let i = 0; i < BOARD_SIZE; i++) {
-      for (let j = 0; j < BOARD_SIZE; j++) {
-        if (board[i][j] === aiColor) {
-          hasPieces = true;
-          aiTotalScore += getScoreForPlayer(i, j, aiColor);
-        } else if (board[i][j] === playerColor) {
-          hasPieces = true;
-          playerTotalScore += getScoreForPlayer(i, j, playerColor);
-        }
-      }
+    // Keep the incremental line score as the base, then inspect nearby empty
+    // cells for the same tactical patterns used by move ordering. The bounded
+    // frontier keeps this stronger evaluation substantially cheaper than a
+    // full-board scan while avoiding the old mobility-only regression.
+    const frontier = candidateCells.slice(0, Math.min(candidateCells.length, 64));
+    const mobility = candidateCells.length * 12;
+    let attackPotential = 0;
+    let defensePotential = 0;
+    for (const cell of frontier) {
+      const row = Math.floor(cell / 15);
+      const col = cell % 15;
+      setPiece(row, col, aiColor);
+      attackPotential += getScoreForPlayer(row, col, aiColor) + getSpatialThreatScore(row, col, aiColor) * 40;
+      setPiece(row, col, 0);
+      setPiece(row, col, playerColor);
+      defensePotential += getScoreForPlayer(row, col, playerColor) + getSpatialThreatScore(row, col, playerColor) * 40;
+      setPiece(row, col, 0);
     }
-    
-    if (!hasPieces) {
-      evaluationCache.set(positionKey, 0);
-      return 0;
-    }
-    
-    // Evaluate both sides' next-move threats symmetrically.
-    const emptyMoves = getPossibleMoves();
-    for (const move of emptyMoves) {
-        const { row, col } = move;
-        
-        setPiece(row, col, aiColor);
-        aiTotalScore += getScoreForMove(row, col, aiColor);
-        setPiece(row, col, 0);
-        
-        setPiece(row, col, playerColor);
-        playerTotalScore += getScoreForMove(row, col, playerColor);
-        setPiece(row, col, 0);
-    }
-    
-    const result = aiTotalScore - playerTotalScore + totalLineValue * 0.08;
+    const result = totalLineValue + mobility + (attackPotential - defensePotential) * 0.18;
     if (evaluationCache.size > 30000) evaluationCache.clear();
     evaluationCache.set(positionKey, result);
     return result;
@@ -620,40 +718,7 @@
   
   // 获取所有可能的落子位置 (只考虑周围有子的空位)
   function getPossibleMoves() {
-    const moves = [];
-    const hasPiece = (r, c) => r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] !== 0;
-    
-    for (let i = 0; i < BOARD_SIZE; i++) {
-      for (let j = 0; j < BOARD_SIZE; j++) {
-        if (board[i][j] === 0) {
-          // 检查周围两圈是否有棋子，以扩大搜索范围
-          let neighbor = false;
-          for (let dx = -2; dx <= 2; dx++) {
-            for (let dy = -2; dy <= 2; dy++) {
-              if (dx === 0 && dy === 0) continue;
-              if (hasPiece(i + dx, j + dy)) {
-                neighbor = true;
-                break;
-              }
-            }
-            if (neighbor) break;
-          }
-          if (neighbor) {
-            moves.push({ row: i, col: j });
-          }
-        }
-      }
-    }
-    
-    // 如果棋盘为空，则从中心开始
-    if (moves.length === 0) {
-        const center = Math.floor(BOARD_SIZE / 2);
-        if (board[center][center] === 0) {
-            moves.push({ row: center, col: center });
-        }
-    }
-    
-    return moves;
+    return candidateCells.map(cell => moveObjects[cell]);
   }
   
   function getImmediateWinningMoves(player) {
@@ -671,34 +736,68 @@
       threatCache.set(cacheKey, winningMoves.map(move => ({ ...move })));
       return winningMoves;
   }
+
+  // A move that creates two independent immediate wins is a forced attack.
+  // Check this before defensive ordering so a winning continuation is not
+  // discarded merely because the opponent also has a developing threat.
+  function findDoubleThreatMove(player) {
+      const deadline = Math.min(searchDeadline, performance.now() + 2000);
+      for (const move of getPossibleMoves()) {
+          if (performance.now() >= deadline) break;
+          setPiece(move.row, move.col, player);
+          const opponentWins = getImmediateWinningMoves(3 - player);
+          const winningReplies = opponentWins.length ? [] : getImmediateWinningMoves(player);
+          setPiece(move.row, move.col, 0);
+          if (!opponentWins.length && winningReplies.length >= 2) return move;
+      }
+      return null;
+  }
   
   // Generate urgent wins and blocks first, then order remaining moves for either color.
   function getFilteredMoves(player = aiColor, useTraining = false, preferredMove = null, ply = 0) {
       const allMoves = getPossibleMoves();
       const opponent = 3 - player;
-      const winningMoves = getImmediateWinningMoves(player);
-      const opponentWinningMoves = getImmediateWinningMoves(opponent);
-      if (winningMoves.length) return winningMoves.map(move => ({ ...move, tactical: true, score: SCORE.FIVE }));
-      if (opponentWinningMoves.length) return opponentWinningMoves.map(move => ({ ...move, tactical: true, score: SCORE.FIVE }));
-  
+      const winningMoves = [];
+      const opponentWinningMoves = [];
       const scoredMoves = allMoves.map(move => {
           const { row, col } = move;
+          const cell = row * 15 + col;
+          const stateKey = `${hashA >>> 0}|${hashB >>> 0}|${cell}|${player}`;
+          const cachedScores = moveScoreCache.get(stateKey);
+          if (cachedScores) {
+            if (cachedScores.wins) winningMoves.push({ ...move, tactical: true, score: SCORE.FIVE });
+            if (cachedScores.opponentWins) opponentWinningMoves.push({ ...move, tactical: true, score: SCORE.FIVE });
+            const trainingPrior = useTraining ? getTrainingPrior(row, col, player) : 0;
+            const sameMove = preferredMove && move.row === preferredMove.row && move.col === preferredMove.col;
+            const killer = (killerMoves[Math.min(ply, killerMoves.length - 1)] || []).some(candidate => candidate.row === row && candidate.col === col);
+            const score = cachedScores.attackScore * 1.5 + cachedScores.defenseScore * 1.5 + cachedScores.attackSpace * 0.7 + cachedScores.defenseSpace * 0.7 + trainingPrior
+              + (sameMove ? 1e15 : 0) + (killer ? 200000 : 0) + (historyScores.get(`${player}|${row},${col}`) || 0) * 10;
+            return { ...move, score, tactical: cachedScores.tactical };
+          }
           setPiece(row, col, player);
+          const wins = checkWinWithoutUpdate(row, col, player);
           const attackScore = getScoreForPlayer(row, col, player);
           const attackSpace = getSpatialThreatScore(row, col, player);
           setPiece(row, col, 0);
           setPiece(row, col, opponent);
+          const opponentWins = checkWinWithoutUpdate(row, col, opponent);
           const defenseScore = getScoreForPlayer(row, col, opponent);
           const defenseSpace = getSpatialThreatScore(row, col, opponent);
           setPiece(row, col, 0);
+          if (wins) winningMoves.push({ ...move, tactical: true, score: SCORE.FIVE });
+          if (opponentWins) opponentWinningMoves.push({ ...move, tactical: true, score: SCORE.FIVE });
           const trainingPrior = useTraining ? getTrainingPrior(row, col, player) : 0;
           const sameMove = preferredMove && move.row === preferredMove.row && move.col === preferredMove.col;
           const killer = (killerMoves[Math.min(ply, killerMoves.length - 1)] || []).some(candidate => candidate.row === row && candidate.col === col);
           const score = attackScore * 1.5 + defenseScore * 1.5 + attackSpace * 0.7 + defenseSpace * 0.7 + trainingPrior
             + (sameMove ? 1e15 : 0) + (killer ? 200000 : 0) + (historyScores.get(`${player}|${row},${col}`) || 0) * 10;
           const tactical = attackScore >= SCORE.CHONG_FOUR || defenseScore >= SCORE.CHONG_FOUR || attackSpace >= 100000 || defenseSpace >= 100000;
+          if (moveScoreCache.size > 40000) moveScoreCache.clear();
+          moveScoreCache.set(stateKey, { attackScore, defenseScore, attackSpace, defenseSpace, tactical, wins, opponentWins });
           return { ...move, score, tactical };
       });
+      if (winningMoves.length) return winningMoves;
+      if (opponentWinningMoves.length) return opponentWinningMoves;
       scoredMoves.sort((a, b) => b.score - a.score);
       return scoredMoves.slice(0, MAX_MOVES_TO_SEARCH);
   }
@@ -893,6 +992,7 @@
       lineCache.clear();
       threatCache.clear();
       patternCache.clear();
+      moveScoreCache.clear();
     }
   };
 })();

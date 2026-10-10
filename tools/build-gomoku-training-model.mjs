@@ -34,7 +34,7 @@ const directories = (await readdir(root, { withFileTypes: true }))
   .map(entry => entry.name)
   .sort();
 
-async function buildModel(sourceDirectories) {
+async function buildModel(sourceDirectories, { includeModelBattle = true, modelVersion = null } = {}) {
   const outcomes = { win: 0, loss: 0, draw: 0 };
   const priors = {};
   let gameCount = 0;
@@ -48,6 +48,11 @@ async function buildModel(sourceDirectories) {
     for (const file of files) {
       const game = JSON.parse(await readFile(path.join(directoryPath, file), 'utf8'));
       if (!['win', 'loss', 'draw'].includes(game.result) || !Array.isArray(game.moves)) continue;
+      // Model-versus-model results measure a matchup and opening choice, not
+      // a human-facing expert policy. Keep them in the cumulative archive,
+      // but exclude them from the Pro/Thinker expert prior so one version's
+      // wins cannot train another version into a weaker opening.
+      if (game.model_battle === true && (!includeModelBattle || (modelVersion !== null && game.model_version !== modelVersion))) continue;
       const playerColor = game.player_color ?? game.playerColor;
       const aiColor = game.ai_color ?? game.aiColor;
       if (![1, 2].includes(playerColor) || ![1, 2].includes(aiColor) || playerColor === aiColor) continue;
@@ -81,12 +86,19 @@ const legacyDirectories = directories.filter(directory => {
 });
 const cumulativeModel = await buildModel(directories);
 const v9Model = await buildModel(legacyDirectories);
+const v9ProModel = await buildModel(directories, { modelVersion: 9.1 });
+// V9Thinker keeps the V9-era data boundary; period 1010 and later remain
+// exclusive to V9Pro even when those folders contain Thinker matchups.
+const v9ThinkerModel = v9Model;
 const output = [
   `window.GOMOKU_TRAINING_MODEL = ${JSON.stringify(cumulativeModel)};`,
-  'window.GOMOKU_V9PRO_TRAINING_MODEL = window.GOMOKU_TRAINING_MODEL;',
+  `window.GOMOKU_V9PRO_TRAINING_MODEL = ${JSON.stringify(v9ProModel)};`,
+  `window.GOMOKU_V9THINKER_TRAINING_MODEL = ${JSON.stringify(v9ThinkerModel)};`,
   `window.GOMOKU_V9_TRAINING_MODEL = ${JSON.stringify(v9Model)};`,
   ''
 ].join('\n');
 await writeFile(outputPath, output, 'utf8');
 console.log(`Built ${Object.keys(cumulativeModel.priors).length} cumulative opening patterns from ${cumulativeModel.gameCount} games in ${directories.length} training folders.`);
+console.log(`Built ${Object.keys(v9ProModel.priors).length} V9Pro expert patterns from ${v9ProModel.gameCount} base and V9Pro-owned games in ${directories.length} training folders.`);
+console.log(`Built ${Object.keys(v9ThinkerModel.priors).length} V9Thinker expert patterns from the V9-era ${v9ThinkerModel.gameCount}-game boundary.`);
 console.log(`Built ${Object.keys(v9Model.priors).length} V9 opening patterns from ${v9Model.gameCount} games in ${legacyDirectories.length} training folders.`);

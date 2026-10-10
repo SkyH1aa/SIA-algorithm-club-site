@@ -244,12 +244,12 @@
       return `铭星V${version}`;
     }
     function getModelWinPoints(version) {
-      return version === 9.1 || version === 9.2 ? 10 : Math.trunc(version);
+      if (version === 9.2) return 11;
+      return version === 9.1 ? 10 : Math.trunc(version);
     }
     function canUploadTrainingResult(version, result) {
       if (!['win', 'loss', 'draw'].includes(result)) return false;
-      if (version === 9 || version === 9.1 || version === 9.2) return true;
-      return version === 8 && (result === 'win' || result === 'draw');
+      return version === 8 || version === 9 || version === 9.1 || version === 9.2;
     }
     function modelOptionsMarkup(selectedVersion) {
       return MODEL_VERSIONS.map(version => `<option value="${version}"${version === selectedVersion ? ' selected' : ''}>${getModelName(version)}</option>`).join('');
