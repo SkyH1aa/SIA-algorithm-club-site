@@ -61,8 +61,11 @@ async function uploadGomokuTrainingData(payload: any) {
     throw new Error('模型对战标记不合法。');
   }
 
-  if (payload.result === 'loss' && payload.modelVersion !== 9 && payload.modelVersion !== 9.1) {
-    throw new Error('该模型版本不接收 AI 负局训练数据。');
+  const acceptsResult = payload.modelVersion === 9 || payload.modelVersion === 9.1
+    ? true
+    : payload.modelVersion === 8 && (payload.result === 'win' || payload.result === 'draw');
+  if (!acceptsResult) {
+    throw new Error('该模型版本不接收此类训练数据。');
   }
 
   if (

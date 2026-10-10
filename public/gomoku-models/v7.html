@@ -711,7 +711,6 @@
         playerColor = request.playerColor;
         currentPlayer = aiColor;
         gameover = false;
-        transpositionTable.clear();
         const move = findBestMoveWithMinimax();
         parent.postMessage({ type: 'gomoku:move-result', requestId: request.requestId, move }, '*');
       } catch (error) {

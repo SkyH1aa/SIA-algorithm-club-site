@@ -224,6 +224,8 @@
     let isModelBattle = false;
     let blackModelVersion = 9;
     let whiteModelVersion = 9.1;
+    let lastTrainingUploadError = '';
+    let gameSessionToken = 0;
     let legacyEngineReady = Promise.resolve();
     let legacyLoadedVersion = null;
     let legacyMoveRequestId = 0;
@@ -241,8 +243,10 @@
     function getModelWinPoints(version) {
       return version === 9.1 ? 10 : Math.trunc(version);
     }
-    function isLossUploadAllowed(version) {
-      return version === 9 || version === 9.1;
+    function canUploadTrainingResult(version, result) {
+      if (!['win', 'loss', 'draw'].includes(result)) return false;
+      if (version === 9 || version === 9.1) return true;
+      return version === 8 && (result === 'win' || result === 'draw');
     }
     function modelOptionsMarkup(selectedVersion) {
       return MODEL_VERSIONS.map(version => `<option value="${version}"${version === selectedVersion ? ' selected' : ''}>${getModelName(version)}</option>`).join('');
@@ -284,7 +288,11 @@
       });
     });
     gameModeSelect.addEventListener('change', () => {
-      if (gameInProgress) return;
+      if (gameInProgress) {
+        gameover = true;
+        gameInProgress = false;
+      }
+      resetGame();
       updateModeControls();
     });
     startModelBattleButton.addEventListener('click', startModelBattle);
@@ -350,23 +358,41 @@
       modelBattle = false
     } = {}) {
       if (!gameMoves.length) return false;
-      const response = await fetch(GOMOKU_TRAINING_URL, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          result: aiResult,
-          modelVersion,
-          nickname,
-          playerColor: 3 - modelColor,
-          aiColor: modelColor,
-          modelBattle,
-          opponentModelVersion,
-          moves: gameMoves
-        })
-      });
-      if (!response.ok) return false;
-      const payload = await response.json().catch(() => ({}));
-      return payload.upload?.ok === true;
+      lastTrainingUploadError = '';
+      const body = {
+        result: aiResult,
+        modelVersion,
+        nickname,
+        playerColor: 3 - modelColor,
+        aiColor: modelColor,
+        moves: gameMoves
+      };
+      if (modelBattle) {
+        Object.assign(body, {
+          modelBattle: true,
+          opponentModelVersion
+        });
+      }
+      try {
+        const response = await fetch(GOMOKU_TRAINING_URL, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          lastTrainingUploadError = payload.error || `服务器返回 HTTP ${response.status}`;
+          return false;
+        }
+        if (payload.upload?.ok !== true) {
+          lastTrainingUploadError = payload.error || '服务器未确认保存';
+          return false;
+        }
+        return true;
+      } catch (error) {
+        lastTrainingUploadError = error?.message || '网络请求失败';
+        return false;
+      }
     }
 
     function updateGameActionButton() {
@@ -376,6 +402,12 @@
     }
 
     function startGameSession({ modelBattle = false } = {}) {
+      gameSessionToken += 1;
+      board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
+      currentPlayer = 1;
+      gameover = false;
+      lastAiMove = null;
+      initBoard();
       moveCount = 0;
       gameStartedAt = Date.now();
       resultSubmitted = false;
@@ -399,6 +431,13 @@
       updateGameActionButton();
     }
 
+    function queueAIMove(delay = 0, sessionToken = gameSessionToken) {
+      setTimeout(() => {
+        if (sessionToken !== gameSessionToken) return;
+        void makeAIMove();
+      }, delay);
+    }
+
     async function finishGame(result, { uploadTraining = true } = {}) {
       gameInProgress = false;
       updateGameActionButton();
@@ -418,13 +457,13 @@
       document.getElementById('result').textContent = ClubI18n.t(result === 'win' ? 'gomoku.win' : result === 'draw' ? 'gomoku.draw' : 'gomoku.lose', { score, model: getModelName(activeModelVersion) });
       if (gameMoves.length && uploadTraining) {
         const aiResult = result === 'win' ? 'loss' : result === 'loss' ? 'win' : 'draw';
-        if (aiResult === 'loss' && activeModelVersion !== 9 && activeModelVersion !== 9.1) {
+        if (!canUploadTrainingResult(activeModelVersion, aiResult)) {
           document.getElementById('result').textContent += ClubI18n.t('gomoku.trainSkipped');
         } else {
           const uploaded = await uploadGameTrainingData(nickname, aiResult);
           document.getElementById('result').textContent += uploaded
             ? ClubI18n.t('gomoku.trainSaved')
-            : ClubI18n.t('gomoku.trainFail');
+            : `${ClubI18n.t('gomoku.trainFail')}（${escapeHtml(lastTrainingUploadError)}）`;
         }
       }
       if (!supabaseClient || typeof supabaseClient.rpc !== 'function') {
@@ -460,8 +499,9 @@
           ];
       let uploaded = 0;
       let skipped = 0;
+      let uploadError = '';
       for (const outcome of outcomes) {
-        if (outcome.result === 'loss' && !isLossUploadAllowed(outcome.version)) {
+        if (!canUploadTrainingResult(outcome.version, outcome.result)) {
           skipped++;
           continue;
         }
@@ -475,12 +515,14 @@
         } catch (_error) {
           // Keep sending the other model's record if this request fails.
         }
+        if (!uploaded || lastTrainingUploadError) uploadError = lastTrainingUploadError || uploadError;
       }
       if (uploaded) resultElement.textContent += ` · 已上传 ${uploaded} 份模型训练数据`;
-      if (skipped) resultElement.textContent += ` · 按版本规则跳过 ${skipped} 份败局数据`;
-      if (uploaded < outcomes.filter(outcome => outcome.result !== 'loss' || isLossUploadAllowed(outcome.version)).length) {
-        resultElement.textContent += ' · 部分训练数据上传失败';
+      if (skipped) resultElement.textContent += ` · 按版本规则跳过 ${skipped} 份训练数据`;
+      if (uploaded < outcomes.filter(outcome => canUploadTrainingResult(outcome.version, outcome.result)).length) {
+        resultElement.textContent += ` · 部分训练数据上传失败${uploadError ? `（${escapeHtml(uploadError)}）` : ''}`;
       }
+      isModelBattle = false;
       releaseGameSetup();
     }
 
@@ -560,7 +602,7 @@
       initBoard();
       startGameSession({ modelBattle: true });
       document.getElementById('status').textContent = `${getModelName(blackModelVersion)}（黑棋）思考中…`;
-      setTimeout(makeAIMove, 50);
+      queueAIMove(50, gameSessionToken);
     }
 
     async function setPlayerColor(color) {
@@ -574,7 +616,7 @@
       statusElement.innerHTML = playerColor === 1 ? ClubI18n.t('gomoku.yourTurnBlack') : ClubI18n.t('gomoku.aiThinkingBlack');
       updateGameActionButton();
       if (aiColor === 1) {
-        setTimeout(makeAIMove, 500); // AI执黑先手
+        queueAIMove(500, gameSessionToken); // AI执黑先手
       }
     }
 
@@ -594,7 +636,7 @@
         }
         currentPlayer = 3 - currentPlayer;
         updateStatus();
-        setTimeout(makeAIMove, 500);
+        queueAIMove(500, gameSessionToken);
       }
     }
 
@@ -633,6 +675,7 @@
     // AI落子
     async function makeAIMove() {
       if (gameover || !gameInProgress) return;
+      const sessionToken = gameSessionToken;
       const battleColor = isModelBattle ? currentPlayer : aiColor;
       if (!isModelBattle && currentPlayer !== aiColor) return;
       const version = isModelBattle
@@ -642,13 +685,14 @@
       try {
         move = await findModelMove(version, battleColor);
       } catch (error) {
+        if (sessionToken !== gameSessionToken) return;
         document.getElementById('result').textContent = error.message || '模型加载失败';
         gameover = true;
         gameInProgress = false;
         releaseGameSetup();
         return;
       }
-      if (gameover || !gameInProgress) return;
+      if (sessionToken !== gameSessionToken || gameover || !gameInProgress) return;
       if (!move) {
         move = findRandomMove();
       }
@@ -667,7 +711,7 @@
         }
         currentPlayer = 3 - currentPlayer;
         updateStatus();
-        if (isModelBattle) setTimeout(makeAIMove, 50);
+        if (isModelBattle) queueAIMove(50, sessionToken);
       }
     }
 
@@ -823,6 +867,7 @@
     // 重新开始游戏
     function resetGame() {
       if (gameInProgress && !gameover) return;
+      gameSessionToken += 1;
       board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
       currentPlayer = 1;
       gameover = false;
