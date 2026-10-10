@@ -72,7 +72,14 @@
     try {
       let state;
       try {
-        const res = await fetch(URL, { method: 'POST', headers: { 'content-type': 'application/json', apikey: KEY }, body: JSON.stringify({ action: 'site_service_status' }) });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        let res;
+        try {
+          res = await fetch(URL, { method: 'POST', headers: { 'content-type': 'application/json', apikey: KEY }, body: JSON.stringify({ action: 'site_service_status' }), signal: controller.signal });
+        } finally {
+          clearTimeout(timeoutId);
+        }
         if (!res.ok) throw new Error('service status request failed');
         state = await res.json();
         latestState = state;
@@ -84,7 +91,7 @@
           latestState = state;
           window.dispatchEvent(new CustomEvent('club:servicestate', { detail: state }));
         }
-        if (!state) { setTimeout(check, 1200); return; }
+        if (!state) { reveal(); return; }
       }
       const feature = featureKey && state.feature_settings && state.feature_settings[featureKey];
       if (state.enabled !== false && (!feature || feature.enabled !== false)) { reveal(); return; }

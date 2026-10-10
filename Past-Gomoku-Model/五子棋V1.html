@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>五子棋-算法社版</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f0f0f0;
+      font-family: Arial, sans-serif;
+    }
+    
+    .game-container {
+      text-align: center;
+    }
+    
+    .board {
+      display: grid;
+      grid-template-columns: repeat(15, 30px);
+      grid-template-rows: repeat(15, 30px);
+      gap: 0;
+      border: 2px solid #333;
+      background-color: #deb887;
+      position: relative;
+    }
+    
+    .cell {
+      width: 30px;
+      height: 30px;
+      border: 1px solid #333;
+      box-sizing: border-box;
+      cursor: pointer;
+      position: relative;
+    }
+    
+    .cell::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 6px;
+      height: 6px;
+      background-color: #333;
+      border-radius: 50%;
+    }
+    
+    .black {
+      background-color: #000;
+      border-radius: 50%;
+    }
+    
+    .white {
+      background-color: #fff;
+      border-radius: 50%;
+      border: 1px solid #000;
+    }
+    
+    .status {
+      margin: 20px 0;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <h1>五子棋-算法社版</h1>
+    <div class="status" id="status">你的回合 (黑子)</div>
+    <div class="board" id="board"></div>
+    <br>
+    <button onclick="resetGame()">重新开始</button>
+  </div>
+
+  <script>
+    const BOARD_SIZE = 15;
+    let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
+    let currentPlayer = 1; // 1: 黑子(玩家), 2: 白子(AI)
+    let gameover = false;
+
+    // 八个方向: 上、下、左、右、左上、右下、左下、右上
+    const directions = [
+      [-1, 0], [1, 0], [0, -1], [0, 1],
+      [-1, -1], [1, 1], [1, -1], [-1, 1]
+    ];
+
+    // 初始化棋盘
+    function initBoard() {
+      const boardElement = document.getElementById('board');
+      boardElement.innerHTML = '';
+      
+      for (let i = 0; i < BOARD_SIZE; i++) {
+        for (let j = 0; j < BOARD_SIZE; j++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.row = i;
+          cell.dataset.col = j;
+          cell.addEventListener('click', () => makeMove(i, j));
+          boardElement.appendChild(cell);
+        }
+      }
+    }
+
+    // 落子
+    function makeMove(row, col) {
+      if (gameover || board[row][col] !== 0 || currentPlayer !== 1) return;
+      
+      placePiece(row, col, 1);
+      
+      if (!checkWin(row, col, 1)) {
+        currentPlayer = 2;
+        updateStatus();
+        setTimeout(makeAIMove, 500); // AI思考半秒
+      }
+    }
+
+    // AI落子
+    function makeAIMove() {
+      if (gameover) return;
+      
+      let move = findBestMove();
+      if (!move) {
+        // 如果没有找到好位置，随机下
+        move = findRandomMove();
+      }
+      
+      placePiece(move.row, move.col, 2);
+      
+      if (!checkWin(move.row, move.col, 2)) {
+        currentPlayer = 1;
+        updateStatus();
+      }
+    }
+
+    // 寻找最佳位置
+    function findBestMove() {
+      let bestMove = null;
+      let maxScore = -1;
+      
+      // 遍历所有空位
+      for (let i = 0; i < BOARD_SIZE; i++) {
+        for (let j = 0; j < BOARD_SIZE; j++) {
+          if (board[i][j] === 0) {
+            // 评估这个位置的分数
+            const score = evaluatePosition(i, j);
+            if (score > maxScore) {
+              maxScore = score;
+              bestMove = { row: i, col: j };
+            }
+          }
+        }
+      }
+      
+      return bestMove;
+    }
+
+    // 评估位置分数
+    function evaluatePosition(row, col) {
+      // 检查AI(白子)在这个位置能形成的连线
+      const aiScore = evaluateForPlayer(row, col, 2);
+      // 检查玩家(黑子)在这个位置能形成的连线
+      const playerScore = evaluateForPlayer(row, col, 1);
+      
+      // 优先堵住玩家的威胁，然后考虑自己的进攻
+      return Math.max(aiScore, playerScore * 0.9); // 稍微偏向防守
+    }
+
+    // 为特定玩家评估位置
+    function evaluateForPlayer(row, col, player) {
+      let score = 0;
+      
+      // 检查八个方向
+      for (let [dx, dy] of directions) {
+        let count = 1; // 包括当前位置
+        let blocked = 0;
+        
+        // 向一个方向检查
+        for (let i = 1; i <= 4; i++) {
+          const newRow = row + dx * i;
+          const newCol = col + dy * i;
+          
+          if (newRow < 0 || newRow >= BOARD_SIZE || newCol < 0 || newCol >= BOARD_SIZE) {
+            blocked++;
+            break;
+          }
+          
+          if (board[newRow][newCol] === player) {
+            count++;
+          } else if (board[newRow][newCol] !== 0) {
+            blocked++;
+            break;
+          } else {
+            break;
+          }
+        }
+        
+        // 向相反方向检查
+        for (let i = 1; i <= 4; i++) {
+          const newRow = row - dx * i;
+          const newCol = col - dy * i;
+          
+          if (newRow < 0 || newRow >= BOARD_SIZE || newCol < 0 || newCol >= BOARD_SIZE) {
+            blocked++;
+            break;
+          }
+          
+          if (board[newRow][newCol] === player) {
+            count++;
+          } else if (board[newRow][newCol] !== 0) {
+            blocked++;
+            break;
+          } else {
+            break;
+          }
+        }
+        
+        // 根据连子数和阻挡情况评分
+        if (count >= 5) {
+          score += 100000; // 五连
+        } else if (count === 4) {
+          if (blocked === 0) score += 10000; // 活四
+          else if (blocked === 1) score += 1000; // 冲四
+        } else if (count === 3) {
+          if (blocked === 0) score += 100; // 活三
+          else if (blocked === 1) score += 10; // 眠三
+        } else if (count === 2) {
+          if (blocked === 0) score += 10; // 活二
+        }
+      }
+      
+      return score;
+    }
+
+    // 寻找随机位置
+    function findRandomMove() {
+      let emptyCells = [];
+      for (let i = 0; i < BOARD_SIZE; i++) {
+        for (let j = 0; j < BOARD_SIZE; j++) {
+          if (board[i][j] === 0) {
+            emptyCells.push({ row: i, col: j });
+          }
+        }
+      }
+      
+      if (emptyCells.length > 0) {
+        return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+      }
+      
+      return null;
+    }
+
+    // 放置棋子
+    function placePiece(row, col, player) {
+      board[row][col] = player;
+      const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+      cell.classList.add(player === 1 ? 'black' : 'white');
+    }
+
+    // 检查是否获胜
+    function checkWin(row, col, player) {
+      // 检查八个方向是否有五连
+      for (let [dx, dy] of directions) {
+        let count = 1;
+        
+        // 向一个方向计数
+        for (let i = 1; i <= 4; i++) {
+          const newRow = row + dx * i;
+          const newCol = col + dy * i;
+          if (newRow >= 0 && newRow < BOARD_SIZE && newCol >= 0 && newCol < BOARD_SIZE && 
+              board[newRow][newCol] === player) {
+            count++;
+          } else {
+            break;
+          }
+        }
+        
+        // 向相反方向计数
+        for (let i = 1; i <= 4; i++) {
+          const newRow = row - dx * i;
+          const newCol = col - dy * i;
+          if (newRow >= 0 && newRow < BOARD_SIZE && newCol >= 0 && newCol < BOARD_SIZE && 
+              board[newRow][newCol] === player) {
+            count++;
+          } else {
+            break;
+          }
+        }
+        
+        if (count >= 5) {
+          gameover = true;
+          const winner = player === 1 ? '你' : 'AI';
+          document.getElementById('status').textContent = `${winner}获胜！`;
+          return true;
+        }
+      }
+      
+      return false;
+    }
+
+    // 更新状态显示
+    function updateStatus() {
+      const statusElement = document.getElementById('status');
+      if (currentPlayer === 1) {
+        statusElement.textContent = '你的回合 (黑子)';
+      } else {
+        statusElement.textContent = 'AI思考中... (白子)';
+      }
+    }
+
+    // 重新开始游戏
+    function resetGame() {
+      board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
+      currentPlayer = 1;
+      gameover = false;
+      initBoard();
+      updateStatus();
+    }
+
+    // 初始化游戏
+    initBoard();
+    updateStatus();
+  </script>
+</body>
+</html>

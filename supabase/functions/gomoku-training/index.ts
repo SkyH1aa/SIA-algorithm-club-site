@@ -48,8 +48,16 @@ function trainingFileName() {
 }
 
 async function uploadGomokuTrainingData(payload: any) {
-  if (!payload || payload.result !== 'loss') {
-    throw new Error('只允许上传 AI 失败的对局。');
+  if (!payload || !['win', 'loss', 'draw'].includes(payload.result)) {
+    throw new Error('对局结果不合法。');
+  }
+
+  if (![1, 2, 3, 6, 7, 8, 9].includes(payload.modelVersion)) {
+    throw new Error('模型版本不合法。');
+  }
+
+  if (payload.result === 'loss' && payload.modelVersion < 8) {
+    throw new Error('该模型版本不接收 AI 负局训练数据。');
   }
 
   if (
@@ -109,7 +117,8 @@ async function uploadGomokuTrainingData(payload: any) {
 
   const body = JSON.stringify({
     schema: 'algorithm-club.gomoku-training.v1',
-    result: 'loss',
+    result: payload.result,
+    model_version: payload.modelVersion,
     nickname: typeof payload.nickname === 'string'
       ? payload.nickname.slice(0, 40)
       : null,

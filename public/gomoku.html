@@ -32,6 +32,8 @@
     .game-layout { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 24px; align-items: start; }
     .panel { padding: 20px; border: 1px solid rgba(73, 231, 255, .24); border-radius: 12px; background: rgba(13, 28, 47, .84); box-shadow: 0 16px 42px rgba(0,0,0,.22); }
     .setup { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+    .setup select { min-width: 150px; padding: 10px 12px; border: 1px solid #31536a; border-radius: 6px; background: #081522; color: #fff; font-size: 15px; }
+    .model-engine-frame { position: fixed; width: 1px; height: 1px; left: -10px; top: -10px; opacity: 0; pointer-events: none; }
     input { min-width: 210px; padding: 10px 12px; border: 1px solid #31536a; border-radius: 6px; background: #081522; color: #fff; font-size: 15px; }
     .hint { color: #91a9b8; font-size: 13px; }
     .leaderboard h2 { margin-top: 0; }
@@ -163,6 +165,11 @@
         <div class="setup">
           <label for="nickname" data-i18n="games.nickPlaceholder">挑战昵称</label>
           <input id="nickname" maxlength="20" placeholder="请输入昵称" data-i18n-placeholder="games.nickPlaceholder" autocomplete="nickname" />
+          <label for="modelVersion" data-i18n="gomoku.modelLabel">挑战模型</label>
+          <select id="modelVersion" aria-label="选择挑战模型">
+            <option value="1">铭星V1</option><option value="2">铭星V2</option><option value="3">铭星V3</option>
+            <option value="6">铭星V6</option><option value="7">铭星V7</option><option value="8">铭星V8</option><option value="9" selected>铭星V9</option>
+          </select>
           <span class="hint" data-i18n="gomoku.nickSideHint">先填写昵称，再选择执子</span>
         </div>
         <div class="status" id="status"></div>
@@ -176,17 +183,19 @@
       </main>
       <aside class="leaderboard panel">
         <h2 data-i18n="games.leaderboard">排行榜</h2>
-        <p class="hint" data-i18n="gomoku.lbHint">按胜利得分排序，平局 1 分，失败 0 分。</p>
+        <p class="hint" data-i18n="gomoku.lbHint">战胜铭星Vx 得 x 分，平局 1 分，失败 0 分。</p>
         <ol class="leaderboard-list" id="leaderboardList"><li class="empty" data-i18n="common.loading">正在读取…</li></ol>
         <div class="leaderboard-pagination" id="leaderboardPagination" hidden><button type="button" id="leaderboardPrev" class="button secondary" data-i18n="games.prevPage">上一页</button><span id="leaderboardPageInfo"></span><button type="button" id="leaderboardNext" class="button secondary" data-i18n="games.nextPage">下一页</button></div>
       </aside>
     </div>
   </div>
+  <iframe id="legacyModelEngine" class="model-engine-frame" title="历史五子棋模型引擎" aria-hidden="true"></iframe>
 
+  <script src="data/gomoku-training-model.js"></script>
   <script>
     const BOARD_SIZE = 15;
     const BASE_SEARCH_DEPTH = 5; // 基础Minimax搜索深度 (提升到5)
-    const MAX_MOVES_TO_SEARCH = 10; // 每次搜索只考虑评分最高的10个点 (更严格的筛选)
+    const MAX_MOVES_TO_SEARCH = 10;
     let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
     let currentPlayer = 1; // 1: 黑子, 2: 白子
     let gameover = false;
@@ -198,6 +207,26 @@
     let resultSubmitted = false;
     let gameInProgress = false;
     let gameActionBusy = false;
+    let activeModelVersion = 9;
+    let legacyEngineReady = Promise.resolve();
+    let legacyMoveRequestId = 0;
+    const modelVersionSelect = document.getElementById('modelVersion');
+    const legacyModelEngine = document.getElementById('legacyModelEngine');
+    function prepareLegacyModel(version) {
+      legacyEngineReady = new Promise((resolve, reject) => {
+        legacyModelEngine.onload = resolve;
+        legacyModelEngine.onerror = () => reject(new Error('历史模型加载失败'));
+        legacyModelEngine.src = `gomoku-models/v${version}.html`;
+      });
+      return legacyEngineReady;
+    }
+    modelVersionSelect.addEventListener('change', () => {
+      if (gameInProgress) return;
+      const version = Number(modelVersionSelect.value);
+      if (version < 9) void prepareLegacyModel(version).catch(error => {
+        document.getElementById('result').textContent = error.message;
+      });
+    });
     let explainEnabled = false;
     const explainToggle = document.getElementById('explainToggle');
     function updateExplain(data = {}) { if (!explainEnabled) return; document.getElementById('explainCandidates').textContent = data.candidates ?? '—'; document.getElementById('explainDepth').textContent = data.depth ?? '—'; document.getElementById('explainScore').textContent = data.score ?? '—'; document.getElementById('explainTarget').textContent = data.target ?? '—'; }
@@ -252,13 +281,14 @@
 
     const GOMOKU_TRAINING_URL = `${SUPABASE_URL}/functions/v1/gomoku-training`;
 
-    async function uploadWinningGameTrainingData(nickname) {
+    async function uploadGameTrainingData(nickname, aiResult) {
       if (!gameMoves.length) return false;
       const response = await fetch(GOMOKU_TRAINING_URL, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          result: 'loss',
+          result: aiResult,
+          modelVersion: activeModelVersion,
           nickname,
           playerColor,
           aiColor,
@@ -281,25 +311,32 @@
       gameStartedAt = Date.now();
       resultSubmitted = false;
       gameMoves = [];
+      activeModelVersion = Number(modelVersionSelect.value);
+      modelVersionSelect.disabled = true;
       gameInProgress = true;
       document.getElementById('result').textContent = '';
       updateGameActionButton();
     }
 
-    async function finishGame(result) {
+    async function finishGame(result, { uploadTraining = true } = {}) {
       gameInProgress = false;
       updateGameActionButton();
       const nickname = getNickname();
       if (!nickname || resultSubmitted) return;
       resultSubmitted = true;
       const durationMs = gameStartedAt ? Date.now() - gameStartedAt : 0;
-      const score = result === 'win' ? 3 : result === 'draw' ? 1 : 0;
-      document.getElementById('result').textContent = ClubI18n.t(result === 'win' ? 'gomoku.win' : result === 'draw' ? 'gomoku.draw' : 'gomoku.lose', { score });
-      if (result === 'win') {
-        const uploaded = await uploadWinningGameTrainingData(nickname);
-        document.getElementById('result').textContent += uploaded
-          ? ClubI18n.t('gomoku.trainSaved')
-          : ClubI18n.t('gomoku.trainFail');
+      const score = result === 'win' ? activeModelVersion : result === 'draw' ? 1 : 0;
+      document.getElementById('result').textContent = ClubI18n.t(result === 'win' ? 'gomoku.win' : result === 'draw' ? 'gomoku.draw' : 'gomoku.lose', { score, model: `铭星V${activeModelVersion}` });
+      if (gameMoves.length && uploadTraining) {
+        const aiResult = result === 'win' ? 'loss' : result === 'loss' ? 'win' : 'draw';
+        if (aiResult === 'loss' && activeModelVersion < 8) {
+          document.getElementById('result').textContent += ClubI18n.t('gomoku.trainSkipped');
+        } else {
+          const uploaded = await uploadGameTrainingData(nickname, aiResult);
+          document.getElementById('result').textContent += uploaded
+            ? ClubI18n.t('gomoku.trainSaved')
+            : ClubI18n.t('gomoku.trainFail');
+        }
       }
       if (!supabaseClient || typeof supabaseClient.rpc !== 'function') {
         document.getElementById('result').textContent += ClubI18n.t('gomoku.scoreNoInit');
@@ -308,6 +345,7 @@
       const { error } = await supabaseClient.rpc('record_gomoku_result', {
         p_nickname: nickname,
         p_result: result,
+        p_win_points: activeModelVersion,
         p_moves: Math.max(1, moveCount),
         p_duration_ms: Math.min(durationMs, 86400000)
       });
@@ -348,7 +386,7 @@
       renderLeaderboard();
     }
 
-    // 置换表缓存 (Transposition Table)
+    // 置换表保存精确分或 Alpha-Beta 上下界。
     const transpositionTable = new Map();
     function getBoardKey(depth, isMaximizing) {
         let key = depth + '|' + (isMaximizing ? '1' : '0') + '|';
@@ -381,28 +419,34 @@
         'DOUBLE_FOUR': 500000000, // 双四 (分数再次提高)
     };
 
-    // 从 17 局玩家胜局中提取的 AI 开局落点频率。
-    // 键为“AI 第几手:行,列”，只在 AI 前 4 手参与排序，战术必胜/必防始终优先。
-    const TRAINING_OPENING_PRIORS = new Map([
-      ['1:6,6', 8], ['1:5,6', 4], ['1:5,5', 2], ['1:7,8', 2], ['1:4,11', 1],
-      ['2:7,6', 6], ['2:6,5', 2], ['2:6,7', 3], ['2:3,6', 2], ['2:7,5', 1], ['2:8,9', 2],
-      ['3:5,7', 5], ['3:6,5', 2], ['3:6,4', 3], ['3:4,5', 1], ['3:5,10', 1], ['3:3,7', 2], ['3:7,4', 1],
-      ['4:5,6', 4], ['4:3,5', 3], ['4:4,6', 3], ['4:4,10', 1], ['4:5,4', 1], ['4:5,9', 1], ['4:3,7', 1], ['4:7,11', 1]
-    ]);
+    const GOMOKU_TRAINING_MODEL = window.GOMOKU_TRAINING_MODEL || { priors: {} };
 
-    function getBoardMoveCount() {
-      let count = 0;
-      for (const row of board) for (const cell of row) if (cell !== 0) count++;
-      return count;
+    function transformTrainingCoordinate(row, col, rotation, reflected) {
+      let r = row;
+      let c = reflected ? BOARD_SIZE - 1 - col : col;
+      for (let i = 0; i < rotation; i++) [r, c] = [c, BOARD_SIZE - 1 - r];
+      return [r, c];
     }
 
-    function getTrainingPrior(row, col, player, nextMoveNumber) {
-      if (player !== aiColor) return 0;
-      const aiMoveNumber = aiColor === 1
-        ? Math.ceil(nextMoveNumber / 2)
-        : Math.floor(nextMoveNumber / 2);
-      if (aiMoveNumber < 1 || aiMoveNumber > 4) return 0;
-      return TRAINING_OPENING_PRIORS.get(`${aiMoveNumber}:${row},${col}`) || 0;
+    function getTrainingPrior(row, col, player) {
+      if (player !== aiColor || !GOMOKU_TRAINING_MODEL.priors) return 0;
+      const aiMoveNumber = gameMoves.filter(move => move.player === aiColor).length + 1;
+      if (aiMoveNumber > 4) return 0;
+      const keys = [];
+      for (let reflected = 0; reflected < 2; reflected++) {
+        for (let rotation = 0; rotation < 4; rotation++) {
+          const [r, c] = transformTrainingCoordinate(row, col, rotation, reflected);
+          const state = gameMoves.map(move => {
+            const [historyRow, historyCol] = transformTrainingCoordinate(move.row, move.col, rotation, reflected);
+            return `${move.player}:${historyRow},${historyCol}`;
+          }).join(';');
+          keys.push(`${aiColor}|${aiMoveNumber}|${state}|${r},${c}`);
+        }
+      }
+      const prior = GOMOKU_TRAINING_MODEL.priors[keys.sort()[0]];
+      if (!prior) return 0;
+      const total = prior.win + prior.loss + (prior.draw || 0);
+      return total ? 300 * (prior.win - prior.loss) / (total + 4) : 0;
     }
 
     // 初始化棋盘
@@ -459,10 +503,46 @@
     }
 
     // AI落子
-    function makeAIMove() {
+    async function makeAIMove() {
       if (gameover || currentPlayer !== aiColor) return;
-      
-      let move = findBestMoveWithMinimax();
+      let move;
+      try {
+        if (activeModelVersion === 9) {
+          move = findBestMoveWithMinimax();
+        } else {
+          await legacyEngineReady;
+          const engineWindow = legacyModelEngine.contentWindow;
+          let engineBoard = board;
+          if (activeModelVersion === 1 && aiColor === 1) {
+            engineBoard = board.map(row => row.map(cell => cell ? 3 - cell : 0));
+          }
+          const requestId = ++legacyMoveRequestId;
+          move = await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              window.removeEventListener('message', onMessage);
+              reject(new Error('历史模型响应超时'));
+            }, 60000);
+            function onMessage(event) {
+              if (event.source !== engineWindow || event.data?.type !== 'gomoku:move-result' || event.data.requestId !== requestId) return;
+              clearTimeout(timeout);
+              window.removeEventListener('message', onMessage);
+              if (event.data.error) reject(new Error(event.data.error));
+              else resolve(event.data.move);
+            }
+            window.addEventListener('message', onMessage);
+            engineWindow.postMessage({
+              type: 'gomoku:calculate-move',
+              requestId,
+              board: engineBoard,
+              aiColor,
+              playerColor
+            }, '*');
+          });
+        }
+      } catch (error) {
+        document.getElementById('result').textContent = error.message || '模型加载失败';
+        return;
+      }
       if (!move) {
         move = findRandomMove();
       }
@@ -490,68 +570,69 @@
     function findBestMoveWithMinimax() {
       let bestScore = -Infinity;
       let bestMove = null;
-      
-      // 1. 获取并筛选最有潜力的落子点
-      const moves = getFilteredMoves();
-      
-      // 动态调整搜索深度
-      let currentSearchDepth = BASE_SEARCH_DEPTH;
-      // 如果存在活四或双三威胁，增加搜索深度
-      if (moves.some(m => m.score >= SCORE.LIVE_FOUR || m.score >= SCORE.DOUBLE_LIVE_THREE)) {
-          currentSearchDepth = BASE_SEARCH_DEPTH + 1; // 增加到 6 步
+      transpositionTable.clear();
+      // 根节点硬战术：AI 能立即连五时，绝不被对手冲四的评分带偏。
+      const immediateWins = getImmediateWinningMoves(aiColor);
+      if (immediateWins.length) {
+        const forcedMove = immediateWins[0];
+        updateExplain({
+          candidates: immediateWins.length,
+          depth: 0,
+          score: SCORE.FIVE,
+          target: `${forcedMove.row + 1}, ${forcedMove.col + 1}`
+        });
+        return forcedMove;
       }
+      const moves = getFilteredMoves(aiColor, true);
+      const currentSearchDepth = BASE_SEARCH_DEPTH;
       updateExplain({ candidates: moves.length, depth: currentSearchDepth, score: moves[0]?.score ?? '—', target: moves[0] ? `${moves[0].row + 1}, ${moves[0].col + 1}` : '—' });
-      
+      let alpha = -Infinity;
       for (const move of moves) {
         const { row, col } = move;
-        
-        // 1. 尝试落子
         board[row][col] = aiColor;
-        
-        // 2. Minimax 搜索 (下一层是玩家的回合，所以是最小化层)
-        // 初始 alpha = -Infinity, beta = Infinity
-        const score = minimax(currentSearchDepth - 1, -Infinity, Infinity, false); 
-        
-        // 3. 恢复棋盘
+        const score = checkWinWithoutUpdate(row, col, aiColor)
+          ? SCORE.FIVE
+          : minimax(currentSearchDepth - 1, alpha, Infinity, false);
         board[row][col] = 0;
-        
         if (score > bestScore) {
           bestScore = score;
           bestMove = move;
         }
+        alpha = Math.max(alpha, bestScore);
       }
-      
       return bestMove;
     }
 
-    // Minimax 算法 (带 Alpha-Beta 剪枝 + 置换表)
+    // Minimax with bound-aware transposition caching.
     function minimax(depth, alpha, beta, isMaximizingPlayer) {
-      // 1. 查询置换表
+      const originalAlpha = alpha;
+      const originalBeta = beta;
       const key = getBoardKey(depth, isMaximizingPlayer);
-      if (transpositionTable.has(key)) {
-        return transpositionTable.get(key);
+      const cached = transpositionTable.get(key);
+      if (cached) {
+        if (cached.bound === 'exact') return cached.score;
+        if (cached.bound === 'lower') alpha = Math.max(alpha, cached.score);
+        else if (cached.bound === 'upper') beta = Math.min(beta, cached.score);
+        if (alpha >= beta) return cached.score;
       }
-      
-      // 2. 终止条件
-      if (depth === 0 || isGameOver()) {
+      if (depth === 0) {
         const evalScore = evaluateBoard();
-        transpositionTable.set(key, evalScore);
+        transpositionTable.set(key, { score: evalScore, bound: 'exact' });
         return evalScore;
       }
-      
       const currentTurn = isMaximizingPlayer ? aiColor : playerColor;
-      // 3. 获取当前层最有潜力的落子点
       const moves = getFilteredMoves(currentTurn);
-      
+      if (!moves.length) return 0;
       let result;
       if (isMaximizingPlayer) {
         let maxEval = -Infinity;
         for (const move of moves) {
           const { row, col } = move;
           board[row][col] = currentTurn;
-          const evaluation = minimax(depth - 1, alpha, beta, false);
+          const evaluation = checkWinWithoutUpdate(row, col, currentTurn)
+            ? SCORE.FIVE + depth
+            : minimax(depth - 1, alpha, beta, false);
           board[row][col] = 0;
-          
           maxEval = Math.max(maxEval, evaluation);
           alpha = Math.max(alpha, evaluation);
           if (beta <= alpha) break;
@@ -562,17 +643,19 @@
         for (const move of moves) {
           const { row, col } = move;
           board[row][col] = currentTurn;
-          const evaluation = minimax(depth - 1, alpha, beta, true);
+          const evaluation = checkWinWithoutUpdate(row, col, currentTurn)
+            ? -SCORE.FIVE - depth
+            : minimax(depth - 1, alpha, beta, true);
           board[row][col] = 0;
-          
           minEval = Math.min(minEval, evaluation);
           beta = Math.min(beta, evaluation);
           if (beta <= alpha) break;
         }
         result = minEval;
       }
-      
-      transpositionTable.set(key, result);
+      const bound = result <= originalAlpha ? 'upper' : result >= originalBeta ? 'lower' : 'exact';
+      if (transpositionTable.size > 50000) transpositionTable.clear();
+      transpositionTable.set(key, { score: result, bound });
       return result;
     }
 
@@ -597,7 +680,7 @@
       
       if (!hasPieces) return 0;
       
-      // 评估附近空位的潜在威胁
+      // Evaluate both sides' next-move threats symmetrically.
       const emptyMoves = getPossibleMoves();
       for (const move of emptyMoves) {
           const { row, col } = move;
@@ -673,58 +756,39 @@
       return moves;
     }
     
-    // 筛选最有潜力的落子点 (用于 Minimax 搜索)
-    function getFilteredMoves(player = aiColor) {
-        const allMoves = getPossibleMoves();
-        const nextMoveNumber = getBoardMoveCount() + 1;
-        
-        // 1. 检查是否有必胜/必防的棋
-        for (const move of allMoves) {
+    function getImmediateWinningMoves(player) {
+        const winningMoves = [];
+        for (const move of getPossibleMoves()) {
             const { row, col } = move;
-            
-            // 检查AI是否能赢
-            board[row][col] = aiColor;
-            if (checkWinWithoutUpdate(row, col, aiColor)) {
-                board[row][col] = 0;
-                return [move]; // 必胜，直接返回
-            }
-            board[row][col] = 0;
-            
-            // 检查玩家是否能赢 (必防)
-            board[row][col] = playerColor;
-            if (checkWinWithoutUpdate(row, col, playerColor)) {
-                board[row][col] = 0;
-                return [move]; // 必防，直接返回
-            }
+            board[row][col] = player;
+            if (checkWinWithoutUpdate(row, col, player)) winningMoves.push(move);
             board[row][col] = 0;
         }
-        
-        // 2. 静态评估所有可行点，并排序
+        return winningMoves;
+    }
+
+    // Generate urgent wins and blocks first, then order remaining moves for either color.
+    function getFilteredMoves(player = aiColor, useTraining = false) {
+        const allMoves = getPossibleMoves();
+        const opponent = 3 - player;
+        const winningMoves = getImmediateWinningMoves(player);
+        const opponentWinningMoves = getImmediateWinningMoves(opponent);
+        if (winningMoves.length) return winningMoves;
+        if (opponentWinningMoves.length) return opponentWinningMoves;
+
         const scoredMoves = allMoves.map(move => {
             const { row, col } = move;
-            
-            // 评估AI落子后的得分
-            board[row][col] = aiColor;
-            const aiScore = getScoreForPlayer(row, col, aiColor);
+            board[row][col] = player;
+            const attackScore = getScoreForPlayer(row, col, player);
             board[row][col] = 0;
-            
-            // 评估玩家落子后的得分 (防守价值)
-            board[row][col] = playerColor;
-            const playerScore = getScoreForPlayer(row, col, playerColor);
+            board[row][col] = opponent;
+            const defenseScore = getScoreForPlayer(row, col, opponent);
             board[row][col] = 0;
-            
-            // 综合评分：进攻价值 + 防守价值 (进一步提高防守权重)
-            const trainingPrior = getTrainingPrior(row, col, player, nextMoveNumber);
-            // 训练频率是开局微调项，避免压过活四、冲四等硬战术。
-            const score = aiScore * 1.5 + playerScore * 1.5 + trainingPrior * 18000;
-            
+            const trainingPrior = useTraining ? getTrainingPrior(row, col, player) : 0;
+            const score = attackScore * 1.5 + defenseScore * 1.5 + trainingPrior;
             return { ...move, score };
         });
-        
-        // 降序排序
         scoredMoves.sort((a, b) => b.score - a.score);
-        
-        // 3. 返回评分最高的 N 个点
         return scoredMoves.slice(0, MAX_MOVES_TO_SEARCH);
     }
 
@@ -1025,7 +1089,7 @@
       gameInProgress = false;
       document.getElementById('status').textContent = ClubI18n.t('gomoku.youSurrendered');
       try {
-        await finishGame('loss');
+        await finishGame('loss', { uploadTraining: false });
       } finally {
         gameActionBusy = false;
         updateGameActionButton();
@@ -1047,6 +1111,7 @@
       resultSubmitted = false;
       lastAiMove = null;
       document.getElementById('result').textContent = '';
+      modelVersionSelect.disabled = false;
       transpositionTable.clear();
       initBoard();
       document.getElementById('status').innerHTML = ClubI18n.t('gomoku.chooseSide') + ': <button onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';

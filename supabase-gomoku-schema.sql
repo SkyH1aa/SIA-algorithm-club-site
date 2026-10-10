@@ -1,5 +1,5 @@
 -- 五子棋累计排行榜：同一个昵称只保留一条记录
--- 可直接在 Supabase SQL Editor 执行。首次执行会从旧 gomoku_scores 汇总历史成绩。
+-- 可重复执行；只创建/更新当前排行榜结构，不依赖旧表或回填历史数据。
 
 create table if not exists public.gomoku_players (
   nickname text primary key
@@ -12,23 +12,6 @@ create table if not exists public.gomoku_players (
   total_duration_ms bigint not null default 0 check (total_duration_ms >= 0),
   updated_at timestamptz not null default now()
 );
-
--- 将旧的一局一行数据汇总到新表。重复执行不会重复累计。
-insert into public.gomoku_players (
-  nickname, wins, losses, draws, total_score, total_moves, total_duration_ms
-)
-select
-  trim(nickname),
-  count(*) filter (where result = 'win'),
-  count(*) filter (where result = 'loss'),
-  count(*) filter (where result = 'draw'),
-  coalesce(sum(score), 0),
-  coalesce(sum(moves), 0),
-  coalesce(sum(duration_ms), 0)
-from public.gomoku_scores
-where char_length(trim(nickname)) between 1 and 20
-group by trim(nickname)
-on conflict (nickname) do nothing;
 
 create index if not exists gomoku_players_leaderboard_idx
   on public.gomoku_players (total_score desc, updated_at asc);
@@ -45,12 +28,12 @@ create policy "Public can read gomoku players"
 revoke insert, update, delete on public.gomoku_players from anon, authenticated;
 grant select on public.gomoku_players to anon, authenticated;
 
-drop function if exists public.record_gomoku_result(text, text, integer, integer);
 create or replace function public.record_gomoku_result(
   p_nickname text,
   p_result text,
   p_moves integer,
-  p_duration_ms integer
+  p_duration_ms integer,
+  p_win_points integer
 )
 returns void
 language plpgsql
@@ -62,13 +45,16 @@ declare
   add_win integer := case when p_result = 'win' then 1 else 0 end;
   add_loss integer := case when p_result = 'loss' then 1 else 0 end;
   add_draw integer := case when p_result = 'draw' then 1 else 0 end;
-  add_score integer := case when p_result = 'win' then 3 when p_result = 'draw' then 1 else 0 end;
+  add_score integer := case when p_result = 'win' then p_win_points when p_result = 'draw' then 1 else 0 end;
 begin
   if char_length(clean_nickname) not between 1 and 20 then
     raise exception '昵称长度必须为 1 到 20 个字符';
   end if;
   if p_result not in ('win', 'loss', 'draw') then
     raise exception '无效的对局结果';
+  end if;
+  if p_win_points not between 1 and 9 then
+    raise exception '无效的获胜积分';
   end if;
   if p_moves not between 1 and 500 then
     raise exception '无效的步数';
@@ -93,7 +79,7 @@ begin
 end;
 $$;
 
-revoke all on function public.record_gomoku_result(text, text, integer, integer)
+revoke all on function public.record_gomoku_result(text, text, integer, integer, integer)
   from public, anon, authenticated;
-grant execute on function public.record_gomoku_result(text, text, integer, integer)
+grant execute on function public.record_gomoku_result(text, text, integer, integer, integer)
   to anon, authenticated;
