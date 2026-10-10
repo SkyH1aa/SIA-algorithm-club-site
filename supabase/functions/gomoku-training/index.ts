@@ -52,11 +52,16 @@ async function uploadGomokuTrainingData(payload: any) {
     throw new Error('对局结果不合法。');
   }
 
-  if (![1, 2, 3, 6, 7, 8, 9].includes(payload.modelVersion)) {
+  if (![1, 2, 3, 6, 7, 8, 9, 9.1].includes(payload.modelVersion)) {
     throw new Error('模型版本不合法。');
   }
 
-  if (payload.result === 'loss' && payload.modelVersion < 8) {
+  const modelBattle = payload.modelBattle === true;
+  if (payload.modelBattle !== undefined && typeof payload.modelBattle !== 'boolean') {
+    throw new Error('模型对战标记不合法。');
+  }
+
+  if (payload.result === 'loss' && payload.modelVersion !== 9 && payload.modelVersion !== 9.1) {
     throw new Error('该模型版本不接收 AI 负局训练数据。');
   }
 
@@ -74,6 +79,14 @@ async function uploadGomokuTrainingData(payload: any) {
     payload.playerColor === payload.aiColor
   ) {
     throw new Error('对局执子信息不合法。');
+  }
+
+  if (modelBattle) {
+    if (![1, 2, 3, 6, 7, 8, 9, 9.1].includes(payload.opponentModelVersion)) {
+      throw new Error('对手模型版本不合法。');
+    }
+  } else if (payload.opponentModelVersion !== null && payload.opponentModelVersion !== undefined) {
+    throw new Error('普通对局不能填写对手模型版本。');
   }
 
   const occupied = new Set<string>();
@@ -124,6 +137,10 @@ async function uploadGomokuTrainingData(payload: any) {
       : null,
     player_color: payload.playerColor,
     ai_color: payload.aiColor,
+    model_battle: modelBattle,
+    model_color: payload.aiColor,
+    opponent_model_color: modelBattle ? 3 - payload.aiColor : null,
+    opponent_model_version: modelBattle ? payload.opponentModelVersion : null,
     moves,
     move_count: moves.length,
     created_at: new Date().toISOString()

@@ -13,6 +13,7 @@
 <style>
     :root { color-scheme: dark; --board-highlight: #00e5ff; --board-highlight-shadow: rgba(0, 229, 255, .48); }
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     html { scroll-behavior: smooth; scroll-snap-type: y proximity; scroll-padding-top: 72px; }
     body {
       position: relative;
@@ -163,14 +164,26 @@
     <div class="game-layout">
       <main class="game-container panel">
         <div class="setup">
+          <label for="gameMode">对战模式</label>
+          <select id="gameMode" aria-label="选择对战模式">
+            <option value="human">玩家挑战</option>
+            <option value="model-battle">模型对战</option>
+          </select>
           <label for="nickname" data-i18n="games.nickPlaceholder">挑战昵称</label>
           <input id="nickname" maxlength="20" placeholder="请输入昵称" data-i18n-placeholder="games.nickPlaceholder" autocomplete="nickname" />
           <label for="modelVersion" data-i18n="gomoku.modelLabel">挑战模型</label>
           <select id="modelVersion" aria-label="选择挑战模型">
             <option value="1">铭星V1</option><option value="2">铭星V2</option><option value="3">铭星V3</option>
-            <option value="6">铭星V6</option><option value="7">铭星V7</option><option value="8">铭星V8</option><option value="9" selected>铭星V9</option>
+            <option value="6">铭星V6</option><option value="7">铭星V7</option><option value="8">铭星V8</option><option value="9" selected>铭星V9</option><option value="9.1">铭星V9Pro</option>
           </select>
           <span class="hint" data-i18n="gomoku.nickSideHint">先填写昵称，再选择执子</span>
+        </div>
+        <div class="setup battle-setup" id="battleSetup" hidden>
+          <label for="blackModelVersion">黑方模型</label>
+          <select id="blackModelVersion" aria-label="选择黑方模型"></select>
+          <label for="whiteModelVersion">白方模型</label>
+          <select id="whiteModelVersion" aria-label="选择白方模型"></select>
+          <button type="button" id="startModelBattleButton">开始模型对战</button>
         </div>
         <div class="status" id="status"></div>
         <div class="explain-panel">
@@ -193,6 +206,7 @@
 
   <script src="data/gomoku-training-model.js"></script>
   <script src="gomoku-models/v9.js"></script>
+  <script src="gomoku-models/v9pro.js"></script>
   <script>
     const BOARD_SIZE = 15;
     let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
@@ -207,25 +221,74 @@
     let gameInProgress = false;
     let gameActionBusy = false;
     let activeModelVersion = 9;
+    let isModelBattle = false;
+    let blackModelVersion = 9;
+    let whiteModelVersion = 9.1;
     let legacyEngineReady = Promise.resolve();
+    let legacyLoadedVersion = null;
     let legacyMoveRequestId = 0;
+    const MODEL_VERSIONS = [1, 2, 3, 6, 7, 8, 9, 9.1];
     const modelVersionSelect = document.getElementById('modelVersion');
+    const gameModeSelect = document.getElementById('gameMode');
+    const battleSetup = document.getElementById('battleSetup');
+    const blackModelVersionSelect = document.getElementById('blackModelVersion');
+    const whiteModelVersionSelect = document.getElementById('whiteModelVersion');
+    const startModelBattleButton = document.getElementById('startModelBattleButton');
     const legacyModelEngine = document.getElementById('legacyModelEngine');
+    function getModelName(version) {
+      return version === 9.1 ? '铭星V9Pro' : `铭星V${version}`;
+    }
+    function getModelWinPoints(version) {
+      return version === 9.1 ? 10 : Math.trunc(version);
+    }
+    function isLossUploadAllowed(version) {
+      return version === 9 || version === 9.1;
+    }
+    function modelOptionsMarkup(selectedVersion) {
+      return MODEL_VERSIONS.map(version => `<option value="${version}"${version === selectedVersion ? ' selected' : ''}>${getModelName(version)}</option>`).join('');
+    }
+    function updateModeControls() {
+      const battle = gameModeSelect.value === 'model-battle';
+      battleSetup.hidden = !battle;
+      document.querySelector('label[for="modelVersion"]')?.toggleAttribute('hidden', battle);
+      modelVersionSelect.hidden = battle;
+      if (!gameInProgress) {
+        document.getElementById('nickname').disabled = battle;
+        document.getElementById('status').innerHTML = battle
+          ? '请选择黑白模型，然后开始模型对战'
+          : ClubI18n.t('gomoku.chooseSide') + ': <button onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';
+      }
+    }
+    function populateBattleModels() {
+      blackModelVersionSelect.innerHTML = modelOptionsMarkup(blackModelVersion);
+      whiteModelVersionSelect.innerHTML = modelOptionsMarkup(whiteModelVersion);
+    }
     function prepareLegacyModel(version) {
+      if (legacyLoadedVersion === version) return legacyEngineReady;
       legacyEngineReady = new Promise((resolve, reject) => {
         legacyModelEngine.onload = resolve;
-        legacyModelEngine.onerror = () => reject(new Error('历史模型加载失败'));
+        legacyModelEngine.onerror = () => {
+          legacyLoadedVersion = null;
+          reject(new Error('历史模型加载失败'));
+        };
         legacyModelEngine.src = `gomoku-models/v${version}.html`;
       });
+      legacyLoadedVersion = version;
       return legacyEngineReady;
     }
     modelVersionSelect.addEventListener('change', () => {
-      if (gameInProgress) return;
+      if (gameInProgress || gameModeSelect.value === 'model-battle') return;
       const version = Number(modelVersionSelect.value);
       if (version < 9) void prepareLegacyModel(version).catch(error => {
         document.getElementById('result').textContent = error.message;
       });
     });
+    gameModeSelect.addEventListener('change', () => {
+      if (gameInProgress) return;
+      updateModeControls();
+    });
+    startModelBattleButton.addEventListener('click', startModelBattle);
+    populateBattleModels();
     let explainEnabled = false;
     const explainToggle = document.getElementById('explainToggle');
     function updateExplain(data = {}) { if (!explainEnabled) return; document.getElementById('explainCandidates').textContent = data.candidates ?? '—'; document.getElementById('explainDepth').textContent = data.depth ?? '—'; document.getElementById('explainScore').textContent = data.score ?? '—'; document.getElementById('explainTarget').textContent = data.target ?? '—'; }
@@ -280,17 +343,24 @@
 
     const GOMOKU_TRAINING_URL = `${SUPABASE_URL}/functions/v1/gomoku-training`;
 
-    async function uploadGameTrainingData(nickname, aiResult) {
+    async function uploadGameTrainingData(nickname, aiResult, {
+      modelVersion = activeModelVersion,
+      modelColor = aiColor,
+      opponentModelVersion = null,
+      modelBattle = false
+    } = {}) {
       if (!gameMoves.length) return false;
       const response = await fetch(GOMOKU_TRAINING_URL, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           result: aiResult,
-          modelVersion: activeModelVersion,
+          modelVersion,
           nickname,
-          playerColor,
-          aiColor,
+          playerColor: 3 - modelColor,
+          aiColor: modelColor,
+          modelBattle,
+          opponentModelVersion,
           moves: gameMoves
         })
       });
@@ -305,12 +375,24 @@
       button.disabled = gameActionBusy;
     }
 
-    function startGameSession() {
+    function startGameSession({ modelBattle = false } = {}) {
       moveCount = 0;
       gameStartedAt = Date.now();
       resultSubmitted = false;
       gameMoves = [];
-      activeModelVersion = Number(modelVersionSelect.value);
+      isModelBattle = modelBattle;
+      if (modelBattle) {
+        blackModelVersion = Number(blackModelVersionSelect.value);
+        whiteModelVersion = Number(whiteModelVersionSelect.value);
+        gameModeSelect.disabled = true;
+        blackModelVersionSelect.disabled = true;
+        whiteModelVersionSelect.disabled = true;
+        startModelBattleButton.disabled = true;
+      } else {
+        activeModelVersion = Number(modelVersionSelect.value);
+        gameModeSelect.disabled = true;
+        document.getElementById('nickname').disabled = true;
+      }
       modelVersionSelect.disabled = true;
       gameInProgress = true;
       document.getElementById('result').textContent = '';
@@ -320,15 +402,23 @@
     async function finishGame(result, { uploadTraining = true } = {}) {
       gameInProgress = false;
       updateGameActionButton();
-      const nickname = getNickname();
-      if (!nickname || resultSubmitted) return;
+      if (resultSubmitted) return;
+      if (!isModelBattle) {
+        const nickname = getNickname();
+        if (!nickname) return;
+      }
       resultSubmitted = true;
       const durationMs = gameStartedAt ? Date.now() - gameStartedAt : 0;
-      const score = result === 'win' ? activeModelVersion : result === 'draw' ? 1 : 0;
-      document.getElementById('result').textContent = ClubI18n.t(result === 'win' ? 'gomoku.win' : result === 'draw' ? 'gomoku.draw' : 'gomoku.lose', { score, model: `铭星V${activeModelVersion}` });
+      if (isModelBattle) {
+        await finishModelBattle(result);
+        return;
+      }
+      const nickname = document.getElementById('nickname').value.trim();
+      const score = result === 'win' ? getModelWinPoints(activeModelVersion) : result === 'draw' ? 1 : 0;
+      document.getElementById('result').textContent = ClubI18n.t(result === 'win' ? 'gomoku.win' : result === 'draw' ? 'gomoku.draw' : 'gomoku.lose', { score, model: getModelName(activeModelVersion) });
       if (gameMoves.length && uploadTraining) {
         const aiResult = result === 'win' ? 'loss' : result === 'loss' ? 'win' : 'draw';
-        if (aiResult === 'loss' && activeModelVersion < 8) {
+        if (aiResult === 'loss' && activeModelVersion !== 9 && activeModelVersion !== 9.1) {
           document.getElementById('result').textContent += ClubI18n.t('gomoku.trainSkipped');
         } else {
           const uploaded = await uploadGameTrainingData(nickname, aiResult);
@@ -344,7 +434,7 @@
       const { error } = await supabaseClient.rpc('record_gomoku_result', {
         p_nickname: nickname,
         p_result: result,
-        p_win_points: activeModelVersion,
+        p_win_points: getModelWinPoints(activeModelVersion),
         p_moves: Math.max(1, moveCount),
         p_duration_ms: Math.min(durationMs, 86400000)
       });
@@ -354,6 +444,54 @@
       }
       document.getElementById('result').textContent += ClubI18n.t('gomoku.scoreSaved');
       await loadLeaderboard();
+    }
+
+    async function finishModelBattle(winnerColor) {
+      const resultElement = document.getElementById('result');
+      const winnerVersion = winnerColor === 1 ? blackModelVersion : winnerColor === 2 ? whiteModelVersion : null;
+      resultElement.textContent = winnerVersion
+        ? `${getModelName(winnerVersion)}（${winnerColor === 1 ? '黑棋' : '白棋'}）获胜`
+        : '模型对战平局';
+      const outcomes = winnerColor === null
+        ? [{ version: blackModelVersion, color: 1, result: 'draw', opponent: whiteModelVersion }, { version: whiteModelVersion, color: 2, result: 'draw', opponent: blackModelVersion }]
+        : [
+            { version: winnerVersion, color: winnerColor, result: 'win', opponent: winnerColor === 1 ? whiteModelVersion : blackModelVersion },
+            { version: winnerColor === 1 ? whiteModelVersion : blackModelVersion, color: 3 - winnerColor, result: 'loss', opponent: winnerVersion }
+          ];
+      let uploaded = 0;
+      let skipped = 0;
+      for (const outcome of outcomes) {
+        if (outcome.result === 'loss' && !isLossUploadAllowed(outcome.version)) {
+          skipped++;
+          continue;
+        }
+        try {
+          if (await uploadGameTrainingData('模型对战', outcome.result, {
+            modelVersion: outcome.version,
+            modelColor: outcome.color,
+            opponentModelVersion: outcome.opponent,
+            modelBattle: true
+          })) uploaded++;
+        } catch (_error) {
+          // Keep sending the other model's record if this request fails.
+        }
+      }
+      if (uploaded) resultElement.textContent += ` · 已上传 ${uploaded} 份模型训练数据`;
+      if (skipped) resultElement.textContent += ` · 按版本规则跳过 ${skipped} 份败局数据`;
+      if (uploaded < outcomes.filter(outcome => outcome.result !== 'loss' || isLossUploadAllowed(outcome.version)).length) {
+        resultElement.textContent += ' · 部分训练数据上传失败';
+      }
+      releaseGameSetup();
+    }
+
+    function releaseGameSetup() {
+      modelVersionSelect.disabled = false;
+      gameModeSelect.disabled = false;
+      document.getElementById('nickname').disabled = gameModeSelect.value === 'model-battle';
+      blackModelVersionSelect.disabled = false;
+      whiteModelVersionSelect.disabled = false;
+      startModelBattleButton.disabled = false;
+      updateModeControls();
     }
 
     let leaderboardRows = [];
@@ -409,6 +547,22 @@
     }
 
     // 选择执子颜色
+    async function startModelBattle() {
+      if (gameInProgress) return;
+      blackModelVersion = Number(blackModelVersionSelect.value);
+      whiteModelVersion = Number(whiteModelVersionSelect.value);
+      board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
+      currentPlayer = 1;
+      gameover = false;
+      playerColor = null;
+      aiColor = null;
+      lastAiMove = null;
+      initBoard();
+      startGameSession({ modelBattle: true });
+      document.getElementById('status').textContent = `${getModelName(blackModelVersion)}（黑棋）思考中…`;
+      setTimeout(makeAIMove, 50);
+    }
+
     async function setPlayerColor(color) {
       const nickname = getNickname();
       if (!nickname || !(await confirmNickname(nickname))) return;
@@ -444,63 +598,76 @@
       }
     }
 
+    async function findModelMove(version, color) {
+      aiColor = color;
+      playerColor = 3 - color;
+      if (version === 9) return window.GomokuV9.findBestMove();
+      if (version === 9.1) return window.GomokuV9Pro.findBestMove();
+      await prepareLegacyModel(version);
+      const engineWindow = legacyModelEngine.contentWindow;
+      let engineBoard = board;
+      if (version === 1 && color === 1) {
+        engineBoard = board.map(row => row.map(cell => cell ? 3 - cell : 0));
+      }
+      const requestId = ++legacyMoveRequestId;
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          window.removeEventListener('message', onMessage);
+          reject(new Error('历史模型响应超时'));
+        }, 60000);
+        function onMessage(event) {
+          if (event.source !== engineWindow || event.data?.type !== 'gomoku:move-result' || event.data.requestId !== requestId) return;
+          clearTimeout(timeout);
+          window.removeEventListener('message', onMessage);
+          if (event.data.error) reject(new Error(event.data.error));
+          else resolve(event.data.move);
+        }
+        window.addEventListener('message', onMessage);
+        engineWindow.postMessage({
+          type: 'gomoku:calculate-move', requestId, board: engineBoard,
+          aiColor: color, playerColor: 3 - color
+        }, '*');
+      });
+    }
+
     // AI落子
     async function makeAIMove() {
-      if (gameover || currentPlayer !== aiColor) return;
+      if (gameover || !gameInProgress) return;
+      const battleColor = isModelBattle ? currentPlayer : aiColor;
+      if (!isModelBattle && currentPlayer !== aiColor) return;
+      const version = isModelBattle
+        ? (battleColor === 1 ? blackModelVersion : whiteModelVersion)
+        : activeModelVersion;
       let move;
       try {
-        if (activeModelVersion === 9) {
-          move = window.GomokuV9.findBestMove();
-        } else {
-          await legacyEngineReady;
-          const engineWindow = legacyModelEngine.contentWindow;
-          let engineBoard = board;
-          if (activeModelVersion === 1 && aiColor === 1) {
-            engineBoard = board.map(row => row.map(cell => cell ? 3 - cell : 0));
-          }
-          const requestId = ++legacyMoveRequestId;
-          move = await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              window.removeEventListener('message', onMessage);
-              reject(new Error('历史模型响应超时'));
-            }, 60000);
-            function onMessage(event) {
-              if (event.source !== engineWindow || event.data?.type !== 'gomoku:move-result' || event.data.requestId !== requestId) return;
-              clearTimeout(timeout);
-              window.removeEventListener('message', onMessage);
-              if (event.data.error) reject(new Error(event.data.error));
-              else resolve(event.data.move);
-            }
-            window.addEventListener('message', onMessage);
-            engineWindow.postMessage({
-              type: 'gomoku:calculate-move',
-              requestId,
-              board: engineBoard,
-              aiColor,
-              playerColor
-            }, '*');
-          });
-        }
+        move = await findModelMove(version, battleColor);
       } catch (error) {
         document.getElementById('result').textContent = error.message || '模型加载失败';
+        gameover = true;
+        gameInProgress = false;
+        releaseGameSetup();
         return;
       }
+      if (gameover || !gameInProgress) return;
       if (!move) {
         move = findRandomMove();
       }
       
-      placePiece(move.row, move.col, aiColor);
+      if (!move || board[move.row]?.[move.col] !== 0) move = findRandomMove();
+      if (!move) return;
+      placePiece(move.row, move.col, battleColor);
       moveCount++;
       
-      if (!checkWin(move.row, move.col, aiColor)) {
+      if (!checkWin(move.row, move.col, battleColor)) {
         if (isBoardFull()) {
           gameover = true;
           document.getElementById('status').textContent = ClubI18n.t('gomoku.drawShort');
-          finishGame('draw');
+          void finishGame(null);
           return;
         }
         currentPlayer = 3 - currentPlayer;
         updateStatus();
+        if (isModelBattle) setTimeout(makeAIMove, 50);
       }
     }
 
@@ -592,6 +759,11 @@
         
         if (count >= 5) {
           gameover = true;
+          if (isModelBattle) {
+            document.getElementById('status').textContent = `${getModelName(player === 1 ? blackModelVersion : whiteModelVersion)}（${player === 1 ? '黑棋' : '白棋'}）获胜`;
+            void finishGame(player);
+            return true;
+          }
           const winner = player === playerColor ? ClubI18n.t('gomoku.winnerYou') : ClubI18n.t('games.aiLabel');
           document.getElementById('status').textContent = ClubI18n.t('gomoku.winner', { winner });
           finishGame(player === playerColor ? 'win' : 'loss');
@@ -605,6 +777,11 @@
     // 更新状态显示
     function updateStatus() {
       if (gameover) return;
+      if (isModelBattle) {
+        const version = currentPlayer === 1 ? blackModelVersion : whiteModelVersion;
+        document.getElementById('status').textContent = `${getModelName(version)}（${currentPlayer === 1 ? '黑棋' : '白棋'}）思考中…`;
+        return;
+      }
       // 尚未选择执色时保持「选择执子颜色」界面，不显示 AI 思考
       if (!playerColor || !aiColor) return;
 
@@ -627,6 +804,13 @@
       updateGameActionButton();
       gameover = true;
       gameInProgress = false;
+      if (isModelBattle) {
+        document.getElementById('status').textContent = '模型对战已停止';
+        releaseGameSetup();
+        gameActionBusy = false;
+        updateGameActionButton();
+        return;
+      }
       document.getElementById('status').textContent = ClubI18n.t('gomoku.youSurrendered');
       try {
         await finishGame('loss', { uploadTraining: false });
@@ -643,6 +827,7 @@
       currentPlayer = 1;
       gameover = false;
       gameInProgress = false;
+      isModelBattle = false;
       playerColor = null;
       aiColor = null;
       moveCount = 0;
@@ -652,10 +837,16 @@
       lastAiMove = null;
       document.getElementById('result').textContent = '';
       modelVersionSelect.disabled = false;
+      gameModeSelect.disabled = false;
+      blackModelVersionSelect.disabled = false;
+      whiteModelVersionSelect.disabled = false;
+      startModelBattleButton.disabled = false;
       window.GomokuV9.clearCache();
+      window.GomokuV9Pro.clearCache();
       initBoard();
       document.getElementById('status').innerHTML = ClubI18n.t('gomoku.chooseSide') + ': <button onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';
       updateGameActionButton();
+      updateModeControls();
     }
 
     // 初始化游戏

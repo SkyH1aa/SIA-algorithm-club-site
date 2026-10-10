@@ -3,11 +3,22 @@
     [-1, 0], [1, 0], [0, -1], [0, 1],
     [-1, -1], [1, 1], [1, -1], [-1, 1]
   ];
-  const BASE_SEARCH_DEPTH = 5; // 基础Minimax搜索深度 (提升到5)
-  const MAX_MOVES_TO_SEARCH = 10;
+  const MAX_SEARCH_DEPTH = 6;
+  const MAX_MOVES_TO_SEARCH = 12;
+  const SEARCH_TIME_MS = 25000;
+  const VCF_TIME_MS = 3500;
+  const VCF_NODE_LIMIT = 5000;
+  const VCF_MAX_DEPTH = 7;
   
   // 置换表保存精确分或 Alpha-Beta 上下界。
   const transpositionTable = new Map();
+  const killerMoves = Array.from({ length: 32 }, () => []);
+  const historyScores = new Map();
+  let searchDeadline = 0;
+  let searchAborted = false;
+  let searchedNodes = 0;
+  let searchPolls = 0;
+  let vcfNodes = 0;
   function getBoardKey(depth, isMaximizing) {
       let key = depth + '|' + (isMaximizing ? '1' : '0') + '|';
       for (let i = 0; i < BOARD_SIZE; i++) {
@@ -34,7 +45,7 @@
       'DOUBLE_FOUR': 500000000, // 双四 (分数再次提高)
   };
   
-  const GOMOKU_TRAINING_MODEL = window.GOMOKU_V9_TRAINING_MODEL || { priors: {} };
+  const GOMOKU_TRAINING_MODEL = window.GOMOKU_V9PRO_TRAINING_MODEL || window.GOMOKU_TRAINING_MODEL || { priors: {} };
   
   function transformTrainingCoordinate(row, col, rotation, reflected) {
     let r = row;
@@ -71,9 +82,15 @@
   
   // 寻找最佳位置 (使用 Minimax + Alpha-Beta 剪枝)
   function findBestMoveWithMinimax() {
-    let bestScore = -Infinity;
-    let bestMove = null;
+    const startedAt = performance.now();
+    searchDeadline = startedAt + SEARCH_TIME_MS;
+    searchAborted = false;
+    searchedNodes = 0;
+    searchPolls = 0;
+    vcfNodes = 0;
     transpositionTable.clear();
+    killerMoves.forEach(moves => moves.length = 0);
+    historyScores.clear();
     // 根节点硬战术：AI 能立即连五时，绝不被对手冲四的评分带偏。
     const immediateWins = getImmediateWinningMoves(aiColor);
     if (immediateWins.length) {
@@ -86,30 +103,75 @@
       });
       return forcedMove;
     }
+    const urgentBlocks = getImmediateWinningMoves(playerColor);
+    if (urgentBlocks.length) {
+      const block = urgentBlocks[0];
+      updateExplain({ candidates: urgentBlocks.length, depth: 0, score: SCORE.CHONG_FOUR, target: `${block.row + 1}, ${block.col + 1}` });
+      return block;
+    }
+    const threatMove = findVcfWin(aiColor);
+    if (threatMove) {
+      updateExplain({ candidates: vcfNodes, depth: 'VCF', score: SCORE.FIVE - 1, target: `${threatMove.row + 1}, ${threatMove.col + 1}` });
+      return threatMove;
+    }
+
     const moves = getFilteredMoves(aiColor, true);
-    const currentSearchDepth = BASE_SEARCH_DEPTH;
-    updateExplain({ candidates: moves.length, depth: currentSearchDepth, score: moves[0]?.score ?? '—', target: moves[0] ? `${moves[0].row + 1}, ${moves[0].col + 1}` : '—' });
+    if (!moves.length) return null;
+    let bestMove = moves[0];
+    let bestScore = -Infinity;
+    let completedDepth = 0;
+    for (let depth = 1; depth <= MAX_SEARCH_DEPTH; depth++) {
+      const result = searchRoot(moves, depth, bestMove);
+      if (searchAborted) break;
+      completedDepth = depth;
+      bestMove = result.move || bestMove;
+      bestScore = result.score;
+    }
+
+    updateExplain({ candidates: moves.length, depth: completedDepth, score: bestScore, target: `${bestMove.row + 1}, ${bestMove.col + 1}` });
+    return bestMove;
+  }
+
+  function searchRoot(rootMoves, depth, previousBest) {
+    const moves = orderMoves(rootMoves, aiColor, previousBest, 0, false);
     let alpha = -Infinity;
-    for (const move of moves) {
-      const { row, col } = move;
-      board[row][col] = aiColor;
-      const score = checkWinWithoutUpdate(row, col, aiColor)
-        ? SCORE.FIVE
-        : minimax(currentSearchDepth - 1, alpha, Infinity, false);
-      board[row][col] = 0;
+    const beta = Infinity;
+    let bestScore = -Infinity;
+    let bestMove = null;
+
+    for (let index = 0; index < moves.length; index++) {
+      if (shouldStopSearch()) break;
+      const move = moves[index];
+      board[move.row][move.col] = aiColor;
+      let score;
+      if (checkWinWithoutUpdate(move.row, move.col, aiColor)) {
+        score = SCORE.FIVE + depth;
+      } else if (index === 0) {
+        score = minimax(depth - 1, alpha, beta, false, 1);
+      } else {
+        score = minimax(depth - 1, alpha, alpha + 1, false, 1);
+        if (!searchAborted && score > alpha && score < beta) {
+          score = minimax(depth - 1, alpha, beta, false, 1);
+        }
+      }
+      board[move.row][move.col] = 0;
+      if (searchAborted) break;
       if (score > bestScore) {
         bestScore = score;
         bestMove = move;
       }
-      alpha = Math.max(alpha, bestScore);
+      alpha = Math.max(alpha, score);
     }
-    return bestMove;
+    return { move: bestMove, score: bestScore };
   }
-  
-  // Minimax with bound-aware transposition caching.
-  function minimax(depth, alpha, beta, isMaximizingPlayer) {
+
+  // Iterative-deepening alpha-beta with PVS, late-move reductions, and a bound-aware TT.
+  function minimax(depth, alpha, beta, isMaximizingPlayer, ply) {
+    if (shouldStopSearch()) return 0;
+    searchedNodes++;
     const originalAlpha = alpha;
     const originalBeta = beta;
+    const currentTurn = isMaximizingPlayer ? aiColor : playerColor;
     const key = getBoardKey(depth, isMaximizingPlayer);
     const cached = transpositionTable.get(key);
     if (cached) {
@@ -118,48 +180,245 @@
       else if (cached.bound === 'upper') beta = Math.min(beta, cached.score);
       if (alpha >= beta) return cached.score;
     }
-    if (depth === 0) {
-      const evalScore = evaluateBoard();
-      transpositionTable.set(key, { score: evalScore, bound: 'exact' });
-      return evalScore;
+    if (depth <= 0) {
+      return threatQuiescence(alpha, beta, isMaximizingPlayer, ply, 0);
     }
-    const currentTurn = isMaximizingPlayer ? aiColor : playerColor;
-    const moves = getFilteredMoves(currentTurn);
+    const ttMove = cached?.move;
+    const moves = orderMoves(getFilteredMoves(currentTurn), currentTurn, ttMove, ply, false);
     if (!moves.length) return 0;
     let result;
+    let bestMove = null;
     if (isMaximizingPlayer) {
       let maxEval = -Infinity;
-      for (const move of moves) {
+      for (let index = 0; index < moves.length; index++) {
+        if (shouldStopSearch()) break;
+        const move = moves[index];
         const { row, col } = move;
         board[row][col] = currentTurn;
-        const evaluation = checkWinWithoutUpdate(row, col, currentTurn)
-          ? SCORE.FIVE + depth
-          : minimax(depth - 1, alpha, beta, false);
+        const wins = checkWinWithoutUpdate(row, col, currentTurn);
+        const reducible = index >= 4 && depth >= 3 && !wins && !isForcingMove(row, col, currentTurn);
+        let evaluation;
+        if (wins) evaluation = SCORE.FIVE + depth;
+        else if (index === 0) evaluation = minimax(depth - 1, alpha, beta, false, ply + 1);
+        else {
+          const reducedDepth = depth - 1 - (reducible ? 1 : 0);
+          evaluation = minimax(reducedDepth, alpha, alpha + 1, false, ply + 1);
+          if (!searchAborted && evaluation > alpha && (reducible || evaluation < beta)) {
+            evaluation = minimax(depth - 1, alpha, beta, false, ply + 1);
+          }
+        }
         board[row][col] = 0;
-        maxEval = Math.max(maxEval, evaluation);
+        if (searchAborted) break;
+        if (evaluation > maxEval) {
+          maxEval = evaluation;
+          bestMove = move;
+        }
         alpha = Math.max(alpha, evaluation);
-        if (beta <= alpha) break;
+        if (beta <= alpha) {
+          rememberCutoff(move, currentTurn, depth, ply);
+          break;
+        }
       }
       result = maxEval;
     } else {
       let minEval = Infinity;
-      for (const move of moves) {
+      for (let index = 0; index < moves.length; index++) {
+        if (shouldStopSearch()) break;
+        const move = moves[index];
         const { row, col } = move;
         board[row][col] = currentTurn;
-        const evaluation = checkWinWithoutUpdate(row, col, currentTurn)
-          ? -SCORE.FIVE - depth
-          : minimax(depth - 1, alpha, beta, true);
+        const wins = checkWinWithoutUpdate(row, col, currentTurn);
+        const reducible = index >= 4 && depth >= 3 && !wins && !isForcingMove(row, col, currentTurn);
+        let evaluation;
+        if (wins) evaluation = -SCORE.FIVE - depth;
+        else if (index === 0) evaluation = minimax(depth - 1, alpha, beta, true, ply + 1);
+        else {
+          const reducedDepth = depth - 1 - (reducible ? 1 : 0);
+          evaluation = minimax(reducedDepth, beta - 1, beta, true, ply + 1);
+          if (!searchAborted && evaluation < beta && (reducible || evaluation > alpha)) {
+            evaluation = minimax(depth - 1, alpha, beta, true, ply + 1);
+          }
+        }
         board[row][col] = 0;
-        minEval = Math.min(minEval, evaluation);
-        beta = Math.min(beta, evaluation);
-        if (beta <= alpha) break;
+        if (searchAborted) break;
+        if (evaluation < minEval) {
+          minEval = evaluation;
+          bestMove = move;
+        }
+      beta = Math.min(beta, evaluation);
+        if (beta <= alpha) {
+          rememberCutoff(move, currentTurn, depth, ply);
+          break;
+        }
       }
       result = minEval;
     }
+    if (searchAborted || !Number.isFinite(result)) return 0;
     const bound = result <= originalAlpha ? 'upper' : result >= originalBeta ? 'lower' : 'exact';
     if (transpositionTable.size > 50000) transpositionTable.clear();
-    transpositionTable.set(key, { score: result, bound });
+    transpositionTable.set(key, { score: result, bound, move: bestMove });
     return result;
+  }
+
+  function shouldStopSearch() {
+    if (searchAborted) return true;
+    if ((++searchPolls & 63) === 0 && performance.now() >= searchDeadline) {
+      searchAborted = true;
+    }
+    return searchAborted;
+  }
+
+  function moveKey(move) {
+    return `${move.row},${move.col}`;
+  }
+
+  function orderMoves(moves, player, preferredMove, ply, includePrior) {
+    const opponent = 3 - player;
+    const preferredKey = preferredMove ? moveKey(preferredMove) : '';
+    const killers = killerMoves[Math.min(ply, killerMoves.length - 1)] || [];
+    return moves.map(move => {
+      let score = move.score || 0;
+      if (preferredKey && moveKey(move) === preferredKey) score += 1e15;
+      if (killers.some(killer => moveKey(killer) === moveKey(move))) score += 1e12;
+      score += historyScores.get(`${player}|${moveKey(move)}`) || 0;
+      if (includePrior) score += getTrainingPrior(move.row, move.col, player);
+      board[move.row][move.col] = player;
+      const ownScore = getScoreForPlayer(move.row, move.col, player);
+      board[move.row][move.col] = opponent;
+      const blockScore = getScoreForPlayer(move.row, move.col, opponent);
+      board[move.row][move.col] = 0;
+      score += ownScore * 1.5 + blockScore * 1.5;
+      return { ...move, score };
+    }).sort((a, b) => b.score - a.score);
+  }
+
+  function rememberCutoff(move, player, depth, ply) {
+    const killers = killerMoves[Math.min(ply, killerMoves.length - 1)];
+    const key = moveKey(move);
+    if (!killers.some(candidate => moveKey(candidate) === key)) {
+      killers.unshift(move);
+      killers.length = Math.min(killers.length, 2);
+    }
+    const historyKey = `${player}|${key}`;
+    historyScores.set(historyKey, (historyScores.get(historyKey) || 0) + depth * depth);
+  }
+
+  function isForcingMove(row, col, player) {
+    return getScoreForPlayer(row, col, player) >= SCORE.CHONG_FOUR;
+  }
+
+  function getFourThreatMoves(player) {
+    const moves = [];
+    for (const move of getPossibleMoves()) {
+      board[move.row][move.col] = player;
+      const wins = checkWinWithoutUpdate(move.row, move.col, player);
+      const score = wins ? SCORE.FIVE : getScoreForPlayer(move.row, move.col, player);
+      board[move.row][move.col] = 0;
+      if (score >= SCORE.CHONG_FOUR) moves.push({ ...move, score });
+    }
+    return moves;
+  }
+
+  function findVcfWin(attacker) {
+    let nodes = 0;
+    const deadline = Math.min(searchDeadline, performance.now() + VCF_TIME_MS);
+
+    function prove(sideToMove, depth) {
+      if (++nodes > VCF_NODE_LIMIT || depth <= 0 || performance.now() >= deadline) return null;
+      if (sideToMove === attacker) {
+        const threats = getFourThreatMoves(attacker)
+          .sort((a, b) => b.score - a.score);
+        for (const move of threats) {
+          if (++nodes > VCF_NODE_LIMIT || performance.now() >= deadline) return null;
+          board[move.row][move.col] = attacker;
+          if (checkWinWithoutUpdate(move.row, move.col, attacker)) {
+            board[move.row][move.col] = 0;
+            return move;
+          }
+          const opponentWins = getImmediateWinningMoves(3 - attacker);
+          if (opponentWins.length) {
+            board[move.row][move.col] = 0;
+            continue;
+          }
+          const replies = getImmediateWinningMoves(attacker);
+          if (!replies.length) {
+            board[move.row][move.col] = 0;
+            continue;
+          }
+          const replyResult = prove(3 - attacker, depth - 1);
+          board[move.row][move.col] = 0;
+          if (replyResult) return move;
+        }
+        return null;
+      }
+
+      const attackingWins = getImmediateWinningMoves(attacker);
+      if (!attackingWins.length) return null;
+      if (attackingWins.length > 1) return { proven: true };
+      for (const defense of getPossibleMoves()) {
+        if (++nodes > VCF_NODE_LIMIT || performance.now() >= deadline) return null;
+        board[defense.row][defense.col] = 3 - attacker;
+        const counterWin = checkWinWithoutUpdate(defense.row, defense.col, 3 - attacker);
+        if (counterWin) {
+          board[defense.row][defense.col] = 0;
+          return null;
+        }
+        const remainingWins = getImmediateWinningMoves(attacker);
+        const blocked = remainingWins.length === 0;
+        const continuation = blocked ? prove(attacker, depth - 1) : { proven: true };
+        board[defense.row][defense.col] = 0;
+        if (!continuation) return null;
+      }
+      return { proven: true };
+    }
+
+    for (const move of getFourThreatMoves(attacker)) {
+      if (performance.now() >= deadline || nodes > VCF_NODE_LIMIT) break;
+      board[move.row][move.col] = attacker;
+      const isWin = checkWinWithoutUpdate(move.row, move.col, attacker);
+      const opponentCanWin = getImmediateWinningMoves(3 - attacker).length > 0;
+      const hasWinningReply = getImmediateWinningMoves(attacker).length > 0;
+      board[move.row][move.col] = 0;
+      if (isWin) return move;
+      if (opponentCanWin || !hasWinningReply) continue;
+      board[move.row][move.col] = attacker;
+      const forced = prove(3 - attacker, VCF_MAX_DEPTH - 1);
+      board[move.row][move.col] = 0;
+      if (forced) return move;
+    }
+    vcfNodes = nodes;
+    return null;
+  }
+
+  function threatQuiescence(alpha, beta, isMaximizingPlayer, ply, qDepth) {
+    if (shouldStopSearch()) return 0;
+    const currentTurn = isMaximizingPlayer ? aiColor : playerColor;
+    const immediateWins = getImmediateWinningMoves(currentTurn);
+    if (immediateWins.length) return isMaximizingPlayer ? SCORE.FIVE + ply : -SCORE.FIVE - ply;
+    const opponentWins = getImmediateWinningMoves(3 - currentTurn);
+    if (!opponentWins.length || qDepth >= 4) return evaluateBoard();
+
+    const defenses = orderMoves(getFilteredMoves(currentTurn), currentTurn, null, ply, false);
+    if (!defenses.length) return evaluateBoard();
+    let value = isMaximizingPlayer ? -Infinity : Infinity;
+    for (const move of defenses) {
+      if (shouldStopSearch()) break;
+      board[move.row][move.col] = currentTurn;
+      const wins = checkWinWithoutUpdate(move.row, move.col, currentTurn);
+      const score = wins
+        ? (isMaximizingPlayer ? SCORE.FIVE + ply : -SCORE.FIVE - ply)
+        : threatQuiescence(alpha, beta, !isMaximizingPlayer, ply + 1, qDepth + 1);
+      board[move.row][move.col] = 0;
+      if (isMaximizingPlayer) {
+        value = Math.max(value, score);
+        alpha = Math.max(alpha, value);
+      } else {
+        value = Math.min(value, score);
+        beta = Math.min(beta, value);
+      }
+      if (alpha >= beta) break;
+    }
+    return Number.isFinite(value) ? value : evaluateBoard();
   }
   
   // 评估整个棋盘状态
@@ -468,7 +727,7 @@
   }
   
   
-  window.GomokuV9 = {
+  window.GomokuV9Pro = {
     findBestMove: findBestMoveWithMinimax,
     clearCache: () => transpositionTable.clear()
   };
