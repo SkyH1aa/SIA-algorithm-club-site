@@ -1,4 +1,5 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -34,9 +35,10 @@ const directories = (await readdir(root, { withFileTypes: true }))
   .map(entry => entry.name)
   .sort();
 
-async function buildModel(sourceDirectories, { includeModelBattle = true, modelVersion = null } = {}) {
+async function buildModel(sourceDirectories, { includeModelBattle = true, modelVersion = null, deduplicate = true } = {}) {
   const outcomes = { win: 0, loss: 0, draw: 0 };
   const priors = {};
+  const seenGames = new Set();
   let gameCount = 0;
   for (const directory of sourceDirectories) {
     const directoryPath = path.join(root, directory);
@@ -46,12 +48,14 @@ async function buildModel(sourceDirectories, { includeModelBattle = true, modelV
       .sort();
 
     for (const file of files) {
-      const game = JSON.parse(await readFile(path.join(directoryPath, file), 'utf8'));
+      const raw = await readFile(path.join(directoryPath, file), 'utf8');
+      const gameHash = createHash('sha256').update(raw).digest('hex');
+      if (deduplicate && seenGames.has(gameHash)) continue;
+      seenGames.add(gameHash);
+      const game = JSON.parse(raw);
       if (!['win', 'loss', 'draw'].includes(game.result) || !Array.isArray(game.moves)) continue;
-      // Model-versus-model results measure a matchup and opening choice, not
-      // a human-facing expert policy. Keep them in the cumulative archive,
-      // but exclude them from the Pro/Thinker expert prior so one version's
-      // wins cannot train another version into a weaker opening.
+      // Keep every valid perspective in the cumulative archive, but only
+      // the requested model's battle perspective in its opening prior.
       if (game.model_battle === true && (!includeModelBattle || (modelVersion !== null && game.model_version !== modelVersion))) continue;
       const playerColor = game.player_color ?? game.playerColor;
       const aiColor = game.ai_color ?? game.aiColor;
@@ -85,7 +89,8 @@ const legacyDirectories = directories.filter(directory => {
   return match && Number(match[1]) < v9TrainingPeriodLimit;
 });
 const cumulativeModel = await buildModel(directories);
-const v9Model = await buildModel(legacyDirectories);
+// Preserve the historical builder semantics for the frozen V9 prior.
+const v9Model = await buildModel(legacyDirectories, { deduplicate: false });
 const v9ProModel = await buildModel(directories, { modelVersion: 9.1 });
 // V9Thinker keeps the V9-era data boundary; period 1010 and later remain
 // exclusive to V9Pro even when those folders contain Thinker matchups.
@@ -102,3 +107,7 @@ console.log(`Built ${Object.keys(cumulativeModel.priors).length} cumulative open
 console.log(`Built ${Object.keys(v9ProModel.priors).length} V9Pro expert patterns from ${v9ProModel.gameCount} base and V9Pro-owned games in ${directories.length} training folders.`);
 console.log(`Built ${Object.keys(v9ThinkerModel.priors).length} V9Thinker expert patterns from the V9-era ${v9ThinkerModel.gameCount}-game boundary.`);
 console.log(`Built ${Object.keys(v9Model.priors).length} V9 opening patterns from ${v9Model.gameCount} games in ${legacyDirectories.length} training folders.`);
+for (const directory of directories) {
+  const period = await buildModel([directory]);
+  console.log(`${directory}: ${period.gameCount} unique perspective records (win ${period.outcomes.win}, loss ${period.outcomes.loss}, draw ${period.outcomes.draw}).`);
+}

@@ -1,0 +1,187 @@
+{
+  "verifiedAt": "2026-10-10T15:21:23.923Z",
+  "scope": "10 color-swapped empty-board matches; production parameters; no claim for arbitrary openings or devices",
+  "protectedHashes": {
+    "public/gomoku-models/v8.html": "bdc8eec5923142dcd63ff6c73b78fc030247d6dbdd48b164b8fb41acc4e9271c",
+    "public/gomoku-models/v9.js": "aefe1edef27af31de4e7aeedc45628d05466652cabb932d371e0f1987a2b92fc",
+    "supabase/functions/gomoku-training/index.ts": "7df557c72ea051dc73ec525a0d40b53116f298c6f843b1ed5ba01a99b1a575d8"
+  },
+  "v9PriorUnchanged": true,
+  "thinkerPriorUnchanged": true,
+  "rows": [
+    {
+      "name": "pro-black-v8",
+      "black": "v9pro",
+      "white": "v8",
+      "winner": "v9pro",
+      "plies": 31,
+      "stats": {
+        "v9pro": {
+          "moves": 16,
+          "searches": 9,
+          "fullDepth": 8,
+          "timeAborts": 0,
+          "maxMs": 1221
+        }
+      }
+    },
+    {
+      "name": "pro-white-v8",
+      "black": "v8",
+      "white": "v9pro",
+      "winner": "v9pro",
+      "plies": 28,
+      "stats": {
+        "v9pro": {
+          "moves": 14,
+          "searches": 8,
+          "fullDepth": 7,
+          "timeAborts": 0,
+          "maxMs": 1151
+        }
+      }
+    },
+    {
+      "name": "pro-black-v9",
+      "black": "v9pro",
+      "white": "v9",
+      "winner": "v9pro",
+      "plies": 25,
+      "stats": {
+        "v9pro": {
+          "moves": 13,
+          "searches": 10,
+          "fullDepth": 9,
+          "timeAborts": 0,
+          "maxMs": 860
+        }
+      }
+    },
+    {
+      "name": "pro-white-v9",
+      "black": "v9",
+      "white": "v9pro",
+      "winner": "v9pro",
+      "plies": 30,
+      "stats": {
+        "v9pro": {
+          "moves": 15,
+          "searches": 7,
+          "fullDepth": 7,
+          "timeAborts": 0,
+          "maxMs": 1791
+        }
+      }
+    },
+    {
+      "name": "thinker-black-v8",
+      "black": "v9thinker",
+      "white": "v8",
+      "winner": "v9thinker",
+      "plies": 29,
+      "stats": {
+        "v9thinker": {
+          "moves": 15,
+          "searches": 9,
+          "fullDepth": 8,
+          "timeAborts": 0,
+          "maxMs": 3416
+        }
+      }
+    },
+    {
+      "name": "thinker-white-v8",
+      "black": "v8",
+      "white": "v9thinker",
+      "winner": "v9thinker",
+      "plies": 24,
+      "stats": {
+        "v9thinker": {
+          "moves": 12,
+          "searches": 8,
+          "fullDepth": 6,
+          "timeAborts": 0,
+          "maxMs": 4873
+        }
+      }
+    },
+    {
+      "name": "thinker-black-v9",
+      "black": "v9thinker",
+      "white": "v9",
+      "winner": "v9thinker",
+      "plies": 25,
+      "stats": {
+        "v9thinker": {
+          "moves": 13,
+          "searches": 9,
+          "fullDepth": 7,
+          "timeAborts": 0,
+          "maxMs": 3568
+        }
+      }
+    },
+    {
+      "name": "thinker-white-v9",
+      "black": "v9",
+      "white": "v9thinker",
+      "winner": "v9thinker",
+      "plies": 24,
+      "stats": {
+        "v9thinker": {
+          "moves": 12,
+          "searches": 8,
+          "fullDepth": 6,
+          "timeAborts": 0,
+          "maxMs": 4444
+        }
+      }
+    },
+    {
+      "name": "thinker-black-pro",
+      "black": "v9thinker",
+      "white": "v9pro",
+      "winner": "v9thinker",
+      "plies": 35,
+      "stats": {
+        "v9pro": {
+          "moves": 17,
+          "searches": 13,
+          "fullDepth": 10,
+          "timeAborts": 0,
+          "maxMs": 1227
+        },
+        "v9thinker": {
+          "moves": 18,
+          "searches": 12,
+          "fullDepth": 12,
+          "timeAborts": 0,
+          "maxMs": 3602
+        }
+      }
+    },
+    {
+      "name": "thinker-white-pro",
+      "black": "v9pro",
+      "white": "v9thinker",
+      "winner": "v9thinker",
+      "plies": 70,
+      "stats": {
+        "v9pro": {
+          "moves": 35,
+          "searches": 25,
+          "fullDepth": 24,
+          "timeAborts": 1,
+          "maxMs": 25001
+        },
+        "v9thinker": {
+          "moves": 35,
+          "searches": 21,
+          "fullDepth": 16,
+          "timeAborts": 3,
+          "maxMs": 40002
+        }
+      }
+    }
+  ]
+}
