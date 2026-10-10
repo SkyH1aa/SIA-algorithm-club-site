@@ -174,7 +174,7 @@
           <label for="modelVersion" data-i18n="gomoku.modelLabel">挑战模型</label>
           <select id="modelVersion" aria-label="选择挑战模型">
             <option value="1">铭星V1</option><option value="2">铭星V2</option><option value="3">铭星V3</option>
-            <option value="6">铭星V6</option><option value="7">铭星V7</option><option value="8">铭星V8</option><option value="9" selected>铭星V9</option><option value="9.1">铭星V9Pro</option>
+            <option value="6">铭星V6</option><option value="7">铭星V7</option><option value="8">铭星V8</option><option value="9" selected>铭星V9</option><option value="9.1">铭星V9Pro</option><option value="9.2">铭星V9Thinker</option>
           </select>
           <span class="hint" data-i18n="gomoku.nickSideHint">先填写昵称，再选择执子</span>
         </div>
@@ -207,6 +207,7 @@
   <script src="data/gomoku-training-model.js"></script>
   <script src="gomoku-models/v9.js"></script>
   <script src="gomoku-models/v9pro.js"></script>
+  <script src="gomoku-models/v9thinker.js"></script>
   <script>
     const BOARD_SIZE = 15;
     let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
@@ -229,7 +230,7 @@
     let legacyEngineReady = Promise.resolve();
     let legacyLoadedVersion = null;
     let legacyMoveRequestId = 0;
-    const MODEL_VERSIONS = [1, 2, 3, 6, 7, 8, 9, 9.1];
+    const MODEL_VERSIONS = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2];
     const modelVersionSelect = document.getElementById('modelVersion');
     const gameModeSelect = document.getElementById('gameMode');
     const battleSetup = document.getElementById('battleSetup');
@@ -238,14 +239,16 @@
     const startModelBattleButton = document.getElementById('startModelBattleButton');
     const legacyModelEngine = document.getElementById('legacyModelEngine');
     function getModelName(version) {
-      return version === 9.1 ? '铭星V9Pro' : `铭星V${version}`;
+      if (version === 9.1) return '铭星V9Pro';
+      if (version === 9.2) return '铭星V9Thinker';
+      return `铭星V${version}`;
     }
     function getModelWinPoints(version) {
-      return version === 9.1 ? 10 : Math.trunc(version);
+      return version === 9.1 || version === 9.2 ? 10 : Math.trunc(version);
     }
     function canUploadTrainingResult(version, result) {
       if (!['win', 'loss', 'draw'].includes(result)) return false;
-      if (version === 9 || version === 9.1) return true;
+      if (version === 9 || version === 9.1 || version === 9.2) return true;
       return version === 8 && (result === 'win' || result === 'draw');
     }
     function modelOptionsMarkup(selectedVersion) {
@@ -645,6 +648,7 @@
       playerColor = 3 - color;
       if (version === 9) return window.GomokuV9.findBestMove();
       if (version === 9.1) return window.GomokuV9Pro.findBestMove();
+      if (version === 9.2) return window.GomokuV9Thinker.findBestMove();
       await prepareLegacyModel(version);
       const engineWindow = legacyModelEngine.contentWindow;
       let engineBoard = board;
@@ -888,6 +892,7 @@
       startModelBattleButton.disabled = false;
       window.GomokuV9.clearCache();
       window.GomokuV9Pro.clearCache();
+      window.GomokuV9Thinker.clearCache();
       initBoard();
       document.getElementById('status').innerHTML = ClubI18n.t('gomoku.chooseSide') + ': <button onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';
       updateGameActionButton();

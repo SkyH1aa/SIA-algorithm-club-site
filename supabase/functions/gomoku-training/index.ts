@@ -52,7 +52,7 @@ async function uploadGomokuTrainingData(payload: any) {
     throw new Error('对局结果不合法。');
   }
 
-  if (![1, 2, 3, 6, 7, 8, 9, 9.1].includes(payload.modelVersion)) {
+  if (![1, 2, 3, 6, 7, 8, 9, 9.1, 9.2].includes(payload.modelVersion)) {
     throw new Error('模型版本不合法。');
   }
 
@@ -61,7 +61,7 @@ async function uploadGomokuTrainingData(payload: any) {
     throw new Error('模型对战标记不合法。');
   }
 
-  const acceptsResult = payload.modelVersion === 9 || payload.modelVersion === 9.1
+  const acceptsResult = payload.modelVersion === 9 || payload.modelVersion === 9.1 || payload.modelVersion === 9.2
     ? true
     : payload.modelVersion === 8 && (payload.result === 'win' || payload.result === 'draw');
   if (!acceptsResult) {
@@ -85,7 +85,7 @@ async function uploadGomokuTrainingData(payload: any) {
   }
 
   if (modelBattle) {
-    if (![1, 2, 3, 6, 7, 8, 9, 9.1].includes(payload.opponentModelVersion)) {
+    if (![1, 2, 3, 6, 7, 8, 9, 9.1, 9.2].includes(payload.opponentModelVersion)) {
       throw new Error('对手模型版本不合法。');
     }
   } else if (payload.opponentModelVersion !== null && payload.opponentModelVersion !== undefined) {
