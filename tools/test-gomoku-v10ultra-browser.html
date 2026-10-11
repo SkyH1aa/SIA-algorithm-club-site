@@ -1,0 +1,79 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>V10Ultra browser validation</title>
+<pre id="out">loading</pre>
+<script src="../public/data/gomoku-training-model.js"></script>
+<script src="../public/gomoku-models/expert-core.js"></script>
+<script src="../public/gomoku-models/v9pro.js"></script>
+<script src="../public/gomoku-models/v9thinker.js"></script>
+<script src="../public/gomoku-models/v10-core.js"></script>
+<script src="../public/gomoku-models/v10.js"></script>
+<script src="../public/gomoku-models/v10ultra.js"></script>
+<script>
+  const SIZE = 15;
+  let board = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+  let aiColor = 1;
+  let playerColor = 2;
+  let gameMoves = [];
+  function updateExplain() {}
+  function win(row, col, color) {
+    return [[1, 0], [0, 1], [1, 1], [1, -1]].some(([dr, dc]) => {
+      let n = 1;
+      for (const sign of [-1, 1]) for (let i = 1; i < SIZE; i++) {
+        if (board[row + sign * dr * i]?.[col + sign * dc * i] !== color) break;
+        n++;
+      }
+      return n >= 5;
+    });
+  }
+  function engine(version, color) {
+    aiColor = color;
+    playerColor = 3 - color;
+    if (version === 'v10ultra') return window.GomokuV10Ultra.findBestMove();
+    if (version === 'v9pro') return Promise.resolve(window.GomokuV9Pro.findBestMove());
+    if (version === 'v9thinker') return Promise.resolve(window.GomokuV9Thinker.findBestMove());
+    return Promise.resolve(window.GomokuV10.findBestMove());
+  }
+  async function run() {
+    const query = new URLSearchParams(location.search);
+    const black = query.get('black') || 'v10ultra';
+    const white = query.get('white') || 'v9pro';
+    const moves = [];
+    const startedAt = new Date().toISOString();
+    let winner = null;
+    if (query.get('single') === '1') {
+      const started = performance.now();
+      const move = await engine('v10ultra', Number(query.get('color')) === 2 ? 2 : 1);
+      const elapsedMs = Math.round(performance.now() - started);
+      if (!move || board[move.row]?.[move.col] !== 0) throw new Error(`V10Ultra illegal move ${JSON.stringify(move)}`);
+      const result = { black: 'v10ultra', white: 'test', winner: null, result: 'single-move', elapsedMs, moves: [{ move: 1, row: move.row, col: move.col, player: Number(query.get('color')) === 2 ? 2 : 1 }] };
+      document.title = 'RESULT single-move';
+      document.getElementById('out').textContent = JSON.stringify(result, null, 2);
+      window.validationResult = result;
+      return;
+    }
+    for (let turn = 0; turn < SIZE * SIZE; turn++) {
+      const color = turn % 2 + 1;
+      const version = color === 1 ? black : white;
+      const started = performance.now();
+      const move = await engine(version, color);
+      const elapsedMs = Math.round(performance.now() - started);
+      if (!move || !Number.isInteger(move.row) || !Number.isInteger(move.col) || board[move.row]?.[move.col] !== 0) throw new Error(`${version} illegal move ${JSON.stringify(move)}`);
+      board[move.row][move.col] = color;
+      const record = { move: turn + 1, row: move.row, col: move.col, player: color, model: version, elapsedMs };
+      moves.push(record);
+      gameMoves.push({ row: move.row, col: move.col, player: color });
+      document.title = `${black}/${white} ${turn + 1}`;
+      document.getElementById('out').textContent = JSON.stringify({ black, white, moves, winner }, null, 2);
+      if (win(move.row, move.col, color)) { winner = version; break; }
+    }
+    const result = { black, white, startedAt, finishedAt: new Date().toISOString(), winner, result: winner ? 'win' : 'draw', moves };
+    document.title = `RESULT ${winner || 'draw'}`;
+    document.getElementById('out').textContent = JSON.stringify(result, null, 2);
+    window.validationResult = result;
+  }
+  run().catch(error => {
+    document.title = 'ERROR';
+    document.getElementById('out').textContent = JSON.stringify({ error: error.stack || String(error) }, null, 2);
+  });
+</script>

@@ -88,25 +88,36 @@ const legacyDirectories = directories.filter(directory => {
   const match = directory.match(/^五子棋训练数据(\d+)$/);
   return match && Number(match[1]) < v9TrainingPeriodLimit;
 });
+const v9ProDirectories = directories.filter(directory => {
+  const match = directory.match(/^五子棋训练数据(\d+)$/);
+  return match && Number(match[1]) < 1013;
+});
 const cumulativeModel = await buildModel(directories);
 // Preserve the historical builder semantics for the frozen V9 prior.
 const v9Model = await buildModel(legacyDirectories, { deduplicate: false });
-const v9ProModel = await buildModel(directories, { modelVersion: 9.1 });
+// Freeze every pre-V10 opponent, including Pro's 1012-era prior.
+const v9ProModel = await buildModel(v9ProDirectories, { modelVersion: 9.1 });
 // V9Thinker keeps the V9-era data boundary; period 1010 and later remain
 // exclusive to V9Pro even when those folders contain Thinker matchups.
 const v9ThinkerModel = v9Model;
+// V10 is a new model family. It receives the complete cumulative archive,
+// including period 1013 and later, while the frozen V9-era models above keep
+// their original data boundary.
+const v10Model = await buildModel(directories);
 const output = [
   `window.GOMOKU_TRAINING_MODEL = ${JSON.stringify(cumulativeModel)};`,
   `window.GOMOKU_V9PRO_TRAINING_MODEL = ${JSON.stringify(v9ProModel)};`,
   `window.GOMOKU_V9THINKER_TRAINING_MODEL = ${JSON.stringify(v9ThinkerModel)};`,
   `window.GOMOKU_V9_TRAINING_MODEL = ${JSON.stringify(v9Model)};`,
+  `window.GOMOKU_V10_TRAINING_MODEL = ${JSON.stringify(v10Model)};`,
   ''
 ].join('\n');
 await writeFile(outputPath, output, 'utf8');
 console.log(`Built ${Object.keys(cumulativeModel.priors).length} cumulative opening patterns from ${cumulativeModel.gameCount} games in ${directories.length} training folders.`);
-console.log(`Built ${Object.keys(v9ProModel.priors).length} V9Pro expert patterns from ${v9ProModel.gameCount} base and V9Pro-owned games in ${directories.length} training folders.`);
+console.log(`Built ${Object.keys(v9ProModel.priors).length} V9Pro expert patterns from ${v9ProModel.gameCount} base and V9Pro-owned games in ${v9ProDirectories.length} frozen training folders.`);
 console.log(`Built ${Object.keys(v9ThinkerModel.priors).length} V9Thinker expert patterns from the V9-era ${v9ThinkerModel.gameCount}-game boundary.`);
 console.log(`Built ${Object.keys(v9Model.priors).length} V9 opening patterns from ${v9Model.gameCount} games in ${legacyDirectories.length} training folders.`);
+console.log(`Built ${Object.keys(v10Model.priors).length} V10 cumulative patterns from ${v10Model.gameCount} games in ${directories.length} training folders.`);
 for (const directory of directories) {
   const period = await buildModel([directory]);
   console.log(`${directory}: ${period.gameCount} unique perspective records (win ${period.outcomes.win}, loss ${period.outcomes.loss}, draw ${period.outcomes.draw}).`);

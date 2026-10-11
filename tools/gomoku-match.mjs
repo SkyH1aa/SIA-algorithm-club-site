@@ -21,7 +21,7 @@ export function loadEngine(version) {
     for (const script of html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)) vm.runInContext(script[1], context);
     vm.runInContext('window.testMove = (b, color) => { board = b; aiColor = color; playerColor = 3-color; transpositionTable.clear(); return findBestMoveWithMinimax(); };', context);
   } else {
-    if (version !== 'v9') vm.runInContext(fs.readFileSync(path.join(root, 'public/gomoku-models/expert-core.js'), 'utf8'), context);
+    if (version !== 'v9') vm.runInContext(fs.readFileSync(path.join(root, version === 'v10' ? 'public/gomoku-models/v10-core.js' : 'public/gomoku-models/expert-core.js'), 'utf8'), context);
     vm.runInContext(fs.readFileSync(path.join(root, `public/gomoku-models/${version}.js`), 'utf8'), context);
   }
   return (board, color, history) => {
@@ -30,7 +30,7 @@ export function loadEngine(version) {
     sandbox.aiColor = color; sandbox.playerColor = 3-color; sandbox.gameMoves = history.map(move => ({ ...move }));
     const before = JSON.stringify(sandbox.board);
     const started = performance.now();
-    const engine = { v9: 'GomokuV9', v9pro: 'GomokuV9Pro', v9thinker: 'GomokuV9Thinker' }[version];
+    const engine = { v9: 'GomokuV9', v9pro: 'GomokuV9Pro', v9thinker: 'GomokuV9Thinker', v10: 'GomokuV10' }[version];
     const move = version === 'v8' ? sandbox.testMove(sandbox.board, color) : sandbox[engine].findBestMove();
     const elapsedMs = Math.round(performance.now() - started);
     if (JSON.stringify(sandbox.board) !== before) throw new Error(`${version} mutated board`);
@@ -56,7 +56,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const board = Array.from({length:15},()=>Array(15).fill(0));
   const moves = openingFile ? JSON.parse(fs.readFileSync(openingFile, 'utf8')).moves : [];
   for (const move of moves) board[move.row][move.col] = move.player;
-  const inputs = ['public/gomoku-models/expert-core.js', 'public/data/gomoku-training-model.js', ...[...new Set([black, white])].map(v => `public/gomoku-models/${v}.${v === 'v8' ? 'html' : 'js'}`)];
+  const inputs = ['public/gomoku-models/expert-core.js', ...(black === 'v10' || white === 'v10' ? ['public/gomoku-models/v10-core.js'] : []), 'public/data/gomoku-training-model.js', ...[...new Set([black, white])].map(v => `public/gomoku-models/${v}.${v === 'v8' ? 'html' : 'js'}`)];
   const fingerprints = Object.fromEntries(inputs.map(file => [file, createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex')]));
   const report = { black, white, startedAt: new Date().toISOString(), limits: 'production, real monotonic clock', fingerprints, moves, winner: null };
   fs.mkdirSync(path.dirname(path.resolve(root, output)), { recursive: true });
