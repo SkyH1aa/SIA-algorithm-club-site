@@ -1,0 +1,28 @@
+{
+  "slowrenju": {
+    "repo": "https://github.com/wind23/SlowRenju",
+    "commit": "41007cf70762b62df77223da25c9605d0a853602",
+    "engineVersion": "5.1.3",
+    "emcc": "6.0.12",
+    "rule": "freestyle"
+  },
+  "gomokuzero": {
+    "repo": "https://github.com/maojh15/GomokuZeroAI",
+    "sourceCommit": "6ac709d5011971c1d4dafd3c3ccb103352e3e9bc",
+    "weights": "https://huggingface.co/maojh15/GomokuZeroAI",
+    "weightRevision": "87e8db2a2ffc0a75c945bfcac9e1c647c247e1cf",
+    "checkpoint": "iter_0150_15x15.pt",
+    "checkpointSha256": "23fa3409da45a7fa3dfa14ba2fb9415f3b730c5f4299d51e46660045670030e6",
+    "export": "FP32 ONNX; opset17; no retraining",
+    "onnxSha256": "0a3698b965cb714e065caf3ddc7153b1f0151bb0361880bbd3f498f38711edcb",
+    "iteration": 150,
+    "channels": 128,
+    "weightLicenseDeclared": "MIT",
+    "sourceLicenseFileFound": false
+  },
+  "runtime": {
+    "package": "onnxruntime-web",
+    "version": "1.22.0",
+    "license": "MIT"
+  }
+}

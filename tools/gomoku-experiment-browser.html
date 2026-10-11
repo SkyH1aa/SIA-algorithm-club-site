@@ -1,0 +1,101 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Gomoku experiment validation</title>
+<pre id="out">loading</pre>
+<script src="../public/data/gomoku-training-model.js"></script>
+<script src="../public/gomoku-models/expert-core.js"></script>
+<script src="../public/gomoku-models/v9thinker.js"></script>
+<script src="../public/gomoku-models/v10-core.js"></script>
+<script src="../public/gomoku-models/v10.js"></script>
+<script src="../public/gomoku-models/v10ultra.js"></script>
+<script src="../public/gomoku-models/experimental/models.js"></script>
+<script src="../public/gomoku-models/v10exp.js"></script>
+<script>
+const SIZE = 15;
+let board = Array.from({length: SIZE}, () => Array(SIZE).fill(0));
+let aiColor = 1, playerColor = 2, gameMoves = [];
+function updateExplain() {}
+const engines = { v9thinker: GomokuV9Thinker, v10: GomokuV10, v10ultra: GomokuV10Ultra, v10exp: GomokuV10Exp,
+  ...GomokuExperiments };
+function win(row, col, color) {
+  return [[1,0],[0,1],[1,1],[1,-1]].some(([dr,dc]) => {
+    let n = 1;
+    for (const sign of [-1,1]) for (let i=1; i<SIZE; i++) {
+      if (board[row+sign*dr*i]?.[col+sign*dc*i] !== color) break;
+      n++;
+    }
+    return n >= 5;
+  });
+}
+async function choose(name, color) {
+  aiColor = color; playerColor = 3-color;
+  const move = await engines[name].findBestMove({board, color,history:gameMoves});
+  if (!move || !Number.isInteger(move.row) || !Number.isInteger(move.col) || board[move.row]?.[move.col] !== 0)
+    throw new Error(`${name} illegal move ${JSON.stringify(move)}`);
+  return move;
+}
+function render(report) {
+  window.validationProgress = report;
+  document.getElementById('out').textContent = JSON.stringify(report, null, 2);
+}
+async function smoke() {
+  const results = [];
+  for (const name of Object.keys(GomokuExperiments)) {
+    await engines[name].preload();
+    for (const color of [1,2]) {
+      // Current side has an immediate five and the opponent has a four too.
+      // Winning must take precedence over defending, for either color.
+      board = Array.from({length:15}, () => Array(15).fill(0)); gameMoves=[];
+      const mine = [[7,4],[7,5],[7,6],[7,7]];
+      const other = [[3,4],[3,5],[3,6],[3,7]];
+      mine.forEach(([r,c])=>board[r][c]=color);
+      other.forEach(([r,c])=>board[r][c]=3-color);
+      if (color === 2) board[0][0]=1;
+      const started = performance.now(), move = await choose(name,color);
+      if (!win(move.row,move.col,color)) throw new Error(`${name} missed immediate five as ${color}`);
+      results.push({name,color,move,elapsedMs:Math.round(performance.now()-started),stats:engines[name].lastSearch});
+      board = Array.from({length:15}, () => Array(15).fill(0)); gameMoves=[];
+      [[0,0],[2,1],[4,2],[3,3]].forEach(([r,c])=>board[r][c]=color);
+      for(let col=4;col<8;col++)board[3][col]=3-color;
+      if(color===2)board[0][14]=1;
+      const block=await choose(name,color);
+      if(block.row!==3||block.col!==8)throw new Error(`${name} missed unique forced block as ${color}`);
+      results.push({name,color,forcedBlock:true,move:block});
+    }
+    engines[name].clearCache();
+    board = Array.from({length:15}, () => Array(15).fill(0)); gameMoves=[];
+    const move = await choose(name,1);
+    results.push({name,reset:true,move});
+    engines[name].clearCache();
+  }
+  return {result:'smoke',results};
+}
+async function run() {
+  const q = new URLSearchParams(location.search);
+  if (q.has('smoke')) return smoke();
+  const black = q.get('black'), white = q.get('white');
+  if (!engines[black] || !engines[white]) throw new Error('Unknown engine');
+  const report = {black,white,rule:'freestyle; 15x15; >=5 wins; no opening constraints',
+    limits:{slowrenju:120000,gomokuzero:{timeMs:120000,simulations:2000},v9thinker:40000,v10:40000,v10ultra:75000,v10exp:180000},
+    startedAt:new Date().toISOString(),winner:null,moves:[]};
+  // Asset preparation is excluded from per-move search measurements.
+  for (const name of [black,white]) if (engines[name].preload) await engines[name].preload();
+  render(report);
+  for(let turn=0;turn<225;turn++) {
+    const color=turn%2+1, name=color===1?black:white;
+    const started=performance.now(), move=await choose(name,color), elapsedMs=Math.round(performance.now()-started);
+    board[move.row][move.col]=color;
+    gameMoves.push({row:move.row,col:move.col,player:color});
+    report.moves.push({move:turn+1,row:move.row,col:move.col,player:color,model:name,elapsedMs,search:engines[name].lastSearch});
+    document.title=`${black}/${white} ${turn+1}`;
+    render(report);
+    if(win(move.row,move.col,color)) {report.winner=name;break;}
+    await new Promise(resolve=>setTimeout(resolve,0));
+  }
+  report.result=report.winner?'win':'draw'; report.finishedAt=new Date().toISOString();
+  Object.values(engines).forEach(engine=>engine.clearCache());
+  return report;
+}
+run().then(result=>{window.validationResult=result;document.title='RESULT';render(result);})
+  .catch(error=>{window.validationResult={error:error.stack||String(error)};document.title='ERROR';render(window.validationResult);});
+</script>

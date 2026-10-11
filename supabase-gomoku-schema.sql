@@ -1,4 +1,5 @@
 -- 五子棋累计排行榜：同一个昵称只保留一条记录
+-- V9Mesa 胜局9分，V10Mesa胜局14分；V10Exp与V10Ultra均为15分。
 -- 可重复执行；只创建/更新当前排行榜结构，不依赖旧表或回填历史数据。
 
 create table if not exists public.gomoku_players (

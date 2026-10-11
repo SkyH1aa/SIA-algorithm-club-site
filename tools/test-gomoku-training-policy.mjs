@@ -17,7 +17,7 @@ const context = vm.createContext({
   }
 });
 vm.runInContext(stripTypeScriptTypes(source), context);
-const versions = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 10, 10.1];
+const versions = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3];
 let cases = 0;
 for (const version of versions) for (const result of ['win', 'loss', 'draw']) for (const color of [1, 2]) for (const battle of [false, true]) {
   stored = null;
@@ -27,7 +27,7 @@ for (const version of versions) for (const result of ['win', 'loss', 'draw']) fo
     ...(battle ? { modelBattle: true, opponentModelVersion: 9.1 } : {})
   };
   const response = await serve({ method: 'POST', json: async () => payload });
-  if ([9.2, 10, 10.1].includes(version)) {
+  if ([9.2, 10, 10.1, 10.2, 10.3].includes(version)) {
     assert.equal(response.status, 200);
     assert.equal(stored.result, result);
     assert.equal(stored.model_version, version);
@@ -43,6 +43,21 @@ for (const version of versions) for (const result of ['win', 'loss', 'draw']) fo
   }
   cases++;
 }
+// New non-uploading versions remain valid opponents of an uploading model.
+for(const version of [9.2,10,10.1,10.2,10.3])for(const opponent of versions)
+  for(const color of [1,2])for(const result of ['win','loss','draw']) {
+    stored=null;
+    const response=await serve({method:'POST',json:async()=>({
+      result,modelVersion:version,opponentModelVersion:opponent,modelBattle:true,
+      nickname:'test-only',aiColor:color,playerColor:3-color,
+      moves:[{row:7,col:7,player:1},{row:6,col:8,player:2}]
+    })});
+    assert.equal(response.status,200);
+    assert.equal(stored.opponent_model_version,opponent);
+    assert.equal(stored.opponent_model_color,3-color);
+    assert.equal(stored.result,result);
+    cases++;
+  }
 // The opaque-origin build must wrap exactly the HTTP build, with no changes
 // to the engine, neural weights, or the search protocol.
 const directory = path.join(root, 'public/gomoku-models/v10ultra');
@@ -53,4 +68,4 @@ assert.equal(pack.rapfiSource, fs.readFileSync(path.join(directory, 'rapfi-singl
 assert.equal(pack.workerSource, fs.readFileSync(path.join(directory, 'worker.js'), 'utf8'));
 assert.ok(Buffer.from(pack.wasmBase64, 'base64').equals(fs.readFileSync(path.join(directory, 'rapfi-single.wasm'))));
 assert.ok(Buffer.from(pack.dataBase64, 'base64').equals(fs.readFileSync(path.join(directory, 'rapfi.data'))));
-console.log(`PASS: ${cases} edge function cases; only 9.2/10/10.1 accept all outcomes, colors and modes preserved; file:// and HTTP engine/weights are identical.`);
+console.log(`PASS: ${cases} edge function cases; only 9.2/10/10.1/10.2/10.3 accept all outcomes, colors and modes preserved; file:// and HTTP engine/weights are identical.`);

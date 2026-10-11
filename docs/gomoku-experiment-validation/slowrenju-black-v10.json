@@ -1,0 +1,493 @@
+{
+  "black": "slowrenju",
+  "white": "v10",
+  "rule": "freestyle; 15x15; >=5 wins; no opening constraints",
+  "limits": {
+    "slowrenju": 120000,
+    "gomokuzero": {
+      "timeMs": 120000,
+      "simulations": 2000
+    },
+    "v9thinker": 40000,
+    "v10": 40000,
+    "v10ultra": 75000
+  },
+  "startedAt": "2026-10-11T10:16:53.887Z",
+  "winner": "slowrenju",
+  "moves": [
+    {
+      "move": 1,
+      "row": 7,
+      "col": 7,
+      "player": 1,
+      "model": "slowrenju",
+      "elapsedMs": 98,
+      "search": {
+        "depth": 0,
+        "score": 0,
+        "nodes": 0,
+        "elapsedMs": 98,
+        "reason": "slowrenju-wasm"
+      }
+    },
+    {
+      "move": 2,
+      "row": 8,
+      "col": 8,
+      "player": 2,
+      "model": "v10",
+      "elapsedMs": 2,
+      "search": {
+        "depth": 0,
+        "configuredDepth": 8,
+        "candidates": 20,
+        "nodes": 0,
+        "qnodes": 0,
+        "elapsedMs": 1.5999999977648258,
+        "aborted": false,
+        "reason": "opening",
+        "score": 0
+      }
+    },
+    {
+      "move": 3,
+      "row": 6,
+      "col": 9,
+      "player": 1,
+      "model": "slowrenju",
+      "elapsedMs": 119301,
+      "search": {
+        "depth": 12,
+        "score": 17,
+        "nodes": 20643880,
+        "elapsedMs": 119300,
+        "reason": "slowrenju-wasm"
+      }
+    },
+    {
+      "move": 4,
+      "row": 7,
+      "col": 9,
+      "player": 2,
+      "model": "v10",
+      "elapsedMs": 10672,
+      "search": {
+        "depth": 8,
+        "configuredDepth": 8,
+        "candidates": 20,
+        "nodes": 1435230,
+        "qnodes": 656764,
+        "elapsedMs": 10672.199999999255,
+        "aborted": false,
+        "reason": "search",
+        "score": -81832
+      }
+    },
+    {
+      "move": 5,
+      "row": 6,
+      "col": 10,
+      "player": 1,
+      "model": "slowrenju",
+      "elapsedMs": 119300,
+      "search": {
+        "depth": 13,
+        "score": 23,
+        "nodes": 19347839,
+        "elapsedMs": 119300,
+        "reason": "slowrenju-wasm"
+      }
+    },
+    {
+      "move": 6,
+      "row": 6,
+      "col": 8,
+      "player": 2,
+      "model": "v10",
+      "elapsedMs": 3085,
+      "search": {
+        "depth": 8,
+        "configuredDepth": 8,
+        "candidates": 20,
+        "nodes": 256950,
+        "qnodes": 126311,
+        "elapsedMs": 3084.699999999255,
+        "aborted": false,
+        "reason": "search",
+        "score": -8933
+      }
+    },
+    {
+      "move": 7,
+      "row": 5,
+      "col": 7,
+      "player": 1,
+      "model": "slowrenju",
+      "elapsedMs": 119301,
+      "search": {
+        "depth": 12,
+        "score": 28,
+        "nodes": 20920909,
+        "elapsedMs": 119301,
+        "reason": "slowrenju-wasm"
+      }
+    },
+    {
+      "move": 8,
+      "row": 8,
+      "col": 7,
+      "player": 2,
+      "model": "v10",
+      "elapsedMs": 6328,
+      "search": {
+        "depth": 8,
+        "configuredDepth": 8,
+        "candidates": 20,
+        "nodes": 572819,
+        "qnodes": 291361,
+        "elapsedMs": 6327.89999999851,
+        "aborted": false,
+        "reason": "search",
+        "score": -881967
+      }
+    },
+    {
+      "move": 9,
+      "row": 5,
+      "col": 8,
+      "player": 1,
+      "model": "slowrenju",
+      "elapsedMs": 108105,
+      "search": {
+        "depth": 14,
+        "score": 19960,
+        "nodes": 18478186,
+        "elapsedMs": 108105,
+        "reason": "slowrenju-wasm"
+      }
+    },
+    {
+      "move": 10,
+      "row": 8,
+      "col": 10,
+      "player": 2,
+      "model": "v10",
+      "elapsedMs": 1796,
+      "search": {
+        "depth": 8,
+        "configuredDepth": 8,
+        "candidates": 20,
+        "nodes": 175681,
+        "qnodes": 104289,
+        "elapsedMs": 1796.199999999255,
+        "aborted": false,
+        "reason": "search",
+        "score": -951746
+      }
+    },
+    {
+      "move": 11,
+      "row": 8,
+      "col": 9,
+      "player": 1,
+      "model": "slowrenju",
+      "elapsedMs": 4,
+      "search": {
+        "depth": 2,
+        "score": 19961,
+        "nodes": 1,
+        "elapsedMs": 4,
+        "reason": "slowrenju-wasm"
+      }
+    },
+    {
+      "move": 12,
+      "row": 9,
+      "col": 11,
+      "player": 2,
+      "model": "v10",
+      "elapsedMs": 3634,
+      "search": {
+        "depth": 8,
+        "configuredDepth": 8,
+        "candidates": 20,
+        "nodes": 379141,
+        "qnodes": 258980,
+        "elapsedMs": 3634.2000000029802,
+        "aborted": false,
+        "reason": "search",
+        "score": -953218
+      }
+    },
+    {
+      "move": 13,
+      "row": 10,
+      "col": 12,
+      "player": 1,
+      "model": "slowrenju",
+      "elapsedMs": 1,
+      "search": {
+        "depth": 2,
+        "score": 19958,
+        "nodes": 1,
+        "elapsedMs": 1,
+        "reason": "slowrenju-wasm"
+      }
+    },
+    {
+      "move": 14,
+      "row": 4,
+      "col": 7,
+      "player": 2,
+      "model": "v10",
+      "elapsedMs": 4533,
+      "search": {
+        "depth": 8,
+        "configuredDepth": 8,
+        "candidates": 20,
+        "nodes": 483022,
+        "qnodes": 347803,
+        "elapsedMs": 4532.599999997765,
+        "aborted": false,
+        "reason": "search",
+        "score": -963422
+      }
+    },
+    {
+      "move": 15,
+      "row": 5,
+      "col": 9,
+      "player": 1,
+      "model": "slowrenju",
+      "elapsedMs": 0,
+      "search": {
+        "depth": 2,
+        "score": 19968,
+        "nodes": 1,
+        "elapsedMs": 0,
+        "reason": "slowrenju-wasm"
+      }
+    },
+    {
+      "move": 16,
+      "row": 5,
+      "col": 6,
+      "player": 2,
+      "model": "v10",
+      "elapsedMs": 3502,
+      "search": {
+        "depth": 7,
+        "configuredDepth": 8,
+        "candidates": 20,
+        "nodes": 370240,
+        "qnodes": 348050,
+        "elapsedMs": 3501.60000000149,
+        "aborted": false,
+        "reason": "search",
+        "score": -99999987
+      }
+    },
+    {
+      "move": 17,
+      "row": 3,
+      "col": 10,
+      "player": 1,
+      "model": "slowrenju",
+      "elapsedMs": 2,
+      "search": {
+        "depth": 2,
+        "score": 19973,
+        "nodes": 1,
+        "elapsedMs": 2,
+        "reason": "slowrenju-wasm"
+      }
+    },
+    {
+      "move": 18,
+      "row": 5,
+      "col": 10,
+      "player": 2,
+      "model": "v10",
+      "elapsedMs": 129,
+      "search": {
+        "depth": 5,
+        "configuredDepth": 8,
+        "candidates": 20,
+        "nodes": 12575,
+        "qnodes": 10119,
+        "elapsedMs": 129.39999999850988,
+        "aborted": false,
+        "reason": "search",
+        "score": -99999991
+      }
+    },
+    {
+      "move": 19,
+      "row": 4,
+      "col": 9,
+      "player": 1,
+      "model": "slowrenju",
+      "elapsedMs": 0,
+      "search": {
+        "depth": 2,
+        "score": 19973,
+        "nodes": 1,
+        "elapsedMs": 0,
+        "reason": "slowrenju-wasm"
+      }
+    },
+    {
+      "move": 20,
+      "row": 6,
+      "col": 7,
+      "player": 2,
+      "model": "v10",
+      "elapsedMs": 17,
+      "search": {
+        "depth": 3,
+        "configuredDepth": 8,
+        "candidates": 20,
+        "nodes": 2098,
+        "qnodes": 1895,
+        "elapsedMs": 16.600000001490116,
+        "aborted": false,
+        "reason": "search",
+        "score": -99999993
+      }
+    },
+    {
+      "move": 21,
+      "row": 4,
+      "col": 8,
+      "player": 1,
+      "model": "slowrenju",
+      "elapsedMs": 0,
+      "search": {
+        "depth": 2,
+        "score": 19996,
+        "nodes": 1,
+        "elapsedMs": 0,
+        "reason": "slowrenju-wasm"
+      }
+    },
+    {
+      "move": 22,
+      "row": 7,
+      "col": 11,
+      "player": 2,
+      "model": "v10",
+      "elapsedMs": 16,
+      "search": {
+        "depth": 1,
+        "configuredDepth": 8,
+        "candidates": 20,
+        "nodes": 1751,
+        "qnodes": 1730,
+        "elapsedMs": 15.800000000745058,
+        "aborted": false,
+        "reason": "search",
+        "score": -99999995
+      }
+    },
+    {
+      "move": 23,
+      "row": 3,
+      "col": 9,
+      "player": 1,
+      "model": "slowrenju",
+      "elapsedMs": 0,
+      "search": {
+        "depth": 0,
+        "score": 0,
+        "nodes": 0,
+        "elapsedMs": 0,
+        "reason": "slowrenju-wasm"
+      }
+    },
+    {
+      "move": 24,
+      "row": 2,
+      "col": 9,
+      "player": 2,
+      "model": "v10",
+      "elapsedMs": 0,
+      "search": {
+        "depth": 0,
+        "configuredDepth": 8,
+        "candidates": 20,
+        "nodes": 0,
+        "qnodes": 0,
+        "elapsedMs": 0.19999999925494194,
+        "aborted": false,
+        "reason": "block",
+        "score": 0
+      }
+    },
+    {
+      "move": 25,
+      "row": 6,
+      "col": 6,
+      "player": 1,
+      "model": "slowrenju",
+      "elapsedMs": 0,
+      "search": {
+        "depth": 0,
+        "score": 0,
+        "nodes": 0,
+        "elapsedMs": 0,
+        "reason": "slowrenju-wasm"
+      }
+    },
+    {
+      "move": 26,
+      "row": 2,
+      "col": 10,
+      "player": 2,
+      "model": "v10",
+      "elapsedMs": 0,
+      "search": {
+        "depth": 0,
+        "configuredDepth": 8,
+        "candidates": 20,
+        "nodes": 0,
+        "qnodes": 0,
+        "elapsedMs": 0.09999999776482582,
+        "aborted": false,
+        "reason": "block",
+        "score": 0
+      }
+    },
+    {
+      "move": 27,
+      "row": 7,
+      "col": 5,
+      "player": 1,
+      "model": "slowrenju",
+      "elapsedMs": 0,
+      "search": {
+        "depth": 0,
+        "score": 0,
+        "nodes": 0,
+        "elapsedMs": 0,
+        "reason": "slowrenju-wasm"
+      }
+    }
+  ],
+  "result": "win",
+  "finishedAt": "2026-10-11T10:25:13.747Z",
+  "fingerprints": {
+    "public/gomoku-models/expert-core.js": "2158912ab7485768a876c5beca2cbb784a98e4ab9d2e36a1f67bc0f6102ded9a",
+    "public/gomoku-models/v9thinker.js": "24afab175af8d0acdd77a429a01d349e15541de0d6d1c7f84375267b607d45f1",
+    "public/gomoku-models/v10-core.js": "1e6083fdeca7158cb1c0df447eed36e7a210a10afc2a24de059be3f1909efc77",
+    "public/gomoku-models/v10.js": "1a3d869846684b706c857ec2eccf1013ba72eb57385243c653623700d0af927f",
+    "public/gomoku-models/v10ultra.js": "cca285fba4eadd7d0d75f647c3dfefc59e6f8f6d980e1c0eca2a37f3d51a6871",
+    "public/gomoku-models/v10ultra/worker.js": "392c155bf347daf7dfd2bd883475288d2e07befa49ff5755f533025a94305b49",
+    "public/gomoku-models/v10ultra/rapfi-single.wasm": "20bb495aff65ff3e7ebc46e70890e9d1f98bf5023ee0e2c7378651f5f36a5820",
+    "public/gomoku-models/v10ultra/rapfi.data": "36b924671316bc28ca16b240cdc4435ce43a29417385c60ee316f4fa09f7496f",
+    "public/gomoku-models/experimental/models.js": "62e05f9c847d4de30c96e5b0a48c18e5994aee09b783fb94da74e873969743f3",
+    "public/gomoku-models/experimental/slowrenju/worker.js": "6fcf79971a8e845c6daf49f38a4f595f6fd36a52e3ea3be205ccd4b175b6c056",
+    "public/gomoku-models/experimental/slowrenju/engine.wasm": "05d0050a068d4f4711694e50e5f6fd0bdae9d09ed914cf3b6c69003a248c3f8f",
+    "public/gomoku-models/experimental/gomokuzero/worker.js": "78423c5487e978bcf5d6965fcfa7317aa8b955d01ce8f69ecc9fadfb71946ac3",
+    "public/gomoku-models/experimental/gomokuzero/model.onnx": "0a3698b965cb714e065caf3ddc7153b1f0151bb0361880bbd3f498f38711edcb"
+  }
+}

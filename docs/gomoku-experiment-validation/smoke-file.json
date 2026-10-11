@@ -1,0 +1,134 @@
+{
+  "result": "smoke",
+  "results": [
+    {
+      "name": "slowrenju",
+      "color": 1,
+      "move": {
+        "row": 7,
+        "col": 8
+      },
+      "elapsedMs": 81,
+      "stats": {
+        "depth": 0,
+        "score": 0,
+        "nodes": 0,
+        "elapsedMs": 81,
+        "reason": "slowrenju-wasm"
+      }
+    },
+    {
+      "name": "slowrenju",
+      "color": 1,
+      "forcedBlock": true,
+      "move": {
+        "row": 3,
+        "col": 8
+      }
+    },
+    {
+      "name": "slowrenju",
+      "color": 2,
+      "move": {
+        "row": 7,
+        "col": 8
+      },
+      "elapsedMs": 0,
+      "stats": {
+        "depth": 0,
+        "score": 0,
+        "nodes": 0,
+        "elapsedMs": 0,
+        "reason": "slowrenju-wasm"
+      }
+    },
+    {
+      "name": "slowrenju",
+      "color": 2,
+      "forcedBlock": true,
+      "move": {
+        "row": 3,
+        "col": 8
+      }
+    },
+    {
+      "name": "slowrenju",
+      "reset": true,
+      "move": {
+        "row": 7,
+        "col": 7
+      }
+    },
+    {
+      "name": "gomokuzero",
+      "color": 1,
+      "move": {
+        "row": 7,
+        "col": 3
+      },
+      "elapsedMs": 1,
+      "stats": {
+        "depth": 1,
+        "simulations": 0,
+        "reason": "immediate-win",
+        "elapsedMs": 1
+      }
+    },
+    {
+      "name": "gomokuzero",
+      "color": 1,
+      "forcedBlock": true,
+      "move": {
+        "row": 3,
+        "col": 8
+      }
+    },
+    {
+      "name": "gomokuzero",
+      "color": 2,
+      "move": {
+        "row": 7,
+        "col": 3
+      },
+      "elapsedMs": 0,
+      "stats": {
+        "depth": 1,
+        "simulations": 0,
+        "reason": "immediate-win",
+        "elapsedMs": 0
+      }
+    },
+    {
+      "name": "gomokuzero",
+      "color": 2,
+      "forcedBlock": true,
+      "move": {
+        "row": 3,
+        "col": 8
+      }
+    },
+    {
+      "name": "gomokuzero",
+      "reset": true,
+      "move": {
+        "row": 8,
+        "col": 6
+      }
+    }
+  ],
+  "fingerprints": {
+    "public/gomoku-models/expert-core.js": "2158912ab7485768a876c5beca2cbb784a98e4ab9d2e36a1f67bc0f6102ded9a",
+    "public/gomoku-models/v9thinker.js": "24afab175af8d0acdd77a429a01d349e15541de0d6d1c7f84375267b607d45f1",
+    "public/gomoku-models/v10-core.js": "1e6083fdeca7158cb1c0df447eed36e7a210a10afc2a24de059be3f1909efc77",
+    "public/gomoku-models/v10.js": "1a3d869846684b706c857ec2eccf1013ba72eb57385243c653623700d0af927f",
+    "public/gomoku-models/v10ultra.js": "cca285fba4eadd7d0d75f647c3dfefc59e6f8f6d980e1c0eca2a37f3d51a6871",
+    "public/gomoku-models/v10ultra/worker.js": "392c155bf347daf7dfd2bd883475288d2e07befa49ff5755f533025a94305b49",
+    "public/gomoku-models/v10ultra/rapfi-single.wasm": "20bb495aff65ff3e7ebc46e70890e9d1f98bf5023ee0e2c7378651f5f36a5820",
+    "public/gomoku-models/v10ultra/rapfi.data": "36b924671316bc28ca16b240cdc4435ce43a29417385c60ee316f4fa09f7496f",
+    "public/gomoku-models/experimental/models.js": "62e05f9c847d4de30c96e5b0a48c18e5994aee09b783fb94da74e873969743f3",
+    "public/gomoku-models/experimental/slowrenju/worker.js": "6fcf79971a8e845c6daf49f38a4f595f6fd36a52e3ea3be205ccd4b175b6c056",
+    "public/gomoku-models/experimental/slowrenju/engine.wasm": "05d0050a068d4f4711694e50e5f6fd0bdae9d09ed914cf3b6c69003a248c3f8f",
+    "public/gomoku-models/experimental/gomokuzero/worker.js": "78423c5487e978bcf5d6965fcfa7317aa8b955d01ce8f69ecc9fadfb71946ac3",
+    "public/gomoku-models/experimental/gomokuzero/model.onnx": "0a3698b965cb714e065caf3ddc7153b1f0151bb0361880bbd3f498f38711edcb"
+  }
+}

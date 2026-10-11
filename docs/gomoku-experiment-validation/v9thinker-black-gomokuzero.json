@@ -1,0 +1,298 @@
+{
+  "black": "v9thinker",
+  "white": "gomokuzero",
+  "rule": "freestyle; 15x15; >=5 wins; no opening constraints",
+  "limits": {
+    "slowrenju": 120000,
+    "gomokuzero": {
+      "timeMs": 120000,
+      "simulations": 2000
+    },
+    "v9thinker": 40000,
+    "v10": 40000,
+    "v10ultra": 75000
+  },
+  "startedAt": "2026-10-11T09:58:01.920Z",
+  "winner": "v9thinker",
+  "moves": [
+    {
+      "move": 1,
+      "row": 7,
+      "col": 7,
+      "player": 1,
+      "model": "v9thinker",
+      "elapsedMs": 558,
+      "search": {
+        "depth": 7,
+        "configuredDepth": 7,
+        "candidates": 14,
+        "nodes": 91375,
+        "qnodes": 36994,
+        "elapsedMs": 557.4000000022352,
+        "aborted": false,
+        "reason": "search",
+        "score": 9826
+      }
+    },
+    {
+      "move": 2,
+      "row": 8,
+      "col": 8,
+      "player": 2,
+      "model": "gomokuzero",
+      "elapsedMs": 9951,
+      "search": {
+        "depth": 12,
+        "simulations": 2000,
+        "candidates": 224,
+        "elapsedMs": 9951,
+        "aborted": false,
+        "reason": "gomokuzero-puct"
+      }
+    },
+    {
+      "move": 3,
+      "row": 6,
+      "col": 7,
+      "player": 1,
+      "model": "v9thinker",
+      "elapsedMs": 771,
+      "search": {
+        "depth": 7,
+        "configuredDepth": 7,
+        "candidates": 14,
+        "nodes": 146652,
+        "qnodes": 58934,
+        "elapsedMs": 771.1999999992549,
+        "aborted": false,
+        "reason": "search",
+        "score": 952286
+      }
+    },
+    {
+      "move": 4,
+      "row": 6,
+      "col": 8,
+      "player": 2,
+      "model": "gomokuzero",
+      "elapsedMs": 9388,
+      "search": {
+        "depth": 15,
+        "simulations": 2000,
+        "candidates": 222,
+        "elapsedMs": 9388,
+        "aborted": false,
+        "reason": "gomokuzero-puct"
+      }
+    },
+    {
+      "move": 5,
+      "row": 7,
+      "col": 8,
+      "player": 1,
+      "model": "v9thinker",
+      "elapsedMs": 231,
+      "search": {
+        "depth": 7,
+        "configuredDepth": 7,
+        "candidates": 14,
+        "nodes": 47033,
+        "qnodes": 20298,
+        "elapsedMs": 231.30000000074506,
+        "aborted": false,
+        "reason": "search",
+        "score": 960704
+      }
+    },
+    {
+      "move": 6,
+      "row": 5,
+      "col": 7,
+      "player": 2,
+      "model": "gomokuzero",
+      "elapsedMs": 7591,
+      "search": {
+        "depth": 24,
+        "simulations": 2000,
+        "candidates": 220,
+        "elapsedMs": 7591,
+        "aborted": false,
+        "reason": "gomokuzero-puct"
+      }
+    },
+    {
+      "move": 7,
+      "row": 7,
+      "col": 9,
+      "player": 1,
+      "model": "v9thinker",
+      "elapsedMs": 234,
+      "search": {
+        "depth": 7,
+        "configuredDepth": 7,
+        "candidates": 14,
+        "nodes": 50251,
+        "qnodes": 29132,
+        "elapsedMs": 233.79999999701977,
+        "aborted": false,
+        "reason": "search",
+        "score": 986358
+      }
+    },
+    {
+      "move": 8,
+      "row": 7,
+      "col": 10,
+      "player": 2,
+      "model": "gomokuzero",
+      "elapsedMs": 4363,
+      "search": {
+        "depth": 25,
+        "simulations": 2000,
+        "candidates": 218,
+        "elapsedMs": 4363,
+        "aborted": false,
+        "reason": "gomokuzero-puct"
+      }
+    },
+    {
+      "move": 9,
+      "row": 8,
+      "col": 7,
+      "player": 1,
+      "model": "v9thinker",
+      "elapsedMs": 384,
+      "search": {
+        "depth": 7,
+        "configuredDepth": 7,
+        "candidates": 14,
+        "nodes": 86291,
+        "qnodes": 57477,
+        "elapsedMs": 383.70000000298023,
+        "aborted": false,
+        "reason": "search",
+        "score": 986204
+      }
+    },
+    {
+      "move": 10,
+      "row": 7,
+      "col": 6,
+      "player": 2,
+      "model": "gomokuzero",
+      "elapsedMs": 6050,
+      "search": {
+        "depth": 20,
+        "simulations": 2000,
+        "candidates": 216,
+        "elapsedMs": 6050,
+        "aborted": false,
+        "reason": "gomokuzero-puct"
+      }
+    },
+    {
+      "move": 11,
+      "row": 6,
+      "col": 9,
+      "player": 1,
+      "model": "v9thinker",
+      "elapsedMs": 39,
+      "search": {
+        "depth": 4,
+        "configuredDepth": 7,
+        "candidates": 14,
+        "nodes": 7284,
+        "qnodes": 6499,
+        "elapsedMs": 39,
+        "aborted": false,
+        "reason": "search",
+        "score": 99999994
+      }
+    },
+    {
+      "move": 12,
+      "row": 8,
+      "col": 9,
+      "player": 2,
+      "model": "gomokuzero",
+      "elapsedMs": 5975,
+      "search": {
+        "depth": 9,
+        "simulations": 2000,
+        "candidates": 214,
+        "elapsedMs": 5975,
+        "aborted": false,
+        "reason": "gomokuzero-puct"
+      }
+    },
+    {
+      "move": 13,
+      "row": 5,
+      "col": 10,
+      "player": 1,
+      "model": "v9thinker",
+      "elapsedMs": 0,
+      "search": {
+        "depth": 0,
+        "configuredDepth": 7,
+        "candidates": 14,
+        "nodes": 1,
+        "qnodes": 0,
+        "elapsedMs": 0.09999999776482582,
+        "aborted": false,
+        "reason": "VCF",
+        "score": 99999998
+      }
+    },
+    {
+      "move": 14,
+      "row": 4,
+      "col": 11,
+      "player": 2,
+      "model": "gomokuzero",
+      "elapsedMs": 4,
+      "search": {
+        "depth": 1,
+        "simulations": 0,
+        "reason": "forced-block",
+        "elapsedMs": 4
+      }
+    },
+    {
+      "move": 15,
+      "row": 9,
+      "col": 6,
+      "player": 1,
+      "model": "v9thinker",
+      "elapsedMs": 0,
+      "search": {
+        "depth": 0,
+        "configuredDepth": 7,
+        "candidates": 14,
+        "nodes": 0,
+        "qnodes": 0,
+        "elapsedMs": 0.09999999776482582,
+        "aborted": false,
+        "reason": "win",
+        "score": 100000000
+      }
+    }
+  ],
+  "result": "win",
+  "finishedAt": "2026-10-11T09:58:47.685Z",
+  "fingerprints": {
+    "public/gomoku-models/expert-core.js": "2158912ab7485768a876c5beca2cbb784a98e4ab9d2e36a1f67bc0f6102ded9a",
+    "public/gomoku-models/v9thinker.js": "24afab175af8d0acdd77a429a01d349e15541de0d6d1c7f84375267b607d45f1",
+    "public/gomoku-models/v10-core.js": "1e6083fdeca7158cb1c0df447eed36e7a210a10afc2a24de059be3f1909efc77",
+    "public/gomoku-models/v10.js": "1a3d869846684b706c857ec2eccf1013ba72eb57385243c653623700d0af927f",
+    "public/gomoku-models/v10ultra.js": "cca285fba4eadd7d0d75f647c3dfefc59e6f8f6d980e1c0eca2a37f3d51a6871",
+    "public/gomoku-models/v10ultra/worker.js": "392c155bf347daf7dfd2bd883475288d2e07befa49ff5755f533025a94305b49",
+    "public/gomoku-models/v10ultra/rapfi-single.wasm": "20bb495aff65ff3e7ebc46e70890e9d1f98bf5023ee0e2c7378651f5f36a5820",
+    "public/gomoku-models/v10ultra/rapfi.data": "36b924671316bc28ca16b240cdc4435ce43a29417385c60ee316f4fa09f7496f",
+    "public/gomoku-models/experimental/models.js": "62e05f9c847d4de30c96e5b0a48c18e5994aee09b783fb94da74e873969743f3",
+    "public/gomoku-models/experimental/slowrenju/worker.js": "6fcf79971a8e845c6daf49f38a4f595f6fd36a52e3ea3be205ccd4b175b6c056",
+    "public/gomoku-models/experimental/slowrenju/engine.wasm": "05d0050a068d4f4711694e50e5f6fd0bdae9d09ed914cf3b6c69003a248c3f8f",
+    "public/gomoku-models/experimental/gomokuzero/worker.js": "78423c5487e978bcf5d6965fcfa7317aa8b955d01ce8f69ecc9fadfb71946ac3",
+    "public/gomoku-models/experimental/gomokuzero/model.onnx": "0a3698b965cb714e065caf3ddc7153b1f0151bb0361880bbd3f498f38711edcb"
+  }
+}
