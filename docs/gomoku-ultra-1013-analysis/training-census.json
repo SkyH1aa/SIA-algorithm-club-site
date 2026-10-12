@@ -1,0 +1,58 @@
+{
+  "generatedAt": "2026-10-11T12:40:35.103Z",
+  "periods": [
+    {
+      "directory": "五子棋训练数据1008",
+      "files": 17
+    },
+    {
+      "directory": "五子棋训练数据1009",
+      "files": 5
+    },
+    {
+      "directory": "五子棋训练数据1010",
+      "files": 8
+    },
+    {
+      "directory": "五子棋训练数据1011",
+      "files": 14
+    },
+    {
+      "directory": "五子棋训练数据1012",
+      "files": 26
+    },
+    {
+      "directory": "五子棋训练数据1013",
+      "files": 21
+    },
+    {
+      "directory": "五子棋训练数据1014",
+      "files": 50
+    }
+  ],
+  "files": 141,
+  "uniqueRawFiles": 132,
+  "validUniquePerspectives": 112,
+  "uniqueCompleteTrajectories": 90,
+  "uniqueBoardPositions": 2475,
+  "ultraUniqueCompleteTrajectories": 23,
+  "invalid": [
+    {
+      "file": "五子棋训练数据1008/gomoku-20260819121309732-3004bff4-2220-428a-a8f5-9a65df4bc7dc.json",
+      "error": "Incomplete game"
+    },
+    {
+      "file": "五子棋训练数据1008/gomoku-20260819121325578-2833ea7b-182e-418b-87ab-0aa73c23136c.json",
+      "error": "Incomplete game"
+    },
+    {
+      "file": "五子棋训练数据1010/gomoku-20261010012804620-c3b57825-b5a0-4fb7-b245-79eafb5dcdeb.json",
+      "error": "Incomplete game"
+    }
+  ],
+  "notes": [
+    "Trajectories merge timestamp/download/perspective duplicates, not symmetries.",
+    "Positions are highly correlated; these are not independent training examples.",
+    "No teacher policy/value/search-depth labels are supplied by these records."
+  ]
+}

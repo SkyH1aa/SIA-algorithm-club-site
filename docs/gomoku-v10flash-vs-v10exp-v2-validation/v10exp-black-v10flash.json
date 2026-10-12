@@ -1,0 +1,1511 @@
+{
+  "black": "v10exp",
+  "white": "v10flash",
+  "rule": "freestyle; 15x15; >=5 wins; no opening constraints",
+  "limits": {
+    "slowrenju": 120000,
+    "gomokuzero": {
+      "timeMs": 120000,
+      "simulations": 2000
+    },
+    "v9thinker": 40000,
+    "v10": 40000,
+    "v10ultra": 75000,
+    "v11candidate": 90000,
+    "v10flash": 120000,
+    "v10exp": 180000
+  },
+  "startedAt": "2026-10-12T11:29:35.874Z",
+  "winner": "v10exp",
+  "moves": [
+    {
+      "move": 1,
+      "row": 7,
+      "col": 7,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 144,
+      "search": {
+        "reason": "mix9-expert-checked",
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 1,
+          "elapsedMs": 2.0999999940395355,
+          "aborted": false
+        },
+        "elapsedMs": 144,
+        "experts": {
+          "v10": {
+            "type": "progress",
+            "id": 6,
+            "move": {
+              "row": 7,
+              "col": 7
+            },
+            "stats": {
+              "candidates": 1,
+              "depth": 5,
+              "score": 8631,
+              "target": "8, 8",
+              "move": {
+                "row": 7,
+                "col": 7
+              }
+            }
+          },
+          "thinker": {
+            "type": "progress",
+            "id": 5,
+            "move": {
+              "row": 7,
+              "col": 7
+            },
+            "stats": {
+              "candidates": 1,
+              "depth": 6,
+              "score": -1325,
+              "target": "8, 8",
+              "move": {
+                "row": 7,
+                "col": 7
+              }
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 2,
+      "row": 6,
+      "col": 6,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 7588,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 7465,
+        "configuredDepth": 16,
+        "reason": "opening-book",
+        "elapsedMs": 7581,
+        "book": {
+          "move": {
+            "row": 6,
+            "col": 6
+          },
+          "score": 0.25,
+          "games": 10,
+          "record": {
+            "win": 7,
+            "loss": 3,
+            "draw": 0
+          },
+          "engineMove": {
+            "row": 7,
+            "col": 8
+          }
+        },
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 0
+        }
+      }
+    },
+    {
+      "move": 3,
+      "row": 7,
+      "col": 8,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 6738,
+      "search": {
+        "reason": "mix9-expert-checked",
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 1,
+          "elapsedMs": 0.20000000298023224,
+          "aborted": false
+        },
+        "elapsedMs": 6696,
+        "experts": {
+          "thinker": {
+            "type": "result",
+            "id": 11,
+            "move": {
+              "row": 7,
+              "col": 8
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 139010,
+              "qnodes": 55277,
+              "elapsedMs": 748.6000000014901,
+              "aborted": false,
+              "reason": "search",
+              "score": 952286
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 12,
+            "move": {
+              "row": 8,
+              "col": 7
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 7,
+              "score": 883594,
+              "target": "9, 8",
+              "move": {
+                "row": 8,
+                "col": 7
+              }
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 4,
+      "row": 7,
+      "col": 9,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 10967,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 10,
+        "configuredDepth": 16,
+        "reason": "rapfi-mix9-flash",
+        "elapsedMs": 10962,
+        "book": null,
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 0
+        }
+      }
+    },
+    {
+      "move": 5,
+      "row": 8,
+      "col": 7,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 3767,
+      "search": {
+        "reason": "mix9-expert-checked",
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 1,
+          "elapsedMs": 0.20000000298023224,
+          "aborted": false
+        },
+        "elapsedMs": 3732,
+        "experts": {
+          "thinker": {
+            "type": "result",
+            "id": 16,
+            "move": {
+              "row": 6,
+              "col": 8
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 101072,
+              "qnodes": 43628,
+              "elapsedMs": 567.1000000014901,
+              "aborted": false,
+              "reason": "search",
+              "score": 953848
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 17,
+            "move": {
+              "row": 6,
+              "col": 8
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 7,
+              "score": 960823,
+              "target": "7, 9",
+              "move": {
+                "row": 6,
+                "col": 8
+              }
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 6,
+      "row": 6,
+      "col": 8,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 136,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 130,
+        "configuredDepth": 16,
+        "reason": "rapfi-mix9-flash",
+        "elapsedMs": 131,
+        "book": null,
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 0
+        }
+      }
+    },
+    {
+      "move": 7,
+      "row": 8,
+      "col": 10,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 11481,
+      "search": {
+        "reason": "mix9-expert-checked",
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 1,
+          "elapsedMs": 0.5,
+          "aborted": false
+        },
+        "elapsedMs": 11444,
+        "experts": {
+          "thinker": {
+            "type": "result",
+            "id": 21,
+            "move": {
+              "row": 6,
+              "col": 9
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 33453,
+              "qnodes": 17294,
+              "elapsedMs": 195.5,
+              "aborted": false,
+              "reason": "search",
+              "score": 872401
+            }
+          },
+          "v10": {
+            "type": "result",
+            "id": 22,
+            "move": {
+              "row": 8,
+              "col": 10
+            },
+            "stats": {
+              "depth": 8,
+              "configuredDepth": 8,
+              "candidates": 20,
+              "nodes": 173645,
+              "qnodes": 88066,
+              "elapsedMs": 937.1999999955297,
+              "aborted": false,
+              "reason": "search",
+              "score": 1085
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 8,
+      "row": 9,
+      "col": 7,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 2124,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 2116,
+        "configuredDepth": 16,
+        "reason": "rapfi-mix9-flash",
+        "elapsedMs": 2116,
+        "book": null,
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 3
+        }
+      }
+    },
+    {
+      "move": 9,
+      "row": 6,
+      "col": 7,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 4530,
+      "search": {
+        "reason": "mix9-expert-checked",
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 1,
+          "elapsedMs": 0.20000000298023224,
+          "aborted": false
+        },
+        "elapsedMs": 4530,
+        "experts": {
+          "v10": {
+            "type": "result",
+            "id": 26,
+            "move": {
+              "row": 6,
+              "col": 7
+            },
+            "stats": {
+              "depth": 8,
+              "configuredDepth": 8,
+              "candidates": 20,
+              "nodes": 311304,
+              "qnodes": 193784,
+              "elapsedMs": 1715.5,
+              "aborted": false,
+              "reason": "search",
+              "score": 2089
+            }
+          },
+          "thinker": {
+            "type": "result",
+            "id": 25,
+            "move": {
+              "row": 6,
+              "col": 7
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 53226,
+              "qnodes": 29341,
+              "elapsedMs": 302.90000000596046,
+              "aborted": false,
+              "reason": "search",
+              "score": 952170
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 10,
+      "row": 6,
+      "col": 10,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 3511,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 3506,
+        "configuredDepth": 16,
+        "reason": "rapfi-mix9-flash",
+        "elapsedMs": 3507,
+        "book": null,
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 3
+        }
+      }
+    },
+    {
+      "move": 11,
+      "row": 8,
+      "col": 8,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 264,
+      "search": {
+        "reason": "mix9-expert-checked",
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 1,
+          "elapsedMs": 0.19999999552965164,
+          "aborted": false
+        },
+        "elapsedMs": 264,
+        "experts": {
+          "thinker": {
+            "type": "result",
+            "id": 29,
+            "move": {
+              "row": 8,
+              "col": 8
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 30787,
+              "qnodes": 21422,
+              "elapsedMs": 185.60000000149012,
+              "aborted": false,
+              "reason": "search",
+              "score": 953092
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 30,
+            "move": {
+              "row": 8,
+              "col": 8
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 7,
+              "score": 953092,
+              "target": "9, 9",
+              "move": {
+                "row": 8,
+                "col": 8
+              }
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 12,
+      "row": 8,
+      "col": 9,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 99,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 94,
+        "configuredDepth": 16,
+        "reason": "rapfi-mix9-flash",
+        "elapsedMs": 95,
+        "book": null,
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 0
+        }
+      }
+    },
+    {
+      "move": 13,
+      "row": 6,
+      "col": 9,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 610,
+      "search": {
+        "reason": "mix9-expert-checked",
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 1,
+          "elapsedMs": 0.20000000298023224,
+          "aborted": false
+        },
+        "elapsedMs": 569,
+        "experts": {
+          "thinker": {
+            "type": "progress",
+            "id": 34,
+            "move": {
+              "row": 9,
+              "col": 8
+            },
+            "stats": {
+              "candidates": 14,
+              "depth": 6,
+              "score": 11451,
+              "target": "10, 9",
+              "move": {
+                "row": 9,
+                "col": 8
+              }
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 35,
+            "move": {
+              "row": 4,
+              "col": 7
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 5,
+              "score": 953092,
+              "target": "5, 8",
+              "move": {
+                "row": 4,
+                "col": 7
+              }
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 14,
+      "row": 9,
+      "col": 6,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 116,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 112,
+        "configuredDepth": 16,
+        "reason": "rapfi-mix9-flash",
+        "elapsedMs": 113,
+        "book": null,
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 0
+        }
+      }
+    },
+    {
+      "move": 15,
+      "row": 4,
+      "col": 7,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 662,
+      "search": {
+        "reason": "mix9-expert-checked",
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 1,
+          "elapsedMs": 0.19999999552965164,
+          "aborted": false
+        },
+        "elapsedMs": 623,
+        "experts": {
+          "thinker": {
+            "type": "progress",
+            "id": 40,
+            "move": {
+              "row": 5,
+              "col": 7
+            },
+            "stats": {
+              "candidates": 14,
+              "depth": 5,
+              "score": 962166,
+              "target": "6, 8",
+              "move": {
+                "row": 5,
+                "col": 7
+              }
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 41,
+            "move": {
+              "row": 5,
+              "col": 7
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 5,
+              "score": 962166,
+              "target": "6, 8",
+              "move": {
+                "row": 5,
+                "col": 7
+              }
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 16,
+      "row": 5,
+      "col": 7,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 3,
+      "search": {
+        "reason": "forced-block",
+        "depth": 0,
+        "candidates": 1,
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 5
+        }
+      }
+    },
+    {
+      "move": 17,
+      "row": 5,
+      "col": 8,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 238,
+      "search": {
+        "reason": "mix9-expert-checked",
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 3,
+          "elapsedMs": 0.6000000014901161,
+          "aborted": false
+        },
+        "elapsedMs": 198,
+        "experts": {
+          "thinker": {
+            "type": "progress",
+            "id": 46,
+            "move": {
+              "row": 5,
+              "col": 8
+            },
+            "stats": {
+              "candidates": 14,
+              "depth": 5,
+              "score": 876101,
+              "target": "6, 9",
+              "move": {
+                "row": 5,
+                "col": 8
+              }
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 47,
+            "move": {
+              "row": 3,
+              "col": 6
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 4,
+              "score": -80959,
+              "target": "4, 7",
+              "move": {
+                "row": 3,
+                "col": 6
+              }
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 18,
+      "row": 3,
+      "col": 6,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 170,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 166,
+        "configuredDepth": 16,
+        "reason": "rapfi-mix9-flash",
+        "elapsedMs": 167,
+        "book": null,
+        "threats": {
+          "openFour": 0,
+          "four": 1,
+          "openThree": 7
+        }
+      }
+    },
+    {
+      "move": 19,
+      "row": 7,
+      "col": 6,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 330,
+      "search": {
+        "reason": "mix9-expert-checked",
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 7,
+          "elapsedMs": 1.3000000044703484,
+          "aborted": false
+        },
+        "elapsedMs": 282,
+        "experts": {
+          "v10": {
+            "type": "progress",
+            "id": 53,
+            "move": {
+              "row": 7,
+              "col": 6
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 4,
+              "score": 103319,
+              "target": "8, 7",
+              "move": {
+                "row": 7,
+                "col": 6
+              }
+            }
+          },
+          "thinker": {
+            "type": "progress",
+            "id": 52,
+            "move": {
+              "row": 7,
+              "col": 6
+            },
+            "stats": {
+              "candidates": 14,
+              "depth": 4,
+              "score": 104927,
+              "target": "8, 7",
+              "move": {
+                "row": 7,
+                "col": 6
+              }
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 20,
+      "row": 8,
+      "col": 5,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 203,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 190,
+        "configuredDepth": 16,
+        "reason": "rapfi-mix9-flash",
+        "elapsedMs": 191,
+        "book": null,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 7
+        }
+      }
+    },
+    {
+      "move": 21,
+      "row": 9,
+      "col": 8,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 570,
+      "search": {
+        "reason": "mix9-expert-checked",
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 7,
+          "elapsedMs": 0.8000000044703484,
+          "aborted": false
+        },
+        "elapsedMs": 516,
+        "experts": {
+          "thinker": {
+            "type": "progress",
+            "id": 58,
+            "move": {
+              "row": 7,
+              "col": 10
+            },
+            "stats": {
+              "candidates": 14,
+              "depth": 3,
+              "score": 964860,
+              "target": "8, 11",
+              "move": {
+                "row": 7,
+                "col": 10
+              }
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 59,
+            "move": {
+              "row": 6,
+              "col": 5
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 3,
+              "score": 966465,
+              "target": "7, 6",
+              "move": {
+                "row": 6,
+                "col": 5
+              }
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 22,
+      "row": 4,
+      "col": 6,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 75,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 68,
+        "configuredDepth": 16,
+        "reason": "rapfi-mix9-flash",
+        "elapsedMs": 69,
+        "book": null,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 7
+        }
+      }
+    },
+    {
+      "move": 23,
+      "row": 3,
+      "col": 5,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 45,
+      "search": {
+        "reason": "forced-block",
+        "elapsedMs": 0,
+        "depth": 1
+      }
+    },
+    {
+      "move": 24,
+      "row": 5,
+      "col": 6,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 60,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 53,
+        "configuredDepth": 16,
+        "reason": "rapfi-mix9-flash",
+        "elapsedMs": 54,
+        "book": null,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 5
+        }
+      }
+    },
+    {
+      "move": 25,
+      "row": 2,
+      "col": 6,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 0,
+      "search": {
+        "reason": "forced-block",
+        "elapsedMs": 0,
+        "depth": 1
+      }
+    },
+    {
+      "move": 26,
+      "row": 10,
+      "col": 9,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 50,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 46,
+        "configuredDepth": 16,
+        "reason": "rapfi-mix9-flash",
+        "elapsedMs": 46,
+        "book": null,
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 5
+        }
+      }
+    },
+    {
+      "move": 27,
+      "row": 4,
+      "col": 4,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 258,
+      "search": {
+        "reason": "mix9-expert-checked",
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 3,
+          "elapsedMs": 0.20000000298023224,
+          "aborted": false
+        },
+        "elapsedMs": 258,
+        "experts": {
+          "thinker": {
+            "type": "progress",
+            "id": 64,
+            "move": {
+              "row": 4,
+              "col": 9
+            },
+            "stats": {
+              "candidates": 14,
+              "depth": 1,
+              "score": 87992042,
+              "target": "5, 10",
+              "move": {
+                "row": 4,
+                "col": 9
+              }
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 28,
+      "row": 9,
+      "col": 9,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 36,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 30,
+        "configuredDepth": 16,
+        "reason": "rapfi-mix9-flash",
+        "elapsedMs": 31,
+        "book": null,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 6
+        }
+      }
+    },
+    {
+      "move": 29,
+      "row": 11,
+      "col": 9,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 44,
+      "search": {
+        "reason": "forced-block",
+        "elapsedMs": 0,
+        "depth": 1
+      }
+    },
+    {
+      "move": 30,
+      "row": 5,
+      "col": 3,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 25,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 19,
+        "configuredDepth": 16,
+        "reason": "rapfi-mix9-flash",
+        "elapsedMs": 19,
+        "book": null,
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 6
+        }
+      }
+    },
+    {
+      "move": 31,
+      "row": 4,
+      "col": 9,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 7,
+      "search": {
+        "reason": "expert-proved-win",
+        "elapsedMs": 7,
+        "depth": 1,
+        "experts": {
+          "v10": {
+            "type": "progress",
+            "id": 71,
+            "move": {
+              "row": 4,
+              "col": 9
+            },
+            "stats": {
+              "depth": "VCF",
+              "configuredDepth": 8,
+              "candidates": 20,
+              "nodes": 20,
+              "qnodes": 0,
+              "elapsedMs": 6.100000001490116,
+              "aborted": false,
+              "reason": "VCF",
+              "score": 99999998,
+              "target": "5, 10",
+              "move": {
+                "row": 4,
+                "col": 9
+              }
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 32,
+      "row": 3,
+      "col": 10,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 6,
+      "search": {
+        "reason": "forced-block",
+        "depth": 0,
+        "candidates": 1,
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 8
+        }
+      }
+    },
+    {
+      "move": 33,
+      "row": 4,
+      "col": 11,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 240,
+      "search": {
+        "reason": "expert-proved-win",
+        "elapsedMs": 6,
+        "depth": 1,
+        "experts": {
+          "thinker": {
+            "type": "progress",
+            "id": 76,
+            "move": {
+              "row": 4,
+              "col": 11
+            },
+            "stats": {
+              "depth": "VCF",
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 19,
+              "qnodes": 0,
+              "elapsedMs": 4.899999998509884,
+              "aborted": false,
+              "reason": "VCF",
+              "score": 99999998,
+              "target": "5, 12",
+              "move": {
+                "row": 4,
+                "col": 11
+              }
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 34,
+      "row": 5,
+      "col": 10,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 5,
+      "search": {
+        "reason": "forced-block",
+        "depth": 0,
+        "candidates": 1,
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 10
+        }
+      }
+    },
+    {
+      "move": 35,
+      "row": 1,
+      "col": 7,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 220,
+      "search": {
+        "reason": "expert-proved-win",
+        "elapsedMs": 7,
+        "depth": 1,
+        "experts": {
+          "thinker": {
+            "type": "progress",
+            "id": 82,
+            "move": {
+              "row": 1,
+              "col": 7
+            },
+            "stats": {
+              "depth": "VCF",
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 21,
+              "qnodes": 0,
+              "elapsedMs": 5.699999995529652,
+              "aborted": false,
+              "reason": "VCF",
+              "score": 99999998,
+              "target": "2, 8",
+              "move": {
+                "row": 1,
+                "col": 7
+              }
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 36,
+      "row": 0,
+      "col": 8,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 5,
+      "search": {
+        "reason": "forced-block",
+        "depth": 0,
+        "candidates": 1,
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 1,
+          "four": 4,
+          "openThree": 15
+        }
+      }
+    },
+    {
+      "move": 37,
+      "row": 7,
+      "col": 4,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 232,
+      "search": {
+        "reason": "expert-proved-win",
+        "elapsedMs": 6,
+        "depth": 1,
+        "experts": {
+          "thinker": {
+            "type": "progress",
+            "id": 88,
+            "move": {
+              "row": 7,
+              "col": 4
+            },
+            "stats": {
+              "depth": "VCF",
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 15,
+              "qnodes": 0,
+              "elapsedMs": 4.799999997019768,
+              "aborted": false,
+              "reason": "VCF",
+              "score": 99999998,
+              "target": "8, 5",
+              "move": {
+                "row": 7,
+                "col": 4
+              }
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 38,
+      "row": 7,
+      "col": 5,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 6,
+      "search": {
+        "reason": "forced-block",
+        "depth": 0,
+        "candidates": 1,
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 1,
+          "four": 4,
+          "openThree": 11
+        }
+      }
+    },
+    {
+      "move": 39,
+      "row": 5,
+      "col": 4,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 211,
+      "search": {
+        "reason": "expert-proved-win",
+        "elapsedMs": 3,
+        "depth": 1,
+        "experts": {
+          "v10": {
+            "type": "progress",
+            "id": 95,
+            "move": {
+              "row": 5,
+              "col": 4
+            },
+            "stats": {
+              "depth": "VCF",
+              "configuredDepth": 8,
+              "candidates": 20,
+              "nodes": 2,
+              "qnodes": 0,
+              "elapsedMs": 2.5,
+              "aborted": false,
+              "reason": "VCF",
+              "score": 99999998,
+              "target": "6, 5",
+              "move": {
+                "row": 5,
+                "col": 4
+              }
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 40,
+      "row": 6,
+      "col": 5,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 4,
+      "search": {
+        "reason": "forced-block",
+        "depth": 0,
+        "candidates": 1,
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 3,
+          "four": 5,
+          "openThree": 23
+        }
+      }
+    },
+    {
+      "move": 41,
+      "row": 6,
+      "col": 4,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 216,
+      "search": {
+        "reason": "expert-proved-win",
+        "elapsedMs": 3,
+        "depth": 1,
+        "experts": {
+          "v10": {
+            "type": "progress",
+            "id": 101,
+            "move": {
+              "row": 6,
+              "col": 4
+            },
+            "stats": {
+              "depth": "VCF",
+              "configuredDepth": 8,
+              "candidates": 20,
+              "nodes": 1,
+              "qnodes": 0,
+              "elapsedMs": 2.5,
+              "aborted": false,
+              "reason": "VCF",
+              "score": 99999998,
+              "target": "7, 5",
+              "move": {
+                "row": 6,
+                "col": 4
+              }
+            }
+          }
+        },
+        "configuredDepth": 18
+      }
+    },
+    {
+      "move": 42,
+      "row": 3,
+      "col": 4,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 4,
+      "search": {
+        "reason": "forced-block",
+        "depth": 0,
+        "candidates": 2,
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 5,
+          "four": 5,
+          "openThree": 22
+        }
+      }
+    },
+    {
+      "move": 43,
+      "row": 8,
+      "col": 4,
+      "player": 1,
+      "model": "v10exp",
+      "elapsedMs": 199,
+      "search": {
+        "reason": "immediate-win",
+        "elapsedMs": 0,
+        "depth": 1
+      }
+    }
+  ],
+  "result": "win",
+  "finishedAt": "2026-10-12T11:30:32.539Z",
+  "fingerprints": {
+    "public/gomoku-models/expert-core.js": "2158912ab7485768a876c5beca2cbb784a98e4ab9d2e36a1f67bc0f6102ded9a",
+    "public/gomoku-models/v9.js": "aefe1edef27af31de4e7aeedc45628d05466652cabb932d371e0f1987a2b92fc",
+    "public/gomoku-models/v9pro.js": "f11527025ca84c37dc0739b63bd1afd74e8da1861181ef88d315b1ed929736a6",
+    "public/gomoku-models/v9thinker.js": "24afab175af8d0acdd77a429a01d349e15541de0d6d1c7f84375267b607d45f1",
+    "public/gomoku-models/v10-core.js": "1e6083fdeca7158cb1c0df447eed36e7a210a10afc2a24de059be3f1909efc77",
+    "public/gomoku-models/v10.js": "1a3d869846684b706c857ec2eccf1013ba72eb57385243c653623700d0af927f",
+    "public/gomoku-models/v10ultra.js": "cca285fba4eadd7d0d75f647c3dfefc59e6f8f6d980e1c0eca2a37f3d51a6871",
+    "public/gomoku-models/v10ultra/worker.js": "392c155bf347daf7dfd2bd883475288d2e07befa49ff5755f533025a94305b49",
+    "public/gomoku-models/v10ultra/rapfi-single.wasm": "20bb495aff65ff3e7ebc46e70890e9d1f98bf5023ee0e2c7378651f5f36a5820",
+    "public/gomoku-models/v11candidate.js": "0410525e605c7db597fc5b90ffd7eaab34919d8cde14f1dc6958898eb24606e3",
+    "public/gomoku-models/v11candidate/worker.js": "efd270681b275f6faee80ac3638ec5106ecf404064aa8f1534f08d3a455c6794",
+    "public/gomoku-models/v10flash.js": "a4437558efdf3940d61db6ba1e81e3df7f04de6fe9dd6cfdec94bc7c4e0047d8",
+    "public/gomoku-models/v10flash/worker.js": "efd270681b275f6faee80ac3638ec5106ecf404064aa8f1534f08d3a455c6794",
+    "public/gomoku-models/v10ultra/rapfi.data": "36b924671316bc28ca16b240cdc4435ce43a29417385c60ee316f4fa09f7496f",
+    "public/gomoku-models/experimental/models.js": "62e05f9c847d4de30c96e5b0a48c18e5994aee09b783fb94da74e873969743f3",
+    "public/gomoku-models/experimental/slowrenju/worker.js": "6fcf79971a8e845c6daf49f38a4f595f6fd36a52e3ea3be205ccd4b175b6c056",
+    "public/gomoku-models/experimental/slowrenju/engine.wasm": "05d0050a068d4f4711694e50e5f6fd0bdae9d09ed914cf3b6c69003a248c3f8f",
+    "public/gomoku-models/experimental/gomokuzero/worker.js": "78423c5487e978bcf5d6965fcfa7317aa8b955d01ce8f69ecc9fadfb71946ac3",
+    "public/gomoku-models/experimental/gomokuzero/model.onnx": "0a3698b965cb714e065caf3ddc7153b1f0151bb0361880bbd3f498f38711edcb",
+    "public/gomoku-models/v10exp.js": "9827c72e8b6761368bb7532a953e0287406b80a6e8e156292c03617c17072d80",
+    "public/gomoku-models/v10exp/expert-worker.js": "dc16bea443d53d6d7dae69a3afbf77dfc92188eeb51a84ea36b996508ed056b7",
+    "public/gomoku-models/v10exp/proof-core.js": "7d4873c2ec99499f0fcf81904f00e10b905c8b2c8c854e6d0c04c8e2afe3b022",
+    "public/gomoku-models/v10exp/neural-worker.js": "54dd011eacdcdfc9a15815cd10a29b1e27477963465474ad3fb292d93ff42217"
+  }
+}

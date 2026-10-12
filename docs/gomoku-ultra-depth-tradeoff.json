@@ -1,0 +1,946 @@
+{
+  "startedAt": "2026-10-12T12:29:09.353Z",
+  "complete": true,
+  "budgetMs": 75000,
+  "depths": [
+    12,
+    14,
+    16,
+    18
+  ],
+  "samples": [
+    "ply12-white-recorded-s0"
+  ],
+  "coldWorkerPerSearch": true,
+  "fingerprints": {
+    "public/gomoku-models/v10ultra.js": "cca285fba4eadd7d0d75f647c3dfefc59e6f8f6d980e1c0eca2a37f3d51a6871",
+    "public/gomoku-models/v10ultra/worker.js": "392c155bf347daf7dfd2bd883475288d2e07befa49ff5755f533025a94305b49",
+    "public/gomoku-models/v10ultra/rapfi-single.js": "b77c7efce5b420f222beb291838a33e7d86c4177a27961726aaae0acbfedde9f",
+    "public/gomoku-models/v10ultra/rapfi-single.wasm": "20bb495aff65ff3e7ebc46e70890e9d1f98bf5023ee0e2c7378651f5f36a5820",
+    "public/gomoku-models/v10ultra/rapfi.data": "36b924671316bc28ca16b240cdc4435ce43a29417385c60ee316f4fa09f7496f",
+    "public/gomoku-models/v10exp/proof-core.js": "7d4873c2ec99499f0fcf81904f00e10b905c8b2c8c854e6d0c04c8e2afe3b022",
+    "tools/gomoku-ultra-diagnostic-worker.js": "76451737a13f0bef23b602a0b80d3d7fd1d26a4082e177026e5c4858e0377c7b",
+    "tools/gomoku-ultra-diagnostic.html": "628750080696bf4cea36ec5d1a6111ae55021a2e57fdbc4a8e35847082a5b9b5"
+  },
+  "results": [
+    {
+      "sampleId": "ply12-white-recorded-s0",
+      "maxDepth": 12,
+      "timeoutTurnMs": 75000,
+      "move": {
+        "row": 7,
+        "col": 4
+      },
+      "elapsedMs": 204.69999999552965,
+      "trace": [
+        {
+          "type": "trace",
+          "line": "OK",
+          "timestamp": 224.10000000149012
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE mix9svq nnue: load weight from mix9svqfreestyle_bsmix.bin.lz4",
+          "timestamp": 226.29999999701977
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE mix9svq nnue: weight loaded in 112ms",
+          "timestamp": 337.5
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE OptiTime 56s | MaxTime 74s",
+          "timestamp": 340.19999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 2-5 | Eval -392 | Time 7ms | G10 G9",
+          "timestamp": 347.8999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 3-14 | Eval -492 | Time 9ms | G10 G9 H11 I11",
+          "timestamp": 349.69999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 4-6 | Eval -510 | Time 10ms | G10 G9 H11 I11 H9",
+          "timestamp": 350.29999999701977
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 5-6 | Eval -510 | Time 10ms | G10 G9 H11 I11 H9",
+          "timestamp": 350.6000000014901
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 6-16 | Eval -1145 | Time 20ms | G10 G9 I11 H11 H9 E12 E7",
+          "timestamp": 360.1000000014901
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 7-14 | Eval -1145 | Time 20ms | G10 G9 I11 H11 H9 E12 E7",
+          "timestamp": 360.8999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 382.5
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 6,5",
+          "timestamp": 382.6000000014901
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 8-22 | Eval -M22 | Time 43ms | G10 G9 I11 H11 C9 D8 D10 H9 E9 J9 I9 G6 H5 D6 D5 C6 B5",
+          "timestamp": 383.1000000014901
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 409.1000000014901
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 409.1000000014901
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 9-18 | Eval -M20 | Time 69ms | H11 I11 G10 G7 G9 G12 C7 C6 B5 D8 D10 D6 D5 G6 H5",
+          "timestamp": 409.19999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 412.8999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 413
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 10-16 | Eval -M16 | Time 73ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 413.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 418.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 418.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 11-12 | Eval -M16 | Time 78ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 418.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 427.1000000014901
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 427.1000000014901
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 12-12 | Eval -M16 | Time 87ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 427.19999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Speed 48540 | Depth 12-12 | Eval -M16 | Node 4223 | Time 87ms",
+          "timestamp": 427.29999999701977
+        },
+        {
+          "type": "trace",
+          "line": "7,4",
+          "timestamp": 427.5
+        }
+      ],
+      "opponentVCF": {
+        "proved": false,
+        "move": null,
+        "nodes": 1,
+        "elapsedMs": 1.3728999999999587,
+        "aborted": false
+      },
+      "knownLosingMove": null,
+      "matchesUnprovedAlternative": null,
+      "recordedMove": [
+        7,
+        4
+      ],
+      "engineSummary": {
+        "completedDepth": 12,
+        "selectiveDepth": 12,
+        "evaluation": "-M16",
+        "nodesText": "4223",
+        "timeText": "87ms",
+        "raw": "MESSAGE Speed 48540 | Depth 12-12 | Eval -M16 | Node 4223 | Time 87ms"
+      },
+      "principalVariation": "MESSAGE Depth 12-12 | Eval -M16 | Time 87ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+      "withinBudget": true
+    },
+    {
+      "sampleId": "ply12-white-recorded-s0",
+      "maxDepth": 14,
+      "timeoutTurnMs": 75000,
+      "move": {
+        "row": 7,
+        "col": 4
+      },
+      "elapsedMs": 233.19999999552965,
+      "trace": [
+        {
+          "type": "trace",
+          "line": "OK",
+          "timestamp": 212.29999999701977
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE mix9svq nnue: load weight from mix9svqfreestyle_bsmix.bin.lz4",
+          "timestamp": 214.19999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE mix9svq nnue: weight loaded in 111ms",
+          "timestamp": 325
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE OptiTime 56s | MaxTime 74s",
+          "timestamp": 327.59999999403954
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 2-5 | Eval -392 | Time 7ms | G10 G9",
+          "timestamp": 334.69999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 3-14 | Eval -492 | Time 9ms | G10 G9 H11 I11",
+          "timestamp": 336.79999999701977
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 4-6 | Eval -510 | Time 10ms | G10 G9 H11 I11 H9",
+          "timestamp": 337.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 5-6 | Eval -510 | Time 10ms | G10 G9 H11 I11 H9",
+          "timestamp": 337.69999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 6-16 | Eval -1145 | Time 19ms | G10 G9 I11 H11 H9 E12 E7",
+          "timestamp": 346.29999999701977
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 7-14 | Eval -1145 | Time 20ms | G10 G9 I11 H11 H9 E12 E7",
+          "timestamp": 347.09999999403954
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 368.69999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 6,5",
+          "timestamp": 368.79999999701977
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 8-22 | Eval -M22 | Time 42ms | G10 G9 I11 H11 C9 D8 D10 H9 E9 J9 I9 G6 H5 D6 D5 C6 B5",
+          "timestamp": 369.09999999403954
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 395.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 395.5
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 9-18 | Eval -M20 | Time 68ms | H11 I11 G10 G7 G9 G12 C7 C6 B5 D8 D10 D6 D5 G6 H5",
+          "timestamp": 395.5
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 400.29999999701977
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 400.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 10-16 | Eval -M16 | Time 73ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 400.79999999701977
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 405.79999999701977
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 405.8999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 11-12 | Eval -M16 | Time 78ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 405.8999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 415.29999999701977
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 415.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 12-12 | Eval -M16 | Time 88ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 415.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 427.8999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 428
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 13-12 | Eval -M16 | Time 101ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 428.09999999403954
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 443.5
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 443.59999999403954
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 14-12 | Eval -M16 | Time 116ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 443.69999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Speed 48000 | Depth 14-12 | Eval -M16 | Node 5568 | Time 116ms",
+          "timestamp": 443.8999999985099
+        },
+        {
+          "type": "trace",
+          "line": "7,4",
+          "timestamp": 444
+        }
+      ],
+      "opponentVCF": {
+        "proved": false,
+        "move": null,
+        "nodes": 1,
+        "elapsedMs": 1.1748000000000047,
+        "aborted": false
+      },
+      "knownLosingMove": null,
+      "matchesUnprovedAlternative": null,
+      "recordedMove": [
+        7,
+        4
+      ],
+      "engineSummary": {
+        "completedDepth": 14,
+        "selectiveDepth": 12,
+        "evaluation": "-M16",
+        "nodesText": "5568",
+        "timeText": "116ms",
+        "raw": "MESSAGE Speed 48000 | Depth 14-12 | Eval -M16 | Node 5568 | Time 116ms"
+      },
+      "principalVariation": "MESSAGE Depth 14-12 | Eval -M16 | Time 116ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+      "withinBudget": true
+    },
+    {
+      "sampleId": "ply12-white-recorded-s0",
+      "maxDepth": 16,
+      "timeoutTurnMs": 75000,
+      "move": {
+        "row": 7,
+        "col": 4
+      },
+      "elapsedMs": 304.5,
+      "trace": [
+        {
+          "type": "trace",
+          "line": "OK",
+          "timestamp": 216.20000000298023
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE mix9svq nnue: load weight from mix9svqfreestyle_bsmix.bin.lz4",
+          "timestamp": 218.20000000298023
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE mix9svq nnue: weight loaded in 111ms",
+          "timestamp": 328.6000000014901
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE OptiTime 56s | MaxTime 74s",
+          "timestamp": 331.30000000447035
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 2-5 | Eval -392 | Time 7ms | G10 G9",
+          "timestamp": 338.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 3-14 | Eval -492 | Time 9ms | G10 G9 H11 I11",
+          "timestamp": 340.30000000447035
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 4-6 | Eval -510 | Time 10ms | G10 G9 H11 I11 H9",
+          "timestamp": 341.20000000298023
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 5-6 | Eval -510 | Time 10ms | G10 G9 H11 I11 H9",
+          "timestamp": 341.5
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 6-16 | Eval -1145 | Time 20ms | G10 G9 I11 H11 H9 E12 E7",
+          "timestamp": 351.70000000298023
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 7-14 | Eval -1145 | Time 21ms | G10 G9 I11 H11 H9 E12 E7",
+          "timestamp": 352.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 374.70000000298023
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 6,5",
+          "timestamp": 374.80000000447035
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 8-22 | Eval -M22 | Time 44ms | G10 G9 I11 H11 C9 D8 D10 H9 E9 J9 I9 G6 H5 D6 D5 C6 B5",
+          "timestamp": 375
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 401.6000000014901
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 401.6000000014901
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 9-18 | Eval -M20 | Time 70ms | H11 I11 G10 G7 G9 G12 C7 C6 B5 D8 D10 D6 D5 G6 H5",
+          "timestamp": 401.70000000298023
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 405
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 405
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 10-16 | Eval -M16 | Time 74ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 405.30000000447035
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 410.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 410.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 11-12 | Eval -M16 | Time 79ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 410.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 420.6000000014901
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 420.70000000298023
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 12-12 | Eval -M16 | Time 89ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 420.70000000298023
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 433.8999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 434
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 13-12 | Eval -M16 | Time 103ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 434
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 450.30000000447035
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 450.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 14-12 | Eval -M16 | Time 119ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 450.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 472.5
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 472.6000000014901
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 15-12 | Eval -M16 | Time 141ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 472.6000000014901
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 518.7000000029802
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 518.8000000044703
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 16-12 | Eval -M14 | Time 187ms | H11 I11 G10 G7 G9 G12 C7 E9 D10",
+          "timestamp": 518.8000000044703
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Speed 48133 | Depth 16-12 | Eval -M14 | Node 9001 | Time 188ms",
+          "timestamp": 519
+        },
+        {
+          "type": "trace",
+          "line": "7,4",
+          "timestamp": 519.1000000014901
+        }
+      ],
+      "opponentVCF": {
+        "proved": false,
+        "move": null,
+        "nodes": 1,
+        "elapsedMs": 1.8174999999998818,
+        "aborted": false
+      },
+      "knownLosingMove": null,
+      "matchesUnprovedAlternative": null,
+      "recordedMove": [
+        7,
+        4
+      ],
+      "engineSummary": {
+        "completedDepth": 16,
+        "selectiveDepth": 12,
+        "evaluation": "-M14",
+        "nodesText": "9001",
+        "timeText": "188ms",
+        "raw": "MESSAGE Speed 48133 | Depth 16-12 | Eval -M14 | Node 9001 | Time 188ms"
+      },
+      "principalVariation": "MESSAGE Depth 16-12 | Eval -M14 | Time 187ms | H11 I11 G10 G7 G9 G12 C7 E9 D10",
+      "withinBudget": true
+    },
+    {
+      "sampleId": "ply12-white-recorded-s0",
+      "maxDepth": 18,
+      "timeoutTurnMs": 75000,
+      "move": {
+        "row": 7,
+        "col": 4
+      },
+      "elapsedMs": 374.6000000014901,
+      "trace": [
+        {
+          "type": "trace",
+          "line": "OK",
+          "timestamp": 217.19999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE mix9svq nnue: load weight from mix9svqfreestyle_bsmix.bin.lz4",
+          "timestamp": 219.29999999701977
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE mix9svq nnue: weight loaded in 122ms",
+          "timestamp": 340.79999999701977
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE OptiTime 56s | MaxTime 74s",
+          "timestamp": 343.8999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 2-5 | Eval -392 | Time 8ms | G10 G9",
+          "timestamp": 351.59999999403954
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 3-14 | Eval -492 | Time 11ms | G10 G9 H11 I11",
+          "timestamp": 354.19999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 4-6 | Eval -510 | Time 12ms | G10 G9 H11 I11 H9",
+          "timestamp": 355
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 5-6 | Eval -510 | Time 12ms | G10 G9 H11 I11 H9",
+          "timestamp": 355.59999999403954
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 6-16 | Eval -1145 | Time 24ms | G10 G9 I11 H11 H9 E12 E7",
+          "timestamp": 367.19999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 7-14 | Eval -1145 | Time 25ms | G10 G9 I11 H11 H9 E12 E7",
+          "timestamp": 368.19999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 391.19999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 6,5",
+          "timestamp": 391.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 8-22 | Eval -M22 | Time 48ms | G10 G9 I11 H11 C9 D8 D10 H9 E9 J9 I9 G6 H5 D6 D5 C6 B5",
+          "timestamp": 391.69999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 421
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 421
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 9-18 | Eval -M20 | Time 78ms | H11 I11 G10 G7 G9 G12 C7 C6 B5 D8 D10 D6 D5 G6 H5",
+          "timestamp": 421.09999999403954
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 424.5
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 424.5
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 10-16 | Eval -M16 | Time 81ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 424.79999999701977
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 429.8999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 429.8999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 11-12 | Eval -M16 | Time 86ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 430
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 441.19999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 441.19999999552965
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 12-12 | Eval -M16 | Time 98ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 441.29999999701977
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 456.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 456.5
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 13-12 | Eval -M16 | Time 113ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 456.5
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 472.8999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 473
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 14-12 | Eval -M16 | Time 130ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 473
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 498.79999999701977
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 498.79999999701977
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 15-12 | Eval -M16 | Time 155ms | H11 I11 G10 C6 B5 G6 H5 D8 D10 D6 D5",
+          "timestamp": 498.8999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME LOST 8,4",
+          "timestamp": 548.5
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 548.5
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 548.5
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 16-12 | Eval -M14 | Time 205ms | H11 I11 G10 G7 G9 G12 C7 E9 D10",
+          "timestamp": 548.5999999940395
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME LOST 7,4",
+          "timestamp": 568.5
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME LOST 6,5",
+          "timestamp": 568.5999999940395
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME LOST 2,9",
+          "timestamp": 569.1999999955297
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME LOST 8,4",
+          "timestamp": 569.1999999955297
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 569.1999999955297
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 569.1999999955297
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 17-10 | Eval -M14 | Time 226ms | H11 I11 G10 G7 G9 G12 C7 E9 D10",
+          "timestamp": 569.1999999955297
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME LOST 7,4",
+          "timestamp": 587.6999999955297
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME LOST 6,5",
+          "timestamp": 587.7999999970198
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME LOST 2,9",
+          "timestamp": 588.8999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME LOST 8,4",
+          "timestamp": 588.8999999985099
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME REFRESH",
+          "timestamp": 589
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE REALTIME BEST 7,4",
+          "timestamp": 589
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Depth 18-10 | Eval -M14 | Time 246ms | H11 I11 G10 G7 G9 G12 C7 E9 D10",
+          "timestamp": 589.0999999940395
+        },
+        {
+          "type": "trace",
+          "line": "MESSAGE Speed 44345 | Depth 18-10 | Eval -M14 | Node 10K | Time 246ms",
+          "timestamp": 589.3999999985099
+        },
+        {
+          "type": "trace",
+          "line": "7,4",
+          "timestamp": 589.8999999985099
+        }
+      ],
+      "opponentVCF": {
+        "proved": false,
+        "move": null,
+        "nodes": 1,
+        "elapsedMs": 0.8375999999998385,
+        "aborted": false
+      },
+      "knownLosingMove": null,
+      "matchesUnprovedAlternative": null,
+      "recordedMove": [
+        7,
+        4
+      ],
+      "engineSummary": {
+        "completedDepth": 18,
+        "selectiveDepth": 10,
+        "evaluation": "-M14",
+        "nodesText": "10K",
+        "timeText": "246ms",
+        "raw": "MESSAGE Speed 44345 | Depth 18-10 | Eval -M14 | Node 10K | Time 246ms"
+      },
+      "principalVariation": "MESSAGE Depth 18-10 | Eval -M14 | Time 246ms | H11 I11 G10 G7 G9 G12 C7 E9 D10",
+      "withinBudget": true
+    }
+  ],
+  "limitations": [
+    "Configured maxDepth is not actual completed depth.",
+    "An unproved opponent VCF does not establish safety or improved overall strength.",
+    "Black defensive samples are synthetic legal color swaps with a quiet corner stone.",
+    "This is a local position regression, not a complete-game strength evaluation."
+  ],
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Chrome/154.0.8037.98",
+    "revision": "@b859317bf11f6be47f9b7799ec690a0a42a1fb33",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+    "jsVersion": "15.4.80.20"
+  },
+  "finishedAt": "2026-10-12T12:29:11.493Z"
+}

@@ -178,7 +178,7 @@
           <input id="nickname" maxlength="20" placeholder="请输入昵称" data-i18n-placeholder="games.nickPlaceholder" autocomplete="nickname" />
           <label for="modelVersion" data-i18n="gomoku.modelLabel">挑战模型</label>
           <select id="modelVersion" aria-label="选择挑战模型">
-            <option value="1">铭星V1</option><option value="2">铭星V2</option><option value="3">铭星V3</option><option value="6">铭星V6</option><option value="7">铭星V7</option><option value="8">铭星V8</option><option value="9" selected>铭星V9</option><option value="9.1">铭星V9Pro</option><option value="9.3">铭星V9Mesa</option><option value="9.2">铭星V9Thinker</option><option value="10">铭星V10</option><option value="10.2">铭星V10Mesa</option><option value="10.3">铭星V10Exp</option><option value="10.1">铭星V10Ultra</option>
+            <option value="1">铭星V1</option><option value="2">铭星V2</option><option value="3">铭星V3</option><option value="6">铭星V6</option><option value="7">铭星V7</option><option value="8">铭星V8</option><option value="9" selected>铭星V9</option><option value="9.1">铭星V9Pro</option><option value="9.3">铭星V9Mesa</option><option value="9.2">铭星V9Thinker</option><option value="10">铭星V10</option><option value="10.2">铭星V10Mesa</option><option value="10.4">铭星V10Flash</option><option value="10.3">铭星V10Exp</option><option value="10.1">铭星V10Ultra</option>
           </select>
           <span class="hint" data-i18n="gomoku.nickSideHint">先填写昵称，再选择执子</span>
         </div>
@@ -201,7 +201,7 @@
       </main>
       <aside class="leaderboard panel">
         <h2 data-i18n="games.leaderboard">排行榜</h2>
-        <p class="hint" data-i18n="gomoku.lbHint">战胜 V9Mesa 得 9 分，V9Pro 得 10 分，V9Thinker / V10 得 12 分，V10Mesa 得 14 分，V10Exp / V10Ultra 得 15 分；其他 Vx 得 x 分。平局 1 分，失败 0 分。</p>
+        <p class="hint" data-i18n="gomoku.lbHint">战胜 V9Mesa 得 9 分，V9Pro 得 10 分，V9Thinker / V10 得 12 分，V10Mesa / V10Flash 得 14 分，V10Exp / V10Ultra 得 15 分；其他 Vx 得 x 分。平局 1 分，失败 0 分。</p>
         <ol class="leaderboard-list" id="leaderboardList"><li class="empty" data-i18n="common.loading">正在读取…</li></ol>
         <div class="leaderboard-pagination" id="leaderboardPagination" hidden><button type="button" id="leaderboardPrev" class="button secondary" data-i18n="games.prevPage">上一页</button><span id="leaderboardPageInfo"></span><button type="button" id="leaderboardNext" class="button secondary" data-i18n="games.nextPage">下一页</button></div>
       </aside>
@@ -220,6 +220,7 @@
   <script src="gomoku-models/experimental/models.js"></script>
   <script src="gomoku-models/mesa.js"></script>
   <script src="gomoku-models/v10exp.js"></script>
+  <script src="gomoku-models/v10flash.js"></script>
   <script>
     const BOARD_SIZE = 15;
     let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
@@ -244,7 +245,7 @@
     let legacyEngineReady = Promise.resolve();
     let legacyLoadedVersion = null;
     let legacyMoveRequestId = 0;
-    const MODEL_VERSIONS = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.3, 9.2, 10, 10.2, 10.3, 10.1];
+    const MODEL_VERSIONS = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.3, 9.2, 10, 10.2, 10.4, 10.3, 10.1];
     const modelVersionSelect = document.getElementById('modelVersion');
     const gameModeSelect = document.getElementById('gameMode');
     const battleSetup = document.getElementById('battleSetup');
@@ -260,11 +261,13 @@
       if (version === 9.3) return '铭星V9Mesa';
       if (version === 10.2) return '铭星V10Mesa';
       if (version === 10.3) return '铭星V10Exp';
+      if (version === 10.4) return '铭星V10Flash';
       return `铭星V${version}`;
     }
     function getModelWinPoints(version) {
       if (version === 9.3) return 9;
       if (version === 10.2) return 14;
+      if (version === 10.4) return 15;
       if (version === 10.3) return 15;
       if (version === 10.1) return 15;
       if (version === 10) return 12;
@@ -273,15 +276,15 @@
     }
     function canUploadTrainingResult(version, result) {
       if (!['win', 'loss', 'draw'].includes(result)) return false;
-      return version === 9.2 || version === 10 || version === 10.1 || version === 10.2 || version === 10.3;
+      return version === 9.2 || version === 10 || version === 10.1 || version === 10.2 || version === 10.3 || version === 10.4;
     }
     function startAiCountdown(version) {
       stopAiCountdown();
-      if (![10.1, 9.3, 10.2, 10.3].includes(version)) return;
+      if (![10.1, 9.3, 10.2, 10.3, 10.4].includes(version)) return;
       const label = document.getElementById('aiCountdownLabel');
       const fill = document.getElementById('aiCountdownFill');
       const panel = document.getElementById('aiCountdown');
-      const total = version === 10.3 ? 180000 : version === 10.1 ? 75000 : 120000;
+      const total = version === 10.3 ? 180000 : version === 10.4 ? 120000 : version === 10.1 ? 75000 : 120000;
       aiCountdownDeadline = performance.now() + total;
       panel.hidden = false;
       const tick = () => {
@@ -703,6 +706,7 @@
       if (version === 9.3) return window.GomokuV9Mesa.findBestMove({board,color});
       if (version === 10.2) return window.GomokuV10Mesa.findBestMove({board,color});
       if (version === 10.3) return window.GomokuV10Exp.findBestMove({board,color,history:gameMoves});
+      if (version === 10.4) return window.GomokuV10Flash.findBestMove({board,color,history:gameMoves});
       await prepareLegacyModel(version);
       const engineWindow = legacyModelEngine.contentWindow;
       let engineBoard = board;
@@ -741,7 +745,7 @@
         : activeModelVersion;
       let move;
       try {
-        const candidate = version === 9.3 ? GomokuV9Mesa : version === 10.2 ? GomokuV10Mesa : version === 10.3 ? GomokuV10Exp : null;
+        const candidate = version === 9.3 ? GomokuV9Mesa : version === 10.2 ? GomokuV10Mesa : version === 10.3 ? GomokuV10Exp : version === 10.4 ? GomokuV10Flash : null;
         if (candidate) {
           document.getElementById('status').textContent = `${getModelName(version)}：正在准备模型…`;
           await candidate.preload();
@@ -962,6 +966,7 @@
       window.GomokuV9Mesa.clearCache();
       window.GomokuV10Mesa.clearCache();
       window.GomokuV10Exp.clearCache();
+      window.GomokuV10Flash.clearCache();
       stopAiCountdown();
       initBoard();
       document.getElementById('status').innerHTML = ClubI18n.t('gomoku.chooseSide') + ': <button onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';

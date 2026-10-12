@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Ultra local diagnostic — no uploads</title>
+<pre id="status">Local regression only. No scores or training uploads.</pre>
+<script>
+window.runDiagnostic = async function (sample, maxDepth, timeoutTurnMs) {
+  const worker = new Worker('./gomoku-ultra-diagnostic-worker.js');
+  const trace = [];
+  let timer;
+  function request(message, timeout) {
+    return new Promise((resolve, reject) => {
+      timer = setTimeout(() => reject(new Error('Diagnostic watchdog expired')), timeout);
+      worker.onerror = e => { clearTimeout(timer); reject(new Error(e.message)); };
+      worker.onmessage = ({data}) => {
+        if (data.type === 'trace') { trace.push(data); return; }
+        if (data.id !== message.id) return;
+        if (data.type === 'error') { clearTimeout(timer); reject(new Error(data.error)); }
+        if (data.type === 'ready' || data.type === 'result') { clearTimeout(timer); resolve(data); }
+      };
+      worker.postMessage(message);
+    });
+  }
+  try {
+    await request({op: 'preload', id: 1}, 60000);
+    trace.length = 0;
+    const started = performance.now();
+    const result = await request({op: 'think', id: 2, boardSize: 15,
+      timeoutTurnMs, maxDepth, maxNodes: 0, playerIsBlack: sample.toMove === 2,
+      stoneHistory: sample.history.map(m => ({row:m.row, col:m.col,
+        piece: m.player === sample.toMove ? 'ai' : 'player'}))}, timeoutTurnMs + 10000);
+    return {sampleId: sample.id, maxDepth, timeoutTurnMs, move: result.move,
+      elapsedMs: performance.now() - started, trace};
+  } finally { clearTimeout(timer); worker.terminate(); }
+};
+</script>

@@ -2,12 +2,18 @@
 <meta charset="utf-8">
 <title>Gomoku experiment validation</title>
 <pre id="out">loading</pre>
+<script>var BOARD_SIZE = 15;</script>
 <script src="../public/data/gomoku-training-model.js"></script>
 <script src="../public/gomoku-models/expert-core.js"></script>
+<script src="../public/gomoku-models/v9.js"></script>
+<script src="../public/gomoku-models/v9pro.js"></script>
 <script src="../public/gomoku-models/v9thinker.js"></script>
 <script src="../public/gomoku-models/v10-core.js"></script>
 <script src="../public/gomoku-models/v10.js"></script>
 <script src="../public/gomoku-models/v10ultra.js"></script>
+<script src="../public/gomoku-models/v11candidate.js"></script>
+<script src="../public/gomoku-models/v10flash.js"></script>
+<script src="../public/gomoku-models/v10thinker.js"></script>
 <script src="../public/gomoku-models/experimental/models.js"></script>
 <script src="../public/gomoku-models/v10exp.js"></script>
 <script>
@@ -15,7 +21,11 @@ const SIZE = 15;
 let board = Array.from({length: SIZE}, () => Array(SIZE).fill(0));
 let aiColor = 1, playerColor = 2, gameMoves = [];
 function updateExplain() {}
-const engines = { v9thinker: GomokuV9Thinker, v10: GomokuV10, v10ultra: GomokuV10Ultra, v10exp: GomokuV10Exp,
+const engines = { v9: GomokuV9, v9pro: GomokuV9Pro, v9thinker: GomokuV9Thinker, v10: GomokuV10, v10ultra: GomokuV10Ultra, v11candidate: GomokuV11Candidate, v10flash: GomokuV10Flash, v10exp: GomokuV10Exp,
+  v10thinker: GomokuV10Thinker,
+  v10thinker14: GomokuV10ThinkerFactory({ depth: 14, name: 'gomoku-v10thinker-14' }),
+  v10thinker16: GomokuV10ThinkerFactory({ depth: 16, name: 'gomoku-v10thinker-16' }),
+  v10thinker18: GomokuV10ThinkerFactory({ depth: 18, name: 'gomoku-v10thinker-18' }),
   ...GomokuExperiments };
 function win(row, col, color) {
   return [[1,0],[0,1],[1,1],[1,-1]].some(([dr,dc]) => {
@@ -74,19 +84,54 @@ async function run() {
   const q = new URLSearchParams(location.search);
   if (q.has('smoke')) return smoke();
   const black = q.get('black'), white = q.get('white');
-  if (!engines[black] || !engines[white]) throw new Error('Unknown engine');
+  // A scripted side replays a recorded move list (for example a real human
+  // game) so the other color can be tested against that exact line. Either
+  // side may be `script`; its color comes from the record itself, or from an
+  // explicit `scriptColor` when the record holds a full two-color game.
+  const scriptPath = q.get('script');
+  const scriptColorQuery = Number(q.get('scriptColor')) || null;
+  let script = null;
+  if (scriptPath) {
+    const response = await fetch(scriptPath);
+    if (!response.ok) throw new Error(`script ${response.status}`);
+    const data = await response.json();
+    const recorded = Array.isArray(data) ? data : data.moves;
+    if (!Array.isArray(recorded) || !recorded.length) throw new Error('script has no moves');
+    const color = scriptColorQuery || recorded[0].player;
+    if (![1, 2].includes(color)) throw new Error('script color must be 1 or 2');
+    const moves = recorded.filter(m => m.player === color).map(m => ({ row: m.row, col: m.col, player: m.player }));
+    if (!moves.length) throw new Error(`script has no moves for color ${color}`);
+    script = { color, moves, index: 0 };
+  }
+  for (const name of [black,white]) if (name !== 'script' && !engines[name]) throw new Error('Unknown engine');
+  if (script && (black === 'script') === (white === 'script')) throw new Error('exactly one side must be scripted');
+  if (script && script.color !== (black === 'script' ? 1 : 2)) throw new Error('script color does not match its side');
   const report = {black,white,rule:'freestyle; 15x15; >=5 wins; no opening constraints',
-    limits:{slowrenju:120000,gomokuzero:{timeMs:120000,simulations:2000},v9thinker:40000,v10:40000,v10ultra:75000,v10exp:180000},
+    limits:{slowrenju:120000,gomokuzero:{timeMs:120000,simulations:2000},v9thinker:40000,v10:40000,v10ultra:75000,v11candidate:90000,v10flash:120000,v10thinker:75000,v10thinker14:75000,v10thinker16:75000,v10thinker18:75000,v10exp:180000},
     startedAt:new Date().toISOString(),winner:null,moves:[]};
+  if (script) report.script = { source: scriptPath, color: script.color, moves: script.moves.length };
   // Asset preparation is excluded from per-move search measurements.
-  for (const name of [black,white]) if (engines[name].preload) await engines[name].preload();
+  for (const name of [black,white]) if (name !== 'script' && engines[name].preload) await engines[name].preload();
   render(report);
   for(let turn=0;turn<225;turn++) {
     const color=turn%2+1, name=color===1?black:white;
-    const started=performance.now(), move=await choose(name,color), elapsedMs=Math.round(performance.now()-started);
+    let move, elapsedMs=0, search=null;
+    if (name === 'script') {
+      const next = script.moves[script.index++];
+      // The record ran out, or it now collides with the engine's line: the
+      // replayed game cannot continue past that point.
+      if (!next) { report.scriptExhausted = true; break; }
+      if (board[next.row][next.col] !== 0) { report.scriptConflict = { move: turn+1, row: next.row, col: next.col }; break; }
+      move = { row: next.row, col: next.col };
+    } else {
+      const started=performance.now();
+      move = await choose(name,color);
+      elapsedMs=Math.round(performance.now()-started);
+      search=engines[name].lastSearch;
+    }
     board[move.row][move.col]=color;
     gameMoves.push({row:move.row,col:move.col,player:color});
-    report.moves.push({move:turn+1,row:move.row,col:move.col,player:color,model:name,elapsedMs,search:engines[name].lastSearch});
+    report.moves.push({move:turn+1,row:move.row,col:move.col,player:color,model:name,elapsedMs,search});
     document.title=`${black}/${white} ${turn+1}`;
     render(report);
     if(win(move.row,move.col,color)) {report.winner=name;break;}

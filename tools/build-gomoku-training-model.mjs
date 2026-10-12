@@ -7,6 +7,14 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const boardSize = 15;
 const outputPath = path.join(root, 'public', 'data', 'gomoku-training-model.js');
 const v9TrainingPeriodLimit = 1010;
+// Periods from this boundary on belong to V10Flash alone, so the cumulative
+// archive and the V10 priors stop before it.
+const frozenArchivePeriodLimit = 1014;
+// V10Flash draws every game played by these reference models, no matter which
+// training period recorded it, plus everything from its own periods onward.
+// V10Exp (10.3) has no recorded games yet, so it contributes nothing until
+// such games exist.
+const v10FlashSourceVersions = [9.2, 10, 10.1, 10.3];
 
 function transform(row, col, rotation, reflected) {
   let r = row;
@@ -35,12 +43,13 @@ const directories = (await readdir(root, { withFileTypes: true }))
   .map(entry => entry.name)
   .sort();
 
-async function buildModel(sourceDirectories, { includeModelBattle = true, modelVersion = null, deduplicate = true } = {}) {
+async function buildModel(sourceDirectories, { includeModelBattle = true, modelVersion = null, deduplicate = true, sourceModelVersions = null, minPeriod = null } = {}) {
   const outcomes = { win: 0, loss: 0, draw: 0 };
   const priors = {};
   const seenGames = new Set();
   let gameCount = 0;
   for (const directory of sourceDirectories) {
+    const directoryPeriod = Number((directory.match(/^五子棋训练数据(\d+)$/) || [])[1]) || 0;
     const directoryPath = path.join(root, directory);
     const files = (await readdir(directoryPath, { withFileTypes: true }))
       .filter(entry => entry.isFile() && /^gomoku-.*\.json$/i.test(entry.name))
@@ -54,6 +63,13 @@ async function buildModel(sourceDirectories, { includeModelBattle = true, modelV
       seenGames.add(gameHash);
       const game = JSON.parse(raw);
       if (!['win', 'loss', 'draw'].includes(game.result) || !Array.isArray(game.moves)) continue;
+      // An explicit source-model scope keeps only games produced by the listed
+      // model versions, plus (optionally) everything from the newest periods.
+      if (sourceModelVersions || minPeriod !== null) {
+        const byVersion = sourceModelVersions ? sourceModelVersions.includes(game.model_version) : false;
+        const byPeriod = minPeriod !== null && directoryPeriod >= minPeriod;
+        if (!byVersion && !byPeriod) continue;
+      }
       // Keep every valid perspective in the cumulative archive, but only
       // the requested model's battle perspective in its opening prior.
       if (game.model_battle === true && (!includeModelBattle || (modelVersion !== null && game.model_version !== modelVersion))) continue;
@@ -92,7 +108,14 @@ const v9ProDirectories = directories.filter(directory => {
   const match = directory.match(/^五子棋训练数据(\d+)$/);
   return match && Number(match[1]) < 1013;
 });
-const cumulativeModel = await buildModel(directories);
+// V10Flash's prior draws on every game played by the four reference model
+// families it is meant to replace or complement, wherever those games live,
+// plus everything from its own newest periods (1014 onward).
+const frozenDirectories = directories.filter(directory => {
+  const match = directory.match(/^五子棋训练数据(\d+)$/);
+  return match && Number(match[1]) < frozenArchivePeriodLimit;
+});
+const cumulativeModel = await buildModel(frozenDirectories);
 // Preserve the historical builder semantics for the frozen V9 prior.
 const v9Model = await buildModel(legacyDirectories, { deduplicate: false });
 // Freeze every pre-V10 opponent, including Pro's 1012-era prior.
@@ -100,16 +123,23 @@ const v9ProModel = await buildModel(v9ProDirectories, { modelVersion: 9.1 });
 // V9Thinker keeps the V9-era data boundary; period 1010 and later remain
 // exclusive to V9Pro even when those folders contain Thinker matchups.
 const v9ThinkerModel = v9Model;
-// V10 is a new model family. It receives the complete cumulative archive,
-// including period 1013 and later, while the frozen V9-era models above keep
-// their original data boundary.
-const v10Model = await buildModel(directories);
+// V10 is a new model family. It receives the cumulative archive, including
+// period 1013, while the frozen V9-era models above keep their original
+// boundary and period 1014+ stays exclusive to V10Flash.
+const v10Model = await buildModel(frozenDirectories);
+// V10Flash's prior draws on every game played by the four reference model
+// families it is meant to replace or complement, wherever those games live,
+// plus everything from its own newest periods (1014 onward).
+const v10FlashModel = await buildModel(directories, { sourceModelVersions: v10FlashSourceVersions, minPeriod: frozenArchivePeriodLimit });
+v10FlashModel.sourceModelVersions = v10FlashSourceVersions;
+v10FlashModel.minPeriod = frozenArchivePeriodLimit;
 const output = [
   `window.GOMOKU_TRAINING_MODEL = ${JSON.stringify(cumulativeModel)};`,
   `window.GOMOKU_V9PRO_TRAINING_MODEL = ${JSON.stringify(v9ProModel)};`,
   `window.GOMOKU_V9THINKER_TRAINING_MODEL = ${JSON.stringify(v9ThinkerModel)};`,
   `window.GOMOKU_V9_TRAINING_MODEL = ${JSON.stringify(v9Model)};`,
   `window.GOMOKU_V10_TRAINING_MODEL = ${JSON.stringify(v10Model)};`,
+  `window.GOMOKU_V10FLASH_TRAINING_MODEL = ${JSON.stringify(v10FlashModel)};`,
   ''
 ].join('\n');
 await writeFile(outputPath, output, 'utf8');
@@ -118,6 +148,7 @@ console.log(`Built ${Object.keys(v9ProModel.priors).length} V9Pro expert pattern
 console.log(`Built ${Object.keys(v9ThinkerModel.priors).length} V9Thinker expert patterns from the V9-era ${v9ThinkerModel.gameCount}-game boundary.`);
 console.log(`Built ${Object.keys(v9Model.priors).length} V9 opening patterns from ${v9Model.gameCount} games in ${legacyDirectories.length} training folders.`);
 console.log(`Built ${Object.keys(v10Model.priors).length} V10 cumulative patterns from ${v10Model.gameCount} games in ${directories.length} training folders.`);
+console.log(`Built ${Object.keys(v10FlashModel.priors).length} V10Flash opening patterns from ${v10FlashModel.gameCount} games (${v10FlashSourceVersions.join('/')} games in any period, plus every period >= ${frozenArchivePeriodLimit}).`);
 for (const directory of directories) {
   const period = await buildModel([directory]);
   console.log(`${directory}: ${period.gameCount} unique perspective records (win ${period.outcomes.win}, loss ${period.outcomes.loss}, draw ${period.outcomes.draw}).`);

@@ -7,7 +7,10 @@ const [black, white, output, origin = 'http://127.0.0.1:4173', mode] = process.a
 if (!black || !white || !output) throw new Error('Usage: node tools/run-gomoku-experiment-browser.mjs <black|smoke> <white> <output> [origin]');
 // Each match owns a separate tab, so independent full games can run without
 // navigating or interrupting another match or a user's production page.
-const query=black==='smoke'?'smoke=1':new URLSearchParams({black,white}).toString();
+// GOMOKU_MATCH_SCRIPT turns one side into a replay of a recorded move list.
+const script = process.env.GOMOKU_MATCH_SCRIPT || null;
+const scriptColor = script ? (process.env.GOMOKU_MATCH_SCRIPT_COLOR || null) : null;
+const query=black==='smoke'?'smoke=1':new URLSearchParams({black,white,...(script?{script}:{}),...(scriptColor?{scriptColor}:{})}).toString();
 const target = mode === '--attach'
   ? (await fetch('http://127.0.0.1:9223/json').then(r=>r.json())).find(t=>t.url.endsWith('?'+query))
   : await fetch('http://127.0.0.1:9223/json/new?about:blank', {method:'PUT'}).then(r=>r.json());
@@ -28,12 +31,16 @@ async function evaluate(expression) {
   return result.result.value;
 }
 const out = path.resolve(root,output); fs.mkdirSync(path.dirname(out),{recursive:true});
-const files = ['public/gomoku-models/expert-core.js','public/gomoku-models/v9thinker.js','public/gomoku-models/v10-core.js','public/gomoku-models/v10.js',
+const files = ['public/gomoku-models/expert-core.js','public/gomoku-models/v9.js','public/gomoku-models/v9pro.js','public/gomoku-models/v9thinker.js','public/gomoku-models/v10-core.js','public/gomoku-models/v10.js',
   'public/gomoku-models/v10ultra.js','public/gomoku-models/v10ultra/worker.js','public/gomoku-models/v10ultra/rapfi-single.wasm',
+  'public/gomoku-models/v11candidate.js','public/gomoku-models/v11candidate/worker.js',
+  'public/gomoku-models/v10flash.js','public/gomoku-models/v10flash/worker.js',
+  'public/gomoku-models/v10thinker.js','public/gomoku-models/v10thinker/worker.js',
   'public/gomoku-models/v10ultra/rapfi.data','public/gomoku-models/experimental/models.js',
   'public/gomoku-models/experimental/slowrenju/worker.js','public/gomoku-models/experimental/slowrenju/engine.wasm',
   'public/gomoku-models/experimental/gomokuzero/worker.js','public/gomoku-models/experimental/gomokuzero/model.onnx'];
 if(black==='v10exp'||white==='v10exp') files.push('public/gomoku-models/v10exp.js','public/gomoku-models/v10exp/expert-worker.js','public/gomoku-models/v10exp/proof-core.js','public/gomoku-models/v10exp/neural-worker.js');
+if(script) files.push(script.replace(/^\//, ''));
 const fingerprints = Object.fromEntries(files.map(f=>[f,createHash('sha256').update(fs.readFileSync(path.join(root,f))).digest('hex')]));
 try {
   await call('Page.enable'); await call('Runtime.enable');

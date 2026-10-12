@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-10-12T09:36:39.369Z",
+  "complete": true,
+  "pair": [
+    "v10flash",
+    "v10ultra"
+  ],
+  "rule": "freestyle; 15x15; >=5 wins; no opening constraints",
+  "matches": [
+    {
+      "black": "v10flash",
+      "white": "v10ultra",
+      "winner": "v10flash",
+      "moves": 19,
+      "file": "v10flash-black-v10ultra.json"
+    },
+    {
+      "black": "v10ultra",
+      "white": "v10flash",
+      "winner": "v10ultra",
+      "moves": 81,
+      "file": "v10ultra-black-v10flash.json"
+    }
+  ],
+  "models": {
+    "v10flash": {
+      "wins": 1,
+      "losses": 1,
+      "draws": 0,
+      "colors": {
+        "black": "win",
+        "white": "loss"
+      },
+      "reasons": {
+        "rapfi-mix9-flash": 36,
+        "immediate-win": 1,
+        "opening-book": 2,
+        "forced-block": 11
+      },
+      "bookMoves": 2,
+      "moves": 50,
+      "totalMs": 170167,
+      "meanMs": 3403,
+      "maxMs": 34347,
+      "medianMs": 464
+    },
+    "v10ultra": {
+      "wins": 1,
+      "losses": 1,
+      "draws": 0,
+      "colors": {
+        "white": "loss",
+        "black": "win"
+      },
+      "reasons": {
+        "rapfi-nnue": 50
+      },
+      "bookMoves": 0,
+      "moves": 50,
+      "totalMs": 17065,
+      "meanMs": 341,
+      "maxMs": 2535,
+      "medianMs": 135
+    }
+  }
+}

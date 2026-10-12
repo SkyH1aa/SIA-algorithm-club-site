@@ -76,10 +76,10 @@ try {
       loadLeaderboard = async () => {};
       ClubI18n.init();
       document.getElementById('nickname').value = 'integration-check';
-      const versions = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3];
-      const eligible = [9.2, 10, 10.1, 10.2, 10.3];
-      const expectedPoints = { '9.1': 10, '9.2': 12, '10': 12, '10.1': 15, '9.3': 9, '10.2': 14, '10.3': 15 };
-      const expectedOrder=[1,2,3,6,7,8,9,9.1,9.3,9.2,10,10.2,10.3,10.1];
+      const versions = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4];
+      const eligible = [9.2, 10, 10.1, 10.2, 10.3, 10.4];
+      const expectedPoints = { '9.1': 10, '9.2': 12, '10': 12, '10.1': 15, '9.3': 9, '10.2': 14, '10.3': 15, '10.4': 15 };
+      const expectedOrder=[1,2,3,6,7,8,9,9.1,9.3,9.2,10,10.2,10.4,10.3,10.1];
       check(JSON.stringify(MODEL_VERSIONS)===JSON.stringify(expectedOrder),'Strength order registry');
       populateBattleModels();
       for(const selector of [modelVersionSelect,blackModelVersionSelect,whiteModelVersionSelect]) {
@@ -88,7 +88,7 @@ try {
       }
       for(const lang of ['zh','en']) {
         const hint=ClubI18n.t('gomoku.lbHint',{},lang);
-        check(['V9Mesa','V10Mesa','V10Exp','V10Ultra','14','15'].every(s=>hint.includes(s)),'Leaderboard points hint');
+        check(['V9Mesa','V10Mesa','V10Exp','V10Flash','V10Ultra','14','15'].every(s=>hint.includes(s)),'Leaderboard points hint');
       }
       let humanCases = 0, battleCases = 0;
       for (const version of versions) for (const color of [1, 2]) for (const outcome of ['win', 'loss', 'draw']) {
@@ -145,14 +145,14 @@ try {
       }
       GomokuV10Ultra.clearCache();
       const newWorkerMoves=[];
-      for(const version of [9.3,10.2,10.3])for(const color of [1,2]) {
+      for(const version of [9.3,10.2,10.3,10.4])for(const color of [1,2]) {
         board=Array.from({length:15},()=>Array(15).fill(0));gameMoves=[];
         for(let c=4;c<8;c++){board[7][c]=color;board[3][c]=3-color;}
         if(color===2)board[0][0]=1;
         const move=await findModelMove(version,color);
         check(move.row===7 && [3,8].includes(move.col),'New model own win priority');
         startAiCountdown(version);
-        const expected=version===10.3?'180.0':'120.0';
+        const expected=version===10.3?'180.0':version===10.4?'120.0':'120.0';
         check(!document.getElementById('aiCountdown').hidden && document.getElementById('aiCountdownLabel').textContent.includes(expected),'New budget countdown');
         stopAiCountdown();newWorkerMoves.push({version,color,move});
       }
@@ -173,12 +173,54 @@ try {
       await new Promise(resolve=>setTimeout(resolve,100));
       GomokuV10Exp.clearCache();
       check(await interrupted,'Exp reset cancels active neural and expert search');
+      // V10Flash runs the same Rapfi Mix9 Worker as V10Ultra, plus the opening
+      // book built from its exclusive data boundary (period >= 1014).
+      const bookA = GomokuV10Flash.bookFor(
+        (()=>{const b=Array.from({length:15},()=>Array(15).fill(0));b[7][7]=1;return b;})(), 2, [{row:7,col:7,player:1}]);
+      const bookACells = [...bookA.cells.keys()].sort();
+      check(bookA && bookA.best.row===6 && bookA.best.col===6 && bookA.best.games===10, 'Book picks the diagonal reply');
+      check(bookACells.join('|') === '5,5|5,9|6,6|6,8|8,6|8,8|9,5|9,9', 'Book cells match the built prior');
+      const bookB = GomokuV10Flash.bookFor(Array.from({length:15},()=>Array(15).fill(0)), 1, []);
+      check(bookB && bookB.best.row===7 && bookB.best.col===7 && bookB.best.games===22, 'Book center opening');
+      const bookC = GomokuV10Flash.bookFor(
+        (()=>{const b=Array.from({length:15},()=>Array(15).fill(0));b[7][7]=1;b[5][9]=2;return b;})(), 1,
+        [{row:7,col:7,player:1},{row:5,col:9,player:2}]);
+      check(bookC===null, 'Book stays silent beyond its data');
+      const flashWorkerMoves=[];
+      for(const color of [1,2]) {
+        GomokuV10Flash.clearCache();
+        board=Array.from({length:15},()=>Array(15).fill(0));gameMoves=[];
+        if(color===2){board[7][7]=1;gameMoves=[{row:7,col:7,player:1}];}
+        const started=performance.now();
+        const move=await findModelMove(10.4,color);
+        check(move&&Number.isInteger(move.row)&&Number.isInteger(move.col)&&board[move.row]?.[move.col]===0,'Flash Worker legal move');
+        if(color===1) check(move.row===7&&move.col===7,'Flash center opening agreed with the book');
+        if(color===2) check(bookACells.indexOf(move.row+','+move.col)>=0,'Flash opening book constrained the reply');
+        flashWorkerMoves.push({color,move,elapsedMs:Math.round(performance.now()-started),search:GomokuV10Flash.lastSearch});
+      }
+      // A proven four-chase must be played at once, without calling the engine.
+      board=Array.from({length:15},()=>Array(15).fill(0));gameMoves=[];
+      [[7,4],[7,5],[7,6]].forEach(([r,c])=>{board[r][c]=1;gameMoves.push({row:r,col:c,player:1});});
+      board[2][2]=2;gameMoves.push({row:2,col:2,player:2});
+      check(GomokuV10Flash.threatsFor(board,1).openFour>=2,'V10Flash sees the open-four threats');
+      const forced=await findModelMove(10.4,1);
+      check(GomokuV10Flash.lastSearch.reason==='vcf-win','A proven forced win must be played as vcf-win');
+      check(forced.row===7&&(forced.col===3||forced.col===7),'Forced win move');
+      check(board[forced.row][forced.col]===0,'Forced win move targets an empty cell');
+      GomokuV10Flash.clearCache();
+      await GomokuV10Flash.preload();
+      board=Array.from({length:15},()=>Array(15).fill(0));board[7][7]=1;
+      gameMoves=[{row:7,col:7,player:1}];
+      const flashInterrupted=findModelMove(10.4,2).then(()=>false,()=>true);
+      await new Promise(resolve=>setTimeout(resolve,100));
+      GomokuV10Flash.clearCache();
+      check(await flashInterrupted,'Flash reset cancels active search');
       for(const mode of ['model-battle','human']) {
         board[7][7]=1;gameMoves=[{row:7,col:7,player:1}];
         gameModeSelect.value=mode;gameModeSelect.dispatchEvent(new Event('change'));
         check(board.flat().every(x=>!x)&&gameMoves.length===0,'Mode switch clears all engines');
       }
-      return {url: location.href, humanCases, battleCases, strengthOrder:expectedOrder, points:expectedPoints, uploadVersions:eligible, surrenderCases:eligible.length, workerMoves, newWorkerMoves, expNeuralMoves, expCancellation:true};
+      return {url: location.href, humanCases, battleCases, strengthOrder:expectedOrder, points:expectedPoints, uploadVersions:eligible, surrenderCases:eligible.length, workerMoves, newWorkerMoves, expNeuralMoves, expCancellation:true, flashWorkerMoves, flashCancellation:true, flashBook:{best:[bookA.best.row,bookA.best.col],games:bookA.best.games,cells:[...bookA.cells.keys()].sort()}};
     })()`);
     reports.push(report);
     console.log(`PASS ${url}: ${report.humanCases} human cases, ${report.battleCases} model battle cases, black/white/reset Worker moves.`);
