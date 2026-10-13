@@ -1,0 +1,68 @@
+{
+  "generatedAt": "2026-10-13T03:32:25.322Z",
+  "complete": true,
+  "pair": [
+    "v10thinker",
+    "v10flash"
+  ],
+  "rule": "freestyle; 15x15; >=5 wins; no opening constraints",
+  "matches": [
+    {
+      "black": "v10thinker",
+      "white": "v10flash",
+      "winner": "v10thinker",
+      "moves": 37,
+      "file": "v10thinker-black-v10flash.json"
+    },
+    {
+      "black": "v10flash",
+      "white": "v10thinker",
+      "winner": "v10flash",
+      "moves": 39,
+      "file": "v10flash-black-v10thinker.json"
+    }
+  ],
+  "models": {
+    "v10thinker": {
+      "wins": 1,
+      "losses": 1,
+      "draws": 0,
+      "colors": {
+        "black": "win",
+        "white": "loss"
+      },
+      "reasons": {
+        "rapfi-thinker": 38
+      },
+      "bookMoves": 0,
+      "moves": 38,
+      "totalMs": 24340,
+      "meanMs": 641,
+      "maxMs": 7046,
+      "medianMs": 108
+    },
+    "v10flash": {
+      "wins": 1,
+      "losses": 1,
+      "draws": 0,
+      "colors": {
+        "white": "loss",
+        "black": "win"
+      },
+      "reasons": {
+        "opening-book": 1,
+        "mix9-expert-checked": 23,
+        "forced-block": 8,
+        "no-proven-safe-alternative": 1,
+        "vcf-win": 4,
+        "immediate-win": 1
+      },
+      "bookMoves": 1,
+      "moves": 38,
+      "totalMs": 36469,
+      "meanMs": 960,
+      "maxMs": 10739,
+      "medianMs": 130
+    }
+  }
+}

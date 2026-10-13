@@ -1,5 +1,5 @@
 -- 五子棋累计排行榜：同一个昵称只保留一条记录
--- V9Mesa 胜局9分，V10Mesa胜局14分；V10Flash、V10Exp与V10Ultra均为15分。
+-- V9Mesa 胜局9分，V10Mesa胜局14分；V10Flash、V10Exp与V10Ultra均为15分，V10Thinker为16分。
 -- 可重复执行；只创建/更新当前排行榜结构，不依赖旧表或回填历史数据。
 
 create table if not exists public.gomoku_players (
@@ -54,7 +54,7 @@ begin
   if p_result not in ('win', 'loss', 'draw') then
     raise exception '无效的对局结果';
   end if;
-  if p_win_points not between 1 and 15 then
+  if p_win_points not between 1 and 16 then
     raise exception '无效的获胜积分';
   end if;
   if p_moves not between 1 and 500 then

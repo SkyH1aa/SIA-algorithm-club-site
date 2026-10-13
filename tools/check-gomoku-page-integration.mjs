@@ -76,10 +76,10 @@ try {
       loadLeaderboard = async () => {};
       ClubI18n.init();
       document.getElementById('nickname').value = 'integration-check';
-      const versions = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4];
-      const eligible = [9.2, 10, 10.1, 10.2, 10.3, 10.4];
-      const expectedPoints = { '9.1': 10, '9.2': 12, '10': 12, '10.1': 15, '9.3': 9, '10.2': 14, '10.3': 15, '10.4': 15 };
-      const expectedOrder=[1,2,3,6,7,8,9,9.1,9.3,9.2,10,10.2,10.4,10.3,10.1];
+      const versions = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4, 10.5];
+      const eligible = [9.2, 10, 10.1, 10.2, 10.3, 10.4, 10.5];
+      const expectedPoints = { '9.1': 10, '9.2': 12, '10': 12, '10.1': 15, '9.3': 9, '10.2': 14, '10.3': 15, '10.4': 15, '10.5': 16 };
+      const expectedOrder=[1,2,3,6,7,8,9,9.1,9.3,9.2,10,10.2,10.4,10.3,10.1,10.5];
       check(JSON.stringify(MODEL_VERSIONS)===JSON.stringify(expectedOrder),'Strength order registry');
       populateBattleModels();
       for(const selector of [modelVersionSelect,blackModelVersionSelect,whiteModelVersionSelect]) {
@@ -88,7 +88,7 @@ try {
       }
       for(const lang of ['zh','en']) {
         const hint=ClubI18n.t('gomoku.lbHint',{},lang);
-        check(['V9Mesa','V10Mesa','V10Exp','V10Flash','V10Ultra','14','15'].every(s=>hint.includes(s)),'Leaderboard points hint');
+        check(['V9Mesa','V10Mesa','V10Exp','V10Flash','V10Ultra','V10Thinker','14','15','16'].every(s=>hint.includes(s)),'Leaderboard points hint');
       }
       let humanCases = 0, battleCases = 0;
       for (const version of versions) for (const color of [1, 2]) for (const outcome of ['win', 'loss', 'draw']) {
@@ -198,6 +198,11 @@ try {
         if(color===2) check(bookACells.indexOf(move.row+','+move.col)>=0,'Flash opening book constrained the reply');
         flashWorkerMoves.push({color,move,elapsedMs:Math.round(performance.now()-started),search:GomokuV10Flash.lastSearch});
       }
+      // V10Thinker is pure Rapfi like V10Ultra: no tactical pre-check, so it is
+      // checked for its countdown only (it must not be asserted to find wins).
+      startAiCountdown(10.5);
+      check(!document.getElementById('aiCountdown').hidden && document.getElementById('aiCountdownLabel').textContent.includes('75.0'),'V10Thinker budget countdown');
+      stopAiCountdown();
       // A proven four-chase must be played at once, without calling the engine.
       board=Array.from({length:15},()=>Array(15).fill(0));gameMoves=[];
       [[7,4],[7,5],[7,6]].forEach(([r,c])=>{board[r][c]=1;gameMoves.push({row:r,col:c,player:1});});

@@ -1,15 +1,21 @@
 (function () {
   'use strict';
-  // V10Thinker is a straight copy of the V10Ultra Rapfi setup (same engine and
-  // Mix9 weight bytes, same 75 s budget) with a tunable depth cap, used to find
-  // out how much the 12-ply cap of V10Ultra actually costs. The default instance
-  // is exported as window.GomokuV10Thinker; the arena uses the factory to build
-  // the 14/16/18-ply variants for a head-to-head comparison.
+  // V10Thinker (10.5) is V10Ultra's Rapfi setup with a deeper, fixed search: the
+  // same engine and Mix9 weight bytes, the same 75 s budget, but a 16-ply cap
+  // instead of 12. Measured on a recorded midgame position, a 12-ply cap reports
+  // a quiet -858 while the position is already a proven loss; 14 plies sees the
+  // mate for about 0.9 s, and 14 and 16 cost the same there. A 20-ply cap was
+  // measured to stall moves for 85-120 s, which is why it is not used. The
+  // factory stays exported so the arena can still build other depths.
   const SIZE = 15, DEFAULT_TIME_MS = 75000, DEFAULT_DEPTH = 16;
+  // Resolve this module's own URL once, while document.currentScript is still
+  // valid: the factory is also called from other pages' inline scripts, where
+  // currentScript.src is empty and the base would otherwise fall back to the
+  // page directory.
+  const MODEL_BASE = new URL('./', document.currentScript?.src || document.baseURI);
 
   function create({ depth = DEFAULT_DEPTH, timeMs = DEFAULT_TIME_MS, name = 'gomoku-v10thinker' } = {}) {
     const MAX_DEPTH = depth;
-    const MODEL_BASE = new URL('./', document.currentScript?.src || document.baseURI);
     let worker = null;
     let ready = null;
     let requestId = 0;

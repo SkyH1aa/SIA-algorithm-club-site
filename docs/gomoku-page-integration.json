@@ -1,8 +1,8 @@
 [
   {
     "url": "file:///D:/GithubRcj/SIA-algorithm-club-site/public/gomoku.html",
-    "humanCases": 90,
-    "battleCases": 675,
+    "humanCases": 96,
+    "battleCases": 768,
     "strengthOrder": [
       1,
       2,
@@ -18,7 +18,8 @@
       10.2,
       10.4,
       10.3,
-      10.1
+      10.1,
+      10.5
     ],
     "points": {
       "10": 12,
@@ -28,7 +29,8 @@
       "9.3": 9,
       "10.2": 14,
       "10.3": 15,
-      "10.4": 15
+      "10.4": 15,
+      "10.5": 16
     },
     "uploadVersions": [
       9.2,
@@ -36,9 +38,10 @@
       10.1,
       10.2,
       10.3,
-      10.4
+      10.4,
+      10.5
     ],
-    "surrenderCases": 6,
+    "surrenderCases": 7,
     "workerMoves": [
       {
         "color": 1,
@@ -46,7 +49,7 @@
           "row": 7,
           "col": 7
         },
-        "elapsedMs": 431
+        "elapsedMs": 488
       },
       {
         "color": 2,
@@ -54,7 +57,7 @@
           "row": 6,
           "col": 8
         },
-        "elapsedMs": 1142
+        "elapsedMs": 1182
       },
       {
         "color": 1,
@@ -62,7 +65,7 @@
           "row": 7,
           "col": 7
         },
-        "elapsedMs": 348
+        "elapsedMs": 362
       }
     ],
     "newWorkerMoves": [
@@ -144,29 +147,11 @@
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 1.6000000014901161,
+            "elapsedMs": 2.3999999999650754,
             "aborted": false
           },
-          "elapsedMs": 147,
+          "elapsedMs": 150,
           "experts": {
-            "v10": {
-              "type": "progress",
-              "id": 10,
-              "move": {
-                "row": 7,
-                "col": 7
-              },
-              "stats": {
-                "candidates": 1,
-                "depth": 5,
-                "score": 8631,
-                "target": "8, 8",
-                "move": {
-                  "row": 7,
-                  "col": 7
-                }
-              }
-            },
             "thinker": {
               "type": "progress",
               "id": 9,
@@ -178,6 +163,24 @@
                 "candidates": 1,
                 "depth": 6,
                 "score": -1325,
+                "target": "8, 8",
+                "move": {
+                  "row": 7,
+                  "col": 7
+                }
+              }
+            },
+            "v10": {
+              "type": "progress",
+              "id": 10,
+              "move": {
+                "row": 7,
+                "col": 7
+              },
+              "stats": {
+                "candidates": 1,
+                "depth": 5,
+                "score": 8631,
                 "target": "8, 8",
                 "move": {
                   "row": 7,
@@ -201,10 +204,10 @@
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 2.2999999970197678,
+            "elapsedMs": 1.5,
             "aborted": false
           },
-          "elapsedMs": 12054,
+          "elapsedMs": 12248,
           "experts": {
             "v10": {
               "type": "result",
@@ -219,7 +222,7 @@
                 "candidates": 20,
                 "nodes": 0,
                 "qnodes": 0,
-                "elapsedMs": 2.600000001490116,
+                "elapsedMs": 2.400000000023283,
                 "aborted": false,
                 "reason": "opening",
                 "score": 0
@@ -238,7 +241,7 @@
                 "candidates": 14,
                 "nodes": 155640,
                 "qnodes": 64140,
-                "elapsedMs": 878,
+                "elapsedMs": 887.4000000000233,
                 "aborted": false,
                 "reason": "search",
                 "score": 54
@@ -257,7 +260,7 @@
           "row": 7,
           "col": 7
         },
-        "elapsedMs": 1068,
+        "elapsedMs": 989,
         "search": {
           "depth": 0,
           "selDepth": 0,
@@ -266,7 +269,7 @@
           "engineTimeMs": 0,
           "configuredDepth": 16,
           "reason": "mix9-expert-checked",
-          "elapsedMs": 123,
+          "elapsedMs": 114,
           "threats": {
             "openFour": 0,
             "four": 0,
@@ -282,24 +285,6 @@
             "agreed": true
           },
           "experts": {
-            "thinker": {
-              "type": "progress",
-              "id": 5,
-              "move": {
-                "row": 7,
-                "col": 7
-              },
-              "stats": {
-                "candidates": 1,
-                "depth": 6,
-                "score": -1325,
-                "target": "8, 8",
-                "move": {
-                  "row": 7,
-                  "col": 7
-                }
-              }
-            },
             "v10": {
               "type": "progress",
               "id": 6,
@@ -317,13 +302,31 @@
                   "col": 7
                 }
               }
+            },
+            "thinker": {
+              "type": "progress",
+              "id": 5,
+              "move": {
+                "row": 7,
+                "col": 7
+              },
+              "stats": {
+                "candidates": 1,
+                "depth": 6,
+                "score": -1325,
+                "target": "8, 8",
+                "move": {
+                  "row": 7,
+                  "col": 7
+                }
+              }
             }
           },
           "proof": {
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 1.5999999940395355,
+            "elapsedMs": 1.099999999976717,
             "aborted": false
           }
         }
@@ -334,16 +337,16 @@
           "row": 6,
           "col": 6
         },
-        "elapsedMs": 9028,
+        "elapsedMs": 9687,
         "search": {
           "depth": 16,
           "selDepth": 0,
           "nodes": 0,
           "score": null,
-          "engineTimeMs": 8024,
+          "engineTimeMs": 8416,
           "configuredDepth": 16,
           "reason": "opening-book",
-          "elapsedMs": 8152,
+          "elapsedMs": 8589,
           "threats": {
             "openFour": 0,
             "four": 0,
@@ -375,7 +378,7 @@
                 "candidates": 20,
                 "nodes": 0,
                 "qnodes": 0,
-                "elapsedMs": 3.3000000044703484,
+                "elapsedMs": 3.2999999999883585,
                 "aborted": false,
                 "reason": "opening",
                 "score": 0
@@ -394,7 +397,7 @@
                 "candidates": 14,
                 "nodes": 155640,
                 "qnodes": 64140,
-                "elapsedMs": 928.6000000014901,
+                "elapsedMs": 1343.0999999999767,
                 "aborted": false,
                 "reason": "search",
                 "score": 54
@@ -405,7 +408,7 @@
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 2.100000001490116,
+            "elapsedMs": 0.9000000000232831,
             "aborted": false
           }
         }
@@ -432,8 +435,8 @@
   },
   {
     "url": "http://127.0.0.1:4173/public/gomoku.html",
-    "humanCases": 90,
-    "battleCases": 675,
+    "humanCases": 96,
+    "battleCases": 768,
     "strengthOrder": [
       1,
       2,
@@ -449,7 +452,8 @@
       10.2,
       10.4,
       10.3,
-      10.1
+      10.1,
+      10.5
     ],
     "points": {
       "10": 12,
@@ -459,7 +463,8 @@
       "9.3": 9,
       "10.2": 14,
       "10.3": 15,
-      "10.4": 15
+      "10.4": 15,
+      "10.5": 16
     },
     "uploadVersions": [
       9.2,
@@ -467,9 +472,10 @@
       10.1,
       10.2,
       10.3,
-      10.4
+      10.4,
+      10.5
     ],
-    "surrenderCases": 6,
+    "surrenderCases": 7,
     "workerMoves": [
       {
         "color": 1,
@@ -477,7 +483,7 @@
           "row": 7,
           "col": 7
         },
-        "elapsedMs": 377
+        "elapsedMs": 374
       },
       {
         "color": 2,
@@ -485,7 +491,7 @@
           "row": 6,
           "col": 8
         },
-        "elapsedMs": 1163
+        "elapsedMs": 1052
       },
       {
         "color": 1,
@@ -493,7 +499,7 @@
           "row": 7,
           "col": 7
         },
-        "elapsedMs": 414
+        "elapsedMs": 299
       }
     ],
     "newWorkerMoves": [
@@ -575,10 +581,10 @@
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 2.1999999955296516,
+            "elapsedMs": 1.6000000000349246,
             "aborted": false
           },
-          "elapsedMs": 146,
+          "elapsedMs": 122,
           "experts": {
             "v10": {
               "type": "progress",
@@ -632,10 +638,10 @@
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 1.8999999985098839,
+            "elapsedMs": 2.300000000046566,
             "aborted": false
           },
-          "elapsedMs": 12469,
+          "elapsedMs": 11479,
           "experts": {
             "v10": {
               "type": "result",
@@ -650,7 +656,7 @@
                 "candidates": 20,
                 "nodes": 0,
                 "qnodes": 0,
-                "elapsedMs": 3,
+                "elapsedMs": 2.5,
                 "aborted": false,
                 "reason": "opening",
                 "score": 0
@@ -669,7 +675,7 @@
                 "candidates": 14,
                 "nodes": 155640,
                 "qnodes": 64140,
-                "elapsedMs": 1019.1000000014901,
+                "elapsedMs": 857.5,
                 "aborted": false,
                 "reason": "search",
                 "score": 54
@@ -688,7 +694,7 @@
           "row": 7,
           "col": 7
         },
-        "elapsedMs": 332,
+        "elapsedMs": 345,
         "search": {
           "depth": 0,
           "selDepth": 0,
@@ -697,7 +703,7 @@
           "engineTimeMs": 0,
           "configuredDepth": 16,
           "reason": "mix9-expert-checked",
-          "elapsedMs": 123,
+          "elapsedMs": 140,
           "threats": {
             "openFour": 0,
             "four": 0,
@@ -713,24 +719,6 @@
             "agreed": true
           },
           "experts": {
-            "v10": {
-              "type": "progress",
-              "id": 6,
-              "move": {
-                "row": 7,
-                "col": 7
-              },
-              "stats": {
-                "candidates": 1,
-                "depth": 5,
-                "score": 8631,
-                "target": "8, 8",
-                "move": {
-                  "row": 7,
-                  "col": 7
-                }
-              }
-            },
             "thinker": {
               "type": "progress",
               "id": 5,
@@ -748,13 +736,31 @@
                   "col": 7
                 }
               }
+            },
+            "v10": {
+              "type": "progress",
+              "id": 6,
+              "move": {
+                "row": 7,
+                "col": 7
+              },
+              "stats": {
+                "candidates": 1,
+                "depth": 5,
+                "score": 8631,
+                "target": "8, 8",
+                "move": {
+                  "row": 7,
+                  "col": 7
+                }
+              }
             }
           },
           "proof": {
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 1.5,
+            "elapsedMs": 2.7000000000116415,
             "aborted": false
           }
         }
@@ -765,16 +771,16 @@
           "row": 6,
           "col": 6
         },
-        "elapsedMs": 8132,
+        "elapsedMs": 8421,
         "search": {
           "depth": 16,
           "selDepth": 0,
           "nodes": 0,
           "score": null,
-          "engineTimeMs": 7727,
+          "engineTimeMs": 8010,
           "configuredDepth": 16,
           "reason": "opening-book",
-          "elapsedMs": 7880,
+          "elapsedMs": 8154,
           "threats": {
             "openFour": 0,
             "four": 0,
@@ -806,7 +812,7 @@
                 "candidates": 20,
                 "nodes": 0,
                 "qnodes": 0,
-                "elapsedMs": 2.5,
+                "elapsedMs": 3,
                 "aborted": false,
                 "reason": "opening",
                 "score": 0
@@ -825,7 +831,7 @@
                 "candidates": 14,
                 "nodes": 155640,
                 "qnodes": 64140,
-                "elapsedMs": 936.8999999985099,
+                "elapsedMs": 1011.9000000000233,
                 "aborted": false,
                 "reason": "search",
                 "score": 54
@@ -836,7 +842,7 @@
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 2.5,
+            "elapsedMs": 2,
             "aborted": false
           }
         }

@@ -18,7 +18,7 @@ const context = vm.createContext({
   }
 });
 vm.runInContext(stripTypeScriptTypes(source), context);
-const versions = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4];
+const versions = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4, 10.5];
 let cases = 0;
 for (const version of versions) for (const result of ['win', 'loss', 'draw']) for (const color of [1, 2]) for (const battle of [false, true]) {
   stored = null;
@@ -28,7 +28,7 @@ for (const version of versions) for (const result of ['win', 'loss', 'draw']) fo
     ...(battle ? { modelBattle: true, opponentModelVersion: 9.1 } : {})
   };
   const response = await serve({ method: 'POST', json: async () => payload });
-  if ([9.2, 10, 10.1, 10.2, 10.3, 10.4].includes(version)) {
+  if ([9.2, 10, 10.1, 10.2, 10.3, 10.4, 10.5].includes(version)) {
     assert.equal(response.status, 200);
     assert.equal(stored.result, result);
     assert.equal(stored.model_version, version);
@@ -45,7 +45,7 @@ for (const version of versions) for (const result of ['win', 'loss', 'draw']) fo
   cases++;
 }
 // New non-uploading versions remain valid opponents of an uploading model.
-for(const version of [9.2,10,10.1,10.2,10.3,10.4])for(const opponent of versions)
+for(const version of [9.2,10,10.1,10.2,10.3,10.4,10.5])for(const opponent of versions)
   for(const color of [1,2])for(const result of ['win','loss','draw']) {
     stored=null;
     const response=await serve({method:'POST',json:async()=>({
@@ -90,6 +90,26 @@ for (const [key, file] of [['expert', 'expert-core.js'], ['thinker', 'v9thinker.
   assert.equal(flashPack[key], fs.readFileSync(path.join(root, 'public/gomoku-models', file), 'utf8'), `frozen expert source ${file}`);
 }
 assert.equal(flashPack.training, fs.readFileSync(path.join(root, 'public/data/gomoku-training-model.js'), 'utf8'));
+// V10Thinker is a copy of the V10Ultra Rapfi setup with a tunable depth cap. It
+// must reuse V10Ultra's engine and weight bytes instead of shipping its own, and
+// its wrapper must resolve paths from its own module URL (the factory is called
+// from other pages' inline scripts, where document.currentScript.src is empty).
+const thinkerWrapper = fs.readFileSync(path.join(root, 'public/gomoku-models/v10thinker.js'), 'utf8');
+assert.ok(thinkerWrapper.includes('window.GomokuV10ThinkerFactory'), 'V10Thinker factory is exported');
+assert.ok(thinkerWrapper.includes("const MODEL_BASE = new URL('./', document.currentScript?.src || document.baseURI);"), 'V10Thinker resolves its base at module load');
+const thinkerWorker = fs.readFileSync(path.join(root, 'public/gomoku-models/v10thinker/worker.js'), 'utf8');
+assert.ok(thinkerWorker.includes("importScripts('../v10ultra/rapfi-single.js')"), 'V10Thinker loads V10Ultra Rapfi source');
+assert.ok(thinkerWorker.includes("baseUrl() + '../v10ultra/rapfi.data'"), 'V10Thinker loads V10Ultra Mix9 weights');
+const thinkerPackage = path.join(root, 'public/gomoku-models/v10thinker/file-package.js');
+if (fs.existsSync(thinkerPackage)) {
+  const thinkerContext = { window: {} };
+  vm.runInNewContext(fs.readFileSync(thinkerPackage, 'utf8'), thinkerContext);
+  const thinkerPack = thinkerContext.window.GOMOKU_V10THINKER_FILE_PACKAGE;
+  assert.equal(thinkerPack.rapfiSource, pack.rapfiSource, 'V10Thinker file:// Rapfi source matches V10Ultra');
+  assert.equal(thinkerPack.wasmBase64, pack.wasmBase64, 'V10Thinker file:// WASM matches V10Ultra');
+  assert.equal(thinkerPack.dataBase64, pack.dataBase64, 'V10Thinker file:// Mix9 weights match V10Ultra');
+  assert.equal(thinkerPack.workerSource, thinkerWorker, 'V10Thinker file:// worker matches its own bridge');
+}
 // The V10Flash prior must draw exactly the games played by its four reference
 // model families in any period, plus everything from period 1014 onward. Every
 // other exported prior must stay free of the 1014+ periods.
@@ -123,4 +143,4 @@ for (const name of ['GOMOKU_TRAINING_MODEL', 'GOMOKU_V9PRO_TRAINING_MODEL', 'GOM
 }
 const flashContributors = flashModel.sourceModelVersions.filter(version => version !== 10.3);
 assert.ok(flashContributors.length === 3, 'V10Exp (10.3) contributes no games yet');
-console.log(`PASS: ${cases} edge function cases; only 9.2/10/10.1/10.2/10.3/10.4 accept all outcomes, colors and modes preserved; file:// and HTTP engine/weights are identical for V10Ultra and V10Flash; the V10Flash prior is built from exactly ${expectedFlash} games (9.2/10/10.1/10.3 in any period, plus period >= 1014) and no other prior reads period 1014.`);
+console.log(`PASS: ${cases} edge function cases; only 9.2/10/10.1/10.2/10.3/10.4/10.5 accept all outcomes, colors and modes preserved; file:// and HTTP engine/weights are identical for V10Ultra and V10Flash; the V10Flash prior is built from exactly ${expectedFlash} games (9.2/10/10.1/10.3 in any period, plus period >= 1014) and no other prior reads period 1014.`);
