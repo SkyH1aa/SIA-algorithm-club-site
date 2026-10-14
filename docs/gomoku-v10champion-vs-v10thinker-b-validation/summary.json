@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-10-14T00:57:01.953Z",
+  "complete": true,
+  "pair": [
+    "v10champion",
+    "v10thinker"
+  ],
+  "rule": "freestyle; 15x15; >=5 wins; no opening constraints",
+  "matches": [
+    {
+      "black": "v10champion",
+      "white": "v10thinker",
+      "winner": "v10champion",
+      "moves": 69,
+      "file": "v10champion-black-v10thinker.json"
+    },
+    {
+      "black": "v10thinker",
+      "white": "v10champion",
+      "winner": "v10thinker",
+      "moves": 29,
+      "file": "v10thinker-black-v10champion.json"
+    }
+  ],
+  "models": {
+    "v10champion": {
+      "wins": 1,
+      "losses": 1,
+      "draws": 0,
+      "colors": {
+        "black": "win",
+        "white": "loss"
+      },
+      "reasons": {
+        "rapfi-nnue-champion": 39,
+        "forced-block": 8,
+        "immediate-win": 1,
+        "opening-book": 1
+      },
+      "bookMoves": 1,
+      "moves": 49,
+      "totalMs": 12839,
+      "meanMs": 262,
+      "maxMs": 2035,
+      "medianMs": 70
+    },
+    "v10thinker": {
+      "wins": 1,
+      "losses": 1,
+      "draws": 0,
+      "colors": {
+        "white": "loss",
+        "black": "win"
+      },
+      "reasons": {
+        "rapfi-thinker": 49
+      },
+      "bookMoves": 0,
+      "moves": 49,
+      "totalMs": 106085,
+      "meanMs": 2165,
+      "maxMs": 17789,
+      "medianMs": 250
+    }
+  }
+}

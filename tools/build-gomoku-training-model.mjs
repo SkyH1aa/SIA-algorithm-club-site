@@ -133,6 +133,11 @@ const v10Model = await buildModel(frozenDirectories);
 const v10FlashModel = await buildModel(directories, { sourceModelVersions: v10FlashSourceVersions, minPeriod: frozenArchivePeriodLimit });
 v10FlashModel.sourceModelVersions = v10FlashSourceVersions;
 v10FlashModel.minPeriod = frozenArchivePeriodLimit;
+// V10Champion takes every recorded game in every period, 1008 through the
+// newest, as one opening prior. Unlike V10Flash this is not scoped to model
+// versions: it is the whole archive, including the periods the other exports
+// stop at, which is why it is a separate export rather than a change to theirs.
+const v10ChampionModel = await buildModel(directories);
 const output = [
   `window.GOMOKU_TRAINING_MODEL = ${JSON.stringify(cumulativeModel)};`,
   `window.GOMOKU_V9PRO_TRAINING_MODEL = ${JSON.stringify(v9ProModel)};`,
@@ -140,6 +145,7 @@ const output = [
   `window.GOMOKU_V9_TRAINING_MODEL = ${JSON.stringify(v9Model)};`,
   `window.GOMOKU_V10_TRAINING_MODEL = ${JSON.stringify(v10Model)};`,
   `window.GOMOKU_V10FLASH_TRAINING_MODEL = ${JSON.stringify(v10FlashModel)};`,
+  `window.GOMOKU_V10CHAMPION_TRAINING_MODEL = ${JSON.stringify(v10ChampionModel)};`,
   ''
 ].join('\n');
 await writeFile(outputPath, output, 'utf8');
@@ -148,6 +154,7 @@ console.log(`Built ${Object.keys(v9ProModel.priors).length} V9Pro expert pattern
 console.log(`Built ${Object.keys(v9ThinkerModel.priors).length} V9Thinker expert patterns from the V9-era ${v9ThinkerModel.gameCount}-game boundary.`);
 console.log(`Built ${Object.keys(v9Model.priors).length} V9 opening patterns from ${v9Model.gameCount} games in ${legacyDirectories.length} training folders.`);
 console.log(`Built ${Object.keys(v10Model.priors).length} V10 cumulative patterns from ${v10Model.gameCount} games in ${directories.length} training folders.`);
+console.log(`Built ${Object.keys(v10ChampionModel.priors).length} V10Champion full-archive patterns from ${v10ChampionModel.gameCount} games in ${directories.length} training folders.`);
 console.log(`Built ${Object.keys(v10FlashModel.priors).length} V10Flash opening patterns from ${v10FlashModel.gameCount} games (${v10FlashSourceVersions.join('/')} games in any period, plus every period >= ${frozenArchivePeriodLimit}).`);
 for (const directory of directories) {
   const period = await buildModel([directory]);

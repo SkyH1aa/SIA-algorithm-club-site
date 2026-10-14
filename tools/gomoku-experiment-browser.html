@@ -14,6 +14,7 @@
 <script src="../public/gomoku-models/v11candidate.js"></script>
 <script src="../public/gomoku-models/v10flash.js"></script>
 <script src="../public/gomoku-models/v10thinker.js"></script>
+<script src="../public/gomoku-models/v10champion.js"></script>
 <script src="../public/gomoku-models/experimental/models.js"></script>
 <script src="../public/gomoku-models/v10exp.js"></script>
 <script>
@@ -23,6 +24,11 @@ let aiColor = 1, playerColor = 2, gameMoves = [];
 function updateExplain() {}
 const engines = { v9: GomokuV9, v9pro: GomokuV9Pro, v9thinker: GomokuV9Thinker, v10: GomokuV10, v10ultra: GomokuV10Ultra, v11candidate: GomokuV11Candidate, v10flash: GomokuV10Flash, v10exp: GomokuV10Exp,
   v10thinker: GomokuV10Thinker,
+  // Champion configuration: the same Rapfi engine and the same official
+  // freestyle network, but the artificial depth cap removed so the engine
+  // keeps deepening until its per-move budget runs out, like the released
+  // tournament build does.
+  v10champion: GomokuV10Champion,
   v10thinker14: GomokuV10ThinkerFactory({ depth: 14, name: 'gomoku-v10thinker-14' }),
   v10thinker16: GomokuV10ThinkerFactory({ depth: 16, name: 'gomoku-v10thinker-16' }),
   v10thinker18: GomokuV10ThinkerFactory({ depth: 18, name: 'gomoku-v10thinker-18' }),
@@ -103,17 +109,45 @@ async function run() {
     if (!moves.length) throw new Error(`script has no moves for color ${color}`);
     script = { color, moves, index: 0 };
   }
+  // A shared opening: the listed moves are placed on the board before either
+  // engine starts, so the same position can be played twice with the colors
+  // swapped. This is the only way to compare engines that both win as black
+  // from an empty board.
+  const openingPath = q.get('opening');
+  let opening = null;
+  if (openingPath) {
+    const response = await fetch(openingPath);
+    if (!response.ok) throw new Error(`opening ${response.status}`);
+    const data = await response.json();
+    const listed = Array.isArray(data) ? data : data.moves;
+    if (!Array.isArray(listed) || !listed.length) throw new Error('opening has no moves');
+    opening = listed.map((m, index) => {
+      if (!Number.isInteger(m.row) || !Number.isInteger(m.col) || m.player !== index % 2 + 1) throw new Error(`opening move ${index + 1} is malformed`);
+      return { row: m.row, col: m.col, player: m.player };
+    });
+  }
   for (const name of [black,white]) if (name !== 'script' && !engines[name]) throw new Error('Unknown engine');
   if (script && (black === 'script') === (white === 'script')) throw new Error('exactly one side must be scripted');
   if (script && script.color !== (black === 'script' ? 1 : 2)) throw new Error('script color does not match its side');
   const report = {black,white,rule:'freestyle; 15x15; >=5 wins; no opening constraints',
-    limits:{slowrenju:120000,gomokuzero:{timeMs:120000,simulations:2000},v9thinker:40000,v10:40000,v10ultra:75000,v11candidate:90000,v10flash:120000,v10thinker:75000,v10thinker14:75000,v10thinker16:75000,v10thinker18:75000,v10exp:180000},
+    limits:{slowrenju:120000,gomokuzero:{timeMs:120000,simulations:2000},v9thinker:40000,v10:40000,v10ultra:75000,v11candidate:90000,v10flash:120000,v10thinker:75000,v10thinker14:75000,v10thinker16:75000,v10thinker18:75000,v10champion:30000,v10exp:180000},
     startedAt:new Date().toISOString(),winner:null,moves:[]};
   if (script) report.script = { source: scriptPath, color: script.color, moves: script.moves.length };
+  if (opening) {
+    // The opening is placed first, then the game continues from there.
+    opening.forEach((move, index) => {
+      if (board[move.row][move.col] !== 0) throw new Error(`opening move ${move.row},${move.col} is occupied`);
+      board[move.row][move.col] = move.player;
+      gameMoves.push({ row: move.row, col: move.col, player: move.player });
+      report.moves.push({ move: index + 1, row: move.row, col: move.col, player: move.player, model: 'opening', elapsedMs: 0, search: null });
+    });
+    report.opening = { source: openingPath, plies: opening.length, moves: opening.map(m => ({ row: m.row, col: m.col, player: m.player })) };
+  }
+  const openingPlies = opening ? opening.length : 0;
   // Asset preparation is excluded from per-move search measurements.
   for (const name of [black,white]) if (name !== 'script' && engines[name].preload) await engines[name].preload();
   render(report);
-  for(let turn=0;turn<225;turn++) {
+  for(let turn=openingPlies;turn<225;turn++) {
     const color=turn%2+1, name=color===1?black:white;
     let move, elapsedMs=0, search=null;
     if (name === 'script') {

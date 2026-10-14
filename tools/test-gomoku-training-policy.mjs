@@ -94,6 +94,19 @@ assert.equal(flashPack.training, fs.readFileSync(path.join(root, 'public/data/go
 // must reuse V10Ultra's engine and weight bytes instead of shipping its own, and
 // its wrapper must resolve paths from its own module URL (the factory is called
 // from other pages' inline scripts, where document.currentScript.src is empty).
+// V10Champion runs the V10Ultra Rapfi setup (same engine, weights, 12-ply cap
+// and 75 s budget) with its own full-archive opening prior, so its engine and
+// package bytes must equal V10Ultra's while the prior export is its own.
+{
+  const champDir = path.join(root, 'public/gomoku-models/v10champion');
+  const ultraDir = path.join(root, 'public/gomoku-models/v10ultra');
+  assert.ok(fs.readFileSync(path.join(champDir, 'rapfi-single.js')).equals(fs.readFileSync(path.join(ultraDir, 'rapfi-single.js'))), 'V10Champion engine equals V10Ultra');
+  assert.ok(fs.readFileSync(path.join(champDir, 'rapfi.data')).equals(fs.readFileSync(path.join(ultraDir, 'rapfi.data'))), 'V10Champion package equals V10Ultra');
+  assert.ok(fs.readFileSync(path.join(champDir, 'rapfi-single.wasm')).equals(fs.readFileSync(path.join(ultraDir, 'rapfi-single.wasm'))), 'V10Champion WASM equals V10Ultra');
+  const wrapper = fs.readFileSync(path.join(root, 'public/gomoku-models/v10champion.js'), 'utf8');
+  assert.ok(wrapper.includes('GOMOKU_V10CHAMPION_TRAINING_MODEL'), 'V10Champion reads its own prior');
+  assert.ok(wrapper.includes('const THINK_MS = 75000') && wrapper.includes('const MAX_DEPTH = 12'), 'V10Champion uses the V10Ultra budget and depth');
+}
 const thinkerWrapper = fs.readFileSync(path.join(root, 'public/gomoku-models/v10thinker.js'), 'utf8');
 assert.ok(thinkerWrapper.includes('window.GomokuV10ThinkerFactory'), 'V10Thinker factory is exported');
 assert.ok(thinkerWrapper.includes("const MODEL_BASE = new URL('./', document.currentScript?.src || document.baseURI);"), 'V10Thinker resolves its base at module load');

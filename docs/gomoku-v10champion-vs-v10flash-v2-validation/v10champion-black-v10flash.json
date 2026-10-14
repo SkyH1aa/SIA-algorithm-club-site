@@ -1,0 +1,2268 @@
+{
+  "black": "v10champion",
+  "white": "v10flash",
+  "rule": "freestyle; 15x15; >=5 wins; no opening constraints",
+  "limits": {
+    "slowrenju": 120000,
+    "gomokuzero": {
+      "timeMs": 120000,
+      "simulations": 2000
+    },
+    "v9thinker": 40000,
+    "v10": 40000,
+    "v10ultra": 75000,
+    "v11candidate": 90000,
+    "v10flash": 120000,
+    "v10thinker": 75000,
+    "v10thinker14": 75000,
+    "v10thinker16": 75000,
+    "v10thinker18": 75000,
+    "v10champion": 30000,
+    "v10exp": 180000
+  },
+  "startedAt": "2026-10-13T08:08:14.391Z",
+  "winner": "v10flash",
+  "moves": [
+    {
+      "move": 1,
+      "row": 7,
+      "col": 7,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 194,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 194,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 2,
+      "row": 6,
+      "col": 6,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 7510,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 7395,
+        "configuredDepth": 16,
+        "reason": "opening-book",
+        "elapsedMs": 7507,
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 0
+        },
+        "book": {
+          "move": {
+            "row": 6,
+            "col": 6
+          },
+          "score": 0.25,
+          "games": 10,
+          "engineMove": {
+            "row": 7,
+            "col": 8
+          }
+        },
+        "experts": {
+          "v10": {
+            "type": "result",
+            "id": 6,
+            "move": {
+              "row": 8,
+              "col": 8
+            },
+            "stats": {
+              "depth": 0,
+              "configuredDepth": 8,
+              "candidates": 20,
+              "nodes": 0,
+              "qnodes": 0,
+              "elapsedMs": 2.5,
+              "aborted": false,
+              "reason": "opening",
+              "score": 0
+            }
+          },
+          "thinker": {
+            "type": "result",
+            "id": 5,
+            "move": {
+              "row": 5,
+              "col": 9
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 155640,
+              "qnodes": 64140,
+              "elapsedMs": 851.8999999985099,
+              "aborted": false,
+              "reason": "search",
+              "score": 54
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 1,
+          "elapsedMs": 0.9000000022351742,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 3,
+      "row": 6,
+      "col": 7,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 29971,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 29971,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 4,
+      "row": 7,
+      "col": 8,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 10204,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 10,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 10202,
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 0
+        },
+        "book": null,
+        "experts": {
+          "thinker": {
+            "type": "result",
+            "id": 9,
+            "move": {
+              "row": 8,
+              "col": 7
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 110414,
+              "qnodes": 46868,
+              "elapsedMs": 547.2000000029802,
+              "aborted": false,
+              "reason": "search",
+              "score": 0
+            }
+          },
+          "v10": {
+            "type": "result",
+            "id": 10,
+            "move": {
+              "row": 8,
+              "col": 7
+            },
+            "stats": {
+              "depth": 8,
+              "configuredDepth": 8,
+              "candidates": 20,
+              "nodes": 732577,
+              "qnodes": 351868,
+              "elapsedMs": 4246.300000000745,
+              "aborted": false,
+              "reason": "search",
+              "score": -11341
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 1,
+          "elapsedMs": 0.10000000149011612,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 5,
+      "row": 8,
+      "col": 7,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 27461,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 27461,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 6,
+      "row": 5,
+      "col": 7,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 1171,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 1165,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 1169,
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 0
+        },
+        "book": null,
+        "experts": {
+          "thinker": {
+            "type": "result",
+            "id": 13,
+            "move": {
+              "row": 5,
+              "col": 7
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 32390,
+              "qnodes": 16006,
+              "elapsedMs": 166.59999999776483,
+              "aborted": false,
+              "reason": "search",
+              "score": -459
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 14,
+            "move": {
+              "row": 5,
+              "col": 7
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 7,
+              "score": -459,
+              "target": "6, 8",
+              "move": {
+                "row": 5,
+                "col": 7
+              }
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 3,
+          "elapsedMs": 0.6999999992549419,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 7,
+      "row": 8,
+      "col": 6,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 24620,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 24620,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 8,
+      "row": 8,
+      "col": 5,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 1939,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 1900,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 1903,
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 2
+        },
+        "book": null,
+        "experts": {
+          "thinker": {
+            "type": "result",
+            "id": 18,
+            "move": {
+              "row": 7,
+              "col": 5
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 28229,
+              "qnodes": 14906,
+              "elapsedMs": 149.10000000149012,
+              "aborted": false,
+              "reason": "search",
+              "score": 620
+            }
+          },
+          "v10": {
+            "type": "result",
+            "id": 19,
+            "move": {
+              "row": 7,
+              "col": 5
+            },
+            "stats": {
+              "depth": 8,
+              "configuredDepth": 8,
+              "candidates": 20,
+              "nodes": 124853,
+              "qnodes": 71774,
+              "elapsedMs": 662.3000000007451,
+              "aborted": false,
+              "reason": "search",
+              "score": -89111
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 3,
+          "elapsedMs": 0.19999999925494194,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 9,
+      "row": 9,
+      "col": 5,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 29971,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 29971,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 10,
+      "row": 10,
+      "col": 4,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 9994,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 9989,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 9991,
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 3
+        },
+        "book": null,
+        "experts": {
+          "thinker": {
+            "type": "result",
+            "id": 22,
+            "move": {
+              "row": 10,
+              "col": 4
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 46524,
+              "qnodes": 31043,
+              "elapsedMs": 219.30000000074506,
+              "aborted": false,
+              "reason": "search",
+              "score": -82354
+            }
+          },
+          "v10": {
+            "type": "result",
+            "id": 23,
+            "move": {
+              "row": 6,
+              "col": 8
+            },
+            "stats": {
+              "depth": 8,
+              "configuredDepth": 8,
+              "candidates": 20,
+              "nodes": 301429,
+              "qnodes": 195227,
+              "elapsedMs": 1433.5,
+              "aborted": false,
+              "reason": "search",
+              "score": -881681
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 13,
+          "elapsedMs": 1.0999999977648258,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 11,
+      "row": 9,
+      "col": 7,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 26543,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 26543,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 12,
+      "row": 10,
+      "col": 7,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 3,
+      "search": {
+        "reason": "forced-block",
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 3
+        },
+        "depth": 0,
+        "candidates": 1
+      }
+    },
+    {
+      "move": 13,
+      "row": 10,
+      "col": 6,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 29971,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 29971,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 14,
+      "row": 9,
+      "col": 6,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 5862,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 5855,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 5858,
+        "threats": {
+          "openFour": 0,
+          "four": 0,
+          "openThree": 6
+        },
+        "book": null,
+        "experts": {
+          "thinker": {
+            "type": "result",
+            "id": 26,
+            "move": {
+              "row": 9,
+              "col": 6
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 21929,
+              "qnodes": 11493,
+              "elapsedMs": 121.69999999925494,
+              "aborted": false,
+              "reason": "search",
+              "score": -1683
+            }
+          },
+          "v10": {
+            "type": "result",
+            "id": 27,
+            "move": {
+              "row": 9,
+              "col": 6
+            },
+            "stats": {
+              "depth": 8,
+              "configuredDepth": 8,
+              "candidates": 20,
+              "nodes": 271672,
+              "qnodes": 232355,
+              "elapsedMs": 1150.8999999985099,
+              "aborted": false,
+              "reason": "search",
+              "score": -953625
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 3,
+          "elapsedMs": 0.8999999985098839,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 15,
+      "row": 7,
+      "col": 4,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 27557,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 27557,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 16,
+      "row": 7,
+      "col": 5,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 599,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 593,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 594,
+        "threats": {
+          "openFour": 0,
+          "four": 1,
+          "openThree": 3
+        },
+        "book": null,
+        "experts": {
+          "thinker": {
+            "type": "result",
+            "id": 30,
+            "move": {
+              "row": 7,
+              "col": 5
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 82375,
+              "qnodes": 72407,
+              "elapsedMs": 363.5,
+              "aborted": false,
+              "reason": "search",
+              "score": -2962
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 31,
+            "move": {
+              "row": 7,
+              "col": 5
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 7,
+              "score": -2962,
+              "target": "8, 6",
+              "move": {
+                "row": 7,
+                "col": 5
+              }
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 3,
+          "elapsedMs": 0.30000000074505806,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 17,
+      "row": 8,
+      "col": 4,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 28082,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 28082,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 18,
+      "row": 11,
+      "col": 7,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 357,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 318,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 320,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 0
+        },
+        "book": null,
+        "experts": {
+          "thinker": {
+            "type": "progress",
+            "id": 35,
+            "move": {
+              "row": 7,
+              "col": 3
+            },
+            "stats": {
+              "candidates": 14,
+              "depth": 6,
+              "score": -951770,
+              "target": "8, 4",
+              "move": {
+                "row": 7,
+                "col": 3
+              }
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 36,
+            "move": {
+              "row": 7,
+              "col": 3
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 4,
+              "score": -953625,
+              "target": "8, 4",
+              "move": {
+                "row": 7,
+                "col": 3
+              }
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 13,
+          "elapsedMs": 0.3999999985098839,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 19,
+      "row": 8,
+      "col": 8,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 25755,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 25755,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 20,
+      "row": 7,
+      "col": 9,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 6721,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 6674,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 6683,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 0
+        },
+        "book": null,
+        "experts": {
+          "thinker": {
+            "type": "result",
+            "id": 41,
+            "move": {
+              "row": 7,
+              "col": 9
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 370926,
+              "qnodes": 357631,
+              "elapsedMs": 1537.5,
+              "aborted": false,
+              "reason": "search",
+              "score": -1602
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 42,
+            "move": {
+              "row": 7,
+              "col": 9
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 7,
+              "score": -4165,
+              "target": "8, 10",
+              "move": {
+                "row": 7,
+                "col": 9
+              }
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 577,
+          "elapsedMs": 8.100000001490116,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 21,
+      "row": 5,
+      "col": 4,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 29971,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 29971,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 22,
+      "row": 6,
+      "col": 4,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 77,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 35,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 40,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 3
+        },
+        "book": null,
+        "experts": {
+          "thinker": {
+            "type": "progress",
+            "id": 46,
+            "move": {
+              "row": 6,
+              "col": 4
+            },
+            "stats": {
+              "candidates": 14,
+              "depth": 1,
+              "score": -2962,
+              "target": "7, 5",
+              "move": {
+                "row": 6,
+                "col": 4
+              }
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 47,
+            "move": {
+              "row": 6,
+              "col": 4
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 1,
+              "score": -2962,
+              "target": "7, 5",
+              "move": {
+                "row": 6,
+                "col": 4
+              }
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 577,
+          "elapsedMs": 3.699999999254942,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 23,
+      "row": 6,
+      "col": 5,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 29972,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 29972,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 24,
+      "row": 4,
+      "col": 3,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 15791,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 15,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 15751,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 3
+        },
+        "book": null,
+        "experts": {
+          "v10": {
+            "type": "progress",
+            "id": 53,
+            "move": {
+              "row": 11,
+              "col": 8
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 6,
+              "score": -879116,
+              "target": "12, 9",
+              "move": {
+                "row": 11,
+                "col": 8
+              }
+            }
+          },
+          "thinker": {
+            "type": "result",
+            "id": 52,
+            "move": {
+              "row": 7,
+              "col": 6
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 746088,
+              "qnodes": 733666,
+              "elapsedMs": 2870,
+              "aborted": false,
+              "reason": "search",
+              "score": -1251
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 5599,
+          "elapsedMs": 37.30000000074506,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 25,
+      "row": 11,
+      "col": 5,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 24838,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 24838,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 26,
+      "row": 12,
+      "col": 4,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 4,
+      "search": {
+        "reason": "forced-block",
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 3
+        },
+        "depth": 0,
+        "candidates": 1
+      }
+    },
+    {
+      "move": 27,
+      "row": 5,
+      "col": 6,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 29972,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 29972,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 28,
+      "row": 4,
+      "col": 7,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 2018,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 1937,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 1979,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 5
+        },
+        "book": null,
+        "experts": {
+          "thinker": {
+            "type": "progress",
+            "id": 57,
+            "move": {
+              "row": 11,
+              "col": 8
+            },
+            "stats": {
+              "candidates": 14,
+              "depth": 6,
+              "score": -12947,
+              "target": "12, 9",
+              "move": {
+                "row": 11,
+                "col": 8
+              }
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 58,
+            "move": {
+              "row": 8,
+              "col": 3
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 4,
+              "score": -6085,
+              "target": "9, 4",
+              "move": {
+                "row": 8,
+                "col": 3
+              }
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 5599,
+          "elapsedMs": 41.69999999925494,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 29,
+      "row": 6,
+      "col": 3,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 29971,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 29971,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 30,
+      "row": 7,
+      "col": 3,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 21955,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 21,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 21899,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 5
+        },
+        "book": null,
+        "experts": {
+          "thinker": {
+            "type": "result",
+            "id": 63,
+            "move": {
+              "row": 7,
+              "col": 3
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 1043495,
+              "qnodes": 1034097,
+              "elapsedMs": 4298.900000002235,
+              "aborted": false,
+              "reason": "search",
+              "score": -2144
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 64,
+            "move": {
+              "row": 7,
+              "col": 3
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 6,
+              "score": 2177,
+              "target": "8, 4",
+              "move": {
+                "row": 7,
+                "col": 3
+              }
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 577,
+          "elapsedMs": 5.199999999254942,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 31,
+      "row": 4,
+      "col": 5,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 29971,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 29971,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 32,
+      "row": 3,
+      "col": 6,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 32080,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 31,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 32041,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 7
+        },
+        "book": null,
+        "experts": {
+          "thinker": {
+            "type": "result",
+            "id": 68,
+            "move": {
+              "row": 7,
+              "col": 2
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 2901271,
+              "qnodes": 2887328,
+              "elapsedMs": 11876.70000000298,
+              "aborted": false,
+              "reason": "search",
+              "score": -2591
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 69,
+            "move": {
+              "row": 11,
+              "col": 8
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 4,
+              "score": -10088,
+              "target": "12, 9",
+              "move": {
+                "row": 11,
+                "col": 8
+              }
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 29289,
+          "elapsedMs": 399.30000000074506,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 33,
+      "row": 9,
+      "col": 2,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 23241,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 23241,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 34,
+      "row": 8,
+      "col": 3,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 3,
+      "search": {
+        "reason": "forced-block",
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 11
+        },
+        "depth": 0,
+        "candidates": 1
+      }
+    },
+    {
+      "move": 35,
+      "row": 7,
+      "col": 2,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 29972,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 29972,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 36,
+      "row": 8,
+      "col": 1,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 4,
+      "search": {
+        "reason": "forced-block",
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 11
+        },
+        "depth": 0,
+        "candidates": 1
+      }
+    },
+    {
+      "move": 37,
+      "row": 10,
+      "col": 10,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 29971,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 29971,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 38,
+      "row": 8,
+      "col": 10,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 6727,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 6678,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 6686,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 11
+        },
+        "book": null,
+        "experts": {
+          "thinker": {
+            "type": "result",
+            "id": 73,
+            "move": {
+              "row": 11,
+              "col": 8
+            },
+            "stats": {
+              "depth": 7,
+              "configuredDepth": 7,
+              "candidates": 14,
+              "nodes": 428640,
+              "qnodes": 418512,
+              "elapsedMs": 1795.300000000745,
+              "aborted": false,
+              "reason": "search",
+              "score": 86407
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 74,
+            "move": {
+              "row": 8,
+              "col": 10
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 6,
+              "score": -914,
+              "target": "9, 11",
+              "move": {
+                "row": 8,
+                "col": 10
+              }
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 657,
+          "elapsedMs": 5.900000002235174,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 39,
+      "row": 9,
+      "col": 9,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 28038,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 28038,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 40,
+      "row": 11,
+      "col": 11,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 4,
+      "search": {
+        "reason": "forced-block",
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 1,
+          "four": 4,
+          "openThree": 14
+        },
+        "depth": 0,
+        "candidates": 1
+      }
+    },
+    {
+      "move": 41,
+      "row": 6,
+      "col": 8,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 29651,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 29651,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 42,
+      "row": 5,
+      "col": 9,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 5,
+      "search": {
+        "reason": "forced-block",
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 11
+        },
+        "depth": 0,
+        "candidates": 1
+      }
+    },
+    {
+      "move": 43,
+      "row": 5,
+      "col": 8,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 23076,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 23076,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 44,
+      "row": 3,
+      "col": 9,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 681,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 621,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 623,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 10
+        },
+        "book": null,
+        "experts": {
+          "thinker": {
+            "type": "progress",
+            "id": 78,
+            "move": {
+              "row": 4,
+              "col": 8
+            },
+            "stats": {
+              "candidates": 14,
+              "depth": 5,
+              "score": 955273,
+              "target": "5, 9",
+              "move": {
+                "row": 4,
+                "col": 8
+              }
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 79,
+            "move": {
+              "row": 4,
+              "col": 8
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 3,
+              "score": 976442,
+              "target": "5, 9",
+              "move": {
+                "row": 4,
+                "col": 8
+              }
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 1,
+          "elapsedMs": 0.09999999776482582,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 45,
+      "row": 4,
+      "col": 8,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 5154,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 5154,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 46,
+      "row": 4,
+      "col": 9,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 253,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 199,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 200,
+        "threats": {
+          "openFour": 0,
+          "four": 3,
+          "openThree": 11
+        },
+        "book": null,
+        "experts": {
+          "v10": {
+            "type": "progress",
+            "id": 85,
+            "move": {
+              "row": 3,
+              "col": 7
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 2,
+              "score": 268495,
+              "target": "4, 8",
+              "move": {
+                "row": 3,
+                "col": 7
+              }
+            }
+          },
+          "thinker": {
+            "type": "progress",
+            "id": 84,
+            "move": {
+              "row": 4,
+              "col": 9
+            },
+            "stats": {
+              "candidates": 14,
+              "depth": 4,
+              "score": 291031,
+              "target": "5, 10",
+              "move": {
+                "row": 4,
+                "col": 9
+              }
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 1,
+          "elapsedMs": 0.10000000149011612,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 47,
+      "row": 6,
+      "col": 9,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 102,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 102,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 48,
+      "row": 3,
+      "col": 7,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 217,
+      "search": {
+        "depth": 16,
+        "selDepth": 0,
+        "nodes": 0,
+        "score": null,
+        "engineTimeMs": 152,
+        "configuredDepth": 16,
+        "reason": "mix9-expert-checked",
+        "elapsedMs": 166,
+        "threats": {
+          "openFour": 0,
+          "four": 2,
+          "openThree": 10
+        },
+        "book": null,
+        "experts": {
+          "thinker": {
+            "type": "progress",
+            "id": 90,
+            "move": {
+              "row": 2,
+              "col": 9
+            },
+            "stats": {
+              "candidates": 14,
+              "depth": 3,
+              "score": 951102,
+              "target": "3, 10",
+              "move": {
+                "row": 2,
+                "col": 9
+              }
+            }
+          },
+          "v10": {
+            "type": "progress",
+            "id": 91,
+            "move": {
+              "row": 5,
+              "col": 5
+            },
+            "stats": {
+              "candidates": 20,
+              "depth": 1,
+              "score": 952426,
+              "target": "6, 6",
+              "move": {
+                "row": 5,
+                "col": 5
+              }
+            }
+          }
+        },
+        "proof": {
+          "proved": false,
+          "move": null,
+          "nodes": 1261,
+          "elapsedMs": 11.899999998509884,
+          "aborted": false
+        }
+      }
+    },
+    {
+      "move": 49,
+      "row": 9,
+      "col": 8,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 5,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 5,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 50,
+      "row": 7,
+      "col": 6,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 6,
+      "search": {
+        "reason": "forced-block",
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 1,
+          "four": 7,
+          "openThree": 10
+        },
+        "depth": 0,
+        "candidates": 1
+      }
+    },
+    {
+      "move": 51,
+      "row": 9,
+      "col": 11,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 3,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 3,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 52,
+      "row": 9,
+      "col": 10,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 4,
+      "search": {
+        "reason": "forced-block",
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 1,
+          "four": 7,
+          "openThree": 10
+        },
+        "depth": 0,
+        "candidates": 1
+      }
+    },
+    {
+      "move": 53,
+      "row": 6,
+      "col": 11,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 5,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 5,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 54,
+      "row": 6,
+      "col": 10,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 4,
+      "search": {
+        "reason": "forced-block",
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 1,
+          "four": 7,
+          "openThree": 11
+        },
+        "depth": 0,
+        "candidates": 1
+      }
+    },
+    {
+      "move": 55,
+      "row": 3,
+      "col": 8,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 1,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 1,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 56,
+      "row": 2,
+      "col": 8,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 4,
+      "search": {
+        "reason": "forced-block",
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 0,
+          "four": 7,
+          "openThree": 8
+        },
+        "depth": 0,
+        "candidates": 1
+      }
+    },
+    {
+      "move": 57,
+      "row": 3,
+      "col": 4,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 1,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 1,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 58,
+      "row": 2,
+      "col": 3,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 4,
+      "search": {
+        "reason": "forced-block",
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 0,
+          "four": 9,
+          "openThree": 10
+        },
+        "depth": 0,
+        "candidates": 1
+      }
+    },
+    {
+      "move": 59,
+      "row": 5,
+      "col": 5,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 1,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 1,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 60,
+      "row": 1,
+      "col": 7,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 49,
+      "search": {
+        "reason": "vcf-win",
+        "elapsedMs": 45,
+        "threats": {
+          "openFour": 0,
+          "four": 7,
+          "openThree": 11
+        },
+        "depth": 10
+      }
+    },
+    {
+      "move": 61,
+      "row": 2,
+      "col": 7,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 3,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 3,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 62,
+      "row": 0,
+      "col": 6,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 53,
+      "search": {
+        "reason": "vcf-win",
+        "elapsedMs": 49,
+        "threats": {
+          "openFour": 1,
+          "four": 7,
+          "openThree": 12
+        },
+        "depth": 10
+      }
+    },
+    {
+      "move": 63,
+      "row": 4,
+      "col": 10,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 142,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 142,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 64,
+      "row": 1,
+      "col": 9,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 129,
+      "search": {
+        "reason": "vcf-win",
+        "elapsedMs": 125,
+        "threats": {
+          "openFour": 0,
+          "four": 5,
+          "openThree": 9
+        },
+        "depth": 10
+      }
+    },
+    {
+      "move": 65,
+      "row": 2,
+      "col": 9,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 13,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 13,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 66,
+      "row": 4,
+      "col": 6,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 171,
+      "search": {
+        "reason": "vcf-win",
+        "elapsedMs": 167,
+        "threats": {
+          "openFour": 0,
+          "four": 5,
+          "openThree": 12
+        },
+        "depth": 10
+      }
+    },
+    {
+      "move": 67,
+      "row": 0,
+      "col": 10,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 1,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 1,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 68,
+      "row": 1,
+      "col": 6,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 185,
+      "search": {
+        "reason": "vcf-win",
+        "elapsedMs": 180,
+        "threats": {
+          "openFour": 0,
+          "four": 5,
+          "openThree": 11
+        },
+        "depth": 10
+      }
+    },
+    {
+      "move": 69,
+      "row": 2,
+      "col": 6,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 1,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 1,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 70,
+      "row": 1,
+      "col": 5,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 198,
+      "search": {
+        "reason": "vcf-win",
+        "elapsedMs": 194,
+        "threats": {
+          "openFour": 1,
+          "four": 5,
+          "openThree": 16
+        },
+        "depth": 10
+      }
+    },
+    {
+      "move": 71,
+      "row": 1,
+      "col": 8,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 1,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 1,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 72,
+      "row": 1,
+      "col": 3,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 164,
+      "search": {
+        "reason": "vcf-win",
+        "elapsedMs": 160,
+        "threats": {
+          "openFour": 0,
+          "four": 5,
+          "openThree": 11
+        },
+        "depth": 10
+      }
+    },
+    {
+      "move": 73,
+      "row": 1,
+      "col": 4,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 1,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 1,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 74,
+      "row": 3,
+      "col": 3,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 43,
+      "search": {
+        "reason": "vcf-win",
+        "elapsedMs": 35,
+        "threats": {
+          "openFour": 1,
+          "four": 7,
+          "openThree": 10
+        },
+        "depth": 10
+      }
+    },
+    {
+      "move": 75,
+      "row": 5,
+      "col": 3,
+      "player": 1,
+      "model": "v10champion",
+      "elapsedMs": 2,
+      "search": {
+        "depth": "config",
+        "configuredDepth": "config",
+        "elapsedMs": 2,
+        "aborted": false,
+        "reason": "rapfi-champion-official"
+      }
+    },
+    {
+      "move": 76,
+      "row": 0,
+      "col": 3,
+      "player": 2,
+      "model": "v10flash",
+      "elapsedMs": 5,
+      "search": {
+        "reason": "immediate-win",
+        "elapsedMs": 0,
+        "threats": {
+          "openFour": 1,
+          "four": 11,
+          "openThree": 8
+        },
+        "depth": 0,
+        "candidates": 1
+      }
+    }
+  ],
+  "result": "win",
+  "finishedAt": "2026-10-13T08:20:14.198Z",
+  "fingerprints": {
+    "public/gomoku-models/expert-core.js": "2158912ab7485768a876c5beca2cbb784a98e4ab9d2e36a1f67bc0f6102ded9a",
+    "public/gomoku-models/v9.js": "aefe1edef27af31de4e7aeedc45628d05466652cabb932d371e0f1987a2b92fc",
+    "public/gomoku-models/v9pro.js": "f11527025ca84c37dc0739b63bd1afd74e8da1861181ef88d315b1ed929736a6",
+    "public/gomoku-models/v9thinker.js": "24afab175af8d0acdd77a429a01d349e15541de0d6d1c7f84375267b607d45f1",
+    "public/gomoku-models/v10-core.js": "1e6083fdeca7158cb1c0df447eed36e7a210a10afc2a24de059be3f1909efc77",
+    "public/gomoku-models/v10.js": "1a3d869846684b706c857ec2eccf1013ba72eb57385243c653623700d0af927f",
+    "public/gomoku-models/v10ultra.js": "cca285fba4eadd7d0d75f647c3dfefc59e6f8f6d980e1c0eca2a37f3d51a6871",
+    "public/gomoku-models/v10ultra/worker.js": "392c155bf347daf7dfd2bd883475288d2e07befa49ff5755f533025a94305b49",
+    "public/gomoku-models/v10ultra/rapfi-single.wasm": "20bb495aff65ff3e7ebc46e70890e9d1f98bf5023ee0e2c7378651f5f36a5820",
+    "public/gomoku-models/v11candidate.js": "0410525e605c7db597fc5b90ffd7eaab34919d8cde14f1dc6958898eb24606e3",
+    "public/gomoku-models/v11candidate/worker.js": "efd270681b275f6faee80ac3638ec5106ecf404064aa8f1534f08d3a455c6794",
+    "public/gomoku-models/v10flash.js": "844aba060610dd6af105066445f8598830d4c1e7ed9493912a1247a188bc5b46",
+    "public/gomoku-models/v10flash/worker.js": "efd270681b275f6faee80ac3638ec5106ecf404064aa8f1534f08d3a455c6794",
+    "public/gomoku-models/v10thinker.js": "f005b7be34592bce9a51d25164ea7e134e3fe1d2b5f19a182f8971ff31361905",
+    "public/gomoku-models/v10thinker/worker.js": "697c657500099bdd51e71cf20a13e1fb0043a9e4d8cf6a6a65c56953461e1a60",
+    "public/gomoku-models/v10champion.js": "6306d10abc1073195802c7b915f5365ec6ee665b25b14f85b7e24b857b9811a8",
+    "public/gomoku-models/v10champion/worker.js": "706ebdf3a25284d67a0f18a191b41c00f9002aae72a597b08465c0897b42491d",
+    "public/gomoku-models/v10champion/rapfi-single.js": "8033edd23ab2131811b4a9bd09b42c0226f03b748fc668c0f51e8773e375039d",
+    "public/gomoku-models/v10champion/rapfi.data": "c0310699714725ce18aa33932b51a3dc51cc74ec2ca30c1cd3a536f35fa5e51f",
+    "public/gomoku-models/v10ultra/rapfi.data": "36b924671316bc28ca16b240cdc4435ce43a29417385c60ee316f4fa09f7496f",
+    "public/gomoku-models/experimental/models.js": "62e05f9c847d4de30c96e5b0a48c18e5994aee09b783fb94da74e873969743f3",
+    "public/gomoku-models/experimental/slowrenju/worker.js": "6fcf79971a8e845c6daf49f38a4f595f6fd36a52e3ea3be205ccd4b175b6c056",
+    "public/gomoku-models/experimental/slowrenju/engine.wasm": "05d0050a068d4f4711694e50e5f6fd0bdae9d09ed914cf3b6c69003a248c3f8f",
+    "public/gomoku-models/experimental/gomokuzero/worker.js": "78423c5487e978bcf5d6965fcfa7317aa8b955d01ce8f69ecc9fadfb71946ac3",
+    "public/gomoku-models/experimental/gomokuzero/model.onnx": "0a3698b965cb714e065caf3ddc7153b1f0151bb0361880bbd3f498f38711edcb"
+  }
+}

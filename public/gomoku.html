@@ -44,6 +44,11 @@
     .score { color: #ffd166; font-weight: bold; }
     .empty { color: #91a9b8; font-size: 14px; }
     .explain-panel { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(73,231,255,.16); }
+    .explain-source { display: flex; gap: 10px; align-items: baseline; margin: 6px 0 12px; font-size: 13px; }
+    .explain-source span { opacity: .7; }
+    .explain-grid { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+    .explain-stat small.explain-missing { display: block; margin-top: 2px; font-size: 10px; line-height: 1.25; font-weight: 400; opacity: .55; }
+
     .explain-toggle { display: flex; gap: 8px; align-items: center; color: #e7f7ff; font-size: 13px; }
     .explain-toggle input { min-width: 16px; width: 16px; height: 16px; margin: 0; accent-color: #C54A34; }
     .explain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
@@ -62,6 +67,28 @@
     .ai-countdown { min-height: 22px; margin: 8px auto 0; max-width: 520px; color: #ffd166; font-size: 13px; }
     .ai-countdown[hidden] { display: none; }
     .ai-countdown-track { height: 6px; margin-top: 5px; overflow: hidden; border: 1px solid rgba(255,209,102,.35); border-radius: 999px; background: rgba(8,17,38,.65); }
+    /* 实时胜率条：两侧按百分比占位，中间分界线随之移动。 */
+    .winrate { margin: 0 0 14px; }
+    .winrate-head, .winrate-values { display: flex; justify-content: space-between; font-size: 12px; letter-spacing: .3px; opacity: .85; }
+    .winrate-track { position: relative; display: flex; height: 14px; margin: 6px 0 4px; overflow: hidden; border: 1px solid rgba(73,231,255,.28); border-radius: 999px; background: rgba(8,17,38,.7); }
+    .winrate-fill { height: 100%; transition: width .35s ease; }
+    .winrate-fill-left { background: linear-gradient(90deg, rgba(73,231,255,.85), rgba(73,231,255,.5)); }
+    .winrate-fill-right { background: linear-gradient(90deg, rgba(255,120,170,.5), rgba(255,120,170,.85)); }
+    .winrate-values span { font-variant-numeric: tabular-nums; }
+    html[data-theme="light"] .winrate-track { background: #F6EFE8; border-color: #E7DDD5; }
+    /* 对战记录折叠框 */
+    .match-log { margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(73,231,255,.16); }
+    .match-log > summary { cursor: pointer; font-weight: 600; letter-spacing: .3px; }
+    .match-log-table-wrap { max-height: 320px; margin-top: 10px; overflow: auto; }
+    .match-log-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .match-log-table th, .match-log-table td { padding: 6px 8px; text-align: left; white-space: nowrap; border-bottom: 1px solid rgba(73,231,255,.12); }
+    .match-log-table th { position: sticky; top: 0; background: rgba(8,17,38,.92); font-weight: 600; opacity: .85; }
+    .match-log-table td.empty { text-align: center; opacity: .7; }
+    .match-log-table .outcome-win { color: #6ee7a8; }
+    .match-log-table .outcome-loss { color: #ff8fa3; }
+    .match-log-table .outcome-invalid, .match-log-table .outcome-surrender { color: #ffd166; }
+    html[data-theme="light"] .match-log { border-color: #E7DDD5; }
+    html[data-theme="light"] .match-log-table th { background: #FFF9F4; }
     .ai-countdown-fill { height: 100%; width: 100%; transform-origin: left center; background: linear-gradient(90deg, #49e7ff, #ffd166, #ff6b6b); transition: width .2s linear; }
     @media (max-width: 860px) { .game-layout { grid-template-columns: 1fr; } }
     @media (max-width: 520px) { .board { margin: 0 auto; } }
@@ -178,7 +205,7 @@
           <input id="nickname" maxlength="20" placeholder="请输入昵称" data-i18n-placeholder="games.nickPlaceholder" autocomplete="nickname" />
           <label for="modelVersion" data-i18n="gomoku.modelLabel">挑战模型</label>
           <select id="modelVersion" aria-label="选择挑战模型">
-            <option value="1">铭星V1</option><option value="2">铭星V2</option><option value="3">铭星V3</option><option value="6">铭星V6</option><option value="7">铭星V7</option><option value="8">铭星V8</option><option value="9" selected>铭星V9</option><option value="9.1">铭星V9Pro</option><option value="9.3">铭星V9Mesa</option><option value="9.2">铭星V9Thinker</option><option value="10">铭星V10</option><option value="10.2">铭星V10Mesa</option><option value="10.4">铭星V10Flash</option><option value="10.3">铭星V10Exp</option><option value="10.1">铭星V10Ultra</option><option value="10.5">铭星V10Thinker</option>
+            <option value="1">铭星V1</option><option value="2">铭星V2</option><option value="3">铭星V3</option><option value="6">铭星V6</option><option value="7">铭星V7</option><option value="8">铭星V8</option><option value="9" selected>铭星V9</option><option value="9.1">铭星V9Pro</option><option value="9.3">铭星V9Mesa</option><option value="9.2">铭星V9Thinker</option><option value="10">铭星V10</option><option value="10.2">铭星V10Mesa</option><option value="10.4">铭星V10Flash</option><option value="10.3">铭星V10Exp</option><option value="10.1">铭星V10Ultra</option><option value="10.5">铭星V10Thinker</option><option value="10.6" disabled>铭星V10Champion（待发布）</option>
           </select>
           <span class="hint" data-i18n="gomoku.nickSideHint">先填写昵称，再选择执子</span>
         </div>
@@ -193,11 +220,40 @@
         <div class="ai-countdown" id="aiCountdown" hidden aria-live="polite"><span id="aiCountdownLabel"></span><div class="ai-countdown-track"><div class="ai-countdown-fill" id="aiCountdownFill"></div></div></div>
         <div class="explain-panel">
           <label class="explain-toggle"><input type="checkbox" id="explainToggle"><span data-i18n="explain.toggle">显示 AI 决策面板</span></label>
-          <div id="explainPanelBody" hidden><h3 data-i18n="explain.title">AI 决策面板</h3><div class="explain-grid"><div class="explain-stat"><span data-i18n="explain.candidates">候选动作</span><strong id="explainCandidates">—</strong></div><div class="explain-stat"><span data-i18n="explain.depth">搜索深度</span><strong id="explainDepth">—</strong></div><div class="explain-stat"><span data-i18n="explain.score">评估分</span><strong id="explainScore">—</strong></div><div class="explain-stat"><span data-i18n="explain.target">目标落点</span><strong id="explainTarget">—</strong></div></div><p class="explain-note" data-i18n="explain.modeHint">仅在 AI 正在决策或 AI 辅助运行时更新。</p></div>
+          <div id="explainPanelBody" hidden>
+            <h3 data-i18n="explain.title">AI 决策面板</h3>
+            <p class="explain-source"><span data-i18n="explain.sourceLabel">决策来源</span><strong id="explainSource">—</strong></p>
+            <div class="explain-grid">
+              <div class="explain-stat"><span data-i18n="explain.explainSource">决策来源</span><strong id="explainSource">—</strong><small class="explain-missing" id="explainSourceNote" hidden></small></div>
+              <div class="explain-stat"><span data-i18n="explain.explainTarget">目标落点</span><strong id="explainTarget">—</strong><small class="explain-missing" id="explainTargetNote" hidden></small></div>
+              <div class="explain-stat"><span data-i18n="explain.explainDepth">搜索深度</span><strong id="explainDepth">—</strong><small class="explain-missing" id="explainDepthNote" hidden></small></div>
+              <div class="explain-stat"><span data-i18n="explain.explainSelDepth">选择深度</span><strong id="explainSelDepth">—</strong><small class="explain-missing" id="explainSelDepthNote" hidden></small></div>
+              <div class="explain-stat"><span data-i18n="explain.explainScore">评估分</span><strong id="explainScore">—</strong><small class="explain-missing" id="explainScoreNote" hidden></small></div>
+              <div class="explain-stat"><span data-i18n="explain.explainCandidates">候选动作</span><strong id="explainCandidates">—</strong><small class="explain-missing" id="explainCandidatesNote" hidden></small></div>
+              <div class="explain-stat"><span data-i18n="explain.explainNodes">搜索节点</span><strong id="explainNodes">—</strong><small class="explain-missing" id="explainNodesNote" hidden></small></div>
+              <div class="explain-stat"><span data-i18n="explain.explainEngineTime">引擎用时</span><strong id="explainEngineTime">—</strong><small class="explain-missing" id="explainEngineTimeNote" hidden></small></div>
+              <div class="explain-stat"><span data-i18n="explain.explainTotalTime">总用时</span><strong id="explainTotalTime">—</strong><small class="explain-missing" id="explainTotalTimeNote" hidden></small></div>
+            </div>
+            <p class="explain-note" data-i18n="explain.modeHint">仅在 AI 正在决策或 AI 辅助运行时更新；标注为“该引擎未提供”的字段表示这个引擎不上报该项。</p>
+          </div>
+        </div>
+        <div class="winrate" id="winratePanel" hidden aria-live="polite">
+          <div class="winrate-head"><span id="winrateLeftLabel">你</span><span id="winrateRightLabel">铭星 V9</span></div>
+          <div class="winrate-track"><div class="winrate-fill winrate-fill-left" id="winrateLeftFill"></div><div class="winrate-fill winrate-fill-right" id="winrateRightFill"></div></div>
+          <div class="winrate-values"><span id="winrateLeftValue">—</span><span id="winrateRightValue">—</span></div>
         </div>
         <div class="board" id="board"></div>
         <p class="result" id="result" aria-live="polite"></p>
         <button id="gameActionButton" onclick="handleGameAction()" data-i18n="games.restart">重新开始</button>
+        <details class="match-log panel" id="matchLogPanel">
+          <summary data-i18n="gomoku.logTitle">对战记录（最近 1500 条）</summary>
+          <p class="hint" data-i18n="gomoku.logHint">超过 10 分钟没有结果的记录会标记为无效对局，但记录仍会保留。</p>
+          <div class="match-log-table-wrap"><table class="match-log-table"><thead><tr>
+            <th data-i18n="gomoku.logTime">时间</th><th data-i18n="gomoku.logNickname">昵称</th><th data-i18n="gomoku.logMode">模式</th>
+            <th data-i18n="gomoku.logSides">执子情况</th><th data-i18n="gomoku.logDuration">用时</th><th data-i18n="gomoku.logMoves">步数</th>
+            <th data-i18n="gomoku.logWinner">获胜方</th>
+          </tr></thead><tbody id="matchLogBody"><tr><td colspan="7" class="empty" data-i18n="common.loading">正在读取…</td></tr></tbody></table></div>
+        </details>
       </main>
       <aside class="leaderboard panel">
         <h2 data-i18n="games.leaderboard">排行榜</h2>
@@ -246,6 +302,8 @@
     let legacyEngineReady = Promise.resolve();
     let legacyLoadedVersion = null;
     let legacyMoveRequestId = 0;
+    // 可挑战/可对战版本。V10Champion（10.6）刻意不在此列：它在页面上只作为
+    // “待发布”条目展示，人机对战与模型对战都不可选。
     const MODEL_VERSIONS = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.3, 9.2, 10, 10.2, 10.4, 10.3, 10.1, 10.5];
     const modelVersionSelect = document.getElementById('modelVersion');
     const gameModeSelect = document.getElementById('gameMode');
@@ -357,7 +415,119 @@
     populateBattleModels();
     let explainEnabled = false;
     const explainToggle = document.getElementById('explainToggle');
-    function updateExplain(data = {}) { if (!explainEnabled) return; document.getElementById('explainCandidates').textContent = data.candidates ?? '—'; document.getElementById('explainDepth').textContent = data.depth ?? '—'; document.getElementById('explainScore').textContent = data.score ?? '—'; document.getElementById('explainTarget').textContent = data.target ?? '—'; }
+    // 各引擎上报的字段名不完全一致，这里做一次归一化；缺失的字段明确标出原因，
+    // 而不是笼统显示一个破折号。
+    function normalizeSearchTelemetry(data = {}) {
+      const pick = (...keys) => { for (const key of keys) { const value = data[key]; if (value !== undefined && value !== null && value !== '') return value; } return undefined; };
+      const reasonLabels = {
+        'immediate-win': '立即连五', 'forced-block': '必防对手连五', 'vcf-win': '自研 VCF 必胜',
+        'opening-book': '开局先验', 'rapfi-nnue': 'Rapfi 神经网络搜索', 'rapfi-nnue-champion': 'Rapfi 搜索（冠军配置）',
+        'rapfi-thinker': 'Rapfi 搜索', 'rapfi-mix9-flash': 'Rapfi 搜索（V10Flash）', 'rapfi-mix9-candidate': 'Rapfi 搜索（候选）',
+        'mix9-expert-checked': '自由网 + 专家复核', 'expert-proved-win': '专家已证明必胜',
+        'expert-rejected-forced-loss': '改用专家备选（原落点被证明必败）', 'no-proven-safe-alternative': '无已证明安全的备选',
+        search: '极大极小搜索', block: '必防', opening: '开局库', win: '已证明胜着', VCF: '连续冲四证明',
+        'completed-iteration-deadline': '预算内完成迭代', loading: '加载资源'
+      };
+      const reason = pick('reason');
+      return {
+        source: reasonLabels[reason] || (reason ? String(reason) : undefined),
+        target: pick('target'),
+        depth: pick('depth', 'completedDepth'),
+        configuredDepth: pick('configuredDepth'),
+        selDepth: pick('selDepth'),
+        score: pick('score', 'evaluation'),
+        candidates: pick('candidates'),
+        nodes: pick('nodes'),
+        qnodes: pick('qnodes'),
+        engineTimeMs: pick('engineTimeMs'),
+        elapsedMs: pick('elapsedMs'),
+        aborted: data.aborted,
+        threats: data.threats,
+        experts: data.experts,
+        book: data.book,
+        proof: data.proof
+      };
+    }
+    function explainNumber(value, suffix) {
+      if (value === undefined || value === null) return undefined;
+      const n = Number(value);
+      if (!Number.isFinite(n)) return undefined;
+      return (Math.abs(n) >= 100000 ? n.toLocaleString('en-US') : String(n)) + (suffix || '');
+    }
+    function formatMs(value) {
+      if (value === undefined || value === null) return undefined;
+      const n = Number(value);
+      if (!Number.isFinite(n)) return undefined;
+      return n < 1000 ? Math.round(n) + ' ms' : (n / 1000).toFixed(2) + ' s';
+    }
+    function setExplainField(id, value, missingNote) {
+      const el = document.getElementById(id);
+      const note = document.getElementById(id + 'Note');
+      if (!el) return;
+      if (value === undefined || value === null) {
+        el.textContent = '—';
+        if (note) { note.textContent = missingNote || ''; note.hidden = !missingNote; }
+        return;
+      }
+      el.textContent = String(value);
+      if (note) { note.textContent = ''; note.hidden = true; }
+    }
+    // 不同引擎上报的字段差别很大，这里按引擎族给出可解释的缺失原因，
+    // 避免面板只显示一个没有信息量的破折号。
+    function explainMissingNote(field) {
+      const version = isModelBattle ? (winrateLeftColor === 1 ? blackModelVersion : whiteModelVersion) : activeModelVersion;
+      const rapfi = [10.1, 10.5, 10.6].includes(Number(version));
+      const minimax = [9, 9.1, 9.2, 10].includes(Number(version));
+      if (field === 'score') {
+        if (rapfi) return '该 Rapfi 精简构建未编译详细遥测，引擎不上报评估分';
+        if (minimax) return '纯战术着（立即连五/必防）不产生评估分';
+        return '该引擎未提供评估分';
+      }
+      if (field === 'nodes') return rapfi ? '该 Rapfi 精简构建不上报节点数' : '该引擎未上报节点数';
+      if (field === 'candidates') {
+        if (rapfi) return '该 Rapfi 精简构建不上报候选数';
+        return '该引擎未上报候选数';
+      }
+      if (field === 'engineTimeMs') return rapfi ? '该 Rapfi 精简构建不上报引擎内部用时' : '该引擎未上报引擎用时';
+      if (field === 'selDepth') return '该引擎未上报选择深度';
+      return '该引擎未提供';
+    }
+    function updateExplain(data = {}) {
+      if (!explainEnabled) return;
+      const t = normalizeSearchTelemetry(data);
+      setExplainField('explainSource', t.source);
+      setExplainField('explainTarget', t.target);
+      const notDepth = '该引擎未提供';
+      setExplainField('explainDepth',
+        t.depth === undefined ? undefined
+          : (t.configuredDepth && Number(t.configuredDepth) !== Number(t.depth) ? t.depth + ' / 上限 ' + t.configuredDepth : t.depth),
+        notDepth);
+      setExplainField('explainSelDepth', t.selDepth, notDepth);
+      // 评估分：把必胜/必败的边界值翻译成人话，便于读。
+      let scoreText;
+      if (t.score !== undefined) {
+        const n = Number(t.score);
+        scoreText = Number.isFinite(n) && Math.abs(n) >= 1000000 ? (n > 0 ? '必胜' : '必败') : String(t.score);
+      }
+      setExplainField('explainScore', scoreText, explainMissingNote('score'));
+      setExplainField('explainCandidates',
+        t.candidates === undefined ? undefined : t.candidates + (t.qnodes ? '（静态 ' + t.qnodes + '）' : ''),
+        explainMissingNote('candidates'));
+      setExplainField('explainNodes',
+        t.nodes === undefined ? undefined : explainNumber(t.nodes),
+        explainMissingNote('nodes'));
+      setExplainField('explainEngineTime', formatMs(t.engineTimeMs), explainMissingNote('engineTimeMs'));
+
+      // 来源细节：专家观测、开局先验、证明结果，有则追加在来源行后面。
+      const details = [];
+      if (t.book) details.push('先验：' + (t.book.move ? (t.book.move.row + 1) + ',' + (t.book.move.col + 1) : '命中') + (t.book.games ? '（' + t.book.games + ' 局）' : ''));
+      if (t.experts) { const names = Object.keys(t.experts); if (names.length) details.push('专家：' + names.join('、')); }
+      if (t.threats) details.push('威胁：活四 ' + (t.threats.openFour || 0) + ' / 冲四 ' + (t.threats.four || 0) + ' / 活三 ' + (t.threats.openThree || 0));
+      if (t.proof && t.proof.proved === false) details.push('证明器：未发现强制胜着');
+      if (Number(t.score) && Math.abs(Number(t.score)) >= 1000000) details.push('已找到必胜线');
+      const sourceEl = document.getElementById('explainSource');
+      if (sourceEl) sourceEl.textContent = (t.source || '—') + (details.length ? ' · ' + details.join(' · ') : '');
+    }
     explainToggle.addEventListener('change', () => { explainEnabled = explainToggle.checked; document.getElementById('explainPanelBody').hidden = !explainEnabled; });
 
     const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
@@ -487,6 +657,10 @@
       gameInProgress = true;
       document.getElementById('result').textContent = '';
       updateGameActionButton();
+      // 开局即展示胜率条（50% 起步）并登记一条待回写的对战记录。
+      setWinRateLabels();
+      renderWinRate({ left: 0.5, right: 0.5 });
+      void startMatchLog();
     }
 
     function queueAIMove(delay = 0, sessionToken = gameSessionToken) {
@@ -540,6 +714,11 @@
         return;
       }
       document.getElementById('result').textContent += ClubI18n.t('gomoku.scoreSaved');
+      await finishMatchLog({
+        outcome: result, moves: Math.max(1, moveCount), durationMs,
+        score, winnerLabel: result === 'win' ? nickname : getModelName(activeModelVersion),
+        winnerColor: result === 'draw' ? null : (result === 'win' ? playerColor : aiColor)
+      });
       await loadLeaderboard();
     }
 
@@ -580,8 +759,17 @@
       if (uploaded < outcomes.filter(outcome => canUploadTrainingResult(outcome.version, outcome.result)).length) {
         resultElement.textContent += ` · 部分训练数据上传失败${uploadError ? `（${escapeHtml(uploadError)}）` : ''}`;
       }
+      await finishMatchLog({
+        outcome: winnerColor === null ? 'draw' : 'win',
+        moves: Math.max(1, moveCount),
+        durationMs: gameStartedAt ? Date.now() - gameStartedAt : null,
+        score: null,
+        winnerLabel: winnerVersion ? getModelName(winnerVersion) : null,
+        winnerColor
+      });
       isModelBattle = false;
       releaseGameSetup();
+      hideWinRate();
     }
 
     function releaseGameSetup() {
@@ -670,6 +858,10 @@
       playerColor = color;
       aiColor = color === 1 ? 2 : 1;
       currentPlayer = 1; // 总是黑子先手
+      // setPlayerColor 先开局后定位颜色，因此这里要再刷新一次胜率条标签，
+      // 否则开局那一刻 playerColor 仍是 null，面板会被判定为无对局而隐藏。
+      setWinRateLabels();
+      renderWinRate({ left: 0.5, right: 0.5 });
       const statusElement = document.getElementById('status');
       statusElement.innerHTML = playerColor === 1 ? ClubI18n.t('gomoku.yourTurnBlack') : ClubI18n.t('gomoku.aiThinkingBlack');
       updateGameActionButton();
@@ -822,6 +1014,246 @@
     // 放置棋子
     let lastAiMove = null;
 
+    // ---- 实时胜率（启发式威胁评估）------------------------------------------
+    // 每步之后按“该方落地后能形成的强制威胁”估算一个 0-100% 的胜率，两侧共用一条
+    // 进度条按百分比占位。它是轻量的启发式估计，不是引擎的严格胜率；连五/活四这类
+    // 决定性棋形会直接把数值推到边界。
+    const WINRATE_DIRS = [[0,1],[1,0],[1,1],[1,-1]];
+    function lineWonAt(b, row, col, color) {
+      return WINRATE_DIRS.some(([dr,dc]) => {
+        let total = 1;
+        for (const sign of [-1,1]) for (let n=1;n<BOARD_SIZE;n++) {
+          if (b[row+sign*dr*n]?.[col+sign*dc*n] !== color) break;
+          total++;
+        }
+        return total >= 5;
+      });
+    }
+    // 该颜色当前能落成的强制威胁：连五点、活四（两条成五线）、冲四（一条成五线）。
+    function threatProfile(b, color) {
+      // 逐方向精确判定，而不是把“成五点总数”直接当活四/冲四：
+      //   活四 = 某方向填一子后形成四连，且两端各有一个成五点（无法单点封堵）；
+      //   冲四 = 某方向填一子后形成四连，但只有一个成五点（对手必挡）；
+      //   活三 = 填一子形成三连且两端开阔，下一步可成活四。
+      // 把成五点数量直接当活四会误判被堵死的连子，因此这里按方向分别计数。
+      let five = 0, openFour = 0, four = 0, openThree = 0;
+      const runAt = (board, row, col, color, dr, dc) => {
+        let run = 1;
+        for (const sign of [-1,1]) for (let n=1;n<BOARD_SIZE;n++) {
+          if (board[row+sign*dr*n]?.[col+sign*dc*n] !== color) break;
+          run++;
+        }
+        return run;
+      };
+      const completionPoints = (board, row, col, color, dr, dc) => {
+        // 这条线上能补成五的空点数量（用于区分活四与冲四）。
+        let points = 0;
+        for (let off=-4; off<=4; off++) {
+          if (!off) continue;
+          const r = row+dr*off, c = col+dc*off;
+          if (r<0 || r>=BOARD_SIZE || c<0 || c>=BOARD_SIZE || board[r][c]) continue;
+          board[r][c] = color;
+          const made = lineWonAt(board, r, c, color);
+          board[r][c] = 0;
+          if (made) points++;
+        }
+        return points;
+      };
+      for (let row=0; row<BOARD_SIZE; row++) for (let col=0; col<BOARD_SIZE; col++) {
+        if (b[row][col]) continue;
+        b[row][col] = color;
+        if (lineWonAt(b, row, col, color)) { five++; b[row][col] = 0; continue; }
+        let sawOpenFour = false, sawFour = false, sawOpenThree = false;
+        for (const [dr,dc] of WINRATE_DIRS) {
+          const run = runAt(b, row, col, color, dr, dc);
+          if (run < 3) continue;
+          const points = completionPoints(b, row, col, color, dr, dc);
+          if (run >= 4) {
+            if (points >= 2) sawOpenFour = true;
+            else if (points === 1) sawFour = true;
+          } else if (points >= 2) {
+            sawOpenThree = true;
+          }
+        }
+        b[row][col] = 0;
+        if (sawOpenFour) openFour++;
+        else if (sawFour) four++;
+        else if (sawOpenThree) openThree++;
+      }
+      return { five, openFour, four, openThree };
+    }
+
+    // 把双方威胁折算成一方胜率；双方都无威胁时回落到 50%。
+    function estimateWinRate(mine, theirs) {
+      if (mine.five) return 1;
+      if (theirs.five) return 0;
+      // 活四近乎必胜，冲四强威胁，活三只是发展中的威胁，权重依次递减。
+      const strength = (t) => t.openFour * 6 + t.four * 1.6 + (t.openThree || 0) * 0.35;
+      const m = strength(mine), o = strength(theirs);
+      if (!m && !o) return 0.5;
+      return 1 / (1 + Math.exp(-(m - o) / 3));
+    }
+    // leftColor 为左侧一方：人机对战是玩家，模型对战是黑方。
+    function winRateFor(leftColor) {
+      const left = threatProfile(board, leftColor);
+      const right = threatProfile(board, 3 - leftColor);
+      const leftRate = estimateWinRate(left, right);
+      return { left: leftRate, right: 1 - leftRate };
+    }
+    let winrateLeftColor = 1;
+    function setWinRateLabels() {
+      const panel = document.getElementById('winratePanel');
+      const leftLabel = document.getElementById('winrateLeftLabel');
+      const rightLabel = document.getElementById('winrateRightLabel');
+      if (isModelBattle) {
+        winrateLeftColor = 1;
+        leftLabel.textContent = getModelName(blackModelVersion) + '（' + ClubI18n.t('gomoku.black') + '）';
+        rightLabel.textContent = getModelName(whiteModelVersion) + '（' + ClubI18n.t('gomoku.white') + '）';
+        panel.hidden = false;
+      } else if (playerColor) {
+        winrateLeftColor = playerColor;
+        const nickname = document.getElementById('nickname').value.trim() || ClubI18n.t('gomoku.you');
+        leftLabel.textContent = nickname + '（' + ClubI18n.t(playerColor === 1 ? 'gomoku.black' : 'gomoku.white') + '）';
+        rightLabel.textContent = getModelName(activeModelVersion) + '（' + ClubI18n.t(playerColor === 1 ? 'gomoku.white' : 'gomoku.black') + '）';
+        panel.hidden = false;
+      } else {
+        panel.hidden = true;
+      }
+    }
+    function renderWinRate(forced) {
+      const panel = document.getElementById('winratePanel');
+      if (panel.hidden) return;
+      const rates = forced || winRateFor(winrateLeftColor);
+      const leftPercent = Math.round(rates.left * 100);
+      document.getElementById('winrateLeftFill').style.width = leftPercent + '%';
+      document.getElementById('winrateRightFill').style.width = (100 - leftPercent) + '%';
+      document.getElementById('winrateLeftValue').textContent = leftPercent + '%';
+      document.getElementById('winrateRightValue').textContent = (100 - leftPercent) + '%';
+    }
+    function hideWinRate() {
+      document.getElementById('winratePanel').hidden = true;
+    }
+
+    // ---- 对战记录日志 ------------------------------------------------------
+    // 开局时生成指纹并登记一条 pending 记录，结束后按同一指纹回写结果。
+    // 10 分钟没有结果的记录由查询侧判定为“无效对局”，记录本身保留。
+    const MATCH_LOG_LIMIT = 1500;
+    const MATCH_LOG_STALE_MS = 600000;
+    let currentMatchFingerprint = null;
+    function newMatchFingerprint() {
+      const random = (window.crypto?.randomUUID?.() || (Date.now().toString(36) + Math.random().toString(36).slice(2, 12)));
+      return ('gm-' + random).slice(0, 48);
+    }
+    async function startMatchLog() {
+      currentMatchFingerprint = newMatchFingerprint();
+      if (!supabaseClient || typeof supabaseClient.rpc !== 'function') return;
+      try {
+        await supabaseClient.rpc('start_gomoku_match', {
+          p_fingerprint: currentMatchFingerprint,
+          p_nickname: isModelBattle ? null : (document.getElementById('nickname').value.trim() || null),
+          p_mode: isModelBattle ? 'model-battle' : 'human',
+          p_model_version: isModelBattle ? blackModelVersion : activeModelVersion,
+          p_opponent_model_version: isModelBattle ? whiteModelVersion : null,
+          p_player_color: isModelBattle ? null : playerColor,
+          p_ai_color: isModelBattle ? null : aiColor
+        });
+      } catch (_error) {
+        // 日志不影响对局本身。
+      }
+    }
+    async function finishMatchLog({ outcome, moves, durationMs, score, winnerLabel, winnerColor }) {
+      if (!currentMatchFingerprint) return;
+      const fingerprint = currentMatchFingerprint;
+      currentMatchFingerprint = null;
+      if (!supabaseClient || typeof supabaseClient.rpc !== 'function') return;
+      try {
+        await supabaseClient.rpc('finish_gomoku_match', {
+          p_fingerprint: fingerprint,
+          p_outcome: outcome,
+          p_moves: moves ?? null,
+          p_duration_ms: durationMs ?? null,
+          p_score: score ?? null,
+          p_winner_label: winnerLabel ?? null,
+          p_winner_color: winnerColor ?? null
+        });
+        void loadMatchLog();
+      } catch (_error) {
+        // 忽略日志写入失败。
+      }
+    }
+    function formatDuration(ms) {
+      if (ms === null || ms === undefined) return '—';
+      const total = Math.max(0, Math.round(ms / 1000));
+      const minutes = Math.floor(total / 60);
+      return minutes ? minutes + '分' + (total % 60) + '秒' : total + '秒';
+    }
+    function matchLogTime(iso) {
+      const date = iso ? new Date(iso) : null;
+      if (!date || Number.isNaN(date.getTime())) return '—';
+      const pad = (n) => String(n).padStart(2, '0');
+      return pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':' + pad(date.getSeconds());
+    }
+    function modeLabel(row) {
+      return row.mode === 'model-battle' ? ClubI18n.t('gomoku.logModeBattle') : ClubI18n.t('gomoku.logModeHuman');
+    }
+    // 执子情况：人机显示「昵称（黑） vs 铭星Vx（白）」，模型对战显示「铭星Va（黑） vs 铭星Vb（白）」。
+    function sidesLabel(row) {
+      const colorName = (color) => ClubI18n.t(color === 1 ? 'gomoku.black' : 'gomoku.white');
+      if (row.mode === 'model-battle') {
+        return getModelName(Number(row.model_version)) + '（' + colorName(1) + '） vs ' +
+               getModelName(Number(row.opponent_model_version)) + '（' + colorName(2) + '）';
+      }
+      const nickname = row.nickname || ClubI18n.t('gomoku.you');
+      const ai = getModelName(Number(row.model_version));
+      const playerColor = row.player_color === 2 ? 2 : 1;
+      return playerColor === 1
+        ? nickname + '（' + colorName(1) + '） vs ' + ai + '（' + colorName(2) + '）'
+        : ai + '（' + colorName(1) + '） vs ' + nickname + '（' + colorName(2) + '）';
+    }
+    // 获胜方：谁赢了 + 执什么颜色；投降/无效/进行中分别说明。
+    function winnerCell(row) {
+      let outcome = row.outcome;
+      if (!outcome) {
+        const started = row.started_at ? new Date(row.started_at).getTime() : 0;
+        outcome = (Date.now() - started > MATCH_LOG_STALE_MS) ? 'invalid' : 'pending';
+      }
+      const colorName = (color) => ClubI18n.t(color === 1 ? 'gomoku.black' : 'gomoku.white');
+      if (outcome === 'draw') return '<span class="outcome-draw">' + ClubI18n.t('gomoku.logDraw') + '</span>';
+      if (outcome === 'invalid') return '<span class="outcome-invalid">' + ClubI18n.t('gomoku.logInvalid') + '</span>';
+      if (outcome === 'pending') return '<span class="outcome-pending">' + ClubI18n.t('gomoku.logPending') + '</span>';
+      const surrendered = outcome === 'surrender';
+      let winnerColor = row.winner_color;
+      if (surrendered && !winnerColor) winnerColor = row.player_color === 1 ? 2 : 1;
+      const who = row.winner_label ? escapeHtml(row.winner_label) : (winnerColor ? colorName(winnerColor) : '');
+      const tag = surrendered ? ClubI18n.t('gomoku.logSurrender') : ClubI18n.t('gomoku.logWin');
+      return '<span class="outcome-' + outcome + '">' + tag + '</span> · ' + who +
+        (winnerColor ? '（' + colorName(winnerColor) + '）' : '');
+    }
+    async function loadMatchLog() {
+      const body = document.getElementById('matchLogBody');
+      if (!body) return;
+      if (!supabaseClient) { body.innerHTML = '<tr><td colspan="7" class="empty">' + ClubI18n.t('gomoku.lbNoInit') + '</td></tr>'; return; }
+      const { data, error } = await supabaseClient.from('gomoku_match_log')
+        .select('nickname, mode, model_version, opponent_model_version, player_color, started_at, duration_ms, moves, outcome, winner_label, winner_color')
+        .order('started_at', { ascending: false })
+        .limit(MATCH_LOG_LIMIT);
+      if (error) { body.innerHTML = '<tr><td colspan="7" class="empty">' + ClubI18n.t('gomoku.logUnavailable') + '</td></tr>'; return; }
+      if (!data || !data.length) { body.innerHTML = '<tr><td colspan="7" class="empty">' + ClubI18n.t('gomoku.logEmpty') + '</td></tr>'; return; }
+      body.innerHTML = data.map((row) => '<tr>' +
+        '<td>' + matchLogTime(row.started_at) + '</td>' +
+        '<td>' + escapeHtml(row.nickname || '—') + '</td>' +
+        '<td>' + modeLabel(row) + '</td>' +
+        '<td>' + escapeHtml(sidesLabel(row)) + '</td>' +
+        '<td>' + formatDuration(row.duration_ms) + '</td>' +
+        '<td>' + (row.moves ?? '—') + '</td>' +
+        '<td>' + winnerCell(row) + '</td>' +
+      '</tr>').join('');
+    }
+    document.getElementById('matchLogPanel')?.addEventListener('toggle', (event) => {
+      if (event.target.open) void loadMatchLog();
+    });
+
+
     function placePiece(row, col, player) {
       board[row][col] = player;
       gameMoves.push({ row, col, player });
@@ -835,6 +1267,7 @@
         cell.classList.add('last-ai-move');
         lastAiMove = { row, col };
       }
+      renderWinRate();
     }
 
     // 检查棋盘是否已满（平局）
@@ -934,6 +1367,12 @@
       document.getElementById('status').textContent = ClubI18n.t('gomoku.youSurrendered');
       try {
         await finishGame('loss', { uploadTraining: false });
+        await finishMatchLog({
+          outcome: 'surrender', moves: Math.max(1, moveCount),
+          durationMs: gameStartedAt ? Date.now() - gameStartedAt : null,
+          score: 0, winnerLabel: isModelBattle ? null : getModelName(activeModelVersion),
+          winnerColor: isModelBattle ? null : aiColor
+        });
       } finally {
         gameActionBusy = false;
         updateGameActionButton();
@@ -973,6 +1412,8 @@
       window.GomokuV10Exp.clearCache();
       window.GomokuV10Flash.clearCache();
       stopAiCountdown();
+      hideWinRate();
+      currentMatchFingerprint = null;
       initBoard();
       document.getElementById('status').innerHTML = ClubI18n.t('gomoku.chooseSide') + ': <button onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';
       updateGameActionButton();

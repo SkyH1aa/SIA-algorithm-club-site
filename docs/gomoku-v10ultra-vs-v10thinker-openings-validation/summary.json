@@ -1,0 +1,153 @@
+{
+  "generatedAt": "2026-10-13T06:46:44.517Z",
+  "complete": true,
+  "pair": [
+    "v10ultra",
+    "v10thinker"
+  ],
+  "protocol": "fixed opening, both engines play it twice with colors swapped",
+  "openings": [
+    {
+      "id": "center",
+      "plies": 1,
+      "games": [
+        {
+          "black": "v10ultra",
+          "white": "v10thinker",
+          "winner": "v10ultra",
+          "moves": 69
+        },
+        {
+          "black": "v10thinker",
+          "white": "v10ultra",
+          "winner": "v10thinker",
+          "moves": 19
+        }
+      ]
+    },
+    {
+      "id": "diag-near",
+      "plies": 2,
+      "games": [
+        {
+          "black": "v10ultra",
+          "white": "v10thinker",
+          "winner": "v10ultra",
+          "moves": 39
+        },
+        {
+          "black": "v10thinker",
+          "white": "v10ultra",
+          "winner": "v10thinker",
+          "moves": 27
+        }
+      ]
+    },
+    {
+      "id": "straight-near",
+      "plies": 2,
+      "games": [
+        {
+          "black": "v10ultra",
+          "white": "v10thinker",
+          "winner": "v10ultra",
+          "moves": 41
+        },
+        {
+          "black": "v10thinker",
+          "white": "v10ultra",
+          "winner": "v10thinker",
+          "moves": 37
+        }
+      ]
+    },
+    {
+      "id": "diag-far",
+      "plies": 2,
+      "games": [
+        {
+          "black": "v10ultra",
+          "white": "v10thinker",
+          "winner": "v10ultra",
+          "moves": 77
+        },
+        {
+          "black": "v10thinker",
+          "white": "v10ultra",
+          "winner": "v10thinker",
+          "moves": 43
+        }
+      ]
+    },
+    {
+      "id": "exchange-4",
+      "plies": 4,
+      "games": [
+        {
+          "black": "v10ultra",
+          "white": "v10thinker",
+          "winner": "v10ultra",
+          "moves": 35
+        },
+        {
+          "black": "v10thinker",
+          "white": "v10ultra",
+          "winner": "v10thinker",
+          "moves": 21
+        }
+      ]
+    },
+    {
+      "id": "spread-5",
+      "plies": 5,
+      "games": [
+        {
+          "black": "v10ultra",
+          "white": "v10thinker",
+          "winner": null,
+          "moves": 225
+        },
+        {
+          "black": "v10thinker",
+          "white": "v10ultra",
+          "winner": "v10thinker",
+          "moves": 81
+        }
+      ]
+    }
+  ],
+  "models": {
+    "v10ultra": {
+      "wins": 5,
+      "losses": 6,
+      "draws": 1,
+      "asBlack": {
+        "wins": 5,
+        "losses": 1
+      },
+      "asWhite": {
+        "wins": 0,
+        "losses": 6
+      },
+      "moves": 341,
+      "meanMs": 231,
+      "maxMs": 2854
+    },
+    "v10thinker": {
+      "wins": 6,
+      "losses": 5,
+      "draws": 1,
+      "asBlack": {
+        "wins": 6,
+        "losses": 0
+      },
+      "asWhite": {
+        "wins": 0,
+        "losses": 6
+      },
+      "moves": 341,
+      "meanMs": 2058,
+      "maxMs": 49996
+    }
+  }
+}

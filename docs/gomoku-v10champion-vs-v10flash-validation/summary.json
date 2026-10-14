@@ -1,0 +1,67 @@
+{
+  "generatedAt": "2026-10-13T07:45:40.960Z",
+  "complete": true,
+  "pair": [
+    "v10champion",
+    "v10flash"
+  ],
+  "rule": "freestyle; 15x15; >=5 wins; no opening constraints",
+  "matches": [
+    {
+      "black": "v10champion",
+      "white": "v10flash",
+      "winner": "v10flash",
+      "moves": 26,
+      "file": "v10champion-black-v10flash.json"
+    },
+    {
+      "black": "v10flash",
+      "white": "v10champion",
+      "winner": "v10flash",
+      "moves": 35,
+      "file": "v10flash-black-v10champion.json"
+    }
+  ],
+  "models": {
+    "v10champion": {
+      "wins": 0,
+      "losses": 2,
+      "draws": 0,
+      "colors": {
+        "black": "loss",
+        "white": "loss"
+      },
+      "reasons": {
+        "rapfi-champion-official": 30
+      },
+      "bookMoves": 0,
+      "moves": 30,
+      "totalMs": 453,
+      "meanMs": 15,
+      "maxMs": 224,
+      "medianMs": 2
+    },
+    "v10flash": {
+      "wins": 2,
+      "losses": 0,
+      "draws": 0,
+      "colors": {
+        "white": "win",
+        "black": "win"
+      },
+      "reasons": {
+        "opening-book": 1,
+        "mix9-expert-checked": 13,
+        "expert-proved-win": 4,
+        "vcf-win": 11,
+        "immediate-win": 2
+      },
+      "bookMoves": 1,
+      "moves": 31,
+      "totalMs": 35614,
+      "meanMs": 1149,
+      "maxMs": 14137,
+      "medianMs": 129
+    }
+  }
+}

@@ -52,7 +52,7 @@
       saveFail: '主题已在本机生效，但云端保存失败（可能尚未执行 SQL）。'
     },
     explain: {
-      title: 'AI 决策面板', toggle: '显示 AI 决策面板', waiting: '等待 AI 下一次决策…', candidates: '候选动作', depth: '搜索深度', score: '评估分', target: '目标落点', rotation: '旋转', path: '路径长度', apple: '当前苹果', direction: '目标方向', modeHint: '仅在 AI 正在决策或 AI 辅助运行时更新。'
+      title: 'AI 决策面板', toggle: '显示 AI 决策面板', waiting: '等待 AI 下一次决策…', candidates: '候选动作', depth: '搜索深度', score: '评估分', target: '目标落点', rotation: '旋转', path: '路径长度', apple: '当前苹果', direction: '目标方向', sourceLabel: '决策来源', explainSource: '决策来源', explainDepth: '搜索深度', explainSelDepth: '选择深度', explainScore: '评估分', explainCandidates: '候选动作', explainNodes: '搜索节点', explainEngineTime: '引擎用时', explainTotalTime: '总用时', explainTarget: '目标落点', modeHint: '仅在 AI 正在决策或 AI 辅助运行时更新；标注为“该引擎未提供”的字段表示这个引擎不上报该项。'
     },
     nav: {
       home: '首页',
@@ -454,6 +454,29 @@
       lbNoInit: 'Supabase 尚未初始化。',
       lbUnavailable: '排行榜暂不可用，请先执行累计成绩 SQL 脚本。',
       lbRow: '{wins}胜 {losses}负 {draws}平',
+      logTitle: '对战记录（最近 1500 条）',
+      logHint: '超过 10 分钟没有结果的记录会标记为无效对局，但记录仍会保留。',
+      logTime: '时间',
+      logMode: '模式',
+      logModeHuman: '人机对战',
+      logModeBattle: '模型对战',
+      logSides: '执子情况',
+      logWinner: '获胜方',
+      logNickname: '昵称',
+      logModel: '对战模型',
+      logColor: '执子',
+      logDuration: '用时',
+      logMoves: '步数',
+      logResult: '结果',
+      logScore: '积分',
+      logWin: '胜利',
+      logLoss: '失败',
+      logDraw: '平局',
+      logSurrender: '投降',
+      logInvalid: '无效对局',
+      logPending: '进行中',
+      logEmpty: '暂无对战记录。',
+      logUnavailable: '对战记录暂不可用，请先执行累计成绩 SQL 脚本。',
       winnerYou: '你'
     },
     join: {
@@ -2025,7 +2048,7 @@
       saveFail: 'Theme applied locally, but cloud save failed (SQL may not be deployed yet).'
     },
     explain: {
-      title: 'AI Decision Panel', toggle: 'Show AI decision panel', waiting: 'Waiting for the next AI decision…', candidates: 'Candidate moves', depth: 'Search depth', score: 'Evaluation', target: 'Target placement', rotation: 'Rotation', path: 'Path length', apple: 'Current apple', direction: 'Target direction', modeHint: 'Updates while the AI is deciding or assisting.'
+      title: 'AI Decision Panel', toggle: 'Show AI decision panel', waiting: 'Waiting for the next AI decision…', candidates: 'Candidate moves', depth: 'Search depth', score: 'Evaluation', target: 'Target placement', rotation: 'Rotation', path: 'Path length', apple: 'Current apple', sourceLabel: 'Source', explainSource: 'Source', explainDepth: 'Search depth', explainSelDepth: 'Selective depth', explainScore: 'Evaluation', explainCandidates: 'Candidate moves', explainNodes: 'Nodes', explainEngineTime: 'Engine time', explainTotalTime: 'Total time', explainTarget: 'Target placement', direction: 'Target direction', modeHint: 'Updates while the AI is deciding or assisting.'
     },
     nav: {
       home: 'Home',
@@ -2427,6 +2450,29 @@
       lbNoInit: 'Supabase not initialized.',
       lbUnavailable: 'Leaderboard unavailable — run the cumulative score SQL first.',
       lbRow: '{wins}W {losses}L {draws}D',
+      logTitle: 'Match log (latest 1500)',
+      logHint: 'Records with no result after 10 minutes are marked invalid, but the row is kept.',
+      logTime: 'Time',
+      logMode: 'Mode',
+      logModeHuman: 'Human vs AI',
+      logModeBattle: 'Model battle',
+      logSides: 'Sides',
+      logWinner: 'Winner',
+      logNickname: 'Nickname',
+      logModel: 'Model',
+      logColor: 'Side',
+      logDuration: 'Duration',
+      logMoves: 'Moves',
+      logResult: 'Result',
+      logScore: 'Points',
+      logWin: 'Win',
+      logLoss: 'Loss',
+      logDraw: 'Draw',
+      logSurrender: 'Surrendered',
+      logInvalid: 'Invalid',
+      logPending: 'Running',
+      logEmpty: 'No matches recorded yet.',
+      logUnavailable: 'Match log unavailable — run the cumulative score SQL first.',
       winnerYou: 'You'
     },
     join: {

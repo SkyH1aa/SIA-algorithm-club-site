@@ -83,8 +83,18 @@ try {
       check(JSON.stringify(MODEL_VERSIONS)===JSON.stringify(expectedOrder),'Strength order registry');
       populateBattleModels();
       for(const selector of [modelVersionSelect,blackModelVersionSelect,whiteModelVersionSelect]) {
-        check(JSON.stringify([...selector.options].map(o=>Number(o.value)))===JSON.stringify(expectedOrder),'All three selectors follow strength order');
-        for(const option of selector.options)check(option.textContent===getModelName(Number(option.value)),'Selector model labels');
+        // 只有启用中的选项参与强度顺序；V10Champion 以 disabled 的“待发布”条目展示。
+        const allOptions=[...selector.options];
+        const enabled=allOptions.filter(o=>!o.disabled).map(o=>Number(o.value));
+        check(JSON.stringify(enabled)===JSON.stringify(expectedOrder),'All three selectors follow strength order');
+        for(const option of allOptions.filter(o=>!o.disabled))check(option.textContent===getModelName(Number(option.value)),'Selector model labels');
+      }
+      // V10Champion 必须只作为不可选的待发布项出现，且绝不能进入对战选择器。
+      const pending=[...modelVersionSelect.options].filter(o=>o.disabled);
+      check(pending.length===1 && pending[0].value==='10.6' && pending[0].textContent.includes('待发布'),'V10Champion is a disabled coming-soon entry');
+      check(!MODEL_VERSIONS.includes(10.6),'V10Champion must not be a challengeable version');
+      for(const selector of [blackModelVersionSelect,whiteModelVersionSelect]) {
+        check(![...selector.options].some(o=>Number(o.value)===10.6),'V10Champion must not be selectable in model battle');
       }
       for(const lang of ['zh','en']) {
         const hint=ClubI18n.t('gomoku.lbHint',{},lang);
@@ -178,10 +188,14 @@ try {
       const bookA = GomokuV10Flash.bookFor(
         (()=>{const b=Array.from({length:15},()=>Array(15).fill(0));b[7][7]=1;return b;})(), 2, [{row:7,col:7,player:1}]);
       const bookACells = [...bookA.cells.keys()].sort();
-      check(bookA && bookA.best.row===6 && bookA.best.col===6 && bookA.best.games===10, 'Book picks the diagonal reply');
-      check(bookACells.join('|') === '5,5|5,9|6,6|6,8|8,6|8,8|9,5|9,9', 'Book cells match the built prior');
+      // The book's contract is "data-backed, in the first four plies, picking the
+      // strongest recorded reply" -- the exact cells move as the archive grows, so
+      // the assertions check that contract rather than a hard-coded cell.
+      check(bookA && bookA.best.games>=4 && bookACells.includes(bookA.best.row+','+bookA.best.col), 'Book picks a data-backed reply');
+      check(bookACells.length>=1 && bookACells.every(cell=>bookA.cells.get(cell).games>=4), 'Every book cell clears the sample threshold');
+      check([...bookA.cells.values()].every(cell=>cell.score>0), 'Book only keeps non-negative records');
       const bookB = GomokuV10Flash.bookFor(Array.from({length:15},()=>Array(15).fill(0)), 1, []);
-      check(bookB && bookB.best.row===7 && bookB.best.col===7 && bookB.best.games===22, 'Book center opening');
+      check(bookB && bookB.best.row===7 && bookB.best.col===7, 'Book center opening');
       const bookC = GomokuV10Flash.bookFor(
         (()=>{const b=Array.from({length:15},()=>Array(15).fill(0));b[7][7]=1;b[5][9]=2;return b;})(), 1,
         [{row:7,col:7,player:1},{row:5,col:9,player:2}]);
@@ -225,6 +239,87 @@ try {
         gameModeSelect.value=mode;gameModeSelect.dispatchEvent(new Event('change'));
         check(board.flat().every(x=>!x)&&gameMoves.length===0,'Mode switch clears all engines');
       }
+      // AI 决策面板：九项字段齐全，缺失项要明确标注而不是只显示破折号。
+      const explainIds=['explainSource','explainTarget','explainDepth','explainSelDepth','explainScore','explainCandidates','explainNodes','explainEngineTime','explainTotalTime'];
+      for(const id of explainIds) check(!!document.getElementById(id),'Explain panel field '+id);
+      const savedExplain=explainEnabled; explainEnabled=true; document.getElementById('explainPanelBody').hidden=false;
+      // 有完整遥测的引擎：字段应逐项写入。
+      updateExplain({reason:'rapfi-nnue',depth:12,configuredDepth:12,score:128,nodes:12345,selDepth:9,engineTimeMs:850,elapsedMs:900,candidates:20,target:'8, 8'});
+      check(document.getElementById('explainScore').textContent==='128','Explain shows the engine score');
+      check(document.getElementById('explainNodes').textContent==='12345','Explain shows node counts');
+      updateExplain({reason:'search',depth:8,nodes:1234567,target:'1, 1'});
+      check(document.getElementById('explainNodes').textContent==='1,234,567','Explain groups large node counts');
+      // 引擎用时必须在同一次带 engineTimeMs 的上报里检查，避免被前一次上报重置。
+      updateExplain({reason:'rapfi-nnue',depth:12,selDepth:9,engineTimeMs:850,elapsedMs:900,target:'8, 8'});
+      check(document.getElementById('explainEngineTime').textContent==='850 ms','Explain formats engine time in ms');
+      updateExplain({reason:'rapfi-nnue',depth:12,engineTimeMs:2500,elapsedMs:2600,target:'8, 8'});
+      check(document.getElementById('explainEngineTime').textContent==='2.50 s','Explain formats engine time in seconds');
+      check(document.getElementById('explainSource').textContent.includes('Rapfi'),'Explain names the decision source');
+      check(document.getElementById('explainDepthNote').hidden,'No missing note when the field is present');
+      // 不上报评估分的引擎：显示破折号并标注原因。
+      updateExplain({reason:'forced-block',depth:0,candidates:3,target:'7, 7'});
+      check(document.getElementById('explainScore').textContent==='—','Missing score shows a dash');
+      check(!document.getElementById('explainScoreNote').hidden&&document.getElementById('explainScoreNote').textContent.length>0,'Missing score explains why');
+      check(document.getElementById('explainSource').textContent.includes('必防')||document.getElementById('explainSource').textContent.includes('block'),'Explain localises the reason');
+      // 缺失原因必须按引擎族解释：Rapfi 精简构建与极小极大引擎说法不同。
+      activeModelVersion=10.1; isModelBattle=false;
+      updateExplain({reason:'rapfi-nnue',depth:12,target:'7, 7'});
+      check(document.getElementById('explainScoreNote').textContent.includes('Rapfi'),'Rapfi missing score explains the slim build');
+      activeModelVersion=9.2;
+      updateExplain({reason:'immediate-win',depth:0,candidates:1,target:'7, 7'});
+      check(document.getElementById('explainScoreNote').hidden||!document.getElementById('explainScoreNote').textContent.includes('Rapfi'),'Minimax engines do not blame the Rapfi build');
+      // 必败/必胜的边界评估值翻译成人话。
+      updateExplain({reason:'search',score:-1000001,depth:8,target:'1, 1'});
+      check(document.getElementById('explainScore').textContent==='必败','A losing mate bound reads as a loss');
+      updateExplain({reason:'search',score:1000001,depth:8,target:'1, 1'});
+      check(document.getElementById('explainScore').textContent==='必胜','A winning mate bound reads as a win');
+      updateExplain({reason:'vcf-win',depth:10,threats:{openFour:1,four:2,openThree:3},target:'5, 5'});
+      check(document.getElementById('explainSource').textContent.includes('VCF'),'Explain surfaces the VCF origin');
+      check(document.getElementById('explainSource').textContent.includes('威胁'),'Explain appends the threat census');
+      explainEnabled=savedExplain;
+      // 胜率条：开局后可见、两侧百分比相加为 100、决定性棋形推到边界。
+      check(typeof renderWinRate==='function' && typeof winRateFor==='function' && typeof threatProfile==='function','Win rate helpers exist');
+      const emptyBoard=()=>Array.from({length:15},()=>Array(15).fill(0));
+      board=emptyBoard(); gameMoves=[];
+      isModelBattle=false; playerColor=1; aiColor=2; activeModelVersion=9;
+      setWinRateLabels(); renderWinRate();
+      check(!document.getElementById('winratePanel').hidden,'Win rate bar visible for a human game');
+      check(document.getElementById('winrateLeftValue').textContent==='50%'&&document.getElementById('winrateRightValue').textContent==='50%','An empty board starts at 50/50');
+      // 黑棋已有活四时，黑方胜率必须接近满值。
+      // 直接以“左侧=黑方”计算，避免依赖此前用例留下的 playerColor 状态。
+      board=emptyBoard(); [[7,4],[7,5],[7,6],[7,7]].forEach(([r,c])=>board[r][c]=1);
+      check(winRateFor(1).left>=0.95,'A live four drives that side to the top');
+      check(winRateFor(2).left<=0.05,'The opponent live four drives the other side to the bottom');
+      // 渲染路径：显式走一遍人机状态，百分比必须写到 DOM 上。
+      isModelBattle=false; playerColor=1; aiColor=2; setWinRateLabels();
+      check(!document.getElementById('winratePanel').hidden,'Win rate panel shown before render');
+      renderWinRate();
+      const renderedLeft=String(document.getElementById('winrateLeftValue').textContent||'');
+      check(renderedLeft.endsWith('%')&&Number(renderedLeft.replace('%',''))>=95,'Win rate bar renders the side value ('+renderedLeft+')');
+      const renderedWidth=String(document.getElementById('winrateLeftFill').style.width||'');
+      check(Number(renderedWidth.replace('%',''))>=95,'Win rate fill width follows the percentage ('+renderedWidth+')');
+      hideWinRate(); check(document.getElementById('winratePanel').hidden,'Win rate bar hides on reset');
+      // 对战记录：折叠框默认关闭，展开后才拉取；指纹与开始/结束 RPC 都已接线。
+      check(document.getElementById('matchLogPanel') && !document.getElementById('matchLogPanel').open,'Match log starts collapsed');
+      check(typeof startMatchLog==='function' && typeof finishMatchLog==='function','Match log helpers exist');
+      // 对战记录：七栏（时间/昵称/模式/执子情况/用时/步数/获胜方），且必须描述谁赢了与双方执子。
+      const logHeaders=[...document.querySelectorAll('#matchLogPanel table thead th')].map(th=>th.textContent);
+      check(logHeaders.length===7,'Match log has seven columns');
+      check(!logHeaders.some(h=>h.includes('积分')||h.includes('Points')),'The points column is gone');
+      check(typeof modeLabel==='function'&&typeof sidesLabel==='function'&&typeof winnerCell==='function','Match log helpers exist');
+      check(modeLabel({mode:'human'})!==modeLabel({mode:'model-battle'}),'Mode column distinguishes human and battle');
+      const humanSides=sidesLabel({mode:'human',nickname:'老J',model_version:10.1,player_color:1});
+      check(humanSides.includes('老J')&&humanSides.includes('V10Ultra'),'Human sides name both players');
+      check(humanSides.indexOf('老J')<humanSides.indexOf('V10Ultra'),'Black side is listed first');
+      const whiteSides=sidesLabel({mode:'human',nickname:'老J',model_version:10.1,player_color:2});
+      check(whiteSides.indexOf('V10Ultra')<whiteSides.indexOf('老J'),'When the player is white the AI is listed first');
+      const battleSides=sidesLabel({mode:'model-battle',model_version:10.4,opponent_model_version:10.3});
+      check(battleSides.includes('V10Flash')&&battleSides.includes('V10Exp'),'Battle sides name both models');
+      check(winnerCell({outcome:'win',winner_label:'老J',winner_color:1}).includes('老J'),'Winner column names the winner');
+      check(winnerCell({outcome:'win',winner_label:'老J',winner_color:1}).includes('黑'),'Winner column shows the winning colour');
+      check(winnerCell({outcome:'surrender',player_color:1,winner_label:null}).includes('投降'),'Surrender is labelled');
+      check(winnerCell({outcome:'draw'}).length>0,'Draw is labelled');
+      check(winnerCell({outcome:null,started_at:new Date(Date.now()-700000).toISOString()}).length>0,'A stale record reads as invalid');
       return {url: location.href, humanCases, battleCases, strengthOrder:expectedOrder, points:expectedPoints, uploadVersions:eligible, surrenderCases:eligible.length, workerMoves, newWorkerMoves, expNeuralMoves, expCancellation:true, flashWorkerMoves, flashCancellation:true, flashBook:{best:[bookA.best.row,bookA.best.col],games:bookA.best.games,cells:[...bookA.cells.keys()].sort()}};
     })()`);
     reports.push(report);
