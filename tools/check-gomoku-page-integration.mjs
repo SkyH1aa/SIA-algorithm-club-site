@@ -76,29 +76,30 @@ try {
       loadLeaderboard = async () => {};
       ClubI18n.init();
       document.getElementById('nickname').value = 'integration-check';
-      const versions = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4, 10.5];
-      const eligible = [9.2, 10, 10.1, 10.2, 10.3, 10.4, 10.5];
-      const expectedPoints = { '9.1': 10, '9.2': 12, '10': 12, '10.1': 15, '9.3': 9, '10.2': 14, '10.3': 15, '10.4': 15, '10.5': 16 };
-      const expectedOrder=[1,2,3,6,7,8,9,9.1,9.3,9.2,10,10.2,10.4,10.3,10.1,10.5];
+      const versions = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6];
+      const eligible = [9.2, 10, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6];
+      const expectedPoints = { '9.1': 10, '9.2': 12, '10': 12, '10.1': 15, '9.3': 9, '10.2': 14, '10.3': 15, '10.4': 15, '10.5': 16, '10.6': 15 };
+      const expectedOrder=[1,2,3,6,7,8,9,9.1,9.3,9.2,10,10.2,10.4,10.3,10.1,10.5,10.6];
       check(JSON.stringify(MODEL_VERSIONS)===JSON.stringify(expectedOrder),'Strength order registry');
       populateBattleModels();
       for(const selector of [modelVersionSelect,blackModelVersionSelect,whiteModelVersionSelect]) {
-        // 只有启用中的选项参与强度顺序；V10Champion 以 disabled 的“待发布”条目展示。
+        // 所有选项都参与强度顺序（V10Bru·我非我Champion 已开放，无禁用项）。
         const allOptions=[...selector.options];
         const enabled=allOptions.filter(o=>!o.disabled).map(o=>Number(o.value));
         check(JSON.stringify(enabled)===JSON.stringify(expectedOrder),'All three selectors follow strength order');
         for(const option of allOptions.filter(o=>!o.disabled))check(option.textContent===getModelName(Number(option.value)),'Selector model labels');
       }
-      // V10Champion 必须只作为不可选的待发布项出现，且绝不能进入对战选择器。
-      const pending=[...modelVersionSelect.options].filter(o=>o.disabled);
-      check(pending.length===1 && pending[0].value==='10.6' && pending[0].textContent.includes('待发布'),'V10Champion is a disabled coming-soon entry');
-      check(!MODEL_VERSIONS.includes(10.6),'V10Champion must not be a challengeable version');
+      // V10Bru·我非我Champion 已全面开放：可挑战、可模型对战，且不再有禁用的待发布项。
+      check([...modelVersionSelect.options].every(o=>!o.disabled),'No disabled model entries remain');
+      check(MODEL_VERSIONS.includes(10.6),'V10Bru Champion is challengeable');
+      check(getModelName(10.6)==='铭星V10Bru·我非我Champion','V10Bru Champion display name');
+      check(getModelWinPoints(10.6)===15,'V10Bru Champion awards 15 points');
       for(const selector of [blackModelVersionSelect,whiteModelVersionSelect]) {
-        check(![...selector.options].some(o=>Number(o.value)===10.6),'V10Champion must not be selectable in model battle');
+        check([...selector.options].some(o=>Number(o.value)===10.6),'V10Bru Champion is selectable in model battle');
       }
       for(const lang of ['zh','en']) {
         const hint=ClubI18n.t('gomoku.lbHint',{},lang);
-        check(['V9Mesa','V10Mesa','V10Exp','V10Flash','V10Ultra','V10Thinker','14','15','16'].every(s=>hint.includes(s)),'Leaderboard points hint');
+        check(['V9Mesa','V10Mesa','V10Exp','V10Flash','V10Ultra','V10Thinker','V10Bru','14','15','16'].every(s=>hint.includes(s)),'Leaderboard points hint');
       }
       let humanCases = 0, battleCases = 0;
       for (const version of versions) for (const color of [1, 2]) for (const outcome of ['win', 'loss', 'draw']) {

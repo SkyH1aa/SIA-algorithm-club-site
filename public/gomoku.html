@@ -206,7 +206,7 @@
           <input id="nickname" maxlength="20" placeholder="请输入昵称" data-i18n-placeholder="games.nickPlaceholder" autocomplete="nickname" />
           <label for="modelVersion" data-i18n="gomoku.modelLabel">挑战模型</label>
           <select id="modelVersion" aria-label="选择挑战模型">
-            <option value="1">铭星V1</option><option value="2">铭星V2</option><option value="3">铭星V3</option><option value="6">铭星V6</option><option value="7">铭星V7</option><option value="8">铭星V8</option><option value="9" selected>铭星V9</option><option value="9.1">铭星V9Pro</option><option value="9.3">铭星V9Mesa</option><option value="9.2">铭星V9Thinker</option><option value="10">铭星V10</option><option value="10.2">铭星V10Mesa</option><option value="10.4">铭星V10Flash</option><option value="10.3">铭星V10Exp</option><option value="10.1">铭星V10Ultra</option><option value="10.5">铭星V10Thinker</option><option value="10.6" disabled>铭星V10Champion（待发布）</option>
+            <option value="1">铭星V1</option><option value="2">铭星V2</option><option value="3">铭星V3</option><option value="6">铭星V6</option><option value="7">铭星V7</option><option value="8">铭星V8</option><option value="9" selected>铭星V9</option><option value="9.1">铭星V9Pro</option><option value="9.3">铭星V9Mesa</option><option value="9.2">铭星V9Thinker</option><option value="10">铭星V10</option><option value="10.2">铭星V10Mesa</option><option value="10.4">铭星V10Flash</option><option value="10.3">铭星V10Exp</option><option value="10.1">铭星V10Ultra</option><option value="10.5">铭星V10Thinker</option><option value="10.6">铭星V10Bru·我非我Champion</option>
           </select>
           <span class="hint" data-i18n="gomoku.nickSideHint">先填写昵称，再选择执子</span>
         </div>
@@ -279,6 +279,7 @@
   <script src="gomoku-models/v10exp.js"></script>
   <script src="gomoku-models/v10flash.js"></script>
   <script src="gomoku-models/v10thinker.js"></script>
+  <script src="gomoku-models/v10champion.js"></script>
   <script>
     const BOARD_SIZE = 15;
     let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
@@ -303,9 +304,8 @@
     let legacyEngineReady = Promise.resolve();
     let legacyLoadedVersion = null;
     let legacyMoveRequestId = 0;
-    // 可挑战/可对战版本。V10Champion（10.6）刻意不在此列：它在页面上只作为
-    // “待发布”条目展示，人机对战与模型对战都不可选。
-    const MODEL_VERSIONS = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.3, 9.2, 10, 10.2, 10.4, 10.3, 10.1, 10.5];
+    // 可挑战/可对战版本，顺序即页面展示顺序（V10Bru·我非我Champion 排在最后）。
+    const MODEL_VERSIONS = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.3, 9.2, 10, 10.2, 10.4, 10.3, 10.1, 10.5, 10.6];
     const modelVersionSelect = document.getElementById('modelVersion');
     const gameModeSelect = document.getElementById('gameMode');
     const battleSetup = document.getElementById('battleSetup');
@@ -323,6 +323,7 @@
       if (version === 10.3) return '铭星V10Exp';
       if (version === 10.4) return '铭星V10Flash';
       if (version === 10.5) return '铭星V10Thinker';
+      if (version === 10.6) return '铭星V10Bru·我非我Champion';
       return `铭星V${version}`;
     }
     function getModelWinPoints(version) {
@@ -330,6 +331,7 @@
       if (version === 10.2) return 14;
       if (version === 10.4) return 15;
       if (version === 10.5) return 16;
+      if (version === 10.6) return 15;
       if (version === 10.3) return 15;
       if (version === 10.1) return 15;
       if (version === 10) return 12;
@@ -338,15 +340,15 @@
     }
     function canUploadTrainingResult(version, result) {
       if (!['win', 'loss', 'draw'].includes(result)) return false;
-      return version === 9.2 || version === 10 || version === 10.1 || version === 10.2 || version === 10.3 || version === 10.4 || version === 10.5;
+      return version === 9.2 || version === 10 || version === 10.1 || version === 10.2 || version === 10.3 || version === 10.4 || version === 10.5 || version === 10.6;
     }
     function startAiCountdown(version) {
       stopAiCountdown();
-      if (![10.1, 9.3, 10.2, 10.3, 10.4, 10.5].includes(version)) return;
+      if (![10.1, 9.3, 10.2, 10.3, 10.4, 10.5, 10.6].includes(version)) return;
       const label = document.getElementById('aiCountdownLabel');
       const fill = document.getElementById('aiCountdownFill');
       const panel = document.getElementById('aiCountdown');
-      const total = version === 10.3 ? 180000 : version === 10.4 ? 120000 : (version === 10.1 || version === 10.5) ? 75000 : 120000;
+      const total = version === 10.3 ? 180000 : version === 10.4 ? 120000 : (version === 10.1 || version === 10.5 || version === 10.6) ? 75000 : 120000;
       aiCountdownDeadline = performance.now() + total;
       panel.hidden = false;
       const tick = () => {
@@ -912,6 +914,7 @@
       if (version === 10) return window.GomokuV10.findBestMove();
       if (version === 10.1) return window.GomokuV10Ultra.findBestMove();
       if (version === 10.5) return window.GomokuV10Thinker.findBestMove();
+      if (version === 10.6) return window.GomokuV10Champion.findBestMove({board,color,history:gameMoves});
       if (version === 9.3) return window.GomokuV9Mesa.findBestMove({board,color});
       if (version === 10.2) return window.GomokuV10Mesa.findBestMove({board,color});
       if (version === 10.3) return window.GomokuV10Exp.findBestMove({board,color,history:gameMoves});
@@ -954,7 +957,7 @@
         : activeModelVersion;
       let move;
       try {
-        const candidate = version === 9.3 ? GomokuV9Mesa : version === 10.2 ? GomokuV10Mesa : version === 10.3 ? GomokuV10Exp : version === 10.4 ? GomokuV10Flash : null;
+        const candidate = version === 9.3 ? GomokuV9Mesa : version === 10.2 ? GomokuV10Mesa : version === 10.3 ? GomokuV10Exp : version === 10.4 ? GomokuV10Flash : version === 10.6 ? GomokuV10Champion : null;
         if (candidate) {
           document.getElementById('status').textContent = `${getModelName(version)}：正在准备模型…`;
           await candidate.preload();
@@ -1465,6 +1468,7 @@
       window.GomokuV10Mesa.clearCache();
       window.GomokuV10Exp.clearCache();
       window.GomokuV10Flash.clearCache();
+      window.GomokuV10Champion.clearCache();
       stopAiCountdown();
       hideWinRate();
       currentMatchFingerprint = null;

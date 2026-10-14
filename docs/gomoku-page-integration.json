@@ -1,8 +1,8 @@
 [
   {
     "url": "file:///D:/GithubRcj/SIA-algorithm-club-site/public/gomoku.html",
-    "humanCases": 96,
-    "battleCases": 768,
+    "humanCases": 102,
+    "battleCases": 867,
     "strengthOrder": [
       1,
       2,
@@ -19,7 +19,8 @@
       10.4,
       10.3,
       10.1,
-      10.5
+      10.5,
+      10.6
     ],
     "points": {
       "10": 12,
@@ -30,7 +31,8 @@
       "10.2": 14,
       "10.3": 15,
       "10.4": 15,
-      "10.5": 16
+      "10.5": 16,
+      "10.6": 15
     },
     "uploadVersions": [
       9.2,
@@ -39,9 +41,10 @@
       10.2,
       10.3,
       10.4,
-      10.5
+      10.5,
+      10.6
     ],
-    "surrenderCases": 7,
+    "surrenderCases": 8,
     "workerMoves": [
       {
         "color": 1,
@@ -49,7 +52,7 @@
           "row": 7,
           "col": 7
         },
-        "elapsedMs": 692
+        "elapsedMs": 521
       },
       {
         "color": 2,
@@ -57,7 +60,7 @@
           "row": 6,
           "col": 8
         },
-        "elapsedMs": 1719
+        "elapsedMs": 1174
       },
       {
         "color": 1,
@@ -65,7 +68,445 @@
           "row": 7,
           "col": 7
         },
-        "elapsedMs": 417
+        "elapsedMs": 380
+      }
+    ],
+    "newWorkerMoves": [
+      {
+        "version": 9.3,
+        "color": 1,
+        "move": {
+          "row": 7,
+          "col": 3
+        }
+      },
+      {
+        "version": 9.3,
+        "color": 2,
+        "move": {
+          "row": 7,
+          "col": 3
+        }
+      },
+      {
+        "version": 10.2,
+        "color": 1,
+        "move": {
+          "row": 7,
+          "col": 8
+        }
+      },
+      {
+        "version": 10.2,
+        "color": 2,
+        "move": {
+          "row": 7,
+          "col": 8
+        }
+      },
+      {
+        "version": 10.3,
+        "color": 1,
+        "move": {
+          "row": 7,
+          "col": 3
+        }
+      },
+      {
+        "version": 10.3,
+        "color": 2,
+        "move": {
+          "row": 7,
+          "col": 3
+        }
+      },
+      {
+        "version": 10.4,
+        "color": 1,
+        "move": {
+          "row": 7,
+          "col": 3
+        }
+      },
+      {
+        "version": 10.4,
+        "color": 2,
+        "move": {
+          "row": 7,
+          "col": 3
+        }
+      }
+    ],
+    "expNeuralMoves": [
+      {
+        "color": 1,
+        "move": {
+          "row": 7,
+          "col": 7
+        },
+        "search": {
+          "reason": "mix9-expert-checked",
+          "proof": {
+            "proved": false,
+            "move": null,
+            "nodes": 1,
+            "elapsedMs": 2.3000000044703484,
+            "aborted": false
+          },
+          "elapsedMs": 147,
+          "experts": {
+            "thinker": {
+              "type": "progress",
+              "id": 9,
+              "move": {
+                "row": 7,
+                "col": 7
+              },
+              "stats": {
+                "candidates": 1,
+                "depth": 6,
+                "score": -1325,
+                "target": "8, 8",
+                "move": {
+                  "row": 7,
+                  "col": 7
+                }
+              }
+            },
+            "v10": {
+              "type": "progress",
+              "id": 10,
+              "move": {
+                "row": 7,
+                "col": 7
+              },
+              "stats": {
+                "candidates": 1,
+                "depth": 5,
+                "score": 8631,
+                "target": "8, 8",
+                "move": {
+                  "row": 7,
+                  "col": 7
+                }
+              }
+            }
+          },
+          "configuredDepth": 18
+        }
+      },
+      {
+        "color": 2,
+        "move": {
+          "row": 6,
+          "col": 8
+        },
+        "search": {
+          "reason": "mix9-expert-checked",
+          "proof": {
+            "proved": false,
+            "move": null,
+            "nodes": 1,
+            "elapsedMs": 2.5,
+            "aborted": false
+          },
+          "elapsedMs": 12925,
+          "experts": {
+            "v10": {
+              "type": "result",
+              "id": 18,
+              "move": {
+                "row": 8,
+                "col": 8
+              },
+              "stats": {
+                "depth": 0,
+                "configuredDepth": 8,
+                "candidates": 20,
+                "nodes": 0,
+                "qnodes": 0,
+                "elapsedMs": 2.6999999955296516,
+                "aborted": false,
+                "reason": "opening",
+                "score": 0
+              }
+            },
+            "thinker": {
+              "type": "result",
+              "id": 17,
+              "move": {
+                "row": 5,
+                "col": 9
+              },
+              "stats": {
+                "depth": 7,
+                "configuredDepth": 7,
+                "candidates": 14,
+                "nodes": 155640,
+                "qnodes": 64140,
+                "elapsedMs": 979.3000000044703,
+                "aborted": false,
+                "reason": "search",
+                "score": 54
+              }
+            }
+          },
+          "configuredDepth": 18
+        }
+      }
+    ],
+    "expCancellation": true,
+    "flashWorkerMoves": [
+      {
+        "color": 1,
+        "move": {
+          "row": 7,
+          "col": 7
+        },
+        "elapsedMs": 1225,
+        "search": {
+          "depth": 0,
+          "selDepth": 0,
+          "nodes": 0,
+          "score": null,
+          "engineTimeMs": 0,
+          "configuredDepth": 16,
+          "reason": "mix9-expert-checked",
+          "elapsedMs": 135,
+          "threats": {
+            "openFour": 0,
+            "four": 0,
+            "openThree": 0
+          },
+          "book": {
+            "move": {
+              "row": 7,
+              "col": 7
+            },
+            "score": 0.515,
+            "games": 27,
+            "agreed": true
+          },
+          "experts": {
+            "thinker": {
+              "type": "progress",
+              "id": 5,
+              "move": {
+                "row": 7,
+                "col": 7
+              },
+              "stats": {
+                "candidates": 1,
+                "depth": 6,
+                "score": -1325,
+                "target": "8, 8",
+                "move": {
+                  "row": 7,
+                  "col": 7
+                }
+              }
+            },
+            "v10": {
+              "type": "progress",
+              "id": 6,
+              "move": {
+                "row": 7,
+                "col": 7
+              },
+              "stats": {
+                "candidates": 1,
+                "depth": 5,
+                "score": 8631,
+                "target": "8, 8",
+                "move": {
+                  "row": 7,
+                  "col": 7
+                }
+              }
+            }
+          },
+          "proof": {
+            "proved": false,
+            "move": null,
+            "nodes": 1,
+            "elapsedMs": 1.7000000029802322,
+            "aborted": false
+          }
+        }
+      },
+      {
+        "color": 2,
+        "move": {
+          "row": 7,
+          "col": 8
+        },
+        "elapsedMs": 9613,
+        "search": {
+          "depth": 16,
+          "selDepth": 0,
+          "nodes": 0,
+          "score": null,
+          "engineTimeMs": 8413,
+          "configuredDepth": 16,
+          "reason": "mix9-expert-checked",
+          "elapsedMs": 8561,
+          "threats": {
+            "openFour": 0,
+            "four": 0,
+            "openThree": 0
+          },
+          "book": {
+            "move": {
+              "row": 7,
+              "col": 8
+            },
+            "score": 0.538,
+            "games": 7,
+            "agreed": true
+          },
+          "experts": {
+            "v10": {
+              "type": "result",
+              "id": 14,
+              "move": {
+                "row": 8,
+                "col": 8
+              },
+              "stats": {
+                "depth": 0,
+                "configuredDepth": 8,
+                "candidates": 20,
+                "nodes": 0,
+                "qnodes": 0,
+                "elapsedMs": 2.7999999970197678,
+                "aborted": false,
+                "reason": "opening",
+                "score": 0
+              }
+            },
+            "thinker": {
+              "type": "result",
+              "id": 13,
+              "move": {
+                "row": 5,
+                "col": 9
+              },
+              "stats": {
+                "depth": 7,
+                "configuredDepth": 7,
+                "candidates": 14,
+                "nodes": 155640,
+                "qnodes": 64140,
+                "elapsedMs": 1005.5,
+                "aborted": false,
+                "reason": "search",
+                "score": 54
+              }
+            }
+          },
+          "proof": {
+            "proved": false,
+            "move": null,
+            "nodes": 1,
+            "elapsedMs": 2.100000001490116,
+            "aborted": false
+          }
+        }
+      }
+    ],
+    "flashCancellation": true,
+    "flashBook": {
+      "best": [
+        6,
+        7
+      ],
+      "games": 7,
+      "cells": [
+        "5,5",
+        "5,9",
+        "6,6",
+        "6,7",
+        "6,8",
+        "7,6",
+        "7,8",
+        "8,6",
+        "8,7",
+        "8,8",
+        "9,5",
+        "9,9"
+      ]
+    }
+  },
+  {
+    "url": "http://127.0.0.1:4173/public/gomoku.html",
+    "humanCases": 102,
+    "battleCases": 867,
+    "strengthOrder": [
+      1,
+      2,
+      3,
+      6,
+      7,
+      8,
+      9,
+      9.1,
+      9.3,
+      9.2,
+      10,
+      10.2,
+      10.4,
+      10.3,
+      10.1,
+      10.5,
+      10.6
+    ],
+    "points": {
+      "10": 12,
+      "9.1": 10,
+      "9.2": 12,
+      "10.1": 15,
+      "9.3": 9,
+      "10.2": 14,
+      "10.3": 15,
+      "10.4": 15,
+      "10.5": 16,
+      "10.6": 15
+    },
+    "uploadVersions": [
+      9.2,
+      10,
+      10.1,
+      10.2,
+      10.3,
+      10.4,
+      10.5,
+      10.6
+    ],
+    "surrenderCases": 8,
+    "workerMoves": [
+      {
+        "color": 1,
+        "move": {
+          "row": 7,
+          "col": 7
+        },
+        "elapsedMs": 490
+      },
+      {
+        "color": 2,
+        "move": {
+          "row": 6,
+          "col": 8
+        },
+        "elapsedMs": 1202
+      },
+      {
+        "color": 1,
+        "move": {
+          "row": 7,
+          "col": 7
+        },
+        "elapsedMs": 347
       }
     ],
     "newWorkerMoves": [
@@ -150,26 +591,8 @@
             "elapsedMs": 1.7999999970197678,
             "aborted": false
           },
-          "elapsedMs": 191,
+          "elapsedMs": 154,
           "experts": {
-            "v10": {
-              "type": "progress",
-              "id": 10,
-              "move": {
-                "row": 7,
-                "col": 7
-              },
-              "stats": {
-                "candidates": 1,
-                "depth": 5,
-                "score": 8631,
-                "target": "8, 8",
-                "move": {
-                  "row": 7,
-                  "col": 7
-                }
-              }
-            },
             "thinker": {
               "type": "progress",
               "id": 9,
@@ -181,6 +604,24 @@
                 "candidates": 1,
                 "depth": 6,
                 "score": -1325,
+                "target": "8, 8",
+                "move": {
+                  "row": 7,
+                  "col": 7
+                }
+              }
+            },
+            "v10": {
+              "type": "progress",
+              "id": 10,
+              "move": {
+                "row": 7,
+                "col": 7
+              },
+              "stats": {
+                "candidates": 1,
+                "depth": 5,
+                "score": 8631,
                 "target": "8, 8",
                 "move": {
                   "row": 7,
@@ -204,10 +645,10 @@
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 2.0999999940395355,
+            "elapsedMs": 2.1999999955296516,
             "aborted": false
           },
-          "elapsedMs": 12970,
+          "elapsedMs": 12678,
           "experts": {
             "v10": {
               "type": "result",
@@ -222,7 +663,7 @@
                 "candidates": 20,
                 "nodes": 0,
                 "qnodes": 0,
-                "elapsedMs": 2.7000000029802322,
+                "elapsedMs": 1.8000000044703484,
                 "aborted": false,
                 "reason": "opening",
                 "score": 0
@@ -241,7 +682,7 @@
                 "candidates": 14,
                 "nodes": 155640,
                 "qnodes": 64140,
-                "elapsedMs": 1131.7000000029802,
+                "elapsedMs": 1021.5,
                 "aborted": false,
                 "reason": "search",
                 "score": 54
@@ -260,7 +701,7 @@
           "row": 7,
           "col": 7
         },
-        "elapsedMs": 1114,
+        "elapsedMs": 379,
         "search": {
           "depth": 0,
           "selDepth": 0,
@@ -269,7 +710,7 @@
           "engineTimeMs": 0,
           "configuredDepth": 16,
           "reason": "mix9-expert-checked",
-          "elapsedMs": 134,
+          "elapsedMs": 158,
           "threats": {
             "openFour": 0,
             "four": 0,
@@ -319,6 +760,85 @@
                   "row": 7,
                   "col": 7
                 }
+              }
+            }
+          },
+          "proof": {
+            "proved": false,
+            "move": null,
+            "nodes": 1,
+            "elapsedMs": 1.4000000059604645,
+            "aborted": false
+          }
+        }
+      },
+      {
+        "color": 2,
+        "move": {
+          "row": 7,
+          "col": 8
+        },
+        "elapsedMs": 8599,
+        "search": {
+          "depth": 16,
+          "selDepth": 0,
+          "nodes": 0,
+          "score": null,
+          "engineTimeMs": 8169,
+          "configuredDepth": 16,
+          "reason": "mix9-expert-checked",
+          "elapsedMs": 8334,
+          "threats": {
+            "openFour": 0,
+            "four": 0,
+            "openThree": 0
+          },
+          "book": {
+            "move": {
+              "row": 7,
+              "col": 8
+            },
+            "score": 0.538,
+            "games": 7,
+            "agreed": true
+          },
+          "experts": {
+            "v10": {
+              "type": "result",
+              "id": 14,
+              "move": {
+                "row": 8,
+                "col": 8
+              },
+              "stats": {
+                "depth": 0,
+                "configuredDepth": 8,
+                "candidates": 20,
+                "nodes": 0,
+                "qnodes": 0,
+                "elapsedMs": 1.9000000059604645,
+                "aborted": false,
+                "reason": "opening",
+                "score": 0
+              }
+            },
+            "thinker": {
+              "type": "result",
+              "id": 13,
+              "move": {
+                "row": 5,
+                "col": 9
+              },
+              "stats": {
+                "depth": 7,
+                "configuredDepth": 7,
+                "candidates": 14,
+                "nodes": 155640,
+                "qnodes": 64140,
+                "elapsedMs": 1159.1000000014901,
+                "aborted": false,
+                "reason": "search",
+                "score": 54
               }
             }
           },
@@ -327,520 +847,6 @@
             "move": null,
             "nodes": 1,
             "elapsedMs": 1.8999999985098839,
-            "aborted": false
-          }
-        }
-      },
-      {
-        "color": 2,
-        "move": {
-          "row": 7,
-          "col": 8
-        },
-        "elapsedMs": 10000,
-        "search": {
-          "depth": 16,
-          "selDepth": 0,
-          "nodes": 0,
-          "score": null,
-          "engineTimeMs": 8973,
-          "configuredDepth": 16,
-          "reason": "mix9-expert-checked",
-          "elapsedMs": 9091,
-          "threats": {
-            "openFour": 0,
-            "four": 0,
-            "openThree": 0
-          },
-          "book": {
-            "move": {
-              "row": 7,
-              "col": 8
-            },
-            "score": 0.538,
-            "games": 7,
-            "agreed": true
-          },
-          "experts": {
-            "v10": {
-              "type": "result",
-              "id": 14,
-              "move": {
-                "row": 8,
-                "col": 8
-              },
-              "stats": {
-                "depth": 0,
-                "configuredDepth": 8,
-                "candidates": 20,
-                "nodes": 0,
-                "qnodes": 0,
-                "elapsedMs": 2.100000001490116,
-                "aborted": false,
-                "reason": "opening",
-                "score": 0
-              }
-            },
-            "thinker": {
-              "type": "result",
-              "id": 13,
-              "move": {
-                "row": 5,
-                "col": 9
-              },
-              "stats": {
-                "depth": 7,
-                "configuredDepth": 7,
-                "candidates": 14,
-                "nodes": 155640,
-                "qnodes": 64140,
-                "elapsedMs": 891.8999999985099,
-                "aborted": false,
-                "reason": "search",
-                "score": 54
-              }
-            }
-          },
-          "proof": {
-            "proved": false,
-            "move": null,
-            "nodes": 1,
-            "elapsedMs": 2.9000000059604645,
-            "aborted": false
-          }
-        }
-      }
-    ],
-    "flashCancellation": true,
-    "flashBook": {
-      "best": [
-        6,
-        7
-      ],
-      "games": 7,
-      "cells": [
-        "5,5",
-        "5,9",
-        "6,6",
-        "6,7",
-        "6,8",
-        "7,6",
-        "7,8",
-        "8,6",
-        "8,7",
-        "8,8",
-        "9,5",
-        "9,9"
-      ]
-    }
-  },
-  {
-    "url": "http://127.0.0.1:4173/public/gomoku.html",
-    "humanCases": 96,
-    "battleCases": 768,
-    "strengthOrder": [
-      1,
-      2,
-      3,
-      6,
-      7,
-      8,
-      9,
-      9.1,
-      9.3,
-      9.2,
-      10,
-      10.2,
-      10.4,
-      10.3,
-      10.1,
-      10.5
-    ],
-    "points": {
-      "10": 12,
-      "9.1": 10,
-      "9.2": 12,
-      "10.1": 15,
-      "9.3": 9,
-      "10.2": 14,
-      "10.3": 15,
-      "10.4": 15,
-      "10.5": 16
-    },
-    "uploadVersions": [
-      9.2,
-      10,
-      10.1,
-      10.2,
-      10.3,
-      10.4,
-      10.5
-    ],
-    "surrenderCases": 7,
-    "workerMoves": [
-      {
-        "color": 1,
-        "move": {
-          "row": 7,
-          "col": 7
-        },
-        "elapsedMs": 442
-      },
-      {
-        "color": 2,
-        "move": {
-          "row": 6,
-          "col": 8
-        },
-        "elapsedMs": 1248
-      },
-      {
-        "color": 1,
-        "move": {
-          "row": 7,
-          "col": 7
-        },
-        "elapsedMs": 409
-      }
-    ],
-    "newWorkerMoves": [
-      {
-        "version": 9.3,
-        "color": 1,
-        "move": {
-          "row": 7,
-          "col": 3
-        }
-      },
-      {
-        "version": 9.3,
-        "color": 2,
-        "move": {
-          "row": 7,
-          "col": 3
-        }
-      },
-      {
-        "version": 10.2,
-        "color": 1,
-        "move": {
-          "row": 7,
-          "col": 8
-        }
-      },
-      {
-        "version": 10.2,
-        "color": 2,
-        "move": {
-          "row": 7,
-          "col": 8
-        }
-      },
-      {
-        "version": 10.3,
-        "color": 1,
-        "move": {
-          "row": 7,
-          "col": 3
-        }
-      },
-      {
-        "version": 10.3,
-        "color": 2,
-        "move": {
-          "row": 7,
-          "col": 3
-        }
-      },
-      {
-        "version": 10.4,
-        "color": 1,
-        "move": {
-          "row": 7,
-          "col": 3
-        }
-      },
-      {
-        "version": 10.4,
-        "color": 2,
-        "move": {
-          "row": 7,
-          "col": 3
-        }
-      }
-    ],
-    "expNeuralMoves": [
-      {
-        "color": 1,
-        "move": {
-          "row": 7,
-          "col": 7
-        },
-        "search": {
-          "reason": "mix9-expert-checked",
-          "proof": {
-            "proved": false,
-            "move": null,
-            "nodes": 1,
-            "elapsedMs": 2.2999999970197678,
-            "aborted": false
-          },
-          "elapsedMs": 157,
-          "experts": {
-            "v10": {
-              "type": "progress",
-              "id": 10,
-              "move": {
-                "row": 7,
-                "col": 7
-              },
-              "stats": {
-                "candidates": 1,
-                "depth": 5,
-                "score": 8631,
-                "target": "8, 8",
-                "move": {
-                  "row": 7,
-                  "col": 7
-                }
-              }
-            },
-            "thinker": {
-              "type": "progress",
-              "id": 9,
-              "move": {
-                "row": 7,
-                "col": 7
-              },
-              "stats": {
-                "candidates": 1,
-                "depth": 6,
-                "score": -1325,
-                "target": "8, 8",
-                "move": {
-                  "row": 7,
-                  "col": 7
-                }
-              }
-            }
-          },
-          "configuredDepth": 18
-        }
-      },
-      {
-        "color": 2,
-        "move": {
-          "row": 6,
-          "col": 8
-        },
-        "search": {
-          "reason": "mix9-expert-checked",
-          "proof": {
-            "proved": false,
-            "move": null,
-            "nodes": 1,
-            "elapsedMs": 2,
-            "aborted": false
-          },
-          "elapsedMs": 12174,
-          "experts": {
-            "v10": {
-              "type": "result",
-              "id": 18,
-              "move": {
-                "row": 8,
-                "col": 8
-              },
-              "stats": {
-                "depth": 0,
-                "configuredDepth": 8,
-                "candidates": 20,
-                "nodes": 0,
-                "qnodes": 0,
-                "elapsedMs": 3.2999999970197678,
-                "aborted": false,
-                "reason": "opening",
-                "score": 0
-              }
-            },
-            "thinker": {
-              "type": "result",
-              "id": 17,
-              "move": {
-                "row": 5,
-                "col": 9
-              },
-              "stats": {
-                "depth": 7,
-                "configuredDepth": 7,
-                "candidates": 14,
-                "nodes": 155640,
-                "qnodes": 64140,
-                "elapsedMs": 939.2000000029802,
-                "aborted": false,
-                "reason": "search",
-                "score": 54
-              }
-            }
-          },
-          "configuredDepth": 18
-        }
-      }
-    ],
-    "expCancellation": true,
-    "flashWorkerMoves": [
-      {
-        "color": 1,
-        "move": {
-          "row": 7,
-          "col": 7
-        },
-        "elapsedMs": 370,
-        "search": {
-          "depth": 0,
-          "selDepth": 0,
-          "nodes": 0,
-          "score": null,
-          "engineTimeMs": 0,
-          "configuredDepth": 16,
-          "reason": "mix9-expert-checked",
-          "elapsedMs": 130,
-          "threats": {
-            "openFour": 0,
-            "four": 0,
-            "openThree": 0
-          },
-          "book": {
-            "move": {
-              "row": 7,
-              "col": 7
-            },
-            "score": 0.515,
-            "games": 27,
-            "agreed": true
-          },
-          "experts": {
-            "v10": {
-              "type": "progress",
-              "id": 6,
-              "move": {
-                "row": 7,
-                "col": 7
-              },
-              "stats": {
-                "candidates": 1,
-                "depth": 5,
-                "score": 8631,
-                "target": "8, 8",
-                "move": {
-                  "row": 7,
-                  "col": 7
-                }
-              }
-            },
-            "thinker": {
-              "type": "progress",
-              "id": 5,
-              "move": {
-                "row": 7,
-                "col": 7
-              },
-              "stats": {
-                "candidates": 1,
-                "depth": 6,
-                "score": -1325,
-                "target": "8, 8",
-                "move": {
-                  "row": 7,
-                  "col": 7
-                }
-              }
-            }
-          },
-          "proof": {
-            "proved": false,
-            "move": null,
-            "nodes": 1,
-            "elapsedMs": 2.4000000059604645,
-            "aborted": false
-          }
-        }
-      },
-      {
-        "color": 2,
-        "move": {
-          "row": 7,
-          "col": 8
-        },
-        "elapsedMs": 8918,
-        "search": {
-          "depth": 16,
-          "selDepth": 0,
-          "nodes": 0,
-          "score": null,
-          "engineTimeMs": 8480,
-          "configuredDepth": 16,
-          "reason": "mix9-expert-checked",
-          "elapsedMs": 8621,
-          "threats": {
-            "openFour": 0,
-            "four": 0,
-            "openThree": 0
-          },
-          "book": {
-            "move": {
-              "row": 7,
-              "col": 8
-            },
-            "score": 0.538,
-            "games": 7,
-            "agreed": true
-          },
-          "experts": {
-            "v10": {
-              "type": "result",
-              "id": 14,
-              "move": {
-                "row": 8,
-                "col": 8
-              },
-              "stats": {
-                "depth": 0,
-                "configuredDepth": 8,
-                "candidates": 20,
-                "nodes": 0,
-                "qnodes": 0,
-                "elapsedMs": 3.4000000059604645,
-                "aborted": false,
-                "reason": "opening",
-                "score": 0
-              }
-            },
-            "thinker": {
-              "type": "result",
-              "id": 13,
-              "move": {
-                "row": 5,
-                "col": 9
-              },
-              "stats": {
-                "depth": 7,
-                "configuredDepth": 7,
-                "candidates": 14,
-                "nodes": 155640,
-                "qnodes": 64140,
-                "elapsedMs": 1052.6999999955297,
-                "aborted": false,
-                "reason": "search",
-                "score": 54
-              }
-            }
-          },
-          "proof": {
-            "proved": false,
-            "move": null,
-            "nodes": 1,
-            "elapsedMs": 2.2000000029802322,
             "aborted": false
           }
         }

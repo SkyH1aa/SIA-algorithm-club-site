@@ -18,7 +18,7 @@ const context = vm.createContext({
   }
 });
 vm.runInContext(stripTypeScriptTypes(source), context);
-const versions = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4, 10.5];
+const versions = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6];
 let cases = 0;
 for (const version of versions) for (const result of ['win', 'loss', 'draw']) for (const color of [1, 2]) for (const battle of [false, true]) {
   stored = null;
@@ -28,7 +28,7 @@ for (const version of versions) for (const result of ['win', 'loss', 'draw']) fo
     ...(battle ? { modelBattle: true, opponentModelVersion: 9.1 } : {})
   };
   const response = await serve({ method: 'POST', json: async () => payload });
-  if ([9.2, 10, 10.1, 10.2, 10.3, 10.4, 10.5].includes(version)) {
+  if ([9.2, 10, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6].includes(version)) {
     assert.equal(response.status, 200);
     assert.equal(stored.result, result);
     assert.equal(stored.model_version, version);
@@ -45,7 +45,7 @@ for (const version of versions) for (const result of ['win', 'loss', 'draw']) fo
   cases++;
 }
 // New non-uploading versions remain valid opponents of an uploading model.
-for(const version of [9.2,10,10.1,10.2,10.3,10.4,10.5])for(const opponent of versions)
+for(const version of [9.2,10,10.1,10.2,10.3,10.4,10.5,10.6])for(const opponent of versions)
   for(const color of [1,2])for(const result of ['win','loss','draw']) {
     stored=null;
     const response=await serve({method:'POST',json:async()=>({
@@ -156,4 +156,4 @@ for (const name of ['GOMOKU_TRAINING_MODEL', 'GOMOKU_V9PRO_TRAINING_MODEL', 'GOM
 }
 const flashContributors = flashModel.sourceModelVersions.filter(version => version !== 10.3);
 assert.ok(flashContributors.length === 3, 'V10Exp (10.3) contributes no games yet');
-console.log(`PASS: ${cases} edge function cases; only 9.2/10/10.1/10.2/10.3/10.4/10.5 accept all outcomes, colors and modes preserved; file:// and HTTP engine/weights are identical for V10Ultra and V10Flash; the V10Flash prior is built from exactly ${expectedFlash} games (9.2/10/10.1/10.3 in any period, plus period >= 1014) and no other prior reads period 1014.`);
+console.log(`PASS: ${cases} edge function cases; only 9.2/10/10.1/10.2/10.3/10.4/10.5/10.6 accept all outcomes, colors and modes preserved; file:// and HTTP engine/weights are identical for V10Ultra and V10Flash; the V10Flash prior is built from exactly ${expectedFlash} games (9.2/10/10.1/10.3 in any period, plus period >= 1014) and no other prior reads period 1014.`);
