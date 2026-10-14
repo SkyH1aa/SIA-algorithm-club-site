@@ -14,7 +14,8 @@
     :root { color-scheme: dark; --board-highlight: #00e5ff; --board-highlight-shadow: rgba(0, 229, 255, .48); }
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
-    html { scroll-behavior: smooth; scroll-snap-type: y proximity; scroll-padding-top: 72px; }
+    /* 不带 scroll-snap：吸附会把页面卡在单个面板上，导致五子棋界面滚不到完整视图。 */
+    html { scroll-behavior: smooth; scroll-padding-top: 72px; }
     body {
       position: relative;
       min-height: 100vh;
@@ -97,7 +98,7 @@
       text-align: center;
     }
     
-    .ambient-background{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}.ambient-orb{position:absolute;width:min(48vw,620px);aspect-ratio:1;border-radius:50%;filter:blur(72px);opacity:.18;mix-blend-mode:screen;animation:drift-orb 18s ease-in-out infinite alternate}.orb-cyan{top:-18%;left:-12%;background:#00e5ff}.orb-violet{top:20%;right:-16%;background:#7c4dff;animation-delay:-7s}.ambient-grid{position:absolute;inset:-80px;background-image:linear-gradient(rgba(0,229,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.055) 1px,transparent 1px);background-size:72px 72px;opacity:.45;animation:grid-shift 26s linear infinite}#particleCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:.75}.pointer-glow{position:fixed;z-index:0;width:420px;height:420px;left:var(--pointer-x,50%);top:var(--pointer-y,14%);transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(73,231,255,.1),transparent 68%);pointer-events:none}.page-shell{position:relative;z-index:1}.page-header,.game-layout,.leaderboard,.panel{scroll-snap-align:start}.panel,.page-header{transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease}.panel:hover{border-color:rgba(73,231,255,.45);box-shadow:0 22px 60px rgba(0,0,0,.3),0 0 30px rgba(73,231,255,.08)}@keyframes drift-orb{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(7%,5%,0) scale(1.1)}}@keyframes grid-shift{to{transform:translate3d(72px,72px,0)}}.reveal-ready{opacity:0;transform:translateY(24px);transition:opacity .75s ease,transform .75s ease}.reveal-ready.is-visible{opacity:1;transform:none}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.ambient-orb,.ambient-grid{animation:none}.pointer-glow{display:none}.reveal-ready{opacity:1;transform:none;transition:none}.panel,.page-header{transition:none}}
+    .ambient-background{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}.ambient-orb{position:absolute;width:min(48vw,620px);aspect-ratio:1;border-radius:50%;filter:blur(72px);opacity:.18;mix-blend-mode:screen;animation:drift-orb 18s ease-in-out infinite alternate}.orb-cyan{top:-18%;left:-12%;background:#00e5ff}.orb-violet{top:20%;right:-16%;background:#7c4dff;animation-delay:-7s}.ambient-grid{position:absolute;inset:-80px;background-image:linear-gradient(rgba(0,229,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.055) 1px,transparent 1px);background-size:72px 72px;opacity:.45;animation:grid-shift 26s linear infinite}#particleCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:.75}.pointer-glow{position:fixed;z-index:0;width:420px;height:420px;left:var(--pointer-x,50%);top:var(--pointer-y,14%);transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(73,231,255,.1),transparent 68%);pointer-events:none}.page-shell{position:relative;z-index:1}.panel,.page-header{transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease}.panel:hover{border-color:rgba(73,231,255,.45);box-shadow:0 22px 60px rgba(0,0,0,.3),0 0 30px rgba(73,231,255,.08)}@keyframes drift-orb{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(7%,5%,0) scale(1.1)}}@keyframes grid-shift{to{transform:translate3d(72px,72px,0)}}.reveal-ready{opacity:0;transform:translateY(24px);transition:opacity .75s ease,transform .75s ease}.reveal-ready.is-visible{opacity:1;transform:none}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.ambient-orb,.ambient-grid{animation:none}.pointer-glow{display:none}.reveal-ready{opacity:1;transform:none;transition:none}.panel,.page-header{transition:none}}
     .board {
       --cell-size: 30px;
       display: grid;
@@ -1018,43 +1019,66 @@
     // 每步之后按“该方落地后能形成的强制威胁”估算一个 0-100% 的胜率，两侧共用一条
     // 进度条按百分比占位。它是轻量的启发式估计，不是引擎的严格胜率；连五/活四这类
     // 决定性棋形会直接把数值推到边界。
+    // ---- 实时胜率引擎 ------------------------------------------------------
+    // 目标：给出与棋局进程一致的胜率，而不是“双方威胁数之差的静态快照”。
+    // 关键修正：
+    //   1) 先判终局。任何一方已经连五，或已无处可下，直接返回 100/0/50，
+    //      不再去看威胁计数——否则“已经输了”的局面仍可能显示高胜率。
+    //   2) 逐方向精确识别活四/冲四/活三，并把“下一步就能成五”的数目考虑进去。
+    //   3) 用连胜手数（谁先能连成五）区分“我先赢”和“对手先赢”。
     const WINRATE_DIRS = [[0,1],[1,0],[1,1],[1,-1]];
+
     function lineWonAt(b, row, col, color) {
-      return WINRATE_DIRS.some(([dr,dc]) => {
+      for (const [dr,dc] of WINRATE_DIRS) {
         let total = 1;
         for (const sign of [-1,1]) for (let n=1;n<BOARD_SIZE;n++) {
           if (b[row+sign*dr*n]?.[col+sign*dc*n] !== color) break;
           total++;
         }
-        return total >= 5;
-      });
+        if (total >= 5) return true;
+      }
+      return false;
     }
-    // 该颜色当前能落成的强制威胁：连五点、活四（两条成五线）、冲四（一条成五线）。
+    // 该颜色是否已经连成五（遍历已有棋子，判断谁已经赢了）。
+    function hasFive(b, color) {
+      for (let row=0; row<BOARD_SIZE; row++) for (let col=0; col<BOARD_SIZE; col++) {
+        if (b[row][col] !== color) continue;
+        if (lineWonAt(b, row, col, color)) return true;
+      }
+      return false;
+    }
+    // 该颜色“再落一子就成五”的点数量。
+    function immediateWinCount(b, color) {
+      let count = 0;
+      for (let row=0; row<BOARD_SIZE; row++) for (let col=0; col<BOARD_SIZE; col++) {
+        if (b[row][col]) continue;
+        b[row][col] = color;
+        const made = lineWonAt(b, row, col, color);
+        b[row][col] = 0;
+        if (made) count++;
+      }
+      return count;
+    }
+    // 逐方向精确统计威胁：活四（两端可成五，无法单点封堵）、冲四（一点成五，对手必挡）、活三。
     function threatProfile(b, color) {
-      // 逐方向精确判定，而不是把“成五点总数”直接当活四/冲四：
-      //   活四 = 某方向填一子后形成四连，且两端各有一个成五点（无法单点封堵）；
-      //   冲四 = 某方向填一子后形成四连，但只有一个成五点（对手必挡）；
-      //   活三 = 填一子形成三连且两端开阔，下一步可成活四。
-      // 把成五点数量直接当活四会误判被堵死的连子，因此这里按方向分别计数。
-      let five = 0, openFour = 0, four = 0, openThree = 0;
-      const runAt = (board, row, col, color, dr, dc) => {
+      let openFour = 0, four = 0, openThree = 0;
+      const runAt = (board, row, col, c, dr, dc) => {
         let run = 1;
         for (const sign of [-1,1]) for (let n=1;n<BOARD_SIZE;n++) {
-          if (board[row+sign*dr*n]?.[col+sign*dc*n] !== color) break;
+          if (board[row+sign*dr*n]?.[col+sign*dc*n] !== c) break;
           run++;
         }
         return run;
       };
-      const completionPoints = (board, row, col, color, dr, dc) => {
-        // 这条线上能补成五的空点数量（用于区分活四与冲四）。
+      const completionPoints = (board, row, col, c, dr, dc) => {
         let points = 0;
         for (let off=-4; off<=4; off++) {
           if (!off) continue;
-          const r = row+dr*off, c = col+dc*off;
-          if (r<0 || r>=BOARD_SIZE || c<0 || c>=BOARD_SIZE || board[r][c]) continue;
-          board[r][c] = color;
-          const made = lineWonAt(board, r, c, color);
-          board[r][c] = 0;
+          const r = row+dr*off, c2 = col+dc*off;
+          if (r<0 || r>=BOARD_SIZE || c2<0 || c2>=BOARD_SIZE || board[r][c2]) continue;
+          board[r][c2] = c;
+          const made = lineWonAt(board, r, c2, c);
+          board[r][c2] = 0;
           if (made) points++;
         }
         return points;
@@ -1062,7 +1086,6 @@
       for (let row=0; row<BOARD_SIZE; row++) for (let col=0; col<BOARD_SIZE; col++) {
         if (b[row][col]) continue;
         b[row][col] = color;
-        if (lineWonAt(b, row, col, color)) { five++; b[row][col] = 0; continue; }
         let sawOpenFour = false, sawFour = false, sawOpenThree = false;
         for (const [dr,dc] of WINRATE_DIRS) {
           const run = runAt(b, row, col, color, dr, dc);
@@ -1080,24 +1103,48 @@
         else if (sawFour) four++;
         else if (sawOpenThree) openThree++;
       }
-      return { five, openFour, four, openThree };
+      return { openFour, four, openThree };
     }
+    // 判定 leftColor 相对于 rightColor 的胜率（0..1）。turnColor 是当前该落子的一方。
+    function estimateWinRate(b, leftColor, turnColor) {
+      const rightColor = 3 - leftColor;
+      // 1) 终局优先：已连五者直接胜出；棋盘下满则是和棋。
+      const leftFive = hasFive(b, leftColor);
+      const rightFive = hasFive(b, rightColor);
+      if (leftFive && !rightFive) return 1;
+      if (rightFive && !leftFive) return 0;
+      if (leftFive && rightFive) return 0.5;
+      if (b.every(row => row.every(cell => cell !== 0))) return 0.5;
 
-    // 把双方威胁折算成一方胜率；双方都无威胁时回落到 50%。
-    function estimateWinRate(mine, theirs) {
-      if (mine.five) return 1;
-      if (theirs.five) return 0;
-      // 活四近乎必胜，冲四强威胁，活三只是发展中的威胁，权重依次递减。
-      const strength = (t) => t.openFour * 6 + t.four * 1.6 + (t.openThree || 0) * 0.35;
-      const m = strength(mine), o = strength(theirs);
+      // 2) 下一步就能成五的点数：这是最直接的“谁先赢”。
+      const leftImmediate = immediateWinCount(b, leftColor);
+      const rightImmediate = immediateWinCount(b, rightColor);
+      // 若轮到某方落子而该方已有成五点，基本等同于已经赢了。
+      if (leftImmediate && rightImmediate) {
+        // 双方都能立即成五：轮到谁谁赢。
+        return turnColor === leftColor ? 1 : 0;
+      }
+      if (leftImmediate) {
+        if (turnColor === leftColor) return 1;
+        // 对手先手时，只有自己有两个以上成五点才堵不住。
+        return leftImmediate >= 2 ? 1 : 0.02;
+      }
+      if (rightImmediate) {
+        if (turnColor === rightColor) return 0;
+        return rightImmediate >= 2 ? 0 : 0.98;
+      }
+
+      // 3) 没有立即胜负时，用威胁强度差（活四 ≫ 冲四 > 活三）折算。
+      const left = threatProfile(b, leftColor);
+      const right = threatProfile(b, rightColor);
+      const strength = (t) => t.openFour * 12 + t.four * 3 + t.openThree * 0.8;
+      const m = strength(left), o = strength(right);
       if (!m && !o) return 0.5;
-      return 1 / (1 + Math.exp(-(m - o) / 3));
+      return 1 / (1 + Math.exp(-(m - o) / 4));
     }
     // leftColor 为左侧一方：人机对战是玩家，模型对战是黑方。
     function winRateFor(leftColor) {
-      const left = threatProfile(board, leftColor);
-      const right = threatProfile(board, 3 - leftColor);
-      const leftRate = estimateWinRate(left, right);
+      const leftRate = estimateWinRate(board, leftColor, currentPlayer);
       return { left: leftRate, right: 1 - leftRate };
     }
     let winrateLeftColor = 1;
@@ -1427,7 +1474,6 @@
   </script>
   <script>
     const motionQuery = window.matchMedia('(prefers-reduced-motion: no-preference)');
-    if (!motionQuery.matches) document.documentElement.style.scrollSnapType = 'none';
     if (motionQuery.matches) {
       const revealItems = document.querySelectorAll('.page-header, .game-container, .leaderboard, .panel');
       revealItems.forEach(item => item.classList.add('reveal-ready'));

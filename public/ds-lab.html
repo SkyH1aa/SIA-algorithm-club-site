@@ -372,8 +372,12 @@
       gap: 0;
       width: 100%;
       max-width: 860px;
+      /* overflow-x:auto 会连带裁掉纵向溢出，而节点标签 n0/n1… 用绝对定位悬在
+         格子上方，所以这里必须留出足够的上内边距容纳它们，否则标签被裁掉。 */
       overflow-x: auto;
-      padding: 8px 4px;
+      overflow-y: visible;
+      padding: 26px 4px 8px;
+      box-sizing: border-box;
     }
     .list-frame:empty::after {
       content: "空链表 · head → null";

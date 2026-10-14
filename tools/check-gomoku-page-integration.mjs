@@ -239,6 +239,11 @@ try {
         gameModeSelect.value=mode;gameModeSelect.dispatchEvent(new Event('change'));
         check(board.flat().every(x=>!x)&&gameMoves.length===0,'Mode switch clears all engines');
       }
+      // 页面必须能自由滚动：滚动吸附会把视图卡在单个面板上，看不到完整界面。
+      check(getComputedStyle(document.documentElement).scrollSnapType==='none','Page must not trap scrolling with scroll-snap');
+      check(document.documentElement.scrollHeight>window.innerHeight,'Page is taller than the viewport so it can scroll');
+      const snapAligned=[...document.querySelectorAll('*')].filter(el=>getComputedStyle(el).scrollSnapAlign!=='none').length;
+      check(snapAligned===0,'No element keeps a scroll-snap alignment');
       // AI 决策面板：九项字段齐全，缺失项要明确标注而不是只显示破折号。
       const explainIds=['explainSource','explainTarget','explainDepth','explainSelDepth','explainScore','explainCandidates','explainNodes','explainEngineTime','explainTotalTime'];
       for(const id of explainIds) check(!!document.getElementById(id),'Explain panel field '+id);
@@ -286,6 +291,27 @@ try {
       check(!document.getElementById('winratePanel').hidden,'Win rate bar visible for a human game');
       check(document.getElementById('winrateLeftValue').textContent==='50%'&&document.getElementById('winrateRightValue').textContent==='50%','An empty board starts at 50/50');
       // 黑棋已有活四时，黑方胜率必须接近满值。
+      // 胜率必须与胜负一致：已经输的一方不能显示高胜率（这是此前的真实缺陷）。
+      const winBoard=(black,white=[])=>{const b=Array.from({length:15},()=>Array(15).fill(0));black.forEach(c=>b[c[0]][c[1]]=1);white.forEach(c=>b[c[0]][c[1]]=2);return b;};
+      check(Math.round(estimateWinRate(winBoard([[7,3],[7,4],[7,5],[7,6],[7,7]]),1,2)*100)===100,'Five in a row reads as a win');
+      check(Math.round(estimateWinRate(winBoard([[0,0]],[[7,3],[7,4],[7,5],[7,6],[7,7]]),1,1)*100)===0,'A lost position reads as a loss');
+      check(Math.round(estimateWinRate(winBoard([[0,0]],[[7,5],[7,6],[7,7],[7,8]]),1,1)*100)===0,'An opponent open four reads as a loss');
+      check(Math.round(estimateWinRate(winBoard([]),1,1)*100)===50,'An empty board reads as even');
+      check(Math.round(estimateWinRate(winBoard([[7,5],[7,6],[7,7],[7,8]]),1,2)*100)===100,'Our own open four reads as a win');
+      // 双方都已有四连（各有两个成五点）：轮到谁谁赢。
+      const raceBoard=(()=>{const b=Array.from({length:15},()=>Array(15).fill(0));
+        [[7,4],[7,5],[7,6],[7,7]].forEach(c=>b[c[0]][c[1]]=1);
+        [[3,4],[3,5],[3,6],[3,7]].forEach(c=>b[c[0]][c[1]]=2);
+        return b;})();
+      check(immediateWinCount(raceBoard,1)>=2&&immediateWinCount(raceBoard,2)>=2,'Race fixture gives both sides two five-points');
+      check(Math.round(estimateWinRate(raceBoard,1,1)*100)===100,'Whoever moves first wins the immediate race (black)');
+      check(Math.round(estimateWinRate(raceBoard,1,2)*100)===0,'Whoever moves first wins the immediate race (white)');
+      // 一侧已有四连（两个成五点）而对手无威胁：该侧稳赢，轮不轮到都成立。
+      const dominant=winBoard([[7,4],[7,5],[7,6],[7,7]]);
+      check(Math.round(estimateWinRate(dominant,1,2)*100)===100,'An unblockable double five-point still wins when it is the opponent turn');
+      // 只有对手单向成五、且没有第二点时，形势不利但不是必败。
+      const single=winBoard([], [[7,4],[7,5],[7,6],[7,7]]);
+      check(estimateWinRate(single,1,1)<=0.02,'A single blocked-by-one four leaves no winning line');
       // 直接以“左侧=黑方”计算，避免依赖此前用例留下的 playerColor 状态。
       board=emptyBoard(); [[7,4],[7,5],[7,6],[7,7]].forEach(([r,c])=>board[r][c]=1);
       check(winRateFor(1).left>=0.95,'A live four drives that side to the top');
