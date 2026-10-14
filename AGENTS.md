@@ -45,8 +45,13 @@
 node tools/build-gomoku-training-model.mjs
 node --check tools/build-gomoku-training-model.mjs
 node --check public/data/gomoku-training-model.js
+node tools/check-gomoku-sql-syntax.mjs   # 改过 SQL 必须跑：pglast 真实语法校验
 git diff --check
 ```
+
+SQL 改动必须用 `node tools/check-gomoku-sql-syntax.mjs` 校验（需 `pip install pglast`）。
+括号配对与关键字检查发现不了被字符串替换挤断的语句（例如 `grant ...` 与 `to ...;` 断成两截），
+只有真实 PostgreSQL 解析器能发现，不要用其它检查代替它。
 
 检查前端上传结果映射、边缘函数结果校验，以及生成模型的累计期数；不要为了清理工作区而恢复或删除用户已有的训练数据。
 

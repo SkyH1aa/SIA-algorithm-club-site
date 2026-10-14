@@ -671,7 +671,7 @@
       }, delay);
     }
 
-    async function finishGame(result, { uploadTraining = true } = {}) {
+    async function finishGame(result, { uploadTraining = true, surrender = false } = {}) {
       gameInProgress = false;
       updateGameActionButton();
       if (resultSubmitted) return;
@@ -699,6 +699,23 @@
             : `${ClubI18n.t('gomoku.trainFail')}（${escapeHtml(lastTrainingUploadError)}）`;
         }
       }
+      // 对战记录必须先回写：它只依赖本局指纹，不该被排行榜写入的成败牵连。
+      // 之前把回写放在 record_gomoku_result 之后，排行榜一旦报错就会提前 return，
+      // 记录永远停在 pending，10 分钟后被显示成“无效对局”。
+      const logMoves = Math.max(1, moveCount);
+      const logWinnerLabel = result === 'draw' ? null
+        : (result === 'win' ? nickname : getModelName(activeModelVersion));
+      const logWinnerColor = result === 'draw' ? null
+        : (result === 'win' ? playerColor : aiColor);
+      await finishMatchLog({
+        // 投降时结果要如实记为 surrender，而不是普通负局。
+        outcome: surrender ? 'surrender' : result,
+        moves: logMoves, durationMs,
+        score: surrender ? 0 : score,
+        winnerLabel: surrender ? getModelName(activeModelVersion) : logWinnerLabel,
+        winnerColor: surrender ? aiColor : logWinnerColor
+      });
+
       if (!supabaseClient || typeof supabaseClient.rpc !== 'function') {
         document.getElementById('result').textContent += ClubI18n.t('gomoku.scoreNoInit');
         return;
@@ -707,7 +724,7 @@
         p_nickname: nickname,
         p_result: result,
         p_win_points: getModelWinPoints(activeModelVersion),
-        p_moves: Math.max(1, moveCount),
+        p_moves: logMoves,
         p_duration_ms: Math.min(durationMs, 86400000)
       });
       if (error) {
@@ -715,11 +732,6 @@
         return;
       }
       document.getElementById('result').textContent += ClubI18n.t('gomoku.scoreSaved');
-      await finishMatchLog({
-        outcome: result, moves: Math.max(1, moveCount), durationMs,
-        score, winnerLabel: result === 'win' ? nickname : getModelName(activeModelVersion),
-        winnerColor: result === 'draw' ? null : (result === 'win' ? playerColor : aiColor)
-      });
       await loadLeaderboard();
     }
 
@@ -1413,13 +1425,8 @@
       }
       document.getElementById('status').textContent = ClubI18n.t('gomoku.youSurrendered');
       try {
-        await finishGame('loss', { uploadTraining: false });
-        await finishMatchLog({
-          outcome: 'surrender', moves: Math.max(1, moveCount),
-          durationMs: gameStartedAt ? Date.now() - gameStartedAt : null,
-          score: 0, winnerLabel: isModelBattle ? null : getModelName(activeModelVersion),
-          winnerColor: isModelBattle ? null : aiColor
-        });
+        // 投降由 finishGame 内部一并回写，避免同一局写两次（第二次会因指纹已清空而丢失）。
+        await finishGame('loss', { uploadTraining: false, surrender: true });
       } finally {
         gameActionBusy = false;
         updateGameActionButton();

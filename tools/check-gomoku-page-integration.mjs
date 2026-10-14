@@ -328,6 +328,37 @@ try {
       // 对战记录：折叠框默认关闭，展开后才拉取；指纹与开始/结束 RPC 都已接线。
       check(document.getElementById('matchLogPanel') && !document.getElementById('matchLogPanel').open,'Match log starts collapsed');
       check(typeof startMatchLog==='function' && typeof finishMatchLog==='function','Match log helpers exist');
+      // 对战记录必须在排行榜写入失败时也能回写：这是“大量对局被标为无效”的根因。
+      {
+        const calls = [];
+        const originalRpc = supabaseClient.rpc;
+        supabaseClient.rpc = async (name, params) => {
+          calls.push({ name, outcome: params ? params.p_outcome : null });
+          if (name === 'record_gomoku_result') return { error: { message: 'simulated leaderboard failure' } };
+          return { error: null };
+        };
+        const savedLeaderboard = loadLeaderboard; loadLeaderboard = async () => {};
+        document.getElementById('nickname').value = 'integration-check';
+        activeModelVersion = 9; playerColor = 1; aiColor = 2; isModelBattle = false;
+        gameMoves = [{row:7,col:7,player:1}]; moveCount = 1;
+        resultSubmitted = false; gameInProgress = true; gameStartedAt = Date.now() - 4000;
+        currentMatchFingerprint = 'gm-integration-log-1';
+        await finishGame('win');
+        check(calls.some(c => c.name === 'finish_gomoku_match'), 'Match log is written even when the leaderboard fails');
+        check(calls.findIndex(c => c.name === 'finish_gomoku_match') < calls.findIndex(c => c.name === 'record_gomoku_result'), 'Match log is written before the leaderboard call');
+        // 投降只回写一次，且结果记为 surrender。
+        calls.length = 0;
+        gameMoves = [{row:7,col:7,player:1},{row:6,col:8,player:2}]; moveCount = 2;
+        resultSubmitted = false; gameInProgress = true; gameover = false; gameActionBusy = false;
+        gameStartedAt = Date.now() - 9000;
+        currentMatchFingerprint = 'gm-integration-log-2';
+        await handleGameAction();
+        const surrenderLogs = calls.filter(c => c.name === 'finish_gomoku_match');
+        check(surrenderLogs.length === 1, 'Surrender writes exactly one log entry');
+        check(surrenderLogs[0].outcome === 'surrender', 'Surrender is recorded as surrender, not a plain loss');
+        supabaseClient.rpc = originalRpc;
+        loadLeaderboard = savedLeaderboard;
+      }
       // 对战记录：七栏（时间/昵称/模式/执子情况/用时/步数/获胜方），且必须描述谁赢了与双方执子。
       const logHeaders=[...document.querySelectorAll('#matchLogPanel table thead th')].map(th=>th.textContent);
       check(logHeaders.length===7,'Match log has seven columns');

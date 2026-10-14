@@ -245,3 +245,19 @@ revoke all on function public.finish_gomoku_match(text, text, integer, integer, 
   from public, anon, authenticated;
 grant execute on function public.finish_gomoku_match(text, text, integer, integer, integer, text, integer)
   to anon, authenticated;
+
+-- 只读视图：把“超过 10 分钟仍无结果”的 pending 记录直接呈现为 invalid，
+-- 由数据库负责判定，前端不必各自实现同一套规则。
+drop view if exists public.gomoku_match_log_view;
+create view public.gomoku_match_log_view as
+  select
+    fingerprint, nickname, mode, model_version, opponent_model_version,
+    player_color, ai_color, started_at, finished_at, duration_ms, moves,
+    score, winner_label, winner_color,
+    coalesce(
+      outcome,
+      case when now() - started_at > interval '10 minutes' then 'invalid' else 'pending' end
+    ) as effective_outcome
+  from public.gomoku_match_log;
+
+grant select on public.gomoku_match_log_view to anon, authenticated;
