@@ -25,6 +25,7 @@
     .choice.dp::before{border-color:rgba(124,77,255,.35);box-shadow:0 0 70px rgba(124,77,255,.22),inset 0 0 45px rgba(255,95,200,.08)}
     .choice.tree::before{border-color:rgba(0,229,255,.3);box-shadow:0 0 70px rgba(0,229,255,.16),inset 0 0 45px rgba(113,243,191,.08)}
     .choice.heap::before{border-color:rgba(255,140,66,.35);box-shadow:0 0 70px rgba(255,140,66,.18),inset 0 0 45px rgba(255,209,102,.08)}
+    .choice.gomoku::before{border-color:rgba(113,243,191,.34);box-shadow:0 0 70px rgba(113,243,191,.18),inset 0 0 45px rgba(124,77,255,.1)}
     .choice:hover{transform:translateY(-5px);border-color:rgba(0,229,255,.62);box-shadow:0 30px 100px rgba(0,229,255,.2)}
     .choice.search:hover{border-color:rgba(255,95,200,.65)}
     .choice.ds:hover{border-color:rgba(255,209,102,.7);box-shadow:0 30px 100px rgba(255,209,102,.16)}
@@ -32,6 +33,7 @@
     .choice.dp:hover{border-color:rgba(179,147,255,.75);box-shadow:0 30px 100px rgba(124,77,255,.2)}
     .choice.tree:hover{border-color:rgba(0,229,255,.75)}
     .choice.heap:hover{border-color:rgba(255,140,66,.75);box-shadow:0 30px 100px rgba(255,140,66,.16)}
+    .choice.gomoku:hover{border-color:rgba(113,243,191,.75);box-shadow:0 30px 100px rgba(113,243,191,.16)}
     .choice-content{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;align-items:flex-start}
     .choice-icon{display:grid;place-items:center;width:48px;height:48px;border:1px solid rgba(0,229,255,.55);border-radius:9px;color:var(--cyan);font:800 20px/1 ui-monospace,Consolas,monospace;background:rgba(0,229,255,.1)}
     .search .choice-icon{border-color:rgba(255,95,200,.55);color:var(--pink);background:rgba(255,95,200,.1)}
@@ -73,6 +75,7 @@
       <a class="choice dp" href="dp-lab.html"><span class="choice-content"><span class="choice-icon">▦</span><h2 data-i18n="lab.common.dp">动态规划</h2><p data-i18n="lab.common.dpDesc">观察一维递推、LIS 与 0-1 背包的状态转移填表，以及最优方案回溯。</p><span class="go" data-i18n="lab.common.enterDp">进入 DP 实验室</span></span></a>
       <a class="choice tree" href="tree-lab.html"><span class="choice-content"><span class="choice-icon">⑂</span><h2 data-i18n="lab.common.tree">二叉树</h2><p data-i18n="lab.common.treeDesc">前中后序与层序遍历，BST 插入删除，以及字典序二叉树的中序有序性。</p><span class="go" data-i18n="lab.common.enterTree">进入二叉树实验室</span></span></a>
       <a class="choice heap" href="heap-lab.html"><span class="choice-content"><span class="choice-icon">▲</span><h2 data-i18n="lab.common.heap">堆</h2><p data-i18n="lab.common.heapDesc">建堆、插入上浮、删除下沉与堆排序；数组视图与树视图同步展示。</p><span class="go" data-i18n="lab.common.enterHeap">进入堆实验室</span></span></a>
+      <a class="choice gomoku" href="gomoku-satori-lab.html"><span class="choice-content"><span class="choice-icon">◎</span><h2 data-i18n="lab.common.satori">五子棋 AI 决策剖析</h2><p data-i18n="lab.common.satoriDesc">把自研五子棋 AI Gomoku-Satori 的每一步思考完全摊开：威胁普查、候选排序、逐层加深、搜索树与必胜证明。</p><span class="go" data-i18n="lab.common.enterSatori">进入 Satori 决策剖析实验室</span></span></a>
     </section>
   </main>
 <script>!function(){try{var t=document.querySelector('.topbar');if(t&&!document.getElementById('langSwitcherHost')){var h=document.createElement('div');h.id='langSwitcherHost';t.appendChild(h);}if(window.ClubI18n)window.ClubI18n.mountSwitcher(document.getElementById('langSwitcherHost'));if(window.ClubTheme&&typeof window.ClubTheme.autoMountSwitcher==='function')window.ClubTheme.autoMountSwitcher();}catch(e){}}();</script>

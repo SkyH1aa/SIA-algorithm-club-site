@@ -4,6 +4,10 @@
 
 最新用户决定：SlowRenju正式为V10Mesa（10.2，120秒，胜局14分，全胜负平上传），GomokuZero正式为V9Mesa（9.3，120秒，胜局9分，不上传）。新增V10Exp（10.3，180秒）为V9Thinker/V10专家+原Ultra Mix9自由网决策融合，正式胜局15分；新增V10Flash（10.4，120秒，16层，Mix9，Rapfi+自研战术层+专家系统）正式胜局15分；V10Bru·我非我Champion（10.6，V10Ultra同款Rapfi配置+全量先验开局书）已全面开放，正式胜局15分，人机/模型对战均上传自身视角胜负平全部结果。旧模型源码、配置、权重冻结；详见MEMORY.md。实验页所有对局仍保持本地，不上传排行榜/训练数据。
 
+新增 **Gomoku-Satori（版本号 11，原名 V11Ge）为展示版**：从零自研的纯 JavaScript 引擎（`public/gomoku-models/satori/`），不使用 Rapfi、WASM、神经网络或任何训练先验，也不借鉴其它模型的参数与配置。它**可参与人机对战与模型对战**（正式页与实验页均排在列表最后），但**不计积分、不上传训练数据、不写排行榜**——前端 `isExhibitionVersion(11)` 先拦一道，边缘函数 `acceptsResult` 白名单不含 11 作第二道；版本号 11 本身是合法值，因此它仍可作为模型对战的对手，此时只有对手视角按各自规则上传。诚实记录：它对 V9Thinker、V10Ultra 的双色与固定开局验收全败（各 0:12），是搜索引擎与手写评估的展示样例，不是强度对手。改 `satori/engine.js` 或 `satori/worker.js` 后必须重跑 `node tools/build-gomoku-satori-file-package.mjs`；验收工具为 `node tools/test-gomoku-satori.mjs` 与 `node tools/verify-gomoku-satori-vcf.mjs`。
+
+决策剖析实验室 `public/gomoku-satori-lab.html`：把 Satori 每一步决策完全摊开（威胁普查、候选排序及各项得分、迭代加深逐层结果、搜索树、VCF/VCT 证明序列、步骤回看、实时对战）。为此 `satori/engine.js` 增加了**默认关闭**的埋点：只有调用 `setTrace()` 才记录，关闭时不执行任何埋点计算，生产对局的走子结果与耗时完全不变（已有断言校验 trace 开关不改变落子）。改埋点后需重建离线包并重跑 `node tools/check-gomoku-satori-lab.mjs`（HTTP 与 file:// 两侧，含立即连五/必防/VCF 三个战术演示）。
+
 ## 持续累加训练期次
 
 - 每一期训练数据必须保留在独立的 `五子棋训练数据<期号>/` 目录中。不要删除、移动或覆盖旧期目录，也不要只把最新一期复制成唯一数据源。
@@ -29,7 +33,7 @@
 
 ## 铭星五子棋版本
 
-- `Past-Gomoku-Model/` 保存历史模型源文件。当前页面默认模型为铭星V9；可挑战版本为已有的 V1、V2、V3、V6、V7、V8、V9、V9Pro（9.1）、V9Thinker（9.2）、V10（10）、V10Ultra（10.1）、V9Mesa（9.3）、V10Mesa（10.2）、V10Exp（10.3）、V10Flash（10.4）、V10Thinker（10.5）及V10Bru·我非我Champion（10.6），缺失的 V4、V5 不补造。不得为了优化新模型覆盖或删除 V9 和历史版本。
+- `Past-Gomoku-Model/` 保存历史模型源文件。当前页面默认模型为铭星V9；可挑战版本为已有的 V1、V2、V3、V6、V7、V8、V9、V9Pro（9.1）、V9Thinker（9.2）、V10（10）、V10Ultra（10.1）、V9Mesa（9.3）、V10Mesa（10.2）、V10Exp（10.3）、V10Flash（10.4）、V10Thinker（10.5）、V10Bru·我非我Champion（10.6）及展示版 Gomoku-Satori（11），缺失的 V4、V5 不补造。不得为了优化新模型覆盖或删除 V9 和历史版本。
 - 新增/调整可挑战版本时，同步维护 `public/gomoku-models/` 中供页面调用的历史模型文件、`public/gomoku.html` 的模型选择项和训练上传字段；页面展示名称统一为“铭星V<版本号>”。
 - 玩家战胜铭星Vx 时记 x 分；V9Pro 胜局记 10 分，V9Thinker 和 V10 各记 12 分，V10Ultra 记 15 分，V9Mesa记9分、V10Mesa记14分、V10Flash记15分；V10Exp记15分；V10Thinker记16分；V10Bru·我非我Champion记15分；负局 0 分、和棋 1 分。前端显示分数、排行榜 RPC 参数和数据库函数 `record_gomoku_result` 必须同步维护。部署前端后还要在 Supabase 执行更新后的 `supabase-gomoku-schema.sql`。
 - `supabase/functions/gomoku-training/index.ts` 校验并保存所挑战的模型版本；AI 结果仍按 `win`、`loss`、`draw` 原样保存；仅 V9Thinker（9.2）、V10（10）、V10Ultra（10.1）、V10Mesa（10.2）、V10Exp（10.3）、V10Flash（10.4）、V10Thinker（10.5）、V10Bru·我非我Champion（10.6）接收全部三种结果，其他版本的上传请求全部拒收。
@@ -49,6 +53,16 @@ node tools/check-gomoku-sql-syntax.mjs   # 改过 SQL 必须跑：pglast 真实�
 git diff --check
 ```
 
+改动 Satori 引擎、包装器或决策剖析实验室时至少再跑：
+
+```bash
+node tools/build-gomoku-satori-file-package.mjs   # 改了 satori/engine.js 或 satori/worker.js 后必须重建
+node tools/test-gomoku-satori.mjs
+node tools/verify-gomoku-satori-vcf.mjs
+node tools/test-gomoku-training-policy.mjs        # 含离线包字节一致与“11 不在上传白名单”校验
+node tools/check-gomoku-satori-lab.mjs            # 需静态服务器 4173 + Chrome DevTools 9222
+```
+
 SQL 改动必须用 `node tools/check-gomoku-sql-syntax.mjs` 校验（需 `pip install pglast`）。
 括号配对与关键字检查发现不了被字符串替换挤断的语句（例如 `grant ...` 与 `to ...;` 断成两截），
 只有真实 PostgreSQL 解析器能发现，不要用其它检查代替它。
@@ -59,4 +73,4 @@ Mesa资源修改后运行 node tools/build-gomoku-experiment-file-package.mjs；
 
 任一模型改动棋力（搜索参数、先验、开局书）后必须重跑换色完整对局验收：`node tools/run-gomoku-model-pair.mjs <模型A> <模型B> [标签]`，仅在棋谱重放与资源指纹全部通过、`complete=true` 后才可声称对局完成。用真人棋谱验证某个模型时用 `node tools/run-gomoku-human-line.mjs <引擎> <棋谱.json> <输出.json>`（脚本方按记录逐手重放，执子颜色不变，另一方实时对弈）；偏离之后脚本方已非针对当前对手，速胜不能当棋力证据。对战页 `tools/gomoku-experiment-browser.html` 的脚本方引擎位名固定为 `script`，颜色由棋谱或 `scriptColor` 指定，普通双引擎对局不受影响。
 
-页面模型按用户指定强度顺序排列，V9起依次为V9、V9Pro、V9Mesa、V9Thinker、V10、V10Mesa、V10Flash、V10Exp、V10Ultra、V10Thinker、V10Bru·我非我Champion；不得按小数内部版本号排序。人机、黑方、白方选择器和实验页都保持一致。
+页面模型按用户指定强度顺序排列，V9起依次为V9、V9Pro、V9Mesa、V9Thinker、V10、V10Mesa、V10Flash、V10Exp、V10Ultra、V10Thinker、V10Bru·我非我Champion、Gomoku-Satori（展示版，排在最后）；不得按小数内部版本号排序。人机、黑方、白方选择器和实验页都保持一致。

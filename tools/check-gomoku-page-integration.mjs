@@ -76,10 +76,10 @@ try {
       loadLeaderboard = async () => {};
       ClubI18n.init();
       document.getElementById('nickname').value = 'integration-check';
-      const versions = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6];
+      const versions = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 11];
       const eligible = [9.2, 10, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6];
-      const expectedPoints = { '9.1': 10, '9.2': 12, '10': 12, '10.1': 15, '9.3': 9, '10.2': 14, '10.3': 15, '10.4': 15, '10.5': 16, '10.6': 15 };
-      const expectedOrder=[1,2,3,6,7,8,9,9.1,9.3,9.2,10,10.2,10.4,10.3,10.1,10.5,10.6];
+      const expectedPoints = { '9.1': 10, '9.2': 12, '10': 12, '10.1': 15, '9.3': 9, '10.2': 14, '10.3': 15, '10.4': 15, '10.5': 16, '10.6': 15, '11': 0 };
+      const expectedOrder=[1,2,3,6,7,8,9,9.1,9.3,9.2,10,10.2,10.4,10.3,10.1,10.5,10.6,11];
       check(JSON.stringify(MODEL_VERSIONS)===JSON.stringify(expectedOrder),'Strength order registry');
       populateBattleModels();
       for(const selector of [modelVersionSelect,blackModelVersionSelect,whiteModelVersionSelect]) {
@@ -115,7 +115,18 @@ try {
           check(uploads[0].aiColor === color && uploads[0].playerColor === 3 - color, 'Human colors');
           check(!uploads[0].modelBattle && !uploads[0].opponentModelVersion, 'Human mode leaked');
         }
-        const points = expectedPoints[String(version)] || version;
+        // 展示版（Gomoku-Satori，11）走独立路径：不计分、不写排行榜，文案用 exhibition 键。
+        if (isExhibitionVersion(version)) {
+          check(uploads.length === 0, 'Exhibition must not upload training data');
+          check(scores.length === 0, 'Exhibition must not call the leaderboard RPC');
+          const exhibitionText = ClubI18n.t(outcome === 'win' ? 'gomoku.exhibitionWin' : outcome === 'draw' ? 'gomoku.exhibitionDraw' : 'gomoku.exhibitionLose', {model: getModelName(version)});
+          check(document.getElementById('result').textContent.startsWith(exhibitionText), 'Exhibition result text');
+          check(document.getElementById('result').textContent.includes(ClubI18n.t('gomoku.exhibitionNoScore')), 'Exhibition notes no leaderboard write');
+          check(getModelWinPoints(version) === 0, 'Exhibition awards no points');
+          humanCases++;
+          continue;
+        }
+        const points = expectedPoints[String(version)] ?? version;
         check(scores.length === 1 && scores[0].p_win_points === points && scores[0].p_result === outcome, 'Score RPC: ' + version);
         const award = outcome === 'win' ? points : outcome === 'draw' ? 1 : 0;
         const resultText = ClubI18n.t(outcome === 'win' ? 'gomoku.win' : outcome === 'draw' ? 'gomoku.draw' : 'gomoku.lose', {score: award, model: getModelName(version)});
@@ -155,6 +166,38 @@ try {
         workerMoves.push({color, move, elapsedMs: Math.round(performance.now() - started)});
       }
       GomokuV10Ultra.clearCache();
+      // Gomoku-Satori：独立 Worker，黑白都要在真实页面里落出合法着法。
+      // 展示版必须同时验证倒计时与“不计分、不上传”的展示文案。
+      const satoriMoves=[];
+      for(const color of [1,2]) {
+        GomokuSatori.clearCache();
+        board=Array.from({length:15},()=>Array(15).fill(0));gameMoves=[];
+        if(color===2){board[7][7]=1;gameMoves=[{row:7,col:7,player:1}];}
+        const started=performance.now();
+        const move=await findModelMove(11,color);
+        check(move&&Number.isInteger(move.row)&&Number.isInteger(move.col)&&board[move.row]?.[move.col]===0,'Satori Worker legal move (color '+color+')');
+        satoriMoves.push({color,move,elapsedMs:Math.round(performance.now()-started),search:GomokuSatori.lastSearch});
+      }
+      startAiCountdown(11);
+      check(!document.getElementById('aiCountdown').hidden && document.getElementById('aiCountdownLabel').textContent.includes('16.0'),'Satori budget countdown');
+      stopAiCountdown();
+      // 立即连五与必防的优先级必须在真实 Worker 路径上成立（两种颜色）。
+      for(const color of [1,2]) {
+        GomokuSatori.clearCache();
+        board=Array.from({length:15},()=>Array(15).fill(0));gameMoves=[];
+        for(let c=4;c<8;c++){board[7][c]=color;board[3][c]=3-color;}
+        if(color===2)board[0][0]=1;
+        const move=await findModelMove(11,color);
+        check(move.row===7&&[3,8].includes(move.col),'Satori own-win priority (color '+color+')');
+        check(GomokuSatori.lastSearch?.reason==='immediate-win','Satori reports immediate-win');
+      }
+      GomokuSatori.clearCache();
+      await GomokuSatori.preload();
+      board=Array.from({length:15},()=>Array(15).fill(0));board[7][7]=1;gameMoves=[{row:7,col:7,player:1}];
+      const satoriInterrupted=findModelMove(11,2).then(()=>false,()=>true);
+      await new Promise(resolve=>setTimeout(resolve,100));
+      GomokuSatori.clearCache();
+      check(await satoriInterrupted,'Satori reset cancels the active search');
       const newWorkerMoves=[];
       for(const version of [9.3,10.2,10.3,10.4])for(const color of [1,2]) {
         board=Array.from({length:15},()=>Array(15).fill(0));gameMoves=[];

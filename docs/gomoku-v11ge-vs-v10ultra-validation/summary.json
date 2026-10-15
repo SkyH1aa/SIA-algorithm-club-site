@@ -1,0 +1,65 @@
+{
+  "generatedAt": "2026-10-15T05:01:57.339Z",
+  "complete": true,
+  "pair": [
+    "v11ge",
+    "v10ultra"
+  ],
+  "rule": "freestyle; 15x15; >=5 wins; no opening constraints",
+  "matches": [
+    {
+      "black": "v11ge",
+      "white": "v10ultra",
+      "winner": "v10ultra",
+      "moves": 44,
+      "file": "v11ge-black-v10ultra.json"
+    },
+    {
+      "black": "v10ultra",
+      "white": "v11ge",
+      "winner": "v10ultra",
+      "moves": 23,
+      "file": "v10ultra-black-v11ge.json"
+    }
+  ],
+  "models": {
+    "v11ge": {
+      "wins": 0,
+      "losses": 2,
+      "draws": 0,
+      "colors": {
+        "black": "loss",
+        "white": "loss"
+      },
+      "reasons": {
+        "opening-center": 1,
+        "search": 27,
+        "forced-block": 5
+      },
+      "bookMoves": 0,
+      "moves": 33,
+      "totalMs": 229334,
+      "meanMs": 6950,
+      "maxMs": 10009,
+      "medianMs": 10001
+    },
+    "v10ultra": {
+      "wins": 2,
+      "losses": 0,
+      "draws": 0,
+      "colors": {
+        "white": "win",
+        "black": "win"
+      },
+      "reasons": {
+        "rapfi-nnue": 34
+      },
+      "bookMoves": 0,
+      "moves": 34,
+      "totalMs": 6048,
+      "meanMs": 178,
+      "maxMs": 1422,
+      "medianMs": 58
+    }
+  }
+}

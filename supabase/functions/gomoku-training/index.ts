@@ -52,7 +52,7 @@ async function uploadGomokuTrainingData(payload: any) {
     throw new Error('对局结果不合法。');
   }
 
-  if (![1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6].includes(payload.modelVersion)) {
+  if (![1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 11].includes(payload.modelVersion)) {
     throw new Error('模型版本不合法。');
   }
 
@@ -61,6 +61,7 @@ async function uploadGomokuTrainingData(payload: any) {
     throw new Error('模型对战标记不合法。');
   }
 
+  // 11（Gomoku-Satori）是展示版：版本号合法，可作模型战对手，但永不接收自身数据。
   const acceptsResult = [9.2, 10, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6].includes(payload.modelVersion);
   if (!acceptsResult) {
     throw new Error('该模型版本不接收此类训练数据。');
@@ -83,7 +84,7 @@ async function uploadGomokuTrainingData(payload: any) {
   }
 
   if (modelBattle) {
-    if (![1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6].includes(payload.opponentModelVersion)) {
+    if (![1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 11].includes(payload.opponentModelVersion)) {
       throw new Error('对手模型版本不合法。');
     }
   } else if (payload.opponentModelVersion !== null && payload.opponentModelVersion !== undefined) {

@@ -15,6 +15,7 @@
 <script src="../public/gomoku-models/v10flash.js"></script>
 <script src="../public/gomoku-models/v10thinker.js"></script>
 <script src="../public/gomoku-models/v10champion.js"></script>
+<script src="../public/gomoku-models/satori.js"></script>
 <script src="../public/gomoku-models/experimental/models.js"></script>
 <script src="../public/gomoku-models/v10exp.js"></script>
 <script>
@@ -29,6 +30,7 @@ const engines = { v9: GomokuV9, v9pro: GomokuV9Pro, v9thinker: GomokuV9Thinker, 
   // keeps deepening until its per-move budget runs out, like the released
   // tournament build does.
   v10champion: GomokuV10Champion,
+  satori: GomokuSatori,
   v10thinker14: GomokuV10ThinkerFactory({ depth: 14, name: 'gomoku-v10thinker-14' }),
   v10thinker16: GomokuV10ThinkerFactory({ depth: 16, name: 'gomoku-v10thinker-16' }),
   v10thinker18: GomokuV10ThinkerFactory({ depth: 18, name: 'gomoku-v10thinker-18' }),
@@ -130,7 +132,7 @@ async function run() {
   if (script && (black === 'script') === (white === 'script')) throw new Error('exactly one side must be scripted');
   if (script && script.color !== (black === 'script' ? 1 : 2)) throw new Error('script color does not match its side');
   const report = {black,white,rule:'freestyle; 15x15; >=5 wins; no opening constraints',
-    limits:{slowrenju:120000,gomokuzero:{timeMs:120000,simulations:2000},v9thinker:40000,v10:40000,v10ultra:75000,v11candidate:90000,v10flash:120000,v10thinker:75000,v10thinker14:75000,v10thinker16:75000,v10thinker18:75000,v10champion:30000,v10exp:180000},
+    limits:{slowrenju:120000,gomokuzero:{timeMs:120000,simulations:2000},v9thinker:40000,v10:40000,v10ultra:75000,v11candidate:90000,v10flash:120000,v10thinker:75000,v10thinker14:75000,v10thinker16:75000,v10thinker18:75000,v10champion:30000,satori:16000,v10exp:180000},
     startedAt:new Date().toISOString(),winner:null,moves:[]};
   if (script) report.script = { source: scriptPath, color: script.color, moves: script.moves.length };
   if (opening) {

@@ -38,6 +38,7 @@ const files = ['public/gomoku-models/expert-core.js','public/gomoku-models/v9.js
   'public/gomoku-models/v10flash.js','public/gomoku-models/v10flash/worker.js',
   'public/gomoku-models/v10thinker.js','public/gomoku-models/v10thinker/worker.js',
   'public/gomoku-models/v10champion.js','public/gomoku-models/v10champion/worker.js',
+  'public/gomoku-models/satori.js', 'public/gomoku-models/satori/worker.js', 'public/gomoku-models/satori/engine.js',
   'public/gomoku-models/v10champion/rapfi-single.js','public/gomoku-models/v10champion/rapfi.data',
   'public/gomoku-models/v10ultra/rapfi.data','public/gomoku-models/experimental/models.js',
   'public/gomoku-models/experimental/slowrenju/worker.js','public/gomoku-models/experimental/slowrenju/engine.wasm',

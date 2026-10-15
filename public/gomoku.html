@@ -31,6 +31,14 @@
     .page-header a { color: #49e7ff; text-decoration: none; }
     .page-header h1 { margin: 8px 0; }
     .page-header p { color: #91a9b8; }
+    /* 指向决策剖析实验室的入口：本页只负责对局，逐步剖析在独立页面。 */
+    .page-header p.satori-lab-entry { margin-top: 10px; }
+    .page-header p.satori-lab-entry a {
+      display: inline-block; padding: 8px 15px; border-radius: 999px;
+      border: 1px solid rgba(73, 231, 255, .38); background: rgba(73, 231, 255, .08);
+      font-size: 13px; transition: all .25s ease;
+    }
+    .page-header p.satori-lab-entry a:hover { border-color: #49e7ff; box-shadow: 0 0 0 3px rgba(73, 231, 255, .12); }
     .game-layout { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 24px; align-items: start; }
     .panel { padding: 20px; border: 1px solid rgba(73, 231, 255, .24); border-radius: 12px; background: rgba(13, 28, 47, .84); box-shadow: 0 16px 42px rgba(0,0,0,.22); }
     .setup { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
@@ -193,6 +201,7 @@
       <span class="member-identity" data-member-identity hidden></span>
       <h1 data-i18n="gomoku.h1">AI 五子棋挑战</h1>
       <p data-i18n="gomoku.tagline">Powered by Sendelta Haiming · 浏览器端 Minimax + Alpha-Beta AI</p>
+      <p class="satori-lab-entry"><a href="gomoku-satori-lab.html" data-i18n="gomoku.satoriLabEntry">看看自研展示版 AI 是怎么思考的 → 决策剖析实验室</a></p>
     </header>
     <div class="game-layout">
       <main class="game-container panel">
@@ -206,7 +215,7 @@
           <input id="nickname" maxlength="20" placeholder="请输入昵称" data-i18n-placeholder="games.nickPlaceholder" autocomplete="nickname" />
           <label for="modelVersion" data-i18n="gomoku.modelLabel">挑战模型</label>
           <select id="modelVersion" aria-label="选择挑战模型">
-            <option value="1">铭星V1</option><option value="2">铭星V2</option><option value="3">铭星V3</option><option value="6">铭星V6</option><option value="7">铭星V7</option><option value="8">铭星V8</option><option value="9" selected>铭星V9</option><option value="9.1">铭星V9Pro</option><option value="9.3">铭星V9Mesa</option><option value="9.2">铭星V9Thinker</option><option value="10">铭星V10</option><option value="10.2">铭星V10Mesa</option><option value="10.4">铭星V10Flash</option><option value="10.3">铭星V10Exp</option><option value="10.1">铭星V10Ultra</option><option value="10.5">铭星V10Thinker</option><option value="10.6">铭星V10Bru·我非我Champion</option>
+            <option value="1">铭星V1</option><option value="2">铭星V2</option><option value="3">铭星V3</option><option value="6">铭星V6</option><option value="7">铭星V7</option><option value="8">铭星V8</option><option value="9" selected>铭星V9</option><option value="9.1">铭星V9Pro</option><option value="9.3">铭星V9Mesa</option><option value="9.2">铭星V9Thinker</option><option value="10">铭星V10</option><option value="10.2">铭星V10Mesa</option><option value="10.4">铭星V10Flash</option><option value="10.3">铭星V10Exp</option><option value="10.1">铭星V10Ultra</option><option value="10.5">铭星V10Thinker</option><option value="10.6">铭星V10Bru·我非我Champion</option><option value="11">Gomoku-Satori（展示版）</option>
           </select>
           <span class="hint" data-i18n="gomoku.nickSideHint">先填写昵称，再选择执子</span>
         </div>
@@ -280,6 +289,7 @@
   <script src="gomoku-models/v10flash.js"></script>
   <script src="gomoku-models/v10thinker.js"></script>
   <script src="gomoku-models/v10champion.js"></script>
+  <script src="gomoku-models/satori.js"></script>
   <script>
     const BOARD_SIZE = 15;
     let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
@@ -305,7 +315,8 @@
     let legacyLoadedVersion = null;
     let legacyMoveRequestId = 0;
     // 可挑战/可对战版本，顺序即页面展示顺序（V10Bru·我非我Champion 排在最后）。
-    const MODEL_VERSIONS = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.3, 9.2, 10, 10.2, 10.4, 10.3, 10.1, 10.5, 10.6];
+    // 版本 11（Gomoku-Satori）是展示版：可人机、可模型对战，但不计积分、不上传、不写排行榜。
+    const MODEL_VERSIONS = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.3, 9.2, 10, 10.2, 10.4, 10.3, 10.1, 10.5, 10.6, 11];
     const modelVersionSelect = document.getElementById('modelVersion');
     const gameModeSelect = document.getElementById('gameMode');
     const battleSetup = document.getElementById('battleSetup');
@@ -324,9 +335,13 @@
       if (version === 10.4) return '铭星V10Flash';
       if (version === 10.5) return '铭星V10Thinker';
       if (version === 10.6) return '铭星V10Bru·我非我Champion';
+      if (version === 11) return 'Gomoku-Satori（展示版）';
       return `铭星V${version}`;
     }
+    // 展示版不计积分：胜 0 分，平 0 分（对局仍可正常进行，只是不产生成绩）。
+    function isExhibitionVersion(version) { return Number(version) === 11; }
     function getModelWinPoints(version) {
+      if (isExhibitionVersion(version)) return 0;
       if (version === 9.3) return 9;
       if (version === 10.2) return 14;
       if (version === 10.4) return 15;
@@ -340,15 +355,17 @@
     }
     function canUploadTrainingResult(version, result) {
       if (!['win', 'loss', 'draw'].includes(result)) return false;
+      // 展示版（11）永不进入训练数据，前端先拦一道，边缘函数还有第二道校验。
+      if (isExhibitionVersion(version)) return false;
       return version === 9.2 || version === 10 || version === 10.1 || version === 10.2 || version === 10.3 || version === 10.4 || version === 10.5 || version === 10.6;
     }
     function startAiCountdown(version) {
       stopAiCountdown();
-      if (![10.1, 9.3, 10.2, 10.3, 10.4, 10.5, 10.6].includes(version)) return;
+      if (![10.1, 9.3, 10.2, 10.3, 10.4, 10.5, 10.6, 11].includes(version)) return;
       const label = document.getElementById('aiCountdownLabel');
       const fill = document.getElementById('aiCountdownFill');
       const panel = document.getElementById('aiCountdown');
-      const total = version === 10.3 ? 180000 : version === 10.4 ? 120000 : (version === 10.1 || version === 10.5 || version === 10.6) ? 75000 : 120000;
+      const total = version === 11 ? 16000 : version === 10.3 ? 180000 : version === 10.4 ? 120000 : (version === 10.1 || version === 10.5 || version === 10.6) ? 75000 : 120000;
       aiCountdownDeadline = performance.now() + total;
       panel.hidden = false;
       const tick = () => {
@@ -424,6 +441,7 @@
       const pick = (...keys) => { for (const key of keys) { const value = data[key]; if (value !== undefined && value !== null && value !== '') return value; } return undefined; };
       const reasonLabels = {
         'immediate-win': '立即连五', 'forced-block': '必防对手连五', 'vcf-win': '自研 VCF 必胜',
+        'vct-win': '自研 VCT 必胜', 'opening-center': '开局天元',
         'opening-book': '开局先验', 'rapfi-nnue': 'Rapfi 神经网络搜索', 'rapfi-nnue-champion': 'Rapfi 搜索（冠军配置）',
         'rapfi-thinker': 'Rapfi 搜索', 'rapfi-mix9-flash': 'Rapfi 搜索（V10Flash）', 'rapfi-mix9-candidate': 'Rapfi 搜索（候选）',
         'mix9-expert-checked': '自由网 + 专家复核', 'expert-proved-win': '专家已证明必胜',
@@ -481,9 +499,11 @@
       const version = isModelBattle ? (winrateLeftColor === 1 ? blackModelVersion : whiteModelVersion) : activeModelVersion;
       const rapfi = [10.1, 10.5, 10.6].includes(Number(version));
       const minimax = [9, 9.1, 9.2, 10].includes(Number(version));
+      // 自研引擎会主动上报节点数/深度/评估分，缺项只可能是纯战术着。
+      const satori = Number(version) === 11;
       if (field === 'score') {
         if (rapfi) return '该 Rapfi 精简构建未编译详细遥测，引擎不上报评估分';
-        if (minimax) return '纯战术着（立即连五/必防）不产生评估分';
+        if (minimax || satori) return '纯战术着（立即连五/必防）不产生评估分';
         return '该引擎未提供评估分';
       }
       if (field === 'nodes') return rapfi ? '该 Rapfi 精简构建不上报节点数' : '该引擎未上报节点数';
@@ -689,7 +709,11 @@
       }
       const nickname = document.getElementById('nickname').value.trim();
       const score = result === 'win' ? getModelWinPoints(activeModelVersion) : result === 'draw' ? 1 : 0;
-      document.getElementById('result').textContent = ClubI18n.t(result === 'win' ? 'gomoku.win' : result === 'draw' ? 'gomoku.draw' : 'gomoku.lose', { score, model: getModelName(activeModelVersion) });
+      // 展示版：结果照常显示，但明确标注不计分，且不写排行榜（SQL 只接受 1–16 分）。
+      const exhibition = isExhibitionVersion(activeModelVersion);
+      document.getElementById('result').textContent = exhibition
+        ? ClubI18n.t(result === 'win' ? 'gomoku.exhibitionWin' : result === 'draw' ? 'gomoku.exhibitionDraw' : 'gomoku.exhibitionLose', { model: getModelName(activeModelVersion) })
+        : ClubI18n.t(result === 'win' ? 'gomoku.win' : result === 'draw' ? 'gomoku.draw' : 'gomoku.lose', { score, model: getModelName(activeModelVersion) });
       if (gameMoves.length && uploadTraining) {
         const aiResult = result === 'win' ? 'loss' : result === 'loss' ? 'win' : 'draw';
         if (!canUploadTrainingResult(activeModelVersion, aiResult)) {
@@ -713,10 +737,17 @@
         // 投降时结果要如实记为 surrender，而不是普通负局。
         outcome: surrender ? 'surrender' : result,
         moves: logMoves, durationMs,
-        score: surrender ? 0 : score,
+        // 展示版积分为 0（SQL 的 score 允许 0，排行榜 RPC 不接受 0 分所以下面整段跳过）。
+        score: surrender ? 0 : (exhibition ? 0 : score),
         winnerLabel: surrender ? getModelName(activeModelVersion) : logWinnerLabel,
         winnerColor: surrender ? aiColor : logWinnerColor
       });
+
+      // 展示版不进入排行榜：record_gomoku_result 只接受 1–16 分，0 分会被数据库拒绝。
+      if (exhibition) {
+        document.getElementById('result').textContent += ClubI18n.t('gomoku.exhibitionNoScore');
+        return;
+      }
 
       if (!supabaseClient || typeof supabaseClient.rpc !== 'function') {
         document.getElementById('result').textContent += ClubI18n.t('gomoku.scoreNoInit');
@@ -915,6 +946,7 @@
       if (version === 10.1) return window.GomokuV10Ultra.findBestMove();
       if (version === 10.5) return window.GomokuV10Thinker.findBestMove();
       if (version === 10.6) return window.GomokuV10Champion.findBestMove({board,color,history:gameMoves});
+      if (version === 11) return window.GomokuSatori.findBestMove({board,color,history:gameMoves});
       if (version === 9.3) return window.GomokuV9Mesa.findBestMove({board,color});
       if (version === 10.2) return window.GomokuV10Mesa.findBestMove({board,color});
       if (version === 10.3) return window.GomokuV10Exp.findBestMove({board,color,history:gameMoves});
@@ -957,7 +989,7 @@
         : activeModelVersion;
       let move;
       try {
-        const candidate = version === 9.3 ? GomokuV9Mesa : version === 10.2 ? GomokuV10Mesa : version === 10.3 ? GomokuV10Exp : version === 10.4 ? GomokuV10Flash : version === 10.6 ? GomokuV10Champion : null;
+        const candidate = version === 9.3 ? GomokuV9Mesa : version === 10.2 ? GomokuV10Mesa : version === 10.3 ? GomokuV10Exp : version === 10.4 ? GomokuV10Flash : version === 10.6 ? GomokuV10Champion : version === 11 ? GomokuSatori : null;
         if (candidate) {
           document.getElementById('status').textContent = `${getModelName(version)}：正在准备模型…`;
           await candidate.preload();
@@ -1469,6 +1501,7 @@
       window.GomokuV10Exp.clearCache();
       window.GomokuV10Flash.clearCache();
       window.GomokuV10Champion.clearCache();
+      window.GomokuSatori.clearCache();
       stopAiCountdown();
       hideWinRate();
       currentMatchFingerprint = null;

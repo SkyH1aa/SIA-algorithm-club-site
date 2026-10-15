@@ -1,0 +1,153 @@
+{
+  "generatedAt": "2026-10-15T11:38:21.661Z",
+  "complete": true,
+  "pair": [
+    "v11ge",
+    "v10ultra"
+  ],
+  "protocol": "fixed opening, both engines play it twice with colors swapped",
+  "openings": [
+    {
+      "id": "center",
+      "plies": 1,
+      "games": [
+        {
+          "black": "v11ge",
+          "white": "v10ultra",
+          "winner": "v10ultra",
+          "moves": 42
+        },
+        {
+          "black": "v10ultra",
+          "white": "v11ge",
+          "winner": "v10ultra",
+          "moves": 19
+        }
+      ]
+    },
+    {
+      "id": "diag-near",
+      "plies": 2,
+      "games": [
+        {
+          "black": "v11ge",
+          "white": "v10ultra",
+          "winner": "v10ultra",
+          "moves": 42
+        },
+        {
+          "black": "v10ultra",
+          "white": "v11ge",
+          "winner": "v10ultra",
+          "moves": 15
+        }
+      ]
+    },
+    {
+      "id": "straight-near",
+      "plies": 2,
+      "games": [
+        {
+          "black": "v11ge",
+          "white": "v10ultra",
+          "winner": "v10ultra",
+          "moves": 18
+        },
+        {
+          "black": "v10ultra",
+          "white": "v11ge",
+          "winner": "v10ultra",
+          "moves": 17
+        }
+      ]
+    },
+    {
+      "id": "diag-far",
+      "plies": 2,
+      "games": [
+        {
+          "black": "v11ge",
+          "white": "v10ultra",
+          "winner": "v10ultra",
+          "moves": 18
+        },
+        {
+          "black": "v10ultra",
+          "white": "v11ge",
+          "winner": "v10ultra",
+          "moves": 21
+        }
+      ]
+    },
+    {
+      "id": "exchange-4",
+      "plies": 4,
+      "games": [
+        {
+          "black": "v11ge",
+          "white": "v10ultra",
+          "winner": "v10ultra",
+          "moves": 18
+        },
+        {
+          "black": "v10ultra",
+          "white": "v11ge",
+          "winner": "v10ultra",
+          "moves": 19
+        }
+      ]
+    },
+    {
+      "id": "spread-5",
+      "plies": 5,
+      "games": [
+        {
+          "black": "v11ge",
+          "white": "v10ultra",
+          "winner": "v10ultra",
+          "moves": 28
+        },
+        {
+          "black": "v10ultra",
+          "white": "v11ge",
+          "winner": "v10ultra",
+          "moves": 23
+        }
+      ]
+    }
+  ],
+  "models": {
+    "v11ge": {
+      "wins": 0,
+      "losses": 12,
+      "draws": 0,
+      "asBlack": {
+        "wins": 0,
+        "losses": 6
+      },
+      "asWhite": {
+        "wins": 0,
+        "losses": 6
+      },
+      "moves": 121,
+      "meanMs": 2998,
+      "maxMs": 16025
+    },
+    "v10ultra": {
+      "wins": 12,
+      "losses": 0,
+      "draws": 0,
+      "asBlack": {
+        "wins": 6,
+        "losses": 0
+      },
+      "asWhite": {
+        "wins": 6,
+        "losses": 0
+      },
+      "moves": 127,
+      "meanMs": 145,
+      "maxMs": 1842
+    }
+  }
+}

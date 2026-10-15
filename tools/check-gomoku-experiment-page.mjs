@@ -32,7 +32,8 @@ try {
       };
       check(supabaseClient===null,'backend disabled');
       check(MODEL_VERSIONS.includes(10.2)&&MODEL_VERSIONS.includes(9.3),'both options registered');
-      const expectedOrder=[1,2,3,6,7,8,9,9.1,9.3,9.2,10,10.2,10.4,10.3,10.1,10.5,10.6];
+      check(MODEL_VERSIONS.includes(11)&&getModelName(11)==='Gomoku-Satori（展示版）','Satori exhibition entry registered');
+      const expectedOrder=[1,2,3,6,7,8,9,9.1,9.3,9.2,10,10.2,10.4,10.3,10.1,10.5,10.6,11];
       populateBattleModels();
       check(JSON.stringify(MODEL_VERSIONS)===JSON.stringify(expectedOrder),'Experimental registry follows strength order');
       for(const selector of [modelVersionSelect,blackModelVersionSelect,whiteModelVersionSelect])

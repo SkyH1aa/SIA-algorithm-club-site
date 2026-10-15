@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gomoku-Satori 决策剖析实验室 · 算法社</title>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+<style>
+    :root {
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
+      color: #f6fbff;
+      background: #020409;
+      --bg: #020409;
+      --panel: rgba(8, 13, 30, .8);
+      --cyan: #00e5ff;
+      --violet: #7c4dff;
+      --pink: #ff5fc8;
+      --gold: #ffd166;
+      --green: #71f3bf;
+      --red: #ff6b81;
+      --text: #c8d4e2;
+      --muted: #8fa3b8;
+      --line: rgba(115, 221, 255, .2);
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse 70% 50% at 15% 4%, rgba(0, 229, 255, .15), transparent 62%),
+        radial-gradient(ellipse 60% 42% at 88% 7%, rgba(124, 77, 255, .22), transparent 65%),
+        linear-gradient(180deg, #020409, #050917 50%, #020409);
+      color: #f6fbff;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0, 229, 255, .045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, .045) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: radial-gradient(ellipse 110% 100% at 50% 10%, #000, transparent 92%);
+    }
+    a { color: inherit; text-decoration: none; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .48; }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px clamp(16px, 4vw, 48px);
+      background: rgba(2, 4, 9, .82);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+    }
+    .brand { display: inline-flex; align-items: center; gap: 12px; margin-right: auto; }
+    .brand-mark {
+      display: grid; place-items: center;
+      width: 36px; height: 36px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--cyan), var(--violet));
+      color: #02060f; font-weight: 800;
+    }
+    .brand strong, .brand small { display: block; }
+    .brand strong { font-size: 16px; }
+    .brand small { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    .back-link {
+      padding: 9px 16px; border-radius: 999px;
+      border: 1px solid var(--line); color: var(--text); font-size: 13px;
+      transition: all .25s var(--ease-out);
+    }
+    .back-link:hover { color: #fff; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0, 229, 255, .12); }
+
+    main { padding: clamp(20px, 3.4vw, 44px) clamp(16px, 4vw, 48px) 72px; max-width: 1680px; margin: 0 auto; }
+    .intro { max-width: 940px; margin-bottom: 26px; }
+    .eyebrow {
+      margin: 0 0 10px; color: var(--cyan); font-size: 12px;
+      letter-spacing: .22em; text-transform: uppercase;
+    }
+    .intro h1 { margin: 0 0 12px; font-size: clamp(26px, 3.6vw, 42px); line-height: 1.18; }
+    .intro p { margin: 0; color: var(--text); line-height: 1.75; }
+    .intro .notice {
+      margin-top: 14px; padding: 12px 16px; border-radius: 12px;
+      background: rgba(255, 209, 102, .08); border: 1px solid rgba(255, 209, 102, .28);
+      color: #ffe6ad; font-size: 13px; line-height: 1.7;
+    }
+
+    .lab-grid {
+      display: grid; gap: 20px;
+      grid-template-columns: minmax(320px, 520px) minmax(0, 1fr);
+      align-items: start;
+    }
+    @media (max-width: 1080px) { .lab-grid { grid-template-columns: minmax(0, 1fr); } }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 18px 60px rgba(0, 0, 0, .35);
+    }
+    .panel + .panel { margin-top: 16px; }
+    .panel h2 {
+      margin: 0 0 14px; font-size: 15px; letter-spacing: .04em;
+      color: #fff; display: flex; align-items: center; gap: 8px;
+    }
+    .panel h2 .step-tag {
+      margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 400;
+    }
+    .hint { color: var(--muted); font-size: 12px; line-height: 1.7; margin: 0; }
+
+    /* ---- 控制区 ---- */
+    .controls { display: grid; gap: 12px; }
+    .control-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .control-row label { font-size: 12px; color: var(--muted); }
+    select, .btn {
+      padding: 9px 14px; border-radius: 10px;
+      background: rgba(8, 16, 34, .92);
+      border: 1px solid var(--line); color: var(--text); font-size: 13px;
+      transition: all .2s var(--ease-out);
+    }
+    select:focus { outline: none; border-color: var(--cyan); }
+    .btn:hover:not(:disabled) { border-color: var(--cyan); color: #fff; }
+    .btn.primary {
+      background: linear-gradient(135deg, rgba(0, 229, 255, .22), rgba(124, 77, 255, .22));
+      border-color: rgba(0, 229, 255, .45); color: #fff; font-weight: 600;
+    }
+    .mode-tabs { display: inline-flex; padding: 4px; border-radius: 12px; background: rgba(8, 16, 34, .92); border: 1px solid var(--line); }
+    .mode-tabs button {
+      padding: 8px 16px; border: none; background: none; color: var(--muted);
+      border-radius: 9px; font-size: 13px; transition: all .2s var(--ease-out);
+    }
+    .mode-tabs button.active { background: rgba(0, 229, 255, .16); color: #fff; font-weight: 600; }
+
+    /* ---- 棋盘 ---- */
+    .board-wrap { display: grid; justify-items: center; gap: 12px; }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(15, 1fr);
+      gap: 1px;
+      width: min(100%, 470px);
+      aspect-ratio: 1;
+      padding: 8px;
+      border-radius: 14px;
+      background: linear-gradient(160deg, rgba(255, 214, 150, .1), rgba(120, 90, 50, .16));
+      border: 1px solid rgba(255, 214, 150, .28);
+    }
+    .cell {
+      position: relative; border: none; padding: 0;
+      background: rgba(20, 14, 8, .35);
+      border-radius: 3px;
+      display: grid; place-items: center;
+      transition: background .18s var(--ease-out);
+    }
+    .cell::after { content: ""; width: 62%; height: 62%; border-radius: 50%; }
+    .cell.black::after { background: radial-gradient(circle at 34% 30%, #6f7b8c, #0b0f16 72%); }
+    .cell.white::after { background: radial-gradient(circle at 34% 30%, #fff, #b9c4d2 78%); }
+    .cell.empty:hover { background: rgba(0, 229, 255, .2); }
+    .cell.played { background: rgba(113, 243, 191, .3); }
+    .cell.candidate { background: rgba(124, 77, 255, .3); }
+    .cell.best { background: rgba(255, 209, 102, .36); }
+    .cell .coord {
+      position: absolute; inset: 0;
+      display: grid; place-items: center;
+      font-size: 9px; color: rgba(255, 255, 255, .62);
+      pointer-events: none;
+    }
+    .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: var(--muted); }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+
+    /* ---- 决策卡 ---- */
+    .decision-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+    .badge {
+      padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      border: 1px solid transparent;
+    }
+    .badge.reason { background: rgba(0, 229, 255, .14); border-color: rgba(0, 229, 255, .4); color: #9beaff; }
+    .badge.move { background: rgba(255, 209, 102, .14); border-color: rgba(255, 209, 102, .4); color: #ffe6ad; }
+    .badge.side-black { background: rgba(200, 212, 226, .12); border-color: rgba(200, 212, 226, .34); color: #dfe8f3; }
+    .badge.side-white { background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .4); color: #fff; }
+
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 10px; }
+    .stat {
+      padding: 10px 12px; border-radius: 12px;
+      background: rgba(4, 9, 22, .72); border: 1px solid rgba(115, 221, 255, .13);
+    }
+    .stat span { display: block; font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+    .stat strong { font-size: 15px; color: #fff; font-variant-numeric: tabular-nums; }
+
+    /* ---- 表格 ---- */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 7px 9px; text-align: right; white-space: nowrap; }
+    th { color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--line); font-size: 11px; }
+    td { border-bottom: 1px solid rgba(115, 221, 255, .07); font-variant-numeric: tabular-nums; }
+    th:first-child, td:first-child { text-align: left; }
+    tbody tr.kept { background: rgba(113, 243, 191, .07); }
+    tbody tr.dropped { opacity: .5; }
+    tbody tr.best td { color: var(--gold); font-weight: 600; }
+    .tag {
+      display: inline-block; margin-left: 5px; padding: 1px 6px; border-radius: 999px;
+      font-size: 10px; background: rgba(124, 77, 255, .2); color: #c9b6ff;
+    }
+    .tag.killer { background: rgba(255, 95, 200, .2); color: #ffb3e2; }
+    .tag.tt { background: rgba(0, 229, 255, .2); color: #9beaff; }
+
+    /* ---- 威胁普查 ---- */
+    .threat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .threat-card {
+      padding: 12px 14px; border-radius: 12px;
+      background: rgba(4, 9, 22, .72); border: 1px solid rgba(115, 221, 255, .13);
+    }
+    .threat-card h3 { margin: 0 0 10px; font-size: 12px; color: #fff; }
+    .threat-card dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 5px 10px; font-size: 12px; }
+    .threat-card dt { color: var(--muted); }
+    .threat-card dd { margin: 0; text-align: right; color: #fff; font-variant-numeric: tabular-nums; }
+
+    /* ---- 搜索树 ---- */
+    .tree { font-size: 12px; font-family: "Cascadia Mono", "Consolas", monospace; }
+    .tree ul { list-style: none; margin: 0; padding-left: 16px; border-left: 1px dashed rgba(115, 221, 255, .2); }
+    .tree > ul { padding-left: 0; border-left: none; }
+    .tree li { margin: 3px 0; }
+    .node-line { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 3px 6px; border-radius: 7px; }
+    .node-line:hover { background: rgba(0, 229, 255, .07); }
+    .tree button.toggle {
+      width: 18px; height: 18px; padding: 0; border-radius: 5px; line-height: 1;
+      background: rgba(0, 229, 255, .12); border: 1px solid rgba(0, 229, 255, .28);
+      color: #9beaff; font-size: 11px; display: grid; place-items: center;
+    }
+    .tree .mv { color: var(--gold); }
+    .tree .val { color: #fff; }
+    .tree .meta { color: var(--muted); font-size: 11px; }
+    .tree .side-tag {
+      padding: 1px 6px; border-radius: 999px; font-size: 10px;
+      background: rgba(200, 212, 226, .12); color: #dfe8f3;
+    }
+    .tree .cut { color: var(--red); font-size: 11px; }
+    .tree .root-line { color: #9beaff; font-weight: 600; }
+    .tree-note { margin-top: 10px; }
+
+    .empty-state { padding: 22px 14px; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.8; }
+    .progress {
+      height: 6px; border-radius: 999px; overflow: hidden;
+      background: rgba(115, 221, 255, .12); margin-top: 10px;
+    }
+    .progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--cyan), var(--violet)); transition: width .3s var(--ease-out); }
+    .step-nav { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
+    .step-nav .counter { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .warn { color: var(--gold); font-size: 12px; }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html" aria-label="返回算法社首页"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></span>
+    <a class="back-link" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
+  </header>
+
+  <main>
+    <section class="intro">
+      <p class="eyebrow">GOMOKU-SATORI · DECISION TRACE LAB</p>
+      <h1>Gomoku-Satori 决策剖析实验室</h1>
+      <p>Gomoku-Satori 是本站从零自研、不使用任何外部引擎与神经网络的五子棋 AI。这个页面把它的每一次思考完全摊开：先看到威胁普查，再看候选着法如何逐项打分与排序，然后逐层加深搜索，最后用搜索树和证明过程交代“为什么是这一步”。</p>
+      <p class="notice">诚实说明：Satori 是展示版引擎，实力弱于 V9Thinker、V10Ultra 等正式模型。这里展示的是它的真实决策过程，用于讲解 AI 如何思考，而不是宣称它的棋力。</p>
+    </section>
+
+    <div class="lab-grid">
+      <div>
+        <section class="panel">
+          <h2>对局控制</h2>
+          <div class="controls">
+            <div class="control-row">
+              <div class="mode-tabs" id="modeTabs">
+                <button type="button" data-mode="replay" class="active">棋谱回放</button>
+                <button type="button" data-mode="live">实时对战</button>
+              </div>
+            </div>
+            <div class="control-row" id="replayControls">
+              <label for="openingSelect">开局</label>
+              <select id="openingSelect"></select>
+              <label for="plySelect">分析手数</label>
+              <select id="plySelect">
+                <option value="2">2 手</option>
+                <option value="4">4 手</option>
+                <option value="6" selected>6 手</option>
+                <option value="8">8 手</option>
+              </select>
+              <button type="button" class="btn primary" id="runReplay">开始逐手剖析</button>
+            </div>
+            <div class="control-row" id="liveControls" hidden>
+              <label for="liveSide">你执</label>
+              <select id="liveSide">
+                <option value="1">黑棋（先手）</option>
+                <option value="2" selected>白棋（后手）</option>
+              </select>
+              <button type="button" class="btn primary" id="startLive">开始对局</button>
+              <button type="button" class="btn" id="stopLive" disabled>重新开始</button>
+            </div>
+            <p class="hint" id="statusLine">选择开局后点“开始逐手剖析”，Satori 会自己和自己下若干手，再逐手回看它的完整思路。</p>
+            <div class="progress" id="progressBar" hidden><i id="progressFill"></i></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>棋盘 <span class="step-tag" id="boardTag"></span></h2>
+          <div class="board-wrap">
+            <div class="board" id="board"></div>
+            <div class="legend">
+              <span><i style="background:radial-gradient(circle at 34% 30%, #6f7b8c, #0b0f16 72%)"></i>黑子</span>
+              <span><i style="background:radial-gradient(circle at 34% 30%, #fff, #b9c4d2 78%)"></i>白子</span>
+              <span><i style="background:rgba(255,209,102,.7)"></i>本步选中</span>
+              <span><i style="background:rgba(124,77,255,.7)"></i>进入搜索的候选</span>
+            </div>
+            <div class="step-nav" id="stepNav" hidden>
+              <button type="button" class="btn" id="prevStep">← 上一步</button>
+              <span class="counter" id="stepCounter">—</span>
+              <button type="button" class="btn" id="nextStep">下一步 →</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div id="analysisColumn">
+        <section class="panel">
+          <h2>本步决策</h2>
+          <div id="decisionBody"><p class="empty-state">还没有决策数据。<br>先运行一次“开始逐手剖析”。</p></div>
+        </section>
+
+        <section class="panel">
+          <h2>搜索前的威胁普查</h2>
+          <div id="threatBody"><p class="empty-state">等待数据。</p></div>
+        </section>
+
+        <section class="panel">
+          <h2>候选着法排序</h2>
+          <div id="candidateBody"><p class="empty-state">等待数据。</p></div>
+        </section>
+
+        <section class="panel">
+          <h2>迭代加深每层结果</h2>
+          <div id="iterationBody"><p class="empty-state">等待数据。</p></div>
+        </section>
+
+        <section class="panel">
+          <h2>搜索树 <span class="step-tag" id="treeTag"></span></h2>
+          <div id="treeBody"><p class="empty-state">等待数据。</p></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="gomoku-models/satori.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    const SIZE = 15;
+    const BLACK = 1, WHITE = 2;
+    const t = (key, vars) => (window.ClubI18n ? ClubI18n.t(key, vars || {}) : key);
+    // ClubI18n.t 在缺键时返回 key 本身（恒为真值），因此不能靠 || 兜底，
+    // 必须显式判断返回值是否仍是 key。
+    function reasonLabel(reason) {
+      if (!reason) return '';
+      const key = 'satoriLab.reason.' + reason;
+      const text = t(key);
+      return text === key ? reason : text;
+    }
+
+    // 预置局面。前五项是可对局的开局（空盘或短开局），后面几项是战术演示：
+    // 手工摆出的局面，用来让社员看到“非搜索”的决策类型——立即连五、必防对手
+    // 连五、VCF 连续冲四必胜。`side` 指明轮谁走，`demo` 标记为战术演示。
+    const OPENINGS = [
+      { id: 'empty', moves: [] },
+      { id: 'center', moves: [[7, 7]] },
+      { id: 'diag-near', moves: [[7, 7], [6, 8]] },
+      { id: 'straight-near', moves: [[7, 7], [8, 7]] },
+      { id: 'exchange-4', moves: [[7, 7], [6, 8], [6, 6], [8, 6]] },
+      {
+        id: 'demo-immediate-win', demo: true, side: BLACK,
+        black: [[7, 4], [7, 5], [7, 6], [7, 7]], white: [[0, 0], [0, 1], [0, 2]]
+      },
+      {
+        id: 'demo-forced-block', demo: true, side: WHITE,
+        black: [[7, 4], [7, 5], [7, 6], [7, 7]], white: [[3, 3], [3, 4], [3, 5]]
+      },
+      {
+        id: 'demo-vcf', demo: true, side: BLACK,
+        black: [[7, 7], [6, 6], [8, 8], [6, 8], [8, 6]], white: [[7, 6], [6, 7], [8, 7], [7, 8]]
+      }
+    ];
+
+    let board = emptyBoard();
+    let mode = 'replay';
+    let steps = [];          // 每次被剖析的决策
+    let viewIndex = -1;
+    let busy = false;
+
+    const boardEl = document.getElementById('board');
+    const statusLine = document.getElementById('statusLine');
+    const progressBar = document.getElementById('progressBar');
+    const progressFill = document.getElementById('progressFill');
+    const boardTag = document.getElementById('boardTag');
+    const treeTag = document.getElementById('treeTag');
+    const stepNav = document.getElementById('stepNav');
+    const stepCounter = document.getElementById('stepCounter');
+
+    function emptyBoard() { return Array.from({ length: SIZE }, () => Array(SIZE).fill(0)); }
+    function cloneBoard(b) { return b.map((row) => row.slice()); }
+    function key(row, col) { return row + ',' + col; }
+
+    // ---------- 棋盘渲染 ----------
+    for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'cell empty';
+      cell.dataset.row = r; cell.dataset.col = c;
+      cell.addEventListener('click', () => onCellClick(r, c));
+      boardEl.appendChild(cell);
+    }
+    const cells = [...boardEl.children];
+
+    function onCellClick(row, col) {
+      if (mode !== 'live' || busy || board[row][col] !== 0) return;
+      const human = Number(document.getElementById('liveSide').value);
+      const toMove = movesPlayed() % 2 === 0 ? BLACK : WHITE;
+      if (toMove !== human) return;
+      board[row][col] = human;
+      renderBoard();
+      void satoriTurn();
+    }
+
+    function movesPlayed() { return board.flat().filter((v) => v !== 0).length; }
+
+    function renderBoard() {
+      const active = viewIndex >= 0 && steps[viewIndex] ? steps[viewIndex] : null;
+      const candidates = new Set();
+      if (active && active.trace) {
+        const root = active.trace.events.find((e) => e.kind === 'root-candidates');
+        if (root) for (const cd of root.candidates) if (cd.kept) candidates.add(key(cd.row, cd.col));
+      }
+      for (const cell of cells) {
+        const r = Number(cell.dataset.row), c = Number(cell.dataset.col);
+        const v = board[r][c];
+        cell.className = 'cell ' + (v === BLACK ? 'black' : v === WHITE ? 'white' : 'empty');
+        cell.title = '(' + (r + 1) + ', ' + (c + 1) + ')';
+      }
+      if (active) {
+        const chosen = cells[active.move.row * SIZE + active.move.col];
+        if (chosen) chosen.classList.add('best');
+        for (const k of candidates) {
+          const [r, c] = k.split(',').map(Number);
+          const el = cells[r * SIZE + c];
+          if (el && board[r][c] === 0) el.classList.add('candidate');
+        }
+      }
+      boardTag.textContent = t('satoriLab.movesPlayed', { n: movesPlayed() });
+    }
+
+    // ---------- 搜索：一次带剖析的决策 ----------
+    async function analyzeMove(bd, color) {
+      const result = await window.GomokuSatori.analyze({ board: bd, color }, { maxEvents: 40000, treePly: 3, treeMax: 5000, candidatePly: 1 });
+      return result;
+    }
+
+    function winnerOn(bd, row, col, color) {
+      return [[0, 1], [1, 0], [1, 1], [1, -1]].some(([dr, dc]) => {
+        let n = 1;
+        for (const sign of [-1, 1]) for (let i = 1; i < SIZE; i++) {
+          if (bd[row + sign * dr * i]?.[col + sign * dc * i] !== color) break;
+          n++;
+        }
+        return n >= 5;
+      });
+    }
+
+    // ---------- 回放模式：Satori 自己和自己下，逐手剖析；战术演示只剖析一手 ----------
+    async function runReplay() {
+      if (busy) return;
+      busy = true;
+      setStatus(t('satoriLab.running'));
+      progressBar.hidden = false; progressFill.style.width = '0%';
+      document.getElementById('runReplay').disabled = true;
+      try {
+        const opening = OPENINGS[Number(document.getElementById('openingSelect').value)];
+        board = emptyBoard();
+        steps = []; viewIndex = -1;
+
+        // 战术演示：直接摆出指定局面，只剖析引擎这一手，让社员看到
+        // 立即连五 / 必防 / VCF 这几种“不走常规搜索”的决策。
+        if (opening.demo) {
+          for (const [r, c] of opening.black) board[r][c] = BLACK;
+          for (const [r, c] of opening.white) board[r][c] = WHITE;
+          renderBoard();
+          const before = cloneBoard(board);
+          const res = await analyzeMove(before, opening.side);
+          steps.push({ index: 0, color: opening.side, boardBefore: before, move: res.move, stats: res.stats, trace: res.trace });
+          viewIndex = 0;
+          renderBoard(); renderAnalysis();
+          stepNav.hidden = false; renderStepNav();
+          progressFill.style.width = '100%';
+          setStatus(t('satoriLab.demoDone', { reason: reasonLabel(res.stats.reason) }));
+          return;
+        }
+
+        const plies = Number(document.getElementById('plySelect').value);
+        for (const [r, c] of opening.moves) board[r][c] = movesPlayed() % 2 === 0 ? BLACK : WHITE;
+        renderBoard();
+
+        let ended = false;
+        for (let i = 0; i < plies && !ended; i++) {
+          const color = movesPlayed() % 2 === 0 ? BLACK : WHITE;
+          const before = cloneBoard(board);
+          const res = await analyzeMove(before, color);
+          steps.push({ index: i, color, boardBefore: before, move: res.move, stats: res.stats, trace: res.trace });
+          board[res.move.row][res.move.col] = color;
+          viewIndex = steps.length - 1;
+          progressFill.style.width = Math.round(((i + 1) / plies) * 100) + '%';
+          setStatus(t('satoriLab.runningPly', { cur: i + 1, total: plies }));
+          renderBoard();
+          renderAnalysis();
+          if (winnerOn(board, res.move.row, res.move.col, color)) { ended = true; }
+        }
+        setStatus(ended ? t('satoriLab.replayWin') : t('satoriLab.replayDone', { n: steps.length }));
+        stepNav.hidden = steps.length === 0;
+        renderStepNav();
+      } catch (error) {
+        setStatus(t('satoriLab.failed') + ': ' + (error.message || error), true);
+      } finally {
+        busy = false;
+        document.getElementById('runReplay').disabled = false;
+        progressBar.hidden = true;
+      }
+    }
+
+    // ---------- 实时对战 ----------
+    function startLive() {
+      const human = Number(document.getElementById('liveSide').value);
+      board = emptyBoard();
+      steps = []; viewIndex = -1;
+      renderBoard(); renderAnalysis();
+      stepNav.hidden = true;
+      setStatus(human === BLACK ? t('satoriLab.liveYourTurn') : t('satoriLab.liveAiThinking'));
+      if (human === WHITE) void satoriTurn();
+    }
+
+    async function satoriTurn() {
+      if (busy) return;
+      const color = movesPlayed() % 2 === 0 ? BLACK : WHITE;
+      const human = Number(document.getElementById('liveSide').value);
+      if (color === human) return;
+      busy = true;
+      document.getElementById('stopLive').disabled = true;
+      setStatus(t('satoriLab.liveAiThinking'));
+      try {
+        const before = cloneBoard(board);
+        const res = await analyzeMove(before, color);
+        steps.push({ index: steps.length, color, boardBefore: before, move: res.move, stats: res.stats, trace: res.trace });
+        board[res.move.row][res.move.col] = color;
+        viewIndex = steps.length - 1;
+        renderBoard(); renderAnalysis();
+        stepNav.hidden = false; renderStepNav();
+        if (winnerOn(board, res.move.row, res.move.col, color)) setStatus(t('satoriLab.liveAiWon'));
+        else setStatus(t('satoriLab.liveYourTurn'));
+      } catch (error) {
+        setStatus(t('satoriLab.failed') + ': ' + (error.message || error), true);
+      } finally {
+        busy = false;
+        document.getElementById('stopLive').disabled = false;
+      }
+    }
+
+    // ---------- 步骤导航 ----------
+    function renderStepNav() {
+      if (!steps.length) { stepCounter.textContent = '—'; return; }
+      const s = steps[viewIndex] || steps[0];
+      stepCounter.textContent = t('satoriLab.stepOf', {
+        cur: viewIndex + 1, total: steps.length,
+        side: s.color === BLACK ? t('satoriLab.black') : t('satoriLab.white'),
+        move: '(' + (s.move.row + 1) + ', ' + (s.move.col + 1) + ')'
+      });
+      document.getElementById('prevStep').disabled = viewIndex <= 0;
+      document.getElementById('nextStep').disabled = viewIndex >= steps.length - 1;
+    }
+    function gotoStep(index) {
+      if (index < 0 || index >= steps.length) return;
+      viewIndex = index;
+      // 回看时棋盘显示到该步为止的局面前状态 + 该步落子
+      const s = steps[index];
+      board = cloneBoard(s.boardBefore);
+      board[s.move.row][s.move.col] = s.color;
+      renderBoard(); renderAnalysis(); renderStepNav();
+    }
+    document.getElementById('prevStep').addEventListener('click', () => gotoStep(viewIndex - 1));
+    document.getElementById('nextStep').addEventListener('click', () => gotoStep(viewIndex + 1));
+
+    // ---------- 剖析面板 ----------
+    function renderAnalysis() {
+      const s = steps[viewIndex];
+      if (!s) {
+        document.getElementById('decisionBody').innerHTML = '<p class="empty-state">' + t('satoriLab.noData') + '</p>';
+        document.getElementById('threatBody').innerHTML = '<p class="empty-state">' + t('satoriLab.waiting') + '</p>';
+        document.getElementById('candidateBody').innerHTML = '<p class="empty-state">' + t('satoriLab.waiting') + '</p>';
+        document.getElementById('iterationBody').innerHTML = '<p class="empty-state">' + t('satoriLab.waiting') + '</p>';
+        document.getElementById('treeBody').innerHTML = '<p class="empty-state">' + t('satoriLab.waiting') + '</p>';
+        treeTag.textContent = '';
+        return;
+      }
+      renderDecision(s);
+      renderThreats(s);
+      renderCandidates(s);
+      renderIterations(s);
+      renderTree(s);
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+    function fmtScore(value) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '—';
+      // 引擎的胜负分是 WIN - ply（约 1e9），比 EVAL_CAP(8e8) 高一个量级，
+      // 因此用 9e8 作为“已证明胜负”的判定线，避免把必胜显示成 1000.00M。
+      if (Math.abs(n) >= 9e8) return n > 0 ? t('satoriLab.winScore') : t('satoriLab.lossScore');
+      if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+      return String(n);
+    }
+    function coordText(row, col) { return '(' + (row + 1) + ', ' + (col + 1) + ')'; }
+
+    function renderDecision(s) {
+      const st = s.stats || {};
+      const events = (s.trace && s.trace.events) || [];
+      const proofEvent = events.find((e) => e.kind === 'decision' && e.proof);
+      const rows = [
+        [t('satoriLab.field.depth'), st.depth === undefined ? '—' : st.depth],
+        [t('satoriLab.field.nodes'), st.nodes === undefined ? '—' : Number(st.nodes).toLocaleString('en-US')],
+        [t('satoriLab.field.candidates'), st.candidates === undefined ? '—' : st.candidates],
+        [t('satoriLab.field.score'), st.score === undefined ? '—' : fmtScore(st.score)],
+        [t('satoriLab.field.elapsed'), st.elapsedMs === undefined ? '—' : st.elapsedMs + ' ms']
+      ];
+      let proofHtml = '';
+      if (proofEvent) {
+        const list = (proofEvent.proof.steps || []).map((m) => coordText(m.row, m.col)).join(' → ');
+        proofHtml = '<p class="hint" style="margin-top:12px"><strong>' + t('satoriLab.proofTitle', { kind: proofEvent.proof.kind }) + '</strong><br>' + escapeHtml(list) + '</p>';
+      }
+      document.getElementById('decisionBody').innerHTML =
+        '<div class="decision-head">' +
+          '<span class="badge side-' + (s.color === BLACK ? 'black' : 'white') + '">' + (s.color === BLACK ? t('satoriLab.black') : t('satoriLab.white')) + '</span>' +
+          '<span class="badge reason">' + escapeHtml(reasonLabel(st.reason)) + '</span>' +
+          '<span class="badge move">' + t('satoriLab.chosen') + ' ' + coordText(s.move.row, s.move.col) + '</span>' +
+        '</div>' +
+        '<div class="stats">' + rows.map(([k, v]) =>
+          '<div class="stat"><span>' + escapeHtml(k) + '</span><strong>' + escapeHtml(v) + '</strong></div>').join('') + '</div>' +
+        proofHtml;
+    }
+
+    function renderThreats(s) {
+      const events = (s.trace && s.trace.events) || [];
+      const scan = events.find((e) => e.kind === 'threat-scan');
+      if (!scan) {
+        document.getElementById('threatBody').innerHTML = '<p class="empty-state">' + t('satoriLab.noThreatScan') + '</p>';
+        return;
+      }
+      const card = (title, side) => {
+        const points = (side.fivePoints || []).map((m) => coordText(m.row, m.col)).join(' ') || t('satoriLab.none');
+        return '<div class="threat-card"><h3>' + escapeHtml(title) + '</h3><dl>' +
+          '<dt>' + t('satoriLab.threat.fivePoints') + '</dt><dd>' + escapeHtml(points) + '</dd>' +
+          '<dt>' + t('satoriLab.threat.fours') + '</dt><dd>' + side.fours + '</dd>' +
+          '<dt>' + t('satoriLab.threat.openThrees') + '</dt><dd>' + side.openThrees + '</dd>' +
+          '</dl></div>';
+      };
+      document.getElementById('threatBody').innerHTML =
+        '<div class="threat-grid">' +
+        card(t('satoriLab.threat.mine', { n: s.color }), scan.mine) +
+        card(t('satoriLab.threat.theirs', { n: 3 - s.color }), scan.theirs) +
+        '</div>' +
+        '<p class="hint" style="margin-top:12px">' + t('satoriLab.threatNote') + '</p>';
+    }
+
+    function renderCandidates(s) {
+      const events = (s.trace && s.trace.events) || [];
+      const root = events.find((e) => e.kind === 'root-candidates');
+      if (!root) {
+        document.getElementById('candidateBody').innerHTML =
+          '<p class="empty-state">' + t('satoriLab.noCandidates') + '</p>' +
+          '<p class="hint">' + t('satoriLab.noCandidatesWhy') + '</p>';
+        return;
+      }
+      const best = root.candidates[0];
+      const rows = root.candidates.map((cd, i) => {
+        const tags = (cd.fromTransposition ? '<span class="tag tt">' + t('satoriLab.tag.tt') + '</span>' : '') +
+                     (cd.fromKiller ? '<span class="tag killer">' + t('satoriLab.tag.killer') + '</span>' : '');
+        const cls = !cd.kept ? 'dropped' : (best && cd.row === best.row && cd.col === best.col ? 'best kept' : 'kept');
+        return '<tr class="' + cls + '"><td>' + (i + 1) + '</td>' +
+          '<td>' + coordText(cd.row, cd.col) + tags + '</td>' +
+          '<td>' + fmtScore(cd.score) + '</td>' +
+          '<td>' + cd.attack + '</td>' +
+          '<td>' + cd.defense.toFixed(1) + '</td>' +
+          '<td>' + cd.history.toFixed(1) + '</td>' +
+          '<td>' + cd.centerBonus + '</td>' +
+          '<td>' + (cd.kept ? t('satoriLab.kept') : t('satoriLab.dropped')) + '</td></tr>';
+      }).join('');
+      document.getElementById('candidateBody').innerHTML =
+        '<p class="hint">' + t('satoriLab.candidateLead', { total: root.total, limit: root.limit }) + '</p>' +
+        '<div class="table-wrap"><table><thead><tr>' +
+        '<th>#</th><th>' + t('satoriLab.col.cell') + '</th><th>' + t('satoriLab.col.total') + '</th>' +
+        '<th>' + t('satoriLab.col.attack') + '</th><th>' + t('satoriLab.col.defense') + '</th>' +
+        '<th>' + t('satoriLab.col.history') + '</th><th>' + t('satoriLab.col.center') + '</th>' +
+        '<th>' + t('satoriLab.col.kept') + '</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+        '<p class="hint" style="margin-top:12px">' + t('satoriLab.candidateNote') + '</p>';
+    }
+
+    function renderIterations(s) {
+      const events = (s.trace && s.trace.events) || [];
+      const iterations = events.filter((e) => e.kind === 'iteration');
+      if (!iterations.length) {
+        document.getElementById('iterationBody').innerHTML =
+          '<p class="empty-state">' + t('satoriLab.noIterations') + '</p>' +
+          '<p class="hint">' + t('satoriLab.noIterationsWhy') + '</p>';
+        return;
+      }
+      const rows = iterations.map((it) => '<tr' + (it.depth === iterations[iterations.length - 1].depth ? ' class="kept"' : '') + '>' +
+        '<td>' + it.depth + '</td>' +
+        '<td>' + coordText(it.best.row, it.best.col) + '</td>' +
+        '<td>' + fmtScore(it.score) + '</td>' +
+        '<td>' + Number(it.nodes).toLocaleString('en-US') + '</td>' +
+        '<td>' + it.elapsedMs + ' ms</td>' +
+        '<td>' + it.candidates.length + '</td>' +
+        '<td>' + (it.converged ? t('satoriLab.converged') : '') + '</td></tr>').join('');
+      document.getElementById('iterationBody').innerHTML =
+        '<div class="table-wrap"><table><thead><tr>' +
+        '<th>' + t('satoriLab.col.depth') + '</th><th>' + t('satoriLab.col.best') + '</th>' +
+        '<th>' + t('satoriLab.col.score') + '</th><th>' + t('satoriLab.col.nodes') + '</th>' +
+        '<th>' + t('satoriLab.col.time') + '</th><th>' + t('satoriLab.col.cands') + '</th>' +
+        '<th>' + t('satoriLab.col.note') + '</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+        '<p class="hint" style="margin-top:12px">' + t('satoriLab.iterationNote') + '</p>';
+    }
+
+    // ---------- 搜索树 ----------
+    // 引擎回传 node-open / node-close / node-prune / node-cutoff / node-quiescence /
+    // node-forced，这里按 parentId 还原父子结构，逐层展开。
+    function buildTree(treeEvents) {
+      const nodes = new Map();
+      for (const e of treeEvents) {
+        if (e.kind !== 'node-open') continue;
+        nodes.set(e.nodeId, { id: e.nodeId, parentId: e.parentId, ply: e.ply, depth: e.depth,
+          color: e.color, move: e.move, root: !!e.root, value: null, children: [], notes: [] });
+      }
+      for (const e of treeEvents) {
+        const node = nodes.get(e.nodeId);
+        if (!node) continue;
+        if (e.kind === 'node-close') node.value = e.value;
+        else if (e.kind === 'node-prune') {
+          // 发生 beta 剪枝的节点返回的是“下界”而非精确值（fail-high），
+          // 树上要标明，否则会把界误读成精确评分。
+          node.bounded = true;
+          node.notes.push({ kind: 'prune', text: t('satoriLab.tree.prune', { move: coordText(e.row, e.col), score: fmtScore(e.score) }) });
+        }
+        else if (e.kind === 'node-cutoff') node.notes.push({ kind: 'cutoff', text: t('satoriLab.tree.cutoff.' + e.cutoff, { score: e.score === undefined ? '' : fmtScore(e.score) }) });
+        else if (e.kind === 'node-quiescence') node.notes.push({ kind: 'quiescence', text: t('satoriLab.tree.quiescence') });
+        else if (e.kind === 'node-forced') node.notes.push({ kind: 'forced', text: t('satoriLab.tree.forced', { move: coordText(e.row, e.col) }) });
+      }
+      for (const node of nodes.values()) if (node.parentId >= 0 && nodes.has(node.parentId)) nodes.get(node.parentId).children.push(node);
+      return nodes;
+    }
+
+    function renderNode(node, depth) {
+      const hasChildren = node.children.length > 0;
+      const label = node.root ? t('satoriLab.tree.root') : coordText(node.move.row, node.move.col);
+      const notes = node.notes.map((n) => '<span class="cut">' + escapeHtml(n.text) + '</span>').join('');
+      const sep = '<span class="meta">·</span>';
+      const head = '<div class="node-line' + (node.root ? ' root-line' : '') + '">' +
+        (hasChildren
+          ? '<button type="button" class="toggle" data-toggle="' + node.id + '">' + (depth < 1 ? '−' : '+') + '</button>'
+          : '<span style="display:inline-block;width:18px"></span>') +
+        '<span class="mv">' + escapeHtml(label) + '</span>' +
+        // 视角标注：negamax 的返回值是“轮到该节点走的一方”的分数，
+        // 逐层交替，必须写明，否则会把对手的好棋误读成自己的。
+        '<span class="side-tag">' + (node.color === BLACK ? t('satoriLab.black') : t('satoriLab.white')) + '</span>' +
+        sep + '<span class="meta">' + t('satoriLab.tree.depth') + ' ' + node.depth + '</span>' +
+        sep + '<span class="val">' + t('satoriLab.tree.value') + ' ' + (node.value === null ? '—' : (node.bounded ? t('satoriLab.tree.atLeast', { score: fmtScore(node.value) }) : fmtScore(node.value))) + '</span>' +
+        (hasChildren ? sep + '<span class="meta">' + t('satoriLab.tree.children', { n: node.children.length }) + '</span>' : '') +
+        (notes ? sep + notes : '') + '</div>';
+      const childHtml = hasChildren
+        ? '<ul' + (depth < 1 ? '' : ' hidden') + '>' + node.children.map((c) => renderNode(c, depth + 1)).join('') + '</ul>'
+        : '';
+      return '<li>' + head + childHtml + '</li>';
+    }
+
+    function renderTree(s) {
+      const tree = (s.trace && s.trace.tree) || [];
+      const nodes = buildTree(tree);
+      const roots = [...nodes.values()].filter((n) => n.root);
+      if (!roots.length) {
+        document.getElementById('treeBody').innerHTML =
+          '<p class="empty-state">' + t('satoriLab.noTree') + '</p>' +
+          '<p class="hint">' + t('satoriLab.noTreeWhy') + '</p>';
+        treeTag.textContent = '';
+        return;
+      }
+      const meta = s.trace.meta || {};
+      const shown = meta.treeEvents || 0;
+      treeTag.textContent = t('satoriLab.treeTag', { n: shown });
+      const truncated = meta.treeTruncated || meta.overflowed;
+      document.getElementById('treeBody').innerHTML =
+        '<p class="hint">' + t('satoriLab.treeLead', { depth: roots[0].depth, ply: meta.treePly }) + '</p>' +
+        '<div class="tree"><ul>' + roots.map((n) => renderNode(n, 0)).join('') + '</ul></div>' +
+        (truncated ? '<p class="hint tree-note warn">' + t('satoriLab.treeTruncated') + '</p>' : '<p class="hint tree-note">' + t('satoriLab.treeNote') + '</p>');
+    }
+
+    document.getElementById('treeBody').addEventListener('click', (event) => {
+      const btn = event.target.closest('button.toggle');
+      if (!btn) return;
+      const ul = btn.closest('.node-line')?.nextElementSibling;
+      if (!ul || ul.tagName !== 'UL') return;
+      ul.hidden = !ul.hidden;
+      btn.textContent = ul.hidden ? '+' : '−';
+    });
+
+    // ---------- 模式与状态 ----------
+    function setStatus(text, isWarn) {
+      statusLine.textContent = text;
+      statusLine.classList.toggle('warn', !!isWarn);
+    }
+
+    function setMode(next) {
+      mode = next;
+      for (const btn of document.querySelectorAll('#modeTabs button')) {
+        btn.classList.toggle('active', btn.dataset.mode === next);
+      }
+      document.getElementById('replayControls').hidden = next !== 'replay';
+      document.getElementById('liveControls').hidden = next !== 'live';
+      steps = []; viewIndex = -1; board = emptyBoard();
+      stepNav.hidden = true;
+      renderBoard(); renderAnalysis();
+      setStatus(next === 'replay' ? t('satoriLab.replayHint') : t('satoriLab.liveHint'));
+    }
+    document.getElementById('modeTabs').addEventListener('click', (event) => {
+      const btn = event.target.closest('button[data-mode]');
+      if (btn && !busy) setMode(btn.dataset.mode);
+    });
+
+    // 开局下拉（含战术演示项）
+    const openingSelect = document.getElementById('openingSelect');
+    for (const [i, opening] of OPENINGS.entries()) {
+      const option = document.createElement('option');
+      option.value = String(i);
+      option.textContent = opening.demo
+        ? t('satoriLab.demo.' + opening.id)
+        : (opening.moves.length === 0
+          ? t('satoriLab.opening.empty')
+          : opening.moves.map(([r, c]) => '(' + (r + 1) + ',' + (c + 1) + ')').join(' '));
+      openingSelect.appendChild(option);
+    }
+    openingSelect.value = '1';
+    // 战术演示只剖析一手，手数选择对它没有意义，选中演示时禁用。
+    function syncPlySelect() {
+      const opening = OPENINGS[Number(openingSelect.value)];
+      document.getElementById('plySelect').disabled = !!opening.demo;
+      document.getElementById('runReplay').textContent = opening.demo
+        ? t('satoriLab.analyzeOne') : t('satoriLab.runReplay');
+    }
+    openingSelect.addEventListener('change', syncPlySelect);
+    syncPlySelect();
+    document.getElementById('runReplay').addEventListener('click', () => void runReplay());
+    document.getElementById('startLive').addEventListener('click', startLive);
+    document.getElementById('stopLive').addEventListener('click', () => { if (!busy) startLive(); });
+
+    // 初始化
+    renderBoard();
+    setMode('replay');
+
+    // 只读检查钩子：供 tools/check-gomoku-satori-lab.mjs 在真实页面里核对
+    // 每一步都拿到了完整剖析数据。不参与页面逻辑。
+    window.__labSteps = () => steps.map((s) => ({
+      index: s.index, color: s.color, move: s.move, stats: s.stats, trace: s.trace
+    }));
+    window.__labOpenings = () => OPENINGS.map((o, i) => ({ index: i, id: o.id, demo: !!o.demo }));
+  })();
+  </script>
+  <script>!function(){try{var t=document.querySelector('.topbar');if(!document.getElementById('langSwitcherHost')){var h=document.createElement('div');h.id='langSwitcherHost';t.appendChild(h);}if(window.ClubI18n)window.ClubI18n.mountSwitcher(document.getElementById('langSwitcherHost'));}catch(e){}}();</script>
+</body>
+</html>

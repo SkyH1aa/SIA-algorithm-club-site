@@ -1,0 +1,68 @@
+{
+  "generatedAt": "2026-10-15T12:21:08.489Z",
+  "complete": true,
+  "pair": [
+    "satori",
+    "v9pro"
+  ],
+  "rule": "freestyle; 15x15; >=5 wins; no opening constraints",
+  "matches": [
+    {
+      "black": "satori",
+      "white": "v9pro",
+      "winner": "v9pro",
+      "moves": 18,
+      "file": "satori-black-v9pro.json"
+    },
+    {
+      "black": "v9pro",
+      "white": "satori",
+      "winner": "v9pro",
+      "moves": 17,
+      "file": "v9pro-black-satori.json"
+    }
+  ],
+  "models": {
+    "satori": {
+      "wins": 0,
+      "losses": 2,
+      "draws": 0,
+      "colors": {
+        "black": "loss",
+        "white": "loss"
+      },
+      "reasons": {
+        "opening-center": 1,
+        "search": 12,
+        "vct-win": 1,
+        "forced-block": 3
+      },
+      "bookMoves": 0,
+      "moves": 17,
+      "totalMs": 99747,
+      "meanMs": 5867,
+      "maxMs": 16017,
+      "medianMs": 1156
+    },
+    "v9pro": {
+      "wins": 2,
+      "losses": 0,
+      "draws": 0,
+      "colors": {
+        "white": "win",
+        "black": "win"
+      },
+      "reasons": {
+        "search": 13,
+        "VCF": 3,
+        "win": 2
+      },
+      "bookMoves": 0,
+      "moves": 18,
+      "totalMs": 1976,
+      "meanMs": 110,
+      "maxMs": 291,
+      "medianMs": 109
+    }
+  }
+}

@@ -18,7 +18,7 @@ const context = vm.createContext({
   }
 });
 vm.runInContext(stripTypeScriptTypes(source), context);
-const versions = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6];
+const versions = [1, 2, 3, 6, 7, 8, 9, 9.1, 9.2, 9.3, 10, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 11];
 let cases = 0;
 for (const version of versions) for (const result of ['win', 'loss', 'draw']) for (const color of [1, 2]) for (const battle of [false, true]) {
   stored = null;
@@ -123,6 +123,37 @@ if (fs.existsSync(thinkerPackage)) {
   assert.equal(thinkerPack.dataBase64, pack.dataBase64, 'V10Thinker file:// Mix9 weights match V10Ultra');
   assert.equal(thinkerPack.workerSource, thinkerWorker, 'V10Thinker file:// worker matches its own bridge');
 }
+// Gomoku-Satori (11) is a pure-JavaScript exhibition engine: no Rapfi, no WASM,
+// no weights. Its opaque-origin package must embed exactly the HTTP engine and
+// Worker sources, and the wrapper must keep it out of the upload path.
+{
+  const satoriDir = path.join(root, 'public/gomoku-models/satori');
+  const engineSource = fs.readFileSync(path.join(satoriDir, 'engine.js'), 'utf8');
+  const workerSource = fs.readFileSync(path.join(satoriDir, 'worker.js'), 'utf8');
+  const satoriContext = { window: {} };
+  vm.runInNewContext(fs.readFileSync(path.join(satoriDir, 'file-package.js'), 'utf8'), satoriContext);
+  const satoriPack = satoriContext.window.GOMOKU_SATORI_FILE_PACKAGE;
+  assert.equal(satoriPack.engineSource, engineSource, 'Satori file:// engine matches the HTTP engine');
+  assert.equal(satoriPack.workerSource, workerSource, 'Satori file:// worker matches the HTTP bridge');
+  // 展示版边界：引擎不得引用 Rapfi/神经网络资源，也不得读取任何训练先验。
+  // 先去掉注释再检查——引擎头部注释本来就会写明“不使用 Rapfi”，那不是引用。
+  // 匹配的是真实资源引用（字符串字面量里的文件/引擎名），而不是 `...data`
+  // 这类展开语法或普通标识符，否则会产生误报。
+  const stripComments = code => code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  const engineCode = stripComments(engineSource);
+  const assetRef = /['"`][^'"`]*rapfi[^'"`]*['"`]|['"`][^'"`]*\.(wasm|data|onnx)['"`]|importScripts|createGomoku[A-Za-z]*Expert|GOMOKU_[A-Z0-9_]*TRAINING_MODEL/i;
+  assert.ok(!assetRef.test(engineCode), 'Satori engine must not touch Rapfi/WASM/weight assets or a training prior');
+  assert.ok(!/GOMOKU_[A-Z0-9_]*TRAINING_MODEL/.test(stripComments(workerSource)), 'Satori worker must not read a training prior');
+  const satoriWrapper = fs.readFileSync(path.join(root, 'public/gomoku-models/satori.js'), 'utf8');
+  assert.ok(!/GOMOKU_[A-Z0-9_]*TRAINING_MODEL/.test(stripComments(satoriWrapper)), 'Satori wrapper must not read a training prior');
+  assert.ok(!/rapfi/i.test(stripComments(satoriWrapper)), 'Satori wrapper must not reference Rapfi');
+  const gomokuPage = fs.readFileSync(path.join(root, 'public/gomoku.html'), 'utf8');
+  assert.ok(gomokuPage.includes('function isExhibitionVersion(version) { return Number(version) === 11; }'), 'Satori is registered as an exhibition version');
+  assert.ok(gomokuPage.includes("if (isExhibitionVersion(version)) return false;"), 'Satori is blocked from the upload whitelist');
+  // 11 不能出现在任何上传白名单里（前端与边缘函数两侧）。
+  assert.ok(!/canUploadTrainingResult[\s\S]{0,400}version === 11/.test(gomokuPage), 'Satori must not be added to the upload whitelist');
+  assert.ok(!/acceptsResult = \[[^\]]*11[^\]]*\]/.test(fs.readFileSync(path.join(root, 'supabase/functions/gomoku-training/index.ts'), 'utf8')), 'Edge function must not accept Satori uploads');
+}
 // The V10Flash prior must draw exactly the games played by its four reference
 // model families in any period, plus everything from period 1014 onward. Every
 // other exported prior must stay free of the 1014+ periods.
@@ -156,4 +187,4 @@ for (const name of ['GOMOKU_TRAINING_MODEL', 'GOMOKU_V9PRO_TRAINING_MODEL', 'GOM
 }
 const flashContributors = flashModel.sourceModelVersions.filter(version => version !== 10.3);
 assert.ok(flashContributors.length === 3, 'V10Exp (10.3) contributes no games yet');
-console.log(`PASS: ${cases} edge function cases; only 9.2/10/10.1/10.2/10.3/10.4/10.5/10.6 accept all outcomes, colors and modes preserved; file:// and HTTP engine/weights are identical for V10Ultra and V10Flash; the V10Flash prior is built from exactly ${expectedFlash} games (9.2/10/10.1/10.3 in any period, plus period >= 1014) and no other prior reads period 1014.`);
+console.log(`PASS: ${cases} edge function cases; only 9.2/10/10.1/10.2/10.3/10.4/10.5/10.6 accept all outcomes (11 Gomoku-Satori is a valid opponent but never uploads), colors and modes preserved; file:// and HTTP engine/weights are identical for V10Ultra and V10Flash; the V10Flash prior is built from exactly ${expectedFlash} games (9.2/10/10.1/10.3 in any period, plus period >= 1014) and no other prior reads period 1014.`);
