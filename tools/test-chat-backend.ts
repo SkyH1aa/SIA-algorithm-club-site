@@ -174,6 +174,24 @@ try {
     await consume({ action: 'admin_test', model_id: MID, prompt: 'admin local test', max_output_tokens: 5, reasoning_effort: 'high' });
     assert.equal(upstreamBodies[0].input[0].content[0].text, 'admin local test'); assert.equal(audits[0].action, 'admin_test'); assert.equal(audits[0].username, 'local@example.com');
   });
+  await test('ordinary respond always uses the configured default output budget', async () => {
+    const response = await consume(payload({ max_output_tokens: 900 }));
+    assert.match(response, /你好/);
+    assert.equal(upstreamBodies[0].max_output_tokens, 100, 'client budget must not override the admin default');
+    assert.equal(audits[0].max_output_tokens, 100);
+  });
+  await test('2040 KiB image fits 200k context with 32k admin output budget', async () => {
+    model.context_window = 200000;
+    model.max_output_tokens = 32000;
+    model.default_max_output_tokens = 32000;
+    const decodedBytes = 2040 * 1024;
+    const image = { type: 'input_image', image_url: `data:image/png;base64,${'A'.repeat(4 * Math.ceil(decodedBytes / 3))}`, detail: 'auto' };
+    await consume(payload({ input: [{ role: 'user', content: [message('image prompt').content[0], image] }] }));
+    assert.equal(upstreamBodies[0].max_output_tokens, 32000);
+    assert.equal(audits[0].max_output_tokens, 32000);
+    assert.equal(upstreamBodies[0].input[0].content[1].image_url.length, image.image_url.length);
+    assert.ok(audits[0].input_bytes < 12 * 1024 * 1024);
+  });
   await test('strict request, content, output, effort and context validation', async () => {
     for (const bad of [payload({ extra: true }), payload({ input: [] }), payload({ input: [{ role: 'tool', content: [] }] }), payload({ input: [message('')] }), payload({ input: [{ role: 'user', content: [{ type: 'input_text', text: 'x', filename: 'x.txt' }] }] }), payload({ max_output_tokens: 0 }), payload({ max_output_tokens: 1001 }), payload({ max_output_tokens: '5' }), payload({ reasoning_effort: 'extreme' })]) await expectStatus(bad, 400);
     model.context_window = 256; model.max_output_tokens = 100; await expectStatus(payload({ input: [message('x'.repeat(1000))] }), 413);

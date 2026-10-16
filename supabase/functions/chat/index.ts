@@ -39,6 +39,8 @@ const MAX_ATTACHMENTS = 4;
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 const MAX_REASONING_EFFORT = 40;
 const LEASE_MS = 15 * 60 * 1000;
+const IMAGE_TOKEN_ESTIMATE = { low: 1024, auto: 4096, high: 8192 };
+const PDF_TOKEN_ESTIMATE = 8192;
 const ACTIONS = new Set([
   'catalog', 'respond', 'admin_get', 'admin_save_provider', 'admin_save_model',
   'admin_usage', 'admin_test'
@@ -280,6 +282,29 @@ function validPdfFilename(value: string): boolean {
   return true;
 }
 
+function estimateInputTokens(input: Json[]): number {
+  let tokens = 0;
+  for (const raw of input) {
+    const item = object(raw);
+    if (item.type === 'reasoning') {
+      tokens += Math.ceil(encoder.encode(String(item.encrypted_content || '')).byteLength / 3);
+      continue;
+    }
+    if (!Array.isArray(item.content)) continue;
+    for (const rawPart of item.content) {
+      const part = object(rawPart);
+      if (part.type === 'input_text' || part.type === 'output_text') {
+        tokens += Math.ceil(encoder.encode(String(part.text || '')).byteLength / 3);
+      } else if (part.type === 'input_image') {
+        tokens += IMAGE_TOKEN_ESTIMATE[String(part.detail || 'auto') as keyof typeof IMAGE_TOKEN_ESTIMATE] || IMAGE_TOKEN_ESTIMATE.auto;
+      } else if (part.type === 'input_file') {
+        tokens += PDF_TOKEN_ESTIMATE;
+      }
+    }
+  }
+  return tokens;
+}
+
 function validateInput(input: unknown, model: Model): { input: Json[]; inputBytes: number } {
   if (!Array.isArray(input) || input.length < 1 || input.length > MAX_INPUT_ITEMS) throw new HttpError('input', 400);
   let textBytes = 0, attachmentBytes = 0;
@@ -431,13 +456,16 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
   const { model, provider } = await modelWithProvider(payload.model_id);
   const rawInput = test ? [{ role: 'user', content: [{ type: 'input_text', text: text(payload.prompt, MAX_INPUT_TEXT, true) }] }] : payload.input;
   const { input } = validateInput(rawInput, model);
-  const outputTokens = integer(payload.max_output_tokens, 1, model.max_output_tokens, model.default_max_output_tokens);
+  if (!test && payload.max_output_tokens !== undefined) integer(payload.max_output_tokens, 1, model.max_output_tokens);
+  const outputTokens = test
+    ? integer(payload.max_output_tokens, 1, model.max_output_tokens, model.default_max_output_tokens)
+    : model.default_max_output_tokens;
   const effort = payload.reasoning_effort == null ? model.default_reasoning_effort : text(payload.reasoning_effort, MAX_REASONING_EFFORT, true);
   if (effort !== null && !(model.reasoning_efforts as string[]).includes(effort)) throw new HttpError('effort', 400);
   const requestId = crypto.randomUUID();
   const body = { model: model.model_key, input, reasoning: effort ? { effort } : undefined, include: model.preserve_reasoning ? ['reasoning.encrypted_content'] : undefined, max_output_tokens: outputTokens, store: false, stream: true };
   const serialized = JSON.stringify(body);
-  if (Math.ceil(encoder.encode(serialized).byteLength / 3) + outputTokens > model.context_window) throw new HttpError('context', 413);
+  if (estimateInputTokens(input) + outputTokens > model.context_window) throw new HttpError('context', 413);
   if (encoder.encode(serialized).byteLength > MAX_REQUEST_BYTES) throw new HttpError('request_too_large', 413);
   const acquired = await rpc('chat_acquire_generation_lease', { p_user_id: ctx.user.id, p_request_id: requestId, p_expires_at: new Date(Date.now() + LEASE_MS).toISOString() });
   if (acquired !== true) throw new HttpError('busy', 409);

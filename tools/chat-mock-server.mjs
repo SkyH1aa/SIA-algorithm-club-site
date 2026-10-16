@@ -152,7 +152,10 @@ export function createMockServer({testPort = false} = {}) {
     requireThat(uuid(payload.model_id) && model?.enabled && provider?.enabled,'model');
     const input = payload.action === 'admin_test' && payload.input === undefined ? [{role:'user',content:[{type:'input_text',text:text(payload.prompt,500000) || 'Reply with MOCK OK.'}]}] : payload.input;
     Object.assign(meta,validateInput(input,model));
-    const max = integer(payload.max_output_tokens,1,model.max_output_tokens,model.default_max_output_tokens);
+    if (payload.action !== 'admin_test' && payload.max_output_tokens !== undefined) integer(payload.max_output_tokens,1,model.max_output_tokens);
+    const max = payload.action === 'admin_test'
+      ? integer(payload.max_output_tokens,1,model.max_output_tokens,model.default_max_output_tokens)
+      : model.default_max_output_tokens;
     const effort = payload.reasoning_effort == null ? model.default_reasoning_effort : text(payload.reasoning_effort,40,true);
     requireThat(!leases.has(account.id),'busy',409);
     const scenario = state.scenario, requestId = meta.request_id;
@@ -340,6 +343,8 @@ async function selfTest() {
     state = await setup('unbound'); assert.equal((await post({action:'catalog'})).status,403);
     state = await setup('loggedout'); assert.equal((await post({action:'catalog'})).status,401);
     state = await setup('admin');
+    const fixedUsage = (await (await post({action:'admin_usage',page:1,pageSize:1})).json()).usage.find(item => item.action === 'respond');
+    assert.equal(fixedUsage.max_output_tokens,512,'member budget must stay at the configured default');
     const provider = {action:'save_provider',name:'created',label:'MOCK created',base_url:'https://mock-provider.example.com/v1',secret_name:'CHAT_KEY_MOCK_CREATED',enabled:true};
     let saved = await (await post(provider)).json(); assert.ok(uuid(saved.provider.id));
     const providerId = saved.provider.id;

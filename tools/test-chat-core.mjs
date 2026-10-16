@@ -41,7 +41,17 @@ assert.equal(context.truncated, true);
 assert.match(JSON.stringify(context.input), /new/);
 assert.doesNotMatch(JSON.stringify(context.input), /old answer/);
 assert.throws(() => buildContext(turns,{context_window:10},10),/context/);
-assert.throws(() => buildContext(turns,{context_window:20},10),/context/);
+const imageBytes = 2040 * 1024;
+const imageData = `data:image/png;base64,${'A'.repeat(4 * Math.ceil(imageBytes / 3))}`;
+const imageTurn = {input:[{role:'user',content:[{type:'input_text',text:'image prompt'},{type:'input_image',image_url:imageData,detail:'auto'}]}],status:'running',output:[]};
+const imageContext = buildContext([imageTurn],{context_window:200000},32000);
+assert.equal(imageContext.input[0].content[1].image_url.length, imageData.length);
+const oversizedImages = Array.from({length:5}, () => ({type:'input_image',image_url:imageData,detail:'auto'}));
+assert.throws(() => buildContext([{input:[{role:'user',content:oversizedImages}],status:'running',output:[]}],{context_window:1000000},32000),/request_too_large/);
+const textTooLarge = {input:[{role:'user',content:[{type:'input_text',text:'x'.repeat(700000)}]}],status:'running',output:[]};
+assert.throws(() => buildContext([textTooLarge],{context_window:100000},32000),/context/);
+const oversizedRequest = {input:[{role:'user',content:[{type:'input_text',text:'x'.repeat(12 * 1024 * 1024)}]}],status:'running',output:[]};
+assert.throws(() => buildContext([oversizedRequest],{context_window:100000000},32000),/request_too_large/);
 const output = [
   {type:'reasoning',encrypted_content:'opaque'},
   {type:'message',role:'assistant',content:[{type:'output_text',text:'answer'},{type:'refusal',refusal:'x'}]},
@@ -143,9 +153,15 @@ function uiHarness() {
 }
 {
   const ui=uiHarness();await ui.login('A');
+  ui.evaluate("document.getElementById('prompt').value='budget'; void generate();");await settle();
+  assert.equal(ui.requests.at(-1).body.max_output_tokens,50,'ordinary chat must use the admin-configured default budget');
+  ui.requests.at(-1).resolve({ok:true,headers:new Headers({'content-type':'text/event-stream'}),body:stream(delta)});await settle();
+}
+{
+  const ui=uiHarness();await ui.login('A');
   ui.setSaveHook(async()=>{throw new Error('storage');});
   ui.evaluate("document.getElementById('prompt').value='failed save'; void generate();");await settle();
   assert.equal(ui.evaluate('current.turns[0].status'),'failure','failed initial save must not leave a running turn');
   assert.equal(ui.evaluate('generations.size'),0);assert.equal(ui.evaluate('active'),null);
 }
-console.log('Chat UI: startup auth ordering, token refresh, late catalogs, logout, generation/final-save ownership and storage failure checks passed.');
+console.log('Chat UI: startup auth ordering, token refresh, late catalogs, logout, generation/final-save ownership, storage failure and fixed output budget checks passed.');

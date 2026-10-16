@@ -34,11 +34,13 @@ function button(key, handler) {
 }
 function controls() {
   const busy = !!active || attaching;
-  for (const id of ['send','retry','new','rename','delete','clear','export','files','model','effort','output']) $(id).disabled = busy || !session || !models.length;
+  for (const id of ['send','retry','new','rename','delete','clear','export','files','model','effort']) $(id).disabled = busy || !session || !models.length;
   $('stop').disabled = !active;
 }
 function renderMessages() {
-  const box = $('messages'); box.replaceChildren();
+  const box = $('messages');
+  const follow = box.scrollHeight - box.scrollTop - box.clientHeight < 48;
+  box.replaceChildren();
   if (!current?.turns.length) { box.textContent = t('empty'); return; }
   for (const turn of current.turns) {
     for (const role of ['user','assistant']) {
@@ -60,6 +62,7 @@ function renderMessages() {
       box.append(article);
     }
   }
+  if (follow) box.scrollTop = box.scrollHeight;
 }
 function renderList() {
   $('conversations').replaceChildren();
@@ -100,7 +103,6 @@ function configureModel() {
   for (const value of item?.reasoning_efforts || []) { const opt = new Option(value,value); $('effort').add(opt); }
   if (!$('effort').options.length) $('effort').add(new Option(t('default'),''));
   $('effort').value = item?.default_reasoning_effort || '';
-  $('output').max = item?.max_output_tokens || 1; $('output').value = item?.default_max_output_tokens || 1;
   controls();
 }
 async function request(action, body = {}, signal, token = session?.access_token) {
@@ -108,7 +110,7 @@ async function request(action, body = {}, signal, token = session?.access_token)
   const response = await fetch(`${URL}/functions/v1/chat`, {method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${token}`},body:JSON.stringify({action,...body}),signal});
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw Object.assign(new Error(response.status === 409 ? 'busy' : response.status === 401 ? 'login' : ['context','file','login','profile'].includes(data.error) ? data.error : 'request'), {status:response.status});
+    throw Object.assign(new Error(response.status === 409 ? 'busy' : response.status === 401 ? 'login' : ['context','request_too_large','file','login','profile'].includes(data.error) ? data.error : 'request'), {status:response.status});
   }
   return response;
 }
@@ -167,8 +169,7 @@ async function generate(retry = false) {
   if (active || attaching || !session || !model()) return;
   const guard = epoch, chat = current, item = model();
   if (!chat) return;
-  const output = Number($('output').value);
-  if (!Number.isInteger(output) || output < 1 || output > item.max_output_tokens) return status('context');
+  const output = item.default_max_output_tokens;
   const previous = retry ? chat.turns.at(-1) : null;
   if (retry && !previous) return;
   const prompt = previous?.prompt ?? $('prompt').value.trim(), files = previous?.attachments ?? pending.slice();
@@ -183,7 +184,7 @@ async function generate(retry = false) {
     const prior = (retry ? chat.turns.slice(0,-1) : chat.turns).filter(x => x.status === 'success').map(x => ({...x,output:continuation(x.output,x.modelId === item.id && item.preserve_reasoning)}));
     const context = buildContext([...prior,turn],item,output);
     const body = {model_id:item.id,input:context.input,reasoning_effort:$('effort').value || null,max_output_tokens:output};
-    if (new TextEncoder().encode(JSON.stringify({action:'respond',...body})).length > MAX_REQUEST_BYTES) throw new Error('context');
+    if (new TextEncoder().encode(JSON.stringify({action:'respond',...body})).length > MAX_REQUEST_BYTES) throw new Error('request_too_large');
     if (retry) chat.turns.pop();
     chat.turns.push(turn); if (!chat.title) chat.title = prompt.slice(0,60) || files[0]?.name || '';
     await persist(chat,guard); persisted = true;
@@ -204,7 +205,7 @@ async function generate(retry = false) {
     if (guard === epoch) Object.assign(turn,{...result,status:result.status});
   } catch (error) {
     if (turn) turn.status = run.stopped ? 'cancelled' : controller.signal.aborted ? 'interrupted' : 'failure';
-    if (guard === epoch) status(storageError ? 'storage' : ['context','file','pdf','busy','storage'].includes(error.message) ? error.message : run.stopped ? 'cancelled' : 'request');
+    if (guard === epoch) status(storageError ? 'storage' : ['context','request_too_large','file','pdf','busy','storage'].includes(error.message) ? error.message : run.stopped ? 'cancelled' : 'request');
   } finally {
     await saveQueue;
     if (persisted) {

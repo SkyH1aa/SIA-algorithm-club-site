@@ -1,9 +1,23 @@
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
 export const MAX_REQUEST_BYTES = 12 * 1024 * 1024;
 export const MAX_ATTACHMENTS = 4;
+const IMAGE_TOKEN_ESTIMATE = {low:1024,auto:4096,high:8192};
+const PDF_TOKEN_ESTIMATE = 8192;
 
 export function estimateTokens(value) {
-  return Math.ceil(new TextEncoder().encode(JSON.stringify(value)).length / 3);
+  let tokens = 0;
+  for (const item of value || []) {
+    if (item.type === 'reasoning') {
+      tokens += Math.ceil(new TextEncoder().encode(item.encrypted_content || '').length / 3);
+      continue;
+    }
+    for (const part of item.content || []) {
+      if (part.type === 'input_text' || part.type === 'output_text') tokens += Math.ceil(new TextEncoder().encode(part.text || '').length / 3);
+      else if (part.type === 'input_image') tokens += IMAGE_TOKEN_ESTIMATE[part.detail] || IMAGE_TOKEN_ESTIMATE.auto;
+      else if (part.type === 'input_file') tokens += PDF_TOKEN_ESTIMATE;
+    }
+  }
+  return tokens;
 }
 
 export function buildContext(turns, model, outputTokens) {
@@ -14,7 +28,13 @@ export function buildContext(turns, model, outputTokens) {
   let truncated = false;
   for (let i = groups.length - 1; i >= 0; i--) {
     const next = groups[i].concat(selected.flat());
-    if (estimateTokens(next) > budget || new TextEncoder().encode(JSON.stringify(next)).length > MAX_REQUEST_BYTES - 4096) {
+    const bytes = new TextEncoder().encode(JSON.stringify(next)).length;
+    if (bytes > MAX_REQUEST_BYTES - 4096) {
+      if (i === groups.length - 1) throw new Error('request_too_large');
+      truncated = true;
+      break;
+    }
+    if (estimateTokens(next) > budget) {
       if (i === groups.length - 1) throw new Error('context');
       truncated = true;
       break;
