@@ -25,8 +25,60 @@
       --muted: #8fa3b8;
       --line: rgba(115, 221, 255, .2);
       --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      /* 本站主题约定是“默认暗色 + html[data-theme=light] 覆盖”。下列自定义变量
+         让本页自有的深色组件（统计卡、威胁卡、徽章、下拉与棋盘）也能跟随主题，
+         否则亮色下会出现白字压白底、深底失效等问题。 */
+      --lab-surface: rgba(4, 9, 22, .72);
+      --lab-control: rgba(8, 16, 34, .92);
+      --lab-strong: #ffffff;
+      --lab-strong-soft: #dfe8f3;
+      --lab-board-bg: linear-gradient(160deg, rgba(255, 214, 150, .1), rgba(120, 90, 50, .16));
+      --lab-board-cell: rgba(20, 14, 8, .35);
+      --lab-board-line: rgba(255, 214, 150, .28);
+      --lab-grid-line: rgba(255, 214, 150, .16);   /* 棋盘格线：两主题都必须看得见 */
+      --lab-board-shadow: 0 10px 30px rgba(0, 0, 0, .45);   /* 棋盘投影 */
+      --lab-on-accent: #ffffff;          /* 强调按钮/激活页签上的文字 */
+      --lab-accent-fg: #9beaff;          /* 树控件等强调前景 */
+      --lab-notice-fg: #ffe6ad;          /* 说明条文字 */
     }
     * { box-sizing: border-box; }
+    /* 亮色主题：本页自有的深色组件改为浅底深字，保证对比度。
+       body 背景由 theme.css 负责，这里只处理本页自定义部分。 */
+    html[data-theme="light"] {
+      --lab-surface: rgba(0, 0, 0, .04);
+      --lab-control: rgba(255, 255, 255, .96);
+      --lab-strong: #1c1c1e;
+      --lab-strong-soft: #3a3a3c;
+      --lab-board-bg: linear-gradient(160deg, rgba(214, 168, 92, .18), rgba(180, 140, 80, .22));
+      --lab-board-cell: rgba(214, 168, 92, .12);
+      --lab-board-line: rgba(150, 100, 40, .55);
+      --lab-grid-line: rgba(150, 100, 40, .22);
+      --lab-board-shadow: 0 8px 24px rgba(120, 80, 30, .18), 0 1px 3px rgba(120, 80, 30, .14);
+      /* 亮色：强调色映射为站内橙红，其上的文字必须是深色才可读。 */
+      --lab-on-accent: #2a1a12;
+      --lab-accent-fg: #a03d20;
+      --lab-notice-fg: #7a4a10;
+      --line: rgba(0, 0, 0, .16);
+    }
+    html[data-theme="light"] body {
+      background: none;
+      color: #1c1c1e;
+    }
+    html[data-theme="light"] body::before { opacity: .35; }
+    /* 亮色棋盘：琥珀底 + 明确的格线，保证 15×15 网格与落点高亮都看得清。
+       注意 theme.css 有一条全站规则 `html[data-theme="light"] .board { background:#FFFFFF !important }`
+       （为棋盘类组件统一设定白底），它优先级高于本页的 .board，会把棋盘刷成一片白。
+       这里用同级选择器 + !important 覆盖回来，只影响本页的剖析棋盘。 */
+    html[data-theme="light"] .board {
+      background: var(--lab-board-bg) !important;
+      border-color: var(--lab-board-line) !important;
+      /* 全站规则会把 .board 的 box-shadow 也清掉，这里恢复本页自己的日间投影。 */
+      box-shadow: var(--lab-board-shadow) !important;
+    }
+    html[data-theme="light"] .cell.empty:hover { background: rgba(224, 122, 95, .28); }
+    html[data-theme="light"] .cell.played { background: rgba(31, 157, 99, .34); }
+    html[data-theme="light"] .cell.candidate { background: rgba(124, 77, 255, .28); }
+    html[data-theme="light"] .cell.best { background: rgba(201, 137, 0, .45); }
     body {
       margin: 0;
       min-width: 320px;
@@ -78,7 +130,7 @@
       border: 1px solid var(--line); color: var(--text); font-size: 13px;
       transition: all .25s var(--ease-out);
     }
-    .back-link:hover { color: #fff; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0, 229, 255, .12); }
+    .back-link:hover { color: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(224, 122, 95, .16); background: rgba(224, 122, 95, .08); }
 
     main { padding: clamp(20px, 3.4vw, 44px) clamp(16px, 4vw, 48px) 72px; max-width: 1680px; margin: 0 auto; }
     .intro { max-width: 940px; margin-bottom: 26px; }
@@ -91,7 +143,7 @@
     .intro .notice {
       margin-top: 14px; padding: 12px 16px; border-radius: 12px;
       background: rgba(255, 209, 102, .08); border: 1px solid rgba(255, 209, 102, .28);
-      color: #ffe6ad; font-size: 13px; line-height: 1.7;
+      color: var(--lab-notice-fg); font-size: 13px; line-height: 1.7;
     }
 
     .lab-grid {
@@ -112,7 +164,7 @@
     .panel + .panel { margin-top: 16px; }
     .panel h2 {
       margin: 0 0 14px; font-size: 15px; letter-spacing: .04em;
-      color: #fff; display: flex; align-items: center; gap: 8px;
+      color: var(--lab-strong); display: flex; align-items: center; gap: 8px;
     }
     .panel h2 .step-tag {
       margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 400;
@@ -125,22 +177,43 @@
     .control-row label { font-size: 12px; color: var(--muted); }
     select, .btn {
       padding: 9px 14px; border-radius: 10px;
-      background: rgba(8, 16, 34, .92);
+      background: var(--lab-control);
       border: 1px solid var(--line); color: var(--text); font-size: 13px;
       transition: all .2s var(--ease-out);
     }
     select:focus { outline: none; border-color: var(--cyan); }
-    .btn:hover:not(:disabled) { border-color: var(--cyan); color: #fff; }
+    .btn:hover:not(:disabled) { border-color: var(--cyan); color: var(--cyan); }
     .btn.primary {
       background: linear-gradient(135deg, rgba(0, 229, 255, .22), rgba(124, 77, 255, .22));
-      border-color: rgba(0, 229, 255, .45); color: #fff; font-weight: 600;
+      border-color: rgba(0, 229, 255, .45); color: var(--lab-on-accent); font-weight: 600;
     }
-    .mode-tabs { display: inline-flex; padding: 4px; border-radius: 12px; background: rgba(8, 16, 34, .92); border: 1px solid var(--line); }
+    /* 亮色下主按钮接全站强调色（橙红实底 + 白字），与其它页面的 .btn-primary 观感一致。
+       theme.css 里 `html[data-theme="light"] .btn { background:#FFFFFF !important }`
+       会把渐变底刷掉，因此这里同样用 !important 覆盖。 */
+    html[data-theme="light"] .btn.primary {
+      /* 全站强调色 #E07A5F 配白字对比度只有 2.95:1，主按钮上会写字发虚；
+         这里用更深的橙红 #C2410C（5.18:1）保证按钮文字清晰可读。 */
+      background: #C2410C !important;
+      border-color: #9A3412 !important;
+      color: #FFFFFF !important;
+    }
+    html[data-theme="light"] .btn.primary:hover:not(:disabled) {
+      background: #9A3412 !important;
+      color: #FFFFFF !important;
+    }
+    /* 亮色下普通按钮：全站把边框设成 #E5E5EA（对白底约 1.1:1），按钮边界与文字
+       都偏弱。这里给本页控件加深边框与文字，保证可辨识。 */
+    html[data-theme="light"] select,
+    html[data-theme="light"] .btn:not(.primary) {
+      border-color: rgba(0, 0, 0, .32) !important;
+    }
+    html[data-theme="light"] .btn:not(.primary) { color: #1C1C1E !important; }
+    .mode-tabs { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--lab-control); border: 1px solid var(--line); }
     .mode-tabs button {
       padding: 8px 16px; border: none; background: none; color: var(--muted);
       border-radius: 9px; font-size: 13px; transition: all .2s var(--ease-out);
     }
-    .mode-tabs button.active { background: rgba(0, 229, 255, .16); color: #fff; font-weight: 600; }
+    .mode-tabs button.active { background: rgba(0, 229, 255, .16); color: var(--lab-on-accent); font-weight: 600; }
 
     /* ---- 棋盘 ---- */
     .board-wrap { display: grid; justify-items: center; gap: 12px; }
@@ -152,17 +225,24 @@
       aspect-ratio: 1;
       padding: 8px;
       border-radius: 14px;
-      background: linear-gradient(160deg, rgba(255, 214, 150, .1), rgba(120, 90, 50, .16));
-      border: 1px solid rgba(255, 214, 150, .28);
+      background: var(--lab-board-bg);
+      border: 1px solid var(--lab-board-line);
+      box-shadow: var(--lab-board-shadow);
     }
     .cell {
-      position: relative; border: none; padding: 0;
-      background: rgba(20, 14, 8, .35);
+      position: relative; padding: 0;
+      background: var(--lab-board-cell);
+      /* 明确的格线：原先只用 1px 间隙透出底色，在暗色下几乎看不见整块棋盘。 */
+      border: 1px solid var(--lab-grid-line);
       border-radius: 3px;
       display: grid; place-items: center;
       transition: background .18s var(--ease-out);
     }
     .cell::after { content: ""; width: 62%; height: 62%; border-radius: 50%; }
+    /* 棋子投影：日间棋盘上让落子有立体感、也更容易看清。 */
+    .cell.black::after, .cell.white::after { box-shadow: 0 1px 3px rgba(40, 25, 5, .45); }
+    /* 白子描边：亮色棋盘上纯白棋子没有边界，必须描一圈深色。 */
+    .cell.white::after { box-shadow: inset 0 0 0 1px rgba(20, 30, 45, .55), 0 1px 3px rgba(40, 25, 5, .45); }
     .cell.black::after { background: radial-gradient(circle at 34% 30%, #6f7b8c, #0b0f16 72%); }
     .cell.white::after { background: radial-gradient(circle at 34% 30%, #fff, #b9c4d2 78%); }
     .cell.empty:hover { background: rgba(0, 229, 255, .2); }
@@ -187,16 +267,21 @@
     }
     .badge.reason { background: rgba(0, 229, 255, .14); border-color: rgba(0, 229, 255, .4); color: #9beaff; }
     .badge.move { background: rgba(255, 209, 102, .14); border-color: rgba(255, 209, 102, .4); color: #ffe6ad; }
-    .badge.side-black { background: rgba(200, 212, 226, .12); border-color: rgba(200, 212, 226, .34); color: #dfe8f3; }
-    .badge.side-white { background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .4); color: #fff; }
+    .badge.side-black { background: rgba(200, 212, 226, .12); border-color: rgba(200, 212, 226, .34); color: var(--lab-strong-soft); }
+    .badge.side-white { background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .4); color: var(--lab-strong); }
+    /* 亮色主题：浅青/浅金徽章文字在浅底上不可读，换成深色同色相。 */
+    html[data-theme="light"] .badge.reason { background: rgba(0, 130, 150, .14); border-color: rgba(0, 130, 150, .45); color: #00586b; }
+    html[data-theme="light"] .badge.move { background: rgba(180, 130, 0, .16); border-color: rgba(180, 130, 0, .45); color: #6b4a00; }
+    html[data-theme="light"] .badge.side-black { background: rgba(0, 0, 0, .06); border-color: rgba(0, 0, 0, .22); color: #1c1c1e; }
+    html[data-theme="light"] .badge.side-white { background: rgba(0, 0, 0, .06); border-color: rgba(0, 0, 0, .22); color: #1c1c1e; }
 
     .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 10px; }
     .stat {
       padding: 10px 12px; border-radius: 12px;
-      background: rgba(4, 9, 22, .72); border: 1px solid rgba(115, 221, 255, .13);
+      background: var(--lab-surface); border: 1px solid rgba(115, 221, 255, .13);
     }
     .stat span { display: block; font-size: 11px; color: var(--muted); margin-bottom: 5px; }
-    .stat strong { font-size: 15px; color: #fff; font-variant-numeric: tabular-nums; }
+    .stat strong { font-size: 15px; color: var(--lab-strong); font-variant-numeric: tabular-nums; }
 
     /* ---- 表格 ---- */
     .table-wrap { overflow-x: auto; }
@@ -208,23 +293,24 @@
     tbody tr.kept { background: rgba(113, 243, 191, .07); }
     tbody tr.dropped { opacity: .5; }
     tbody tr.best td { color: var(--gold); font-weight: 600; }
+    html[data-theme="light"] tbody tr.best td { color: #8a5a00; }
     .tag {
       display: inline-block; margin-left: 5px; padding: 1px 6px; border-radius: 999px;
       font-size: 10px; background: rgba(124, 77, 255, .2); color: #c9b6ff;
     }
     .tag.killer { background: rgba(255, 95, 200, .2); color: #ffb3e2; }
-    .tag.tt { background: rgba(0, 229, 255, .2); color: #9beaff; }
+    .tag.tt { background: rgba(0, 229, 255, .2); color: var(--lab-accent-fg); }
 
     /* ---- 威胁普查 ---- */
     .threat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
     .threat-card {
       padding: 12px 14px; border-radius: 12px;
-      background: rgba(4, 9, 22, .72); border: 1px solid rgba(115, 221, 255, .13);
+      background: var(--lab-surface); border: 1px solid rgba(115, 221, 255, .13);
     }
-    .threat-card h3 { margin: 0 0 10px; font-size: 12px; color: #fff; }
+    .threat-card h3 { margin: 0 0 10px; font-size: 12px; color: var(--lab-strong); }
     .threat-card dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 5px 10px; font-size: 12px; }
     .threat-card dt { color: var(--muted); }
-    .threat-card dd { margin: 0; text-align: right; color: #fff; font-variant-numeric: tabular-nums; }
+    .threat-card dd { margin: 0; text-align: right; color: var(--lab-strong); font-variant-numeric: tabular-nums; }
 
     /* ---- 搜索树 ---- */
     .tree { font-size: 12px; font-family: "Cascadia Mono", "Consolas", monospace; }
@@ -236,17 +322,19 @@
     .tree button.toggle {
       width: 18px; height: 18px; padding: 0; border-radius: 5px; line-height: 1;
       background: rgba(0, 229, 255, .12); border: 1px solid rgba(0, 229, 255, .28);
-      color: #9beaff; font-size: 11px; display: grid; place-items: center;
+      color: var(--lab-accent-fg); font-size: 11px; display: grid; place-items: center;
     }
     .tree .mv { color: var(--gold); }
-    .tree .val { color: #fff; }
+    html[data-theme="light"] .tree .mv { color: #8a5a00; }
+    .tree .val { color: var(--lab-strong); }
     .tree .meta { color: var(--muted); font-size: 11px; }
     .tree .side-tag {
       padding: 1px 6px; border-radius: 999px; font-size: 10px;
-      background: rgba(200, 212, 226, .12); color: #dfe8f3;
+      background: rgba(200, 212, 226, .12); color: var(--lab-strong-soft);
     }
     .tree .cut { color: var(--red); font-size: 11px; }
-    .tree .root-line { color: #9beaff; font-weight: 600; }
+    html[data-theme="light"] .tree .cut { color: #b3261e; }
+    .tree .root-line { color: var(--lab-accent-fg); font-weight: 600; }
     .tree-note { margin-top: 10px; }
 
     .empty-state { padding: 22px 14px; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.8; }
@@ -286,19 +374,20 @@
               </div>
             </div>
             <div class="control-row" id="replayControls">
-              <label for="openingSelect">开局</label>
+              <label for="openingSelect" data-i18n="satoriLab.openingLabel">开局</label>
               <select id="openingSelect"></select>
-              <label for="plySelect">分析手数</label>
+              <label for="plySelect" data-i18n="satoriLab.plyLabel">分析手数</label>
               <select id="plySelect">
-                <option value="2">2 手</option>
-                <option value="4">4 手</option>
-                <option value="6" selected>6 手</option>
-                <option value="8">8 手</option>
+                <option value="2" data-i18n="satoriLab.ply2">2 手</option>
+                <option value="4" data-i18n="satoriLab.ply4">4 手</option>
+                <option value="6" selected data-i18n="satoriLab.ply6">6 手</option>
+                <option value="8" data-i18n="satoriLab.ply8">8 手</option>
+                <option value="auto" data-i18n="satoriLab.plyAuto">自动（下到分胜负）</option>
               </select>
               <button type="button" class="btn primary" id="runReplay">开始逐手剖析</button>
             </div>
             <div class="control-row" id="liveControls" hidden>
-              <label for="liveSide">你执</label>
+              <label for="liveSide" data-i18n="satoriLab.sideLabel">你执</label>
               <select id="liveSide">
                 <option value="1">黑棋（先手）</option>
                 <option value="2" selected>白棋（后手）</option>
@@ -364,6 +453,9 @@
   (function () {
     'use strict';
     const SIZE = 15;
+    // 自动模式（下到分胜负）的硬上限，防极端对局无限跑。棋盘共 225 格，
+    // 单步预算 16 秒，因此这个上限在实际使用中只是兜底，不会真的跑满。
+    const MAX_AUTO_PLIES = 225;
     const BLACK = 1, WHITE = 2;
     const t = (key, vars) => (window.ClubI18n ? ClubI18n.t(key, vars || {}) : key);
     // ClubI18n.t 在缺键时返回 key 本身（恒为真值），因此不能靠 || 兜底，
@@ -403,6 +495,9 @@
     let steps = [];          // 每次被剖析的决策
     let viewIndex = -1;
     let busy = false;
+    // 每次“回放/演示/实时”分析开始时递增：供验收工具判断一次运行是否已完成。
+    // 不能靠 steps.length 判断——每个战术演示都恰好产出 1 步，长度会回到原值。
+    let runSeq = 0;
 
     const boardEl = document.getElementById('board');
     const statusLine = document.getElementById('statusLine');
@@ -482,11 +577,14 @@
       });
     }
 
+    function isBoardFull() { return movesPlayed() >= SIZE * SIZE; }
+
     // ---------- 回放模式：Satori 自己和自己下，逐手剖析；战术演示只剖析一手 ----------
     async function runReplay() {
       if (busy) return;
       busy = true;
-      setStatus(t('satoriLab.running'));
+      runSeq++;
+      setStatus('satoriLab.running');
       progressBar.hidden = false; progressFill.style.width = '0%';
       document.getElementById('runReplay').disabled = true;
       try {
@@ -507,15 +605,20 @@
           renderBoard(); renderAnalysis();
           stepNav.hidden = false; renderStepNav();
           progressFill.style.width = '100%';
-          setStatus(t('satoriLab.demoDone', { reason: reasonLabel(res.stats.reason) }));
+          setStatus('satoriLab.demoDone', {}, { reasonCode: res.stats.reason });
           return;
         }
 
-        const plies = Number(document.getElementById('plySelect').value);
+        // 手数：固定手数，或 “auto” = 一直自对弈到某一方连五。
+        // 自动模式必须有上限，否则极端对局会一直跑下去；225 格是棋盘上限，
+        // 再用 MAX_AUTO_PLIES 兜底，超限就如实说明“未分出胜负”。
+        const plyValue = document.getElementById('plySelect').value;
+        const auto = plyValue === 'auto';
+        const plies = auto ? MAX_AUTO_PLIES : Number(plyValue);
         for (const [r, c] of opening.moves) board[r][c] = movesPlayed() % 2 === 0 ? BLACK : WHITE;
         renderBoard();
 
-        let ended = false;
+        let ended = false, winner = null;
         for (let i = 0; i < plies && !ended; i++) {
           const color = movesPlayed() % 2 === 0 ? BLACK : WHITE;
           const before = cloneBoard(board);
@@ -523,17 +626,26 @@
           steps.push({ index: i, color, boardBefore: before, move: res.move, stats: res.stats, trace: res.trace });
           board[res.move.row][res.move.col] = color;
           viewIndex = steps.length - 1;
-          progressFill.style.width = Math.round(((i + 1) / plies) * 100) + '%';
-          setStatus(t('satoriLab.runningPly', { cur: i + 1, total: plies }));
+          if (auto) {
+            // 自动模式下总手数未知，进度条按棋盘占用率估算，避免出现假的总数。
+            progressFill.style.width = Math.min(100, Math.round((movesPlayed() / 225) * 100)) + '%';
+            setStatus('satoriLab.runningAuto', { cur: i + 1 });
+          } else {
+            progressFill.style.width = Math.round(((i + 1) / plies) * 100) + '%';
+            setStatus('satoriLab.runningPly', { cur: i + 1, total: plies });
+          }
           renderBoard();
           renderAnalysis();
-          if (winnerOn(board, res.move.row, res.move.col, color)) { ended = true; }
+          if (winnerOn(board, res.move.row, res.move.col, color)) { ended = true; winner = color; }
+          else if (isBoardFull()) { ended = true; winner = null; }
         }
-        setStatus(ended ? t('satoriLab.replayWin') : t('satoriLab.replayDone', { n: steps.length }));
+        if (ended && winner) setStatus('satoriLab.replayWon', { side: winner === BLACK ? t('satoriLab.black') : t('satoriLab.white'), n: steps.length });
+        else if (ended) setStatus('satoriLab.replayDraw', { n: steps.length });
+        else setStatus('satoriLab.replayDone', { n: steps.length });
         stepNav.hidden = steps.length === 0;
         renderStepNav();
       } catch (error) {
-        setStatus(t('satoriLab.failed') + ': ' + (error.message || error), true);
+        setStatus('satoriLab.failed', {}, { warn: true, detail: String(error.message || error) });
       } finally {
         busy = false;
         document.getElementById('runReplay').disabled = false;
@@ -543,12 +655,13 @@
 
     // ---------- 实时对战 ----------
     function startLive() {
+      runSeq++;
       const human = Number(document.getElementById('liveSide').value);
       board = emptyBoard();
       steps = []; viewIndex = -1;
       renderBoard(); renderAnalysis();
       stepNav.hidden = true;
-      setStatus(human === BLACK ? t('satoriLab.liveYourTurn') : t('satoriLab.liveAiThinking'));
+      setStatus(human === BLACK ? 'satoriLab.liveYourTurn' : 'satoriLab.liveAiThinking');
       if (human === WHITE) void satoriTurn();
     }
 
@@ -559,7 +672,7 @@
       if (color === human) return;
       busy = true;
       document.getElementById('stopLive').disabled = true;
-      setStatus(t('satoriLab.liveAiThinking'));
+      setStatus('satoriLab.liveAiThinking');
       try {
         const before = cloneBoard(board);
         const res = await analyzeMove(before, color);
@@ -568,10 +681,10 @@
         viewIndex = steps.length - 1;
         renderBoard(); renderAnalysis();
         stepNav.hidden = false; renderStepNav();
-        if (winnerOn(board, res.move.row, res.move.col, color)) setStatus(t('satoriLab.liveAiWon'));
-        else setStatus(t('satoriLab.liveYourTurn'));
+        if (winnerOn(board, res.move.row, res.move.col, color)) setStatus('satoriLab.liveAiWon');
+        else setStatus('satoriLab.liveYourTurn');
       } catch (error) {
-        setStatus(t('satoriLab.failed') + ': ' + (error.message || error), true);
+        setStatus('satoriLab.failed', {}, { warn: true, detail: String(error.message || error) });
       } finally {
         busy = false;
         document.getElementById('stopLive').disabled = false;
@@ -828,9 +941,27 @@
     });
 
     // ---------- 模式与状态 ----------
-    function setStatus(text, isWarn) {
+    // 状态行保存的是「i18n key + 变量」而不是渲染好的字符串：
+    // 否则切换语言时无法重新翻译（会停留在旧语言或原始 key）。
+    // 变量里若含决策原因码，也必须保存原始码（reasonCode）而不是译好的文本，
+    // 同理在渲染时才翻译。
+    let statusSpec = { key: 'satoriLab.replayHint', vars: {}, warn: false, detail: '', reasonCode: null };
+    function setStatus(key, vars, options) {
+      statusSpec = {
+        key,
+        vars: vars || {},
+        warn: !!(options && options.warn),
+        detail: (options && options.detail) || '',
+        reasonCode: (options && options.reasonCode) || null
+      };
+      renderStatus();
+    }
+    function renderStatus() {
+      const vars = { ...statusSpec.vars };
+      if (statusSpec.reasonCode) vars.reason = reasonLabel(statusSpec.reasonCode);
+      const text = t(statusSpec.key, vars) + (statusSpec.detail ? ': ' + statusSpec.detail : '');
       statusLine.textContent = text;
-      statusLine.classList.toggle('warn', !!isWarn);
+      statusLine.classList.toggle('warn', statusSpec.warn);
     }
 
     function setMode(next) {
@@ -843,26 +974,15 @@
       steps = []; viewIndex = -1; board = emptyBoard();
       stepNav.hidden = true;
       renderBoard(); renderAnalysis();
-      setStatus(next === 'replay' ? t('satoriLab.replayHint') : t('satoriLab.liveHint'));
+      setStatus(next === 'replay' ? 'satoriLab.replayHint' : 'satoriLab.liveHint');
     }
     document.getElementById('modeTabs').addEventListener('click', (event) => {
       const btn = event.target.closest('button[data-mode]');
       if (btn && !busy) setMode(btn.dataset.mode);
     });
 
-    // 开局下拉（含战术演示项）
+    // 开局下拉（含战术演示项）。文案由 refreshLocalizedUi() 统一负责重建。
     const openingSelect = document.getElementById('openingSelect');
-    for (const [i, opening] of OPENINGS.entries()) {
-      const option = document.createElement('option');
-      option.value = String(i);
-      option.textContent = opening.demo
-        ? t('satoriLab.demo.' + opening.id)
-        : (opening.moves.length === 0
-          ? t('satoriLab.opening.empty')
-          : opening.moves.map(([r, c]) => '(' + (r + 1) + ',' + (c + 1) + ')').join(' '));
-      openingSelect.appendChild(option);
-    }
-    openingSelect.value = '1';
     // 战术演示只剖析一手，手数选择对它没有意义，选中演示时禁用。
     function syncPlySelect() {
       const opening = OPENINGS[Number(openingSelect.value)];
@@ -871,21 +991,57 @@
         ? t('satoriLab.analyzeOne') : t('satoriLab.runReplay');
     }
     openingSelect.addEventListener('change', syncPlySelect);
-    syncPlySelect();
     document.getElementById('runReplay').addEventListener('click', () => void runReplay());
     document.getElementById('startLive').addEventListener('click', startLive);
     document.getElementById('stopLive').addEventListener('click', () => { if (!busy) startLive(); });
 
-    // 初始化
+    // 重渲染所有由脚本生成的文案与下拉项。
+    // 本页的内联脚本可能先于 ClubI18n.init() 执行（i18n.js 会延迟 boot），
+    // 那时 t() 只能返回 key 本身；因此必须在这里重新渲染一次，
+    // 并在 club:langchange（首次引导完成与切换语言）时再次刷新。
+    function refreshLocalizedUi() {
+      syncPlySelect();
+      // 开局下拉项的文案由 t() 生成，需要重建。
+      const current = openingSelect.value;
+      openingSelect.innerHTML = '';
+      for (const [i, opening] of OPENINGS.entries()) {
+        const option = document.createElement('option');
+        option.value = String(i);
+        option.textContent = opening.demo
+          ? t('satoriLab.demo.' + opening.id)
+          : (opening.moves.length === 0
+            ? t('satoriLab.opening.empty')
+            : opening.moves.map(([r, c]) => '(' + (r + 1) + ',' + (c + 1) + ')').join(' '));
+        openingSelect.appendChild(option);
+      }
+      openingSelect.value = current;
+      syncPlySelect();
+      // 状态行、棋盘标记与各剖析面板都含动态文案。
+      renderStatus();
+      renderBoard();
+      renderAnalysis();
+      if (steps.length) renderStepNav();
+    }
+
+    // 初始化：先渲染一次（此刻词典可能还没就绪），再在词典就绪后刷新。
+    syncPlySelect();
     renderBoard();
     setMode('replay');
+    window.addEventListener('club:langchange', () => refreshLocalizedUi());
+    // 兜底：若 club:langchange 已经错过（词典在监听注册前就绪），下一帧再刷一次。
+    setTimeout(refreshLocalizedUi, 0);
 
     // 只读检查钩子：供 tools/check-gomoku-satori-lab.mjs 在真实页面里核对
     // 每一步都拿到了完整剖析数据。不参与页面逻辑。
     window.__labSteps = () => steps.map((s) => ({
-      index: s.index, color: s.color, move: s.move, stats: s.stats, trace: s.trace
+      index: s.index, color: s.color, move: s.move, stats: s.stats, trace: s.trace,
+      // 该步落子前的盘面，供验收工具独立重建棋局并核对胜负。
+      boardBefore: s.boardBefore
     }));
     window.__labOpenings = () => OPENINGS.map((o, i) => ({ index: i, id: o.id, demo: !!o.demo }));
+    // 本次运行的序号与忙碌标记：验收工具据此判断一次运行是否真正结束，
+    // 而不是靠 steps.length（战术演示固定 1 步）或状态行文案（会提前变化）。
+    window.__labRun = () => ({ seq: runSeq, busy });
   })();
   </script>
   <script>!function(){try{var t=document.querySelector('.topbar');if(!document.getElementById('langSwitcherHost')){var h=document.createElement('div');h.id='langSwitcherHost';t.appendChild(h);}if(window.ClubI18n)window.ClubI18n.mountSwitcher(document.getElementById('langSwitcherHost'));}catch(e){}}();</script>

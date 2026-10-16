@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN" data-i18n-title-key="chatAdmin.pageTitle">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chat 管理 · 算法社</title>
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="chat-admin.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="theme.js"></script>
+  <script src="member-identity.js"></script>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+  <script src="chat-admin-i18n.js"></script>
+</head>
+<body class="chat-admin-page">
+  <header class="chat-admin-header">
+    <div class="chat-admin-header-inner">
+      <a class="chat-admin-brand" href="admin-hub.html"><span class="chat-admin-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small data-i18n="chatAdmin.title">Chat 管理</small></span></a>
+      <span class="chat-admin-identity" data-member-identity hidden></span>
+      <div class="chat-admin-header-actions">
+        <span id="languageSwitcher"></span>
+        <a href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a>
+        <a href="member-center.html" data-i18n="common.backMember">返回个人中心</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="loginGate" class="chat-admin-panel chat-admin-gate">
+      <strong data-i18n="chatAdmin.loginTitle">请先登录超管账号</strong>
+      <p data-i18n="chatAdmin.loginLead">Chat 管理只对当前 club_super_admins 名单中的账号开放。</p>
+      <a class="chat-admin-button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a>
+    </section>
+
+    <section id="deniedGate" class="chat-admin-panel chat-admin-gate" hidden>
+      <strong data-i18n="chatAdmin.deniedTitle">没有 Chat 超管权限</strong>
+      <p data-i18n="chatAdmin.deniedLead">此页面不会使用浏览器端名单兜底。请联系现任超管把账号加入动态超管名单。</p>
+      <p id="gateMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+      <button id="retryButton" class="chat-admin-button" type="button" data-i18n="common.refresh">刷新数据</button>
+      <a class="chat-admin-button chat-admin-secondary" href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a>
+    </section>
+
+    <div id="adminContent" hidden>
+      <section class="chat-admin-hero">
+        <div>
+          <p class="chat-admin-eyebrow" data-i18n="chatAdmin.eyebrow">CHAT 管理控制台</p>
+          <h1 data-i18n="chatAdmin.title">Chat 管理</h1>
+          <p data-i18n="chatAdmin.lead">管理供应商连接、模型配置、管理员测试调用和使用元数据。密钥只保存在 Supabase Secret 中。</p>
+        </div>
+        <div class="chat-admin-panel chat-admin-status-card">
+          <strong id="statusTitle" data-i18n="chatAdmin.ready">已验证超管身份</strong>
+          <span id="statusHint" role="status" aria-live="polite"></span>
+        </div>
+      </section>
+
+      <section class="chat-admin-grid chat-admin-summary-grid" aria-label="Chat 概览" data-i18n-aria="chatAdmin.summary">
+        <div class="chat-admin-panel chat-admin-stat"><small data-i18n="chatAdmin.providerCount">供应商</small><strong id="providerCount">--</strong></div>
+        <div class="chat-admin-panel chat-admin-stat"><small data-i18n="chatAdmin.modelCount">启用模型</small><strong id="modelCount">--</strong></div>
+        <div class="chat-admin-panel chat-admin-stat"><small data-i18n="chatAdmin.usageCount">当前页用量记录</small><strong id="usageCount">--</strong></div>
+        <div class="chat-admin-panel chat-admin-stat"><small data-i18n="chatAdmin.totalTokens">当前页 token</small><strong id="totalTokens">--</strong></div>
+      </section>
+
+      <section class="chat-admin-panel chat-admin-section">
+        <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.providersTitle">供应商配置</h2><p data-i18n="chatAdmin.providersLead">只保存供应商标识、Base URL、认证头和 Supabase Secret 名称，不在页面输入或回显 API Key。</p></div><button id="refreshButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="common.refresh">刷新数据</button></div>
+        <form id="providerForm" class="chat-admin-form">
+          <input id="providerId" type="hidden">
+          <label><span data-i18n="chatAdmin.providerId">供应商标识</span><input id="providerName" class="chat-admin-input" required maxlength="80" placeholder="例如 openai" data-i18n-placeholder="chatAdmin.providerIdPlaceholder"></label>
+          <label><span data-i18n="chatAdmin.providerLabel">显示名称</span><input id="providerLabel" class="chat-admin-input" maxlength="120" placeholder="例如 OpenAI" data-i18n-placeholder="chatAdmin.providerLabelPlaceholder"></label>
+          <label><span data-i18n="chatAdmin.baseUrl">Base URL</span><input id="providerBaseUrl" class="chat-admin-input" type="url" required maxlength="2048" placeholder="https://api.example.com/v1" data-i18n-placeholder="chatAdmin.baseUrlPlaceholder" data-i18n-title="chatAdmin.baseUrlHelp" title="使用 HTTPS 基础地址，不含 /responses、查询参数或凭据。"></label>
+          <label><span data-i18n="chatAdmin.secretName">Supabase Secret 名称</span><input id="providerSecretName" class="chat-admin-input" required maxlength="89" pattern="CHAT_KEY_[A-Z0-9_]{1,80}" placeholder="CHAT_KEY_OPENAI" data-i18n-placeholder="chatAdmin.secretNamePlaceholder" data-i18n-title="chatAdmin.secretNameHelp" title="CHAT_KEY_ 后接 1–80 个大写字母、数字或下划线。"></label>
+          <label><span data-i18n="chatAdmin.authHeader">认证头</span><select id="providerAuthHeader" class="chat-admin-input" required><option value="authorization">authorization</option><option value="x-api-key">x-api-key</option></select></label>
+          <label class="chat-admin-check"><input id="providerEnabled" type="checkbox" checked><span data-i18n="chatAdmin.enabled">启用</span></label>
+          <div class="chat-admin-actions"><button class="chat-admin-button" type="submit" data-i18n="chatAdmin.saveProvider">保存供应商</button><button id="clearProviderButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="common.clearForm">清空表单</button></div>
+        </form>
+        <p id="providerMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+        <div id="providersList" class="chat-admin-table-wrap"></div>
+      </section>
+
+      <section class="chat-admin-panel chat-admin-section">
+        <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.modelsTitle">模型配置</h2><p data-i18n="chatAdmin.modelsLead">模型参数用于普通 Chat 目录和管理员测试。供应商密钥仍由后端 Secret 读取。</p></div></div>
+        <form id="modelForm" class="chat-admin-form chat-admin-model-form">
+          <input id="modelConfigId" type="hidden">
+          <label><span data-i18n="chatAdmin.modelId">上游模型 ID</span><input id="modelId" class="chat-admin-input" required maxlength="160" placeholder="例如 gpt-4.1-mini" data-i18n-placeholder="chatAdmin.modelIdPlaceholder"></label>
+          <label><span data-i18n="chatAdmin.modelLabel">显示名称</span><input id="modelLabel" class="chat-admin-input" required maxlength="120" placeholder="例如 GPT-4.1 mini" data-i18n-placeholder="chatAdmin.modelLabelPlaceholder"></label>
+          <label><span data-i18n="chatAdmin.modelProvider">供应商</span><select id="modelProvider" class="chat-admin-input" required></select></label>
+          <label><span data-i18n="chatAdmin.contextWindow">上下文窗口</span><input id="contextWindow" class="chat-admin-input" type="number" min="256" max="1000000" step="1" value="8192" required></label>
+          <label><span data-i18n="chatAdmin.maxOutput">最大输出 token</span><input id="maxOutputTokens" class="chat-admin-input" type="number" min="1" max="131072" step="1" value="2048" required></label>
+          <label><span data-i18n="chatAdmin.defaultOutput">默认输出 token</span><input id="defaultOutputTokens" class="chat-admin-input" type="number" min="1" max="2048" step="1" value="1024" required></label>
+          <label><span data-i18n="chatAdmin.reasoningEfforts">思考强度（逗号分隔）</span><input id="reasoningEfforts" class="chat-admin-input" maxlength="491" placeholder="low,medium,high" data-i18n-placeholder="chatAdmin.reasoningPlaceholder" data-i18n-title="chatAdmin.reasoningHelp" title="最多 12 项，每项最多 40 个字符。"></label>
+          <label><span data-i18n="chatAdmin.defaultReasoning">默认思考强度</span><input id="defaultReasoning" class="chat-admin-input" maxlength="40"></label>
+          <label class="chat-admin-check"><input id="preserveReasoning" type="checkbox"><span data-i18n="chatAdmin.preserveReasoning">保留加密思考内容</span></label>
+          <label class="chat-admin-check"><input id="supportsImages" type="checkbox"><span data-i18n="chatAdmin.supportsImages">支持图片</span></label>
+          <label class="chat-admin-check"><input id="supportsPdf" type="checkbox"><span data-i18n="chatAdmin.supportsPdf">支持原生 PDF</span></label>
+          <label class="chat-admin-check"><input id="modelEnabled" type="checkbox" checked><span data-i18n="chatAdmin.enabled">启用</span></label>
+          <div class="chat-admin-actions"><button class="chat-admin-button" type="submit" data-i18n="chatAdmin.saveModel">保存模型</button><button id="clearModelButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="common.clearForm">清空表单</button></div>
+        </form>
+        <p id="modelMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+        <div id="modelsList" class="chat-admin-table-wrap"></div>
+      </section>
+
+      <section class="chat-admin-panel chat-admin-section">
+        <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.testTitle">管理员测试调用</h2><p data-i18n="chatAdmin.testLead">测试会真实调用供应商，可能产生费用。每次点击测试前都必须再次确认。</p></div></div>
+        <form id="testForm" class="chat-admin-test-form">
+          <label><span data-i18n="chatAdmin.testModel">测试模型</span><select id="testModel" class="chat-admin-input" required></select></label>
+          <label><span data-i18n="chatAdmin.testPrompt">测试提示词</span><textarea id="testPrompt" class="chat-admin-input" rows="4" maxlength="12000" required data-i18n-placeholder="chatAdmin.testPromptPlaceholder"></textarea></label>
+          <label><span data-i18n="chatAdmin.testOutput">输出预算</span><input id="testOutput" class="chat-admin-input" type="number" min="1" max="131072" step="1" value="256" required></label>
+          <button class="chat-admin-button chat-admin-danger" type="submit" data-i18n="chatAdmin.runTest">执行付费测试</button>
+        </form>
+        <pre id="testResult" class="chat-admin-test-result" aria-label="测试结果" data-i18n-aria="chatAdmin.testResult" hidden></pre>
+        <p id="testMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="chat-admin-panel chat-admin-section">
+        <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.usageTitle">使用记录</h2><p data-i18n="chatAdmin.usageLead">仅展示姓名、账号、模型、供应商、时间、状态和 token 等用量元数据，不展示对话内容。</p></div><button id="refreshUsageButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.refreshUsage">刷新用量</button></div>
+        <form id="usageFilter" class="chat-admin-filter-form">
+          <label><span data-i18n="chatAdmin.from">开始时间</span><input id="usageFrom" class="chat-admin-input" type="datetime-local"></label>
+          <label><span data-i18n="chatAdmin.to">结束时间</span><input id="usageTo" class="chat-admin-input" type="datetime-local"></label>
+          <label><span data-i18n="chatAdmin.pageSize">每页条数</span><select id="usagePageSize" class="chat-admin-input"><option value="20">20</option><option value="50">50</option><option value="100">100</option></select></label>
+          <button class="chat-admin-button" type="submit" data-i18n="chatAdmin.applyFilter">应用筛选</button>
+        </form>
+        <p id="usageMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+        <div id="usageList" class="chat-admin-table-wrap"></div>
+        <div class="chat-admin-pagination"><button id="usagePrev" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.previous">上一页</button><span id="usagePageLabel"></span><button id="usageNext" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.next">下一页</button></div>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="chat-admin.js"></script>
+</body>
+</html>

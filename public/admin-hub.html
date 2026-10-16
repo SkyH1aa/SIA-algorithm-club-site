@@ -196,7 +196,8 @@
       { key: 'events', href: 'events-admin.html', titleKey: 'admin.entryEvents', descKey: 'admin.entryEventsDesc', shortKey: 'admin.entryShortEvents' },
       { key: 'mall', href: 'mall-admin.html', titleKey: 'admin.entryMall', descKey: 'admin.entryMallDesc', shortKey: 'admin.entryShortMall' },
       { key: 'members', href: 'members-admin.html', titleKey: 'admin.entryMembers', descKey: 'admin.entryMembersDesc', shortKey: 'admin.entryShortMembers' },
-      { key: 'join', href: 'join-admin.html', titleKey: 'admin.entryJoin', descKey: 'admin.entryJoinDesc', shortKey: 'admin.entryShortJoin' }
+      { key: 'join', href: 'join-admin.html', titleKey: 'admin.entryJoin', descKey: 'admin.entryJoinDesc', shortKey: 'admin.entryShortJoin' },
+      { key: 'chat', href: 'chat-admin.html', titleKey: 'admin.entryChat', descKey: 'admin.entryChatDesc', shortKey: 'admin.entryShortChat', superOnly: true }
     ];
     const t = (key, vars) => (window.ClubI18n ? ClubI18n.t(key, vars) : key);
     const FEATURE_DEFS = [
@@ -268,7 +269,7 @@
     }
 
     function renderEntries() {
-      const cards = ENTRY_DEFS.filter(item => permOn(item.key)).map(item => `
+      const cards = ENTRY_DEFS.filter(item => permOn(item.key) && (!item.superOnly || currentAccess.isSuperAdmin)).map(item => `
         <a class="card" href="${item.href}">
           <strong>${escapeHtml(t(item.titleKey))}</strong>
           <p>${escapeHtml(t(item.descKey))}</p>

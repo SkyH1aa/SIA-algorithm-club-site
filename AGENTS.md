@@ -74,3 +74,15 @@ Mesa资源修改后运行 node tools/build-gomoku-experiment-file-package.mjs；
 任一模型改动棋力（搜索参数、先验、开局书）后必须重跑换色完整对局验收：`node tools/run-gomoku-model-pair.mjs <模型A> <模型B> [标签]`，仅在棋谱重放与资源指纹全部通过、`complete=true` 后才可声称对局完成。用真人棋谱验证某个模型时用 `node tools/run-gomoku-human-line.mjs <引擎> <棋谱.json> <输出.json>`（脚本方按记录逐手重放，执子颜色不变，另一方实时对弈）；偏离之后脚本方已非针对当前对手，速胜不能当棋力证据。对战页 `tools/gomoku-experiment-browser.html` 的脚本方引擎位名固定为 `script`，颜色由棋谱或 `scriptColor` 指定，普通双引擎对局不受影响。
 
 页面模型按用户指定强度顺序排列，V9起依次为V9、V9Pro、V9Mesa、V9Thinker、V10、V10Mesa、V10Flash、V10Exp、V10Ultra、V10Thinker、V10Bru·我非我Champion、Gomoku-Satori（展示版，排在最后）；不得按小数内部版本号排序。人机、黑方、白方选择器和实验页都保持一致。
+
+## 页面文案与主题（动态渲染页面必须遵守）
+
+- 当页面有**由脚本生成的文案**（不是纯 HTML 里的 `data-i18n`）时，不能只在初始化时取一次 `ClubI18n.t()`：`i18n.js` 的 boot 是延迟的，内联脚本常常先于字典合并执行，那时 `t()` 只能返回 key 本身（`ClubI18n.t` 缺键时返回 key，恒为真值，`|| 兜底` 无效）。
+- 正确做法：把所有动态渲染集中到一个 `refreshXxx()`，注册 `window.addEventListener('club:langchange', refreshXxx)`，并在初始化后再 `setTimeout(refreshXxx, 0)` 兜底刷一次（本仓库 `ds-lab.html`、`heap-lab.html`、`sorting-lab.html` 均为此约定）。
+- 状态/提示文本要保存「i18n key + 变量」而不是已翻译的字符串；若变量本身是需要翻译的内容（如引擎决策原因码），保存原始码并在渲染时翻译。否则切换语言后句子会中英混杂。
+- 自研页面必须同时适配亮色与暗色：全站约定是「默认暗色 + `html[data-theme="light"]` 覆盖」。不要硬编码深色背景/浅色文字而不写亮色覆盖，否则亮色下会出现白字压白底、徽章不可读。不要用 `:root` 重定义全站主题变量。
+- **全站 `!important` 会吃掉页面样式**：`theme.css` 里有 `html[data-theme="light"] .board { background:#FFFFFF !important }`、`select`、`.btn` 等全站规则。自研页面若用相同的 `.board` / `.btn` 类名，亮色下会被强制刷成白底白边，看起来「白天看不清」。需要个性化时用同级选择器 + `!important` 覆盖回来（只影响本页），不要改 `theme.css`。
+- **不要硬编码 `#fff` 作为悬停/激活文字色**：亮色下白字压白底会直接消失。用 `var(--cyan)`、`var(--text)` 或本页的主题变量（参考 `sorting-lab.html` 的 `.back-link:hover`）。
+- **对比度自检**：正文/标签类文字对背景至少 3:1。全站强调色 `#E07A5F` 配白字只有 2.95:1，按钮实底建议用 `#C2410C`（5.18:1）。
+- **验收固定主题要用 API**：`theme.js` 在 auto 模式下按北京时间自动切换，脚本里直接 `setAttribute('data-theme', ...)` 会被它覆盖，必须用 `ClubTheme.setMode(mode, { persist:false, syncRemote:false })`。
+- 写验收脚本时，**正则不要放进 Node 模板字符串**（`new Function`/`evaluate` 的字符串同理）：`\s`、`\(` 会被静默吞掉，导致断言误判（本项目已踩过两次）。

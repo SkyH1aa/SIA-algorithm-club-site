@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MOCK ONLY · Chat 本地联调设置</title>
+<link rel="stylesheet" href="/theme.css"><link rel="stylesheet" href="/fixtures/setup.css"><script src="/theme.js"></script><script src="/fixtures/setup.js" defer></script></head>
+<body class="mock-setup"><main>
+<h1>MOCK ONLY · Chat 本地联调</h1>
+<p class="mock-warning">此服务仅监听本机 4191。账号、配置、生成与 usage 全为内存模拟；没有线上登录、数据库或模型调用。请只使用测试内容。</p>
+<form id="setupForm">
+<label>模拟账号 <select id="account" name="account"><option value="admin">admin · MOCK 管理员</option><option value="member">member · MOCK 社员 A</option><option value="member2">member2 · MOCK 社员 B（账号隔离）</option><option value="unbound">unbound · 已登录但未绑定</option><option value="loggedout">loggedout · 未登录</option></select></label>
+<label>生成场景 <select id="scenario" name="scenario"><option value="completed">completed · 正常完成</option><option value="incomplete">incomplete · 输出截断终态</option><option value="interrupted">interrupted · 部分输出后 EOF，无终态</option><option value="failed">failed · response.failed</option><option value="slow">slow · 每 1.5 秒一片，测试停止/切换账号</option></select></label>
+<label>真实 ClubTheme 主题 <select id="theme" name="theme"><option value="dark">dark · 暗色</option><option value="light">light · 亮色</option><option value="auto">auto · 北京时间自动</option></select></label>
+<button type="submit">应用 mock 设置</button><button id="reset" type="button">重置 mock 配置 / usage / 请求记录</button>
+</form>
+<p id="status" role="status" aria-live="polite">正在读取本地设置…</p>
+<nav aria-label="Test pages"><a href="/chat.html" target="_blank" rel="noopener">打开正常 Chat 页</a><a href="/chat-admin.html" target="_blank" rel="noopener">打开正常 Chat 管理页</a><a href="/mock/requests" target="_blank" rel="noopener">查看仅元数据的请求记录</a></nav>
+<p>保留本页，在另一个标签页正常操作 Chat。应用后账号事件约 350ms 内送达已打开的页面；场景从下一次请求生效，主题通过真实 API 保存后请刷新目标页。所有标签与浏览器共享当前服务器的模拟状态。</p>
+<h2>上传 fixtures（先下载，再用正常文件选择器上传）</h2>
+<ul><li><a href="/fixtures/sample.txt" download>sample.txt</a>：UTF-8 中英文本。</li><li><a href="/fixtures/sample.png" download>sample.png</a>：有效 PNG，测试预览与多模态输入。</li><li><a href="/fixtures/sample.pdf" download>sample.pdf</a>：单页可提取文本 PDF，应转换为 input_text。</li><li><a href="/fixtures/image-only.pdf" download>image-only.pdf</a>：单页图像 PDF，无可提取文本，走原生 input_file；纯文本模型应拒绝。</li></ul>
+<h2>复现提示</h2>
+<ol><li>用 member + completed 发送两轮，查看回复中的轮数及 assistant 历史计数。</li><li>切 slow 后发送，点击 Chat 的停止；或在本页切 member2，检查旧流终止、账号会话隔离。</li><li>用 admin 打开管理页，创建/编辑供应商与模型，通过 enabled 软停用，执行测试生成并刷新 usage。</li><li>切 unbound / loggedout / member 检查访问门禁；分别选 light / dark 后刷新目标页面查看主题。</li></ol>
+<p>重置服务器数据不会删除浏览器 IndexedDB。Chat 里的“清除此账号本地记录”用于清理该账号会话。切换角色后请重新打开或刷新管理页，避免混入前端旧请求。</p>
+<h2>本地请求元数据</h2><button id="refreshRequests" type="button">刷新元数据</button><pre id="requests" tabindex="0">尚未刷新</pre>
+</main></body></html>
