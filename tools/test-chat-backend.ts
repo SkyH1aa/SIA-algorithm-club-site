@@ -17,14 +17,20 @@ const originalFetch = globalThis.fetch;
 const originalDns = Deno.resolveDns;
 const encoder = new TextEncoder();
 const providerBase = { id: PID, name: 'mock', label: 'Local Provider', base_url: 'https://provider.example.com/v1', secret_name: 'CHAT_KEY_MOCK', auth_header: 'authorization', enabled: true };
-const modelBase = { id: MID, provider_id: PID, model_key: 'local-model', display_name: 'Local Model', context_window: 1000000, max_output_tokens: 1000, default_max_output_tokens: 100, reasoning_efforts: ['low', 'high'], default_reasoning_effort: 'low', supports_images: true, supports_pdf: true, preserve_reasoning: true, enabled: true };
+const modelBase = { id: MID, provider_id: PID, model_key: 'local-model', display_name: 'Local Model', introduction: 'A local test model.', context_window: 1000000, max_output_tokens: 1000, default_max_output_tokens: 100, reasoning_efforts: ['low', 'high'], default_reasoning_effort: 'low', supports_images: true, supports_pdf: true, preserve_reasoning: true, enabled: true };
 let provider: Row, model: Row, profile: boolean, admin: boolean, auditFail: boolean, startFail: boolean, finishFail: boolean, busy: boolean;
 let dnsMode: string, mode: string, upstreamSignal: AbortSignal | undefined;
-let audits: Row[], patches: Row[], upstreamBodies: Array<Row & { input: Array<{ content: Array<{ text: string }> }> }>, requests: URL[], released: number, finishAttempts: number, leased: boolean;
+let audits: Row[], patches: Row[], upstreamBodies: Array<Row & { input: Array<{ content: Array<{ text: string; image_url: string }> }> }>, requests: URL[], released: number, finishAttempts: number, leased: boolean;
+let quota: Row, admissionCode: string | null, shrink: number | null, conflict: boolean;
+let rpcCalls: Array<{ name: string; body: Row }>, settlements: Row[];
+let charged: number;
+const directory = { users: [{ user_id: UID, username: 'local-account', member_name: '测试会员', bound: true }], blacklist: [{ user_id: PID, reason: 'abuse' }] };
 let usageRange: string | null;
 let terminalGate: Promise<void> | null, terminalReached: (() => void) | null;
 function reset() {
   terminalGate = null; terminalReached = null;
+  quota = { global: { daily_limit: null, version: 0, used: 0, remaining: null, resets_at: '2026-10-17T00:00:00Z' }, user: { daily_limit: null, weekly_limit: null, monthly_limit: null, version: 0 }, periods: [], blacklisted: false, reason: null };
+  admissionCode = null; shrink = null; conflict = false; rpcCalls = []; settlements = []; charged = 0;
   provider = { ...providerBase }; model = { ...modelBase }; profile = true; admin = true;
   auditFail = startFail = finishFail = busy = false; dnsMode = 'a-only'; mode = 'complete';
   audits = []; patches = []; upstreamBodies = []; requests = []; released = finishAttempts = 0; leased = false; usageRange = '2-3/17'; upstreamSignal = undefined;
@@ -77,6 +83,7 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
     assert.equal(init.redirect, 'error');
     assert.equal(new Headers(init.headers).get('authorization'), 'Bearer local-provider-secret');
     assert.equal(audits.length, 1, 'audit must precede upstream');
+    assert.equal(audits[0].status, 'upstream_started', 'start marker must precede fetch');
     upstreamBodies.push(JSON.parse(String(init.body)));
     upstreamSignal = init.signal!;
     if (upstreamSignal?.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -99,21 +106,43 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
   if (table === 'club_super_admins') return json(admin ? [{ user_id: UID }] : []);
   if (table === 'chat_providers') return json(init.method === 'POST' ? [{ ...provider, ...JSON.parse(String(init.body)) }] : [provider]);
   if (table === 'chat_models') return json(init.method === 'POST' ? [{ ...model, ...JSON.parse(String(init.body)) }] : [model]);
-  if (table === 'rpc/chat_acquire_generation_lease') {
-    const row = JSON.parse(String(init.body));
-    assert.equal(row.p_user_id, UID); assert.ok(Date.parse(row.p_expires_at) > Date.now());
-    if (busy || leased) return json(false);
-    leased = true; return json(true);
-  }
-  if (table === 'rpc/chat_release_generation_lease') {
-    const row = JSON.parse(String(init.body));
-    if (audits.length) assert.equal(row.p_request_id, audits[0].request_id);
-    assert.equal(row.p_user_id, UID); released++; leased = false; return json(null);
+  if (table.startsWith('rpc/')) {
+    const name = table.slice(4), row = JSON.parse(String(init.body));
+    rpcCalls.push({ name, body: row });
+    if (name === 'chat_quota_get') return json(quota);
+    if (name === 'chat_quota_save') return json(conflict ? { code: 'conflict' } : quota);
+    if (name === 'chat_blacklist_set') return json({ ...quota, blacklisted: row.p_blocked, reason: row.p_reason });
+    if (name === 'chat_user_directory') return json(directory);
+    if (name === 'chat_begin_generation') {
+      assert.equal(row.p_user_id, UID); assert.ok(Number.isInteger(row.p_input_tokens));
+      assert.ok(!('user_id' in row.p_audit)); assert.ok(!('request_id' in row.p_audit));
+      const code = admissionCode || (quota.blacklisted ? 'blacklisted' : busy || leased ? 'busy' : null);
+      if (code) return json({ allowed: false, code, quota });
+      if (auditFail) return json({}, 503);
+      const effective = shrink ?? row.p_output_tokens;
+      charged = row.p_input_tokens + effective;
+      audits.push({ ...row.p_audit, user_id: UID, request_id: row.p_request_id, max_output_tokens: effective });
+      leased = true;
+      return json({ allowed: true, max_output_tokens: effective, quota_limited: effective < row.p_output_tokens, quota });
+    }
+    if (name === 'chat_finish_generation') {
+      finishAttempts++;
+      settlements.push(row);
+      if (terminalGate) { terminalReached?.(); await terminalGate; }
+      if (finishFail) return json({}, 503);
+      const audit = audits.find(item => item.request_id === row.p_request_id);
+      assert.ok(audit);
+      if (!['audited', 'upstream_started'].includes(String(audit.status))) return json({ settled: true });
+      Object.assign(audit, row.p_patch); patches.push(row.p_patch);
+      charged = row.p_refund ? 0 : Number.isSafeInteger(row.p_patch.total_tokens) ? row.p_patch.total_tokens : charged;
+      released++; leased = false;
+      return json({ settled: true });
+    }
+    throw new Error(`unexpected RPC ${name}`);
   }
   if (table === 'chat_usage') {
     if (init.method === 'POST') {
-      if (auditFail) return json({}, 503);
-      const row = JSON.parse(String(init.body)); audits.push(row); return json([{ id: UID, ...row }]);
+      throw new Error('audit insertion must be atomic in begin RPC');
     }
     if (init.method === 'PATCH') {
       const patch = JSON.parse(String(init.body));
@@ -154,7 +183,7 @@ try {
   });
   await test('catalog hides disabled models/providers and secrets', async () => {
     let result = await (await expectStatus({ action: 'catalog' }, 200)).json();
-    assert.equal(result.models.length, 1); assert.equal(result.member_name, '测试会员'); assert.ok(!JSON.stringify(result).includes('CHAT_KEY'));
+    assert.equal(result.models.length, 1); assert.equal(result.models[0].introduction, 'A local test model.'); assert.equal(result.member_name, '测试会员'); assert.ok(!JSON.stringify(result).includes('CHAT_KEY'));
     provider.enabled = false; result = await (await expectStatus({ action: 'catalog' }, 200)).json(); assert.equal(result.models.length, 0);
   });
   await test('multi-turn continuation, encrypted reasoning, images/PDF and metadata-only audit', async () => {
@@ -190,7 +219,7 @@ try {
     assert.equal(upstreamBodies[0].max_output_tokens, 32000);
     assert.equal(audits[0].max_output_tokens, 32000);
     assert.equal(upstreamBodies[0].input[0].content[1].image_url.length, image.image_url.length);
-    assert.ok(audits[0].input_bytes < 12 * 1024 * 1024);
+    assert.ok(Number(audits[0].input_bytes) < 12 * 1024 * 1024);
   });
   await test('strict request, content, output, effort and context validation', async () => {
     for (const bad of [payload({ extra: true }), payload({ input: [] }), payload({ input: [{ role: 'tool', content: [] }] }), payload({ input: [message('')] }), payload({ input: [{ role: 'user', content: [{ type: 'input_text', text: 'x', filename: 'x.txt' }] }] }), payload({ max_output_tokens: 0 }), payload({ max_output_tokens: 1001 }), payload({ max_output_tokens: '5' }), payload({ reasoning_effort: 'extreme' })]) await expectStatus(bad, 400);
@@ -219,6 +248,8 @@ try {
   await test('admin model save and invalid configuration', async () => {
     const { id: _id, ...fields } = modelBase;
     await expectStatus({ action: 'save_model', ...fields }, 200);
+    await expectStatus({ action: 'admin_save_model', ...fields, introduction: 'x'.repeat(1001) }, 400);
+    await expectStatus({ action: 'admin_save_model', ...fields, introduction: 123 }, 400);
     await expectStatus({ action: 'admin_save_model', ...fields, reasoning_efforts: ['high', 'high'] }, 400);
     await expectStatus({ action: 'admin_save_model', ...fields, default_reasoning_effort: 'unknown' }, 400);
     await expectStatus({ action: 'admin_save_model', ...fields, context_window: 256 }, 400);
@@ -243,14 +274,14 @@ try {
   for (const failure of ['network', 'http', 'wrong-content']) await test(`upstream ${failure} redaction and release`, async () => {
     mode = failure; const response = await expectStatus(payload(), 502); assert.deepEqual(await response.json(), { error: 'upstream' }); assert.equal(audits[0].status, 'failed'); assert.equal(released, 1);
   });
-  await test('audit insertion fails closed before provider and releases lease', async () => {
-    auditFail = true; await expectStatus(payload(), 503); assert.equal(upstreamBodies.length, 0); assert.equal(released, 1);
+  await test('atomic admission audit failure never acquires lease or calls provider', async () => {
+    auditFail = true; await expectStatus(payload(), 503); assert.equal(upstreamBodies.length, 0); assert.equal(released, 0); assert.equal(leased, false);
   });
-  await test('upstream-start audit failure aborts provider and releases lease', async () => {
-    startFail = true; await expectStatus(payload(), 503); assert.ok(upstreamSignal!.aborted); assert.equal(released, 1);
+  await test('pre-fetch start marker failure never calls provider and settles conservatively', async () => {
+    startFail = true; await expectStatus(payload(), 503); assert.equal(upstreamBodies.length, 0); assert.equal(released, 1); assert.equal(settlements[0].p_refund, false);
   });
   await test('terminal audit failure does not deliver completed success', async () => {
-    finishFail = true; await assert.rejects(consume()); assert.ok(upstreamSignal!.aborted); assert.equal(released, 1); assert.notEqual(audits[0].status, 'completed');
+    finishFail = true; await assert.rejects(consume()); assert.ok(upstreamSignal!.aborted); assert.equal(released, 0); assert.equal(leased, true); assert.notEqual(audits[0].status, 'completed');
   });
   await test('busy lease never audits or calls provider', async () => {
     busy = true; await expectStatus(payload(), 409); assert.equal(upstreamBodies.length, 0); assert.equal(audits.length, 0); assert.equal(released, 0);
@@ -290,6 +321,70 @@ try {
     release(); await cancellation; await draining;
     assert.equal(audits[0].status, 'completed'); assert.equal(audits[0].total_tokens, 10);
     assert.equal(released, 1); assert.equal(patches.filter(row => row.finished_at).length, 1);
+  });
+  await test('quota visibility, admin routes and dynamic permissions', async () => {
+    assert.deepEqual(await (await expectStatus({ action: 'quota' }, 200)).json(), quota);
+    assert.equal(rpcCalls.at(-1)!.body.p_user_id, UID);
+    assert.deepEqual((await (await expectStatus({ action: 'catalog' }, 200)).json()).quota, quota);
+    await expectStatus({ action: 'admin_quota_get' }, 200); assert.equal(rpcCalls.at(-1)!.body.p_user_id, null);
+    await expectStatus({ action: 'admin_quota_get', user_id: PID }, 200); assert.equal(rpcCalls.at(-1)!.body.p_user_id, PID);
+    const save = { action: 'admin_quota_save', user_id: PID, daily_limit: 0, weekly_limit: null, monthly_limit: 1e12, expected_version: 0 };
+    await expectStatus(save, 200); assert.deepEqual(rpcCalls.at(-1)!.body, { p_actor_user_id: UID, p_user_id: PID, p_daily_limit: 0, p_weekly_limit: null, p_monthly_limit: 1e12, p_expected_version: 0 });
+    await expectStatus({ ...save, user_id: null, weekly_limit: null, monthly_limit: null }, 200);
+    await expectStatus({ action: 'admin_quota_save', daily_limit: null, expected_version: 0 }, 200);
+    assert.equal(rpcCalls.at(-1)!.body.p_weekly_limit, null); assert.equal(rpcCalls.at(-1)!.body.p_monthly_limit, null);
+    conflict = true; await expectStatus(save, 409);
+    assert.deepEqual(await (await expectStatus({ action: 'admin_user_directory' }, 200)).json(), directory);
+    assert.deepEqual(await (await expectStatus({ action: 'admin_blacklist_list' }, 200)).json(), { blacklist: directory.blacklist });
+    await expectStatus({ action: 'admin_set_blacklist', user_id: PID, blocked: true, reason: ' abuse ' }, 200);
+    assert.deepEqual(rpcCalls.at(-1)!.body, { p_actor_user_id: UID, p_user_id: PID, p_blocked: true, p_reason: 'abuse' });
+    await expectStatus({ action: 'admin_set_blacklist', user_id: PID, blocked: false }, 200);
+    admin = false;
+    for (const action of ['admin_quota_get', 'admin_quota_save', 'admin_user_directory', 'admin_blacklist_list', 'admin_set_blacklist']) await expectStatus({ action }, 403);
+    await expectStatus({ action: 'quota', user_id: PID }, 400);
+  });
+  await test('strict quota and blacklist types, bounds and allowlists', async () => {
+    const save = { action: 'admin_quota_save', daily_limit: null, weekly_limit: null, monthly_limit: null, expected_version: 0 };
+    for (const change of [{ daily_limit: -1 }, { daily_limit: 1e12 + 1 }, { daily_limit: '4' }, { daily_limit: 1.5 }, { daily_limit: undefined }, { user_id: UID, weekly_limit: undefined }, { user_id: UID, monthly_limit: undefined }, { expected_version: null }, { expected_version: -1 }, { user_id: '' }, { weekly_limit: 1 }, { extra: true }]) await expectStatus({ ...save, ...change }, 400);
+    for (const change of [{ blocked: 'true' }, { blocked: null }, { user_id: null }, { reason: 5 }, { reason: null }, { reason: 'x'.repeat(1001) }, { extra: true }]) await expectStatus({ action: 'admin_set_blacklist', user_id: UID, blocked: true, ...change }, 400);
+    await expectStatus({ action: 'admin_user_directory', user_id: UID }, 400);
+    assert.equal(rpcCalls.length, 0);
+  });
+  await test('blacklist and quota deny both generation paths without provider', async () => {
+    quota.blacklisted = true;
+    assert.deepEqual(await (await expectStatus({ action: 'catalog' }, 403)).json(), { error: 'blacklisted' });
+    await expectStatus(payload(), 403);
+    await expectStatus({ action: 'admin_test', model_id: MID, prompt: 'test' }, 403);
+    quota.blacklisted = false; admissionCode = 'quota_exceeded';
+    for (const body of [payload(), { action: 'admin_test', model_id: MID, prompt: 'test' }]) {
+      assert.deepEqual(await (await expectStatus(body, 429)).json(), { error: 'quota', quota });
+    }
+    assert.equal(upstreamBodies.length, 0); assert.equal(audits.length, 0); assert.equal(released, 0);
+  });
+  await test('quota shrink uses effective provider and audit budget with exposed headers', async () => {
+    shrink = 12;
+    const response = await expectStatus(payload(), 200);
+    assert.equal(response.headers.get('x-chat-quota-limited'), 'true'); assert.equal(response.headers.get('x-chat-max-output-tokens'), '12');
+    assert.match(response.headers.get('access-control-expose-headers')!, /X-Chat-Quota-Limited/);
+    await response.text();
+    assert.equal(upstreamBodies[0].max_output_tokens, 12); assert.equal(audits[0].max_output_tokens, 12);
+    assert.equal(rpcCalls.find(x => x.name === 'chat_begin_generation')!.body.p_input_tokens, 2);
+    assert.equal(charged, 10); assert.equal(settlements.length, 1); assert.equal(settlements[0].p_refund, false);
+    reset(); shrink = 3;
+    await consume({ action: 'admin_test', model_id: MID, prompt: 'test', max_output_tokens: 20 });
+    assert.equal(upstreamBodies[0].max_output_tokens, 3); assert.equal(audits[0].max_output_tokens, 3);
+  });
+  await test('unknown post-fetch failures retain reservation; only pre-fetch abort refunds', async () => {
+    for (const failure of ['network', 'http', 'eof', 'failed', 'incomplete', 'malformed', 'hanging']) {
+      reset(); mode = failure;
+      const response = await handler(request(payload()));
+      if (failure === 'hanging') await response.body!.cancel();
+      else await response.text().catch(() => undefined);
+      assert.equal(charged, 102, failure); assert.equal(settlements.length, 1); assert.equal(settlements[0].p_refund, false);
+    }
+    reset(); const abort = new AbortController(); abort.abort();
+    await handler(request(payload(), 'member', abort.signal));
+    assert.equal(upstreamBodies.length, 0); assert.equal(charged, 0); assert.equal(settlements[0].p_refund, true);
   });
   await test('HTTP method, malformed body and CORS', async () => {
     assert.equal((await handler(new Request('http://localhost/chat'))).status, 405);

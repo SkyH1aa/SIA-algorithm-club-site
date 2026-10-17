@@ -9,6 +9,8 @@ const t = (key, vars) => window.ClubI18n?.t(`chatAdmin.${key}`, vars) ?? key;
 let session = null, epoch = 0, authorized = false, active = null;
 let providers = [], models = [];
 let usage = emptyUsage();
+let directory = [], blacklist = [], directoryLoaded = false, selectedUser = '', selectionEpoch = 0;
+let globalQuota = null, userQuota = null;
 let testOutput = {visible: false, text: ''};
 const messages = new Map();
 
@@ -54,11 +56,16 @@ function pages() { return Math.max(1, Math.ceil((usage.total ?? 0) / usage.pageS
 function hasNextPage() { return usage.loaded && (usage.total == null ? usage.rows.length === usage.pageSize : usage.page < pages()); }
 function controls() {
   const disabled = Boolean(active) || !authorized;
-  for (const id of ['providerForm', 'modelForm', 'testForm', 'usageFilter']) {
+  for (const id of ['providerForm', 'modelForm', 'testForm', 'usageFilter', 'globalQuotaForm', 'quotaUserForm', 'userQuotaForm', 'blacklistForm']) {
     for (const node of $(id).elements) node.disabled = disabled;
     $(id).setAttribute('aria-busy', String(Boolean(active)));
   }
-  for (const id of ['refreshButton', 'refreshUsageButton']) $(id).disabled = disabled;
+  for (const id of ['refreshButton', 'refreshUsageButton', 'refreshQuotaButton']) $(id).disabled = disabled;
+  for (const node of $('globalQuotaForm').elements) node.disabled = disabled || !globalQuota;
+  $('quotaUser').disabled = disabled || !directoryLoaded;
+  for (const id of ['userQuotaForm', 'blacklistForm']) {
+    for (const node of $(id).elements) node.disabled = disabled || !selectedUser || !userQuota;
+  }
   $('retryButton').disabled = Boolean(active) || !session;
   document.querySelectorAll('[data-edit-provider], [data-edit-model]').forEach(node => { node.disabled = disabled; });
   $('usagePrev').disabled = disabled || usage.page <= 1;
@@ -81,6 +88,7 @@ async function request(run, action, body = {}, stream = false) {
     assertCurrent(run);
     const error = new Error(payload?.error || 'request');
     error.status = response.status;
+    error.action = action;
     throw error;
   }
   if (stream) {
@@ -91,10 +99,15 @@ async function request(run, action, body = {}, stream = false) {
   assertCurrent(run);
   return payload;
 }
+function blockedTest(error) { return error.status === 403 && error.message === 'blacklisted' && ['test', 'admin_test'].includes(error.action); }
 function errorKey(error) {
+  if (error.message === 'busy') return 'busy';
+  if (error.status === 409 && error.message === 'conflict') return 'quotaConflict';
+  if (error.status === 429 && error.message === 'quota') return 'testQuota';
+  if (blockedTest(error)) return 'testBlacklisted';
   if (error.status === 403 || error.message === 'admin') return 'unauthorized';
   if (error.status === 401 || error.message === 'login') return 'loginExpired';
-  return ({busy: 'busy', input: 'invalidInput', model: 'invalidModel', provider_url: 'invalidUrl', secret_name: 'invalidSecret', secret_missing: 'secretMissing', upstream: 'upstreamFailed', context: 'invalidOutput', database: 'databaseFailed'})[error.message] || 'requestFailed';
+  return ({quota_input: 'invalidQuota', busy: 'busy', input: 'invalidInput', model: 'invalidModel', provider_url: 'invalidUrl', secret_name: 'invalidSecret', secret_missing: 'secretMissing', upstream: 'upstreamFailed', context: 'invalidOutput', database: 'databaseFailed'})[error.message] || 'requestFailed';
 }
 async function operation(messageId, work, {verify = false} = {}) {
   if (active || !session?.user?.id || (!authorized && !verify)) return;
@@ -104,7 +117,7 @@ async function operation(messageId, work, {verify = false} = {}) {
   try { await work(run); }
   catch (error) {
     if (!current(run) || error.name === 'AbortError') return;
-    if (error.status === 401 || error.status === 403) {
+    if (error.status === 401 || (error.status === 403 && !blockedTest(error))) {
       authorized = false;
       clearSensitive();
       setGate();
@@ -146,7 +159,7 @@ function renderProviders() {
   $('providersList').innerHTML = providers.length ? table(['providerId', 'providerLabel', 'baseUrl', 'secretName', 'authHeader', 'enabled', 'edit'], providers.map(item => `<tr>${cells([item.name, first(item.label, '-'), item.base_url, item.secret_name, item.auth_header || 'authorization'])}<td>${badge(item.enabled !== false)}</td><td>${editButton('provider', item.id)}</td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t('noProvider'))}</div>`;
 }
 function renderModels() {
-  $('modelsList').innerHTML = models.length ? table(['modelId', 'modelLabel', 'modelProvider', 'contextWindow', 'maxOutput', 'enabled', 'edit'], models.map(item => `<tr>${cells([modelKey(item), first(item.display_name, '-'), providerLabel(item.provider_id), item.context_window, item.max_output_tokens])}<td>${badge(item.enabled !== false)}</td><td>${editButton('model', item.id)}</td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t('noModel'))}</div>`;
+  $('modelsList').innerHTML = models.length ? table(['modelId', 'modelLabel', 'modelIntroduction', 'modelProvider', 'contextWindow', 'maxOutput', 'enabled', 'edit'], models.map(item => `<tr>${cells([modelKey(item), first(item.display_name, '-'), first(item.introduction, '-'), providerLabel(item.provider_id), item.context_window, item.max_output_tokens])}<td>${badge(item.enabled !== false)}</td><td>${editButton('model', item.id)}</td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t('noModel'))}</div>`;
 }
 function usageStatus(value) {
   const key = ({completed: 'success', success: 'success', incomplete: 'incomplete', interrupted: 'interrupted', cancelled: 'cancelled', failed: 'failure', failure: 'failure', audited: 'audited', upstream_started: 'running'})[value];
@@ -161,9 +174,101 @@ function renderUsage() {
   $('usageCount').textContent = usage.loaded ? String(usage.rows.length) : '--';
   $('totalTokens').textContent = usage.loaded ? String(usage.rows.reduce((sum, row) => sum + Number(row.total_tokens || 0), 0)) : '--';
 }
+function quotaValue(value) { return value == null ? t('unlimited') : String(value); }
+function userLabel(item) { return `${first(item.username, item.user_id)} · ${first(item.member_name, t('noMemberName'))}`; }
+function renderQuotaDirectory() {
+  $('quotaUser').replaceChildren(new Option(t(directoryLoaded && !directory.length ? 'noUsers' : 'selectUser'), ''));
+  for (const item of directory) $('quotaUser').add(new Option(userLabel(item), item.user_id));
+  $('quotaUser').value = selectedUser;
+  $('blacklistList').innerHTML = blacklist.length ? table(['quotaUser', 'blacklistReason'], blacklist.map(item => {
+    const user = directory.find(row => row.user_id === item.user_id);
+    return `<tr>${cells([user ? userLabel(user) : item.user_id, item.reason || '-'])}</tr>`;
+  }).join('')) : `<div class="chat-admin-empty">${escapeHtml(t(directoryLoaded ? 'noBlacklist' : 'quotaNotLoaded'))}</div>`;
+}
+function quotaSummary(period, item) {
+  return `<div class="chat-admin-quota-period"><strong>${escapeHtml(t(`quotaPeriod.${period}`))}</strong><span>${escapeHtml(t('quotaSummary', {limit: quotaValue(item.limit), used: item.used ?? '-', remaining: quotaValue(item.remaining), reset: formatTime(item.resets_at)}))}</span></div>`;
+}
+function renderQuota() {
+  $('globalQuotaSummary').innerHTML = globalQuota ? quotaSummary('day', {...globalQuota, limit: globalQuota.daily_limit}) : escapeHtml(t('quotaNotLoaded'));
+  $('userQuotaSummary').innerHTML = userQuota ? asArray(userQuota.periods).filter(item => ['day', 'week', 'month'].includes(item.period)).map(item => quotaSummary(item.period, item)).join('') : escapeHtml(t(selectedUser ? 'quotaNotLoaded' : 'selectUser'));
+  const user = directory.find(item => item.user_id === selectedUser);
+  $('quotaUserState').textContent = user ? `${userLabel(user)} · ${t(user.bound ? 'memberBound' : 'memberUnbound')}${userQuota ? ` · ${t(userQuota.blacklisted ? 'blockedState' : 'allowedState')}` : ''}` : '';
+}
+function fillGlobalQuota() { $('globalDailyLimit').value = globalQuota?.daily_limit ?? ''; }
+function fillUserQuota() {
+  for (const [id, field] of [['userDailyLimit', 'daily_limit'], ['userWeeklyLimit', 'weekly_limit'], ['userMonthlyLimit', 'monthly_limit']]) $(id).value = userQuota?.user?.[field] ?? '';
+  $('userBlacklisted').checked = userQuota?.blacklisted === true;
+  $('blacklistReason').value = userQuota?.reason ?? '';
+}
+function assertSelection(run, userId, revision) {
+  assertCurrent(run);
+  if (selectedUser !== userId || selectionEpoch !== revision) throw new DOMException('Stale user selection', 'AbortError');
+}
+async function loadQuota(run, userId = selectedUser, revision = selectionEpoch) {
+  const snapshot = await request(run, 'admin_quota_get', {user_id: userId || null});
+  assertSelection(run, userId, revision);
+  globalQuota = snapshot.global; fillGlobalQuota();
+  if (userId) { userQuota = snapshot; fillUserQuota(); }
+  renderQuota(); controls();
+}
+async function loadQuotaDirectory(run) {
+  setMessage('quotaMessage', 'loading');
+  const payload = await request(run, 'admin_user_directory');
+  assertCurrent(run);
+  directory = asArray(payload.users); blacklist = asArray(payload.blacklist); directoryLoaded = true;
+  if (selectedUser && !directory.some(item => item.user_id === selectedUser)) {
+    selectedUser = ''; selectionEpoch++; userQuota = null; fillUserQuota();
+  }
+  renderQuotaDirectory(); renderQuota();
+  await loadQuota(run);
+  setMessage('quotaMessage');
+}
+function quotaInput(id) {
+  const raw = $(id).value.trim();
+  if (!raw) return null;
+  const value = Number(raw);
+  if (!validInteger(value, 0, 1000000000000)) throw new Error('quota_input');
+  return value;
+}
+async function saveQuota(run, messageId, userId, revision, action, body) {
+  setMessage(messageId, 'saving');
+  let snapshot;
+  try { snapshot = await request(run, action, body); }
+  catch (error) {
+    assertSelection(run, userId, revision);
+    if (error.status !== 409 || error.message !== 'conflict') throw error;
+    // Never retry a stale version automatically. Reload the server values for review.
+    setMessage(messageId, 'quotaConflict', 'warning');
+    await loadQuota(run, userId, revision);
+    return;
+  }
+  assertSelection(run, userId, revision);
+  globalQuota = snapshot.global; fillGlobalQuota();
+  if (body.user_id) {
+    userQuota = snapshot; fillUserQuota();
+    blacklist = blacklist.filter(item => item.user_id !== userId);
+    if (snapshot.blacklisted) blacklist.push({user_id: userId, reason: snapshot.reason || ''});
+    renderQuotaDirectory();
+  }
+  renderQuota();
+  setMessage(messageId, 'quotaSaved', 'success');
+}
+function testResultState(status, quotaLimited) {
+  if (status === 'incomplete' && quotaLimited) return ['testQuotaTruncated', 'warning'];
+  return ({success: ['testComplete', 'success'], incomplete: ['testIncomplete', 'warning'], interrupted: ['testInterrupted', 'warning'], failure: ['testFailure', 'error']})[status] || ['testFailure', 'error'];
+}
+async function refreshTestQuota(run, userId, revision) {
+  try { await loadQuota(run, userId, revision); }
+  catch (error) {
+    assertCurrent(run);
+    if (error.name === 'AbortError') return;
+    if (error.status === 401 || error.status === 403) throw error;
+    setMessage('quotaMessage', errorKey(error), 'error');
+  }
+}
 function refreshLocalizedUi() {
   window.ClubI18n?.apply(document);
-  renderProviderOptions(); renderModelOptions(); renderProviders(); renderModels(); renderUsage();
+  renderProviderOptions(); renderModelOptions(); renderProviders(); renderModels(); renderUsage(); renderQuotaDirectory(); renderQuota();
   for (const id of messages.keys()) renderMessage(id);
   renderTestOutput(); controls();
 }
@@ -192,10 +297,16 @@ async function loadAdmin(run) {
   renderProviderOptions(); renderModelOptions(); renderProviders(); renderModels(); setGate(); controls();
   setMessage('gateMessage');
   setMessage('statusHint', 'loaded', '', {providers: providers.length, models: models.length});
-  try { await loadUsage(run); setMessage('usageMessage'); }
+  try { await loadQuotaDirectory(run); }
   catch (error) {
     assertCurrent(run);
     if (error.status === 401 || error.status === 403) throw error;
+    setMessage('quotaMessage', errorKey(error), 'error');
+  }
+  try { await loadUsage(run); setMessage('usageMessage'); }
+  catch (error) {
+    assertCurrent(run);
+    if (error.status === 401 || (error.status === 403 && !blockedTest(error))) throw error;
     setMessage('usageMessage', error.message === 'date' ? 'invalidDates' : errorKey(error), 'error');
   }
 }
@@ -204,15 +315,51 @@ function syncDefaultOutputMax() { $('defaultOutputTokens').max = String(Math.min
 function clearModel() { $('modelForm').reset(); $('modelConfigId').value = ''; syncDefaultOutputMax(); }
 function clearSensitive() {
   providers = []; models = []; usage = emptyUsage(); testOutput = {visible: false, text: ''};
+  directory = []; blacklist = []; directoryLoaded = false; selectedUser = ''; selectionEpoch++;
+  globalQuota = null; userQuota = null; fillGlobalQuota(); fillUserQuota();
+  $('quotaUser').replaceChildren();
   clearProvider(); clearModel(); $('testForm').reset(); $('usageFilter').reset();
   $('modelProvider').replaceChildren(); $('testModel').replaceChildren();
   messages.clear();
-  for (const id of ['statusHint', 'gateMessage', 'providerMessage', 'modelMessage', 'testMessage', 'usageMessage']) setMessage(id);
+  for (const id of ['statusHint', 'gateMessage', 'providerMessage', 'modelMessage', 'testMessage', 'usageMessage', 'quotaMessage', 'globalQuotaMessage', 'userQuotaMessage', 'blacklistMessage']) setMessage(id);
   for (const id of ['providerCount', 'modelCount', 'usageCount', 'totalTokens']) $(id).textContent = '--';
   refreshLocalizedUi();
 }
 function validInteger(value, min, max) { return Number.isInteger(value) && value >= min && value <= max; }
 
+$('refreshQuotaButton').onclick = () => void operation('quotaMessage', loadQuotaDirectory);
+$('quotaUserForm').addEventListener('submit', event => event.preventDefault());
+$('quotaUser').addEventListener('change', () => {
+  if (active || !authorized) { $('quotaUser').value = selectedUser; return; }
+  selectedUser = $('quotaUser').value; selectionEpoch++; userQuota = null; fillUserQuota();
+  for (const id of ['userQuotaMessage', 'blacklistMessage']) setMessage(id);
+  renderQuota(); controls();
+  if (selectedUser) void operation('userQuotaMessage', async run => {
+    setMessage('userQuotaMessage', 'loading'); await loadQuota(run); setMessage('userQuotaMessage');
+  });
+});
+for (const [formId, messageId, global] of [['globalQuotaForm', 'globalQuotaMessage', true], ['userQuotaForm', 'userQuotaMessage', false]]) {
+  $(formId).addEventListener('submit', event => {
+    event.preventDefault();
+    if (active || !authorized || !$(formId).reportValidity() || !globalQuota || (!global && !userQuota)) return;
+    let body;
+    try {
+      body = global ? {user_id: null, daily_limit: quotaInput('globalDailyLimit'), expected_version: globalQuota.version} : {
+        user_id: selectedUser, daily_limit: quotaInput('userDailyLimit'), weekly_limit: quotaInput('userWeeklyLimit'), monthly_limit: quotaInput('userMonthlyLimit'), expected_version: userQuota.user.version
+      };
+    } catch { setMessage(messageId, 'invalidQuota', 'error'); return; }
+    const userId = selectedUser, revision = selectionEpoch;
+    void operation(messageId, run => saveQuota(run, messageId, userId, revision, 'admin_quota_save', body));
+  });
+}
+$('blacklistForm').addEventListener('submit', event => {
+  event.preventDefault();
+  if (active || !authorized || !selectedUser || !userQuota || !$('blacklistForm').reportValidity()) return;
+  const userId = selectedUser, revision = selectionEpoch;
+  const body = {user_id: userId, blocked: $('userBlacklisted').checked, reason: $('blacklistReason').value.trim()};
+  if (body.reason.length > 1000) return setMessage('blacklistMessage', 'invalidInput', 'error');
+  void operation('blacklistMessage', run => saveQuota(run, 'blacklistMessage', userId, revision, 'admin_set_blacklist', body));
+});
 $('providersList').addEventListener('click', event => {
   if (active || !authorized) return;
   const button = event.target.closest('[data-edit-provider]');
@@ -229,7 +376,7 @@ $('modelsList').addEventListener('click', event => {
   const item = models.find(row => row.id === button?.dataset.editModel);
   if (!item) return;
   $('modelConfigId').value = item.id; $('modelId').value = modelKey(item);
-  $('modelLabel').value = item.display_name; $('modelProvider').value = item.provider_id;
+  $('modelLabel').value = item.display_name; $('modelIntroduction').value = item.introduction || ''; $('modelProvider').value = item.provider_id;
   $('contextWindow').value = item.context_window; $('maxOutputTokens').value = item.max_output_tokens;
   $('defaultOutputTokens').value = item.default_max_output_tokens; syncDefaultOutputMax();
   $('reasoningEfforts').value = asArray(item.reasoning_efforts).join(','); $('defaultReasoning').value = item.default_reasoning_effort || '';
@@ -258,8 +405,8 @@ $('modelForm').addEventListener('submit', event => {
   event.preventDefault();
   if (active || !authorized || !$('modelForm').reportValidity()) return;
   const efforts = $('reasoningEfforts').value.split(',').map(value => value.trim()).filter(Boolean);
-  const body = {id: $('modelConfigId').value || null, model_key: $('modelId').value.trim(), display_name: $('modelLabel').value.trim(), provider_id: $('modelProvider').value, context_window: Number($('contextWindow').value), max_output_tokens: Number($('maxOutputTokens').value), default_max_output_tokens: Number($('defaultOutputTokens').value), reasoning_efforts: efforts, default_reasoning_effort: $('defaultReasoning').value.trim() || null, supports_images: $('supportsImages').checked, supports_pdf: $('supportsPdf').checked, preserve_reasoning: $('preserveReasoning').checked, enabled: $('modelEnabled').checked};
-  if (!body.model_key || body.model_key.length > 160 || !body.display_name || body.display_name.length > 120 || !body.provider_id) return setMessage('modelMessage', 'modelRequired', 'error');
+  const body = {id: $('modelConfigId').value || null, model_key: $('modelId').value.trim(), display_name: $('modelLabel').value.trim(), introduction: $('modelIntroduction').value.trim() || null, provider_id: $('modelProvider').value, context_window: Number($('contextWindow').value), max_output_tokens: Number($('maxOutputTokens').value), default_max_output_tokens: Number($('defaultOutputTokens').value), reasoning_efforts: efforts, default_reasoning_effort: $('defaultReasoning').value.trim() || null, supports_images: $('supportsImages').checked, supports_pdf: $('supportsPdf').checked, preserve_reasoning: $('preserveReasoning').checked, enabled: $('modelEnabled').checked};
+  if (!body.model_key || body.model_key.length > 160 || !body.display_name || body.display_name.length > 120 || (body.introduction && body.introduction.length > 1000) || !body.provider_id) return setMessage('modelMessage', 'modelRequired', 'error');
   if (!validInteger(body.context_window, 256, 1000000) || !validInteger(body.max_output_tokens, 1, 131072) || !validInteger(body.default_max_output_tokens, 1, body.max_output_tokens)) return setMessage('modelMessage', 'invalidLimits', 'error');
   if (efforts.length > 12 || efforts.some(value => value.length > 40) || (body.default_reasoning_effort?.length || 0) > 40) return setMessage('modelMessage', 'invalidReasoning', 'error');
   void operation('modelMessage', async run => {
@@ -280,6 +427,7 @@ $('testForm').addEventListener('submit', event => {
   if (!window.confirm(t('testConfirm'))) return;
   void operation('testMessage', async run => {
     testOutput = {visible: false, text: ''}; renderTestOutput(); setMessage('testMessage', 'testRunning');
+    const quotaUserId = selectedUser, quotaRevision = selectionEpoch;
     let streaming = false;
     try {
       const response = await request(run, 'test', {model_id: item.id, prompt, max_output_tokens: output, reasoning_effort: null}, true);
@@ -290,18 +438,19 @@ $('testForm').addEventListener('submit', event => {
       });
       assertCurrent(run);
       testOutput = {visible: true, text: result.text}; renderTestOutput();
-      const state = ({success: ['testComplete', 'success'], incomplete: ['testIncomplete', 'warning'], interrupted: ['testInterrupted', 'warning'], failure: ['testFailure', 'error']})[result.status] || ['testFailure', 'error'];
+      const state = testResultState(result.status, response.headers.get('x-chat-quota-limited') === 'true');
       setMessage('testMessage', ...state);
     } catch (error) {
       assertCurrent(run);
-      if (error.status === 401 || error.status === 403) throw error;
+      if (error.status === 401 || (error.status === 403 && !blockedTest(error))) throw error;
       testOutput.visible = true; renderTestOutput();
       setMessage('testMessage', streaming ? 'testInterrupted' : errorKey(error), streaming ? 'warning' : 'error');
     }
+    await refreshTestQuota(run, quotaUserId, quotaRevision);
     try { await loadUsage(run); setMessage('usageMessage'); }
     catch (error) {
       assertCurrent(run);
-      if (error.status === 401 || error.status === 403) throw error;
+      if (error.status === 401 || (error.status === 403 && !blockedTest(error))) throw error;
       setMessage('usageMessage', error.message === 'date' ? 'invalidDates' : errorKey(error), 'error');
     }
   });

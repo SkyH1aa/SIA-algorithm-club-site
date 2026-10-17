@@ -68,7 +68,7 @@ console.log('Chat core: fragmented UTF-8/CRLF, multiline data, terminal states, 
 const chatSource = (await readFile(new URL('../public/chat.js', import.meta.url), 'utf8')).replace(/^import .*;\r?\n/gm, '').replaceAll('import.meta.url', JSON.stringify(new URL('../public/chat.js', import.meta.url).href));
 const deferred = () => { let resolve, reject; const promise = new Promise((yes,no) => { resolve=yes; reject=no; }); return {promise,resolve,reject}; };
 const account = (id, token = id) => ({user:{id},access_token:token});
-const catalogModel = {id:'test-model',display_name:'Test',context_window:10000,max_output_tokens:100,default_max_output_tokens:50,reasoning_efforts:[]};
+const catalogModel = {id:'test-model',display_name:'Test',introduction:'A model for testing.',context_window:10000,max_output_tokens:100,default_max_output_tokens:50,reasoning_efforts:[]};
 const catalog = () => ({ok:true,json:async () => ({models:[catalogModel]})});
 const tick = () => new Promise(resolve => setImmediate(resolve));
 async function settle() { for (let i=0;i<8;i++) await tick(); }
@@ -164,4 +164,42 @@ function uiHarness() {
   assert.equal(ui.evaluate('current.turns[0].status'),'failure','failed initial save must not leave a running turn');
   assert.equal(ui.evaluate('generations.size'),0);assert.equal(ui.evaluate('active'),null);
 }
-console.log('Chat UI: startup auth ordering, token refresh, late catalogs, logout, generation/final-save ownership, storage failure and fixed output budget checks passed.');
+for (const [code, httpStatus] of [['quota',429],['blacklisted',403]]) {
+  const ui=uiHarness();await ui.login('A');
+  ui.evaluate("document.getElementById('prompt').value='limited'; void generate();");await settle();
+  ui.requests.at(-1).resolve({ok:false,status:httpStatus,json:async()=>({error:code})});await settle();
+  assert.equal(ui.evaluate('statusKey'),code,'finally must preserve the specific admission error');
+  assert.equal(ui.evaluate('active'),null);
+  assert.equal(ui.evaluate('current.turns[0].status'),'failure');
+}
+{
+  const ui=uiHarness();await ui.login('A');
+  ui.evaluate("document.getElementById('prompt').value='reset'; void generate();");await settle();
+  const reset='2026-11-01T00:00:00Z';
+  ui.requests.at(-1).resolve({ok:false,status:429,json:async()=>({error:'quota',quota:{global:{daily_limit:10,remaining:0,resets_at:'2026-10-17T00:00:00Z'},periods:[{limit:10,remaining:0,resets_at:reset}]}})});await settle();
+  assert.equal(ui.evaluate('statusKey'),'quotaReset');
+  assert.equal(ui.evaluate('statusVars.reset'),reset);
+  ui.evaluate('render()');
+  assert.equal(ui.evaluate('statusVars.reset'),reset,'rerender must retain untranslated reset variables');
+}
+for (const [terminal,key] of [['response.incomplete','quotaTruncated'],['response.completed','quotaLimited']]) {
+  const ui=uiHarness();await ui.login('A');
+  ui.evaluate("document.getElementById('prompt').value='short'; void generate();");await settle();
+  ui.requests.at(-1).resolve({ok:true,headers:new Headers({'content-type':'text/event-stream','x-chat-quota-limited':'true'}),body:stream(delta+`data: ${JSON.stringify({type:terminal})}\n\n`)});await settle();
+  assert.equal(ui.evaluate('statusKey'),key);
+  assert.equal(ui.evaluate('current.turns[0].text'),'你好');
+  assert.equal(ui.evaluate('current.turns[0].quotaLimited'),true);
+}
+{
+  const ui=uiHarness();ui.auth(account('A'));
+  ui.requests.at(-1).resolve({ok:false,status:403,json:async()=>({error:'blacklisted'})});await settle();
+  assert.equal(ui.evaluate('gateKey'),'blacklisted');
+  assert.equal(ui.elements.get('workspace').hidden,true);
+}
+{
+  const ui=uiHarness();await ui.login('A');
+  assert.equal(ui.elements.get('modelIntroductionText').textContent,catalogModel.introduction);
+  ui.evaluate("models.push({...models[0],id:'second',introduction:'Second introduction'}); document.getElementById('model').value='second'; configureModel();");
+  assert.equal(ui.elements.get('modelIntroductionText').textContent,'Second introduction');
+}
+console.log('Chat UI: auth isolation, fixed output budget, introductions, quota/blacklist errors, reset variables and limited SSE preservation passed.');

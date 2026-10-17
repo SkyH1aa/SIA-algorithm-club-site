@@ -20,7 +20,7 @@ const ACCOUNTS = {
   loggedout: null
 };
 const SCENARIOS = ['completed','incomplete','interrupted','failed','slow'];
-const ACTIONS = ['catalog','respond','admin_get','admin_save_provider','admin_save_model','admin_usage','admin_test'];
+const ACTIONS = ['catalog','respond','admin_get','admin_save_provider','admin_save_model','admin_usage','admin_test','quota','admin_user_directory','admin_quota_get','admin_quota_save','admin_set_blacklist','admin_blacklist_list'];
 const ACTION_ALIASES = new Map([['save_provider','admin_save_provider'],['save_model','admin_save_model'],['usage','admin_usage'],['test','admin_test']]);
 const PROVIDER_ID = '20000000-0000-4000-8000-000000000001';
 const MODEL_ID = '30000000-0000-4000-8000-000000000001';
@@ -42,7 +42,7 @@ function text(value, max, required = false) {
 function keys(object, allowed) { requireThat(Object.keys(object).every(key => allowed.includes(key))); }
 function seed() {
   const provider = {id:PROVIDER_ID,name:'mock',label:'MOCK 本地供应商',base_url:'https://mock-provider.example.com/v1',secret_name:'CHAT_KEY_MOCK',auth_header:'authorization',enabled:true};
-  const base = {provider_id:provider.id,context_window:32768,max_output_tokens:4096,default_max_output_tokens:512,reasoning_efforts:['low','medium','high'],default_reasoning_effort:'medium',supports_images:true,supports_pdf:true,preserve_reasoning:false,enabled:true};
+  const base = {provider_id:provider.id,context_window:32768,max_output_tokens:4096,default_max_output_tokens:512,reasoning_efforts:['low','medium','high'],default_reasoning_effort:'medium',supports_images:true,supports_pdf:true,preserve_reasoning:false,enabled:true,introduction:null};
   return {providers:[provider],models:[{...base,id:MODEL_ID,model_key:'mock-multimodal',display_name:'MOCK 多模态'}, {...base,id:'30000000-0000-4000-8000-000000000002',model_key:'mock-text',display_name:'MOCK 纯文本',supports_images:false,supports_pdf:false}],usage:[]};
 }
 function sessionFor(state) {
@@ -109,6 +109,18 @@ function validateInput(input, model) {
   requireThat(attachmentCount <= 4 && textBytes <= 500000,'input',413);
   return {input_items:input.length,roles,parts,text_bytes:textBytes,attachment_count:attachmentCount,attachment_bytes:attachmentBytes};
 }
+function estimateInputTokens(input) {
+  let tokens = 0;
+  for (const item of input) {
+    if (item.type === 'reasoning') tokens += Math.ceil(Buffer.byteLength(item.encrypted_content)/3);
+    else for (const part of item.content) {
+      if (['input_text','output_text'].includes(part.type)) tokens += Math.ceil(Buffer.byteLength(part.text)/3);
+      else if (part.type === 'input_image') tokens += {low:1024,auto:4096,high:8192}[part.detail || 'auto'];
+      else if (part.type === 'input_file') tokens += 8192;
+    }
+  }
+  return tokens;
+}
 function providerConfig(payload) {
   requireThat(payload.id == null || uuid(payload.id));
   let url;
@@ -126,7 +138,8 @@ function modelConfig(payload, providers) {
   requireThat(uuid(payload.provider_id) && providers.some(row => row.id === payload.provider_id));
   const max = integer(payload.max_output_tokens,1,131072), efforts = payload.reasoning_efforts ?? [];
   requireThat(Array.isArray(efforts) && efforts.length <= 12 && efforts.every(value => typeof value === 'string' && value.length > 0 && value.length <= 40));
-  return {id:payload.id || randomUUID(),provider_id:payload.provider_id,model_key:text(payload.model_key ?? payload.model_id,160,true),display_name:text(payload.display_name,120,true),context_window:integer(payload.context_window,256,1000000),max_output_tokens:max,default_max_output_tokens:integer(payload.default_max_output_tokens,1,max),reasoning_efforts:efforts,default_reasoning_effort:payload.default_reasoning_effort == null ? null : text(payload.default_reasoning_effort,40,true),supports_images:Boolean(payload.supports_images),supports_pdf:Boolean(payload.supports_pdf),preserve_reasoning:Boolean(payload.preserve_reasoning),enabled:payload.enabled === undefined ? true : Boolean(payload.enabled)};
+  const introduction = payload.introduction == null ? null : text(payload.introduction,1000,true);
+  return {id:payload.id || randomUUID(),provider_id:payload.provider_id,model_key:text(payload.model_key ?? payload.model_id,160,true),display_name:text(payload.display_name,120,true),introduction,context_window:integer(payload.context_window,256,1000000),max_output_tokens:max,default_max_output_tokens:integer(payload.default_max_output_tokens,1,max),reasoning_efforts:efforts,default_reasoning_effort:payload.default_reasoning_effort == null ? null : text(payload.default_reasoning_effort,40,true),supports_images:Boolean(payload.supports_images),supports_pdf:Boolean(payload.supports_pdf),preserve_reasoning:Boolean(payload.preserve_reasoning),enabled:payload.enabled === undefined ? true : Boolean(payload.enabled)};
 }
 function upsert(rows, item) { const index = rows.findIndex(row => row.id === item.id); if (index < 0) rows.push(item); else rows[index] = item; return item; }
 function rewriteJS(source, origin) {
@@ -134,10 +147,49 @@ function rewriteJS(source, origin) {
     .replaceAll('/functions/v1/chat','/mock/chat').replaceAll('/functions/v1/club-drive','/mock/club-drive');
 }
 
-export function createMockServer({testPort = false} = {}) {
+function quotaLimit(value) { return value === null ? null : integer(value,0,1e12); }
+function utcPeriods(now) {
+  const day = Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate());
+  const week = day - ((now.getUTCDay() + 6) % 7) * 86400000;
+  const month = Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),1);
+  return [{period:'day',start:day,end:day+86400000},{period:'week',start:week,end:week+7*86400000},{period:'month',start:month,end:Date.UTC(now.getUTCFullYear(),now.getUTCMonth()+1,1)}];
+}
+
+export function createMockServer({testPort = false, now = () => new Date()} = {}) {
   let state = {account:'member',scenario:'completed',theme:'dark',revision:1};
   let database = seed();
   const logs = [], leases = new Map();
+  let globalQuota, userQuotas, blacklist, counters;
+  function resetQuotas() { globalQuota = {daily_limit:null,version:0}; userQuotas = new Map(); blacklist = new Map(); counters = new Map(); }
+  resetQuotas();
+  function target(value, optional = true) {
+    if (optional && value == null) return null;
+    requireThat(uuid(value) && Object.values(ACCOUNTS).some(account => account?.id === value));
+    return value;
+  }
+  const userSetting = id => userQuotas.get(id) || {daily_limit:null,weekly_limit:null,monthly_limit:null,version:0};
+  const counterKey = (id, period) => `${id || 'global'}:${period.period}:${period.start}`;
+  const used = (id, period) => counters.get(counterKey(id,period)) || 0;
+  function snapshot(id) {
+    const periods = utcPeriods(now()), user = userSetting(id), day = periods[0];
+    const remaining = (limit,count) => limit === null ? null : Math.max(0,limit-count);
+    return {global:{...globalQuota,used:used(null,day),remaining:remaining(globalQuota.daily_limit,used(null,day)),resets_at:new Date(day.end).toISOString()},user:{...user},periods:periods.map(period => {
+      const limit = user[`${period.period === 'day' ? 'daily' : period.period === 'week' ? 'weekly' : 'monthly'}_limit`], count = id === null ? 0 : used(id,period);
+      return {period:period.period,limit,used:count,remaining:remaining(limit,count),resets_at:new Date(period.end).toISOString()};
+    }),blacklisted:blacklist.has(id),reason:blacklist.get(id) ?? null};
+  }
+  function reserve(id,inputTokens,requested) {
+    requireThat(!blacklist.has(id),'blacklisted',403);
+    const quota = snapshot(id), left = [quota.global.remaining,...quota.periods.map(period => period.remaining)].filter(value => value !== null);
+    const max = Math.min(requested,...left.map(value => value-inputTokens));
+    requireThat(max >= 1,'quota',429);
+    const periods = utcPeriods(now()), entries = [[null,periods[0]],...periods.map(period => [id,period])];
+    const amount = inputTokens + max;
+    const add = delta => { for (const [owner,period] of entries) { const key = counterKey(owner,period); counters.set(key,(counters.get(key) || 0)+delta); } };
+    add(amount);
+    let settled = false;
+    return {max,limited:max < requested,settle(actual) { if (!settled) { settled = true; add(actual-amount); } }};
+  }
   function record(value) { logs.push(value); if (logs.length > 500) logs.shift(); }
   function publicState() { return {...state,mock:true,session:sessionFor(state),accounts:Object.keys(ACCOUNTS),scenarios:SCENARIOS}; }
   function authenticate(req, admin = false) {
@@ -153,11 +205,14 @@ export function createMockServer({testPort = false} = {}) {
     const input = payload.action === 'admin_test' && payload.input === undefined ? [{role:'user',content:[{type:'input_text',text:text(payload.prompt,500000) || 'Reply with MOCK OK.'}]}] : payload.input;
     Object.assign(meta,validateInput(input,model));
     if (payload.action !== 'admin_test' && payload.max_output_tokens !== undefined) integer(payload.max_output_tokens,1,model.max_output_tokens);
-    const max = payload.action === 'admin_test'
+    const requested = payload.action === 'admin_test'
       ? integer(payload.max_output_tokens,1,model.max_output_tokens,model.default_max_output_tokens)
       : model.default_max_output_tokens;
     const effort = payload.reasoning_effort == null ? model.default_reasoning_effort : text(payload.reasoning_effort,40,true);
+    requireThat(!blacklist.has(account.id),'blacklisted',403);
     requireThat(!leases.has(account.id),'busy',409);
+    const inputEstimate = estimateInputTokens(input);
+    const reservation = reserve(account.id,inputEstimate,requested), max = reservation.max;
     const scenario = state.scenario, requestId = meta.request_id;
     Object.assign(meta,{model_id:model.id,max_output_tokens:max,reasoning_effort:effort == null ? null : model.reasoning_efforts.includes(effort) ? effort : 'custom',scenario});
     const usage = {request_id:requestId,user_id:account.id,member_name:account.member_name,username:account.username || account.email || account.id,provider_name:provider.label || provider.name,model_name:model.display_name,action:payload.action,provider_id:provider.id,model_id:model.id,model_key:model.model_key,input_bytes:meta.request_bytes,max_output_tokens:max,reasoning_effort:meta.reasoning_effort,status:'upstream_started',upstream_status:200,input_tokens:null,output_tokens:null,total_tokens:null,error_code:null,started_at:new Date().toISOString(),finished_at:null};
@@ -172,13 +227,16 @@ export function createMockServer({testPort = false} = {}) {
     };
     leases.set(account.id,{cancel:() => { finish('cancelled','environment_reset'); res.destroy(); }});
     res.on('close',() => finish('cancelled','client_cancelled'));
-    res.writeHead(200,{'content-type':'text/event-stream; charset=utf-8','cache-control':'no-cache, no-transform','x-chat-request-id':requestId,'connection':'keep-alive'});
+    res.writeHead(200,{'content-type':'text/event-stream; charset=utf-8','cache-control':'no-cache, no-transform','x-chat-request-id':requestId,'x-chat-max-output-tokens':String(max),...(reservation.limited ? {'x-chat-quota-limited':'true'} : {}),'connection':'keep-alive'});
     res.flushHeaders();
     const event = data => { if (!res.destroyed) res.write(`event: ${data.type}\r\ndata: ${JSON.stringify(data)}\r\n\r\n`); };
     event({type:'response.created',response:{id:`mock-${requestId}`,object:'response',status:'in_progress',output:[]}});
     const turn = meta.roles.user;
     const answer = `**MOCK / 本地模拟**\n\n第 ${turn} 轮；已收到 ${meta.roles.assistant} 条 assistant 历史。\n\n文本片段 ${meta.parts.input_text}，图片 ${meta.parts.input_image}，原生 PDF ${meta.parts.input_file}。\n\n- 场景：${scenario}\n- 此内容由 fixture 生成，无线上模型调用。\n\n\`\`\`js\nconsole.log('mock only');\n\`\`\`\n\n[本地设置](/setup)\n\n<script>MOCK_UNSAFE_HTML</script>\n`;
-    const chunks = answer.match(/[\s\S]{1,18}/g);
+    // This fixture uses a synthetic byte/3 tokenizer, not a provider tokenizer.
+    const answerTokens = Math.ceil(Buffer.byteLength(answer)/3);
+    const outputText = answerTokens <= max ? answer : answer.slice(0,Math.max(1,Math.floor(answer.length*max/answerTokens)));
+    const chunks = outputText.match(/[\s\S]{1,18}/g);
     let index = 0, collected = '';
     timer = setInterval(() => {
       if (ended) return;
@@ -186,10 +244,11 @@ export function createMockServer({testPort = false} = {}) {
       if (scenario === 'interrupted' && index >= 3) { finish('incomplete','upstream_eof'); res.end(); return; }
       if (index < chunks.length) return;
       const terminal = scenario === 'slow' ? 'completed' : scenario;
-      const tokens = {input_tokens:Math.ceil(meta.text_bytes / 3) + meta.attachment_count * 32,output_tokens:Math.ceil(Buffer.byteLength(collected) / 3)};
+      const tokens = {input_tokens:Math.ceil(meta.text_bytes / 3) + meta.attachment_count * 32,output_tokens:Math.min(max,Math.ceil(Buffer.byteLength(collected) / 3))};
       tokens.total_tokens = tokens.input_tokens + tokens.output_tokens;
       const output = [{id:`mock-message-${requestId}`,type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:collected,annotations:[]}]}];
       Object.assign(usage,tokens);
+      reservation.settle(tokens.total_tokens);
       finish(terminal,terminal === 'completed' ? null : `response.${terminal}`);
       event({type:`response.${terminal}`,response:{id:`mock-${requestId}`,object:'response',status:terminal,output,usage:tokens,...(terminal === 'incomplete' ? {incomplete_details:{reason:'max_output_tokens'}} : {}),...(terminal === 'failed' ? {error:{code:'mock_failure',message:'MOCK simulated failure'}} : {})}});
       res.end('data: [DONE]\r\n\r\n');
@@ -208,7 +267,31 @@ export function createMockServer({testPort = false} = {}) {
       if (['respond','admin_test'].includes(payload.action)) { stream(req,res,payload,account,meta); return; }
       let result;
       switch (payload.action) {
-        case 'catalog': result = {models:database.models.filter(model => model.enabled && database.providers.some(provider => provider.id === model.provider_id && provider.enabled)).map(({provider_id,model_key,enabled,...model}) => model),bound:true,member_name:account.member_name}; break;
+        case 'quota': keys(payload,['action']); result = snapshot(account.id); break;
+        case 'admin_user_directory':
+          keys(payload,['action']);
+          result = {users:Object.values(ACCOUNTS).filter(Boolean).map(account => ({user_id:account.id,username:account.email,member_name:account.member_name,bound:account.bound})),blacklist:[...blacklist].map(([user_id,reason]) => ({user_id,reason}))}; break;
+        case 'admin_blacklist_list': keys(payload,['action']); result = {blacklist:[...blacklist].map(([user_id,reason]) => ({user_id,reason}))}; break;
+        case 'admin_set_blacklist': {
+          keys(payload,['action','user_id','blocked','reason']); const id = target(payload.user_id,false);
+          requireThat(typeof payload.blocked === 'boolean'); const reason = text(payload.reason,1000);
+          if (payload.blocked) blacklist.set(id,reason); else blacklist.delete(id);
+          result = snapshot(id); break;
+        }
+        case 'admin_quota_get': keys(payload,['action','user_id']); result = snapshot(target(payload.user_id)); break;
+        case 'admin_quota_save': {
+          keys(payload,['action','user_id','daily_limit','weekly_limit','monthly_limit','expected_version']);
+          const id = target(payload.user_id), current = id === null ? globalQuota : userSetting(id);
+          const version = integer(payload.expected_version,0,Number.MAX_SAFE_INTEGER);
+          const daily_limit = quotaLimit(payload.daily_limit);
+          const weekly_limit = quotaLimit(id === null ? payload.weekly_limit ?? null : payload.weekly_limit), monthly_limit = quotaLimit(id === null ? payload.monthly_limit ?? null : payload.monthly_limit);
+          requireThat(id !== null || (weekly_limit === null && monthly_limit === null));
+          requireThat(version === current.version,'conflict',409);
+          const setting = {daily_limit,version:version+1};
+          if (id === null) globalQuota = setting; else userQuotas.set(id,{...setting,weekly_limit,monthly_limit});
+          result = snapshot(id); break;
+        }
+        case 'catalog': requireThat(!blacklist.has(account.id),'blacklisted',403); result = {models:database.models.filter(model => model.enabled && database.providers.some(provider => provider.id === model.provider_id && provider.enabled)).map(({provider_id,model_key,enabled,...model}) => model),bound:true,member_name:account.member_name,quota:snapshot(account.id)}; break;
         case 'admin_get': result = {providers:database.providers,models:database.models.map(model => ({...model,model_id:model.model_key}))}; break;
         case 'admin_save_provider': result = {provider:upsert(database.providers,providerConfig(payload))}; break;
         case 'admin_save_model': result = {model:upsert(database.models,modelConfig(payload,database.providers))}; break;
@@ -265,7 +348,7 @@ export function createMockServer({testPort = false} = {}) {
       if (pathname === '/mock/setup' && req.method === 'POST') {
         const {payload} = await body(req); keys(payload,['account','scenario','theme','reset']);
         requireThat(Object.hasOwn(ACCOUNTS,payload.account) && SCENARIOS.includes(payload.scenario) && ['auto','light','dark'].includes(payload.theme));
-        if (payload.reset) { for (const lease of leases.values()) lease.cancel(); database = seed(); logs.length = 0; }
+        if (payload.reset) { for (const lease of leases.values()) lease.cancel(); database = seed(); resetQuotas(); logs.length = 0; }
         if (state.account !== payload.account || payload.reset) state.revision++;
         Object.assign(state,{account:payload.account,scenario:payload.scenario,theme:payload.theme});
         json(res,publicState()); return;
@@ -294,7 +377,8 @@ export function createMockServer({testPort = false} = {}) {
 }
 
 async function selfTest() {
-  const server = createMockServer({testPort:true});
+  let clock = new Date('2026-10-18T23:59:00Z');
+  const server = createMockServer({testPort:true,now:() => clock});
   await new Promise((resolve,reject) => { server.once('error',reject); server.listen(0,'127.0.0.1',resolve); });
   try {
     const base = `http://127.0.0.1:${server.address().port}`;
@@ -315,7 +399,7 @@ async function selfTest() {
     }
     for (const resource of ['setup.js','setup.css','mock-supabase.js','sample.txt','sample.png','sample.pdf','image-only.pdf']) assert.equal((await localFetch(base+'/fixtures/'+resource)).status,200);
     const catalog = await (await post({action:'catalog'})).json(); assert.equal(catalog.bound,true); assert.equal(catalog.models.length,2);
-    assert.equal((await post({action:'admin_get'})).status,403);
+    for (const action of ACTIONS.filter(action => action.startsWith('admin_'))) assert.equal((await post({action})).status,403);
     for (const action of [...ACTION_ALIASES.keys(),...ACTION_ALIASES.values()]) assert.equal((await post({action})).status,403);
     const input = [{role:'user',content:[{type:'input_text',text:'HTTP fixture check'}]}];
     const request = {action:'respond',model_id:MODEL_ID,input,max_output_tokens:512};
@@ -349,8 +433,9 @@ async function selfTest() {
     let saved = await (await post(provider)).json(); assert.ok(uuid(saved.provider.id));
     const providerId = saved.provider.id;
     assert.equal((await post({...provider,action:'admin_save_provider',id:providerId,label:'MOCK updated'})).status,200);
-    const model = {action:'save_model',provider_id:providerId,model_key:'mock-created',display_name:'MOCK created',context_window:2048,max_output_tokens:512,default_max_output_tokens:128,reasoning_efforts:[],supports_images:false,supports_pdf:false};
+    const model = {action:'save_model',provider_id:providerId,model_key:'mock-created',display_name:'MOCK created',introduction:'Created model for local checks.',context_window:2048,max_output_tokens:512,default_max_output_tokens:128,reasoning_efforts:[],supports_images:false,supports_pdf:false};
     saved = await (await post(model)).json(); assert.ok(uuid(saved.model.id));
+    assert.equal(saved.model.introduction, model.introduction);
     const modelId = saved.model.id;
     result = await readResponses((await post({action:'test',model_id:modelId,prompt:'test',max_output_tokens:128})).body,()=>{}); assert.equal(result.status,'success');
     assert.equal((await post({...model,action:'admin_save_model',id:modelId,enabled:false})).status,200);
@@ -375,7 +460,65 @@ async function selfTest() {
     assert.doesNotMatch(JSON.stringify(logs),/authorization|apikey|access_token|HTTP fixture check|CHAT_KEY_MOCK_CREATED/);
     assert.equal((await localFetch(base+'/mock/setup',{method:'POST',headers:{origin:'https://example.com','content-type':'application/json'},body:'{}'})).status,403);
     assert.equal((await get('/fixtures/%2e%2e%2f%2e%2e%2fAGENTS.md')).status,404);
+    state = await setup('admin','completed',true);
+    const directory = await (await post({action:'admin_user_directory'})).json();
+    assert.equal(directory.users.length,4); assert.deepEqual(directory.blacklist,[]);
+    assert.ok(directory.users.every(user => uuid(user.user_id) && user.username && typeof user.bound === 'boolean'));
+    const memberId = ACCOUNTS.member.id;
+    const saveQuota = (user_id,daily_limit,weekly_limit,monthly_limit,expected_version) => post({action:'admin_quota_save',user_id,daily_limit,weekly_limit,monthly_limit,expected_version});
+    assert.equal((await post({action:'admin_quota_get',user_id:ACCOUNTS.member.email})).status,400);
+    for (const value of [-1,1.5,1e12+1,'10']) assert.equal((await saveQuota(memberId,value,null,null,0)).status,400);
+    let quota = await (await saveQuota(memberId,1e12,null,null,0)).json(); assert.equal(quota.user.daily_limit,1e12);
+    assert.equal((await saveQuota(memberId,null,null,null,0)).status,409);
+    quota = await (await saveQuota(memberId,null,80,100,1)).json(); assert.equal(quota.user.version,2);
+    assert.equal((await post({action:'admin_quota_save',daily_limit:200,expected_version:0})).status,200);
+    assert.equal((await saveQuota(null,null,1,null,1)).status,400);
+    state = await setup('member');
+    assert.equal((await post({action:'quota',user_id:ACCOUNTS.admin.id})).status,400);
+    quota = await (await post({action:'quota'})).json();
+    assert.equal(quota.global.daily_limit,200); assert.equal(quota.periods[1].remaining,80);
+    assert.deepEqual(quota.periods.map(period => period.resets_at),['2026-10-19T00:00:00.000Z','2026-10-19T00:00:00.000Z','2026-11-01T00:00:00.000Z']);
+    const limited = await post(request);
+    assert.equal(limited.headers.get('x-chat-quota-limited'),'true');
+    assert.equal(Number(limited.headers.get('x-chat-max-output-tokens')),80-estimateInputTokens(input));
+    await readResponses(limited.body,()=>{});
+    quota = await (await post({action:'quota'})).json(); assert.ok(quota.periods[1].used > 0 && quota.periods[1].used <= 80);
+    clock = new Date('2026-10-19T00:00:00Z');
+    quota = await (await post({action:'quota'})).json(); assert.equal(quota.global.used,0); assert.equal(quota.periods[1].used,0); assert.ok(quota.periods[2].used > 0);
+    clock = new Date('2026-11-01T00:00:00Z');
+    quota = await (await post({action:'quota'})).json(); assert.equal(quota.periods[2].used,0);
+    state = await setup('admin');
+    await saveQuota(memberId,0,null,null,2);
+    state = await setup('member'); assert.equal((await post(request)).status,429); assert.equal((await post({action:'catalog'})).status,200);
+    state = await setup('admin');
+    await saveQuota(memberId,null,null,null,3);
+    await saveQuota(null,0,null,null,1);
+    assert.equal((await post({action:'admin_test',model_id:MODEL_ID,prompt:'test'})).status,429);
+    await saveQuota(null,null,null,null,2);
+    await saveQuota(ACCOUNTS.admin.id,50,null,null,0);
+    const adminLimited = await post({action:'admin_test',model_id:MODEL_ID,prompt:'test'});
+    assert.equal(adminLimited.headers.get('x-chat-quota-limited'),'true');
+    const adminResult = await readResponses(adminLimited.body,()=>{});
+    quota = await (await post({action:'quota'})).json();
+    assert.equal(quota.periods[0].used,adminResult.usage.total_tokens,'completed usage settles instead of retaining reservation');
+    await saveQuota(ACCOUNTS.admin.id,null,null,null,1);
+    state = await setup('member','interrupted');
+    await readResponses((await post(request)).body,()=>{});
+    quota = await (await post({action:'quota'})).json();
+    assert.equal(quota.periods[0].used,estimateInputTokens(input)+512,'EOF without usage keeps the full reservation');
+    state = await setup('admin');
+    await post({action:'admin_set_blacklist',user_id:memberId,blocked:true,reason:'MOCK policy'});
+    const blocked = await (await post({action:'admin_blacklist_list'})).json(); assert.deepEqual(blocked.blacklist,[{user_id:memberId,reason:'MOCK policy'}]);
+    state = await setup('member');
+    assert.equal((await post({action:'catalog'})).status,403); assert.equal((await post(request)).status,403);
+    quota = await (await post({action:'quota'})).json(); assert.equal(quota.blacklisted,true); assert.equal(quota.reason,'MOCK policy');
+    state = await setup('admin');
+    await post({action:'admin_set_blacklist',user_id:ACCOUNTS.admin.id,blocked:true});
+    assert.equal((await post({action:'admin_test',model_id:MODEL_ID,prompt:'test'})).status,403);
+    assert.equal((await post({action:'admin_quota_get'})).status,200,'blocked admins retain management access');
     state = await setup('member','completed',true); assert.equal((await (await get('/mock/requests')).json()).requests.length,0);
+    quota = await (await post({action:'quota'})).json(); assert.equal(quota.global.version,0); assert.equal(quota.global.daily_limit,null); assert.equal(quota.global.used,0); assert.equal(quota.user.version,0); assert.equal(quota.blacklisted,false);
+    console.log('Chat quota/blacklist self-test passed: strict admin auth, directory UUIDs, own snapshot, null/zero/max bounds, version conflicts, both route reservations/headers, UTC day/week/month rollover, no-usage retention, blacklist gates and reset.');
     console.log('Chat mock HTTP self-test passed: local SDK/URL/CSP, fixtures, catalog, permissions, multi-turn SSE, terminal states, cancellation/lease, account switch, admin save/disable/test/usage, redacted metadata, reset and traversal/origin guards.');
   } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
 }

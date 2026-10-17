@@ -83,6 +83,7 @@
           <input id="modelConfigId" type="hidden">
           <label><span data-i18n="chatAdmin.modelId">上游模型 ID</span><input id="modelId" class="chat-admin-input" required maxlength="160" placeholder="例如 gpt-4.1-mini" data-i18n-placeholder="chatAdmin.modelIdPlaceholder"></label>
           <label><span data-i18n="chatAdmin.modelLabel">显示名称</span><input id="modelLabel" class="chat-admin-input" required maxlength="120" placeholder="例如 GPT-4.1 mini" data-i18n-placeholder="chatAdmin.modelLabelPlaceholder"></label>
+          <label class="chat-admin-model-introduction"><span data-i18n="chatAdmin.modelIntroduction">模型介绍</span><textarea id="modelIntroduction" class="chat-admin-input" rows="3" maxlength="1000" placeholder="介绍模型特点、适用场景或限制" data-i18n-placeholder="chatAdmin.modelIntroductionPlaceholder"></textarea></label>
           <label><span data-i18n="chatAdmin.modelProvider">供应商</span><select id="modelProvider" class="chat-admin-input" required></select></label>
           <label><span data-i18n="chatAdmin.contextWindow">上下文窗口</span><input id="contextWindow" class="chat-admin-input" type="number" min="256" max="1000000" step="1" value="8192" required></label>
           <label><span data-i18n="chatAdmin.maxOutput">最大输出 token</span><input id="maxOutputTokens" class="chat-admin-input" type="number" min="1" max="131072" step="1" value="2048" required></label>
@@ -97,6 +98,40 @@
         </form>
         <p id="modelMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
         <div id="modelsList" class="chat-admin-table-wrap"></div>
+      </section>
+
+      <section class="chat-admin-panel chat-admin-section">
+        <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.quotaTitle">配额与黑名单</h2><p data-i18n="chatAdmin.quotaLead">按 token 限制用量。留空表示不限，0 表示阻止调用；每项上限为 1,000,000,000,000。</p></div><button id="refreshQuotaButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.refreshQuota">刷新配额与用户</button></div>
+        <h3 data-i18n="chatAdmin.globalQuota">全站每日配额</h3>
+        <form id="globalQuotaForm" class="chat-admin-form">
+          <label><span data-i18n="chatAdmin.dailyLimit">每日 token 上限</span><input id="globalDailyLimit" class="chat-admin-input" type="number" min="0" max="1000000000000" step="1" aria-describedby="quotaHelp"></label>
+          <div class="chat-admin-actions"><button class="chat-admin-button" type="submit" data-i18n="chatAdmin.saveGlobalQuota">保存全站配额</button></div>
+        </form>
+        <div id="globalQuotaSummary" class="chat-admin-quota-summary" aria-live="polite"></div>
+        <p id="globalQuotaMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+        <hr class="chat-admin-divider">
+        <form id="quotaUserForm" class="chat-admin-form">
+          <label><span data-i18n="chatAdmin.quotaUser">用户账号 · 社员姓名</span><select id="quotaUser" class="chat-admin-input"></select></label>
+        </form>
+        <p id="quotaUserState" class="chat-admin-quota-state"></p>
+        <p id="quotaHelp" class="chat-admin-quota-help" data-i18n="chatAdmin.quotaHelp">全站与用户配额同时生效。留空表示不限，0 阻止调用。周期重置时间由服务器提供。</p>
+        <form id="userQuotaForm" class="chat-admin-form chat-admin-user-quota-form">
+          <label><span data-i18n="chatAdmin.dailyLimit">每日 token 上限</span><input id="userDailyLimit" class="chat-admin-input" type="number" min="0" max="1000000000000" step="1" aria-describedby="quotaHelp"></label>
+          <label><span data-i18n="chatAdmin.weeklyLimit">每周 token 上限</span><input id="userWeeklyLimit" class="chat-admin-input" type="number" min="0" max="1000000000000" step="1" aria-describedby="quotaHelp"></label>
+          <label><span data-i18n="chatAdmin.monthlyLimit">每月 token 上限</span><input id="userMonthlyLimit" class="chat-admin-input" type="number" min="0" max="1000000000000" step="1" aria-describedby="quotaHelp"></label>
+          <div class="chat-admin-actions"><button class="chat-admin-button" type="submit" data-i18n="chatAdmin.saveUserQuota">保存用户配额</button></div>
+        </form>
+        <div id="userQuotaSummary" class="chat-admin-quota-summary" aria-live="polite"></div>
+        <p id="userQuotaMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+        <form id="blacklistForm" class="chat-admin-form">
+          <label class="chat-admin-check"><input id="userBlacklisted" type="checkbox"><span data-i18n="chatAdmin.blacklisted">禁止此用户调用 Chat（黑名单）</span></label>
+          <label><span data-i18n="chatAdmin.blacklistReason">原因（可选，最多 1000 字符）</span><textarea id="blacklistReason" class="chat-admin-input" rows="2" maxlength="1000"></textarea></label>
+          <div class="chat-admin-actions"><button class="chat-admin-button chat-admin-danger" type="submit" data-i18n="chatAdmin.saveBlacklist">保存黑名单状态</button></div>
+        </form>
+        <p id="blacklistMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+        <h3 data-i18n="chatAdmin.blacklistTitle">黑名单用户</h3>
+        <div id="blacklistList" class="chat-admin-table-wrap"></div>
+        <p id="quotaMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
       </section>
 
       <section class="chat-admin-panel chat-admin-section">

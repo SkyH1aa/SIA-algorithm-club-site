@@ -14,6 +14,7 @@ type Model = {
   provider_id: string;
   model_key: string;
   display_name: string;
+  introduction: string | null;
   context_window: number;
   max_output_tokens: number;
   default_max_output_tokens: number;
@@ -38,12 +39,12 @@ const MAX_CONTENT_PARTS = 5;
 const MAX_ATTACHMENTS = 4;
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 const MAX_REASONING_EFFORT = 40;
-const LEASE_MS = 15 * 60 * 1000;
 const IMAGE_TOKEN_ESTIMATE = { low: 1024, auto: 4096, high: 8192 };
 const PDF_TOKEN_ESTIMATE = 8192;
 const ACTIONS = new Set([
   'catalog', 'respond', 'admin_get', 'admin_save_provider', 'admin_save_model',
-  'admin_usage', 'admin_test'
+  'admin_usage', 'admin_test', 'quota', 'admin_quota_get', 'admin_quota_save',
+  'admin_user_directory', 'admin_blacklist_list', 'admin_set_blacklist'
 ]);
 const encoder = new TextEncoder();
 
@@ -55,6 +56,7 @@ function corsHeaders(request: Request): Headers {
   const headers = new Headers({
     'access-control-allow-headers': 'authorization, apikey, content-type',
     'access-control-allow-methods': 'POST, OPTIONS',
+    'access-control-expose-headers': 'X-Chat-Request-Id, X-Chat-Quota-Limited, X-Chat-Max-Output-Tokens',
     'access-control-max-age': '600',
     vary: 'Origin'
   });
@@ -359,13 +361,13 @@ async function providers(): Promise<Provider[]> {
 }
 
 async function models(): Promise<Model[]> {
-  return await restJson<Model[]>('chat_models?select=id,provider_id,model_key,display_name,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,supports_images,supports_pdf,preserve_reasoning,enabled&order=display_name.asc');
+  return await restJson<Model[]>('chat_models?select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,supports_images,supports_pdf,preserve_reasoning,enabled&order=display_name.asc');
 }
 
 function catalogPayload(items: Model[], providerRows: Provider[]) {
   const enabledProviders = new Set(providerRows.filter(x => x.enabled).map(x => x.id));
   return items.filter(x => x.enabled && enabledProviders.has(x.provider_id)).map(x => ({
-    id: x.id, display_name: x.display_name, context_window: x.context_window,
+    id: x.id, display_name: x.display_name, introduction: x.introduction || null, context_window: x.context_window,
     max_output_tokens: x.max_output_tokens, default_max_output_tokens: x.default_max_output_tokens,
     reasoning_efforts: Array.isArray(x.reasoning_efforts) ? x.reasoning_efforts : [],
     default_reasoning_effort: x.default_reasoning_effort, supports_images: x.supports_images,
@@ -376,7 +378,7 @@ function catalogPayload(items: Model[], providerRows: Provider[]) {
 async function modelWithProvider(modelId: unknown, enabledOnly = true): Promise<{ model: Model; provider: Provider }> {
   if (!isUuid(modelId)) throw new HttpError('model', 400);
   const [modelRows, providerRows] = await Promise.all([
-    restJson<Model[]>(`chat_models?id=eq.${encodeURIComponent(modelId)}&select=id,provider_id,model_key,display_name,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,supports_images,supports_pdf,preserve_reasoning,enabled&limit=1`),
+    restJson<Model[]>(`chat_models?id=eq.${encodeURIComponent(modelId)}&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,supports_images,supports_pdf,preserve_reasoning,enabled&limit=1`),
     providers()
   ]);
   const model = modelRows[0];
@@ -411,12 +413,13 @@ async function saveModel(payload: Json) {
   if (!isUuid(payload.provider_id)) throw new HttpError('input', 400);
   const modelKey = text(payload.model_key ?? payload.model_id, 160, true)!;
   const displayName = text(payload.display_name, 120, true)!;
+  const introduction = payload.introduction == null ? null : text(payload.introduction, 1000, true);
   const max = integer(payload.max_output_tokens, 1, 131072);
   const defaultMax = integer(payload.default_max_output_tokens, 1, max);
   const efforts = payload.reasoning_efforts === undefined ? [] : payload.reasoning_efforts;
   if (!Array.isArray(efforts) || efforts.length > 12 || efforts.some(x => typeof x !== 'string' || x.length < 1 || x.length > MAX_REASONING_EFFORT)) throw new HttpError('input', 400);
   const body = {
-    ...(id ? { id } : {}), provider_id: payload.provider_id, model_key: modelKey, display_name: displayName,
+    ...(id ? { id } : {}), provider_id: payload.provider_id, model_key: modelKey, display_name: displayName, introduction,
     context_window: integer(payload.context_window, 256, 1000000), max_output_tokens: max,
     default_max_output_tokens: defaultMax, reasoning_efforts: efforts,
     default_reasoning_effort: payload.default_reasoning_effort == null ? null : text(payload.default_reasoning_effort, MAX_REASONING_EFFORT, true),
@@ -431,12 +434,57 @@ async function saveModel(payload: Json) {
   return rows[0] || null;
 }
 
-async function usageAudit(requestId: string, ctx: RequestContext, model: Model, provider: Provider, inputBytes: number, outputTokens: number, effort: string | null, action: 'respond' | 'admin_test') {
-  const rows = await restJson<Array<{ id: string }>>('chat_usage', {
-    method: 'POST', headers: { 'content-type': 'application/json', prefer: 'return=representation' },
-    body: JSON.stringify({ request_id: requestId, user_id: ctx.user.id, member_name: ctx.profile?.member_name || null, username: ctx.profile?.username || ctx.user.email || ctx.user.id, provider_name: provider.label || provider.name, model_name: model.display_name, action, provider_id: provider.id, model_id: model.id, model_key: model.model_key, input_bytes: inputBytes, max_output_tokens: outputTokens, reasoning_effort: effort, status: 'audited' })
+function quotaUserId(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  if (!isUuid(value)) throw new HttpError('input', 400);
+  return value;
+}
+
+function quotaLimit(value: unknown): number | null {
+  return value === null ? null : integer(value, 0, 1_000_000_000_000);
+}
+
+async function quotaSnapshot(userId: string | null): Promise<Json> {
+  const result = await rpc('chat_quota_get', { p_user_id: userId });
+  if (!result || typeof result !== 'object' || Array.isArray(result)) throw new HttpError('database', 503);
+  return result as Json;
+}
+
+async function quotaAdmin(ctx: RequestContext, action: string, payload: Json): Promise<unknown> {
+  if (action === 'admin_quota_get') return await quotaSnapshot(quotaUserId(payload.user_id));
+  if (action === 'admin_quota_save') {
+    const userId = quotaUserId(payload.user_id);
+    const daily = quotaLimit(payload.daily_limit);
+    const weekly = quotaLimit(userId === null && payload.weekly_limit === undefined ? null : payload.weekly_limit);
+    const monthly = quotaLimit(userId === null && payload.monthly_limit === undefined ? null : payload.monthly_limit);
+    if (userId === null && (weekly !== null || monthly !== null)) throw new HttpError('input', 400);
+    const result = await rpc('chat_quota_save', {
+      p_actor_user_id: ctx.user.id, p_user_id: userId, p_daily_limit: daily,
+      p_weekly_limit: weekly, p_monthly_limit: monthly,
+      p_expected_version: integer(payload.expected_version, 0, Number.MAX_SAFE_INTEGER)
+    });
+    if ((result as Json | null)?.code === 'conflict') throw new HttpError('conflict', 409);
+    if (!result) throw new HttpError('database', 503);
+    return result;
+  }
+  if (action === 'admin_set_blacklist') {
+    if (!isUuid(payload.user_id) || typeof payload.blocked !== 'boolean' ||
+      (payload.reason !== undefined && typeof payload.reason !== 'string')) throw new HttpError('input', 400);
+    return await rpc('chat_blacklist_set', {
+      p_actor_user_id: ctx.user.id, p_user_id: payload.user_id, p_blocked: payload.blocked,
+      p_reason: text(payload.reason, 1000) || null
+    });
+  }
+  const directory = await rpc('chat_user_directory', { p_actor_user_id: ctx.user.id }) as Json | null;
+  if (!directory || !Array.isArray(directory.users) || !Array.isArray(directory.blacklist)) throw new HttpError('database', 503);
+  return action === 'admin_blacklist_list' ? { blacklist: directory.blacklist } : directory;
+}
+
+async function finishGeneration(requestId: string, patch: Json, refund = false) {
+  const result = await rpc('chat_finish_generation', {
+    p_request_id: requestId, p_patch: { ...patch, finished_at: new Date().toISOString() }, p_refund: refund
   });
-  if (!rows[0]) throw new HttpError('database', 503);
+  if (result === false || result === null || (result as Json)?.code) throw new HttpError('database', 503);
 }
 
 async function updateUsage(requestId: string, patch: Json) {
@@ -464,15 +512,41 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
   if (effort !== null && !(model.reasoning_efforts as string[]).includes(effort)) throw new HttpError('effort', 400);
   const requestId = crypto.randomUUID();
   const body = { model: model.model_key, input, reasoning: effort ? { effort } : undefined, include: model.preserve_reasoning ? ['reasoning.encrypted_content'] : undefined, max_output_tokens: outputTokens, store: false, stream: true };
-  const serialized = JSON.stringify(body);
-  if (estimateInputTokens(input) + outputTokens > model.context_window) throw new HttpError('context', 413);
+  let serialized = JSON.stringify(body);
+  const inputTokens = estimateInputTokens(input);
+  if (inputTokens + outputTokens > model.context_window) throw new HttpError('context', 413);
   if (encoder.encode(serialized).byteLength > MAX_REQUEST_BYTES) throw new HttpError('request_too_large', 413);
-  const acquired = await rpc('chat_acquire_generation_lease', { p_user_id: ctx.user.id, p_request_id: requestId, p_expires_at: new Date(Date.now() + LEASE_MS).toISOString() });
-  if (acquired !== true) throw new HttpError('busy', 409);
+  // Reservations use estimates, not a hard guarantee about provider billing (especially files).
+  const admission = await rpc('chat_begin_generation', {
+    p_user_id: ctx.user.id, p_request_id: requestId, p_input_tokens: inputTokens, p_output_tokens: outputTokens,
+    p_audit: { member_name: ctx.profile?.member_name || null, username: ctx.profile?.username || ctx.user.email || ctx.user.id,
+      provider_name: provider.label || provider.name, model_name: model.display_name, action: test ? 'admin_test' : 'respond',
+      provider_id: provider.id, model_id: model.id, model_key: model.model_key,
+      input_bytes: encoder.encode(serialized).byteLength, max_output_tokens: outputTokens, reasoning_effort: effort, status: 'audited' }
+  }) as Json | null;
+  if (!admission || typeof admission.allowed !== 'boolean') throw new HttpError('database', 503);
+  if (!admission.allowed) {
+    if (admission.code === 'quota' || admission.code === 'quota_exceeded') return json(request, { error: 'quota', quota: admission.quota }, 429);
+    if (admission.code === 'busy') throw new HttpError('busy', 409);
+    if (admission.code === 'blacklisted') throw new HttpError('blacklisted', 403);
+    throw new HttpError('database', 503);
+  }
+  if (!Number.isInteger(admission.max_output_tokens) || (admission.max_output_tokens as number) < 1 ||
+    (admission.max_output_tokens as number) > outputTokens) {
+    await finishGeneration(requestId, { status: 'failed', error_code: 'database' }, true);
+    throw new HttpError('database', 503);
+  }
+  body.max_output_tokens = admission.max_output_tokens as number;
+  serialized = JSON.stringify(body);
+  if (request.signal.aborted) {
+    await finishGeneration(requestId, { status: 'cancelled', error_code: 'client_cancelled' }, true);
+    throw new HttpError('cancelled', 499);
+  }
   try {
-    await usageAudit(requestId, ctx, model, provider, encoder.encode(serialized).byteLength, outputTokens, effort, test ? 'admin_test' : 'respond');
+    // Persist the transition before fetch. Any later uncertainty retains reservation.
+    await updateUsage(requestId, { status: 'upstream_started' });
   } catch (error) {
-    await rpc('chat_release_generation_lease', { p_user_id: ctx.user.id, p_request_id: requestId }).catch(() => undefined);
+    await finishGeneration(requestId, { status: 'failed', error_code: 'database' }).catch(() => undefined);
     throw error;
   }
   const upstreamController = new AbortController();
@@ -484,15 +558,13 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
     upstream = await fetch(`${provider.base_url}/responses`, { method: 'POST', headers: upstreamHeaders(provider, Deno.env.get(provider.secret_name)!), body: serialized, redirect: 'error', signal: upstreamController.signal });
   } catch {
     request.signal.removeEventListener('abort', cancelUpstream);
-    await updateUsage(requestId, { status: request.signal.aborted ? 'cancelled' : 'failed', error_code: request.signal.aborted ? 'client_cancelled' : 'upstream_network', finished_at: new Date().toISOString() }).catch(() => undefined);
-    await rpc('chat_release_generation_lease', { p_user_id: ctx.user.id, p_request_id: requestId }).catch(() => undefined);
+    await finishGeneration(requestId, { status: request.signal.aborted ? 'cancelled' : 'failed', error_code: request.signal.aborted ? 'client_cancelled' : 'upstream_network' }).catch(() => undefined);
     throw new HttpError(request.signal.aborted ? 'cancelled' : 'upstream', request.signal.aborted ? 499 : 502);
   }
   if (!upstream.ok || !upstream.body || !/^text\/event-stream(?:\s*;|$)/i.test(upstream.headers.get('content-type') || '')) {
     request.signal.removeEventListener('abort', cancelUpstream);
     upstreamController.abort();
-    await updateUsage(requestId, { status: 'failed', upstream_status: upstream.status, error_code: 'upstream_http', finished_at: new Date().toISOString() }).catch(() => undefined);
-    await rpc('chat_release_generation_lease', { p_user_id: ctx.user.id, p_request_id: requestId }).catch(() => undefined);
+    await finishGeneration(requestId, { status: 'failed', upstream_status: upstream.status, error_code: 'upstream_http' }).catch(() => undefined);
     throw new HttpError('upstream', 502);
   }
   try {
@@ -501,12 +573,14 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
     request.signal.removeEventListener('abort', cancelUpstream);
     upstreamController.abort();
     await upstream.body.cancel().catch(() => undefined);
-    await updateUsage(requestId, { status: 'failed', error_code: 'database', finished_at: new Date().toISOString() }).catch(() => undefined);
-    await rpc('chat_release_generation_lease', { p_user_id: ctx.user.id, p_request_id: requestId }).catch(() => undefined);
+    await finishGeneration(requestId, { status: 'failed', error_code: 'database' }).catch(() => undefined);
     throw error;
   }
   request.signal.removeEventListener('abort', cancelUpstream);
-  return proxyStream(request, upstream.body, upstreamController, requestId, ctx.user.id);
+  const response = proxyStream(request, upstream.body, upstreamController, requestId);
+  if (body.max_output_tokens < outputTokens) response.headers.set('x-chat-quota-limited', 'true');
+  response.headers.set('x-chat-max-output-tokens', String(body.max_output_tokens));
+  return response;
 }
 
 function parseSse(onEvent: (event: Json) => void) {
@@ -559,7 +633,7 @@ function terminalUsage(event: Json): Json | null {
   return { status: type === 'response.completed' ? 'completed' : type === 'response.incomplete' ? 'incomplete' : 'failed', input_tokens: token(usage.input_tokens), output_tokens: token(usage.output_tokens), total_tokens: token(usage.total_tokens), error_code: type === 'response.completed' ? null : type };
 }
 
-function proxyStream(request: Request, body: ReadableStream<Uint8Array>, upstream: AbortController, requestId: string, userId: string): Response {
+function proxyStream(request: Request, body: ReadableStream<Uint8Array>, upstream: AbortController, requestId: string): Response {
   const reader = body.getReader();
   const decoder = new TextDecoder('utf-8', { fatal: true });
   let terminal: Json | null = null, cancelled = false;
@@ -568,13 +642,7 @@ function proxyStream(request: Request, body: ReadableStream<Uint8Array>, upstrea
   const finish = (patch: Json): Promise<void> => {
     if (finishing) return finishing;
     request.signal.removeEventListener('abort', onAbort);
-    finishing = (async () => {
-      try {
-        await updateUsage(requestId, { ...patch, finished_at: new Date().toISOString() });
-      } finally {
-        await rpc('chat_release_generation_lease', { p_user_id: userId, p_request_id: requestId });
-      }
-    })();
+    finishing = finishGeneration(requestId, patch);
     return finishing;
   };
   const cancel = async () => {
@@ -667,21 +735,30 @@ async function main(request: Request, payload: Json): Promise<Response> {
   const action = ({ save_provider: 'admin_save_provider', save_model: 'admin_save_model', usage: 'admin_usage', test: 'admin_test' } as Record<string, string>)[String(payload.action)] || payload.action;
   if (typeof action !== 'string' || !ACTIONS.has(action)) throw new HttpError('action', 400);
   const allowed: Record<string, string[]> = {
-    catalog: [], admin_get: [], respond: ['model_id', 'input', 'max_output_tokens', 'reasoning_effort'],
+    catalog: [], quota: [], admin_quota_get: ['user_id'],
+    admin_quota_save: ['user_id', 'daily_limit', 'weekly_limit', 'monthly_limit', 'expected_version'],
+    admin_user_directory: [], admin_blacklist_list: [], admin_set_blacklist: ['user_id', 'blocked', 'reason'],
+    admin_get: [], respond: ['model_id', 'input', 'max_output_tokens', 'reasoning_effort'],
     admin_test: ['model_id', 'prompt', 'max_output_tokens', 'reasoning_effort'],
     admin_usage: ['page', 'pageSize', 'limit', 'from', 'to'],
     admin_save_provider: ['id', 'name', 'label', 'base_url', 'secret_name', 'auth_header', 'enabled'],
-    admin_save_model: ['id', 'provider_id', 'model_key', 'model_id', 'display_name', 'context_window', 'max_output_tokens', 'default_max_output_tokens', 'reasoning_efforts', 'default_reasoning_effort', 'supports_images', 'supports_pdf', 'preserve_reasoning', 'enabled']
+    admin_save_model: ['id', 'provider_id', 'model_key', 'model_id', 'display_name', 'introduction', 'context_window', 'max_output_tokens', 'default_max_output_tokens', 'reasoning_efforts', 'default_reasoning_effort', 'supports_images', 'supports_pdf', 'preserve_reasoning', 'enabled']
   };
   allowKeys(payload, ['action', ...allowed[action]]);
   if (action === 'admin_get') return json(request, await adminGet(request));
   if (action === 'admin_save_provider') return json(request, { provider: await saveProviderAfterAuth(request, payload) });
   if (action === 'admin_save_model') return json(request, { model: await saveModelAfterAuth(request, payload) });
   if (action === 'admin_usage') return json(request, await adminUsage(request, payload));
+  if (action === 'quota') return json(request, await quotaSnapshot((await context(request)).user.id));
+  if (['admin_quota_get', 'admin_quota_save', 'admin_user_directory', 'admin_blacklist_list', 'admin_set_blacklist'].includes(action)) {
+    return json(request, await quotaAdmin(await context(request, true), action, payload));
+  }
   if (action === 'catalog') {
     const ctx = await context(request);
+    const quota = await quotaSnapshot(ctx.user.id);
+    if (quota.blacklisted === true) throw new HttpError('blacklisted', 403);
     const [all, providerRows] = await Promise.all([models(), providers()]);
-    return json(request, { models: catalogPayload(all, providerRows), bound: Boolean(ctx.profile), member_name: ctx.profile?.member_name || null });
+    return json(request, { models: catalogPayload(all, providerRows), bound: Boolean(ctx.profile), member_name: ctx.profile?.member_name || null, quota });
   }
   if (action === 'respond') return await callResponses(request, await context(request), payload);
   if (action === 'admin_test') return await callResponses(request, await context(request, true), payload, true);

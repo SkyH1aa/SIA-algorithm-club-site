@@ -5,9 +5,9 @@ const URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
 const KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
 const client = window.supabase.createClient(URL, KEY);
 const $ = id => document.getElementById(id);
-const t = key => ClubI18n.t(`chat.${key}`);
+const t = (key, vars) => ClubI18n.t(`chat.${key}`, vars);
 let session = null, epoch = 0, models = [], chats = [], current = null, pending = [], active = null;
-let statusKey = 'loading', gateKey = 'loading', attaching = false, catalogController = null;
+let statusKey = 'loading', statusVars = {}, gateKey = 'loading', attaching = false, catalogController = null;
 const generations = new Set();
 const renderer = new marked.Renderer();
 renderer.html = ({text}) => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
@@ -27,7 +27,12 @@ function markdown(text) {
   return fragment;
 }
 const model = () => models.find(x => x.id === $('model').value);
-function status(key) { statusKey = key; $('status').textContent = t(key); }
+function status(key, vars = {}) { statusKey = key; statusVars = vars; $('status').textContent = t(key, vars); }
+function quotaReset(quota) {
+  const buckets = [{...quota?.global, limit:quota?.global?.daily_limit}, ...(quota?.periods || [])];
+  const dates = buckets.filter(row => row && row.limit != null && row.remaining === 0 && row.resets_at).map(row => row.resets_at);
+  return dates.sort().at(-1) || '';
+}
 function button(key, handler) {
   const node = document.createElement('button'); node.type = 'button'; node.textContent = t(key);
   node.onclick = handler; return node;
@@ -84,9 +89,14 @@ function renderAttachments() {
 }
 function render() {
   renderList(); renderMessages(); renderAttachments(); controls();
+  const selected = model(), introduction = $('modelIntroduction'), introductionText = $('modelIntroductionText');
+  if (introduction && introductionText) {
+    introductionText.textContent = selected?.introduction || '';
+    introduction.hidden = !selected?.introduction;
+  }
   const defaultOption = [...$('effort').options].find(option => option.value === '');
   if (defaultOption) defaultOption.textContent = t('default');
-  $('status').textContent = t(statusKey); $('gate').textContent = gateKey ? t(gateKey) : '';
+  $('status').textContent = t(statusKey, statusVars); $('gate').textContent = gateKey ? t(gateKey) : '';
 }
 async function persist(chat, guard) {
   chat.updatedAt = Date.now();
@@ -103,14 +113,14 @@ function configureModel() {
   for (const value of item?.reasoning_efforts || []) { const opt = new Option(value,value); $('effort').add(opt); }
   if (!$('effort').options.length) $('effort').add(new Option(t('default'),''));
   $('effort').value = item?.default_reasoning_effort || '';
-  controls();
+  render();
 }
 async function request(action, body = {}, signal, token = session?.access_token) {
   if (!token) throw new Error('login');
   const response = await fetch(`${URL}/functions/v1/chat`, {method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${token}`},body:JSON.stringify({action,...body}),signal});
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw Object.assign(new Error(response.status === 409 ? 'busy' : response.status === 401 ? 'login' : ['context','request_too_large','file','login','profile'].includes(data.error) ? data.error : 'request'), {status:response.status});
+    throw Object.assign(new Error(response.status === 409 ? 'busy' : response.status === 401 ? 'login' : ['context','request_too_large','file','login','profile','quota','blacklisted'].includes(data.error) ? data.error : 'request'), {status:response.status, quota:data.quota});
   }
   return response;
 }
@@ -178,7 +188,7 @@ async function generate(retry = false) {
   let finish;
   const run = {controller,stopped:false,userId:chat.userId,done:new Promise(resolve => { finish = resolve; })};
   generations.add(run); active = run; controls();
-  let turn, persisted = false, saveAt = 0, saveQueue = Promise.resolve(), storageError = false;
+  let turn, persisted = false, saveAt = 0, saveQueue = Promise.resolve(), storageError = false, failureKey = '', failureVars = {};
   try {
     turn = {id:crypto.randomUUID(),prompt,attachments:files,input:inputFor(prompt,files,item),output:[],text:'',status:'running',modelId:item.id,modelName:item.display_name,createdAt:Date.now()};
     const prior = (retry ? chat.turns.slice(0,-1) : chat.turns).filter(x => x.status === 'success').map(x => ({...x,output:continuation(x.output,x.modelId === item.id && item.preserve_reasoning)}));
@@ -192,6 +202,7 @@ async function generate(retry = false) {
     pending = []; $('prompt').value = ''; status(context.truncated ? 'truncated' : 'sending'); render();
     const response = await request('respond',body,controller.signal);
     if (!response.body || !response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('request');
+    turn.quotaLimited = response.headers.get('x-chat-quota-limited') === 'true';
     const result = await readResponses(response.body, value => {
       if (guard !== epoch || run !== active) return;
       turn.text = value.text; turn.output = value.output; turn.usage = value.usage;
@@ -205,7 +216,10 @@ async function generate(retry = false) {
     if (guard === epoch) Object.assign(turn,{...result,status:result.status});
   } catch (error) {
     if (turn) turn.status = run.stopped ? 'cancelled' : controller.signal.aborted ? 'interrupted' : 'failure';
-    if (guard === epoch) status(storageError ? 'storage' : ['context','request_too_large','file','pdf','busy','storage'].includes(error.message) ? error.message : run.stopped ? 'cancelled' : 'request');
+    failureKey = storageError ? 'storage' : ['context','request_too_large','file','pdf','busy','storage','quota','blacklisted'].includes(error.message) ? error.message : run.stopped ? 'cancelled' : 'request';
+    const reset = quotaReset(error.quota);
+    if (failureKey === 'quota' && reset) { failureKey = 'quotaReset'; failureVars = {reset}; }
+    if (guard === epoch) status(failureKey, failureVars);
   } finally {
     await saveQueue;
     if (persisted) {
@@ -213,7 +227,13 @@ async function generate(retry = false) {
       try { await persist(chat,guard); } catch { storageError = true; }
     }
     generations.delete(run); finish();
-    if (guard === epoch && active === run) { active = null; if (persisted && !storageError) status(turn.status); render(); }
+    if (guard === epoch && active === run) {
+      active = null;
+      if (storageError) status('storage');
+      else if (failureKey) status(failureKey, failureVars);
+      else if (persisted) status(turn.quotaLimited && turn.status === 'incomplete' ? 'quotaTruncated' : turn.quotaLimited && turn.status === 'success' ? 'quotaLimited' : turn.status);
+      render();
+    }
   }
 }
 async function auth(next, reload = false) {
@@ -256,7 +276,7 @@ async function auth(next, reload = false) {
     configureModel(); gateKey = models.length ? '' : 'noModels'; status('ready');
     current = chats[0] || null; if (!current) newChat();
     $('workspace').hidden = false; render();
-  } catch (error) { if (guard === epoch) { catalogController = null; gateKey = ['storage','profile','login'].includes(error.message) ? error.message : 'request'; render(); } }
+  } catch (error) { if (guard === epoch) { catalogController = null; gateKey = ['storage','profile','login','blacklisted','quota'].includes(error.message) ? error.message : 'request'; render(); } }
 }
 $('composer').onsubmit = event => { event.preventDefault(); void generate(); };
 $('prompt').onkeydown = event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void generate(); } };
