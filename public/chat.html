@@ -78,8 +78,15 @@
     <header class="chat-main-header">
       <div class="chat-model-picker">
         <span class="chat-model-dot" aria-hidden="true"></span>
-        <label for="model" data-i18n="chat.model">模型</label>
-        <select id="model"></select>
+        <label for="model" id="modelLabel" data-i18n="chat.model">模型</label>
+        <div class="chat-model-select">
+          <select id="model" class="chat-select-native" tabindex="-1" aria-hidden="true"></select>
+          <button id="modelTrigger" class="chat-model-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="modelLabel">
+            <span id="modelTriggerText"></span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="modelMenu" class="chat-model-menu" role="listbox" aria-labelledby="modelLabel" hidden></div>
+        </div>
       </div>
       <div class="chat-main-actions">
         <button id="openCustomModel" class="chat-quiet-button" type="button" data-i18n="chat.customOpen">配置社团代理模型</button>

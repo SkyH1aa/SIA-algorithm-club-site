@@ -184,6 +184,9 @@ function controls() {
   const busy = !!active || attaching || customBusy;
   for (const id of ['send','retry','new','rename','delete','clear','export','files','model','effort']) $(id).disabled = busy || !session || !models.length;
   for (const id of ['customSave','customDelete','customClearKey','customModelName','customModelKey','customBaseUrl','customApiKey']) $(id).disabled = busy || !session;
+  const trigger = $('modelTrigger');
+  // 原生 select 已隐藏，忙碌状态必须同样禁用可见的触发按钮。
+  if (trigger) trigger.disabled = busy || !session || !models.length;
   $('stop').disabled = !active;
   const spinner = $('statusSpinner');
   if (spinner) spinner.hidden = !busy;
@@ -378,6 +381,61 @@ function renderAttachments() {
   }
 }
 
+/* ---------- 模型选择器（自绘，避免原生弹层在暗色下变白底） ---------- */
+function setModelMenuOpen(open, focusActive = false) {
+  const menu = $('modelMenu'), trigger = $('modelTrigger');
+  if (!menu || !trigger) return;
+  menu.hidden = !open;
+  trigger.setAttribute('aria-expanded', String(open));
+  if (!open) return;
+  const active = menu.querySelector?.('.chat-model-option[aria-selected="true"]') || menu.querySelector?.('.chat-model-option');
+  for (const option of menu.querySelectorAll?.('.chat-model-option') || []) classOn(option, 'is-active', option === active);
+  if (focusActive) active?.focus?.();
+}
+function syncModelTrigger() {
+  const select = $('model'), trigger = $('modelTrigger'), text = $('modelTriggerText');
+  if (!select || !trigger) return;
+  const selected = select.options[select.selectedIndex];
+  const label = selected?.textContent || '';
+  if (text) text.textContent = label || t('noModels');
+  trigger.disabled = !label;
+  trigger.title = label;
+  const menu = $('modelMenu');
+  if (menu) {
+    menu.replaceChildren();
+    if (!select.options.length) {
+      const empty = document.createElement('p'); empty.className = 'chat-model-empty'; empty.textContent = t('noModels');
+      menu.append(empty);
+      return;
+    }
+    for (const option of select.options) {
+      const item = document.createElement('button');
+      item.type = 'button'; item.className = 'chat-model-option'; item.setAttribute('role', 'option');
+      if (item.dataset) item.dataset.value = option.value;
+      item.setAttribute('aria-selected', String(option.selected));
+      const span = document.createElement('span'); span.textContent = option.textContent;
+      item.append(span);
+      item.onclick = () => {
+        select.value = option.value;
+        setModelMenuOpen(false);
+        syncModelTrigger();
+        select.dispatchEvent(new Event('change'));
+        trigger.focus?.();
+      };
+      menu.append(item);
+    }
+  }
+}
+function moveModelMenuFocus(delta) {
+  const menu = $('modelMenu');
+  const items = [...(menu?.querySelectorAll?.('.chat-model-option') || [])];
+  if (!items.length) return;
+  const index = items.indexOf(document.activeElement);
+  const next = items[(index + delta + items.length) % items.length] || items[0];
+  for (const item of items) classOn(item, 'is-active', item === next);
+  next.focus?.();
+}
+
 function syncLangButton() {
   const lang = ClubI18n.getLang?.() || 'zh';
   for (const option of document.querySelectorAll?.('[data-lang-option]') || []) {
@@ -401,7 +459,7 @@ function syncGatePanel() {
 }
 
 function render() {
-  renderList(); renderMessages(); renderAttachments(); controls(); syncHeaderUi(); syncLangButton();
+  renderList(); renderMessages(); renderAttachments(); controls(); syncHeaderUi(); syncLangButton(); syncModelTrigger();
   const selected = model(), introduction = $('modelIntroduction'), introductionText = $('modelIntroductionText');
   if (introduction && introductionText) {
     introductionText.textContent = selected?.introduction || '';
@@ -698,7 +756,21 @@ $('retry').onclick = () => void generate(true);
 $('new').onclick = () => { newChat(); closeSidebarOnMobile(); };
 $('scrollBottom').onclick = () => { const box = $('messages'); box.scrollTo?.({top:box.scrollHeight, behavior:'smooth'}); if (!box.scrollTo) box.scrollTop = box.scrollHeight; };
 $('messages').addEventListener?.('scroll', updateScrollButton, {passive:true});
-$('model').onchange = () => { configureModel(); customForm(); customStatus(); };
+$('model').onchange = () => { syncModelTrigger(); configureModel(); customForm(); customStatus(); };
+$('modelTrigger').onclick = () => setModelMenuOpen($('modelMenu').hidden, true);
+$('modelTrigger').onkeydown = event => {
+  if (['ArrowDown','ArrowUp'].includes(event.key)) { event.preventDefault(); setModelMenuOpen(true, true); }
+};
+$('modelMenu').onkeydown = event => {
+  if (event.key === 'ArrowDown') { event.preventDefault(); moveModelMenuFocus(1); }
+  else if (event.key === 'ArrowUp') { event.preventDefault(); moveModelMenuFocus(-1); }
+  else if (event.key === 'Escape') { event.preventDefault(); setModelMenuOpen(false); $('modelTrigger').focus?.(); }
+  else if (event.key === 'Tab') setModelMenuOpen(false);
+};
+document.addEventListener?.('click', event => {
+  const wrap = document.querySelector('.chat-model-select');
+  if (wrap && !wrap.contains(event.target)) setModelMenuOpen(false);
+});
 $('files').onchange = async () => {
   const guard = epoch, selected = [...$('files').files], item = model(); $('files').value = '';
   if (!item || active || attaching) return;
@@ -771,6 +843,7 @@ $('customClearKey').onclick = () => { const id = $('customModelId').value; if (i
 
 document.addEventListener?.('keydown', event => {
   if (event.key !== 'Escape') return;
+  if (!($('modelMenu')?.hidden)) { setModelMenuOpen(false); $('modelTrigger')?.focus?.(); return; }
   if (!($('chatSettings')?.hidden)) { setSettingsOpen(false); return; }
   if (active) { active.stopped = true; active.controller.abort(); return; }
   if (globalThis.matchMedia?.('(max-width: 760px)').matches) setSidebarOpen(false);

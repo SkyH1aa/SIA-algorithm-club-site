@@ -80,6 +80,18 @@ html:has(body.chat-page) body { height: 100%; overflow: hidden; }
   cursor: pointer;
   transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s var(--chat-ease);
 }
+
+/* 原生下拉弹出层由浏览器绘制：select 背景透明时它会用白底，
+   但 option 仍继承页面浅色文字，于是出现白字压白底。这里逐个 option 指定配色。 */
+.chat-page select option,
+.chat-page select optgroup {
+  background: var(--chat-surface-2);
+  color: var(--chat-text);
+}
+.chat-page select option:checked {
+  background: var(--chat-accent-strong);
+  color: var(--chat-on-accent);
+}
 .chat-page button:active:not(:disabled) { transform: translateY(1px); }
 .chat-page button:disabled { opacity: .45; cursor: default; }
 .chat-page button:focus-visible,
@@ -508,11 +520,12 @@ html[data-theme="light"] .chat-theme-toggle .chat-icon-moon { display: block; }
   border-bottom: 1px solid var(--chat-line);
 }
 .chat-model-picker {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
-  padding: 4px 10px 4px 8px;
+  padding: 4px 8px 4px 8px;
   border: 1px solid var(--chat-line);
   border-radius: 999px;
   background: var(--chat-surface-2);
@@ -536,13 +549,81 @@ html[data-theme="light"] .chat-theme-toggle .chat-icon-moon { display: block; }
   padding: 3px 4px;
   font-size: 13.5px;
   font-weight: 650;
-  background: transparent;
+  /* 不能留 transparent：Chrome 会据此把原生弹出层铺成白底。 */
+  background: var(--chat-surface-2);
   border: 0;
   border-radius: 6px;
   color: var(--chat-text);
   cursor: pointer;
 }
 .chat-model-picker select:focus-visible { outline-offset: 4px; }
+
+/* 自绘模型选择器：原生 select 只作状态源，视觉层完全跟随主题。 */
+.chat-model-select { position: relative; min-width: 0; }
+.chat-model-select .chat-select-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  border: 0;
+}
+.chat-model-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(46vw, 320px);
+  padding: 3px 4px 3px 2px;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--chat-text);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+}
+.chat-model-trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-model-trigger svg { width: 15px; height: 15px; color: var(--chat-faint); transition: transform .18s var(--chat-ease); }
+.chat-model-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
+.chat-model-trigger:hover:not(:disabled) { color: var(--chat-accent); }
+.chat-model-trigger:disabled { opacity: .5; }
+
+.chat-model-menu {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 8px);
+  left: 0;
+  width: max(240px, 100%);
+  max-height: min(46dvh, 340px);
+  overflow-y: auto;
+  padding: 5px;
+  border: 1px solid var(--chat-line-strong);
+  border-radius: 12px;
+  background: var(--chat-surface);
+  box-shadow: var(--chat-shadow);
+  scrollbar-width: thin;
+  scrollbar-color: var(--chat-line-strong) transparent;
+}
+.chat-model-menu[hidden] { display: none; }
+.chat-model-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 13.5px;
+  color: var(--chat-text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+.chat-model-option span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-model-option:hover,
+.chat-model-option.is-active { background: var(--chat-surface-2); border-color: var(--chat-line); }
+.chat-model-option[aria-selected="true"] { color: var(--chat-accent); font-weight: 650; }
+.chat-model-option[aria-selected="true"]::after { content: "✓"; margin-left: auto; font-size: 12px; }
+.chat-model-empty { padding: 10px; color: var(--chat-faint); font-size: 12.5px; }
 .chat-main-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .chat-quiet-button {
   padding: 7px 11px;
