@@ -183,12 +183,14 @@ node tools/chat-mock-server.mjs
 
 浏览器打开 `http://localhost:4191/setup`，按 `docs/chat-validation/README.md` 的矩阵验证账号门禁、生成场景、账号隔离、主题和管理页操作。mock 不访问真实 auth、数据库或供应商，mock 成功不等于线上验收。
 
+mock 的 `/mock/chat` 实现 `custom_model_list`、`custom_model_save`、`custom_model_delete` 三个成员自助配置动作（只落内存、只校验固定社团代理 URL、只允许本人读写、用 `version` 做冲突检测），否则 Chat 页在读取自定义模型时直接进入「请求失败」，无法本地查看工作区。
+
 然后检查：
 
 1. `public/member-center.html` 登录后显示 Chat 入口，入口文案随中英文切换。
 2. `public/club-features.html` 显示 Chat 卡片，入口文案随中英文切换。
 3. 未登录访问 Chat 时显示登录/资料绑定要求；绑定资料后才允许使用 Chat。
-4. 暗色和亮色主题下卡片、文字和入口均可读。
+4. 暗色和亮色主题下卡片、文字和入口均可读。Chat 页顶栏自带的主题按钮调用 `ClubTheme.setMode(...)`，与全站偏好同步；语言按钮在中/英之间切换后，消息区动态生成的文案（角色、状态、按钮提示、会话列表时间与条数）必须一并刷新，不能只换静态节点。
 5. 管理员能进入 `public/chat-admin.html`，普通成员不能读取 provider/model/usage 管理数据。
 6. provider disabled、model disabled、缺少 secret、无效 CORS origin 和不兼容响应都显示可理解的失败状态。
 7. 开启真实 provider 前，先用最低成本模型和很小的输出上限做一次授权后的测试，再确认 usage 记录和 provider 账单。

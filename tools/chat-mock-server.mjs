@@ -23,7 +23,7 @@ const ACCOUNTS = {
 };
 const SCENARIOS = ['completed','incomplete','interrupted','failed','slow'];
 const PROXY_ACTIONS = ['admin_proxy_list','admin_proxy_save','admin_proxy_route_state','admin_proxy_key_create','admin_proxy_key_state'];
-const ACTIONS = ['catalog','respond','admin_get','admin_save_provider','admin_save_model','admin_usage','admin_test','quota','admin_user_directory','admin_quota_get','admin_quota_save','admin_set_blacklist','admin_blacklist_list',...PROXY_ACTIONS];
+const ACTIONS = ['catalog','respond','admin_get','admin_save_provider','admin_save_model','admin_usage','admin_test','quota','admin_user_directory','admin_quota_get','admin_quota_save','admin_set_blacklist','admin_blacklist_list','custom_model_list','custom_model_save','custom_model_delete',...PROXY_ACTIONS];
 const ACTION_ALIASES = new Map([['save_provider','admin_save_provider'],['save_model','admin_save_model'],['usage','admin_usage'],['test','admin_test']]);
 const PROVIDER_ID = '20000000-0000-4000-8000-000000000001';
 const MODEL_ID = '30000000-0000-4000-8000-000000000001';
@@ -244,8 +244,8 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
       proxyResponse(req,res,payload,route,key,meta);
     } catch (error) { meta.outcome = error instanceof MockError ? error.message : 'server'; throw error; }
   }
-  let globalQuota, userQuotas, blacklist, counters;
-  function resetQuotas() { globalQuota = {daily_limit:null,version:0}; userQuotas = new Map(); blacklist = new Map(); counters = new Map(); }
+  let globalQuota, userQuotas, blacklist, counters, customModels;
+  function resetQuotas() { globalQuota = {daily_limit:null,version:0}; userQuotas = new Map(); blacklist = new Map(); counters = new Map(); customModels = new Map(); }
   resetQuotas();
   function target(value, optional = true) {
     if (optional && value == null) return null;
@@ -378,6 +378,38 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
           result = snapshot(id); break;
         }
         case 'catalog': requireThat(!blacklist.has(account.id),'blacklisted',403); result = {models:database.models.filter(model => model.enabled && database.providers.some(provider => provider.id === model.provider_id && provider.enabled)).map(({provider_id,model_key,enabled,...model}) => model),bound:true,member_name:account.member_name,quota:snapshot(account.id)}; break;
+        case 'custom_model_list': {
+          keys(payload,['action']);
+          result = [...customModels.values()].filter(row => row.user_id === account.id).map(({user_id,...row}) => row);
+          break;
+        }
+        case 'custom_model_save': {
+          keys(payload,['action','id','display_name','model_key','base_url','expected_version']);
+          requireThat(uuid(payload.id));
+          requireThat(!Object.hasOwn(payload,'api_key'),'input');
+          requireThat(/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$/.test(String(payload.model_key ?? '').trim()),'input');
+          const baseUrl = text(payload.base_url,512,true);
+          requireThat(/^https:\/\/jgezpvmlnhycxslqbwcx\.supabase\.co\/functions\/v1\/chat-api-proxy\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/?$/i.test(baseUrl),'proxy_url');
+          const version = integer(payload.expected_version,0,Number.MAX_SAFE_INTEGER);
+          const existing = customModels.get(payload.id);
+          requireThat(!existing || existing.user_id === account.id,'input',403);
+          requireThat((existing?.version ?? 0) === version,'conflict',409);
+          const timestamp = now().toISOString();
+          const row = {id:payload.id,user_id:account.id,display_name:text(payload.display_name,120,true),model_key:payload.model_key.trim(),base_url:baseUrl.replace(/\/+$/,''),version:(existing?.version ?? 0)+1,created_at:existing?.created_at || timestamp,updated_at:timestamp};
+          customModels.set(row.id,row);
+          const {user_id,...visible} = row;
+          result = visible; break;
+        }
+        case 'custom_model_delete': {
+          keys(payload,['action','id','expected_version']);
+          requireThat(uuid(payload.id));
+          const version = integer(payload.expected_version,0,Number.MAX_SAFE_INTEGER);
+          const existing = customModels.get(payload.id);
+          if (!existing || existing.user_id !== account.id) { result = {code:'not_found'}; break; }
+          requireThat(existing.version === version,'conflict',409);
+          customModels.delete(payload.id);
+          result = {deleted:true,id:payload.id}; break;
+        }
         case 'admin_get': result = {providers:database.providers,models:database.models.map(model => ({...model,model_id:model.model_key}))}; break;
         case 'admin_save_provider': result = {provider:upsert(database.providers,providerConfig(payload))}; break;
         case 'admin_save_model': result = {model:upsert(database.models,modelConfig(payload,database.providers))}; break;
