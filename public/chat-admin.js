@@ -431,9 +431,9 @@ function renderProxyExample() {
 function renderProxy() {
   const previous = $('proxyKeyRoute').value;
   $('proxyKeyRoute').replaceChildren(new Option(t('proxySelectRoute'), ''));
-  for (const item of proxyRoutes) $('proxyKeyRoute').add(new Option(`${item.name}${item.enabled ? '' : ` · ${t('disabledBadge')}`}`, item.id));
+  for (const item of proxyRoutes.filter(item => !item.deleted_at)) $('proxyKeyRoute').add(new Option(`${item.name}${item.enabled ? '' : ` · ${t('disabledBadge')}`}`, item.id));
   if (proxyRoutes.some(item => item.id === previous)) $('proxyKeyRoute').value = previous;
-  $('proxyRoutesList').innerHTML = proxyRoutes.length ? table(['proxyName', 'baseUrl', 'secretName', 'proxyClientBase', 'enabled', 'proxyVersion', 'startedAt', 'proxyUpdated', 'proxyActions'], proxyRoutes.map(item => `<tr>${cells([item.name, item.base_url, item.secret_name, proxyBaseURL(item.id)])}<td>${badge(item.enabled)}</td>${cells([item.version, formatTime(item.created_at), formatTime(item.updated_at)])}<td><div class="chat-admin-actions">${proxyAction('data-proxy-copy-base', item.id, 'proxyCopyBase')}${proxyAction('data-proxy-edit', item.id, 'edit')}${proxyAction('data-proxy-route-state', item.id, item.enabled ? 'proxyDisable' : 'proxyEnable')}</div></td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t(proxyLoaded ? 'proxyNoRoutes' : 'proxyNotLoaded'))}</div>`;
+  $('proxyRoutesList').innerHTML = proxyRoutes.length ? table(['proxyName', 'baseUrl', 'secretName', 'proxyClientBase', 'enabled', 'proxyVersion', 'startedAt', 'proxyUpdated', 'proxyActions'], proxyRoutes.map(item => `<tr>${cells([item.name, item.base_url, item.secret_name, proxyBaseURL(item.id)])}<td>${item.deleted_at ? escapeHtml(t('proxyDeleted')) : badge(item.enabled)}</td>${cells([item.version, formatTime(item.created_at), formatTime(item.updated_at)])}<td><div class="chat-admin-actions">${proxyAction('data-proxy-copy-base', item.id, 'proxyCopyBase')}${item.deleted_at ? '' : proxyAction('data-proxy-edit', item.id, 'edit')}${item.deleted_at ? '' : proxyAction('data-proxy-route-state', item.id, item.enabled ? 'proxyDisable' : 'proxyEnable')}${item.deleted_at ? '' : proxyAction('data-proxy-route-delete', item.id, 'proxyDelete', true)}</div></td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t(proxyLoaded ? 'proxyNoRoutes' : 'proxyNotLoaded'))}</div>`;
   $('proxyKeysList').innerHTML = proxyKeys.length ? table(['proxyRoute', 'proxyKeyLabel', 'proxyKeyMask', 'status', 'proxyVersion', 'startedAt', 'proxyRevokedAt', 'proxyActions'], proxyKeys.map(item => {
     const route = proxyRoutes.find(route => route.id === item.route_id);
     return `<tr>${cells([route?.name || item.route_id, item.label, `${item.key_prefix}…${item.key_last4}`])}<td>${item.revoked_at ? escapeHtml(t('proxyRevoked')) : badge(item.enabled)}</td>${cells([item.version, formatTime(item.created_at), formatTime(item.revoked_at)])}<td>${item.revoked_at ? '' : `<div class="chat-admin-actions">${proxyAction('data-proxy-key-state', item.id, item.enabled ? 'proxyDisable' : 'proxyEnable')}${proxyAction('data-proxy-key-revoke', item.id, 'proxyRevoke', true)}</div>`}</td></tr>`;
@@ -467,9 +467,13 @@ async function proxyMutation(run, action, body) {
   if (payload.route) {
     proxyRoutes = proxyRoutes.filter(item => item.id !== payload.route.id).concat(payload.route);
     if (action === 'admin_proxy_save') clearProxyRoute();
-    else if ($('proxyRouteId').value === payload.route.id) fillProxyRoute(payload.route);
+    else if (action === 'admin_proxy_route_delete') {
+      if ($('proxyRouteId').value === payload.route.id) clearProxyRoute();
+      if ($('proxyKeyRoute').value === payload.route.id) $('proxyKeyRoute').value = '';
+    } else if ($('proxyRouteId').value === payload.route.id) fillProxyRoute(payload.route);
   }
   if (payload.key) proxyKeys = proxyKeys.filter(item => item.id !== payload.key.id).concat(safeProxyKey(payload.key));
+  if (action === 'admin_proxy_route_delete') await loadProxy(run);
   if (action === 'admin_proxy_key_create') {
     clearProxyPlaintext();
     if (typeof payload.api_key === 'string' && payload.api_key) {
@@ -478,7 +482,7 @@ async function proxyMutation(run, action, body) {
     }
     $('proxyKeyLabel').value = '';
   }
-  renderProxy(); setMessage('proxyMessage', 'proxySaved', 'success');
+  renderProxy(); setMessage('proxyMessage', action === 'admin_proxy_route_delete' ? 'proxyDeleteSuccess' : 'proxySaved', 'success');
 }
 async function copyProxyPlaintext() {
   if (!authorized || !proxyPlaintext) return;
@@ -524,12 +528,17 @@ $('proxyKeyForm').addEventListener('submit', event => {
 });
 $('proxyRoutesList').addEventListener('click', event => {
   if (active || !authorized) return;
-  const button = event.target.closest('[data-proxy-copy-base], [data-proxy-edit], [data-proxy-route-state]');
+  const button = event.target.closest('[data-proxy-copy-base], [data-proxy-edit], [data-proxy-route-state], [data-proxy-route-delete]');
   if (!button) return;
-  const item = proxyRoutes.find(item => item.id === (button.dataset.proxyCopyBase || button.dataset.proxyEdit || button.dataset.proxyRouteState));
+  const item = proxyRoutes.find(item => item.id === (button.dataset.proxyCopyBase || button.dataset.proxyEdit || button.dataset.proxyRouteState || button.dataset.proxyRouteDelete));
   if (!item) return;
   if (button.dataset.proxyCopyBase) { void copyProxyBase(item.id); return; }
   if (button.dataset.proxyEdit) { fillProxyRoute(item); $('proxyRouteName').focus(); return; }
+  if (button.dataset.proxyRouteDelete) {
+    if (!window.confirm(t('proxyDeleteConfirm', {name: item.name}))) return;
+    void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_route_delete', {id: item.id, expected_version: item.version}));
+    return;
+  }
   void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_route_state', {id: item.id, enabled: !item.enabled, expected_version: item.version}));
 });
 $('proxyKeysList').addEventListener('click', event => {

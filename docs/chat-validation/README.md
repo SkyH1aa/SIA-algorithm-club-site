@@ -114,10 +114,11 @@ python docs/chat-validation/fixtures/generate-upload-fixtures.py
 - `admin_proxy_list {}` → `{routes,keys}`。
 - `admin_proxy_save {id:null|UUID,name,base_url,secret_name,enabled,expected_version:0|n}` → `{route}`。
 - `admin_proxy_route_state {id,enabled,expected_version}` → `{route}`。
+- `admin_proxy_route_delete {id,expected_version}` → `{route}`；这是不可逆墓碑删除，会立即让 route UUID 失效并撤销旗下全部 key。
 - `admin_proxy_key_create {route_id,label}` → `{key:metadata,api_key:一次明文}`。
 - `admin_proxy_key_state {id,enabled,revoked:boolean,expected_version}` → `{key}`。
 
-route 只有 `id,name,base_url,secret_name,enabled,version,created_at,updated_at`；key metadata 只有 `id,route_id,label,key_prefix,key_last4,enabled,revoked_at,version,created_at`。32 随机字节生成 `cap_` + base64url，内部只存 SHA-256 hash；list/状态/日志没有 hash 或完整 key，丢失明文只能撤销重建。撤销不可恢复；陈旧 expected_version 返回 409。
+route 包括 `id,name,base_url,secret_name,enabled,deleted_at,version,created_at,updated_at`；key metadata 只有 `id,route_id,label,key_prefix,key_last4,enabled,revoked_at,version,created_at`。32 随机字节生成 `cap_` + base64url，内部只存 SHA-256 hash；list/状态/日志没有 hash 或完整 key，丢失明文只能撤销重建。route 墓碑删除和 key 撤销均不可恢复；陈旧 expected_version 返回 409。
 
 GUI 可用 admin 新建 route（合成 `https://mock-provider.example.com/v1`、`CHAT_KEY_MOCK_PROXY` 引用名），创建 key，查看一次明文提示并确认关闭后列表不可取回；复制 base URL 不应包含任何 key。打开不同主题和语言确认状态、按钮、冲突提示可读。创建/保存/检查 Secret 不能触发真实收费测试。mock 不代表 Secret 实际存在，不能代替生产 Secret/DNS/SQL 验收。
 

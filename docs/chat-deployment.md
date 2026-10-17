@@ -299,10 +299,11 @@ API action 契约：`quota {}` 仅查询本人；`admin_user_directory {}` 返�
 | `admin_proxy_list` | `{}` | `{routes,keys}` |
 | `admin_proxy_save` | `{id:null或UUID,name,base_url,secret_name,enabled,expected_version:0或n}` | `{route}` |
 | `admin_proxy_route_state` | `{id,enabled,expected_version}` | `{route}` |
+| `admin_proxy_route_delete` | `{id,expected_version}` | `{route}`；不可逆墓碑删除，同时永久撤销该路由下的访问密钥 |
 | `admin_proxy_key_create` | `{route_id,label}` | `{key:metadata,api_key:一次明文}` |
 | `admin_proxy_key_state` | `{id,enabled,revoked:boolean,expected_version}` | `{key}` |
 
-route 字段仅为 `id,name,base_url,secret_name,enabled,version,created_at,updated_at`。安全 key metadata 仅为 `id,route_id,label,key_prefix,key_last4,enabled,revoked_at,version,created_at`，不含 hash 或完整 key。新 route 的 `expected_version` 为 0；更新带读取时版本，陈旧版本 `409 conflict`，刷新核对后再操作。撤销不可恢复，需重新创建 key。
+route 字段包括 `id,name,base_url,secret_name,enabled,deleted_at,version,created_at,updated_at`。安全 key metadata 仅为 `id,route_id,label,key_prefix,key_last4,enabled,revoked_at,version,created_at`，不含 hash 或完整 key。新 route 的 `expected_version` 为 0；更新带读取时版本，陈旧版本 `409 conflict`，刷新核对后再操作。route 删除是不可逆墓碑操作：保留 UUID 和安全元数据以避免公开 URL 被复用，但立即停用路由、撤销全部旗下 key、清理活动 lease；删除后的 URL 和 key 永远不能再次准入，已在途的上游请求不会被强制中断。
 
 proxy key 格式为 `cap_` 加 **32 随机字节的 base64url**（43 字符，无 padding）。创建接口只返回一次完整明文；服务端只持久化哈希与安全 metadata，列表/状态保存不能取回明文或哈希。关闭一次明文提示前由接收者安全保存；丢失则撤销重建。不要把 key 放进仓库、截图、日志或公共示例。key_prefix/key_last4 只用于识别，不可用于认证。
 

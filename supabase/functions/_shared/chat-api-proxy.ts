@@ -3,7 +3,7 @@ export class ProxyError extends Error {
   constructor(public code: string, public status: number) { super(code); }
 }
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-export const ROUTE_FIELDS = 'id,name,base_url,secret_name,enabled,version,created_at,updated_at';
+export const ROUTE_FIELDS = 'id,name,base_url,secret_name,enabled,deleted_at,version,created_at,updated_at';
 export const KEY_FIELDS = 'id,route_id,label,key_prefix,key_last4,enabled,revoked_at,version,created_at';
 export async function hashKey(key: string): Promise<string> {
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key))), x => x.toString(16).padStart(2, '0')).join('');

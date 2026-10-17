@@ -766,10 +766,12 @@ create table if not exists public.chat_proxy_routes (
   base_url text not null check (char_length(base_url) between 10 and 2048),
   secret_name text not null check (secret_name ~ '^CHAT_KEY_[A-Z0-9_]{1,80}$'),
   enabled boolean not null default true,
+  deleted_at timestamptz,
   version bigint not null default 1 check (version > 0),
   created_by uuid references auth.users(id), updated_by uuid references auth.users(id),
   created_at timestamptz not null default now(), updated_at timestamptz not null default now()
 );
+alter table public.chat_proxy_routes add column if not exists deleted_at timestamptz;
 create table if not exists public.chat_proxy_keys (
   id uuid primary key default gen_random_uuid(),
   route_id uuid not null references public.chat_proxy_routes(id),
@@ -809,7 +811,7 @@ returns jsonb language plpgsql security definer set search_path = public as $$
 declare r public.chat_proxy_routes; k public.chat_proxy_keys; rid uuid; result jsonb;
 begin
   perform public.chat_quota_assert_admin(p_actor);
-  if p_action is null or p_action not in ('admin_proxy_list','admin_proxy_save','admin_proxy_route_state','admin_proxy_key_create','admin_proxy_key_state') then
+  if p_action is null or p_action not in ('admin_proxy_list','admin_proxy_save','admin_proxy_route_state','admin_proxy_route_delete','admin_proxy_key_create','admin_proxy_key_state') then
     raise exception 'invalid action';
   end if;
   if p_data is null or jsonb_typeof(p_data) <> 'object' then raise exception 'invalid data'; end if;
@@ -818,6 +820,7 @@ begin
     where (p_action = 'admin_proxy_list')
        or (p_action = 'admin_proxy_save' and key not in ('id','name','base_url','secret_name','enabled','expected_version'))
        or (p_action = 'admin_proxy_route_state' and key not in ('id','enabled','expected_version'))
+       or (p_action = 'admin_proxy_route_delete' and key not in ('id','expected_version'))
        or (p_action = 'admin_proxy_key_create' and key not in ('route_id','label','key_hash','key_prefix','key_last4'))
        or (p_action = 'admin_proxy_key_state' and key not in ('id','enabled','revoked','expected_version'))
   ) then raise exception 'invalid data'; end if;
@@ -840,6 +843,12 @@ begin
     if not (p_data ?& array['id','enabled','expected_version'])
       or jsonb_typeof(p_data->'id') <> 'string' or (p_data->>'id') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
       or jsonb_typeof(p_data->'enabled') <> 'boolean'
+      or jsonb_typeof(p_data->'expected_version') <> 'number'
+      or (p_data->>'expected_version') !~ '^[1-9][0-9]*$'
+      or (p_data->>'expected_version')::numeric > 9007199254740991 then raise exception 'invalid data'; end if;
+  elsif p_action = 'admin_proxy_route_delete' then
+    if not (p_data ?& array['id','expected_version'])
+      or jsonb_typeof(p_data->'id') <> 'string' or (p_data->>'id') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
       or jsonb_typeof(p_data->'expected_version') <> 'number'
       or (p_data->>'expected_version') !~ '^[1-9][0-9]*$'
       or (p_data->>'expected_version')::numeric > 9007199254740991 then raise exception 'invalid data'; end if;
@@ -868,14 +877,22 @@ begin
       values(p_data->>'name',p_data->>'base_url',p_data->>'secret_name',(p_data->>'enabled')::boolean,p_actor,p_actor) returning * into r;
     return jsonb_build_object('route',to_jsonb(r)-'created_by'-'updated_by');
   end if;
-  if p_action in ('admin_proxy_save','admin_proxy_route_state') then rid := (p_data->>'id')::uuid;
+  if p_action in ('admin_proxy_save','admin_proxy_route_state','admin_proxy_route_delete') then rid := (p_data->>'id')::uuid;
   elsif p_action = 'admin_proxy_key_create' then rid := (p_data->>'route_id')::uuid;
   elsif p_action = 'admin_proxy_key_state' then select route_id into rid from public.chat_proxy_keys where id = (p_data->>'id')::uuid;
   else raise exception 'invalid action'; end if;
   select * into r from public.chat_proxy_routes where id = rid for update;
   if not found then return '{"code":"not_found"}'; end if;
-  if p_action in ('admin_proxy_save','admin_proxy_route_state') then
+  if p_action = 'admin_proxy_key_create' and r.deleted_at is not null then return '{"code":"deleted"}'; end if;
+  if p_action in ('admin_proxy_save','admin_proxy_route_state','admin_proxy_route_delete') then
+    if r.deleted_at is not null then return '{"code":"deleted"}'; end if;
     if r.version <> (p_data->>'expected_version')::bigint then return '{"code":"conflict"}'; end if;
+    if p_action = 'admin_proxy_route_delete' then
+      delete from public.chat_proxy_leases where route_id = rid;
+      update public.chat_proxy_keys set enabled=false, revoked_at=coalesce(revoked_at,now()), version=version+1, updated_at=now(), updated_by=p_actor where route_id=rid and revoked_at is null;
+      update public.chat_proxy_routes set enabled=false, deleted_at=now(), version=version+1, updated_at=now(), updated_by=p_actor where id=rid returning * into r;
+      return jsonb_build_object('route',to_jsonb(r)-'created_by'-'updated_by');
+    end if;
     update public.chat_proxy_routes set enabled=(p_data->>'enabled')::boolean,
       name=case when p_action='admin_proxy_save' then p_data->>'name' else name end,
       base_url=case when p_action='admin_proxy_save' then p_data->>'base_url' else base_url end,
@@ -905,7 +922,7 @@ begin
     or p_key_limit is null or p_route_limit is null or p_ttl_ms is null
     or p_key_limit not between 1 and 1000 or p_route_limit not between 1 and 10000 or p_ttl_ms not between 1000 and 150000 then raise exception 'invalid limits'; end if;
   select * into r from public.chat_proxy_routes where id=p_route_id for update;
-  if not found or not r.enabled then return '{"code":"invalid_key"}'; end if;
+  if not found or not r.enabled or r.deleted_at is not null then return '{"code":"invalid_key"}'; end if;
   select * into k from public.chat_proxy_keys where route_id=r.id and key_hash=p_key_hash for update;
   if not found or not k.enabled or k.revoked_at is not null then return '{"code":"invalid_key"}'; end if;
   delete from public.chat_proxy_leases where route_id=r.id and expires_at<=clock_timestamp();

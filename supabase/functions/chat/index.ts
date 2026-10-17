@@ -50,7 +50,7 @@ const ACTIONS = new Set([
   'admin_user_directory', 'admin_blacklist_list', 'admin_set_blacklist',
   'admin_model_access_get', 'admin_model_access_save',
   'custom_model_list', 'custom_model_save', 'custom_model_delete',
-  'admin_proxy_list', 'admin_proxy_save', 'admin_proxy_route_state', 'admin_proxy_key_create', 'admin_proxy_key_state'
+  'admin_proxy_list', 'admin_proxy_save', 'admin_proxy_route_state', 'admin_proxy_route_delete', 'admin_proxy_key_create', 'admin_proxy_key_state'
 ]);
 const encoder = new TextEncoder();
 
@@ -456,7 +456,7 @@ async function saveModel(payload: Json) {
     const existing = await restJson<Array<{ visibility?: string }>>(`chat_models?id=eq.${encodeURIComponent(id)}&select=visibility&limit=1`);
     const value = existing[0]?.visibility;
     if (value === 'all' || value === 'assigned') visibility = value;
-  } else {
+  } else if (payload.visibility !== undefined) {
     visibility = payload.visibility as 'all' | 'assigned';
   }
   const body = {
@@ -830,6 +830,9 @@ async function proxyAdmin(request: Request, action: string, payload: Json): Prom
     if (action === 'admin_proxy_key_create') {
       if (!isUuid(data.route_id)) throw new HttpError('input', 400);
       data.label = text(data.label, 120, true);
+    } else if (action === 'admin_proxy_route_delete') {
+      if (!isUuid(data.id)) throw new HttpError('input', 400);
+      data.expected_version = integer(data.expected_version, 1, Number.MAX_SAFE_INTEGER);
     } else {
       if (!(action === 'admin_proxy_save' && data.id === null) && !isUuid(data.id)) throw new HttpError('input', 400);
       data.expected_version = integer(data.expected_version, data.id === null ? 0 : 1, Number.MAX_SAFE_INTEGER);
@@ -866,6 +869,7 @@ async function main(request: Request, payload: Json): Promise<Response> {
     admin_proxy_list: [],
     admin_proxy_save: ['id', 'name', 'base_url', 'secret_name', 'enabled', 'expected_version'],
     admin_proxy_route_state: ['id', 'enabled', 'expected_version'],
+    admin_proxy_route_delete: ['id', 'expected_version'],
     admin_proxy_key_create: ['route_id', 'label'],
     admin_proxy_key_state: ['id', 'enabled', 'revoked', 'expected_version'],
     catalog: [], quota: [], admin_quota_get: ['user_id'],

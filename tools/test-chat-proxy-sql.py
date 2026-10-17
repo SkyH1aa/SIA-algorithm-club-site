@@ -100,10 +100,14 @@ def main():
             rpc('chat_proxy_release', req2)
             r = manage('admin_proxy_route_state', dict(id=str(rid), enabled=False, expected_version=1))['route']
             assert admit()[1]['code'] == 'invalid_key'
-            manage('admin_proxy_route_state', dict(id=str(rid), enabled=True, expected_version=r['version']))
-            k = manage('admin_proxy_key_state', dict(id=k['id'], enabled=False, revoked=True, expected_version=k['version']))['key']
+            deleted = manage('admin_proxy_route_delete', dict(id=str(rid), expected_version=r['version']))['route']
+            assert deleted['enabled'] is False and deleted['deleted_at'] is not None
             assert admit()[1]['code'] == 'invalid_key'
-            assert manage('admin_proxy_key_state', dict(id=k['id'], enabled=True, revoked=False, expected_version=k['version']))['code'] == 'revoked'
+            assert manage('admin_proxy_route_state', dict(id=str(rid), enabled=True, expected_version=deleted['version']))['code'] == 'deleted'
+            assert manage('admin_proxy_route_delete', dict(id=str(rid), expected_version=deleted['version']))['code'] == 'deleted'
+            deleted_key = manage('admin_proxy_list', {})['keys'][0]
+            assert deleted_key['revoked_at'] is not None and deleted_key['enabled'] is False
+            assert manage('admin_proxy_key_state', dict(id=deleted_key['id'], enabled=True, revoked=False, expected_version=deleted_key['version']))['code'] == 'revoked'
             # Check all public roles, not merely RLS flags.
             for role in ('anon', 'authenticated'):
                 assert not db.execute('select has_table_privilege(%s,%s,%s)', (role,'public.chat_proxy_keys','SELECT')).fetchone()[0]

@@ -223,15 +223,15 @@ assert.equal(run('proxyRouteInput().expected_version'), 0);
 reply('admin_proxy_route_state', {route: {...route, enabled: false, version: 3}});
 await run("proxyMutation(proxyRun,'admin_proxy_route_state',{id:routeFixture.id,enabled:false,expected_version:2})");
 assert.equal(run('proxyRoutes[0].enabled'), false);
-run('fillProxyRoute(proxyRoutes[0])');
-reply('admin_proxy_save', {error: 'conflict'}, 409);
-reply('admin_proxy_list', {routes: [{...route, version: 4, name: 'Server changed'}], keys: [key]});
-const writesBefore = calls.filter(item => item.action === 'admin_proxy_save').length;
-await run("proxyMutation(proxyRun,'admin_proxy_save',proxyRouteInput())");
-assert.equal(calls.filter(item => item.action === 'admin_proxy_save').length, writesBefore + 1);
-assert.equal(run('proxyEditingVersion'), 4);
-assert.equal(node('proxyRouteName').value, 'Server changed');
-assert.equal(run("messages.get('proxyMessage').key"), 'proxyConflict');
+  run('fillProxyRoute(proxyRoutes[0])');
+  reply('admin_proxy_save', {error: 'conflict'}, 409);
+  reply('admin_proxy_list', {routes: [{...route, version: 4, name: 'Server changed'}], keys: [key]});
+  const writesBefore = calls.filter(item => item.action === 'admin_proxy_save').length;
+  await run("proxyMutation(proxyRun,'admin_proxy_save',proxyRouteInput())");
+  assert.equal(calls.filter(item => item.action === 'admin_proxy_save').length, writesBefore + 1);
+  assert.equal(run('proxyEditingVersion'), 4);
+  assert.equal(node('proxyRouteName').value, 'Server changed');
+  assert.equal(run("messages.get('proxyMessage').key"), 'proxyConflict');
 console.log('PASS proxy safe metadata, escaped routes, base/secret validation, create/edit/state and conflict reload without retry');
 
 for (const [id, plaintext] of [[key.id, 'MOCK_ONE_TIME_1'], ['44444444-4444-4444-8444-444444444444', 'MOCK_ONE_TIME_2']]) {
