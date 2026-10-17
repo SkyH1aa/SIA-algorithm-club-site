@@ -1,7 +1,52 @@
 <!doctype html>
-<html lang="zh-CN" data-i18n-title-key="chat.title"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI 对话</title>
-<link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="chat.css"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="theme.js"></script><script src="i18n-dict.js?v=20261016"></script><script src="i18n.js"></script><script src="chat-i18n.js"></script><script src="vendor/chat/marked.js"></script><script src="vendor/chat/purify.js"></script><script src="service-prompts.js"></script><script src="service-gate.js"></script><script type="module" src="chat.js"></script></head>
-<body class="chat-page"><header class="chat-header"><a class="chat-back" href="member-center.html" data-i18n="chat.back">← 返回个人中心</a><h1 data-i18n="chat.title">AI 对话</h1><button id="language" type="button">EN / 中文</button></header>
-<p id="gate" role="status"></p><div id="workspace" class="chat-layout" hidden><aside class="chat-sidebar"><button id="new" data-i18n="chat.new">新对话</button><nav id="conversations" aria-label="Conversations" data-i18n-aria="chat.conversations"></nav><button id="clear" data-i18n="chat.clear">清除此账号本地记录</button></aside>
-<main class="chat-main"><div class="chat-settings"><label><span data-i18n="chat.model">模型</span><select id="model"></select></label><button id="openCustomModel" type="button" class="chat-custom-open" data-i18n="chat.customOpen">配置社团代理模型</button><div id="modelIntroduction" class="chat-model-introduction" hidden><strong data-i18n="chat.modelIntroduction">模型介绍</strong><p id="modelIntroductionText"></p></div><label><span data-i18n="chat.effort">思考强度</span><select id="effort"></select></label><span class="chat-budget" data-i18n="chat.outputManaged">最大输出 token 由管理员配置</span></div><details id="customModelPanel" class="chat-custom-model"><summary data-i18n="chat.customTitle">添加社团代理模型</summary><p data-i18n="chat.customPrivacy">配置随账户保存；API Key 只保存在当前页面内存，不上传服务器，刷新或换设备后需重新输入。</p><form id="customModelForm"><input id="customModelId" type="hidden"><label><span data-i18n="chat.customName">显示名称</span><input id="customModelName" maxlength="120" required></label><label><span data-i18n="chat.customModelId">模型 ID</span><input id="customModelKey" maxlength="160" required></label><label><span data-i18n="chat.customBaseUrl">社团代理 Base URL</span><input id="customBaseUrl" type="url" maxlength="512" required placeholder="https://jgezpvmlnhycxslqbwcx.supabase.co/functions/v1/chat-api-proxy/…"><small data-i18n="chat.customBaseHelp">只允许社团固定代理地址。</small></label><label><span data-i18n="chat.customApiKey">代理 API Key</span><input id="customApiKey" type="password" autocomplete="off" maxlength="256"><small data-i18n="chat.customKeyHelp">只保存在当前页面内存。</small></label><div class="chat-tools"><button id="customSave" type="submit" data-i18n="chat.customSave">保存配置</button><button id="customDelete" type="button" data-i18n="chat.customDelete">删除配置</button><button id="customClearKey" type="button" data-i18n="chat.customClearKey">清除当前 Key</button></div></form><p id="customModelStatus" role="status"></p></details><div class="chat-tools"><button id="rename" data-i18n="chat.rename">重命名</button><button id="delete" data-i18n="chat.delete">删除对话</button><button id="export" data-i18n="chat.export">导出对话</button><button id="retry" data-i18n="chat.retry">重试 / 重新生成</button></div>
-<div id="messages" class="chat-message-frame" aria-live="off"></div><form id="composer"><textarea id="prompt" rows="3" maxlength="500000" data-i18n-placeholder="chat.placeholder" aria-label="Message" data-i18n-aria="chat.message"></textarea><div id="attachments"></div><div class="chat-tools"><label class="chat-file"><span data-i18n="chat.attach">添加附件</span><input id="files" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.txt,.md,.csv,.js,.ts,.jsx,.tsx,.py,.json,.html,.css,.c,.cpp,.h,.java,.rs,.go,.sql,.yaml,.yml,.xml,.sh,.log"></label><button id="send" type="submit" data-i18n="chat.send">发送</button><button id="stop" type="button" data-i18n="chat.stop" disabled>停止</button></div></form><p id="status" role="status"></p><p class="chat-note" data-i18n="chat.estimate"></p><details><summary data-i18n="chat.privacyTitle">本地存储、隐私与附件</summary><p data-i18n="chat.privacy"></p><p data-i18n="chat.limits"></p></details></main></div></body></html>
+<html lang="zh-CN" data-i18n-title-key="chat.title">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI 对话</title>
+<link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="chat.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="theme.js"></script><script src="i18n-dict.js?v=20261016"></script><script src="i18n.js"></script><script src="chat-i18n.js"></script><script src="vendor/chat/marked.js"></script><script src="vendor/chat/purify.js"></script><script src="service-prompts.js"></script><script src="service-gate.js"></script><script type="module" src="chat.js"></script>
+</head>
+<body class="chat-page">
+<header class="chat-header">
+  <button id="sidebarToggle" class="chat-icon-button chat-sidebar-toggle" type="button" aria-expanded="true" aria-controls="chatSidebar" data-i18n-aria="chat.sidebarToggle" title="会话列表">☰</button>
+  <a class="chat-back" href="member-center.html" data-i18n="chat.back">← 返回个人中心</a>
+  <div class="chat-brand"><span class="chat-brand-mark">✦</span><h1 data-i18n="chat.title">AI 对话</h1></div>
+  <span id="headerChatTitle" class="chat-header-chat-title"></span>
+  <button id="language" type="button">EN / 中文</button>
+</header>
+<p id="gate" role="status"></p>
+<div id="workspace" class="chat-layout" hidden>
+  <div id="sidebarBackdrop" class="chat-sidebar-backdrop" hidden></div>
+  <aside id="chatSidebar" class="chat-sidebar" aria-label="Conversations" data-i18n-aria="chat.conversations">
+    <div class="chat-sidebar-top"><button id="new" class="chat-new-button" type="button"><span aria-hidden="true">＋</span><span data-i18n="chat.new">新对话</span></button><button id="sidebarClose" class="chat-icon-button chat-sidebar-close" type="button" aria-label="关闭会话列表" data-i18n-aria="chat.sidebarClose">×</button></div>
+    <nav id="conversations"></nav>
+    <button id="clear" class="chat-sidebar-secondary" type="button" data-i18n="chat.clear">清除此账号本地记录</button>
+  </aside>
+  <main class="chat-main">
+    <header class="chat-main-header">
+      <div class="chat-model-picker"><label for="model" data-i18n="chat.model">模型</label><select id="model"></select></div>
+      <div class="chat-main-actions"><button id="openCustomModel" class="chat-quiet-button" type="button" data-i18n="chat.customOpen">配置社团代理模型</button><button id="settingsToggle" class="chat-icon-button" type="button" aria-expanded="false" aria-controls="chatSettings" data-i18n-aria="chat.settings">⚙</button></div>
+    </header>
+    <section id="chatSettings" class="chat-settings-panel" hidden>
+      <div class="chat-settings-grid">
+        <label><span data-i18n="chat.effort">思考强度</span><select id="effort"></select></label>
+        <span class="chat-budget" data-i18n="chat.outputManaged">最大输出 token 由管理员配置</span>
+      </div>
+      <div id="modelIntroduction" class="chat-model-introduction" hidden><strong data-i18n="chat.modelIntroduction">模型介绍</strong><p id="modelIntroductionText"></p></div>
+      <details id="customModelPanel" class="chat-custom-model"><summary data-i18n="chat.customTitle">添加社团代理模型</summary><p data-i18n="chat.customPrivacy">配置随账户保存；API Key 只保存在当前页面内存，不上传服务器，刷新或换设备后需重新输入。</p><form id="customModelForm"><input id="customModelId" type="hidden"><label><span data-i18n="chat.customName">显示名称</span><input id="customModelName" maxlength="120" required></label><label><span data-i18n="chat.customModelId">模型 ID</span><input id="customModelKey" maxlength="160" required></label><label><span data-i18n="chat.customBaseUrl">社团代理 Base URL</span><input id="customBaseUrl" type="url" maxlength="512" required placeholder="https://jgezpvmlnhycxslqbwcx.supabase.co/functions/v1/chat-api-proxy/…"><small data-i18n="chat.customBaseHelp">只允许社团固定代理地址。</small></label><label><span data-i18n="chat.customApiKey">代理 API Key</span><input id="customApiKey" type="password" autocomplete="off" maxlength="256"><small data-i18n="chat.customKeyHelp">只保存在当前页面内存。</small></label><div class="chat-tools"><button id="customSave" type="submit" data-i18n="chat.customSave">保存配置</button><button id="customDelete" type="button" data-i18n="chat.customDelete">删除配置</button><button id="customClearKey" type="button" data-i18n="chat.customClearKey">清除当前 Key</button></div></form><p id="customModelStatus" role="status"></p></details>
+      <div class="chat-tools chat-conversation-actions"><button id="rename" type="button" data-i18n="chat.rename">重命名</button><button id="delete" type="button" data-i18n="chat.delete">删除对话</button><button id="export" type="button" data-i18n="chat.export">导出对话</button><button id="retry" type="button" data-i18n="chat.retry">重试 / 重新生成</button></div>
+    </section>
+    <div id="messages" class="chat-message-frame" aria-live="off"></div>
+    <section class="chat-composer-shell">
+      <form id="composer">
+        <textarea id="prompt" rows="3" maxlength="500000" data-i18n-placeholder="chat.placeholder" aria-label="Message" data-i18n-aria="chat.message"></textarea>
+        <div id="attachments"></div>
+        <div class="chat-composer-toolbar"><label class="chat-file chat-attach-button"><span aria-hidden="true">＋</span><span data-i18n="chat.attach">添加附件</span><input id="files" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.txt,.md,.csv,.js,.ts,.jsx,.tsx,.py,.json,.html,.css,.c,.cpp,.h,.java,.rs,.go,.sql,.yaml,.yml,.xml,.sh,.log"></label><span class="chat-composer-hint" data-i18n="chat.composerHint">Enter 发送 · Shift+Enter 换行</span><button id="send" class="chat-send-button" type="submit" data-i18n="chat.send">发送</button><button id="stop" class="chat-stop-button" type="button" data-i18n="chat.stop" disabled>停止</button></div>
+      </form>
+      <div class="chat-status-row"><p id="status" role="status"></p><p class="chat-note" data-i18n="chat.estimate"></p></div>
+      <details class="chat-privacy"><summary data-i18n="chat.privacyTitle">本地存储、隐私与附件</summary><p data-i18n="chat.privacy"></p><p data-i18n="chat.limits"></p></details>
+    </section>
+  </main>
+</div>
+</body>
+</html>

@@ -15,6 +15,28 @@ const CUSTOM_PROXY_PATH = /^\/functions\/v1\/chat-api-proxy\/[0-9a-f]{8}-[0-9a-f
 const CUSTOM_METADATA = Object.freeze({context_window:128000,max_output_tokens:8192,default_max_output_tokens:8192,reasoning_efforts:[],default_reasoning_effort:null,supports_images:true,supports_pdf:false,preserve_reasoning:false});
 const generations = new Set();
 const renderer = new marked.Renderer();
+function setSidebarOpen(open) {
+  const layout = $('workspace'), toggle = $('sidebarToggle'), sidebar = $('chatSidebar'), backdrop = $('sidebarBackdrop');
+  if (!layout || !toggle || !sidebar) return;
+  layout.classList.toggle('sidebar-open', open);
+  toggle.setAttribute('aria-expanded', String(open));
+  sidebar.setAttribute('aria-hidden', String(!open));
+  if (backdrop) backdrop.hidden = !open;
+}
+function closeSidebarOnMobile() {
+  if (globalThis.matchMedia?.('(max-width: 760px)').matches) setSidebarOpen(false);
+}
+function syncHeaderUi() {
+  const title = $('headerChatTitle');
+  if (title) title.textContent = current?.title || t('new');
+}
+function toggleSettings() {
+  const panel = $('chatSettings'), button = $('settingsToggle');
+  if (!panel || !button) return;
+  const open = panel.hidden;
+  panel.hidden = !open;
+  button.setAttribute('aria-expanded', String(open));
+}
 function customUrl(value) {
   try {
     const url = new globalThis.URL(String(value).trim());
@@ -111,7 +133,7 @@ function renderMessages() {
 function renderList() {
   $('conversations').replaceChildren();
   for (const chat of chats) {
-    const node = button('new', () => { if (!active && !attaching) { current = chat; pending = []; $('prompt').value = ''; render(); } });
+    const node = button('new', () => { if (!active && !attaching) { current = chat; pending = []; $('prompt').value = ''; closeSidebarOnMobile(); render(); } });
     node.textContent = chat.title || t('new'); node.setAttribute('aria-current', String(chat.id === current?.id));
     $('conversations').append(node);
   }
@@ -127,7 +149,7 @@ function renderAttachments() {
   }
 }
 function render() {
-  renderList(); renderMessages(); renderAttachments(); controls();
+  renderList(); renderMessages(); renderAttachments(); controls(); syncHeaderUi();
   const selected = model(), introduction = $('modelIntroduction'), introductionText = $('modelIntroductionText');
   if (introduction && introductionText) {
     introductionText.textContent = selected?.introduction || '';
@@ -382,10 +404,14 @@ async function auth(next, reload = false) {
   } catch (error) { if (guard === epoch) { catalogController = null; gateKey = ['storage','profile','login','blacklisted','quota'].includes(error.message) ? error.message : 'request'; render(); } }
 }
 $('composer').onsubmit = event => { event.preventDefault(); void generate(); };
+$('sidebarToggle').onclick = () => setSidebarOpen(!$('workspace').classList.contains('sidebar-open'));
+$('sidebarClose').onclick = () => setSidebarOpen(false);
+$('sidebarBackdrop').onclick = () => setSidebarOpen(false);
+$('settingsToggle').onclick = toggleSettings;
 $('prompt').onkeydown = event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void generate(); } };
 $('stop').onclick = () => { if (active) { active.stopped = true; active.controller.abort(); } };
 $('retry').onclick = () => void generate(true);
-$('new').onclick = newChat;
+$('new').onclick = () => { newChat(); closeSidebarOnMobile(); };
 $('model').onchange = () => { configureModel(); customForm(); customStatus(); };
 $('files').onchange = async () => {
   const guard = epoch, selected = [...$('files').files], item = model(); $('files').value = '';
@@ -448,7 +474,7 @@ $('export').onclick = async () => {
 };
 $('language').onclick = () => ClubI18n.setLang(ClubI18n.getLang() === 'zh' ? 'en' : 'zh');
 $('customModelForm').onsubmit = saveCustomModel;
-$('openCustomModel').onclick = () => { const panel = $('customModelPanel'); panel.open = true; panel.scrollIntoView({behavior:'smooth',block:'nearest'}); $('customModelName').focus(); };
+$('openCustomModel').onclick = () => { $('chatSettings').hidden = false; $('settingsToggle').setAttribute('aria-expanded', 'true'); const panel = $('customModelPanel'); panel.open = true; panel.scrollIntoView({behavior:'smooth',block:'nearest'}); $('customModelName').focus(); };
 $('customDelete').onclick = () => void deleteCustomModel();
 $('customClearKey').onclick = () => { const id = $('customModelId').value; if (id) customKeys.delete(id); $('customApiKey').value = ''; customStatus('customKeyCleared'); };
 
