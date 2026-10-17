@@ -721,13 +721,22 @@ function setEffortMenuOpen(open) {
   const active = menu.querySelector?.('.chat-model-option[aria-selected="true"]') || menu.querySelector?.('.chat-model-option');
   for (const option of menu.querySelectorAll?.('.chat-model-option') || []) classOn(option, 'is-active', option === active);
 }
-/* 思考强度取值可能是 low/medium/high，也可能是供应商自定义字符串；
-   有对应译文就用译文，没有就原样显示。 */
+/* 思考强度取值可能是 none/low/medium/high/xhigh/max，也可能是供应商自定义字符串；
+   有对应译文就用译文，没有就原样显示。匹配不区分大小写与连字符。 */
+const EFFORT_KEYS = Object.freeze({
+  none:'off', minimal:'minimal', low:'low', medium:'medium', high:'high',
+  xhigh:'xhigh', 'x-high':'xhigh', max:'max', maximum:'max'
+});
+function effortKey(value) {
+  const normalized = String(value || '').trim().toLowerCase().replace(/[_\s]+/g, '-');
+  return EFFORT_KEYS[normalized] || null;
+}
 function effortLabel(value) {
   if (!value) return t('default');
-  const key = `effort_${value}`;
-  const translated = t(key);
-  return translated === `chat.${key}` ? value : translated;
+  const key = effortKey(value);
+  if (!key) return value;
+  const translated = t(`effort_${key}`);
+  return translated === `chat.effort_${key}` ? value : translated;
 }
 function syncEffortPicker() {
   const select = $('effort'), picker = $('effortPicker'), text = $('effortTriggerText'), menu = $('effortMenu');

@@ -66,6 +66,7 @@ console.log('Chat core: fragmented UTF-8/CRLF, multiline data, terminal states, 
 
 // Run the actual UI module in a small DOM/auth/storage harness to control async races.
 const chatSource = (await readFile(new URL('../public/chat.js', import.meta.url), 'utf8')).replace(/^import .*;\r?\n/gm, '').replaceAll('import.meta.url', JSON.stringify(new URL('../public/chat.js', import.meta.url).href));
+const DICT = new Set(['chat.effort_off','chat.effort_low','chat.effort_medium','chat.effort_high','chat.effort_xhigh','chat.effort_max','chat.effortShort','chat.default']);
 const deferred = () => { let resolve, reject; const promise = new Promise((yes,no) => { resolve=yes; reject=no; }); return {promise,resolve,reject}; };
 const account = (id, token = id) => ({user:{id},access_token:token});
 const catalogModel = {id:'test-model',display_name:'Test',introduction:'A model for testing.',context_window:10000,max_output_tokens:100,default_max_output_tokens:50,reasoning_efforts:[]};
@@ -75,7 +76,13 @@ async function settle() { for (let i=0;i<8;i++) await tick(); }
 function uiHarness() {
   const elements = new Map(), timers = [], requests = [], writes = [], records = new Map(), initial = deferred();
   let callback, saveHook;
-  function element() { return {value:'',options:[],files:[],disabled:false,hidden:false,textContent:'',replaceChildren(){this.options=[];this.value='';},append(){},prepend(){},before(){},setAttribute(){},querySelectorAll(){return [];},add(option){this.options.push(option);if(this.options.length===1)this.value=option.value;}}; }
+  function element() { return {
+    value:'',options:[],files:[],disabled:false,hidden:false,textContent:'',
+    // 真实 <select> 会按 value 反查当前项，桩必须同样支持，否则读不到默认强度。
+    get selectedIndex(){ const i=this.options.findIndex(o=>o.value===this.value); return i<0?0:i; },
+    replaceChildren(){this.options=[];this.value='';},append(){},prepend(){},before(){},setAttribute(){},querySelectorAll(){return [];},
+    add(option){this.options.push(option);if(this.options.length===1)this.value=option.value;}
+  }; }
   const store = {
     async list(userId) { return [...records.values()].filter(chat=>chat.userId===userId).map(chat=>structuredClone(chat)); },
     async save(chat) { const snapshot=structuredClone(chat); writes.push(snapshot); await saveHook?.(snapshot); records.set(`${snapshot.userId}/${snapshot.id}`,snapshot); },
@@ -86,7 +93,8 @@ function uiHarness() {
     ...core,chatStore:store,AbortController,TextEncoder,TextDecoder,Blob,structuredClone,crypto,URL,console,
     document:{getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},createElement:element},
     window:{supabase:{createClient:()=>({auth:{onAuthStateChange(fn){callback=fn;},getSession:()=>initial.promise}})},addEventListener(){}},
-    ClubI18n:{t:key=>key},marked:{Renderer:class {},parse:()=>''},DOMPurify:{sanitize:()=>({querySelectorAll:()=>[]})},
+    // 桩 t() 必须像真实 runtime 一样「缺键返回 key」；否则 effortLabel 无法区分已翻译与回退。
+    ClubI18n:{t:key=>DICT.has(key)?`[${key}]`:key,getLang:()=> 'zh'},marked:{Renderer:class {},parse:()=>''},DOMPurify:{sanitize:()=>({querySelectorAll:()=>[]})},
     Option:class {constructor(text,value){this.textContent=text;this.value=value;}},
     setTimeout(fn){timers.push(fn);},fetch(url,init){const result=deferred(), body=JSON.parse(init.body);requests.push({body,token:init.headers.Authorization,signal:init.signal,...result});if(body.action==='custom_model_list') result.resolve({ok:true,json:async()=>[]});return result.promise;}
   });
@@ -304,3 +312,21 @@ async function sendTurn(ui, text) {
   assert.equal(fits.input.length, 1, 'without a prefix behaviour is unchanged');
 }
 console.log('Chat UI: edit-and-resend truncation, per-turn retry, and summary-prefixed compaction passed.');
+
+/* 思考强度标签：none/xhigh/max 必须映射到词典，而不是回显英文原始值。 */
+{
+  const ui = uiHarness();
+  await ui.login('A');
+  ui.evaluate(`models[0].reasoning_efforts=['none','low','medium','high','xhigh','max']; models[0].default_reasoning_effort='xhigh'; configureModel();`);
+  const labels = ui.evaluate(`[...document.getElementById('effort').options].map(o => effortLabel(o.value))`);
+  // VM 沙箱里的数组来自另一个 realm，deepEqual 会因原型不同误判，逐项比较。
+  assert.equal(labels.join(','), ['[chat.effort_off]','[chat.effort_low]','[chat.effort_medium]','[chat.effort_high]','[chat.effort_xhigh]','[chat.effort_max]'].join(','),
+    'each known level must resolve to its dictionary entry');
+  assert.equal(ui.evaluate('effortLabel("XHigh")'), '[chat.effort_xhigh]', 'matching must be case-insensitive');
+  assert.equal(ui.evaluate('effortLabel("x-high")'), '[chat.effort_xhigh]', 'hyphenated vendor spelling maps to the same level');
+  assert.equal(ui.evaluate('effortLabel("ultra")'), 'ultra', 'unknown vendor values are shown verbatim');
+  assert.equal(ui.evaluate('effortLabel("")'), '[chat.default]', 'empty value falls back to Default');
+  assert.equal(ui.evaluate("document.getElementById('effortTriggerText').textContent"), '[chat.effortShort] [chat.effort_xhigh]');
+  assert.equal(ui.evaluate("document.getElementById('effortPicker').hidden"), false);
+}
+console.log('Chat UI: reasoning-effort labels map none/xhigh/max and vendor values passed.');
