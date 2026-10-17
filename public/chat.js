@@ -1,4 +1,4 @@
-import {MAX_FILE_BYTES, MAX_REQUEST_BYTES, MAX_ATTACHMENTS, buildContext, readResponses, continuation} from './chat-core.js';
+import {MAX_FILE_BYTES, MAX_REQUEST_BYTES, MAX_ATTACHMENTS, buildContext, estimateTokens, readResponses, continuation} from './chat-core.js';
 import {chatStore} from './chat-store.js';
 
 const URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
@@ -9,6 +9,8 @@ const t = (key, vars) => ClubI18n.t(`chat.${key}`, vars);
 let session = null, epoch = 0, models = [], customModels = [], chats = [], current = null, pending = [], active = null;
 let memberName = '';
 let customStatusKey = '', customStatusVars = {}, customBusy = false;
+/* 自动/手动压缩进行中：与生成同样属于忙碌状态，期间禁止发送与编辑。 */
+let compacting = false;
 let statusKey = 'loading', statusVars = {}, gateKey = 'loading', attaching = false, catalogController = null;
 const customKeys = new Map();
 const CUSTOM_PROXY_ORIGIN = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
@@ -17,8 +19,18 @@ const CUSTOM_METADATA = Object.freeze({context_window:128000,max_output_tokens:8
 const generations = new Set();
 const ICONS = {
   copy:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.1"/><path d="M5.5 15.5V6.5a2 2 0 0 1 2-2h8"/></svg>',
-  retry:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.6 5.9"/><path d="M20 4v7h-7"/></svg>'
+  retry:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.6 5.9"/><path d="M20 4v7h-7"/></svg>',
+  edit:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>',
+  compact:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16"/><path d="M12 3v4M12 17v4"/></svg>'
 };
+
+/* 上下文压缩：回复完成后达到该比例即自动摘要；保留最近若干轮原文。 */
+const CONTEXT_AUTO_RATIO = 0.85;
+const CONTEXT_KEEP_TURNS = 4;
+const CONTEXT_SUMMARY_MAX_INPUT = 120000;
+
+/* 编辑中的轮次 id；为 null 表示普通新消息。 */
+let editingTurnId = null;
 const timeFmt = new Intl.DateTimeFormat(undefined, {hour:'2-digit', minute:'2-digit'});
 const dateFmt = new Intl.DateTimeFormat(undefined, {month:'short', day:'numeric'});
 const renderer = new marked.Renderer();
@@ -169,7 +181,7 @@ function status(key, vars = {}) {
   const node = $('status');
   if (node) { node.textContent = t(key, vars); classOn(node, 'is-error', ERROR_STATUS.has(key)); }
   const spinner = $('statusSpinner');
-  if (spinner) spinner.hidden = !(active || attaching || customBusy);
+  if (spinner) spinner.hidden = !isBusy();
 }
 function quotaReset(quota) {
   const buckets = [{...quota?.global, limit:quota?.global?.daily_limit}, ...(quota?.periods || [])];
@@ -180,14 +192,21 @@ function button(key, handler) {
   const node = document.createElement('button'); node.type = 'button'; node.textContent = t(key);
   node.onclick = handler; return node;
 }
+/* 生成、附件解析、自定义模型保存、上下文压缩期间都算忙碌。 */
+function isBusy() { return !!active || attaching || customBusy || compacting; }
 function controls() {
-  const busy = !!active || attaching || customBusy;
+  const busy = isBusy();
   for (const id of ['send','retry','new','rename','delete','clear','export','files','model','effort']) $(id).disabled = busy || !session || !models.length;
   for (const id of ['customSave','customDelete','customClearKey','customModelName','customModelKey','customBaseUrl','customApiKey']) $(id).disabled = busy || !session;
   const trigger = $('modelTrigger');
   // 原生 select 已隐藏，忙碌状态必须同样禁用可见的触发按钮。
   if (trigger) trigger.disabled = busy || !session || !models.length;
+  const effortTrigger = $('effortTrigger');
+  if (effortTrigger) effortTrigger.disabled = busy || !session;
   $('stop').disabled = !active;
+  const prompt = $('prompt');
+  // 压缩期间锁定输入，明确告诉用户现在不能发送，而不是静默吞掉回车。
+  if (prompt) prompt.disabled = compacting;
   const spinner = $('statusSpinner');
   if (spinner) spinner.hidden = !busy;
 }
@@ -263,6 +282,7 @@ function turnNode(turn, index, total) {
   const userMeta = document.createElement('span'); userMeta.className = 'chat-message-meta'; userMeta.textContent = shortStamp(turn.createdAt);
   const userActions = document.createElement('div'); userActions.className = 'chat-message-actions';
   userActions.append(iconButton(ICONS.copy, 'copy', () => copyText(turn.prompt)));
+  userActions.append(iconButton(ICONS.edit, 'editMessage', () => startEdit(turn.id)));
   userHead.append(userLabel, userMeta, userActions);
   const bubble = document.createElement('div'); bubble.className = 'chat-bubble'; bubble.textContent = turn.prompt || '';
   userBody.append(userHead, bubble);
@@ -279,16 +299,32 @@ function turnNode(turn, index, total) {
   const pill = statusPill(turn);
   const aiActions = document.createElement('div'); aiActions.className = 'chat-message-actions';
   aiActions.append(iconButton(ICONS.copy, 'copy', () => copyText(turn.text)));
-  if (index === total - 1) aiActions.append(iconButton(ICONS.retry, 'regenerate', () => { if (!active) void generate(true); }));
+  // 每一轮都可重试；重试较早的轮次会重新生成该轮并丢弃其后的问答。
+  aiActions.append(iconButton(ICONS.retry, 'regenerate', () => { if (!active) void regenerate(turn.id); }));
   aiHead.append(aiLabel, aiMeta, pill, aiActions);
   const mark = document.createElement('div'); mark.className = 'chat-markdown';
   mark.append(markdown(turn.text));
   aiBody.append(aiHead, mark);
   assistant.append(aiAvatar, aiBody);
 
-  if (turn.status === 'running') classOn(assistant, 'is-streaming', true);
+  classOn(assistant, 'is-streaming', turn.status === 'running');
   wrap.append(user, assistant);
-  return {wrap, assistant, mark, pill, meta:aiMeta, text:turn.text || '', status:turn.status};
+  return {wrap, assistant, mark, pill, meta:aiMeta, text:turn.text || '', status:turn.status, actions:userActions, aiActions};
+}
+
+/* 压缩分隔条：插在消息流开头，说明「更早的内容已被摘要」，摘要本身可展开查看。 */
+function compactionNode(summary) {
+  const wrap = document.createElement('div'); wrap.className = 'chat-compaction';
+  const icon = document.createElement('span'); icon.className = 'chat-compaction-icon'; icon.innerHTML = ICONS.compact;
+  const body = document.createElement('span'); body.className = 'chat-compaction-body';
+  const text = document.createElement('div'); text.textContent = t('compactedNotice', {n:summary.turns || 0});
+  const details = document.createElement('details');
+  const toggle = document.createElement('summary'); toggle.textContent = t('compactedShow');
+  const detail = document.createElement('p'); detail.className = 'chat-compaction-detail'; detail.textContent = summary.text || '';
+  details.append(toggle, detail);
+  body.append(text, details);
+  wrap.append(icon, body);
+  return wrap;
 }
 
 function copyText(value) {
@@ -305,10 +341,11 @@ function renderMessages() {
     return;
   }
   // 语言也纳入 key：动态文案（角色、状态、复制）必须随语言重建，不能只换静态节点。
-  const key = `${ClubI18n.getLang?.() || 'zh'}|${current.turns.map(turn => turn.id).join('|')}`;
+  const key = `${ClubI18n.getLang?.() || 'zh'}|${current.turns.map(turn => turn.id).join('|')}|${current.summary?.createdAt || 0}`;
   if (key !== rendered.key) {
     box.replaceChildren();
     rendered = {key, nodes:[]};
+    if (current.summary?.text) box.append(compactionNode(current.summary));
     const total = current.turns.length;
     current.turns.forEach((turn, index) => {
       const node = turnNode(turn, index, total);
@@ -360,6 +397,7 @@ function renderList() {
     node.append(title, meta);
     node.onclick = () => {
       if (!active && !attaching) {
+        if (editingTurnId !== null) cancelEdit();
         current = chat; pending = []; $('prompt').value = '';
         resetPromptHeight(); closeSidebarOnMobile(); render();
       }
@@ -381,7 +419,183 @@ function renderAttachments() {
   }
 }
 
-/* ---------- 模型选择器（自绘，避免原生弹层在暗色下变白底） ---------- */
+/* ---------- 上下文用量与压缩 ---------- */
+/* 摘要以一条 input_text 前缀的形式进入请求；本地原文保持不变，可随时查看与导出。 */
+function summaryPrefix(chat) {
+  return chat?.summary?.text ? [{role:'system',content:[{type:'input_text',text:`Earlier in this conversation (compressed):\n${chat.summary.text}`}]}] : [];
+}
+function contextBudget(item, output) { return Math.max(1, item.context_window - output); }
+/* 真正会发给模型的轮次：摘要覆盖的前 N 轮已被替换，不再计入用量。 */
+function contextTurns(chat) {
+  if (!chat) return [];
+  const from = Math.min(chat.summary?.turns || 0, chat.turns.length);
+  return chat.turns.slice(from);
+}
+function contextUsed(chat, item, output) {
+  if (!chat) return 0;
+  const turns = contextTurns(chat).map(turn => ({...turn, output:turn.status === 'success' ? continuation(turn.output, false) : []}));
+  return estimateTokens(summaryPrefix(chat).concat(turns.flatMap(turn => turn.input.concat(turn.output))));
+}
+function renderContextMeter() {
+  const meter = $('contextMeter'), fill = $('contextFill'), textNode = $('contextText'), track = meter?.querySelector?.('.chat-context-track');
+  const item = model();
+  if (!meter || !item || !current) { setHidden(meter, true); return; }
+  const output = item.default_max_output_tokens;
+  const total = contextBudget(item, output);
+  const used = contextUsed(current, item, output);
+  // 百分比不封顶：真实超出时必须显示 138% 而不是误导性的 100%。
+  const ratio = total > 0 ? used / total : 0;
+  const width = Math.min(1, ratio);
+  setHidden(meter, false);
+  if (fill?.style) fill.style.width = `${(width * 100).toFixed(1)}%`;
+  classOn(fill, 'is-warn', ratio >= CONTEXT_AUTO_RATIO && ratio < 0.92);
+  classOn(fill, 'is-danger', ratio >= 0.92);
+  if (textNode) textNode.textContent = t('contextUsage', {used:formatTokens(used), total:formatTokens(total), percent:Math.round(ratio * 100)});
+  if (track) { track.setAttribute('aria-valuenow', String(Math.round(ratio * 100))); track.setAttribute('aria-valuetext', textNode.textContent); }
+  const button = $('compactNow');
+  if (button) {
+    button.textContent = t(current.summary?.text ? 'recompact' : 'compactNow');
+    button.disabled = !!active || !current.turns.length;
+    button.title = current.summary?.text ? t('recompactTitle') : t('compactTitle');
+  }
+}
+function formatTokens(value) {
+  if (value >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k`;
+  return String(value);
+}
+
+/* 取要压缩的轮次：只压缩「尚未被摘要覆盖」的部分，并保留最近 CONTEXT_KEEP_TURNS 轮原文，
+   且至少保留最后一轮，否则刚发的一轮会被立刻摘要、原文从对话里「消失」。 */
+function compactableTurns(chat) {
+  const remaining = contextTurns(chat);
+  const total = remaining.length;
+  if (total < 2) return [];
+  const keep = Math.max(1, Math.min(CONTEXT_KEEP_TURNS, total - 1));
+  return remaining.slice(0, total - keep);
+}
+function transcriptFor(turns, limit) {
+  const lines = [];
+  let bytes = 0;
+  for (const turn of turns) {
+    const answer = (turn.text || '').trim();
+    const block = `${t('summaryUserLabel')}: ${turn.prompt || ''}\n${t('summaryAssistantLabel')}: ${answer}\n`;
+    bytes += new TextEncoder().encode(block).length;
+    if (bytes > limit) break;
+    lines.push(block);
+  }
+  return lines.join('\n---\n');
+}
+/**
+ * 是否需要压缩。直接用会话现有的全部轮次统计用量——自动压缩发生在回复完成之后，
+ * 此时历史里已经包含这一轮，不需要再额外传「待发送轮次」。
+ */
+function needsCompaction(chat, item, output, force = false) {
+  if (!chat.turns.length || !compactableTurns(chat).length) return false;
+  if (force) return true;
+  // 从未成功生成过回复的失败轮次不应触发压缩。
+  if (!chat.turns.some(turn => turn.status === 'success')) return false;
+  return contextUsed(chat, item, output) >= contextBudget(item, output) * CONTEXT_AUTO_RATIO;
+}
+
+/**
+ * 生成摘要。摘要失败不应该挡住对话，因此除取消外的错误都静默降级，
+ * 由下一次回复完成后再尝试。
+ */
+async function ensureContextSummary(chat, item, output, guard, force = false) {
+  if (!needsCompaction(chat, item, output, force)) return summaryPrefix(chat);
+  // 已有摘要时只需要把「上次摘要 + 摘要之后未压缩的轮次」重新合并。
+  const candidates = compactableTurns(chat);
+  const compacted = candidates.slice(-24);
+  const transcript = transcriptFor(compacted, CONTEXT_SUMMARY_MAX_INPUT);
+  if (!transcript.trim()) return summaryPrefix(chat);
+
+  const instruction = [
+    chat.summary?.text ? `${t('summaryInstructionCarry')}\n\n${chat.summary.text}` : '',
+    transcript
+  ].filter(Boolean).join('\n\n');
+
+  const body = {
+    model_id: item.id,
+    input: [{role:'user',content:[{type:'input_text',text:`${t('summaryInstruction')}\n\n${instruction}`}]}],
+    max_output_tokens: Math.min(item.default_max_output_tokens, 2048)
+  };
+  status('compacting');
+  let text = '';
+  try {
+    const response = customModel(item)
+      ? await customRequest(item, {input:body.input, max_output_tokens:body.max_output_tokens}, undefined)
+      : {response:await request('respond', body, undefined), stream:true};
+    if (response.stream) {
+      if (!response.response.body || !response.response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('request');
+      const result = await readResponses(response.response.body, () => {});
+      text = (result.text || '').trim();
+    } else text = (response.result?.text || '').trim();
+  } catch (error) {
+    // 取消或切账号时不要重写状态；其余情况静默降级。
+    if (guard !== epoch) return summaryPrefix(chat);
+    if (error?.message === 'busy' || error?.status === 409) throw error;
+    return summaryPrefix(chat);
+  }
+  if (guard !== epoch) return summaryPrefix(chat);
+  if (!text) return summaryPrefix(chat);
+  // 记录累计被摘要覆盖的轮次数（多次压缩要累加），而不是这一次的轮数。
+  const covered = Math.min(chat.summary?.turns || 0, chat.turns.length) + compacted.length;
+  chat.summary = {text, createdAt:Date.now(), turns:covered, upToId:compacted.at(-1)?.id || ''};
+  await persist(chat, guard).catch(() => {});
+  return summaryPrefix(chat);
+}
+function turnById(id) { return current?.turns.find(turn => turn.id === id) || null; }
+
+function setEditBanner(open) {
+  const banner = $('editBanner'), label = $('sendLabel');
+  if (!banner) return;
+  banner.hidden = !open;
+  if (open) {
+    const turn = turnById(editingTurnId);
+    // 截断提示必须说清代价：编辑之后的所有问答都会被移除。
+    const removed = current ? current.turns.length - current.turns.findIndex(x => x.id === editingTurnId) - 1 : 0;
+    $('editBannerText').textContent = t(removed > 0 ? 'editBannerWithRemoval' : 'editBanner', {n:removed});
+    if (turn) $('editBannerText').title = turn.prompt || '';
+  }
+  if (label) label.textContent = t(open ? 'resend' : 'send');
+  classOn($('send'), 'is-editing', open);
+}
+
+function startEdit(id) {
+  if (isBusy()) return;
+  const turn = turnById(id);
+  if (!turn) return;
+  editingTurnId = id;
+  $('prompt').value = turn.prompt || '';
+  pending = (turn.attachments || []).map(file => ({...file}));
+  renderAttachments();
+  resetPromptHeight();
+  setEditBanner(true);
+  $('prompt').focus?.();
+  const box = $('messages'), node = rendered.nodes[current.turns.indexOf(turn)];
+  node?.wrap.scrollIntoView?.({behavior:'smooth', block:'center'});
+  void box;
+}
+
+function cancelEdit() {
+  if (editingTurnId === null) return;
+  editingTurnId = null;
+  $('prompt').value = '';
+  pending = [];
+  renderAttachments();
+  resetPromptHeight();
+  setEditBanner(false);
+}
+
+/* 重试任意一轮：删除该轮及之后的所有轮次，用原提示词重新生成。 */
+function regenerate(id) {
+  if (isBusy() || !current) return;
+  const index = current.turns.findIndex(turn => turn.id === id);
+  if (index < 0) return;
+  if (index < current.turns.length - 1 && !confirm(t('confirmRegenerateEarlier'))) return;
+  if (editingTurnId !== null) cancelEdit();
+  void generate({retryTurnId: id});
+}
 function setModelMenuOpen(open, focusActive = false) {
   const menu = $('modelMenu'), trigger = $('modelTrigger');
   if (!menu || !trigger) return;
@@ -459,7 +673,7 @@ function syncGatePanel() {
 }
 
 function render() {
-  renderList(); renderMessages(); renderAttachments(); controls(); syncHeaderUi(); syncLangButton(); syncModelTrigger();
+  renderList(); renderMessages(); renderAttachments(); controls(); syncHeaderUi(); syncLangButton(); syncModelTrigger(); renderContextMeter();
   const selected = model(), introduction = $('modelIntroduction'), introductionText = $('modelIntroductionText');
   if (introduction && introductionText) {
     introductionText.textContent = selected?.introduction || '';
@@ -471,6 +685,8 @@ function render() {
   if (node) { node.textContent = t(statusKey, statusVars); classOn(node, 'is-error', ERROR_STATUS.has(statusKey)); }
   $('gate').textContent = gateKey ? t(gateKey) : '';
   syncGatePanel();
+  syncEffortPicker();
+  renderContextMeter();
   updateScrollButton();
 }
 async function persist(chat, guard) {
@@ -479,7 +695,8 @@ async function persist(chat, guard) {
   catch { if (guard === epoch) status('storage'); throw new Error('storage'); }
 }
 function newChat() {
-  if (!session || active || attaching) return;
+  if (!session || isBusy()) return;
+  if (editingTurnId !== null) cancelEdit();
   current = {userId:session.user.id,id:crypto.randomUUID(),title:'',updatedAt:Date.now(),turns:[]};
   chats.unshift(current); pending = []; $('prompt').value = ''; resetPromptHeight();
   status('ready'); render();
@@ -490,7 +707,53 @@ function configureModel() {
   for (const value of item?.reasoning_efforts || []) { const opt = new Option(value,value); $('effort').add(opt); }
   if (!$('effort').options.length) $('effort').add(new Option(t('default'),''));
   $('effort').value = item?.default_reasoning_effort || '';
+  syncEffortPicker();
   render();
+}
+
+/* ---------- 思考强度（输入框内，只对配置了 reasoning_efforts 的模型显示） ---------- */
+function setEffortMenuOpen(open) {
+  const menu = $('effortMenu'), trigger = $('effortTrigger');
+  if (!menu || !trigger) return;
+  menu.hidden = !open;
+  trigger.setAttribute('aria-expanded', String(open));
+  if (!open) return;
+  const active = menu.querySelector?.('.chat-model-option[aria-selected="true"]') || menu.querySelector?.('.chat-model-option');
+  for (const option of menu.querySelectorAll?.('.chat-model-option') || []) classOn(option, 'is-active', option === active);
+}
+/* 思考强度取值可能是 low/medium/high，也可能是供应商自定义字符串；
+   有对应译文就用译文，没有就原样显示。 */
+function effortLabel(value) {
+  if (!value) return t('default');
+  const key = `effort_${value}`;
+  const translated = t(key);
+  return translated === `chat.${key}` ? value : translated;
+}
+function syncEffortPicker() {
+  const select = $('effort'), picker = $('effortPicker'), text = $('effortTriggerText'), menu = $('effortMenu');
+  if (!select || !picker) return;
+  // 少于两项（只有「默认」）时没有可切换的内容，隐藏胶囊以免占位。
+  const meaningful = select.options.length > 1;
+  picker.hidden = !meaningful;
+  if (!meaningful) { setEffortMenuOpen(false); return; }
+  const selected = select.options[select.selectedIndex];
+  if (text) text.textContent = `${t('effortShort')} ${effortLabel(selected?.value)}`;
+  if (!menu) return;
+  menu.replaceChildren();
+  for (const option of select.options) {
+    const item = document.createElement('button');
+    item.type = 'button'; item.className = 'chat-model-option'; item.setAttribute('role', 'option');
+    item.setAttribute('aria-selected', String(option.selected));
+    const span = document.createElement('span'); span.textContent = effortLabel(option.value);
+    item.append(span);
+    item.onclick = () => {
+      select.value = option.value;
+      setEffortMenuOpen(false);
+      syncEffortPicker();
+      select.dispatchEvent(new Event('change'));
+    };
+    menu.append(item);
+  }
 }
 async function loadCustomModels(token, signal) {
   const response = await request('custom_model_list', {}, signal, token);
@@ -612,15 +875,40 @@ function inputFor(prompt, files, item) {
   }
   return [{role:'user',content}];
 }
-async function generate(retry = false) {
-  if (active || attaching || !session || !model()) return;
+/**
+ * 三个入口共用一条生成路径：
+ *  - 普通发送：prompt 取自输入框
+ *  - 编辑重发（editingTurnId）：替换该轮的提示词，并删除其后的所有轮次
+ *  - 重试某轮（retryTurnId）：删除该轮及之后的轮次，用原提示词重新生成
+ */
+function generateGate() {
+  if (compacting) return false;
+  return !(isBusy() || !session || !model());
+}
+
+async function generate({ retryTurnId = null } = {}) {
+  if (!generateGate()) return;
   const guard = epoch, chat = current, item = model();
   if (!chat) return;
   const output = item.default_max_output_tokens;
-  const previous = retry ? chat.turns.at(-1) : null;
-  if (retry && !previous) return;
-  const prompt = previous?.prompt ?? $('prompt').value.trim(), files = previous?.attachments ?? pending.slice();
+
+  let editIndex = -1, retryIndex = -1, prompt, files;
+  if (retryTurnId) {
+    retryIndex = chat.turns.findIndex(turn => turn.id === retryTurnId);
+    if (retryIndex < 0) return;
+    prompt = chat.turns[retryIndex].prompt;
+    files = chat.turns[retryIndex].attachments || [];
+  } else if (editingTurnId) {
+    editIndex = chat.turns.findIndex(turn => turn.id === editingTurnId);
+    prompt = $('prompt').value.trim();
+    files = pending.slice();
+    if (editIndex < 0) { cancelEdit(); return; }
+  } else {
+    prompt = $('prompt').value.trim();
+    files = pending.slice();
+  }
   if (!prompt && !files.length) return;
+
   const controller = new AbortController();
   let finish;
   const run = {controller,stopped:false,userId:chat.userId,done:new Promise(resolve => { finish = resolve; })};
@@ -628,15 +916,23 @@ async function generate(retry = false) {
   let turn, persisted = false, saveAt = 0, saveQueue = Promise.resolve(), storageError = false, failureKey = '', failureVars = {};
   try {
     turn = {id:crypto.randomUUID(),prompt,attachments:files,input:inputFor(prompt,files,item),output:[],text:'',status:'running',modelId:item.id,modelName:item.display_name,createdAt:Date.now()};
-    const prior = (retry ? chat.turns.slice(0,-1) : chat.turns).filter(x => x.status === 'success').map(x => ({...x,output:continuation(x.output,x.modelId === item.id && item.preserve_reasoning)}));
-    const context = buildContext([...prior,turn],item,output);
+    // 先把这一轮的输入历史确定下来：编辑/重试都从被替换轮之前截断。
+    const kept = chat.turns.slice(0, editIndex >= 0 ? editIndex : retryIndex >= 0 ? retryIndex : chat.turns.length);
+    const prior = kept.filter(x => x.status === 'success').map(x => ({...x,output:continuation(x.output,x.modelId === item.id && item.preserve_reasoning)}));
+    // 自动压缩已移到「回复完成后」，这里只带上已有摘要作为前缀。
+    const summary = summaryPrefix(chat);
+    const context = buildContext([...prior,turn],item,output, summary);
     const body = {model_id:item.id,input:context.input,reasoning_effort:$('effort').value || null,max_output_tokens:output};
     if (new TextEncoder().encode(JSON.stringify({action:'respond',...body})).length > MAX_REQUEST_BYTES) throw new Error('request_too_large');
-    if (retry) chat.turns.pop();
-    chat.turns.push(turn); if (!chat.title) chat.title = prompt.slice(0,60) || files[0]?.name || '';
+
+    // 只有请求真正要发出时才改动历史，失败不会提前毁掉对话。
+    chat.turns = kept;
+    chat.turns.push(turn);
+    if (!chat.title) chat.title = prompt.slice(0,60) || files[0]?.name || '';
     await persist(chat,guard); persisted = true;
     if (guard !== epoch) return;
     pending = []; $('prompt').value = ''; resetPromptHeight();
+    editingTurnId = null; setEditBanner(false);
     status(context.truncated ? 'truncated' : 'sending'); render();
     const response = customModel(item) ? await customRequest(item,{input:context.input,reasoning:body.reasoning_effort ? {effort:body.reasoning_effort} : undefined,max_output_tokens:output},controller.signal) : {response:await request('respond',body,controller.signal),stream:true};
     let result;
@@ -675,6 +971,32 @@ async function generate(retry = false) {
       else if (persisted) status(turn.quotaLimited && turn.status === 'incomplete' ? 'quotaTruncated' : turn.quotaLimited && turn.status === 'success' ? 'quotaLimited' : turn.status);
       render();
     }
+    // 回复结束后再判断是否需要压缩：此时用量才包含这一轮的完整回答。
+    if (guard === epoch && persisted && turn?.status === 'success') await autoCompact(chat, item, guard);
+  }
+}
+
+/**
+ * 回复完成后的自动压缩。压缩期间锁定输入（compacting 计入 busy），
+ * 完成或失败后都会解锁，并保留一条可读的状态提示。
+ */
+async function autoCompact(chat, item, guard) {
+  if (compacting || active) return;
+  const output = item.default_max_output_tokens;
+  if (!needsCompaction(chat, item, output)) return;
+  compacting = true;
+  controls();
+  status('compacting');
+  try {
+    const prefix = await ensureContextSummary(chat, item, output, guard, true);
+    if (guard !== epoch) return;
+    // 摘要前缀只有 1 项，判断成功要看是否真的产出了摘要文本。
+    status(chat.summary?.text ? 'compacted' : 'compactSkipped');
+  } catch (error) {
+    if (guard === epoch) status(error?.message === 'busy' ? 'busy' : 'compactFailed');
+  } finally {
+    compacting = false;
+    if (guard === epoch) { render(); }
   }
 }
 async function auth(next, reload = false) {
@@ -752,11 +1074,15 @@ $('chatSearch').oninput = () => renderList();
 $('prompt').oninput = () => resetPromptHeight();
 $('prompt').onkeydown = event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void generate(); } };
 $('stop').onclick = () => { if (active) { active.stopped = true; active.controller.abort(); } };
-$('retry').onclick = () => void generate(true);
+$('retry').onclick = () => { const last = current?.turns.at(-1); if (last) regenerate(last.id); };
 $('new').onclick = () => { newChat(); closeSidebarOnMobile(); };
 $('scrollBottom').onclick = () => { const box = $('messages'); box.scrollTo?.({top:box.scrollHeight, behavior:'smooth'}); if (!box.scrollTo) box.scrollTop = box.scrollHeight; };
 $('messages').addEventListener?.('scroll', updateScrollButton, {passive:true});
 $('model').onchange = () => { syncModelTrigger(); configureModel(); customForm(); customStatus(); };
+$('effort').onchange = () => syncEffortPicker();
+$('effortTrigger').onclick = () => setEffortMenuOpen($('effortMenu').hidden);
+$('editCancel').onclick = () => cancelEdit();
+$('compactNow').onclick = () => void compactNow();
 $('modelTrigger').onclick = () => setModelMenuOpen($('modelMenu').hidden, true);
 $('modelTrigger').onkeydown = event => {
   if (['ArrowDown','ArrowUp'].includes(event.key)) { event.preventDefault(); setModelMenuOpen(true, true); }
@@ -770,10 +1096,12 @@ $('modelMenu').onkeydown = event => {
 document.addEventListener?.('click', event => {
   const wrap = document.querySelector('.chat-model-select');
   if (wrap && !wrap.contains(event.target)) setModelMenuOpen(false);
+  const effortWrap = $('effortPicker');
+  if (effortWrap && !effortWrap.contains(event.target)) setEffortMenuOpen(false);
 });
 $('files').onchange = async () => {
   const guard = epoch, selected = [...$('files').files], item = model(); $('files').value = '';
-  if (!item || active || attaching) return;
+  if (!item || isBusy()) return;
   attaching = true; controls();
   try {
     if (pending.length + selected.length > MAX_ATTACHMENTS) throw new Error('file');
@@ -841,9 +1169,29 @@ $('openCustomModel').onclick = () => { setSettingsOpen(true); const panel = $('c
 $('customDelete').onclick = () => void deleteCustomModel();
 $('customClearKey').onclick = () => { const id = $('customModelId').value; if (id) customKeys.delete(id); $('customApiKey').value = ''; customStatus('customKeyCleared'); };
 
+/* 手动压缩：强制生成一次摘要，立即回写用量。与自动压缩共用锁定与提示。 */
+async function compactNow() {
+  if (isBusy() || !current || !model()) return;
+  const chat = current, item = model(), guard = epoch;
+  compacting = true; controls(); status('compacting');
+  try {
+    const prefix = await ensureContextSummary(chat, item, item.default_max_output_tokens, guard, true);
+    if (guard !== epoch) return;
+    // 摘要前缀只有 1 项，判断成功要看是否真的产出了摘要文本。
+    status(chat.summary?.text ? 'compacted' : 'compactSkipped');
+  } catch (error) {
+    if (guard === epoch) status(error?.message === 'busy' ? 'busy' : 'compactFailed');
+  } finally {
+    compacting = false;
+    if (guard === epoch) render();
+  }
+}
+
 document.addEventListener?.('keydown', event => {
   if (event.key !== 'Escape') return;
   if (!($('modelMenu')?.hidden)) { setModelMenuOpen(false); $('modelTrigger')?.focus?.(); return; }
+  if (!($('effortMenu')?.hidden)) { setEffortMenuOpen(false); $('effortTrigger')?.focus?.(); return; }
+  if (editingTurnId !== null) { cancelEdit(); return; }
   if (!($('chatSettings')?.hidden)) { setSettingsOpen(false); return; }
   if (active) { active.stopped = true; active.controller.abort(); return; }
   if (globalThis.matchMedia?.('(max-width: 760px)').matches) setSidebarOpen(false);

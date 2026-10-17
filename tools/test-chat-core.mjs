@@ -205,3 +205,102 @@ for (const [terminal,key] of [['response.incomplete','quotaTruncated'],['respons
   assert.equal(ui.elements.get('modelIntroductionText').textContent,'Second introduction');
 }
 console.log('Chat UI: auth isolation, fixed output budget, introductions, quota/blacklist errors, reset variables and limited SSE preservation passed.');
+
+/* ---------- 编辑重发 / 指定轮次重试 / 上下文压缩 ---------- */
+const completedEvent = `data: ${JSON.stringify({type:'response.completed',response:{output:[{type:'message',role:'assistant',content:[{type:'output_text',text:'你好！'}]}],usage:{output_tokens:3}}})}\n\n`;
+const okStream = () => ({ok:true,headers:new Headers({'content-type':'text/event-stream'}),body:stream(delta + completedEvent)});
+/** 发一轮并让它成功完成，返回该轮 id。 */
+async function sendTurn(ui, text) {
+  ui.evaluate(`document.getElementById('prompt').value=${JSON.stringify(text)}; void generate();`);
+  await settle();
+  ui.requests.at(-1).resolve(okStream());
+  await settle();
+  return ui.evaluate(`current.turns.at(-1).id`);
+}
+{
+  const ui = uiHarness();
+  await ui.login('A');
+  const first = await sendTurn(ui, 'first question');
+  const second = await sendTurn(ui, 'second question');
+  assert.equal(ui.evaluate('current.turns.length'), 2);
+
+  // 编辑第一条并重发：第二条必须被移除，第一条的提示词被替换。
+  ui.evaluate(`startEdit(${JSON.stringify(first)})`);
+  assert.equal(ui.evaluate(`document.getElementById('prompt').value`), 'first question');
+  assert.equal(ui.evaluate('editingTurnId'), first);
+  ui.evaluate(`document.getElementById('prompt').value='edited question'; void generate();`);
+  await settle();
+  assert.equal(ui.evaluate('editingTurnId'), null, 'editing state must clear once the request starts');
+  assert.equal(ui.evaluate('current.turns.length'), 1, 'editing must drop every later turn');
+  assert.equal(ui.evaluate('current.turns[0].prompt'), 'edited question');
+  assert.equal(ui.requests.at(-1).body.input[0].content[0].text, 'edited question');
+  ui.requests.at(-1).resolve(okStream());
+  await settle();
+  assert.equal(ui.evaluate('current.turns[0].status'), 'success');
+  assert.ok(ui.evaluate('Boolean(current.turns[0].id !== ' + JSON.stringify(first) + ')'), 'edited turn gets a fresh id');
+  assert.ok(ui.evaluate('Boolean(current.turns[0].id !== ' + JSON.stringify(second) + ')'));
+}
+{
+  // 重试较早的一轮同样截断其后内容，并复用原提示词（而不是输入框内容）。
+  const ui = uiHarness();
+  await ui.login('A');
+  const first = await sendTurn(ui, 'keep me');
+  await sendTurn(ui, 'drop me');
+  // 无 DOM 环境没有全局 confirm，先注入再触发（regenerate 会先询问是否丢弃后续轮次）。
+  ui.evaluate('window.confirm = () => true; globalThis.confirm = () => true;');
+  ui.evaluate(`document.getElementById('prompt').value='unrelated draft'; void regenerate(${JSON.stringify(first)});`);
+  await settle();
+  assert.equal(ui.evaluate('current.turns.length'), 1);
+  assert.equal(ui.evaluate('current.turns[0].prompt'), 'keep me');
+  assert.equal(ui.requests.at(-1).body.input[0].content[0].text, 'keep me', 'retry must not reuse the draft in the textarea');
+  ui.requests.at(-1).resolve(okStream());
+  await settle();
+}
+{
+  // 自动压缩发生在「回复完成之后」：完成一个回复 → 触发摘要请求 → 下一次发送带上摘要前缀。
+  const ui = uiHarness();
+  await ui.login('A');
+  await sendTurn(ui, 'a'.repeat(300));
+  await sendTurn(ui, 'b'.repeat(300));
+  // 把窗口调小到本次回复结束后必然越过 85% 阈值。
+  ui.evaluate(`models[0].context_window = 220; models[0].default_max_output_tokens = 50; configureModel();`);
+  const before = ui.requests.length;
+  ui.evaluate("document.getElementById('prompt').value='c'.repeat(300); void generate();");
+  await settle();
+  // 先完成这一轮回复；压缩应在其后的 finally 中自动发起。
+  ui.requests.slice(before).find(r => r.body.action === 'respond' || r.body.input?.[0]?.content?.[0]?.text?.endsWith('compact'))?.resolve(okStream());
+  await settle();
+  const summaryRequest = ui.requests.slice(before).find(r => r.body.input?.[0]?.content?.[0]?.text?.includes('chat.summaryInstruction'));
+  assert.ok(summaryRequest, 'compaction must run automatically after the reply completes');
+  assert.equal(ui.evaluate('compacting'), true, 'compaction must lock the composer while it runs');
+  assert.equal(ui.evaluate("document.getElementById('prompt').disabled"), true, 'prompt must be disabled during compaction');
+  summaryRequest.resolve(okStream());
+  await settle();
+  assert.equal(ui.evaluate('compacting'), false, 'compaction must release the lock when it finishes');
+  assert.equal(ui.evaluate('statusKey'), 'compacted');
+  assert.ok(ui.evaluate('Boolean(current.summary?.text)'), 'summary must be stored on the conversation');
+  assert.ok(ui.evaluate('current.turns.length >= 2'), 'compaction must never summarize away the whole conversation');
+
+  // 下一次发送：摘要作为系统前缀，而不是重新生成摘要。
+  const before2 = ui.requests.length;
+  ui.evaluate("document.getElementById('prompt').value='next question'; void generate();");
+  await settle();
+  const next = ui.requests.slice(before2).find(r => r.body.input?.[0]?.role === 'system');
+  assert.ok(next, 'the stored summary must be sent as the first input item next time');
+  assert.match(next.body.input[0].content[0].text, /compressed/i);
+  next.resolve(okStream());
+  await settle();
+}
+
+/* buildContext：摘要前缀独立占预算，不会把最后一轮挤出上下文。 */
+{
+  const prefix = [{role:'system',content:[{type:'input_text',text:'x'.repeat(90)}]}];
+  const one = [{input:[{role:'user',content:[{type:'input_text',text:'y'.repeat(30)}]}],status:'success',output:[]}];
+  const withPrefix = buildContext(one,{context_window:120},10,prefix);
+  assert.equal(withPrefix.input.length, 1 + 1, 'last turn must survive alongside the summary');
+  assert.equal(withPrefix.input[0].role, 'system');
+  assert.throws(() => buildContext(one,{context_window:40},10,prefix), /context/, 'an oversized summary must fail rather than silently drop the turn');
+  const fits = buildContext(one,{context_window:120},10);
+  assert.equal(fits.input.length, 1, 'without a prefix behaviour is unchanged');
+}
+console.log('Chat UI: edit-and-resend truncation, per-turn retry, and summary-prefixed compaction passed.');

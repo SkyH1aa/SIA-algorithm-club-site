@@ -43,9 +43,9 @@ function text(value, max, required = false) {
   return value.trim() || null;
 }
 function keys(object, allowed) { requireThat(Object.keys(object).every(key => allowed.includes(key))); }
-function seed() {
+function seed(contextWindow) {
   const provider = {id:PROVIDER_ID,name:'mock',label:'MOCK 本地供应商',base_url:'https://mock-provider.example.com/v1',secret_name:'CHAT_KEY_MOCK',auth_header:'authorization',enabled:true};
-  const base = {provider_id:provider.id,context_window:32768,max_output_tokens:4096,default_max_output_tokens:512,reasoning_efforts:['low','medium','high'],default_reasoning_effort:'medium',supports_images:true,supports_pdf:true,preserve_reasoning:false,enabled:true,introduction:null};
+  const base = {provider_id:provider.id,context_window:contextWindow,max_output_tokens:4096,default_max_output_tokens:512,reasoning_efforts:['low','medium','high'],default_reasoning_effort:'medium',supports_images:true,supports_pdf:true,preserve_reasoning:false,enabled:true,introduction:null};
   return {providers:[provider],models:[{...base,id:MODEL_ID,model_key:'mock-multimodal',display_name:'MOCK 多模态'}, {...base,id:'30000000-0000-4000-8000-000000000002',model_key:'mock-text',display_name:'MOCK 纯文本',supports_images:false,supports_pdf:false}],usage:[]};
 }
 function sessionFor(state) {
@@ -161,7 +161,7 @@ function utcPeriods(now) {
 
 export function createMockServer({testPort = false, now = () => new Date()} = {}) {
   let state = {account:'member',scenario:'completed',theme:'dark',revision:1};
-  let database = seed();
+  let database = seed(32768);
   const logs = [], leases = new Map();
   let proxyRoutes = [], proxyKeys = [];
   const proxyLeases = new Map();
@@ -467,9 +467,13 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
       if (pathname === '/mock/session' && req.method === 'GET') { json(res,publicState()); return; }
       if (pathname === '/mock/requests' && req.method === 'GET') { json(res,{mock:true,requests:logs}); return; }
       if (pathname === '/mock/setup' && req.method === 'POST') {
-        const {payload} = await body(req); keys(payload,['account','scenario','theme','reset']);
+        const {payload} = await body(req); keys(payload,['account','scenario','theme','reset','contextWindow']);
         requireThat(Object.hasOwn(ACCOUNTS,payload.account) && SCENARIOS.includes(payload.scenario) && ['auto','light','dark'].includes(payload.theme));
-        if (payload.reset) { for (const lease of [...leases.values(),...proxyLeases.values()]) lease.cancel(); proxyRoutes = []; proxyKeys = []; database = seed(); resetQuotas(); logs.length = 0; }
+        // 可选：把模拟模型的上下文窗口调小，用于在本地复现自动压缩阈值。
+        if (payload.contextWindow !== undefined) requireThat(Number.isInteger(payload.contextWindow) && payload.contextWindow >= 256 && payload.contextWindow <= 1000000);
+        if (payload.contextWindow !== undefined) state.contextWindow = payload.contextWindow;
+        if (payload.contextWindow !== undefined) database = seed(payload.contextWindow);
+        if (payload.reset) { for (const lease of [...leases.values(),...proxyLeases.values()]) lease.cancel(); proxyRoutes = []; proxyKeys = []; database = seed(state.contextWindow || 32768); resetQuotas(); logs.length = 0; }
         if (state.account !== payload.account || payload.reset) state.revision++;
         Object.assign(state,{account:payload.account,scenario:payload.scenario,theme:payload.theme});
         json(res,publicState()); return;

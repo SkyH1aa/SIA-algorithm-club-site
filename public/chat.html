@@ -99,6 +99,11 @@
       </button>
     </div>
     <section class="chat-composer-shell">
+      <div id="editBanner" class="chat-edit-banner" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+        <span id="editBannerText"></span>
+        <button id="editCancel" class="chat-edit-cancel" type="button" data-i18n="chat.editCancel">取消</button>
+      </div>
       <form id="composer">
         <div class="chat-composer-box">
           <textarea id="prompt" rows="1" maxlength="500000" data-i18n-placeholder="chat.placeholder" aria-label="Message" data-i18n-aria="chat.message"></textarea>
@@ -109,15 +114,34 @@
               <span data-i18n="chat.attach">添加附件</span>
               <input id="files" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.txt,.md,.csv,.js,.ts,.jsx,.tsx,.py,.json,.html,.css,.c,.cpp,.h,.java,.rs,.go,.sql,.yaml,.yml,.xml,.sh,.log">
             </label>
+            <div class="chat-effort-picker" id="effortPicker" hidden>
+              <button id="effortTrigger" class="chat-effort-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 00-3.6 10.8V17h7.2v-3.2A6 6 0 0012 3z"/><path d="M9.5 20.5h5"/></svg>
+                <span id="effortTriggerText"></span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <select id="effort" class="chat-select-native" tabindex="-1" aria-hidden="true"></select>
+              <div id="effortMenu" class="chat-model-menu" role="listbox" hidden></div>
+            </div>
             <span class="chat-composer-hint" data-i18n="chat.composerHint">Enter 发送 · Shift+Enter 换行</span>
             <button id="stop" class="chat-stop-button" type="button" data-i18n="chat.stop" disabled>停止</button>
             <button id="send" class="chat-send-button" type="submit">
-              <span data-i18n="chat.send">发送</span>
+              <span id="sendLabel" data-i18n="chat.send">发送</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7"/></svg>
             </button>
           </div>
         </div>
       </form>
+      <div class="chat-context-meter" id="contextMeter" hidden>
+        <div class="chat-context-row">
+          <span class="chat-context-label" data-i18n="chat.contextLabel">上下文</span>
+          <span id="contextText" class="chat-context-text"></span>
+          <button id="compactNow" class="chat-context-compact" type="button" data-i18n="chat.compactNow" title="压缩上下文">压缩</button>
+        </div>
+        <div class="chat-context-track" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+          <div id="contextFill" class="chat-context-fill"></div>
+        </div>
+      </div>
       <div class="chat-status-row"><span id="statusSpinner" class="chat-status-spinner" aria-hidden="true" hidden></span><p id="status" role="status"></p><p class="chat-note" data-i18n="chat.estimate"></p></div>
       <details class="chat-privacy"><summary data-i18n="chat.privacyTitle">本地存储、隐私与附件</summary><p data-i18n="chat.privacy"></p><p data-i18n="chat.limits"></p></details>
     </section>
@@ -135,9 +159,9 @@
     <section class="chat-settings-group">
       <h3 data-i18n="chat.generationTitle">生成</h3>
       <div class="chat-settings-grid">
-        <label><span data-i18n="chat.effort">思考强度</span><select id="effort"></select></label>
         <span class="chat-budget" data-i18n="chat.outputManaged">最大输出 token 由管理员配置</span>
       </div>
+      <p class="chat-settings-note" data-i18n="chat.effortHint">思考强度在输入框左侧切换，仅对支持该选项的模型显示。</p>
       <p class="chat-settings-note" data-i18n="chat.estimate">token 数为近似估算；输出预算包含思考和正文。</p>
     </section>
     <section id="modelIntroduction" class="chat-settings-group chat-model-introduction" hidden>

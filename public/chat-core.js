@@ -20,28 +20,37 @@ export function estimateTokens(value) {
   return tokens;
 }
 
-export function buildContext(turns, model, outputTokens) {
+/**
+ * 把历史轮次裁剪进模型上下文预算。
+ * prefix 是压缩摘要等「永远保留」的输入项：它们不参与从旧到新的丢弃，
+ * 但必须先占用预算，否则摘要会把最后一轮挤出上下文。
+ */
+export function buildContext(turns, model, outputTokens, prefix = []) {
   const budget = model.context_window - outputTokens;
   if (budget <= 0) throw new Error('context');
+  const prefixItems = prefix || [];
+  const prefixTokens = estimateTokens(prefixItems);
+  const prefixBytes = new TextEncoder().encode(JSON.stringify(prefixItems)).length;
+  if (prefixBytes > MAX_REQUEST_BYTES - 4096 || prefixTokens >= budget) throw new Error('context');
   const groups = turns.map(turn => turn.input.concat(turn.status === 'success' ? turn.output || [] : []));
   const selected = [];
   let truncated = false;
   for (let i = groups.length - 1; i >= 0; i--) {
     const next = groups[i].concat(selected.flat());
-    const bytes = new TextEncoder().encode(JSON.stringify(next)).length;
+    const bytes = prefixBytes + new TextEncoder().encode(JSON.stringify(next)).length;
     if (bytes > MAX_REQUEST_BYTES - 4096) {
       if (i === groups.length - 1) throw new Error('request_too_large');
       truncated = true;
       break;
     }
-    if (estimateTokens(next) > budget) {
+    if (prefixTokens + estimateTokens(next) > budget) {
       if (i === groups.length - 1) throw new Error('context');
       truncated = true;
       break;
     }
     selected.unshift(groups[i]);
   }
-  return {input:selected.flat(), truncated};
+  return {input: [...prefixItems, ...selected.flat()], truncated};
 }
 
 export function createSSEParser(onEvent) {
