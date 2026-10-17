@@ -644,6 +644,55 @@ returns jsonb language plpgsql security definer set search_path = public as $$
 declare r public.chat_proxy_routes; k public.chat_proxy_keys; rid uuid; result jsonb;
 begin
   perform public.chat_quota_assert_admin(p_actor);
+  if p_action is null or p_action not in ('admin_proxy_list','admin_proxy_save','admin_proxy_route_state','admin_proxy_key_create','admin_proxy_key_state') then
+    raise exception 'invalid action';
+  end if;
+  if p_data is null or jsonb_typeof(p_data) <> 'object' then raise exception 'invalid data'; end if;
+  if exists (
+    select 1 from jsonb_object_keys(p_data) as key
+    where (p_action = 'admin_proxy_list')
+       or (p_action = 'admin_proxy_save' and key not in ('id','name','base_url','secret_name','enabled','expected_version'))
+       or (p_action = 'admin_proxy_route_state' and key not in ('id','enabled','expected_version'))
+       or (p_action = 'admin_proxy_key_create' and key not in ('route_id','label','key_hash','key_prefix','key_last4'))
+       or (p_action = 'admin_proxy_key_state' and key not in ('id','enabled','revoked','expected_version'))
+  ) then raise exception 'invalid data'; end if;
+  if p_action = 'admin_proxy_list' and p_data <> '{}'::jsonb then raise exception 'invalid data'; end if;
+  if p_action = 'admin_proxy_save' then
+    if not (p_data ?& array['id','name','base_url','secret_name','enabled','expected_version'])
+      or jsonb_typeof(p_data->'id') not in ('null','string')
+      or (jsonb_typeof(p_data->'id') = 'string' and (p_data->>'id') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+      or jsonb_typeof(p_data->'name') <> 'string' or length(btrim(p_data->>'name')) not between 1 and 80
+      or jsonb_typeof(p_data->'base_url') <> 'string' or length(p_data->>'base_url') not between 10 and 2048
+      or jsonb_typeof(p_data->'secret_name') <> 'string' or (p_data->>'secret_name') !~ '^CHAT_KEY_[A-Z0-9_]{1,80}$'
+      or jsonb_typeof(p_data->'enabled') <> 'boolean'
+      or jsonb_typeof(p_data->'expected_version') <> 'number'
+      or (p_data->>'expected_version') !~ '^(0|[1-9][0-9]*)$'
+      or (p_data->>'expected_version')::numeric > 9007199254740991
+      or (p_data->'id' <> 'null'::jsonb and (p_data->>'expected_version')::numeric < 1) then
+      raise exception 'invalid data';
+    end if;
+  elsif p_action = 'admin_proxy_route_state' then
+    if not (p_data ?& array['id','enabled','expected_version'])
+      or jsonb_typeof(p_data->'id') <> 'string' or (p_data->>'id') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      or jsonb_typeof(p_data->'enabled') <> 'boolean'
+      or jsonb_typeof(p_data->'expected_version') <> 'number'
+      or (p_data->>'expected_version') !~ '^[1-9][0-9]*$'
+      or (p_data->>'expected_version')::numeric > 9007199254740991 then raise exception 'invalid data'; end if;
+  elsif p_action = 'admin_proxy_key_create' then
+    if not (p_data ?& array['route_id','label','key_hash','key_prefix','key_last4'])
+      or jsonb_typeof(p_data->'route_id') <> 'string' or (p_data->>'route_id') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      or jsonb_typeof(p_data->'label') <> 'string' or length(btrim(p_data->>'label')) not between 1 and 120
+      or jsonb_typeof(p_data->'key_hash') <> 'string' or (p_data->>'key_hash') !~ '^[a-f0-9]{64}$'
+      or jsonb_typeof(p_data->'key_prefix') <> 'string' or (p_data->>'key_prefix') !~ '^cap_[A-Za-z0-9_-]{8}$'
+      or jsonb_typeof(p_data->'key_last4') <> 'string' or (p_data->>'key_last4') !~ '^[A-Za-z0-9_-]{4}$' then raise exception 'invalid data'; end if;
+  elsif p_action = 'admin_proxy_key_state' then
+    if not (p_data ?& array['id','enabled','revoked','expected_version'])
+      or jsonb_typeof(p_data->'id') <> 'string' or (p_data->>'id') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      or jsonb_typeof(p_data->'enabled') <> 'boolean' or jsonb_typeof(p_data->'revoked') <> 'boolean'
+      or jsonb_typeof(p_data->'expected_version') <> 'number'
+      or (p_data->>'expected_version') !~ '^[1-9][0-9]*$'
+      or (p_data->>'expected_version')::numeric > 9007199254740991 then raise exception 'invalid data'; end if;
+  end if;
   if p_action = 'admin_proxy_list' then
     return jsonb_build_object('routes', coalesce((select jsonb_agg(to_jsonb(t) - 'created_by' - 'updated_by' order by created_at) from public.chat_proxy_routes t), '[]'::jsonb),
       'keys', coalesce((select jsonb_agg(public.chat_proxy_key_metadata(t) order by created_at) from public.chat_proxy_keys t), '[]'::jsonb));
@@ -687,7 +736,9 @@ create or replace function public.chat_proxy_admit(p_route_id uuid,p_key_hash te
 returns jsonb language plpgsql security definer set search_path=public as $$
 declare r public.chat_proxy_routes; k public.chat_proxy_keys;
 begin
-  if p_key_limit not between 1 and 1000 or p_route_limit not between 1 and 10000 or p_ttl_ms not between 1000 and 150000 then raise exception 'invalid limits'; end if;
+  if p_route_id is null or p_key_hash is null or p_key_hash !~ '^[a-f0-9]{64}$' or p_request_id is null
+    or p_key_limit is null or p_route_limit is null or p_ttl_ms is null
+    or p_key_limit not between 1 and 1000 or p_route_limit not between 1 and 10000 or p_ttl_ms not between 1000 and 150000 then raise exception 'invalid limits'; end if;
   select * into r from public.chat_proxy_routes where id=p_route_id for update;
   if not found or not r.enabled then return '{"code":"invalid_key"}'; end if;
   select * into k from public.chat_proxy_keys where route_id=r.id and key_hash=p_key_hash for update;

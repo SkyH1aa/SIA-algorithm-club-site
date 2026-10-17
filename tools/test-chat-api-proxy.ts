@@ -48,7 +48,7 @@ let n=0;
 async function test(name: string, run: () => Promise<void>) {
   calls=0; releases=0; status=200; contentType='application/json'; admission='ok'; base='https://vendor.example.com/v1'; dns='public'; hang=false; delayAdmission=0; networkError=false;
   responseBytes = new TextEncoder().encode('{ "output": [], "opaque": "你好" }');
-  Deno.env.delete('CHAT_PROXY_TIMEOUT_MS'); Deno.env.delete('CHAT_PROXY_KEY_CONCURRENCY');
+  Deno.env.delete('CHAT_PROXY_TIMEOUT_MS'); Deno.env.delete('CHAT_PROXY_KEY_CONCURRENCY'); Deno.env.delete('CHAT_PROXY_CORS_ORIGINS');
   await run(); n++; console.log(`PASS ${name}`);
 }
 try {
@@ -118,6 +118,16 @@ try {
   });
   await test('pre-aborted request never calls upstream', async () => {
     const c=new AbortController(); c.abort(); assert.equal((await handler(request('{}',{},`/${RID}/v1/responses`,'POST',c.signal))).status,504); assert.equal(calls,0); assert.equal(releases,0);
+  });
+  await test('exact CORS allowlist rejects unknown browser origins and preserves CLI auth', async () => {
+    Deno.env.set('CHAT_PROXY_CORS_ORIGINS', 'https://allowed.example, http://localhost:4173');
+    const allowed = await handler(request('{"model":"ok"}', { origin: 'https://allowed.example' }));
+    assert.equal(allowed.status, 200); assert.equal(allowed.headers.get('access-control-allow-origin'), 'https://allowed.example'); await allowed.arrayBuffer();
+    const beforeDenied = calls;
+    const denied = await handler(request('{"model":"ok"}', { origin: 'https://evil.example' }));
+    assert.equal(denied.status, 403); assert.equal(denied.headers.get('access-control-allow-origin'), null); assert.equal(calls, beforeDenied);
+    const cli = await handler(request('{"model":"ok"}'));
+    assert.equal(cli.status, 200); assert.equal(cli.headers.get('access-control-allow-origin'), null); await cli.arrayBuffer();
   });
   await test('configuration validation fails closed', async () => {
     for (const v of ['0','-1','1.2','NaN','120001']) { Deno.env.set('CHAT_PROXY_TIMEOUT_MS',v); assert.equal((await handler(request())).status,503); }

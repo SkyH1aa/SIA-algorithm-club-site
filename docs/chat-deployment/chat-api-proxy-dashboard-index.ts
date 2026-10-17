@@ -68,11 +68,24 @@ function proxySetting(name: string, fallback: number, max: number): number {
 
 
 const MAX_BYTES = 12 * 1024 * 1024;
-function cors(): Headers {
-  return new Headers({ 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'authorization, content-type', 'access-control-max-age': '600', 'cache-control': 'no-store' });
+function configuredProxyOrigins(): Set<string> {
+  return new Set((Deno.env.get('CHAT_PROXY_CORS_ORIGINS') || '').split(',').map(value => value.trim()).filter(Boolean));
 }
-function failure(code: string, status: number): Response {
-  const headers = cors(); headers.set('content-type', 'application/json');
+function cors(request?: Request): Headers {
+  const origin = request?.headers.get('origin');
+  const configured = configuredProxyOrigins();
+  const headers = new Headers({ 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'authorization, content-type', 'access-control-max-age': '600', 'cache-control': 'no-store', 'vary': 'Origin' });
+  if (configured.size === 0) headers.set('access-control-allow-origin', '*');
+  else if (origin && configured.has(origin)) headers.set('access-control-allow-origin', origin);
+  return headers;
+}
+function assertProxyOrigin(request: Request): void {
+  const origin = request.headers.get('origin');
+  const configured = configuredProxyOrigins();
+  if (origin && configured.size > 0 && !configured.has(origin)) throw new ProxyError('cors', 403);
+}
+function failure(code: string, status: number, request?: Request): Response {
+  const headers = cors(request); headers.set('content-type', 'application/json');
   return new Response(status === 304 ? null : JSON.stringify({ error: { message: 'The proxy request could not be completed.', type: 'proxy_error', code } }), { status, headers });
 }
 async function rpc(name: string, body: unknown, signal?: AbortSignal): Promise<Record<string, unknown>> {
@@ -86,10 +99,11 @@ async function rpc(name: string, body: unknown, signal?: AbortSignal): Promise<R
 export async function handler(request: Request): Promise<Response> {
   // Match the deployed prefix or local function prefix, never arbitrary suffixes.
   const url = new URL(request.url);
+  try { assertProxyOrigin(request); } catch (error) { return failure(error instanceof ProxyError ? error.code : 'cors', error instanceof ProxyError ? error.status : 403, request); }
   const match = url.pathname.match(/^\/(?:functions\/v1\/)?chat-api-proxy\/([^/]+)\/v1\/responses$/);
-  if (!match || !UUID.test(match[1]) || url.search) return failure('path', 404);
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors() });
-  if (request.method !== 'POST') return failure('method', 405);
+  if (!match || !UUID.test(match[1]) || url.search) return failure('path', 404, request);
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(request) });
+  if (request.method !== 'POST') return failure('method', 405, request);
   const controller = new AbortController();
   const requestId = crypto.randomUUID();
   let admitted = false, released = false, ended = false;
@@ -171,13 +185,13 @@ export async function handler(request: Request): Promise<Response> {
     }
     if (upstream.status === 204 || upstream.status === 205) {
       void upstream.body?.cancel().catch(() => {}); finish(); await cleanup();
-      return new Response(null, { status: upstream.status, headers: cors() });
+      return new Response(null, { status: upstream.status, headers: cors(request) });
     }
     const type = upstream.headers.get('content-type') || '';
     if (!/^(application\/json|text\/event-stream)(?:;|$)/i.test(type) || !upstream.body) {
       void upstream.body?.cancel().catch(() => {}); throw new ProxyError('upstream_response', 502);
     }
-    const headers = cors();
+    const headers = cors(request);
     // Deliberately tiny response allowlist. No credentials, URL, cookie, server,
     // arbitrary diagnostic fields or content-length after runtime decompression.
     headers.set('content-type', type);
@@ -196,7 +210,7 @@ export async function handler(request: Request): Promise<Response> {
     return new Response(stream, { status: upstream.status, headers });
   } catch (error) {
     finish(); controller.abort(); await cleanup();
-    return failure(error instanceof ProxyError ? error.code : 'upstream_unavailable', error instanceof ProxyError ? error.status : 502);
+    return failure(error instanceof ProxyError ? error.code : 'upstream_unavailable', error instanceof ProxyError ? error.status : 502, request);
   }
 }
 if (typeof Deno.serve === 'function' && !Deno.env.get('CHAT_TEST_MODE')) Deno.serve(handler);

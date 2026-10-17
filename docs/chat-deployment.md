@@ -262,7 +262,21 @@ API action 契约：`quota {}` 仅查询本人；`admin_user_directory {}` 返�
 
 上游 key 只存 Edge Secrets。路由仅存 `CHAT_KEY_*` **引用名**，绝不填入原生 key。应使用**专用于对外代理的上游项目和 Secret**，不要与本站 Chat、私人文件、向量库或其他服务共用。保存配置、检查 Secret 存在、创建 key 均不应发起付费测试；没有自动测试收费请求。真实付费验证必须由所有者单独明确授权，不因部署或打开管理页而自动执行。
 
-### 管理契约与一次明文
+### 手动 Dashboard 部署
+
+本项目按 Supabase 网站 Edge Function 编辑器部署，不需要部署 `_shared`。分别打开 `chat` 与 `chat-api-proxy` 的 Function 编辑器，将下面对应的完整单文件源码粘贴并部署；不要粘贴带 `../_shared` 相对 import 的函数源码，也不要把一个函数包贴到另一个函数中：
+
+- `docs/chat-deployment/chat-dashboard-index.ts` → `chat`
+- `docs/chat-deployment/chat-api-proxy-dashboard-index.ts` → `chat-api-proxy`
+
+每次更新仓库中的任一函数或共享代理 helper，都要重新同步对应 standalone 源码，再粘贴部署。`verify_jwt` 设为关闭是为了由函数内部统一返回错误/CORS；不能省略 `chat` 的 Auth JWT、成员绑定、动态超管检查，也不能省略代理的 `cap_` key 哈希、路由绑定与撤销检查。
+
+### CORS 与线上核对
+
+`CHAT_CORS_ORIGINS` 用于成员 Chat 的精确浏览器来源白名单；可选的 `CHAT_PROXY_CORS_ORIGINS` 用于代理浏览器 SDK 来源，多个 origin 以英文逗号分隔。代理未配置该变量时允许 `*` 以兼容 PowerShell/CLI 等非浏览器客户端，但这不赋予访问权限：每个请求仍必须携带有效代理 key。配置后仅精确匹配的 Origin 获得 CORS 响应头，未知浏览器 Origin 在 admission 前被拒绝。CORS 不是认证，命令行客户端可自行设置或不发送 Origin，因此 key 仍是授权边界。
+
+每次部署后在 Supabase Dashboard 核对实际保存的两份函数源码已包含最新校验，Secrets 仅存在于 Edge Functions；在 SQL Editor/Table Editor 核对 Chat/代理表启用 RLS、客户端角色无表权限，管理/准入/释放 RPC 的 `EXECUTE` 仅授予 `service_role`。`verify_jwt=false` 下线上旧函数或旧 SQL 会直接削弱这些保证，不能仅凭仓库源码判定线上已安全。
+
 
 以下均为 `chat` action，除 `action` 外的请求字段如下；所有动作仅动态超级管理员可用：
 
