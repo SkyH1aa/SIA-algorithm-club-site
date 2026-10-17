@@ -1059,6 +1059,8 @@
         width: min(100%, 620px);
         max-height: min(84vh, 720px);
         overflow: auto;
+        /* 滚到弹窗首尾时不要把滚轮/触摸手势链给背后的章节。 */
+        overscroll-behavior: contain;
         padding: 30px;
         border: 1px solid rgba(0, 229, 255, 0.3);
         border-radius: 16px;
@@ -2229,20 +2231,25 @@
         ['members', '#members'],
         ['join', '#join']
       ];
+      // 章节（星区）→ 顶栏导航项。作品、成员、加入之外的章节没有独立导航项，
+      // 沿用前一个锚点，高亮只随锚点前进，不会在「成员 / 加入」之间来回跳。
+      const zoneNavMap = {
+        home: 'home',
+        capabilities: 'proof',
+        gomoku: 'gomoku',
+        members: 'members',
+        projects: 'members',
+        activities: 'members',
+        join: 'join'
+      };
       function setupSectionNavigation() {
         const navLinks = new Map(sectionNavMap.map(([id, href]) => [id, document.querySelector(`.nav a[href="${href}"]`)]));
-        const sections = sectionNavMap
-          .map(([id]) => {
-            const el = document.getElementById(id);
-            return el ? { id, el } : null;
-          })
-          .filter(Boolean);
-        if (!sections.length) return;
+        const proofEl = document.getElementById('proof');
+        // 章节顺序与文档一致；flight 模式下第 i 章恰好对应滚动进度 i/(n-1)。
+        const zoneSections = [...document.querySelectorAll('main > section.section-block')];
+        if (!navLinks.size || !zoneSections.length) return;
 
         let activeId = '';
-        let navFrame = 0;
-        const homeSection = sections.find(section => section.id === 'home');
-        const proofSection = sections.find(section => section.id === 'proof');
 
         function setActive(id) {
           if (activeId === id) return;
@@ -2251,42 +2258,50 @@
           navLinks.get(id)?.classList.add('is-active');
         }
 
-        function updateActiveNav() {
-          navFrame = 0;
-          const offset = 96;
-          let current = sections[0].id;
-
-          sections.forEach(section => {
-            const top = section.el.getBoundingClientRect().top;
-            if (top - offset <= 1) current = section.id;
-          });
-
-          // #proof 嵌在 #home 内：只有证明带靠近顶部时才切到「实力」，避免首页/作品误亮。
-          if (homeSection && proofSection) {
-            const proofTop = proofSection.el.getBoundingClientRect().top;
-            const homeBottom = homeSection.el.getBoundingClientRect().bottom;
-            if (current === 'proof' && proofTop > window.innerHeight * 0.42) {
-              current = 'home';
-            }
-            if (current === 'home' && homeBottom <= offset + 8) {
-              const next = sections.find(section => section.id !== 'home' && section.id !== 'proof' && section.el.getBoundingClientRect().top - offset <= 1);
-              if (next) current = next.id;
-            }
+        function resolveFromZone(zoneSection) {
+          let id = zoneNavMap[zoneSection.id] || 'home';
+          // #proof 嵌在 #home 章节内：只有首页章节本身可见、且已滚到证明带时才
+          // 切到「实力」。隐藏章节的 rect 全为 0，必须排除，否则会误判。
+          if (id === 'home' && proofEl && zoneSection.style.display !== 'none'
+              && proofEl.getBoundingClientRect().top <= window.innerHeight * 0.42) {
+            id = 'proof';
           }
-
-          if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 8) {
-            current = sections[sections.length - 1].id;
-          }
-
-          setActive(current);
+          return id;
         }
 
-        window.addEventListener('scroll', () => {
-          if (navFrame) window.cancelAnimationFrame(navFrame);
-          navFrame = window.requestAnimationFrame(updateActiveNav);
-        }, { passive: true });
+        function currentZoneSection() {
+          // chapter-flight 下所有章节都是 fixed，getBoundingClientRect().top 全都等于
+          // 导航高度，无法据此判断。章节由文档滚动进度驱动，因此直接用滚动比例
+          // 取最近章节，结果与章节引擎一致，也不受过渡动画的中间状态影响。
+          if (document.body.classList.contains('chapter-flight')) {
+            const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+            const raw = (window.scrollY / max) * (zoneSections.length - 1);
+            const at = Math.min(zoneSections.length - 1, Math.max(0, Math.round(raw)));
+            return zoneSections[at];
+          }
+          // 手机端是普通文档流，沿用视口顶部判定。
+          const offset = 96;
+          let zone = zoneSections[0];
+          zoneSections.forEach(section => {
+            if (section.getBoundingClientRect().top - offset <= 1) zone = section;
+          });
+          return zone;
+        }
+
+        function updateActiveNav() {
+          setActive(resolveFromZone(currentZoneSection()));
+        }
+
+        // 同步更新：setActive 只在锚点变化时才碰 DOM，开销可忽略，也不必依赖
+        // requestAnimationFrame（后台标签页会被节流）。
+        // 捕获阶段监听：flight 模式下章节自身也是滚动容器，其 scroll 不冒泡到 window。
+        document.addEventListener('scroll', updateActiveNav, { passive: true, capture: true });
+        window.addEventListener('scroll', updateActiveNav, { passive: true });
         window.addEventListener('resize', updateActiveNav, { passive: true });
         updateActiveNav();
+        window.addEventListener('load', updateActiveNav, { passive: true });
+        // 浏览器恢复滚动位置时不保证派发 scroll，初始化后再补几帧。
+        [0, 120, 400, 900].forEach(delay => setTimeout(updateActiveNav, delay));
       }
       setupSectionNavigation();
 
@@ -3397,8 +3412,13 @@
           wheelUnlockTimer = setTimeout(releaseWheelLock, 620);
           return true;
         };
+        const ownsScrollGesture = target => {
+          if (document.body.classList.contains('feed-modal-open') || document.body.classList.contains('pc-tip-open')) return true;
+          return target instanceof Element && !!target.closest('.feed-modal, .pc-tip-modal, [role="dialog"]');
+        };
         const routeWheelToChapters = event => {
           if (!flight || event.ctrlKey) return;
+          if (ownsScrollGesture(event.target)) return;
           const modeScale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
           const delta = Number(event.deltaY) * modeScale;
           if (!Number.isFinite(delta) || Math.abs(delta) < .25) return;
@@ -3631,6 +3651,7 @@
         const getTouchPoint = event => event.touches?.[0] || event.changedTouches?.[0] || null;
         const onTouchStart = event => {
           if (!flight || !touchDevice || event.touches.length !== 1) return;
+          if (ownsScrollGesture(event.target)) return;
           const point = getTouchPoint(event);
           if (!point) return;
           touchGesture = {
