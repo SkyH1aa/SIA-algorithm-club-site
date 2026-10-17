@@ -12,7 +12,9 @@ function makeNode(id) {
   let value = '';
   return {
     id, textContent: '', innerHTML: '', checked: false, hidden: false, disabled: false,
-    elements: [], options: [],
+    elements: [], options: [], listeners: {},
+    addEventListener(type, handler) { this.listeners[type] = handler; },
+    reportValidity() { return true; }, focus() {},
     get value() { return value; }, set value(next) { value = String(next); },
     classList: {toggle() {}}, setAttribute() {}, reset() {},
     replaceChildren(...options) { this.options = options; value = options[0]?.value ?? ''; },
@@ -33,13 +35,16 @@ for (const match of html.matchAll(/<form\b[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/fo
   node(match[1]).elements = [...match[2].matchAll(/id="([^"]+)"/g)].map(item => node(item[1]));
 }
 
-let language = 'zh';
+let language = 'zh', confirmResult = true;
+const confirmations = [], clipboard = [];
 const queue = [], calls = [];
 const sandbox = vm.createContext({
   console, DOMException, AbortController, URL, Map, Date, Number, String, Boolean,
   Option: function(text, value) { return {text, value}; },
   document: {getElementById: node, querySelectorAll: () => []},
+  navigator: {clipboard: {writeText: async value => { clipboard.push(value); }}},
   window: {
+    confirm: message => { confirmations.push(message); return confirmResult; },
     supabase: {createClient: () => ({})},
     ClubI18n: {t: (key, vars) => `${language}:${key}:${JSON.stringify(vars ?? {})}`, apply() {}, getLang: () => language}
   },
@@ -184,4 +189,125 @@ assert(!run('authorized'));
 assert.equal(run("messages.get('gateMessage').key"), 'loginExpired');
 assert.equal(queue.length, 0, 'All mocked requests must be consumed');
 console.log('PASS management 403/session 401 revoke access and clear sensitive state');
+// Bind the real proxy handlers without running auth startup or unrelated handlers.
+const proxyHandlersStart = source.indexOf("$('refreshProxyButton').onclick");
+const proxyHandlersEnd = source.indexOf("$('quotaUserForm').addEventListener");
+run(source.slice(proxyHandlersStart, proxyHandlersEnd));
+const route = {id: '22222222-2222-4222-8222-222222222222', name: '<route>', base_url: 'https://example.com/v1', secret_name: 'CHAT_KEY_TEST', enabled: true, version: 1, created_at: '2026-10-16T00:00:00Z', updated_at: '2026-10-16T00:00:00Z'};
+const key = {id: '33333333-3333-4333-8333-333333333333', route_id: route.id, label: '<access>', key_prefix: 'test-prefix', key_last4: '1234', enabled: true, revoked_at: null, version: 1, created_at: route.created_at};
+sandbox.routeFixture = route; sandbox.keyFixture = key;
+run("authorized=true;active=null;const proxyRun={epoch,controller:new AbortController()};active=proxyRun");
+reply('admin_proxy_list', {routes: [route], keys: [{...key, api_key: 'MUST_NOT_RETAIN', key_hash: 'HASH_MUST_NOT_RETAIN'}]});
+await run('loadProxy(proxyRun)');
+assert.deepEqual(calls.at(-1), {action: 'admin_proxy_list'});
+assert.equal(run('JSON.stringify(proxyKeys).includes("MUST_NOT_RETAIN")'), false);
+assert(node('proxyRoutesList').innerHTML.includes('&lt;route&gt;'));
+run('fillProxyRoute(routeFixture)');
+assert.equal(run('proxyRouteInput().expected_version'), 1);
+for (const url of ['https://example.com/response', 'https://example.com/responses/v1', 'https://example.com/%72esponses', 'http://example.com/v1', 'https://x:y@example.com/v1', 'https://example.com/v1?q=1', 'https://example.com:8443/v1']) {
+  node('proxyBaseUrl').value = url;
+  assert.throws(() => run('proxyRouteInput()'), /proxy_url/);
+}
+node('proxyBaseUrl').value = route.base_url;
+node('proxySecretName').value = 'sk-real-key';
+assert.throws(() => run('proxyRouteInput()'), /secret_name/);
+node('proxySecretName').value = route.secret_name;
+reply('admin_proxy_save', {route: {...route, version: 2}});
+await run("proxyMutation(proxyRun,'admin_proxy_save',proxyRouteInput())");
+assert.equal(calls.at(-1).expected_version, 1);
+assert.equal(run('proxyEditingVersion'), 0);
+assert.equal(node('proxyRouteId').value, '');
+run('clearProxyRoute()'); node('proxyRouteName').value = 'New'; node('proxyBaseUrl').value = route.base_url; node('proxySecretName').value = route.secret_name;
+assert.equal(run('proxyRouteInput().id'), null);
+assert.equal(run('proxyRouteInput().expected_version'), 0);
+reply('admin_proxy_route_state', {route: {...route, enabled: false, version: 3}});
+await run("proxyMutation(proxyRun,'admin_proxy_route_state',{id:routeFixture.id,enabled:false,expected_version:2})");
+assert.equal(run('proxyRoutes[0].enabled'), false);
+run('fillProxyRoute(proxyRoutes[0])');
+reply('admin_proxy_save', {error: 'conflict'}, 409);
+reply('admin_proxy_list', {routes: [{...route, version: 4, name: 'Server changed'}], keys: [key]});
+const writesBefore = calls.filter(item => item.action === 'admin_proxy_save').length;
+await run("proxyMutation(proxyRun,'admin_proxy_save',proxyRouteInput())");
+assert.equal(calls.filter(item => item.action === 'admin_proxy_save').length, writesBefore + 1);
+assert.equal(run('proxyEditingVersion'), 4);
+assert.equal(node('proxyRouteName').value, 'Server changed');
+assert.equal(run("messages.get('proxyMessage').key"), 'proxyConflict');
+console.log('PASS proxy safe metadata, escaped routes, base/secret validation, create/edit/state and conflict reload without retry');
+
+for (const [id, plaintext] of [[key.id, 'MOCK_ONE_TIME_1'], ['44444444-4444-4444-8444-444444444444', 'MOCK_ONE_TIME_2']]) {
+  reply('admin_proxy_key_create', {key: {...key, id}, api_key: plaintext});
+  await run(`proxyMutation(proxyRun,'admin_proxy_key_create',{route_id:routeFixture.id,label:'access'})`);
+  assert.equal(node('proxyOneTimeKey').textContent, plaintext);
+  assert.equal(node('proxyOneTimePanel').hidden, false);
+  assert(!node('proxyKeysList').innerHTML.includes(plaintext));
+  assert(!node('proxyExample').textContent.includes(plaintext));
+}
+assert.equal(run('proxyKeys.length'), 2, 'Multiple keys per route must be retained');
+node('proxyKeyRoute').value = route.id;
+node('proxyKeyLabel').value = 'unsaved label';
+node('proxyRouteName').value = 'unsaved route';
+const priorProxyLanguage = node('proxyKeysList').innerHTML;
+language = language === 'en' ? 'zh' : 'en';
+run("setMessage('proxyMessage','proxySaved','success');refreshLocalizedUi()");
+assert.notEqual(node('proxyKeysList').innerHTML, priorProxyLanguage);
+assert.equal(node('proxyKeyLabel').value, 'unsaved label');
+assert.equal(node('proxyRouteName').value, 'unsaved route');
+assert.equal(node('proxyKeyRoute').value, route.id);
+assert.equal(node('proxyOneTimeKey').textContent, 'MOCK_ONE_TIME_2');
+assert(node('proxyMessage').textContent.startsWith(language + ':'));
+reply('admin_proxy_key_state', {error: 'conflict'}, 409);
+reply('admin_proxy_list', {routes: [{...route, version: 4}], keys: [key, {...key, id: '44444444-4444-4444-8444-444444444444'}]});
+await run("proxyMutation(proxyRun,'admin_proxy_key_state',{id:keyFixture.id,enabled:false,revoked:false,expected_version:1})");
+assert.equal(run("messages.get('proxyMessage').key"), 'proxyConflict');
+assert.equal(calls.at(-1).action, 'admin_proxy_list');
+assert.equal(node('proxyOneTimeKey').textContent, 'MOCK_ONE_TIME_2');
+assert.equal(queue.length, 0);
+await run('copyProxyPlaintext()');
+assert.deepEqual(clipboard, ['MOCK_ONE_TIME_2']);
+run('clearProxyPlaintext()');
+assert.equal(run('proxyPlaintext'), ''); assert.equal(node('proxyOneTimeKey').textContent, ''); assert(node('proxyOneTimePanel').hidden);
+node('proxyKeyRoute').value = route.id;
+run('renderProxyExample()');
+assert(node('proxyExample').textContent.includes(`/functions/v1/chat-api-proxy/${route.id}/v1`));
+assert(node('proxyExample').textContent.includes('<YOUR_PROXY_API_KEY>'));
+assert(node('proxyExample').textContent.includes('"method": "POST"'));
+// Exercise real event handlers, including confirmation cancellation and irreversible state.
+run('active=null');
+function keyClick(dataset) { node('proxyKeysList').listeners.click({target: {closest: () => ({dataset})}}); }
+confirmResult = false;
+const beforeCancel = calls.length;
+keyClick({proxyKeyRevoke: key.id});
+assert.equal(calls.length, beforeCancel);
+assert(confirmations.at(-1).includes('proxyRevokeConfirm'));
+confirmResult = true;
+reply('admin_proxy_key_state', {key: {...key, enabled: false, version: 2}});
+keyClick({proxyKeyState: key.id});
+while (run('Boolean(active)')) await new Promise(resolve => setTimeout(resolve, 0));
+assert.deepEqual(calls.at(-1), {action: 'admin_proxy_key_state', id: key.id, enabled: false, revoked: false, expected_version: 1});
+reply('admin_proxy_key_state', {key: {...key, enabled: false, revoked_at: route.created_at, version: 3}});
+keyClick({proxyKeyRevoke: key.id});
+while (run('Boolean(active)')) await new Promise(resolve => setTimeout(resolve, 0));
+assert.deepEqual(calls.at(-1), {action: 'admin_proxy_key_state', id: key.id, enabled: false, revoked: true, expected_version: 2});
+const afterRevoke = calls.length;
+keyClick({proxyKeyState: key.id}); assert.equal(calls.length, afterRevoke, 'Revoked key cannot be enabled');
+assert(node('proxyKeysList').innerHTML.includes('proxyRevoked'));
+console.log('PASS multi-key issuance, one-time copy/clear, placeholder-only examples, state and irreversible revoke confirmation');
+
+// Run the actual account-change function (not an approximation) for signout/switch.
+const sessionStart = source.indexOf('function updateSession(next)');
+const sessionEnd = source.indexOf('// Process account changes immediately');
+run(source.slice(sessionStart, sessionEnd));
+run('active=proxyRun');
+reply('admin_proxy_key_create', {key, api_key: 'STALE_KEY'}, 200, () => run('updateSession(null)'));
+await assert.rejects(run("proxyMutation(proxyRun,'admin_proxy_key_create',{route_id:routeFixture.id,label:'stale'})"), {name: 'AbortError'});
+assert.equal(run('proxyPlaintext'), ''); assert.equal(node('proxyOneTimeKey').textContent, ''); assert.equal(run('proxyKeys.length'), 0);
+run("session={user:{id:'old'},access_token:'mock-token'};authorized=true;proxyPlaintext='OLD_KEY';$('proxyOneTimeKey').textContent=proxyPlaintext;active=null");
+reply('admin_get', {authorized: false});
+run("updateSession({user:{id:'new'},access_token:'mock-token'})");
+assert.equal(run('proxyPlaintext'), '', 'Account switch immediately clears memory');
+assert.equal(node('proxyOneTimeKey').textContent, '', 'Account switch immediately clears DOM');
+while (run('Boolean(active)')) await new Promise(resolve => setTimeout(resolve, 0));
+assert.equal(queue.length, 0);
+assert(!/localStorage|indexedDB|console\.(?:log|debug|info)/.test(source), 'No key persistence or logging');
+console.log('PASS real signout/account switch clears memory and DOM; late issuance cannot restore plaintext');
 console.log(`Chat admin VM regression passed (${calls.length} mocked requests; zero network or paid calls).`);

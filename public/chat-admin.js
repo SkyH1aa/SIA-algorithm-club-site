@@ -8,6 +8,7 @@ const $ = id => document.getElementById(id);
 const t = (key, vars) => window.ClubI18n?.t(`chatAdmin.${key}`, vars) ?? key;
 let session = null, epoch = 0, authorized = false, active = null;
 let providers = [], models = [];
+let proxyRoutes = [], proxyKeys = [], proxyLoaded = false, proxyEditingVersion = 0, proxyPlaintext = '';
 let usage = emptyUsage();
 let directory = [], blacklist = [], directoryLoaded = false, selectedUser = '', selectionEpoch = 0;
 let globalQuota = null, userQuota = null;
@@ -56,7 +57,7 @@ function pages() { return Math.max(1, Math.ceil((usage.total ?? 0) / usage.pageS
 function hasNextPage() { return usage.loaded && (usage.total == null ? usage.rows.length === usage.pageSize : usage.page < pages()); }
 function controls() {
   const disabled = Boolean(active) || !authorized;
-  for (const id of ['providerForm', 'modelForm', 'testForm', 'usageFilter', 'globalQuotaForm', 'quotaUserForm', 'userQuotaForm', 'blacklistForm']) {
+  for (const id of ['providerForm', 'modelForm', 'testForm', 'usageFilter', 'globalQuotaForm', 'quotaUserForm', 'userQuotaForm', 'blacklistForm', 'proxyRouteForm', 'proxyKeyForm']) {
     for (const node of $(id).elements) node.disabled = disabled;
     $(id).setAttribute('aria-busy', String(Boolean(active)));
   }
@@ -68,6 +69,11 @@ function controls() {
   }
   $('retryButton').disabled = Boolean(active) || !session;
   document.querySelectorAll('[data-edit-provider], [data-edit-model]').forEach(node => { node.disabled = disabled; });
+  $('refreshProxyButton').disabled = disabled;
+  $('proxyKeyRoute').disabled = disabled || !proxyLoaded || !proxyRoutes.length;
+  $('createProxyKeyButton').disabled = disabled || !$('proxyKeyRoute').value;
+  $('copyProxyKeyButton').disabled = !authorized || !proxyPlaintext;
+  document.querySelectorAll('[data-proxy-edit], [data-proxy-route-state], [data-proxy-key-state], [data-proxy-key-revoke]').forEach(node => { node.disabled = disabled; });
   $('usagePrev').disabled = disabled || usage.page <= 1;
   $('usageNext').disabled = disabled || !hasNextPage();
   $('testForm').querySelector('button[type="submit"]').disabled = disabled || !$('testModel').value;
@@ -101,6 +107,7 @@ async function request(run, action, body = {}, stream = false) {
 }
 function blockedTest(error) { return error.status === 403 && error.message === 'blacklisted' && ['test', 'admin_test'].includes(error.action); }
 function errorKey(error) {
+  if (error.message === 'proxy_url') return 'proxyInvalidUrl';
   if (error.message === 'busy') return 'busy';
   if (error.status === 409 && error.message === 'conflict') return 'quotaConflict';
   if (error.status === 429 && error.message === 'quota') return 'testQuota';
@@ -268,7 +275,7 @@ async function refreshTestQuota(run, userId, revision) {
 }
 function refreshLocalizedUi() {
   window.ClubI18n?.apply(document);
-  renderProviderOptions(); renderModelOptions(); renderProviders(); renderModels(); renderUsage(); renderQuotaDirectory(); renderQuota();
+  renderProviderOptions(); renderModelOptions(); renderProviders(); renderModels(); renderUsage(); renderQuotaDirectory(); renderQuota(); renderProxy();
   for (const id of messages.keys()) renderMessage(id);
   renderTestOutput(); controls();
 }
@@ -297,6 +304,12 @@ async function loadAdmin(run) {
   renderProviderOptions(); renderModelOptions(); renderProviders(); renderModels(); setGate(); controls();
   setMessage('gateMessage');
   setMessage('statusHint', 'loaded', '', {providers: providers.length, models: models.length});
+  try { await loadProxy(run); setMessage('proxyMessage'); }
+  catch (error) {
+    assertCurrent(run);
+    if (error.status === 401 || error.status === 403) throw error;
+    setMessage('proxyMessage', errorKey(error), 'error');
+  }
   try { await loadQuotaDirectory(run); }
   catch (error) {
     assertCurrent(run);
@@ -314,6 +327,8 @@ function clearProvider() { $('providerForm').reset(); $('providerId').value = ''
 function syncDefaultOutputMax() { $('defaultOutputTokens').max = String(Math.min(131072, Math.max(1, Number($('maxOutputTokens').value) || 1))); }
 function clearModel() { $('modelForm').reset(); $('modelConfigId').value = ''; syncDefaultOutputMax(); }
 function clearSensitive() {
+  clearProxyPlaintext(); proxyRoutes = []; proxyKeys = []; proxyLoaded = false;
+  clearProxyRoute(); $('proxyKeyForm').reset(); $('proxyKeyLabel').value = ''; $('proxyKeyRoute').replaceChildren();
   providers = []; models = []; usage = emptyUsage(); testOutput = {visible: false, text: ''};
   directory = []; blacklist = []; directoryLoaded = false; selectedUser = ''; selectionEpoch++;
   globalQuota = null; userQuota = null; fillGlobalQuota(); fillUserQuota();
@@ -321,13 +336,156 @@ function clearSensitive() {
   clearProvider(); clearModel(); $('testForm').reset(); $('usageFilter').reset();
   $('modelProvider').replaceChildren(); $('testModel').replaceChildren();
   messages.clear();
-  for (const id of ['statusHint', 'gateMessage', 'providerMessage', 'modelMessage', 'testMessage', 'usageMessage', 'quotaMessage', 'globalQuotaMessage', 'userQuotaMessage', 'blacklistMessage']) setMessage(id);
+  for (const id of ['statusHint', 'gateMessage', 'providerMessage', 'modelMessage', 'testMessage', 'usageMessage', 'quotaMessage', 'globalQuotaMessage', 'userQuotaMessage', 'blacklistMessage', 'proxyMessage', 'proxyCopyMessage']) setMessage(id);
   for (const id of ['providerCount', 'modelCount', 'usageCount', 'totalTokens']) $(id).textContent = '--';
   refreshLocalizedUi();
+}
+function proxyBaseURL(id) { return `${SUPABASE_URL}/functions/v1/chat-api-proxy/${encodeURIComponent(id)}/v1`; }
+function clearProxyPlaintext() {
+  proxyPlaintext = '';
+  $('proxyOneTimeKey').textContent = '';
+  $('proxyOneTimePanel').hidden = true;
+  setMessage('proxyCopyMessage');
+}
+function clearProxyRoute() {
+  $('proxyRouteForm').reset(); $('proxyRouteId').value = ''; proxyEditingVersion = 0;
+}
+function fillProxyRoute(item) {
+  $('proxyRouteId').value = item.id; proxyEditingVersion = item.version;
+  $('proxyRouteName').value = item.name; $('proxyBaseUrl').value = item.base_url;
+  $('proxySecretName').value = item.secret_name; $('proxyRouteEnabled').checked = item.enabled;
+}
+function proxyRouteInput() {
+  const body = {id: $('proxyRouteId').value || null, name: $('proxyRouteName').value.trim(), base_url: $('proxyBaseUrl').value.trim(), secret_name: $('proxySecretName').value.trim(), enabled: $('proxyRouteEnabled').checked, expected_version: proxyEditingVersion};
+  if (!body.name || body.name.length > 120) throw new Error('input');
+  if (!/^CHAT_KEY_[A-Z0-9_]{1,80}$/.test(body.secret_name)) throw new Error('secret_name');
+  try {
+    const url = new URL(body.base_url);
+    const path = decodeURIComponent(url.pathname);
+    if (body.base_url.length > 2048 || url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || (url.port && url.port !== '443') || /(^|\/)responses?(\/|$)/i.test(path)) throw new Error();
+  } catch { throw new Error('proxy_url'); }
+  return body;
+}
+function proxyAction(attribute, id, label, danger = false) {
+  return `<button class="chat-admin-button ${danger ? 'chat-admin-danger' : 'chat-admin-secondary'}" type="button" ${attribute}="${escapeHtml(id)}">${escapeHtml(t(label))}</button>`;
+}
+function renderProxyExample() {
+  const id = $('proxyKeyRoute').value;
+  $('proxyExample').textContent = JSON.stringify({baseURL: id ? proxyBaseURL(id) : `${SUPABASE_URL}/functions/v1/chat-api-proxy/<route-id>/v1`, apiKey: '<YOUR_PROXY_API_KEY>', method: 'POST', endpoint: '/responses', body: {model: '<UPSTREAM_MODEL_ID>', input: 'Hello'}}, null, 2);
+}
+function renderProxy() {
+  const previous = $('proxyKeyRoute').value;
+  $('proxyKeyRoute').replaceChildren(new Option(t('proxySelectRoute'), ''));
+  for (const item of proxyRoutes) $('proxyKeyRoute').add(new Option(`${item.name}${item.enabled ? '' : ` · ${t('disabledBadge')}`}`, item.id));
+  if (proxyRoutes.some(item => item.id === previous)) $('proxyKeyRoute').value = previous;
+  $('proxyRoutesList').innerHTML = proxyRoutes.length ? table(['proxyName', 'baseUrl', 'secretName', 'proxyClientBase', 'enabled', 'proxyVersion', 'startedAt', 'proxyUpdated', 'proxyActions'], proxyRoutes.map(item => `<tr>${cells([item.name, item.base_url, item.secret_name, proxyBaseURL(item.id)])}<td>${badge(item.enabled)}</td>${cells([item.version, formatTime(item.created_at), formatTime(item.updated_at)])}<td><div class="chat-admin-actions">${proxyAction('data-proxy-copy-base', item.id, 'proxyCopyBase')}${proxyAction('data-proxy-edit', item.id, 'edit')}${proxyAction('data-proxy-route-state', item.id, item.enabled ? 'proxyDisable' : 'proxyEnable')}</div></td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t(proxyLoaded ? 'proxyNoRoutes' : 'proxyNotLoaded'))}</div>`;
+  $('proxyKeysList').innerHTML = proxyKeys.length ? table(['proxyRoute', 'proxyKeyLabel', 'proxyKeyMask', 'status', 'proxyVersion', 'startedAt', 'proxyRevokedAt', 'proxyActions'], proxyKeys.map(item => {
+    const route = proxyRoutes.find(route => route.id === item.route_id);
+    return `<tr>${cells([route?.name || item.route_id, item.label, `${item.key_prefix}…${item.key_last4}`])}<td>${item.revoked_at ? escapeHtml(t('proxyRevoked')) : badge(item.enabled)}</td>${cells([item.version, formatTime(item.created_at), formatTime(item.revoked_at)])}<td>${item.revoked_at ? '' : `<div class="chat-admin-actions">${proxyAction('data-proxy-key-state', item.id, item.enabled ? 'proxyDisable' : 'proxyEnable')}${proxyAction('data-proxy-key-revoke', item.id, 'proxyRevoke', true)}</div>`}</td></tr>`;
+  }).join('')) : `<div class="chat-admin-empty">${escapeHtml(t(proxyLoaded ? 'proxyNoKeys' : 'proxyNotLoaded'))}</div>`;
+  renderProxyExample();
+}
+// Explicit safe-field projection: never keep a list response's unexpected key/hash fields.
+function safeProxyKey(item) {
+  return Object.fromEntries(['id', 'route_id', 'label', 'key_prefix', 'key_last4', 'enabled', 'revoked_at', 'version', 'created_at'].map(field => [field, item[field]]));
+}
+async function loadProxy(run) {
+  const payload = await request(run, 'admin_proxy_list', {});
+  assertCurrent(run);
+  proxyRoutes = asArray(payload.routes); proxyKeys = asArray(payload.keys).map(safeProxyKey); proxyLoaded = true;
+  renderProxy(); controls();
+}
+async function proxyMutation(run, action, body) {
+  setMessage('proxyMessage', 'saving');
+  let payload;
+  try { payload = await request(run, action, body); }
+  catch (error) {
+    assertCurrent(run);
+    if (error.status !== 409 || error.message !== 'conflict') throw error;
+    await loadProxy(run);
+    const editing = proxyRoutes.find(item => item.id === $('proxyRouteId').value);
+    if (editing) fillProxyRoute(editing); else clearProxyRoute();
+    setMessage('proxyMessage', 'proxyConflict', 'warning');
+    return;
+  }
+  assertCurrent(run);
+  if (payload.route) {
+    proxyRoutes = proxyRoutes.filter(item => item.id !== payload.route.id).concat(payload.route);
+    if (action === 'admin_proxy_save') clearProxyRoute();
+    else if ($('proxyRouteId').value === payload.route.id) fillProxyRoute(payload.route);
+  }
+  if (payload.key) proxyKeys = proxyKeys.filter(item => item.id !== payload.key.id).concat(safeProxyKey(payload.key));
+  if (action === 'admin_proxy_key_create') {
+    clearProxyPlaintext();
+    if (typeof payload.api_key === 'string' && payload.api_key) {
+      proxyPlaintext = payload.api_key;
+      $('proxyOneTimeKey').textContent = proxyPlaintext; $('proxyOneTimePanel').hidden = false;
+    }
+    $('proxyKeyLabel').value = '';
+  }
+  renderProxy(); setMessage('proxyMessage', 'proxySaved', 'success');
+}
+async function copyProxyPlaintext() {
+  if (!authorized || !proxyPlaintext) return;
+  const revision = epoch;
+  try {
+    // Pass the in-memory value only to the explicit user-initiated clipboard write.
+    await navigator.clipboard.writeText(proxyPlaintext);
+    if (revision === epoch && authorized && proxyPlaintext) setMessage('proxyCopyMessage', 'proxyCopied', 'success');
+  } catch { if (revision === epoch && authorized && proxyPlaintext) setMessage('proxyCopyMessage', 'proxyCopyFailed', 'error'); }
+}
+async function copyProxyBase(id) {
+  if (!authorized || !proxyRoutes.some(item => item.id === id)) return;
+  const revision = epoch;
+  try {
+    await navigator.clipboard.writeText(proxyBaseURL(id));
+    if (revision === epoch && authorized) setMessage('proxyMessage', 'proxyBaseCopied', 'success');
+  } catch { if (revision === epoch && authorized) setMessage('proxyMessage', 'proxyCopyFailed', 'error'); }
 }
 function validInteger(value, min, max) { return Number.isInteger(value) && value >= min && value <= max; }
 
 $('refreshQuotaButton').onclick = () => void operation('quotaMessage', loadQuotaDirectory);
+$('refreshProxyButton').onclick = () => void operation('proxyMessage', async run => { await loadProxy(run); setMessage('proxyMessage'); });
+$('clearProxyRouteButton').onclick = () => { if (!active) clearProxyRoute(); };
+$('clearProxyKeyButton').onclick = () => { clearProxyPlaintext(); controls(); };
+$('copyProxyKeyButton').onclick = () => void copyProxyPlaintext();
+$('proxyKeyRoute').addEventListener('change', () => { renderProxyExample(); controls(); });
+$('proxyRouteForm').addEventListener('submit', event => {
+  event.preventDefault();
+  if (active || !authorized || !$('proxyRouteForm').reportValidity()) return;
+  let body;
+  try { body = proxyRouteInput(); } catch (error) { setMessage('proxyMessage', errorKey(error), 'error'); return; }
+  void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_save', body));
+});
+$('proxyKeyForm').addEventListener('submit', event => {
+  event.preventDefault();
+  if (active || !authorized || !$('proxyKeyForm').reportValidity()) return;
+  const route_id = $('proxyKeyRoute').value, label = $('proxyKeyLabel').value.trim();
+  if (!proxyRoutes.some(item => item.id === route_id) || !label || label.length > 120) return setMessage('proxyMessage', 'invalidInput', 'error');
+  // Do not silently replace a key the administrator has not yet saved.
+  if (proxyPlaintext && !window.confirm(t('proxyReplaceConfirm'))) return;
+  clearProxyPlaintext();
+  void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_key_create', {route_id, label}));
+});
+$('proxyRoutesList').addEventListener('click', event => {
+  if (active || !authorized) return;
+  const button = event.target.closest('[data-proxy-copy-base], [data-proxy-edit], [data-proxy-route-state]');
+  if (!button) return;
+  const item = proxyRoutes.find(item => item.id === (button.dataset.proxyCopyBase || button.dataset.proxyEdit || button.dataset.proxyRouteState));
+  if (!item) return;
+  if (button.dataset.proxyCopyBase) { void copyProxyBase(item.id); return; }
+  if (button.dataset.proxyEdit) { fillProxyRoute(item); $('proxyRouteName').focus(); return; }
+  void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_route_state', {id: item.id, enabled: !item.enabled, expected_version: item.version}));
+});
+$('proxyKeysList').addEventListener('click', event => {
+  if (active || !authorized) return;
+  const button = event.target.closest('[data-proxy-key-state], [data-proxy-key-revoke]');
+  const item = proxyKeys.find(item => item.id === (button?.dataset.proxyKeyState || button?.dataset.proxyKeyRevoke));
+  if (!item || item.revoked_at) return;
+  const revoked = Boolean(button.dataset.proxyKeyRevoke);
+  if (revoked && !window.confirm(t('proxyRevokeConfirm', {label: item.label}))) return;
+  void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_key_state', {id: item.id, enabled: revoked ? false : !item.enabled, revoked, expected_version: item.version}));
+});
 $('quotaUserForm').addEventListener('submit', event => event.preventDefault());
 $('quotaUser').addEventListener('change', () => {
   if (active || !authorized) { $('quotaUser').value = selectedUser; return; }

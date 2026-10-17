@@ -9,8 +9,8 @@
 0. 升级额度版本前，先暂停旧 Edge 的新生成准入并等待已有流结束（必要时在网关/函数层暂停；仅隐藏前端按钮不足以阻止旧客户端调用）。旧 Edge 不执行新额度准入，不能让它在迁移窗口继续接单。
 1. **先执行更新后的 Chat SQL**（第 2 节，包括额度、黑名单与预留结算迁移）；保留现有配置和 usage，不删除重建旧表。
 2. 设置 Edge Function secrets（第 3 节）。
-3. **再部署新版 Edge Function `chat`**，先确认新 RPC 可用。
-4. **最后发布新版静态前端**（第 6 节），避免前端提前调用尚不存在的额度接口。
+3. **再部署两个新版 Edge Function `chat` 与 `chat-api-proxy`**，先确认新 RPC 可用。两者均配置 `verify_jwt=false`，但分别在函数内部执行用户 JWT/管理员校验与 proxy key 鉴权。
+4. **最后发布新版静态前端**（第 6 节），避免前端提前调用尚不存在的额度或代理管理接口。
 5. 在管理页配置 provider/model 并完成授权后的低成本测试（第 4、5、7 节），再恢复生成入口。
 
 **计量起点**：历史 `chat_usage` 不回填额度桶；新额度只从新版 Edge 的 admission/预留开始累计。旧 usage 继续作为历史审计保留，不能把升级后显示的 used 理解为本日/本周/本月所有历史供应商消耗。
@@ -38,7 +38,7 @@
 supabase/club-chat-schema.sql
 ```
 
-执行前确认当前项目已经有 `auth.users`、`club_member_profiles` 和 `club_super_admins`。这个文件维护 Chat 的 provider、model、usage、generation lease，以及额度设置、分期计数、请求预留和黑名单；相关读取、保存、准入与结算 RPC 仅供 service role 使用。已有安装也必须执行本次更新后的完整 Chat SQL，不能只部署前端或 Edge。
+执行前确认当前项目已经有 `auth.users`、`club_member_profiles` 和 `club_super_admins`。这个文件维护 Chat 的 provider、model、usage、generation lease，以及额度设置、分期计数、请求预留和黑名单，并增量维护独立的外部代理路由、key 哈希和在途租约；相关读取、保存、准入与结算 RPC 仅供 service role 使用。已有安装也必须执行本次更新后的完整 Chat SQL，不能只部署前端或 Edge。
 
 禁止为了 Chat 执行旧的 member profile schema，也禁止执行包含 `drop table` 的迁移来“清理”旧资料。特别是不要删除或重建现有 `club_member_profiles`，否则会破坏成员登录后的资料绑定、积分和现有功能。
 
@@ -79,6 +79,7 @@ Edge Function 已经自行校验 Bearer token，并通过 Supabase Auth `/auth/v
 
 ```bash
 supabase functions deploy chat --no-verify-jwt
+supabase functions deploy chat-api-proxy --no-verify-jwt
 ```
 
 `--no-verify-jwt` 只关闭 Supabase 网关的默认 JWT 校验，方便该函数返回统一的 CORS/错误响应；函数内部仍然必须验证 `Authorization: Bearer <user-access-token>`，并检查成员资料。不要把它理解为允许匿名调用。部署项目和设置 secrets 时按 Supabase CLI 当前登录账号与项目链接执行，避免把 key 直接写在命令历史中。
@@ -250,5 +251,63 @@ API action 契约：`quota {}` 仅查询本人；`admin_user_directory {}` 返�
 4. 检查 `chat_usage` 中的失败状态、时间和 request ID。
 5. 保留 SQL 表和历史 usage 记录，不执行删除旧 member profile 表的“清理”脚本。
 6. 修复并重新部署 `chat` 函数或静态文件后，再用授权的低成本测试恢复单个 provider/model。
+
+## 11. 独立对外 Responses 代理
+
+### 边界与发布
+
+外部代理独立于成员 Chat：不使用 Chat 的 quota、blacklist、成员资料、页面开关或 catalog/model 配置。关闭 Chat 页面、把成员拉黑、把 Chat 额度设为 0，不会停掉对外代理。停用代理应禁用对应 route/key，泄漏时撤销 key；已开始的流不保证被追溯终止。代理 key 不是 Supabase 用户 JWT，不授予 Chat 管理权限。
+
+发布顺序必须为 **完整主脚本 `supabase/club-chat-schema.sql` → Edge Secrets → 两个 Edge（`chat`、`chat-api-proxy`）→ 前端**。不要单独执行其他代理 SQL 片段代替主脚本。SQL/RPC 使用 service role，不能为方便前端而放开表。两个函数均 `verify_jwt=false`（CLI `--no-verify-jwt`）；不是匿名放行：`chat` 内部验证用户 JWT 与动态超级管理员，`chat-api-proxy` 内部验证 `Authorization: Bearer <proxy-key>` 的哈希、路由绑定、enabled 和撤销状态。
+
+上游 key 只存 Edge Secrets。路由仅存 `CHAT_KEY_*` **引用名**，绝不填入原生 key。应使用**专用于对外代理的上游项目和 Secret**，不要与本站 Chat、私人文件、向量库或其他服务共用。保存配置、检查 Secret 存在、创建 key 均不应发起付费测试；没有自动测试收费请求。真实付费验证必须由所有者单独明确授权，不因部署或打开管理页而自动执行。
+
+### 管理契约与一次明文
+
+以下均为 `chat` action，除 `action` 外的请求字段如下；所有动作仅动态超级管理员可用：
+
+| action | 请求 | 返回 |
+| --- | --- | --- |
+| `admin_proxy_list` | `{}` | `{routes,keys}` |
+| `admin_proxy_save` | `{id:null或UUID,name,base_url,secret_name,enabled,expected_version:0或n}` | `{route}` |
+| `admin_proxy_route_state` | `{id,enabled,expected_version}` | `{route}` |
+| `admin_proxy_key_create` | `{route_id,label}` | `{key:metadata,api_key:一次明文}` |
+| `admin_proxy_key_state` | `{id,enabled,revoked:boolean,expected_version}` | `{key}` |
+
+route 字段仅为 `id,name,base_url,secret_name,enabled,version,created_at,updated_at`。安全 key metadata 仅为 `id,route_id,label,key_prefix,key_last4,enabled,revoked_at,version,created_at`，不含 hash 或完整 key。新 route 的 `expected_version` 为 0；更新带读取时版本，陈旧版本 `409 conflict`，刷新核对后再操作。撤销不可恢复，需重新创建 key。
+
+proxy key 格式为 `cap_` 加 **32 随机字节的 base64url**（43 字符，无 padding）。创建接口只返回一次完整明文；服务端只持久化哈希与安全 metadata，列表/状态保存不能取回明文或哈希。关闭一次明文提示前由接收者安全保存；丢失则撤销重建。不要把 key 放进仓库、截图、日志或公共示例。key_prefix/key_last4 只用于识别，不可用于认证。
+
+### 客户端 URL 与支持范围
+
+路由 `base_url` 填供应商 HTTPS 公网版本根地址（例 `https://api.example.com/v1`），不是 `/response` 或 `/responses`，不带凭据/query/hash。外部客户端使用本站 base：
+
+```text
+https://<project-ref>.supabase.co/functions/v1/chat-api-proxy/<route-uuid>/v1
+```
+
+只提供 **POST `<base>/responses`**；不提供 `/models`、`/chat/completions`、`/response` 或 `/responses/<id>` retrieve。示例使用标准客户端 SDK 的 `responses.create`：
+
+```js
+import OpenAI from 'openai';
+const client = new OpenAI({
+  baseURL: process.env.CLUB_PROXY_BASE_URL,
+  apiKey: process.env.CLUB_PROXY_KEY // 接收者自己保存的一次明文 proxy key，不是原生上游 key
+});
+// 仅示例；不要将其作为部署/自动测试的一部分执行（生产调用可能收费）。
+const response = await client.responses.create({model: 'supplier-model-id', input: 'Hello'});
+// stream:true 使用同一 create 入口，返回 SSE；不需要另一个 URL。
+```
+
+代理不擅自改写 `model` 或其他 Responses 字段，JSON/SSE 由上游能力决定。不提供按 key 用量套餐、金额硬上限或模型 allowlist：客户端可请求任意上游接受的 model/output，不能把 Chat 额度误认为代理预算。默认在途上限为每 key 2、每 route 20，通过独立 SQL 租约准入（满额 429，租约不是 token 计费）；请求体过大返回 413。租约到期不代表取消已计费的供应商工作。
+
+### 安全、转售与运行时限制
+
+- 上线前确认供应商条款明确允许此类转售、转授权或代理；持有上游 key 不等于获得转售许可。
+- **不保证完全隐藏上游**。非 2xx 上游正文统一脱敏，不向客户回传供应商错误正文/原生 key；但成功 JSON、SSE 事件、模型名、错误事件或其他正文内容仍可能暴露供应商特征或敏感内容。尤其 SSE 开始后无法保证正文级净化；不要宣传匿名化或完全隐藏供应商。
+- 透明透传可能包含 `tools`（远程 MCP、搜索、代码执行）、files、`vector_store_id`、`previous_response_id` 和远程媒体 URL。本站不执行这些工具，但**上游可能执行工具/抓取 URL、访问共享项目资源并产生额外费用**。proxy key 之间不构成上游租户隔离。上游 base URL 的 SSRF 校验也不覆盖正文指示上游进行的抓取；因此必须使用隔离的上游项目/Secret，并在供应商侧限制权限、资源和预算。
+- 客户端取消会尝试中止代理流/上游请求并释放租约，但不保证供应商立即停止或退款；流中断/超时不代表未计费。
+- `CHAT_PROXY_TIMEOUT_MS` 控制整条请求/流的超时，默认及最大值均为 **120000 ms（120 秒）**。这是本代理限制，不是供应商完成时间保证。
+- [Supabase 官方运行限制](https://supabase.com/docs/guides/functions/limits)：worker wall-clock 免费方案 150 秒、付费方案 400 秒，idle timeout 150 秒，内存 256 MB。SSE 不保证延长 worker wall-clock；不能因持续有 token 就承诺无限长流。代理自己的 120 秒上限仍会先行生效，平台终止也可能更早发生。
 
 本文不包含真实 key、service role key、数据库凭据或已执行线上操作的声明。

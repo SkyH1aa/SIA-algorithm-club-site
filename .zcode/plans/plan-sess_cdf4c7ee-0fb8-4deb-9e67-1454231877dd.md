@@ -1,92 +1,93 @@
-## 实施计划：Chat 用户黑名单与多周期 Token 限额
+## 实施计划：ChatAI 超管管理的 Responses API 代理
 
-### 1. 明确定额语义并建立数据库计量层
+### 一、已确定的方案
 
-新增到 `supabase/club-chat-schema.sql`，保持现有 Chat 表的 RLS、service role-only 访问和幂等升级风格：
+采用你选择的方案：
+- **自有代理 URL + 自有代理 API key**，不向社员提供上游原生 key。
+- 第一版只支持 **POST `/responses`**，同时兼容普通 JSON 响应与 SSE 流式响应。
+- 上游真实 key 保存在 **Supabase Edge Function Secrets**；管理页只填写 Secret 引用名，不填写或回显真实 key。
+- 销售、收款、发货由你自行处理；网站不增加支付、套餐或自动售卖。
 
-- `chat_quota_settings`：单例配置，保存总体每日 token 上限、版本号、更新时间和修改人。
-- `chat_user_quota_settings`：按 `user_id` 保存用户每日、每周、每月 token 上限；未设置表示继承无限制。
-- `chat_user_blacklist`：按 Auth `user_id` 保存黑名单状态、原因、操作人和时间。
-- `chat_token_usage_buckets`：按用户和 UTC 日/周/月保存已预扣/已结算 token；另外保存总体 UTC 日桶。
-- 必要索引、外键、非负计数约束、RLS、service role 授权和幂等 seed/migration。
+使用方式示例：
+```text
+超管填写的上游 Base URL：https://api.example.com/v1
+Secret 引用名：CHAT_KEY_RESELL_A
 
-限额采用 UTC 日历周期：
+系统生成的代理 Base URL：
+https://<project>.supabase.co/functions/v1/chat-api-proxy/<随机路由ID>/v1
 
-- 日：UTC 00:00 到次日 UTC 00:00。
-- 周：UTC 周一到下周一。
-- 月：UTC 每月 1 日到下月 1 日。
-- 新安装默认不限制，避免升级后突然中断现有服务。
-- 黑名单只阻止新的 `respond`/`admin_test` admission，不自动中断正在进行的流。
+社员调用：POST <代理BaseURL>/responses
+Authorization: Bearer <你签发的代理APIkey>
+```
+上游实际请求地址为 `<上游BaseURL>/responses`。输入必须是基础地址，不含 `/responses`；你示例中的 `/response`（单数）不会被默认为标准端点。第一版按标准 `/responses` 实现，若供应商只有非标准端点会明确报配置问题，不静默猜测或改写。
 
-### 2. 使用原子 RPC 执行黑名单、限额和并发控制
+### 二、独立于现有网站对话
 
-在同一 SQL 主脚本中新增 service-role-only RPC：
+新增独立 Edge Function `chat-api-proxy`，避免改动现有成员 Chat 的 Responses 校验、模型配置、token 配额和审计结算。
 
-- `chat_begin_generation(...)`：在一次事务中检查黑名单、获取用户 generation lease、锁定对应周期桶和总体日桶、计算可用 token，并插入 `chat_usage` 的预审计行。返回允许/拒绝、拒绝码、各周期剩余额度和本次 `max_output_tokens`。
-- `chat_finish_generation(...)`：按 `request_id` 幂等结算实际供应商 `input_tokens/output_tokens/total_tokens`，将预扣额度调整为实际额度；对于取消、EOF、失败或无 usage 的不确定请求保留保守预扣，不把可能已计费的请求退回。
-- `chat_quota_get(...)`：返回当前用户或管理端选定用户的额度、已用、剩余和下次重置时间。
-- `chat_quota_save(...)`：超管修改总体每日额度或单用户日/周/月额度，带版本号检查，避免两个管理标签页互相覆盖。
-- `chat_blacklist_set(...)`：超管按 Auth UUID 设置/解除黑名单并保存原因。
-- `chat_user_directory(...)`：超管专用，复用现有用户/会员资料目录，返回最小字段 `user_id`、`username`、`member_name`、绑定状态；前端下拉框显示用户名，提交始终使用 UUID。
+- **管理接口**仍放在现有 `chat` Edge Function 中，使用 Supabase 登录和动态超级管理员校验。
+- **调用接口**只验证代理 API key，不要求社员登录网站或传 Supabase publishable key。
+- 新函数配置 `verify_jwt=false`，由函数内部验证代理 key；否则 Supabase 网关会把代理 key 误当作 JWT 拒绝。
+- 代理路由、代理 key 的启停是后端强制检查，不只是前端遮罩。
+- 网站内 Chat 的用户配额、黑名单、页面服务开关不自动作用于对外代理；对外代理由自己的路由/key 状态控制。
 
-所有 admission 必须在 Edge Function 调用供应商前完成。不能用“先查询 usage、再插入 usage”的非原子方式，否则并发请求会同时越过总体每日额度。RPC 使用数据库时间和固定锁顺序，确保用户额度、总体额度、黑名单和 lease 的并发结果可预测。
+### 三、数据库与密钥
 
-### 3. 实现“超限直接截断”规则
+在现有 `supabase/club-chat-schema.sql` 中增加幂等迁移，不删除或重建旧 Chat 数据：
 
-在 Edge Function 构造完真实输入并得到供应商默认输出预算后：
+1. **代理路由表**：随机路由 ID、内部名称、上游 Base URL、Secret 引用名、启用状态、配置版本号、创建/修改人及时间。
+2. **代理 key 表**：路由 ID、key 标签、SHA-256 摘要、供识别的短前缀/尾号、启用/撤销状态、创建人及时间。
 
-- 以当前请求的估算输入 token 加管理员默认输出预算计算本次最大需求。
-- RPC 返回的有效额度不足以覆盖完整输出预算时，将本次上游 `max_output_tokens` 缩小为剩余额度减去估算输入 token 的可用部分。
-- 若剩余额度连估算输入 token 都无法覆盖，则返回 `429 quota`，不调用上游。
-- 将实际缩小后的输出预算写入 usage 审计和上游请求，SSE 仍按现有 `incomplete`/终态逻辑保存部分回复；用户端显示“已达到 Chat token 限额，本轮已截断”而不是泛化请求失败。
-- 总体每日额度与用户日/周/月额度同时生效，取最小可用预算。
-- 真实上游 usage 回来后由 finish RPC 结算；没有 usage 或请求在上游已启动后中断时保留预扣，避免通过取消、EOF 或异常绕过硬限额。
-- `admin_test` 也进入总体每日额度；其用户额度是否限制管理员本人按同一规则处理，超管仍可管理配置和解除黑名单。
+两表启用 RLS，普通匿名/登录用户不能直接访问；只允许 service role 及受控管理逻辑使用。
 
-这意味着“强行截断”发生在请求发往上游之前通过缩小输出上限，并由供应商的 `incomplete` 终态完成本轮截断；如果输入本身已超出剩余额度，则只能安全拒绝，不能删除或篡改用户历史上下文。
+代理 key 由后端使用安全随机数生成（至少 256 位随机熵），只在生成成功时返回明文一次。数据库不存明文；忘记后只能签发新 key、撤销旧 key。生成响应使用 `Cache-Control: no-store`，key 不放 URL、不写日志、不写 localStorage/IndexedDB。上游 key 始终只从 Secrets 读取。
 
-### 4. 扩展 Edge Function 动作与错误契约
+每个路由可签发多把 key，方便你分别发给不同社员并单独撤销。第一版不加入按 key 计费、token 套餐或售卖流程。
 
-更新 `supabase/functions/chat/index.ts`：
+### 四、ChatAI 管理界面
 
-- `Model` 和现有 generation 流程接入 begin/finish RPC。
-- 新增 `quota`、`admin_quota_get`、`admin_quota_save`、`admin_user_directory`、`admin_blacklist_list`、`admin_set_blacklist` 等动作及严格 allow-list。
-- 普通 `catalog` 返回当前用户黑名单/额度摘要；黑名单用户仍可得到明确 `403 blacklisted`，不暴露配置详情。
-- `respond` 和 `admin_test` 每次都重新执行原子 admission，不能信任 catalog 缓存。
-- 额度不足返回 `429 quota`，附带 reset 信息；黑名单返回 `403 blacklisted`；管理员配置冲突返回 `409 conflict`。
-- 保留现有身份验证、动态超管检查、usage metadata-only、lease、SSE 和账号隔离。
+新增“对外 Responses API 代理”区域，仅超管可见、可操作：
+- 创建/编辑路由：名称、上游 Base URL、Secret 引用名、启用状态。
+- 展示并复制自动生成的代理 Base URL，不在对外 URL 中出现上游域名。
+- 路由列表可启用/禁用，使用版本检查避免覆盖其他管理员配置。
+- 按路由生成代理 key，填写识别标签，支持复制一次性明文、查看已有 key 的掩码及启用/禁用/撤销。
+- 生成后提供无真实 key 的 curl/Python 配置示例，不自动发起供应商调用。
+- 中英文、亮暗主题、错误提示、账号切换清空敏感数据沿用现有约定。
 
-### 5. 管理端 UI
+不在网页管理 Supabase Secrets；文档说明如何先在 Supabase 后台设置 `CHAT_KEY_*`。保存或启用路由时检查引用的 Secret 是否存在，但不通过付费调用验证 key。
 
-更新 `public/chat-admin.html/js/css/i18n`：
+### 五、转发行为与安全边界
 
-- 新增“总体每日 token 限额”面板。
-- 新增用户选择下拉框，选项显示 `用户名 · 真实姓名`，值使用 Auth UUID；不接受手工输入用户名作为权限目标。
-- 新增单用户每日/每周/每月 token 限额输入，支持清空表示不限额。
-- 新增黑名单开关、原因输入、保存/解除按钮和当前状态。
-- 展示用户当前周期已用、剩余和重置时间；所有数值由服务端返回，前端不自行计算为权威结果。
-- 处理额度 429、黑名单 403、版本冲突和普通管理权限错误；黑名单管理员仍可访问配置管理页。
-- 中英文、亮暗主题、动态语言刷新和现有 account epoch/clear-sensitive 状态逻辑同步维护。
+1. 每次请求验证路由和 key 状态及所属关系，禁用后阻止新请求；已建立的流不承诺即时强杀。
+2. 只接受固定路由的 `/v1/responses`，拒绝其他路径、方法、路径逃逸和任意目标 URL，不能成为开放代理。
+3. 上游只允许公网 HTTPS，保存和调用时检查域名/DNS/地址，禁止内网、loopback、凭据、query、fragment 和重定向；禁止代理回环。
+4. 客户端只传本站代理 key。函数替换为上游 `Authorization: Bearer <Secret>`，绝不把代理 key、Supabase 凭证、Cookie 或客户端任意认证头上送。
+5. 不重写 `model`、`input`、`stream` 等 Responses 请求字段，不强制 SSE，不执行网站 Chat 的上下文裁剪或额度预扣。限制 JSON 请求体为 12 MiB，禁止压缩请求以免大小限制被绕过。
+6. 成功 JSON/SSE 响应按流转发，不解析或修改模型内容，不积攒整条回复；客户端取消时中止上游，不自动重试以避免重复计费。
+7. 不转发上游 `Server`、`Location`、Cookie、内部诊断等可能泄露信息或不安全的响应头；不透出上游 URL、异常堆栈、认证信息。
+8. **错误响应取舍**：保留上游 HTTP 错误状态（如 401/429），但非成功响应正文改为本站统一 OpenAI 风格错误，避免供应商 HTML/错误文本直接暴露上游；因此不是所有错误正文都逐字透传。已经进入成功 SSE 的内容不做全流脱敏。
+9. 公网 API CORS 与管理端独立：支持非浏览器客户端及携带 Bearer key 的浏览器请求，不启用 Cookie 凭证；CORS 不是权限控制。
+10. 每次请求都查后端状态；基础并发保护与可配置请求时限用于保护 Supabase 资源，不宣称是精确计费或完整商业网关。运行时上限按实际 Supabase 套餐文档核实，不能承诺无限时长。超时/平台终止可能留下部分回复，也可能产生费用。
 
-### 6. 成员端反馈
+**诚实边界**：此方案能隐藏连接用的上游地址及真实 key，但模型名称、回复内容、SSE 错误或行为特征仍可能透露供应商；不能保证上游身份完全不可识别。还需你自行确认上游服务允许转售及代理使用。
 
-更新 `public/chat.js`、`chat-i18n.js`：
+### 六、测试
 
-- catalog 或 generation 收到黑名单时显示明确的禁止使用提示。
-- 收到 quota 时显示当前周期已达上限、下次重置时间和本轮已截断/未发起状态。
-- 生成被缩短时保留已收到的文本和 `incomplete` 状态，不显示旧的泛化“请求失败”。
-- 不在 IndexedDB 或前端持久化额度权威数据；额度只来自 Edge Function。
+新增独立代理处理器无网络测试，并扩展管理端测试/mock：
+- 超管权限；普通用户不能管理或读取上游配置。
+- key 生成只显示一次、数据库仅存摘要、跨路由/未知/撤销/禁用 key 拒绝。
+- 路由启停在后端生效，拒绝时不调用上游。
+- JSON 与碎片 SSE 原字节转发，任意合法 Responses 字段保留，非流式响应可用。
+- 上游 key 替换正确、客户端 key/内部头不泄露，错误正文脱敏且状态保留。
+- SSRF、DNS、重定向、路径逃逸、请求过大、错误方法、取消和超时。
+- 管理端账号隔离、版本冲突、中英文、复制/一次性 key 清理。
+- 旧 Chat 的 core、admin、42 项 handler 回归不退化。
+- pglast 解析 SQL 和 PL/pgSQL；真实数据库测试仅使用可用的本地 PostgreSQL，环境缺失则明确标记未运行，不操作线上数据库。
 
-### 7. Mock、测试和真实数据库验证
+### 七、交付与部署
 
-同步 `tools/chat-mock-server.mjs`、`tools/test-chat-backend.ts`、`tools/test-chat-core.mjs` 和验证文档：
+更新代码、mock、测试和部署文档，提供管理操作步骤及客户端接入示例。
 
-- 覆盖超管配置总体额度、用户额度、下拉目录、黑名单设置/解除、普通用户访问拒绝。
-- 覆盖额度不足时不调用上游、输出预算被缩小、SSE incomplete 保留部分输出。
-- 覆盖日/周/月边界、全局日限额、取消/失败保留预扣、重复 finish 不重复计量、账号切换和旧请求隔离。
-- mock 只模拟契约；新增真实 PostgreSQL 集成测试/SQL 验收，验证 `SELECT FOR UPDATE`/advisory lock 下并发 admission 只能成功一次、migration 可重复执行且不会重置配置。
-- 运行 JS/Deno 语法、Chat core、mock 自检、Edge Function handler 测试、pglast SQL 解析、`git diff --check`。
+上线顺序：执行更新后的 Chat SQL → 设置上游 Secrets → 部署 `chat` 管理函数和新 `chat-api-proxy` 函数 → 发布静态管理页 → 由超管创建路由并签发 key。
 
-### 8. 部署边界
-
-完成后只更新本地代码和文档，不执行线上 SQL、不部署 Edge Function、不调用真实供应商、不提交或推送。上线时需先执行新的 Chat 主 SQL，再部署 Edge Function，最后发布静态前端；默认限额保持不限，超管配置后才启用实际限制。
+本次实施仅在本地完成：**不执行线上 SQL、不部署、不调用真实付费供应商、不提交或推送**。任何上线与真实调用另行授权。

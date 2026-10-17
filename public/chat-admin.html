@@ -100,6 +100,37 @@
         <div id="modelsList" class="chat-admin-table-wrap"></div>
       </section>
 
+      <section class="chat-admin-panel chat-admin-section" id="proxySection">
+        <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.proxyTitle">对外 Responses 代理</h2><p data-i18n="chatAdmin.proxyLead">仅支持 POST /responses。管理操作不会调用供应商。上游密钥只引用 Supabase CHAT_KEY_* Secret；下发密钥仅展示一次。</p></div><button id="refreshProxyButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.proxyRefresh">刷新路由与密钥</button></div>
+        <form id="proxyRouteForm" class="chat-admin-form" autocomplete="off">
+          <input id="proxyRouteId" type="hidden">
+          <label><span data-i18n="chatAdmin.proxyName">路由名称</span><input id="proxyRouteName" class="chat-admin-input" required maxlength="120"></label>
+          <label><span data-i18n="chatAdmin.baseUrl">Base URL</span><input id="proxyBaseUrl" class="chat-admin-input" type="url" required maxlength="2048" placeholder="https://api.example.com/v1" aria-describedby="proxyUrlHelp"></label>
+          <label><span data-i18n="chatAdmin.secretName">Supabase Secret 名称</span><input id="proxySecretName" class="chat-admin-input" required maxlength="89" pattern="CHAT_KEY_[A-Z0-9_]{1,80}" placeholder="CHAT_KEY_EXAMPLE"></label>
+          <label class="chat-admin-check"><input id="proxyRouteEnabled" type="checkbox" checked><span data-i18n="chatAdmin.enabled">启用</span></label>
+          <div class="chat-admin-actions"><button class="chat-admin-button" type="submit" data-i18n="chatAdmin.proxySave">保存路由</button><button id="clearProxyRouteButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="common.clearForm">清空表单</button></div>
+        </form>
+        <p id="proxyUrlHelp" class="chat-admin-quota-help" data-i18n="chatAdmin.proxyUrlHelp">HTTPS 上游基础地址，不得含 response/responses 路径、凭据、查询参数或非 443 端口。这里不输入真实密钥。</p>
+        <div id="proxyRoutesList" class="chat-admin-table-wrap"></div>
+        <h3 data-i18n="chatAdmin.proxyKeysTitle">路由访问密钥</h3>
+        <form id="proxyKeyForm" class="chat-admin-form" autocomplete="off">
+          <label><span data-i18n="chatAdmin.proxyRoute">路由</span><select id="proxyKeyRoute" class="chat-admin-input" required></select></label>
+          <label><span data-i18n="chatAdmin.proxyKeyLabel">密钥标签</span><input id="proxyKeyLabel" class="chat-admin-input" required maxlength="120"></label>
+          <div class="chat-admin-actions"><button id="createProxyKeyButton" class="chat-admin-button" type="submit" data-i18n="chatAdmin.proxyCreateKey">生成新密钥</button></div>
+        </form>
+        <div id="proxyOneTimePanel" class="chat-admin-one-time" hidden>
+          <p data-i18n="chatAdmin.proxyOneTimeWarning">请立即安全保存：此明文只展示一次，清除、登出或换账号后无法再次获取。不写入浏览器存储。</p>
+          <pre id="proxyOneTimeKey" class="chat-admin-test-result" aria-label="一次明文密钥" data-i18n-aria="chatAdmin.proxyOneTimeLabel"></pre>
+          <div class="chat-admin-actions"><button id="copyProxyKeyButton" class="chat-admin-button" type="button" data-i18n="chatAdmin.proxyCopy">复制明文</button><button id="clearProxyKeyButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.proxyClearKey">清除明文</button></div>
+        </div>
+        <p id="proxyCopyMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+        <div id="proxyKeysList" class="chat-admin-table-wrap"></div>
+        <h3 data-i18n="chatAdmin.proxyExampleTitle">客户端配置示例（不会自动执行）</h3>
+        <p data-i18n="chatAdmin.proxyExampleHelp" class="chat-admin-quota-help">使用所选路由的 baseURL，并在客户端单独配置访问密钥；示例仅含占位符。只支持 Responses POST，不支持 Chat Completions。</p>
+        <pre id="proxyExample" class="chat-admin-test-result"></pre>
+        <p id="proxyMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+      </section>
+
       <section class="chat-admin-panel chat-admin-section">
         <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.quotaTitle">配额与黑名单</h2><p data-i18n="chatAdmin.quotaLead">按 token 限制用量。留空表示不限，0 表示阻止调用；每项上限为 1,000,000,000,000。</p></div><button id="refreshQuotaButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.refreshQuota">刷新配额与用户</button></div>
         <h3 data-i18n="chatAdmin.globalQuota">全站每日配额</h3>

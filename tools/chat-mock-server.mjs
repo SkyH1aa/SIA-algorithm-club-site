@@ -2,14 +2,16 @@ import http from 'node:http';
 import {readFile, realpath, stat} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {randomUUID} from 'node:crypto';
+import {randomUUID, randomBytes, createHash, timingSafeEqual} from 'node:crypto';
 import assert from 'node:assert/strict';
 
 // Deliberately standalone: never import the backend, read credentials, or fetch an upstream.
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = path.join(ROOT, 'public');
 const FIXTURES = path.join(ROOT, 'docs/chat-validation/fixtures');
-const PORT = 4191;
+const portArgument = process.argv.indexOf('--port');
+const PORT = portArgument < 0 ? 4191 : Number(process.argv[portArgument+1]);
+if (!Number.isInteger(PORT) || PORT < 1024 || PORT > 65535) throw new Error('Invalid --port (1024..65535)');
 const ORIGIN = `http://localhost:${PORT}`;
 const LIMIT = 12 * 1024 * 1024;
 const ACCOUNTS = {
@@ -20,7 +22,8 @@ const ACCOUNTS = {
   loggedout: null
 };
 const SCENARIOS = ['completed','incomplete','interrupted','failed','slow'];
-const ACTIONS = ['catalog','respond','admin_get','admin_save_provider','admin_save_model','admin_usage','admin_test','quota','admin_user_directory','admin_quota_get','admin_quota_save','admin_set_blacklist','admin_blacklist_list'];
+const PROXY_ACTIONS = ['admin_proxy_list','admin_proxy_save','admin_proxy_route_state','admin_proxy_key_create','admin_proxy_key_state'];
+const ACTIONS = ['catalog','respond','admin_get','admin_save_provider','admin_save_model','admin_usage','admin_test','quota','admin_user_directory','admin_quota_get','admin_quota_save','admin_set_blacklist','admin_blacklist_list',...PROXY_ACTIONS];
 const ACTION_ALIASES = new Map([['save_provider','admin_save_provider'],['save_model','admin_save_model'],['usage','admin_usage'],['test','admin_test']]);
 const PROVIDER_ID = '20000000-0000-4000-8000-000000000001';
 const MODEL_ID = '30000000-0000-4000-8000-000000000001';
@@ -144,7 +147,8 @@ function modelConfig(payload, providers) {
 function upsert(rows, item) { const index = rows.findIndex(row => row.id === item.id); if (index < 0) rows.push(item); else rows[index] = item; return item; }
 function rewriteJS(source, origin) {
   return source.replace(/https:\/\/[a-z0-9-]+\.supabase\.co/gi,origin)
-    .replaceAll('/functions/v1/chat','/mock/chat').replaceAll('/functions/v1/club-drive','/mock/club-drive');
+    .replaceAll('/functions/v1/chat-api-proxy','/mock/chat-api-proxy')
+    .replace(/\/functions\/v1\/chat(?=['"`/\s]|$)/g,'/mock/chat').replaceAll('/functions/v1/club-drive','/mock/club-drive');
 }
 
 function quotaLimit(value) { return value === null ? null : integer(value,0,1e12); }
@@ -159,6 +163,87 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
   let state = {account:'member',scenario:'completed',theme:'dark',revision:1};
   let database = seed();
   const logs = [], leases = new Map();
+  let proxyRoutes = [], proxyKeys = [];
+  const proxyLeases = new Map();
+  const keyMetadata = ({hash,...metadata}) => metadata;
+  const digest = value => createHash('sha256').update(value).digest();
+  const proxyRow = (rows,id) => { requireThat(uuid(id)); const row = rows.find(item => item.id === id); requireThat(row,'not_found',404); return row; };
+  const checkVersion = (payload,row) => { integer(payload.expected_version,0,Number.MAX_SAFE_INTEGER); requireThat(payload.expected_version === row.version,'conflict',409); };
+  function proxyAdmin(payload) {
+    const timestamp = now().toISOString();
+    switch (payload.action) {
+      case 'admin_proxy_list': keys(payload,['action']); return {routes:proxyRoutes,keys:proxyKeys.map(keyMetadata)};
+      case 'admin_proxy_save': {
+        keys(payload,['action','id','name','base_url','secret_name','enabled','expected_version']);
+        requireThat(payload.id === null || uuid(payload.id)); requireThat(typeof payload.enabled === 'boolean');
+        const current = payload.id === null ? {version:0} : proxyRow(proxyRoutes,payload.id); checkVersion(payload,current);
+        const config = providerConfig(payload);
+        requireThat(!/(^|\/)(response|chat\/completions|models)\/?$/i.test(new URL(config.base_url).pathname),'provider_url');
+        const route = {id:config.id,name:config.name,base_url:config.base_url,secret_name:config.secret_name,enabled:config.enabled,version:current.version+1,created_at:current.created_at || timestamp,updated_at:timestamp};
+        upsert(proxyRoutes,route); return {route};
+      }
+      case 'admin_proxy_route_state': {
+        keys(payload,['action','id','enabled','expected_version']); requireThat(typeof payload.enabled === 'boolean');
+        const route = proxyRow(proxyRoutes,payload.id); checkVersion(payload,route);
+        Object.assign(route,{enabled:payload.enabled,version:route.version+1,updated_at:timestamp}); return {route};
+      }
+      case 'admin_proxy_key_create': {
+        keys(payload,['action','route_id','label']); const route = proxyRow(proxyRoutes,payload.route_id);
+        const label = text(payload.label,120,true), api_key = `cap_${randomBytes(32).toString('base64url')}`;
+        const key = {id:randomUUID(),route_id:route.id,label,key_prefix:api_key.slice(0,12),key_last4:api_key.slice(-4),enabled:true,revoked_at:null,version:1,created_at:timestamp,hash:digest(api_key)};
+        proxyKeys.push(key); return {key:keyMetadata(key),api_key};
+      }
+      case 'admin_proxy_key_state': {
+        keys(payload,['action','id','enabled','revoked','expected_version']);
+        requireThat(typeof payload.enabled === 'boolean' && typeof payload.revoked === 'boolean');
+        const key = proxyRow(proxyKeys,payload.id); checkVersion(payload,key);
+        requireThat(!key.revoked_at || (payload.revoked && !payload.enabled),'revoked',409);
+        Object.assign(key,{enabled:payload.revoked ? false : payload.enabled,revoked_at:key.revoked_at || (payload.revoked ? timestamp : null),version:key.version+1});
+        return {key:keyMetadata(key)};
+      }
+    }
+  }
+  function proxyResponse(req,res,payload,route,key,meta) {
+    requireThat(typeof payload.model === 'string' && payload.model.length > 0 && payload.model.length <= 160,'input');
+    requireThat(typeof payload.input === 'string' || Array.isArray(payload.input),'input');
+    requireThat(payload.stream === undefined || typeof payload.stream === 'boolean','input');
+    requireThat([...proxyLeases.values()].filter(item => item.keyId === key.id).length < 2 && [...proxyLeases.values()].filter(item => item.routeId === route.id).length < 20,'rate_limit',429);
+    const scenario = state.scenario;
+    // Deterministic local-only failure fixture. Never echo a fabricated upstream body.
+    if (scenario === 'failed') throw new MockError('upstream',502);
+    const response = {id:`mock-proxy-${meta.request_id}`,object:'response',model:payload.model,status:'completed',output:[{id:randomUUID(),type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:'MOCK proxy response; no upstream call.',annotations:[]}]}],usage:{input_tokens:1,output_tokens:1,total_tokens:2}};
+    if (!payload.stream) { meta.outcome = 'completed'; json(res,response); return; }
+    let timer, ended = false;
+    const finish = outcome => { if (ended) return; ended = true; clearInterval(timer); proxyLeases.delete(meta.request_id); meta.outcome = outcome; };
+    proxyLeases.set(meta.request_id,{keyId:key.id,routeId:route.id,cancel:() => { finish('cancelled'); res.destroy(); }});
+    res.on('close',() => finish('cancelled'));
+    res.writeHead(200,{'content-type':'text/event-stream; charset=utf-8','cache-control':'no-store','connection':'keep-alive'}); res.flushHeaders();
+    const event = data => res.write(`event: ${data.type}\ndata: ${JSON.stringify(data)}\n\n`);
+    event({type:'response.created',response:{...response,status:'in_progress',output:[]}});
+    let index = 0;
+    timer = setInterval(() => {
+      if (ended) return;
+      event({type:'response.output_text.delta',output_index:0,content_index:0,delta:'MOCK '}); index++;
+      if (scenario === 'interrupted' && index === 1) { finish('interrupted'); res.end(); return; }
+      if (index < 3) return;
+      const status = scenario === 'incomplete' ? 'incomplete' : 'completed';
+      event({type:`response.${status}`,response:{...response,status}}); finish(status); res.end('data: [DONE]\n\n');
+    },scenario === 'slow' ? 1500 : 25);
+  }
+  async function proxy(req,res,routeId) {
+    const meta = {mock:true,request_id:randomUUID(),endpoint:'chat-api-proxy',route_id:routeId,outcome:'received'}; record(meta);
+    try {
+      requireThat(req.method === 'POST','method',405);
+      const authorization = req.headers.authorization || '';
+      requireThat(/^Bearer cap_[A-Za-z0-9_-]{43}$/.test(authorization),'proxy_key',401);
+      const candidate = digest(authorization.slice(7));
+      const key = proxyKeys.find(item => timingSafeEqual(item.hash,candidate));
+      requireThat(key && key.route_id === routeId && key.enabled && !key.revoked_at,'proxy_key',401);
+      const route = proxyRoutes.find(item => item.id === routeId); requireThat(route?.enabled,'route_disabled',403);
+      const {payload,bytes} = await body(req); meta.request_bytes = bytes;
+      proxyResponse(req,res,payload,route,key,meta);
+    } catch (error) { meta.outcome = error instanceof MockError ? error.message : 'server'; throw error; }
+  }
   let globalQuota, userQuotas, blacklist, counters;
   function resetQuotas() { globalQuota = {daily_limit:null,version:0}; userQuotas = new Map(); blacklist = new Map(); counters = new Map(); }
   resetQuotas();
@@ -264,6 +349,7 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
       requireThat(ACTIONS.includes(payload.action),'action');
       const account = authenticate(req,payload.action.startsWith('admin_'));
       meta.user_id = account.id;
+      if (PROXY_ACTIONS.includes(payload.action)) { const result = proxyAdmin(payload); meta.outcome = 'ok'; json(res,result); return; }
       if (['respond','admin_test'].includes(payload.action)) { stream(req,res,payload,account,meta); return; }
       let result;
       switch (payload.action) {
@@ -342,13 +428,16 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
       const pathname = decodeURIComponent(new URL(req.url,origin).pathname);
       if (req.method === 'OPTIONS') { res.writeHead(204,{'allow':'GET, HEAD, POST, OPTIONS'}); res.end(); return; }
       if (pathname === '/') { res.writeHead(302,{location:'/setup'}); res.end(); return; }
+      const proxyPath = pathname.match(/^\/(?:functions\/v1|mock)\/chat-api-proxy\/([0-9a-f-]+)\/v1\/responses$/i);
+      if (proxyPath && uuid(proxyPath[1])) { await proxy(req,res,proxyPath[1]); return; }
+      if (/^\/(?:functions\/v1|mock)\/chat-api-proxy(?:\/|$)/.test(pathname)) throw new MockError('not_found',404);
       if (pathname === '/mock/chat') { await chat(req,res); return; }
       if (pathname === '/mock/session' && req.method === 'GET') { json(res,publicState()); return; }
       if (pathname === '/mock/requests' && req.method === 'GET') { json(res,{mock:true,requests:logs}); return; }
       if (pathname === '/mock/setup' && req.method === 'POST') {
         const {payload} = await body(req); keys(payload,['account','scenario','theme','reset']);
         requireThat(Object.hasOwn(ACCOUNTS,payload.account) && SCENARIOS.includes(payload.scenario) && ['auto','light','dark'].includes(payload.theme));
-        if (payload.reset) { for (const lease of leases.values()) lease.cancel(); database = seed(); resetQuotas(); logs.length = 0; }
+        if (payload.reset) { for (const lease of [...leases.values(),...proxyLeases.values()]) lease.cancel(); proxyRoutes = []; proxyKeys = []; database = seed(); resetQuotas(); logs.length = 0; }
         if (state.account !== payload.account || payload.reset) state.revision++;
         Object.assign(state,{account:payload.account,scenario:payload.scenario,theme:payload.theme});
         json(res,publicState()); return;
@@ -372,7 +461,7 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
       json(res,{error:error instanceof MockError ? error.message : error instanceof URIError ? 'input' : 'server',mock:true},error instanceof MockError ? error.status : error instanceof URIError ? 400 : 500);
     }
   });
-  server.on('close',() => { for (const lease of leases.values()) lease.cancel(); });
+  server.on('close',() => { for (const lease of [...leases.values(),...proxyLeases.values()]) lease.cancel(); });
   return server;
 }
 
@@ -518,6 +607,77 @@ async function selfTest() {
     assert.equal((await post({action:'admin_quota_get'})).status,200,'blocked admins retain management access');
     state = await setup('member','completed',true); assert.equal((await (await get('/mock/requests')).json()).requests.length,0);
     quota = await (await post({action:'quota'})).json(); assert.equal(quota.global.version,0); assert.equal(quota.global.daily_limit,null); assert.equal(quota.global.used,0); assert.equal(quota.user.version,0); assert.equal(quota.blacklisted,false);
+    state = await setup('admin');
+    assert.equal(rewriteJS('https://abc.supabase.co/functions/v1/chat-api-proxy/route/v1',base),base+'/mock/chat-api-proxy/route/v1');
+    assert.deepEqual(await (await post({action:'admin_proxy_list'})).json(),{routes:[],keys:[]});
+    const routeInput = {action:'admin_proxy_save',id:null,name:'MOCK external',base_url:'https://mock-provider.example.com/v1',secret_name:'CHAT_KEY_MOCK_PROXY',enabled:true,expected_version:0};
+    for (const patch of [{expected_version:1},{secret_name:'sk-native'},{enabled:'true'},{base_url:'https://mock-provider.example.com/v1/response'}]) assert.ok((await post({...routeInput,...patch})).status >= 400);
+    let route = (await (await post(routeInput)).json()).route;
+    assert.deepEqual(Object.keys(route).sort(),['id','name','base_url','secret_name','enabled','version','created_at','updated_at'].sort());
+    assert.equal(route.version,1);
+    assert.equal((await post({...routeInput,id:route.id,expected_version:0})).status,409);
+    route = (await (await post({...routeInput,id:route.id,name:'MOCK updated',expected_version:1})).json()).route;
+    assert.equal(route.version,2);
+    const issued = await (await post({action:'admin_proxy_key_create',route_id:route.id,label:'MOCK client'})).json();
+    assert.match(issued.api_key,/^cap_[A-Za-z0-9_-]{43}$/); assert.equal(Buffer.from(issued.api_key.slice(4),'base64url').length,32);
+    assert.deepEqual(Object.keys(issued.key).sort(),['id','route_id','label','key_prefix','key_last4','enabled','revoked_at','version','created_at'].sort());
+    const endpoint = `/functions/v1/chat-api-proxy/${route.id}/v1/responses`;
+    const proxyRequest = (payload = {model:'client-model-unchanged',input:'mock only'}, apiKey = issued.api_key, resource = endpoint, options = {}) => localFetch(base+resource,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${apiKey}`},body:JSON.stringify(payload),...options});
+    assert.equal((await proxyRequest(undefined,'cap_'+'x'.repeat(43))).status,401);
+    assert.equal((await proxyRequest(undefined,state.session.access_token)).status,401);
+    for (const suffix of ['models','chat/completions','responses/id','response']) assert.equal((await proxyRequest(undefined,issued.api_key,endpoint.replace(/responses$/,suffix))).status,404);
+    assert.equal((await localFetch(base+endpoint)).status,405);
+    let proxyResult = await (await proxyRequest()).json(); assert.equal(proxyResult.model,'client-model-unchanged');
+    assert.equal((await proxyRequest(undefined,issued.api_key,endpoint.replace('/functions/v1/','/mock/'))).status,200);
+    const otherRoute = (await (await post({...routeInput,name:'Other'})).json()).route;
+    assert.equal((await proxyRequest(undefined,issued.api_key,endpoint.replace(route.id,otherRoute.id))).status,401);
+    assert.equal((await proxyRequest({model:'x',input:'x'.repeat(LIMIT)})).status,413);
+    state = await setup('admin','failed');
+    const failure = await proxyRequest(); assert.equal(failure.status,502); assert.deepEqual(await failure.json(),{error:'upstream',mock:true});
+    state = await setup('admin','completed');
+    result = await readResponses((await proxyRequest({model:'sdk-model',input:'x',stream:true})).body,()=>{}); assert.equal(result.status,'success');
+    state = await setup('admin','slow');
+    const cancel = new AbortController();
+    const active = await proxyRequest({model:'x',input:'x',stream:true},issued.api_key,endpoint,{signal:cancel.signal});
+    const active2 = await proxyRequest({model:'x',input:'x',stream:true},issued.api_key,endpoint,{signal:cancel.signal});
+    assert.equal((await proxyRequest()).status,429);
+    cancel.abort(); await active.body.cancel().catch(()=>{}); await active2.body.cancel().catch(()=>{});
+    await new Promise(resolve => setTimeout(resolve,80));
+    assert.equal((await proxyRequest()).status,200,'cancel releases proxy leases');
+    const routeCancel = new AbortController(), routeStreams = [];
+    for (let index = 0; index < 10; index++) {
+      const extra = await (await post({action:'admin_proxy_key_create',route_id:route.id,label:`capacity ${index}`})).json();
+      for (let slot = 0; slot < 2; slot++) routeStreams.push(await proxyRequest({model:'x',input:'x',stream:true},extra.api_key,endpoint,{signal:routeCancel.signal}));
+    }
+    assert.equal((await proxyRequest()).status,429,'route cap applies across keys');
+    routeCancel.abort(); await Promise.all(routeStreams.map(response => response.body.cancel().catch(()=>{})));
+    await new Promise(resolve => setTimeout(resolve,80));
+    assert.equal((await proxyRequest()).status,200,'route cancellation frees capacity');
+    state = await setup('admin');
+    let key = (await (await post({action:'admin_proxy_key_state',id:issued.key.id,enabled:false,revoked:false,expected_version:1})).json()).key;
+    assert.equal((await proxyRequest()).status,401);
+    assert.equal((await post({action:'admin_proxy_key_state',id:key.id,enabled:true,revoked:false,expected_version:1})).status,409);
+    key = (await (await post({action:'admin_proxy_key_state',id:key.id,enabled:true,revoked:false,expected_version:2})).json()).key;
+    route = (await (await post({action:'admin_proxy_route_state',id:route.id,enabled:false,expected_version:2})).json()).route;
+    assert.equal((await proxyRequest()).status,403);
+    route = (await (await post({action:'admin_proxy_route_state',id:route.id,enabled:true,expected_version:3})).json()).route;
+    await saveQuota(null,0,null,null,0);
+    await post({action:'admin_set_blacklist',user_id:ACCOUNTS.admin.id,blocked:true});
+    state = await setup('loggedout'); assert.equal((await proxyRequest()).status,200,'proxy independent of session, quota and blacklist');
+    for (const action of PROXY_ACTIONS) assert.equal((await post({action})).status,401);
+    state = await setup('admin');
+    key = (await (await post({action:'admin_proxy_key_state',id:key.id,enabled:false,revoked:true,expected_version:3})).json()).key;
+    assert.ok(key.revoked_at); assert.equal((await proxyRequest()).status,401);
+    assert.equal((await post({action:'admin_proxy_key_state',id:key.id,enabled:true,revoked:false,expected_version:4})).status,409);
+    const listing = await (await post({action:'admin_proxy_list'})).json();
+    assert.doesNotMatch(JSON.stringify(listing),/"hash"|"api_key"/); assert.ok(!JSON.stringify(listing).includes(issued.api_key));
+    const proxyLogs = await (await get('/mock/requests')).json();
+    assert.ok(proxyLogs.requests.some(item => item.endpoint === 'chat-api-proxy' && item.outcome === 'cancelled'));
+    assert.doesNotMatch(JSON.stringify(proxyLogs),/"hash"|"api_key"|client-model-unchanged|CHAT_KEY_MOCK_PROXY/);
+    assert.ok(!JSON.stringify(proxyLogs).includes(issued.api_key));
+    state = await setup('admin','completed',true);
+    assert.deepEqual(await (await post({action:'admin_proxy_list'})).json(),{routes:[],keys:[]});
+    console.log('Chat proxy self-test passed: admin contracts, safe metadata, one-time 32-byte keys, hash-only storage, versions, route binding, JSON/SSE, model preservation, 401/403/404/405/413/429/502, cancellation, quota/blacklist/session independence, revocation, URL rewrite and reset.');
     console.log('Chat quota/blacklist self-test passed: strict admin auth, directory UUIDs, own snapshot, null/zero/max bounds, version conflicts, both route reservations/headers, UTC day/week/month rollover, no-usage retention, blacklist gates and reset.');
     console.log('Chat mock HTTP self-test passed: local SDK/URL/CSP, fixtures, catalog, permissions, multi-turn SSE, terminal states, cancellation/lease, account switch, admin save/disable/test/usage, redacted metadata, reset and traversal/origin guards.');
   } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }

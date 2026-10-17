@@ -1,3 +1,5 @@
+import { hashKey, newKey, proxyBase, proxySecret, ProxyError, ROUTE_FIELDS } from '../_shared/chat-api-proxy.ts';
+
 type Json = Record<string, unknown>;
 type AuthUser = { id: string; email?: string | null };
 type Provider = {
@@ -44,7 +46,8 @@ const PDF_TOKEN_ESTIMATE = 8192;
 const ACTIONS = new Set([
   'catalog', 'respond', 'admin_get', 'admin_save_provider', 'admin_save_model',
   'admin_usage', 'admin_test', 'quota', 'admin_quota_get', 'admin_quota_save',
-  'admin_user_directory', 'admin_blacklist_list', 'admin_set_blacklist'
+  'admin_user_directory', 'admin_blacklist_list', 'admin_set_blacklist',
+  'admin_proxy_list', 'admin_proxy_save', 'admin_proxy_route_state', 'admin_proxy_key_create', 'admin_proxy_key_state'
 ]);
 const encoder = new TextEncoder();
 
@@ -731,10 +734,51 @@ async function adminUsage(request: Request, payload: Json) {
   return { usage: rows, page, pageSize: limit, total };
 }
 
+async function proxyAdmin(request: Request, action: string, payload: Json): Promise<Response> {
+  const ctx = await context(request, true);
+  const data = { ...payload }; delete data.action;
+  if (action !== 'admin_proxy_list') {
+    if (action === 'admin_proxy_key_create') {
+      if (!isUuid(data.route_id)) throw new HttpError('input', 400);
+      data.label = text(data.label, 120, true);
+    } else {
+      if (!(action === 'admin_proxy_save' && data.id === null) && !isUuid(data.id)) throw new HttpError('input', 400);
+      data.expected_version = integer(data.expected_version, data.id === null ? 0 : 1, Number.MAX_SAFE_INTEGER);
+      if (typeof data.enabled !== 'boolean') throw new HttpError('input', 400);
+    }
+    if (action === 'admin_proxy_save') {
+      data.name = text(data.name, 80, true);
+      data.base_url = await proxyBase(data.base_url);
+      data.secret_name = proxySecret(data.secret_name);
+    }
+    if (action === 'admin_proxy_route_state' && data.enabled) {
+      const rows = await restJson<Json[]>(`chat_proxy_routes?id=eq.${data.id}&select=${ROUTE_FIELDS}&limit=1`);
+      if (!rows[0]) throw new HttpError('not_found', 404);
+      await proxyBase(rows[0].base_url); proxySecret(rows[0].secret_name);
+    }
+    if (action === 'admin_proxy_key_state' && typeof data.revoked !== 'boolean') throw new HttpError('input', 400);
+  }
+  let apiKey: string | undefined;
+  if (action === 'admin_proxy_key_create') {
+    apiKey = newKey();
+    Object.assign(data, { key_hash: await hashKey(apiKey), key_prefix: apiKey.slice(0, 12), key_last4: apiKey.slice(-4) });
+  }
+  const result = object(await rpc('chat_proxy_admin', { p_actor: ctx.user.id, p_action: action, p_data: data }));
+  if (result.code) throw new HttpError(String(result.code), result.code === 'not_found' ? 404 : 409);
+  const response = json(request, apiKey ? { ...result, api_key: apiKey } : result);
+  response.headers.set('cache-control', 'no-store');
+  return response;
+}
+
 async function main(request: Request, payload: Json): Promise<Response> {
   const action = ({ save_provider: 'admin_save_provider', save_model: 'admin_save_model', usage: 'admin_usage', test: 'admin_test' } as Record<string, string>)[String(payload.action)] || payload.action;
   if (typeof action !== 'string' || !ACTIONS.has(action)) throw new HttpError('action', 400);
   const allowed: Record<string, string[]> = {
+    admin_proxy_list: [],
+    admin_proxy_save: ['id', 'name', 'base_url', 'secret_name', 'enabled', 'expected_version'],
+    admin_proxy_route_state: ['id', 'enabled', 'expected_version'],
+    admin_proxy_key_create: ['route_id', 'label'],
+    admin_proxy_key_state: ['id', 'enabled', 'revoked', 'expected_version'],
     catalog: [], quota: [], admin_quota_get: ['user_id'],
     admin_quota_save: ['user_id', 'daily_limit', 'weekly_limit', 'monthly_limit', 'expected_version'],
     admin_user_directory: [], admin_blacklist_list: [], admin_set_blacklist: ['user_id', 'blocked', 'reason'],
@@ -745,6 +789,7 @@ async function main(request: Request, payload: Json): Promise<Response> {
     admin_save_model: ['id', 'provider_id', 'model_key', 'model_id', 'display_name', 'introduction', 'context_window', 'max_output_tokens', 'default_max_output_tokens', 'reasoning_efforts', 'default_reasoning_effort', 'supports_images', 'supports_pdf', 'preserve_reasoning', 'enabled']
   };
   allowKeys(payload, ['action', ...allowed[action]]);
+  if (action.startsWith('admin_proxy_')) return await proxyAdmin(request, action, payload);
   if (action === 'admin_get') return json(request, await adminGet(request));
   if (action === 'admin_save_provider') return json(request, { provider: await saveProviderAfterAuth(request, payload) });
   if (action === 'admin_save_model') return json(request, { model: await saveModelAfterAuth(request, payload) });
@@ -789,7 +834,7 @@ async function handle(request: Request): Promise<Response> {
     try { parsed = JSON.parse(raw); } catch { throw new HttpError('input', 400); }
     return await main(request, object(parsed));
   } catch (error) {
-    if (error instanceof HttpError) return errorResponse(request, error.message, error.status);
+    if (error instanceof HttpError || error instanceof ProxyError) return errorResponse(request, error.message, error.status);
     return errorResponse(request, 'server', 500);
   }
 }

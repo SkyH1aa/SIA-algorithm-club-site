@@ -3,7 +3,7 @@
 <link rel="stylesheet" href="/theme.css"><link rel="stylesheet" href="/fixtures/setup.css"><script src="/theme.js"></script><script src="/fixtures/setup.js" defer></script></head>
 <body class="mock-setup"><main>
 <h1>MOCK ONLY · Chat 本地联调</h1>
-<p class="mock-warning">此服务仅监听本机 4191。账号、配置、生成与 usage 全为内存模拟；没有线上登录、数据库或模型调用。请只使用测试内容。</p>
+<p class="mock-warning">此服务仅监听当前本机联调端口（由启动参数决定）。账号、配置、生成与 usage 全为内存模拟；没有线上登录、数据库或模型调用。请只使用测试内容。</p>
 <form id="setupForm">
 <label>模拟账号 <select id="account" name="account"><option value="admin">admin · MOCK 管理员</option><option value="member">member · MOCK 社员 A</option><option value="member2">member2 · MOCK 社员 B（账号隔离）</option><option value="unbound">unbound · 已登录但未绑定</option><option value="loggedout">loggedout · 未登录</option></select></label>
 <label>生成场景 <select id="scenario" name="scenario"><option value="completed">completed · 正常完成</option><option value="incomplete">incomplete · 输出截断终态</option><option value="interrupted">interrupted · 部分输出后 EOF，无终态</option><option value="failed">failed · response.failed</option><option value="slow">slow · 每 1.5 秒一片，测试停止/切换账号</option></select></label>

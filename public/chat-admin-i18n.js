@@ -1,5 +1,13 @@
 (() => {
   const zh = {
+    proxyTitle: '对外 Responses 代理', proxyLead: '仅支持 POST /responses。管理操作不会调用供应商。上游密钥只引用 Supabase CHAT_KEY_* Secret；下发密钥仅展示一次。',
+    proxyRefresh: '刷新路由与密钥', proxyName: '路由名称', proxySave: '保存路由', proxyRoute: '路由', proxyKeysTitle: '路由访问密钥', proxyKeyLabel: '密钥标签', proxyCreateKey: '生成新密钥',
+    proxyUrlHelp: 'HTTPS 上游基础地址，不得含 response/responses 路径、凭据、查询参数或非 443 端口。这里不输入真实密钥。', proxyInvalidUrl: '请填写 HTTPS 上游基础地址，不含 response/responses 路径、凭据、查询参数或非 443 端口。',
+    proxyOneTimeWarning: '请立即安全保存：此明文只展示一次，清除、登出或换账号后无法再次获取。不写入浏览器存储。', proxyOneTimeLabel: '一次明文密钥', proxyCopy: '复制明文', proxyClearKey: '清除明文', proxyCopied: '已复制。系统剪贴板仍保留副本，请自行安全清理。', proxyCopyFailed: '复制失败，请手动复制并安全保存。',
+    proxyExampleTitle: '客户端配置示例（不会自动执行）', proxyExampleHelp: '使用所选路由的 baseURL，并在客户端单独配置访问密钥；示例仅含占位符。只支持 Responses POST，不支持 Chat Completions。',
+    proxySelectRoute: '请选择路由', proxyClientBase: '客户端 baseURL', proxyCopyBase: '复制客户端 Base URL', proxyBaseCopied: '客户端 Base URL 已复制', proxyVersion: '版本', proxyUpdated: '更新时间', proxyActions: '操作', proxyEnable: '启用', proxyDisable: '停用', proxyKeyMask: '密钥标识（非明文）', proxyRevoked: '已撤销（不可恢复）', proxyRevokedAt: '撤销时间', proxyRevoke: '永久撤销',
+    proxyNoRoutes: '暂无代理路由。', proxyNoKeys: '暂无访问密钥。', proxyNotLoaded: '尚未读取代理数据。', proxySaved: '代理配置已保存。', proxyConflict: '配置已被其他管理员修改，已重载最新路由与密钥。请检查后重新操作；不会自动覆盖。',
+    proxyRevokeConfirm: '永久撤销密钥“{label}”？此操作不可逆，撤销后不能重新启用。', proxyReplaceConfirm: '当前仍有一次明文未清除。生成新密钥会清除旧明文（不会撤销旧密钥）。确认已安全保存并继续？',
     testQuota: '可用 token 配额不足，测试未获准启动。请检查全站及当前账号配额。', testQuotaTruncated: '测试输出因剩余 token 配额被缩短，并已达到该输出预算；下方保留已收到的文本。',
     quotaTitle: '配额与黑名单', quotaLead: '按 token 限制用量。留空表示不限，0 表示阻止调用；每项上限为 1,000,000,000,000。',
     globalQuota: '全站每日配额', dailyLimit: '每日 token 上限', weeklyLimit: '每周 token 上限', monthlyLimit: '每月 token 上限',
@@ -51,6 +59,14 @@
     usageStatus: {success: '成功', incomplete: '未完成', interrupted: '已中断', cancelled: '已取消', failure: '失败', audited: '已登记', running: '调用中'}
   };
   const en = {
+    proxyTitle: 'External Responses proxy', proxyLead: 'POST /responses only. Management never calls a provider. Upstream keys reference Supabase CHAT_KEY_* Secrets; issued access keys are shown once.',
+    proxyRefresh: 'Refresh routes and keys', proxyName: 'Route name', proxySave: 'Save route', proxyRoute: 'Route', proxyKeysTitle: 'Route access keys', proxyKeyLabel: 'Key label', proxyCreateKey: 'Generate new key',
+    proxyUrlHelp: 'HTTPS upstream base URL without response/responses path segments, credentials, query parameters, or ports other than 443. Do not enter real keys here.', proxyInvalidUrl: 'Use an HTTPS upstream base URL without response/responses path segments, credentials, query parameters, or ports other than 443.',
+    proxyOneTimeWarning: 'Save securely now: this plaintext is shown once and cannot be retrieved after clearing, signing out, or switching accounts. It is not written to browser storage.', proxyOneTimeLabel: 'One-time plaintext key', proxyCopy: 'Copy plaintext', proxyClearKey: 'Clear plaintext', proxyCopied: 'Copied. A copy remains in the system clipboard; clear it securely yourself.', proxyCopyFailed: 'Copy failed. Copy manually and save securely.',
+    proxyExampleTitle: 'Client configuration example (never auto-executed)', proxyExampleHelp: 'Use the selected route baseURL and configure its access key separately in your client. This example contains placeholders only. Responses POST only; Chat Completions is not supported.',
+    proxySelectRoute: 'Select a route', proxyClientBase: 'Client baseURL', proxyCopyBase: 'Copy client Base URL', proxyBaseCopied: 'Client Base URL copied', proxyVersion: 'Version', proxyUpdated: 'Updated', proxyActions: 'Actions', proxyEnable: 'Enable', proxyDisable: 'Disable', proxyKeyMask: 'Key identifier (not plaintext)', proxyRevoked: 'Revoked (irreversible)', proxyRevokedAt: 'Revoked at', proxyRevoke: 'Permanently revoke',
+    proxyNoRoutes: 'No proxy routes yet.', proxyNoKeys: 'No access keys yet.', proxyNotLoaded: 'Proxy data not loaded.', proxySaved: 'Proxy configuration saved.', proxyConflict: 'Another administrator changed the configuration. Latest routes and keys have been reloaded. Review before trying again; no automatic overwrite.',
+    proxyRevokeConfirm: 'Permanently revoke key “{label}”? This is irreversible; a revoked key cannot be enabled again.', proxyReplaceConfirm: 'A one-time plaintext key is still visible. Generating another clears the previous plaintext (it does not revoke the old key). Have you saved it securely and want to continue?',
     testQuota: 'Insufficient token quota: the test was not admitted. Check the global and current-account quotas.', testQuotaTruncated: 'The test output budget was reduced by the remaining token quota and was reached. Received text is preserved below.',
     quotaTitle: 'Quotas and blacklist', quotaLead: 'Token limits: leave blank for unlimited, or enter 0 to block calls. Maximum per limit: 1,000,000,000,000.',
     globalQuota: 'Global daily quota', dailyLimit: 'Daily token limit', weeklyLimit: 'Weekly token limit', monthlyLimit: 'Monthly token limit',

@@ -8,6 +8,8 @@
 
 ```bash
 node tools/chat-mock-server.mjs
+# 独立端口，不停止已有 mock：
+node tools/chat-mock-server.mjs --port 4192
 ```
 
 浏览器打开 **http://localhost:4191/setup**。服务仅绑定 `127.0.0.1:4191`，也可使用 `http://127.0.0.1:4191/setup`；同一次测试请固定一个主机名，它们的 IndexedDB / 主题存储互相独立。`Ctrl+C` 停止。端口占用会明确报错，不自动选择别的端口。
@@ -87,7 +89,7 @@ python docs/chat-validation/fixtures/generate-upload-fixtures.py
 - 静态根目录是 `public/`；额外公开 `/setup` 与 `/fixtures/*`，不会公开仓库根目录。
 - 仅在服务响应的 `chat.html` / `chat-admin.html` 中，把远程 Supabase SDK script 替换成 `fixtures/mock-supabase.js`。磁盘上的生产页面没有变更。
 - fixture `createClient()` 忽略所有传入 URL/key，不读真实 Supabase session，只实现所需 `auth.getSession()`、`auth.onAuthStateChange()` 和 subscription unsubscribe。
-- 返回生产 `.js/.mjs` 时在内存中把 `https://<project>.supabase.co` 改为当前本地 origin，把 `/functions/v1/chat` 改为 `/mock/chat`、club-drive 改为 `/mock/club-drive`。生产源码不写回。
+- 返回生产 `.js/.mjs` 时在内存中把整个 `https://<project>.supabase.co` 改为当前本地 origin；先把 `/functions/v1/chat-api-proxy` 改为 `/mock/chat-api-proxy`，再对边界匹配的 `/functions/v1/chat` 改为 `/mock/chat`，club-drive 改为 `/mock/club-drive`。不会把 proxy 路径误吞成 Chat action 路径；硬编码的 Supabase base URL 也必须本地化。生产源码不写回。
 - 每个响应带 `X-Chat-Mock: true`、no-store、仅同源资源的 CSP。connect-src 只允许 self，远程 SDK/遗漏的远程 fetch 都不能访问线上；未实现的本地路径失败，不转发。服务端没有 fetch 上游、数据库 SDK、凭证读取或 DNS 校验。
 - Host 仅接受本机 4191，Origin / Sec-Fetch-Site 拒绝跨站控制；静态路径还检查目录边界与 symlink 真实路径。
 - `/mock/club-drive` 提供站点可用状态、内存主题偏好及模拟 staff access，保证页面配套脚本也只访问本地。
@@ -96,6 +98,39 @@ python docs/chat-validation/fixtures/generate-upload-fixtures.py
 - 生产后端对 provider URL 执行 HTTPS、公网地址、凭据/query/fragment、端口和 DNS/SSRF 校验，并校验 Secret 名称格式；mock 只做受控语法检查，不做 DNS/SSRF/外部请求。生产与前端/后端都限制每轮最多 4 个附件、请求序列化体积最多 12 MiB；mock 还会把可计量文本限制为 500,000 字节，生产后端按 12 MiB 请求/附件/文本边界校验。生产后端严格校验 PNG/JPEG/WebP 与 PDF data URL 的 base64 格式，mock 也校验 data URL，但不会执行生产 DNS、供应商 secret 或上游请求。
 - 前端和生产后端对单文件均限制 5 MiB；PDF 最多 300 页，PDF.js 抽取文本最多 1,000,000 个字符。mock 的附件自检覆盖 PNG/PDF 和模型能力拒绝，但不替代真实浏览器 PDF.js 提取或供应商对原生 `input_file` 的解析验收。模拟输出按有效输出上限缩短，但不是供应商 tokenizer；`incomplete` 场景确定性提供截断终态。usage 返回精确内存 `total` 便于分页测试；生产后端要求 PostgREST 返回有效的 `Content-Range` 总数，缺失或无效时返回 database 错误，不会把 `null` 当成成功总数。
 - 本服务独立实现 mock，不导入正在开发的 Deno 后端，避免改动或依赖其他 agent 的工作。
+
+## 独立代理管理与外部客户端 mock
+
+代理 fixture 只在本工具内存中，不新增磁盘 fixtures、不读取凭证、不做 DNS/真实网络转发。普通 Chat 的 quota、blacklist、模型介绍和原有自检保留。管理动作经 `/mock/chat`，正式契约为：
+
+- `admin_proxy_list {}` → `{routes,keys}`。
+- `admin_proxy_save {id:null|UUID,name,base_url,secret_name,enabled,expected_version:0|n}` → `{route}`。
+- `admin_proxy_route_state {id,enabled,expected_version}` → `{route}`。
+- `admin_proxy_key_create {route_id,label}` → `{key:metadata,api_key:一次明文}`。
+- `admin_proxy_key_state {id,enabled,revoked:boolean,expected_version}` → `{key}`。
+
+route 只有 `id,name,base_url,secret_name,enabled,version,created_at,updated_at`；key metadata 只有 `id,route_id,label,key_prefix,key_last4,enabled,revoked_at,version,created_at`。32 随机字节生成 `cap_` + base64url，内部只存 SHA-256 hash；list/状态/日志没有 hash 或完整 key，丢失明文只能撤销重建。撤销不可恢复；陈旧 expected_version 返回 409。
+
+GUI 可用 admin 新建 route（合成 `https://mock-provider.example.com/v1`、`CHAT_KEY_MOCK_PROXY` 引用名），创建 key，查看一次明文提示并确认关闭后列表不可取回；复制 base URL 不应包含任何 key。打开不同主题和语言确认状态、按钮、冲突提示可读。创建/保存/检查 Secret 不能触发真实收费测试。mock 不代表 Secret 实际存在，不能代替生产 Secret/DNS/SQL 验收。
+
+外部路径支持 **`/functions/v1/chat-api-proxy/<uuid>/v1/responses`** 和供前端改写使用的 `/mock/chat-api-proxy/<uuid>/v1/responses`，只支持 POST responses。客户端 base 是 `http://localhost:4191/functions/v1/chat-api-proxy/<uuid>/v1`（独立端口按实际改）；SDK `responses.create({model,input,stream?})` 使用创建时的 proxy key，不用原生上游 key。`models`、`chat/completions`、单数 `response`、retrieve 均 404，不转发。
+
+| 本地操作 | 预期 |
+| --- | --- |
+| 无 key、错误 key、Supabase session token、跨 route key | 401 |
+| route disabled / key disabled、revoked | 分别 403 / 401；重新启用未撤销 key 可恢复 |
+| completed + stream:false/省略 | 合成 JSON，model 原值返回 |
+| completed + stream:true | 合成 Responses SSE；incomplete / interrupted 对应截断终态或无终态 EOF |
+| failed | 502，统一 `{error:'upstream',mock:true}`，无上游错误正文 |
+| slow 同 key 已有两个在途流 | 第三个请求 429；每 route 在途上限 20 |
+| slow 取消 | 连接中止、日志 cancelled、释放代理租约，可再次调用 |
+| 请求体超过 12 MiB | 413 |
+| Chat 全局额度设 0、管理员拉黑、setup loggedout | 既有有效 proxy key 仍能生成，与 Chat/session 独立 |
+| setup reset | 取消代理流，清空 routes/keys/哈希/租约；旧 proxy key 不再有效 |
+
+mock 仅模拟协议，不执行请求中的 tools/远程 URL、上游项目资源访问或真正 token 计量，也不证明生产取消、平台超时或金额预算。生产透传的 tools/MCP、files/vector stores/previous_response_id、远程媒体可能触发上游执行与共享资源访问；proxy key 不隔离上游租户，务必专用上游项目/Secret。部署、转售许可、非 2xx 脱敏与 SSE 仍可能暴露上游、120 秒全流超时和 Supabase wall-clock 限制详见 `docs/chat-deployment.md` 第 11 节。
+
+自检新增验证五个管理员契约、32-byte key 和精确 metadata 字段、哈希/明文不出 list/log、版本冲突、路由绑定、JSON/SSE/model 原值、401/403/404/405/413/429/502、取消释放、Chat/session 独立性、撤销、URL 替换与 reset。所有请求限于自检自己创建的回环服务器，绝不自动测试生产或付费供应商。未运行新的 GUI 矩阵，不声称代理页面视觉验收通过。
 
 ## 日志、重置与自检
 
@@ -114,6 +149,6 @@ python tools/test-chat-quota-sql.py --syntax-only
 python tools/test-chat-quota-sql.py --dsn 'host=127.0.0.1 port=5432 dbname=postgres user=postgres'
 ```
 
-SQL syntax-only 只做 pglast 解析，不验证事务或并发；真实 DSN 测试另需 psycopg、本地 PostgreSQL 与 CREATEDB/CREATEROLE 权限，会创建/删除随机测试数据库。本次未跑真实 PostgreSQL 集成，不声称并发通过。升级需先暂停旧 Edge 新请求并等待旧流结束，再 SQL → Edge → 前端；历史 `chat_usage` 不回填额度桶，新计量从新版 Edge admission 开始。
+SQL syntax-only 只做 pglast 解析，不验证事务或并发；真实 DSN 测试另需 psycopg、本地 PostgreSQL 与 CREATEDB/CREATEROLE 权限，会创建/删除随机测试数据库。本次未跑真实 PostgreSQL 集成，不声称并发通过。升级需先暂停旧 Edge 新请求并等待旧流结束，再完整主 SQL → Secrets → 两个 Edge（chat 与 chat-api-proxy）→ 前端；历史 `chat_usage` 不回填额度桶，新计量从新版 Edge admission 开始。
 
 自检启动临时本地服务器后自动关闭，验证 SDK 替换、URL 替换、CSP、静态/上传 fixtures、catalog/权限、多轮与附件、所有 SSE 终态、slow 停止/409 锁释放、旧 token 拒绝、配置创建/修改/停用、admin_test、usage、仅元数据日志、重置和跨站/路径防护；还覆盖新管理动作严格鉴权、UUID 目录、本人快照、null/零/最大值、版本冲突、两条生成路由缩减响应头、有效 usage 结算、无 usage 保留预留和 UTC 日/周/月切换。管理 UI 可用本地时间显示重置时刻，底层分桶仍按 UTC。不会启动浏览器或访问线上接口。

@@ -592,3 +592,116 @@ grant execute on function public.chat_quota_get(uuid),
   public.chat_blacklist_set(uuid,uuid,boolean,text), public.chat_user_directory(uuid),
   public.chat_begin_generation(uuid,uuid,bigint,integer,jsonb),
   public.chat_finish_generation(uuid,jsonb,boolean) to service_role;
+
+-- Independent Responses gateway. All admission and mutations lock route first,
+-- then key. Expiry recovers capacity after worker termination; no payload stored.
+create table if not exists public.chat_proxy_routes (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(trim(name)) between 1 and 80),
+  base_url text not null check (char_length(base_url) between 10 and 2048),
+  secret_name text not null check (secret_name ~ '^CHAT_KEY_[A-Z0-9_]{1,80}$'),
+  enabled boolean not null default true,
+  version bigint not null default 1 check (version > 0),
+  created_by uuid references auth.users(id), updated_by uuid references auth.users(id),
+  created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+);
+create table if not exists public.chat_proxy_keys (
+  id uuid primary key default gen_random_uuid(),
+  route_id uuid not null references public.chat_proxy_routes(id),
+  label text not null check (char_length(trim(label)) between 1 and 120),
+  key_hash text not null unique check (key_hash ~ '^[a-f0-9]{64}$'),
+  key_prefix text not null, key_last4 text not null,
+  enabled boolean not null default true, revoked_at timestamptz,
+  version bigint not null default 1 check (version > 0),
+  created_by uuid references auth.users(id), updated_by uuid references auth.users(id),
+  created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+);
+create table if not exists public.chat_proxy_leases (
+  request_id uuid primary key,
+  route_id uuid not null references public.chat_proxy_routes(id),
+  key_id uuid not null references public.chat_proxy_keys(id),
+  created_at timestamptz not null default now(), expires_at timestamptz not null
+);
+create index if not exists chat_proxy_leases_route_idx on public.chat_proxy_leases(route_id, expires_at);
+create index if not exists chat_proxy_leases_key_idx on public.chat_proxy_leases(key_id, expires_at);
+alter table public.chat_proxy_routes enable row level security;
+alter table public.chat_proxy_keys enable row level security;
+alter table public.chat_proxy_leases enable row level security;
+revoke all on public.chat_proxy_routes, public.chat_proxy_keys, public.chat_proxy_leases from public, anon, authenticated;
+grant select, insert, update, delete on public.chat_proxy_routes, public.chat_proxy_keys, public.chat_proxy_leases to service_role;
+
+create or replace function public.chat_proxy_key_metadata(k public.chat_proxy_keys)
+returns jsonb language sql immutable set search_path=public as $$
+  select jsonb_build_object('id',k.id,'route_id',k.route_id,'label',k.label,
+    'key_prefix',k.key_prefix,'key_last4',k.key_last4,'enabled',k.enabled,
+    'revoked_at',k.revoked_at,'version',k.version,'created_at',k.created_at);
+$$;
+revoke all on function public.chat_proxy_key_metadata(public.chat_proxy_keys) from public,anon,authenticated;
+grant execute on function public.chat_proxy_key_metadata(public.chat_proxy_keys) to service_role;
+
+create or replace function public.chat_proxy_admin(p_actor uuid, p_action text, p_data jsonb)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare r public.chat_proxy_routes; k public.chat_proxy_keys; rid uuid; result jsonb;
+begin
+  perform public.chat_quota_assert_admin(p_actor);
+  if p_action = 'admin_proxy_list' then
+    return jsonb_build_object('routes', coalesce((select jsonb_agg(to_jsonb(t) - 'created_by' - 'updated_by' order by created_at) from public.chat_proxy_routes t), '[]'::jsonb),
+      'keys', coalesce((select jsonb_agg(public.chat_proxy_key_metadata(t) order by created_at) from public.chat_proxy_keys t), '[]'::jsonb));
+  end if;
+  if p_action = 'admin_proxy_save' and p_data->>'id' is null then
+    if (p_data->>'expected_version')::bigint <> 0 then return '{"code":"conflict"}'; end if;
+    insert into public.chat_proxy_routes(name,base_url,secret_name,enabled,created_by,updated_by)
+      values(p_data->>'name',p_data->>'base_url',p_data->>'secret_name',(p_data->>'enabled')::boolean,p_actor,p_actor) returning * into r;
+    return jsonb_build_object('route',to_jsonb(r)-'created_by'-'updated_by');
+  end if;
+  if p_action in ('admin_proxy_save','admin_proxy_route_state') then rid := (p_data->>'id')::uuid;
+  elsif p_action = 'admin_proxy_key_create' then rid := (p_data->>'route_id')::uuid;
+  elsif p_action = 'admin_proxy_key_state' then select route_id into rid from public.chat_proxy_keys where id = (p_data->>'id')::uuid;
+  else raise exception 'invalid action'; end if;
+  select * into r from public.chat_proxy_routes where id = rid for update;
+  if not found then return '{"code":"not_found"}'; end if;
+  if p_action in ('admin_proxy_save','admin_proxy_route_state') then
+    if r.version <> (p_data->>'expected_version')::bigint then return '{"code":"conflict"}'; end if;
+    update public.chat_proxy_routes set enabled=(p_data->>'enabled')::boolean,
+      name=case when p_action='admin_proxy_save' then p_data->>'name' else name end,
+      base_url=case when p_action='admin_proxy_save' then p_data->>'base_url' else base_url end,
+      secret_name=case when p_action='admin_proxy_save' then p_data->>'secret_name' else secret_name end,
+      version=version+1,updated_at=now(),updated_by=p_actor where id=rid returning * into r;
+    return jsonb_build_object('route',to_jsonb(r)-'created_by'-'updated_by');
+  end if;
+  if p_action='admin_proxy_key_create' then
+    insert into public.chat_proxy_keys(route_id,label,key_hash,key_prefix,key_last4,created_by,updated_by)
+      values(rid,p_data->>'label',p_data->>'key_hash',p_data->>'key_prefix',p_data->>'key_last4',p_actor,p_actor) returning * into k;
+  else
+    select * into k from public.chat_proxy_keys where id=(p_data->>'id')::uuid for update;
+    if k.version <> (p_data->>'expected_version')::bigint then return '{"code":"conflict"}'; end if;
+    if k.revoked_at is not null and not (p_data->>'revoked')::boolean then return '{"code":"revoked"}'; end if;
+    update public.chat_proxy_keys set enabled=case when (p_data->>'revoked')::boolean then false else (p_data->>'enabled')::boolean end,
+      revoked_at=case when (p_data->>'revoked')::boolean then coalesce(revoked_at,now()) else revoked_at end,
+      version=version+1,updated_at=now(),updated_by=p_actor where id=k.id returning * into k;
+  end if;
+  return jsonb_build_object('key',public.chat_proxy_key_metadata(k));
+end; $$;
+
+create or replace function public.chat_proxy_admit(p_route_id uuid,p_key_hash text,p_request_id uuid,p_key_limit integer,p_route_limit integer,p_ttl_ms integer)
+returns jsonb language plpgsql security definer set search_path=public as $$
+declare r public.chat_proxy_routes; k public.chat_proxy_keys;
+begin
+  if p_key_limit not between 1 and 1000 or p_route_limit not between 1 and 10000 or p_ttl_ms not between 1000 and 150000 then raise exception 'invalid limits'; end if;
+  select * into r from public.chat_proxy_routes where id=p_route_id for update;
+  if not found or not r.enabled then return '{"code":"invalid_key"}'; end if;
+  select * into k from public.chat_proxy_keys where route_id=r.id and key_hash=p_key_hash for update;
+  if not found or not k.enabled or k.revoked_at is not null then return '{"code":"invalid_key"}'; end if;
+  delete from public.chat_proxy_leases where route_id=r.id and expires_at<=clock_timestamp();
+  if (select count(*) from public.chat_proxy_leases where route_id=r.id) >= p_route_limit or
+     (select count(*) from public.chat_proxy_leases where key_id=k.id) >= p_key_limit then return '{"code":"busy"}'; end if;
+  insert into public.chat_proxy_leases(request_id,route_id,key_id,expires_at)
+    values(p_request_id,r.id,k.id,clock_timestamp()+p_ttl_ms*interval '1 millisecond');
+  return jsonb_build_object('route',to_jsonb(r)-'created_by'-'updated_by');
+end; $$;
+create or replace function public.chat_proxy_release(p_request_id uuid)
+returns void language sql security definer set search_path=public as $$
+  delete from public.chat_proxy_leases where request_id=p_request_id;
+$$;
+revoke all on function public.chat_proxy_admin(uuid,text,jsonb), public.chat_proxy_admit(uuid,text,uuid,integer,integer,integer), public.chat_proxy_release(uuid) from public,anon,authenticated;
+grant execute on function public.chat_proxy_admin(uuid,text,jsonb), public.chat_proxy_admit(uuid,text,uuid,integer,integer,integer), public.chat_proxy_release(uuid) to service_role;

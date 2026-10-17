@@ -109,6 +109,17 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
   if (table.startsWith('rpc/')) {
     const name = table.slice(4), row = JSON.parse(String(init.body));
     rpcCalls.push({ name, body: row });
+    if (name === 'chat_proxy_admin') {
+      assert.equal(row.p_actor, UID);
+      if (conflict) return json({ code: 'conflict' });
+      if (row.p_action === 'admin_proxy_list') return json({ routes: [], keys: [] });
+      if (row.p_action === 'admin_proxy_key_create') {
+        assert.match(row.p_data.key_hash, /^[a-f0-9]{64}$/);
+        assert.equal(row.p_data.api_key, undefined);
+        return json({ key: { id: MID, route_id: PID, label: row.p_data.label, key_prefix: row.p_data.key_prefix, key_last4: row.p_data.key_last4, enabled: true, revoked_at: null, version: 1, created_at: '2026-01-01T00:00:00Z' } });
+      }
+      return json(row.p_action === 'admin_proxy_key_state' ? { key: { id: MID, enabled: row.p_data.enabled } } : { route: { id: PID, ...row.p_data, version: 1 } });
+    }
     if (name === 'chat_quota_get') return json(quota);
     if (name === 'chat_quota_save') return json(conflict ? { code: 'conflict' } : quota);
     if (name === 'chat_blacklist_set') return json({ ...quota, blacklisted: row.p_blocked, reason: row.p_reason });
@@ -175,6 +186,22 @@ async function test(name: string, fn: () => Promise<void>) {
   reset(); await fn(); count++; console.log(`PASS ${name}`);
 }
 try {
+  await test('proxy administration dynamic superadmin, strict contract, one-time key and conflicts', async () => {
+    const save = { action: 'admin_proxy_save', id: null, name: 'proxy', base_url: 'https://provider.example.com/v1', secret_name: 'CHAT_KEY_MOCK', enabled: true, expected_version: 0 };
+    admin = false;
+    for (const body of [{action:'admin_proxy_list'},save,{action:'admin_proxy_key_create',route_id:PID,label:'member'}]) await expectStatus(body,403);
+    assert.equal(rpcCalls.length,0); admin=true;
+    await expectStatus({action:'admin_proxy_list'},200);
+    await expectStatus(save,200);
+    const r=await expectStatus({action:'admin_proxy_key_create',route_id:PID,label:'member'},200);
+    assert.equal(r.headers.get('cache-control'),'no-store');
+    const value=await r.json(); assert.match(value.api_key,/^cap_[A-Za-z0-9_-]{43}$/); assert.equal(value.key.key_hash,undefined);
+    const {hashKey}=await import('../supabase/functions/_shared/chat-api-proxy.ts');
+    assert.equal((rpcCalls.at(-1)!.body.p_data as Row).key_hash,await hashKey(value.api_key));
+    for (const bad of [{...save,expected_version:undefined},{...save,enabled:'yes'},{...save,api_key:'must-not-accept'}, {...save,base_url:'https://provider.example.com/v1/response'}, {action:'admin_proxy_key_state',id:MID,enabled:true,expected_version:1}]) await expectStatus(bad,400);
+    conflict=true; await expectStatus({...save,id:PID,expected_version:1},409);
+    assert.equal(upstreamBodies.length,0);
+  });
   await test('authentication, profile binding, dynamic admin permission', async () => {
     await expectStatus({ action: 'catalog' }, 401, null); await expectStatus({ action: 'catalog' }, 401, 'invalid');
     profile = false; await expectStatus(payload(), 403);
