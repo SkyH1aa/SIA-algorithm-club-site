@@ -29,6 +29,10 @@ node tools/chat-mock-server.mjs --port 4192
 | `member` / `member2` | 两个不同 UUID 的已绑定社员，可以 Chat，管理页拒绝；IndexedDB 记录按 userId 隔离 |
 | `unbound` | session 非空，但 catalog/respond 返回 `403 profile`，管理动作返回 `403 admin` |
 | `loggedout` | session 为 null，正常前端显示登录门禁，Chat 接口返回 `401 login` |
+| 模型 `visibility=all` | 任一已绑定成员的 catalog 包含该模型，`respond` 可以使用 |
+| 模型 `visibility=assigned` + 已授权 UUID | 仅被分配的成员在 catalog 中看到并能 `respond` |
+| 模型 `visibility=assigned` + 未授权 UUID | catalog 隐藏；直接提交该模型 UUID 的 `respond` 仍返回 `403 model`，不能用猜测/替换 UUID 绕过 |
+| 管理员 `admin_test` 测试 assigned 模型 | 动态超管可以测试模型配置，但仍需要管理员 JWT，并继续受黑名单、quota、并发和 provider 校验约束 |
 | `completed` | `response.created` → 多段 `response.output_text.delta` → `response.completed`，含 message output 与 usage |
 | `incomplete` | 相同增量，最终 `response.incomplete`，原因 `max_output_tokens` |
 | `interrupted` | 三段增量后正常 EOF，不发终态，Chat 应保留部分文本并标中断；当前 mock usage 审计记 `incomplete/upstream_eof`（真实后端记录 `interrupted/upstream_eof`） |
@@ -41,6 +45,10 @@ node tools/chat-mock-server.mjs --port 4192
 模拟回复包括 Markdown 列表、代码块、链接及一个无害的 `<script>` 文本，方便观察前端渲染/净化行为；mock 不回显用户提示词、附件或任意配置内容。token 数量为本地估算，不能用于计费验证。
 
 管理页建议：用 admin 新建供应商（例如 `https://mock-provider.example.com/v1`、Secret **名称** `CHAT_KEY_MOCK_CREATED`），创建模型，填写最多 1000 字符的模型介绍，保存后编辑确认介绍回填；再打开 Chat 目录切换该模型，确认介绍显示为纯文本。继续测试编辑标签或 enabled，执行测试生成，刷新 usage 并测试分页/时间过滤。只输入合成配置，**不要输入真实 key**。
+
+模型访问验收应覆盖 `all` 与 `assigned` 两种 visibility：给 member 分配 assigned 模型后确认只有该 UUID 能 catalog/respond，移除分配后确认 catalog 隐藏且直接使用已知 model UUID 仍被拒绝；不能只测前端下拉框。管理员 `admin_test` 可作为配置烟雾测试，但额度为 0、额度耗尽、黑名单或 provider/model disabled 时仍应失败，不能把 admin_test 当作 quota bypass。
+
+成员页的 custom cloud 配置只验证合成显示名、模型 ID、固定社团 proxy URL 和一次性内存 key：保存请求不能包含 `api_key`，数据库/接口返回只含 metadata；刷新或关闭页面后 key 必须消失并要求重新输入。固定 URL 必须是规定的 proxy origin、route UUID 和 `/functions/v1/chat-api-proxy/<uuid>` 路径，实际请求为 `POST .../v1/responses`，不应直连上游或暴露任意 `/models`、`/chat/completions` 路径。
 
 当前真实 action 契约只有 upsert 与 `enabled` 软停用，没有 delete action；本 mock 对齐这一点。创建/读取/更新/停用覆盖页面所需的配置 CRUD 生命周期，物理删除通过 setup 重置模拟数据。
 
@@ -113,7 +121,9 @@ route 只有 `id,name,base_url,secret_name,enabled,version,created_at,updated_at
 
 GUI 可用 admin 新建 route（合成 `https://mock-provider.example.com/v1`、`CHAT_KEY_MOCK_PROXY` 引用名），创建 key，查看一次明文提示并确认关闭后列表不可取回；复制 base URL 不应包含任何 key。打开不同主题和语言确认状态、按钮、冲突提示可读。创建/保存/检查 Secret 不能触发真实收费测试。mock 不代表 Secret 实际存在，不能代替生产 Secret/DNS/SQL 验收。
 
-外部路径支持 **`/functions/v1/chat-api-proxy/<uuid>/v1/responses`** 和供前端改写使用的 `/mock/chat-api-proxy/<uuid>/v1/responses`，只支持 POST responses。客户端 base 是 `http://localhost:4191/functions/v1/chat-api-proxy/<uuid>/v1`（独立端口按实际改）；SDK `responses.create({model,input,stream?})` 使用创建时的 proxy key，不用原生上游 key。`models`、`chat/completions`、单数 `response`、retrieve 均 404，不转发。
+外部路径支持 **`/functions/v1/chat-api-proxy/<uuid>/v1/responses`** 和供前端改写使用的 `/mock/chat-api-proxy/<uuid>/v1/responses`，只支持 POST responses。客户端 base 是 `http://localhost:4191/functions/v1/chat-api-proxy/<uuid>/v1`（独立端口按实际改）；SDK `responses.create({model,input,stream?})` 使用创建时的 proxy key，不用原生上游 key。`/v1/responses` 必须保留 model 原值并返回 JSON/SSE；`models`、`chat/completions`、单数 `response`、retrieve 均 404，不转发。
+
+浏览器 CORS 验收要区分 `CHAT_CORS_ORIGINS`（成员 Chat）和 `CHAT_PROXY_CORS_ORIGINS`（独立 proxy），分别用允许和未知 Origin 检查响应。proxy 未配置后者时可返回 `*` 以支持 CLI，但无 key/错误 key 仍 401；配置后未知浏览器 Origin 应在 admission 前 403。CORS 不可作为认证测试替代。
 
 | 本地操作 | 预期 |
 | --- | --- |
@@ -128,7 +138,7 @@ GUI 可用 admin 新建 route（合成 `https://mock-provider.example.com/v1`、
 | Chat 全局额度设 0、管理员拉黑、setup loggedout | 既有有效 proxy key 仍能生成，与 Chat/session 独立 |
 | setup reset | 取消代理流，清空 routes/keys/哈希/租约；旧 proxy key 不再有效 |
 
-mock 仅模拟协议，不执行请求中的 tools/远程 URL、上游项目资源访问或真正 token 计量，也不证明生产取消、平台超时或金额预算。生产透传的 tools/MCP、files/vector stores/previous_response_id、远程媒体可能触发上游执行与共享资源访问；proxy key 不隔离上游租户，务必专用上游项目/Secret。部署、转售许可、非 2xx 脱敏与 SSE 仍可能暴露上游、120 秒全流超时和 Supabase wall-clock 限制详见 `docs/chat-deployment.md` 第 11 节。
+mock 仅模拟协议，不执行请求中的 tools/远程 URL、上游项目资源访问或真正 token 计量，也不证明生产取消、平台超时或金额预算。生产透传的 tools/MCP、files/vector stores/previous_response_id、远程媒体可能触发上游执行与共享资源访问；proxy key 不隔离上游租户，务必专用上游项目/Secret。上线或转售前必须确认供应商条款允许代理、转授权或 resale，且限制工具权限、远程抓取、文件/向量资源和预算；持有上游 key 不等于拥有转售许可。不要宣传完全隐藏供应商：成功 JSON、SSE、模型名和上游错误事件仍可能泄露特征或敏感内容，尤其 SSE 开始后不能保证正文净化。部署、非 2xx 脱敏、120 秒全流超时和 Supabase wall-clock 限制详见 `docs/chat-deployment.md` 第 11 节。
 
 自检新增验证五个管理员契约、32-byte key 和精确 metadata 字段、哈希/明文不出 list/log、版本冲突、路由绑定、JSON/SSE/model 原值、401/403/404/405/413/429/502、取消释放、Chat/session 独立性、撤销、URL 替换与 reset。所有请求限于自检自己创建的回环服务器，绝不自动测试生产或付费供应商。未运行新的 GUI 矩阵，不声称代理页面视觉验收通过。
 
@@ -136,7 +146,7 @@ mock 仅模拟协议，不执行请求中的 tools/远程 URL、上游项目资�
 
 setup 的“刷新元数据”或 **GET `/mock/requests`** 查看最近最多 500 条记录。只保存服务生成 request ID、时间、受控 action/账号、请求字节数、model UUID、受控 effort / 场景、role/part 数量、附件计数/字节和结果；**不保存请求 headers、apikey、authorization、token、key 值、提示正文、附件内容或供应商配置**。不自动写日志文件。usage 最多保留 1000 条模拟生成记录。
 
-setup“重置 mock 配置 / usage / 请求记录”取消活动流并恢复初始模型/供应商，同时清空额度设置、黑名单、所有周期计数和记录，保留当前所选设置。重启服务也丢弃内存。浏览器 IndexedDB 独立存在：请使用 Chat 原有“清除此账号本地记录”分别清理两个账号，不通过 fixture 静默删除。
+setup“重置 mock 配置 / usage / 请求记录”取消活动流并恢复初始模型/供应商，同时清空额度设置、黑名单、所有周期计数和记录，保留当前所选设置。重启服务也丢弃内存。浏览器 IndexedDB 独立存在：请使用 Chat 原有“清除此账号本地记录”分别清理两个账号，不通过 fixture 静默删除。验证内存生命周期时，切换账号应中止旧流、拒绝旧 token、保留另一账号的本地历史；刷新/关闭页面应丢失 custom cloud API key，但不应删除 IndexedDB 会话。生产对照检查数据库 lease/usage 在 Edge 重启后仍保留，取消/租约到期不等于供应商退款。
 
 在仓库根目录运行可重现 HTTP 自检（若 4191 已被 GUI 服务占用，自检会自动使用独立临时端口）：
 
@@ -151,4 +161,4 @@ python tools/test-chat-quota-sql.py --dsn 'host=127.0.0.1 port=5432 dbname=postg
 
 SQL syntax-only 只做 pglast 解析，不验证事务或并发；真实 DSN 测试另需 psycopg、本地 PostgreSQL 与 CREATEDB/CREATEROLE 权限，会创建/删除随机测试数据库。本次未跑真实 PostgreSQL 集成，不声称并发通过。升级需先暂停旧 Edge 新请求并等待旧流结束，再完整主 SQL → Secrets → 两个 Edge（chat 与 chat-api-proxy）→ 前端；历史 `chat_usage` 不回填额度桶，新计量从新版 Edge admission 开始。
 
-自检启动临时本地服务器后自动关闭，验证 SDK 替换、URL 替换、CSP、静态/上传 fixtures、catalog/权限、多轮与附件、所有 SSE 终态、slow 停止/409 锁释放、旧 token 拒绝、配置创建/修改/停用、admin_test、usage、仅元数据日志、重置和跨站/路径防护；还覆盖新管理动作严格鉴权、UUID 目录、本人快照、null/零/最大值、版本冲突、两条生成路由缩减响应头、有效 usage 结算、无 usage 保留预留和 UTC 日/周/月切换。管理 UI 可用本地时间显示重置时刻，底层分桶仍按 UTC。不会启动浏览器或访问线上接口。
+本地 mock 只覆盖运行时协议，不能证明手动发布正确。发布前后要分别检查 Dashboard 中 `chat` 与 `chat-api-proxy` 的完整 standalone bundle：`docs/chat-deployment/chat-dashboard-index.ts` 和 `docs/chat-deployment/chat-api-proxy-dashboard-index.ts`，确认没有未解析的 `_shared` import，且修改源函数或 helper 后已重新同步。不要把 bundle、真实 key、service role key 或生产 proxy key 放入 fixture、日志或截图；不要为验证启动生产部署或发送付费上游请求。

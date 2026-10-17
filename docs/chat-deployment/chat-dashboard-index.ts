@@ -93,6 +93,7 @@ type Model = {
   supports_pdf: boolean;
   preserve_reasoning: boolean;
   enabled: boolean;
+  visibility: 'all' | 'assigned';
 };
 
 type RequestContext = {
@@ -114,6 +115,8 @@ const ACTIONS = new Set([
   'catalog', 'respond', 'admin_get', 'admin_save_provider', 'admin_save_model',
   'admin_usage', 'admin_test', 'quota', 'admin_quota_get', 'admin_quota_save',
   'admin_user_directory', 'admin_blacklist_list', 'admin_set_blacklist',
+  'admin_model_access_get', 'admin_model_access_save',
+  'custom_model_list', 'custom_model_save', 'custom_model_delete',
   'admin_proxy_list', 'admin_proxy_save', 'admin_proxy_route_state', 'admin_proxy_key_create', 'admin_proxy_key_state'
 ]);
 const encoder = new TextEncoder();
@@ -431,12 +434,38 @@ async function providers(): Promise<Provider[]> {
 }
 
 async function models(): Promise<Model[]> {
-  return await restJson<Model[]>('chat_models?select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,supports_images,supports_pdf,preserve_reasoning,enabled&order=display_name.asc');
+  return await restJson<Model[]>('chat_models?select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,supports_images,supports_pdf,preserve_reasoning,enabled,visibility&order=display_name.asc');
 }
 
-function catalogPayload(items: Model[], providerRows: Provider[]) {
+async function modelAccess(modelId: string, userId: string): Promise<boolean> {
+  const rows = await restJson<Array<{ visibility: string }>>(
+    `chat_models?id=eq.${encodeURIComponent(modelId)}&select=visibility&limit=1`
+  );
+  if (!rows[0]) return false;
+  if (rows[0].visibility !== 'assigned') return true;
+  const grants = await restJson<Array<{ user_id: string }>>(
+    `chat_model_access?model_id=eq.${encodeURIComponent(modelId)}&user_id=eq.${encodeURIComponent(userId)}&select=user_id&limit=1`
+  );
+  return grants.length === 1;
+}
+
+function modelVisible(item: Model, userId: string, granted: Set<string>): boolean {
+  return item.visibility !== 'assigned' || granted.has(item.id);
+}
+
+async function visibleModelIds(items: Model[], userId: string): Promise<Set<string>> {
+  const assigned = items.filter(x => x.visibility === 'assigned').map(x => x.id);
+  if (!assigned.length) return new Set(items.map(x => x.id));
+  const rows = await restJson<Array<{ model_id: string }>>(
+    `chat_model_access?user_id=eq.${encodeURIComponent(userId)}&model_id=in.(${assigned.map(encodeURIComponent).join(',')})&select=model_id`
+  );
+  return new Set(items.filter(x => x.visibility !== 'assigned').map(x => x.id).concat(rows.map(x => x.model_id)));
+}
+
+async function catalogPayload(items: Model[], providerRows: Provider[], userId: string) {
   const enabledProviders = new Set(providerRows.filter(x => x.enabled).map(x => x.id));
-  return items.filter(x => x.enabled && enabledProviders.has(x.provider_id)).map(x => ({
+  const visible = await visibleModelIds(items, userId);
+  return items.filter(x => x.enabled && enabledProviders.has(x.provider_id) && visible.has(x.id)).map(x => ({
     id: x.id, display_name: x.display_name, introduction: x.introduction || null, context_window: x.context_window,
     max_output_tokens: x.max_output_tokens, default_max_output_tokens: x.default_max_output_tokens,
     reasoning_efforts: Array.isArray(x.reasoning_efforts) ? x.reasoning_efforts : [],
@@ -445,15 +474,16 @@ function catalogPayload(items: Model[], providerRows: Provider[]) {
   }));
 }
 
-async function modelWithProvider(modelId: unknown, enabledOnly = true): Promise<{ model: Model; provider: Provider }> {
+async function modelWithProvider(modelId: unknown, enabledOnly = true, userId?: string, admin = false): Promise<{ model: Model; provider: Provider }> {
   if (!isUuid(modelId)) throw new HttpError('model', 400);
   const [modelRows, providerRows] = await Promise.all([
-    restJson<Model[]>(`chat_models?id=eq.${encodeURIComponent(modelId)}&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,supports_images,supports_pdf,preserve_reasoning,enabled&limit=1`),
+    restJson<Model[]>(`chat_models?id=eq.${encodeURIComponent(modelId)}&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,supports_images,supports_pdf,preserve_reasoning,enabled,visibility&limit=1`),
     providers()
   ]);
   const model = modelRows[0];
   const provider = model && providerRows.find(x => x.id === model.provider_id);
   if (!model || !provider || (enabledOnly && (!model.enabled || !provider.enabled))) throw new HttpError('model', 400);
+  if (!admin && userId && !(await modelAccess(model.id, userId))) throw new HttpError('model', 403);
   validateModel(model);
   provider.base_url = await publicHttpsUrl(provider.base_url);
   secretName(provider.secret_name);
@@ -488,6 +518,14 @@ async function saveModel(payload: Json) {
   const defaultMax = integer(payload.default_max_output_tokens, 1, max);
   const efforts = payload.reasoning_efforts === undefined ? [] : payload.reasoning_efforts;
   if (!Array.isArray(efforts) || efforts.length > 12 || efforts.some(x => typeof x !== 'string' || x.length < 1 || x.length > MAX_REASONING_EFFORT)) throw new HttpError('input', 400);
+  let visibility: 'all' | 'assigned' = 'all';
+  if (payload.visibility === undefined && id) {
+    const existing = await restJson<Array<{ visibility?: string }>>(`chat_models?id=eq.${encodeURIComponent(id)}&select=visibility&limit=1`);
+    const value = existing[0]?.visibility;
+    if (value === 'all' || value === 'assigned') visibility = value;
+  } else {
+    visibility = payload.visibility as 'all' | 'assigned';
+  }
   const body = {
     ...(id ? { id } : {}), provider_id: payload.provider_id, model_key: modelKey, display_name: displayName, introduction,
     context_window: integer(payload.context_window, 256, 1000000), max_output_tokens: max,
@@ -495,8 +533,10 @@ async function saveModel(payload: Json) {
     default_reasoning_effort: payload.default_reasoning_effort == null ? null : text(payload.default_reasoning_effort, MAX_REASONING_EFFORT, true),
     supports_images: boolean(payload.supports_images), supports_pdf: boolean(payload.supports_pdf),
     preserve_reasoning: boolean(payload.preserve_reasoning), enabled: payload.enabled === undefined ? true : boolean(payload.enabled, true),
+    visibility,
     updated_at: new Date().toISOString()
   };
+  if (body.visibility !== 'all' && body.visibility !== 'assigned') throw new HttpError('input', 400);
   validateModel(body as Model);
   const providerRows = await providers();
   if (!providerRows.some(x => x.id === body.provider_id)) throw new HttpError('input', 400);
@@ -571,7 +611,7 @@ function upstreamHeaders(provider: Provider, key: string): Headers {
 }
 
 async function callResponses(request: Request, ctx: RequestContext, payload: Json, test = false): Promise<Response> {
-  const { model, provider } = await modelWithProvider(payload.model_id);
+  const { model, provider } = await modelWithProvider(payload.model_id, true, ctx.user.id, test && ctx.isAdmin);
   const rawInput = test ? [{ role: 'user', content: [{ type: 'input_text', text: text(payload.prompt, MAX_INPUT_TEXT, true) }] }] : payload.input;
   const { input } = validateInput(rawInput, model);
   if (!test && payload.max_output_tokens !== undefined) integer(payload.max_output_tokens, 1, model.max_output_tokens);
@@ -767,6 +807,55 @@ async function adminGet(request: Request) {
   return { providers: providerRows.map(x => ({ id: x.id, name: x.name, label: x.label, base_url: x.base_url, secret_name: x.secret_name, auth_header: x.auth_header, enabled: x.enabled })), models: modelRows.map(x => ({ ...x, model_id: x.model_key })) };
 }
 
+async function modelAccessAdmin(request: Request, action: string, payload: Json): Promise<Json> {
+  const ctx = await context(request, true);
+  if (!isUuid(payload.model_id)) throw new HttpError('input', 400);
+  if (action === 'admin_model_access_get') {
+    const result = object(await rpc('chat_model_access_get', { p_actor_user_id: ctx.user.id, p_model_id: payload.model_id }));
+    return result;
+  }
+  if (payload.visibility !== 'all' && payload.visibility !== 'assigned') throw new HttpError('input', 400);
+  if (!Array.isArray(payload.user_ids) || payload.user_ids.length > 10000 || payload.user_ids.some(x => !isUuid(x))) throw new HttpError('input', 400);
+  const result = object(await rpc('chat_model_access_save', {
+    p_actor_user_id: ctx.user.id, p_model_id: payload.model_id, p_visibility: payload.visibility,
+    p_user_ids: payload.user_ids, p_expected_version: integer(payload.expected_version, 0, Number.MAX_SAFE_INTEGER)
+  }));
+  if (result.code === 'conflict') throw new HttpError('conflict', 409);
+  return result;
+}
+
+function customProxyBase(value: unknown): string {
+  const raw = text(value, 512, true)!;
+  let url: URL;
+  try { url = new URL(raw); } catch { throw new HttpError('proxy_url', 400); }
+  if (url.protocol !== 'https:' || url.hostname.toLowerCase() !== 'jgezpvmlnhycxslqbwcx.supabase.co' || url.username || url.password || url.search || url.hash || url.port) throw new HttpError('proxy_url', 400);
+  if (!/^\/functions\/v1\/chat-api-proxy\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/?$/i.test(url.pathname)) throw new HttpError('proxy_url', 400);
+  return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
+}
+
+async function customModelAdmin(request: Request, action: string, payload: Json): Promise<unknown> {
+  const ctx = await context(request);
+  if (action === 'custom_model_list') return await rpc('chat_custom_model_list', { p_user_id: ctx.user.id });
+  if (!isUuid(payload.id)) throw new HttpError('input', 400);
+  if (action === 'custom_model_delete') {
+    const result = object(await rpc('chat_custom_model_delete', { p_user_id: ctx.user.id, p_id: payload.id, p_expected_version: integer(payload.expected_version, 0, Number.MAX_SAFE_INTEGER) }));
+    if (result.code === 'conflict') throw new HttpError('conflict', 409);
+    return result;
+  }
+  if (action === 'custom_model_save') {
+    if (Object.prototype.hasOwnProperty.call(payload, 'api_key')) throw new HttpError('input', 400);
+    if (payload.model_key !== undefined && !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$/.test(String(payload.model_key).trim())) throw new HttpError('input', 400);
+    const result = object(await rpc('chat_custom_model_save', {
+      p_user_id: ctx.user.id, p_id: payload.id, p_display_name: text(payload.display_name, 120, true),
+      p_model_key: text(payload.model_key, 160, true), p_base_url: customProxyBase(payload.base_url),
+      p_expected_version: integer(payload.expected_version, 0, Number.MAX_SAFE_INTEGER)
+    }));
+    if (result.code === 'conflict') throw new HttpError('conflict', 409);
+    return result;
+  }
+  throw new HttpError('action', 400);
+}
+
 function isoFilter(value: unknown): string | null {
   if (value == null || value === '') return null;
   const parsed = new Date(String(value));
@@ -853,10 +942,17 @@ async function main(request: Request, payload: Json): Promise<Response> {
     admin_test: ['model_id', 'prompt', 'max_output_tokens', 'reasoning_effort'],
     admin_usage: ['page', 'pageSize', 'limit', 'from', 'to'],
     admin_save_provider: ['id', 'name', 'label', 'base_url', 'secret_name', 'auth_header', 'enabled'],
-    admin_save_model: ['id', 'provider_id', 'model_key', 'model_id', 'display_name', 'introduction', 'context_window', 'max_output_tokens', 'default_max_output_tokens', 'reasoning_efforts', 'default_reasoning_effort', 'supports_images', 'supports_pdf', 'preserve_reasoning', 'enabled']
+    admin_save_model: ['id', 'provider_id', 'model_key', 'model_id', 'display_name', 'introduction', 'context_window', 'max_output_tokens', 'default_max_output_tokens', 'reasoning_efforts', 'default_reasoning_effort', 'supports_images', 'supports_pdf', 'preserve_reasoning', 'enabled', 'visibility'],
+    admin_model_access_get: ['model_id'],
+    admin_model_access_save: ['model_id', 'visibility', 'user_ids', 'expected_version'],
+    custom_model_list: [],
+    custom_model_save: ['id', 'display_name', 'model_key', 'base_url', 'expected_version'],
+    custom_model_delete: ['id', 'expected_version']
   };
   allowKeys(payload, ['action', ...allowed[action]]);
   if (action.startsWith('admin_proxy_')) return await proxyAdmin(request, action, payload);
+  if (action === 'admin_model_access_get' || action === 'admin_model_access_save') return json(request, await modelAccessAdmin(request, action, payload));
+  if (action.startsWith('custom_model_')) return json(request, await customModelAdmin(request, action, payload));
   if (action === 'admin_get') return json(request, await adminGet(request));
   if (action === 'admin_save_provider') return json(request, { provider: await saveProviderAfterAuth(request, payload) });
   if (action === 'admin_save_model') return json(request, { model: await saveModelAfterAuth(request, payload) });
@@ -870,7 +966,7 @@ async function main(request: Request, payload: Json): Promise<Response> {
     const quota = await quotaSnapshot(ctx.user.id);
     if (quota.blacklisted === true) throw new HttpError('blacklisted', 403);
     const [all, providerRows] = await Promise.all([models(), providers()]);
-    return json(request, { models: catalogPayload(all, providerRows), bound: Boolean(ctx.profile), member_name: ctx.profile?.member_name || null, quota });
+    return json(request, { models: await catalogPayload(all, providerRows, ctx.user.id), bound: Boolean(ctx.profile), member_name: ctx.profile?.member_name || null, quota });
   }
   if (action === 'respond') return await callResponses(request, await context(request), payload);
   if (action === 'admin_test') return await callResponses(request, await context(request, true), payload, true);
@@ -906,6 +1002,6 @@ async function handle(request: Request): Promise<Response> {
   }
 }
 
-export const handler = handle;
+const handler = handle;
 
 if (typeof Deno.serve === 'function' && !Deno.env.get('CHAT_TEST_MODE')) Deno.serve(handle);

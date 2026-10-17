@@ -139,7 +139,19 @@ supabase functions deploy chat-api-proxy --no-verify-jwt
 
 `supports_images` 和 `supports_pdf` 是能力元数据：前端用它们控制附件入口，后端也会再次校验模型 capability、附件类型、大小和数量，因此不能通过数据库配置强行让不支持的模型接受附件。PDF 仅接受 `.pdf`，图片仅接受 png/jpeg/webp data URL。文本较多的 PDF 由浏览器抽取为 `input_text`；低文本或扫描型 PDF 在 `supports_pdf` 打开时走原生 `input_file`，由供应商自行解析，本项目不做 OCR。`preserve_reasoning` 错误打开会导致多轮请求被供应商拒绝或泄漏不兼容的 continuation 数据，应保持关闭直到实际验证通过。
 
+### 模型可见性与 UUID 不能绕过授权
+
+每个模型的 `visibility` 只能是：
+
+- `all`：所有已登录且已绑定资料的成员可在 `catalog` 中看到并使用。
+- `assigned`：只有 `chat_model_access` 中明确列出的成员 UUID 可见和使用；管理员在管理页按 UUID 分配，显示姓名/username 只是辅助识别。
+
+这不是前端隐藏功能。`catalog` 按当前用户过滤，`respond` 即使直接提交模型 UUID 也会在服务端重新检查 assignment，未授权返回 `403 model`；猜测、替换或伪造 UUID 不能绕过 assigned 限制。管理员的 `admin_test` 只绕过模型可见性检查以便测试配置，但仍要求管理员 JWT，并继续执行黑名单、额度、并发和上游校验。
+
+成员页的“添加社团代理模型”是另一条用户自有配置路径：仅保存显示名称、模型 ID 和固定社团 proxy 的 base URL 元数据。API key 不接受为 `custom_model_save` 的字段，不写入数据库、Supabase、IndexedDB、日志或 URL，只保存在当前页面内存；刷新页面、关闭标签页、切换设备或重新登录后必须重新输入。固定 proxy 只允许本站规定的 HTTPS host、route UUID 和 `/functions/v1/chat-api-proxy/<route-uuid>` 路径，客户端实际请求为该地址加 `/v1/responses`。
+
 所有 provider 或 model 都可以单独 disabled。供应商不可用、余额不足、接口兼容性变化或正在换 key 时，优先禁用对应 provider/model，并保留 usage 审计记录；不要删除历史配置来绕过问题。
+
 
 ## 6. 前端静态发布
 
@@ -215,6 +227,8 @@ syntax-only 需 pglast；真实集成还需 `psycopg[binary]` 和具备 CREATEDB
 
 已知运行时限制（部署前应知悉）：生成 lease 固定 15 分钟且无续期；若单次生成超过租约时限，同账号的新请求可能提前获锁。终态通过 RPC 事务原子写入审计并结算额度，按 `request_id` 幂等，重复完成同一请求不会重复计量。RPC 失败时记录可能停留在 `upstream_started`、额度保守保留，客户端仍然 fail-closed，不会误报成功。用户重新发起 HTTP 请求会得到新的 `request_id`，没有客户端幂等键将不同请求自动去重。
 
+**内存与生命周期**：生产 Edge 的 in-flight lease、usage 预留和状态在数据库中持久化，函数重启、worker 更换或浏览器刷新不会自动退款；取消请求会尝试中止上游并结算，但不能保证供应商已停止或退费，租约到期也不等于取消。浏览器聊天正文/会话只在当前浏览器 IndexedDB，按 user UUID 隔离；清除站点数据、切换设备或换浏览器不会同步，也不会清除服务端 usage 审计。自定义 cloud API key 仅在当前页面内存，刷新/关闭页面即丢失；本地 mock 重启会清空内存状态，这不是生产清理或退款机制。
+
 ## 8. 额度、黑名单与计量边界
 
 - 超级管理员可设置全站每日 token 上限，以及按账号 UUID 设置个人每日、每周、每月上限；账号目录的 username/中文姓名只是显示，保存目标必须是 `user_id`，不可按重名姓名或 username 猜测目标。`null` 表示不限，`0` 表示该维度不允许新生成，有限值只接受 `0..1,000,000,000,000` 的整数。
@@ -262,18 +276,18 @@ API action 契约：`quota {}` 仅查询本人；`admin_user_directory {}` 返�
 
 上游 key 只存 Edge Secrets。路由仅存 `CHAT_KEY_*` **引用名**，绝不填入原生 key。应使用**专用于对外代理的上游项目和 Secret**，不要与本站 Chat、私人文件、向量库或其他服务共用。保存配置、检查 Secret 存在、创建 key 均不应发起付费测试；没有自动测试收费请求。真实付费验证必须由所有者单独明确授权，不因部署或打开管理页而自动执行。
 
-### 手动 Dashboard 部署
+### 手动 Dashboard 部署与 standalone bundle
 
-本项目按 Supabase 网站 Edge Function 编辑器部署，不需要部署 `_shared`。分别打开 `chat` 与 `chat-api-proxy` 的 Function 编辑器，将下面对应的完整单文件源码粘贴并部署；不要粘贴带 `../_shared` 相对 import 的函数源码，也不要把一个函数包贴到另一个函数中：
+本项目支持两种手动发布方式，二者都需要先执行完整的 `supabase/club-chat-schema.sql`，再设置 Edge secrets，并在函数内部保留认证校验：
 
-- `docs/chat-deployment/chat-dashboard-index.ts` → `chat`
-- `docs/chat-deployment/chat-api-proxy-dashboard-index.ts` → `chat-api-proxy`
+1. **Supabase Dashboard 编辑器**：打开 Edge Functions，分别创建/编辑 `chat` 和 `chat-api-proxy`，将仓库中的完整 standalone 文件粘贴到对应函数：`docs/chat-deployment/chat-dashboard-index.ts` → `chat`，`docs/chat-deployment/chat-api-proxy-dashboard-index.ts` → `chat-api-proxy`。Dashboard 编辑器不会自动上传 `_shared`，不能粘贴带 `../_shared` import 的源文件，也不能把两个 bundle 合并到一个函数。
+2. **CLI/独立 bundle**：将同样的 standalone 文件作为单文件函数源码发布，或在受控环境中按项目的函数发布流程上传对应函数目录。无论采用哪种方式，更新 `supabase/functions/chat/**`、`supabase/functions/chat-api-proxy/**` 或共享 helper 后，都必须重新生成/同步相应 bundle，并逐项检查 Dashboard 中保存的源码确实是最新版本。
 
-每次更新仓库中的任一函数或共享代理 helper，都要重新同步对应 standalone 源码，再粘贴部署。`verify_jwt` 设为关闭是为了由函数内部统一返回错误/CORS；不能省略 `chat` 的 Auth JWT、成员绑定、动态超管检查，也不能省略代理的 `cap_` key 哈希、路由绑定与撤销检查。
+两个函数均可设置 `verify_jwt=false`（CLI 为 `--no-verify-jwt`），这只关闭 Supabase 网关的默认检查，绝不关闭函数自身的认证：`chat` 仍验证成员 JWT、资料绑定、动态超级管理员、模型 UUID assignment 和 quota/blacklist；proxy 仍验证 `cap_` key 哈希、route UUID 绑定、enabled/revoked 状态和并发租约。发布后手动在 Dashboard 核对源码、Secrets、RLS 和 service_role-only RPC 权限；仓库文件不能证明线上函数已经更新。
 
 ### CORS 与线上核对
 
-`CHAT_CORS_ORIGINS` 用于成员 Chat 的精确浏览器来源白名单；可选的 `CHAT_PROXY_CORS_ORIGINS` 用于代理浏览器 SDK 来源，多个 origin 以英文逗号分隔。代理未配置该变量时允许 `*` 以兼容 PowerShell/CLI 等非浏览器客户端，但这不赋予访问权限：每个请求仍必须携带有效代理 key。配置后仅精确匹配的 Origin 获得 CORS 响应头，未知浏览器 Origin 在 admission 前被拒绝。CORS 不是认证，命令行客户端可自行设置或不发送 Origin，因此 key 仍是授权边界。
+`CHAT_CORS_ORIGINS` 只控制成员 Chat 函数的浏览器来源白名单；`CHAT_PROXY_CORS_ORIGINS` 只控制独立 proxy 的浏览器来源白名单，二者不要混用。前者未配置有效 origin 时不会给成员浏览器放行；后者未配置时 proxy 为兼容 CLI/PowerShell 返回 `Access-Control-Allow-Origin: *`，但这不授予权限，仍必须携带有效 `cap_` key。配置 `CHAT_PROXY_CORS_ORIGINS` 后，只精确匹配的 Origin 获得 CORS 响应头，未知浏览器 Origin 在 admission 前返回 `403 cors`。CORS 不是认证，命令行客户端可以不发送 Origin，key 才是授权边界。
 
 每次部署后在 Supabase Dashboard 核对实际保存的两份函数源码已包含最新校验，Secrets 仅存在于 Edge Functions；在 SQL Editor/Table Editor 核对 Chat/代理表启用 RLS、客户端角色无表权限，管理/准入/释放 RPC 的 `EXECUTE` 仅授予 `service_role`。`verify_jwt=false` 下线上旧函数或旧 SQL 会直接削弱这些保证，不能仅凭仓库源码判定线上已安全。
 
@@ -292,7 +306,7 @@ route 字段仅为 `id,name,base_url,secret_name,enabled,version,created_at,upda
 
 proxy key 格式为 `cap_` 加 **32 随机字节的 base64url**（43 字符，无 padding）。创建接口只返回一次完整明文；服务端只持久化哈希与安全 metadata，列表/状态保存不能取回明文或哈希。关闭一次明文提示前由接收者安全保存；丢失则撤销重建。不要把 key 放进仓库、截图、日志或公共示例。key_prefix/key_last4 只用于识别，不可用于认证。
 
-### 客户端 URL 与支持范围
+### 客户端 URL、浏览器直连与支持范围
 
 路由 `base_url` 填供应商 HTTPS 公网版本根地址（例 `https://api.example.com/v1`），不是 `/response` 或 `/responses`，不带凭据/query/hash。外部客户端使用本站 base：
 
@@ -300,7 +314,9 @@ proxy key 格式为 `cap_` 加 **32 随机字节的 base64url**（43 字符，�
 https://<project-ref>.supabase.co/functions/v1/chat-api-proxy/<route-uuid>/v1
 ```
 
-只提供 **POST `<base>/responses`**；不提供 `/models`、`/chat/completions`、`/response` 或 `/responses/<id>` retrieve。示例使用标准客户端 SDK 的 `responses.create`：
+浏览器直连时也必须使用这个固定 proxy 地址，且只向 **POST `<base>/v1/responses`** 发请求；不能把供应商 URL、任意 Supabase Function URL、`/models`、`/chat/completions`、`/response` 或 `/responses/<id>` 暴露给成员页。前端 custom cloud 表单会固定校验 proxy origin、route UUID 和路径，并用 `Authorization: Bearer cap_...` 调用 `/v1/responses`；这不是供应商原生 API key，也不能通过修改模型 metadata 改成任意上游地址。
+
+示例使用标准客户端 SDK 的 `responses.create`：
 
 ```js
 import OpenAI from 'openai';

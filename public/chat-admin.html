@@ -165,6 +165,16 @@
         <p id="quotaMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
       </section>
 
+      <section class="chat-admin-panel chat-admin-section" id="modelAccessSection">
+        <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.modelAccessTitle">模型用户授权</h2><p data-i18n="chatAdmin.modelAccessLead">控制指定模型对哪些用户可见。模型配置保存不会覆盖这里的授权。</p></div></div>
+        <form id="modelAccessForm" class="chat-admin-form chat-admin-access-form">
+          <label><span data-i18n="chatAdmin.accessModel">模型</span><select id="accessModel" class="chat-admin-input" required></select></label>
+          <label><span data-i18n="chatAdmin.visibility">可见范围</span><select id="accessVisibility" class="chat-admin-input"><option value="all" data-i18n="chatAdmin.visibilityAll">所有用户</option><option value="assigned" data-i18n="chatAdmin.visibilityAssigned">仅授权用户</option></select></label>
+          <div class="chat-admin-access-users"><div class="chat-admin-access-users-head"><strong data-i18n="chatAdmin.accessUsers">授权用户</strong><button id="accessSelectAll" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.selectAll">全选</button></div><div id="accessUsers" class="chat-admin-user-list"></div></div>
+          <div class="chat-admin-actions"><button class="chat-admin-button" type="submit" data-i18n="chatAdmin.saveAccess">保存授权</button><button id="refreshAccessButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.refreshAccess">刷新授权</button></div>
+        </form>
+        <p id="modelAccessMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+      </section>
       <section class="chat-admin-panel chat-admin-section">
         <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.testTitle">管理员测试调用</h2><p data-i18n="chatAdmin.testLead">测试会真实调用供应商，可能产生费用。每次点击测试前都必须再次确认。</p></div></div>
         <form id="testForm" class="chat-admin-test-form">

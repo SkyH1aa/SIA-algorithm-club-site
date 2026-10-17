@@ -17,8 +17,12 @@ const originalFetch = globalThis.fetch;
 const originalDns = Deno.resolveDns;
 const encoder = new TextEncoder();
 const providerBase = { id: PID, name: 'mock', label: 'Local Provider', base_url: 'https://provider.example.com/v1', secret_name: 'CHAT_KEY_MOCK', auth_header: 'authorization', enabled: true };
-const modelBase = { id: MID, provider_id: PID, model_key: 'local-model', display_name: 'Local Model', introduction: 'A local test model.', context_window: 1000000, max_output_tokens: 1000, default_max_output_tokens: 100, reasoning_efforts: ['low', 'high'], default_reasoning_effort: 'low', supports_images: true, supports_pdf: true, preserve_reasoning: true, enabled: true };
+const modelBase = { id: MID, provider_id: PID, model_key: 'local-model', display_name: 'Local Model', introduction: 'A local test model.', context_window: 1000000, max_output_tokens: 1000, default_max_output_tokens: 100, reasoning_efforts: ['low', 'high'], default_reasoning_effort: 'low', supports_images: true, supports_pdf: true, preserve_reasoning: true, enabled: true, visibility: 'all' as const };
+const ASSIGNED_MID = '44444444-4444-4444-8444-444444444444';
+const CUSTOM_ID = '55555555-5555-4555-8555-555555555555';
+const OTHER_UID = '66666666-6666-4666-8666-666666666666';
 let provider: Row, model: Row, profile: boolean, admin: boolean, auditFail: boolean, startFail: boolean, finishFail: boolean, busy: boolean;
+let assignedVisible = false, customModels: Row[];
 let dnsMode: string, mode: string, upstreamSignal: AbortSignal | undefined;
 let audits: Row[], patches: Row[], upstreamBodies: Array<Row & { input: Array<{ content: Array<{ text: string; image_url: string }> }> }>, requests: URL[], released: number, finishAttempts: number, leased: boolean;
 let quota: Row, admissionCode: string | null, shrink: number | null, conflict: boolean;
@@ -32,6 +36,7 @@ function reset() {
   quota = { global: { daily_limit: null, version: 0, used: 0, remaining: null, resets_at: '2026-10-17T00:00:00Z' }, user: { daily_limit: null, weekly_limit: null, monthly_limit: null, version: 0 }, periods: [], blacklisted: false, reason: null };
   admissionCode = null; shrink = null; conflict = false; rpcCalls = []; settlements = []; charged = 0;
   provider = { ...providerBase }; model = { ...modelBase }; profile = true; admin = true;
+  assignedVisible = false; customModels = [];
   auditFail = startFail = finishFail = busy = false; dnsMode = 'a-only'; mode = 'complete';
   audits = []; patches = []; upstreamBodies = []; requests = []; released = finishAttempts = 0; leased = false; usageRange = '2-3/17'; upstreamSignal = undefined;
 }
@@ -105,10 +110,31 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
   if (table === 'club_member_profiles') return json(profile ? [{ username: 'local-account', member_name: '测试会员' }] : []);
   if (table === 'club_super_admins') return json(admin ? [{ user_id: UID }] : []);
   if (table === 'chat_providers') return json(init.method === 'POST' ? [{ ...provider, ...JSON.parse(String(init.body)) }] : [provider]);
-  if (table === 'chat_models') return json(init.method === 'POST' ? [{ ...model, ...JSON.parse(String(init.body)) }] : [model]);
+  if (table === 'chat_models') {
+    const body = init.method === 'POST' ? JSON.parse(String(init.body)) : null;
+    const row = { ...model, ...(body || {}) };
+    if (url.searchParams.get('id')?.includes(ASSIGNED_MID)) return json([{ ...row, id: ASSIGNED_MID, visibility: 'assigned' }]);
+    return json([row]);
+  }
+  if (table === 'chat_model_access') return json(assignedVisible ? [{ user_id: UID, model_id: MID }] : []);
+  if (table === 'chat_custom_models') return json(customModels);
   if (table.startsWith('rpc/')) {
     const name = table.slice(4), row = JSON.parse(String(init.body));
     rpcCalls.push({ name, body: row });
+    if (name === 'chat_custom_model_list') return json(customModels);
+    if (name === 'chat_custom_model_save') {
+      assert.equal(row.p_user_id, UID);
+      customModels = [{ id: row.p_id, user_id: UID, display_name: row.p_display_name, model_key: row.p_model_key, base_url: row.p_base_url, version: 0 }];
+      return json(customModels[0]);
+    }
+    if (name === 'chat_custom_model_delete') {
+      customModels = []; return json({ deleted: true, id: row.p_id });
+    }
+    if (name === 'chat_model_access_get') return json({ model_id: ASSIGNED_MID, visibility: assignedVisible ? 'assigned' : 'all', version: 1, user_ids: assignedVisible ? [UID] : [] });
+    if (name === 'chat_model_access_save') {
+      assert.equal(row.p_actor_user_id, UID); assignedVisible = row.p_visibility === 'assigned' && (row.p_user_ids as unknown[]).includes(UID);
+      return json({ model_id: row.p_model_id, visibility: row.p_visibility, version: 2, user_ids: row.p_user_ids });
+    }
     if (name === 'chat_proxy_admin') {
       assert.equal(row.p_actor, UID);
       if (conflict) return json({ code: 'conflict' });
@@ -179,7 +205,7 @@ async function expectStatus(body: Row, status: number, token: string | null = 'm
   const response = await handler(request(body, token)); assert.equal(response.status, status, await response.clone().text()); return response;
 }
 async function consume(body: Row = payload()) {
-  const response = await handler(request(body)); assert.equal(response.status, 200); return await response.text();
+  const response = await handler(request(body)); assert.equal(response.status, 200, await response.clone().text()); return await response.text();
 }
 let count = 0;
 async function test(name: string, fn: () => Promise<void>) {
@@ -212,6 +238,39 @@ try {
     let result = await (await expectStatus({ action: 'catalog' }, 200)).json();
     assert.equal(result.models.length, 1); assert.equal(result.models[0].introduction, 'A local test model.'); assert.equal(result.member_name, '测试会员'); assert.ok(!JSON.stringify(result).includes('CHAT_KEY'));
     provider.enabled = false; result = await (await expectStatus({ action: 'catalog' }, 200)).json(); assert.equal(result.models.length, 0);
+  });
+  await test('model visibility filters catalog and enforces direct access while admins may test assigned models', async () => {
+    model.visibility = 'assigned';
+    let result = await (await expectStatus({ action: 'catalog' }, 200)).json();
+    assert.equal(result.models.length, 0);
+    await expectStatus(payload(), 403);
+    assignedVisible = true;
+    result = await (await expectStatus({ action: 'catalog' }, 200)).json();
+    assert.equal(result.models.length, 1);
+    assignedVisible = false;
+    await consume({ action: 'admin_test', model_id: MID, prompt: 'admin assigned test' });
+    admin = false;
+    await expectStatus({ action: 'admin_model_access_get', model_id: MID }, 403);
+    await expectStatus({ action: 'admin_model_access_save', model_id: MID, visibility: 'assigned', user_ids: [UID], expected_version: 1 }, 403);
+  });
+  await test('model access admin actions and custom profiles reject unsafe payloads', async () => {
+    await expectStatus({ action: 'admin_model_access_get', model_id: ASSIGNED_MID }, 200);
+    await expectStatus({ action: 'admin_model_access_save', model_id: ASSIGNED_MID, visibility: 'assigned', user_ids: [UID], expected_version: 1 }, 200);
+    const base = { action: 'custom_model_save', id: CUSTOM_ID, display_name: 'Personal', model_key: 'upstream/model', base_url: 'https://jgezpvmlnhycxslqbwcx.supabase.co/functions/v1/chat-api-proxy/' + PID, expected_version: 0 };
+    await expectStatus({ action: 'custom_model_list' }, 200);
+    await expectStatus(base, 200);
+    assert.equal(rpcCalls.at(-1)!.body.p_user_id, UID);
+    for (const bad of [
+      { ...base, api_key: 'secret' },
+      { ...base, extra: true },
+      { ...base, model_key: 'bad model' },
+      { ...base, base_url: 'https://evil.example/chat-api-proxy/' + PID },
+      { ...base, base_url: 'https://jgezpvmlnhycxslqbwcx.supabase.co/functions/v1/chat-api-proxy/' + PID + '?x=1' },
+      { ...base, expected_version: -1 }
+    ]) await expectStatus(bad, 400);
+    await expectStatus({ action: 'custom_model_delete', id: CUSTOM_ID, expected_version: 0 }, 200);
+    profile = false;
+    await expectStatus({ action: 'custom_model_list' }, 403);
   });
   await test('multi-turn continuation, encrypted reasoning, images/PDF and metadata-only audit', async () => {
     const image = { type: 'input_image', image_url: 'data:image/png;base64,aGVsbG8=' };

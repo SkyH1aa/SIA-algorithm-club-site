@@ -54,6 +54,171 @@ alter table public.chat_models
 create index if not exists chat_models_enabled_idx
   on public.chat_models (enabled, display_name);
 
+-- Model visibility is independent from the existing enabled switch. Existing
+-- models remain available to every bound member after this additive migration.
+alter table public.chat_models
+  add column if not exists visibility text not null default 'all';
+alter table public.chat_models drop constraint if exists chat_models_visibility_check;
+alter table public.chat_models add constraint chat_models_visibility_check
+  check (visibility in ('all', 'assigned'));
+
+create table if not exists public.chat_model_access (
+  model_id uuid not null references public.chat_models(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default timezone('utc', now()),
+  primary key (model_id, user_id)
+);
+create index if not exists chat_model_access_user_idx
+  on public.chat_model_access(user_id, model_id);
+alter table public.chat_model_access enable row level security;
+revoke all on public.chat_model_access from public, anon, authenticated;
+grant select, insert, update, delete on public.chat_model_access to service_role;
+
+create table if not exists public.chat_custom_models (
+  id uuid primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  display_name text not null check (char_length(trim(display_name)) between 1 and 120),
+  model_key text not null check (
+    char_length(trim(model_key)) between 1 and 160
+    and model_key ~ '^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$'
+  ),
+  base_url text not null check (
+    base_url ~ '^https://jgezpvmlnhycxslqbwcx\\.supabase\\.co/functions/v1/chat-api-proxy/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/?$'
+  ),
+  version bigint not null default 0 check (version >= 0),
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  unique (user_id, id)
+);
+create index if not exists chat_custom_models_user_idx
+  on public.chat_custom_models(user_id, updated_at desc);
+alter table public.chat_custom_models enable row level security;
+revoke all on public.chat_custom_models from public, anon, authenticated;
+grant select, insert, update, delete on public.chat_custom_models to service_role;
+
+create or replace function public.chat_model_access_get(
+  p_actor_user_id uuid, p_model_id uuid
+)
+returns jsonb language plpgsql security definer set search_path = pg_catalog, public as $$
+begin
+  perform public.chat_quota_assert_admin(p_actor_user_id);
+  if p_model_id is null or not exists (select 1 from public.chat_models where id = p_model_id) then
+    raise exception 'Unknown model' using errcode = '22023';
+  end if;
+  return jsonb_build_object(
+    'model_id', p_model_id,
+    'visibility', (select visibility from public.chat_models where id = p_model_id),
+    'version', (select coalesce(extract(epoch from updated_at) * 1000, 0)::bigint from public.chat_models where id = p_model_id),
+    'user_ids', coalesce((select jsonb_agg(user_id order by user_id) from public.chat_model_access where model_id = p_model_id), '[]'::jsonb)
+  );
+end;
+$$;
+
+create or replace function public.chat_model_access_save(
+  p_actor_user_id uuid, p_model_id uuid, p_visibility text,
+  p_user_ids uuid[], p_expected_version bigint
+)
+returns jsonb language plpgsql security definer set search_path = pg_catalog, public as $$
+declare v_version bigint; v_count integer;
+begin
+  perform public.chat_quota_assert_admin(p_actor_user_id);
+  if p_model_id is null or p_visibility not in ('all','assigned') or p_user_ids is null
+    or p_expected_version is null or p_expected_version < 0 then
+    raise exception 'Invalid model access arguments' using errcode = '22023';
+  end if;
+  if not exists (select 1 from public.chat_models where id = p_model_id) then
+    raise exception 'Unknown model' using errcode = '22023';
+  end if;
+  if exists (select 1 from unnest(p_user_ids) as u where u is null)
+    or (select count(*) from unnest(p_user_ids)) <> (select count(distinct u) from unnest(p_user_ids) as u)
+    or cardinality(p_user_ids) > 10000
+    or exists (select 1 from unnest(p_user_ids) as u where not exists (select 1 from auth.users where id = u)) then
+    raise exception 'Invalid user list' using errcode = '22023';
+  end if;
+  if p_visibility = 'assigned' and cardinality(p_user_ids) = 0 then
+    -- An empty assigned list is valid and intentionally makes the model private.
+    null;
+  end if;
+  select coalesce(extract(epoch from updated_at) * 1000, 0)::bigint into v_version
+    from public.chat_models where id = p_model_id for update;
+  if v_version <> p_expected_version then return jsonb_build_object('code','conflict'); end if;
+  update public.chat_models set visibility = p_visibility, updated_at = clock_timestamp() where id = p_model_id;
+  delete from public.chat_model_access where model_id = p_model_id;
+  insert into public.chat_model_access(model_id,user_id,created_by)
+    select p_model_id, u, p_actor_user_id from unnest(p_user_ids) as u;
+  select coalesce(extract(epoch from updated_at) * 1000, 0)::bigint into v_version
+    from public.chat_models where id = p_model_id;
+  return jsonb_build_object('model_id',p_model_id,'visibility',p_visibility,'version',v_version,
+    'user_ids',coalesce((select jsonb_agg(user_id order by user_id) from public.chat_model_access where model_id=p_model_id),'[]'::jsonb));
+end;
+$$;
+
+create or replace function public.chat_custom_model_list(p_user_id uuid)
+returns jsonb language plpgsql security definer set search_path = pg_catalog, public as $$
+begin
+  if p_user_id is null or not exists (select 1 from auth.users where id = p_user_id) then
+    raise exception 'Invalid user' using errcode = '22023';
+  end if;
+  return coalesce((select jsonb_agg(to_jsonb(c) order by c.updated_at desc)
+    from public.chat_custom_models c where c.user_id = p_user_id), '[]'::jsonb);
+end;
+$$;
+
+create or replace function public.chat_custom_model_save(
+  p_user_id uuid, p_id uuid, p_display_name text, p_model_key text,
+  p_base_url text, p_expected_version bigint
+)
+returns jsonb language plpgsql security definer set search_path = pg_catalog, public as $$
+declare v public.chat_custom_models; v_id uuid;
+begin
+  if p_user_id is null or not exists (select 1 from auth.users where id = p_user_id)
+    or p_id is null or p_display_name is null or char_length(btrim(p_display_name)) not between 1 and 120
+    or p_model_key is null or char_length(btrim(p_model_key)) not between 1 and 160
+    or p_base_url is null or p_base_url !~ '^https://jgezpvmlnhycxslqbwcx\\.supabase\\.co/functions/v1/chat-api-proxy/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/?$'
+    or p_expected_version is null or p_expected_version < 0 then
+    raise exception 'Invalid custom model' using errcode = '22023';
+  end if;
+  select * into v from public.chat_custom_models where id=p_id and user_id=p_user_id for update;
+  if not found and exists (select 1 from public.chat_custom_models where id=p_id) then
+    raise exception 'Custom model belongs to another user' using errcode = '42501';
+  end if;
+  if found and v.version <> p_expected_version then return jsonb_build_object('code','conflict'); end if;
+  if not found and p_expected_version <> 0 then return jsonb_build_object('code','conflict'); end if;
+  v_id := p_id;
+  insert into public.chat_custom_models(id,user_id,display_name,model_key,base_url,version)
+    values(v_id,p_user_id,btrim(p_display_name),btrim(p_model_key),regexp_replace(p_base_url,'/$',''),0)
+    on conflict (id) do update set display_name=excluded.display_name, model_key=excluded.model_key,
+      base_url=excluded.base_url, version=public.chat_custom_models.version+1, updated_at=clock_timestamp()
+    returning * into v;
+  return to_jsonb(v);
+end;
+$$;
+
+create or replace function public.chat_custom_model_delete(
+  p_user_id uuid, p_id uuid, p_expected_version bigint
+)
+returns jsonb language plpgsql security definer set search_path = pg_catalog, public as $$
+declare v public.chat_custom_models;
+begin
+  if p_user_id is null or p_id is null or p_expected_version is null or p_expected_version < 0 then
+    raise exception 'Invalid custom model delete' using errcode = '22023';
+  end if;
+  select * into v from public.chat_custom_models where id=p_id and user_id=p_user_id for update;
+  if not found then return jsonb_build_object('code','not_found'); end if;
+  if v.version <> p_expected_version then return jsonb_build_object('code','conflict'); end if;
+  delete from public.chat_custom_models where id=p_id and user_id=p_user_id;
+  return jsonb_build_object('deleted',true,'id',p_id);
+end;
+$$;
+
+revoke all on function public.chat_model_access_get(uuid,uuid), public.chat_model_access_save(uuid,uuid,text,uuid[],bigint),
+  public.chat_custom_model_list(uuid), public.chat_custom_model_save(uuid,uuid,text,text,text,bigint),
+  public.chat_custom_model_delete(uuid,uuid,bigint) from public, anon, authenticated;
+grant execute on function public.chat_model_access_get(uuid,uuid), public.chat_model_access_save(uuid,uuid,text,uuid[],bigint),
+  public.chat_custom_model_list(uuid), public.chat_custom_model_save(uuid,uuid,text,text,text,bigint),
+  public.chat_custom_model_delete(uuid,uuid,bigint) to service_role;
+
 create table if not exists public.chat_usage (
   id uuid primary key default gen_random_uuid(),
   request_id uuid not null unique,

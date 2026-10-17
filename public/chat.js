@@ -6,10 +6,45 @@ const KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
 const client = window.supabase.createClient(URL, KEY);
 const $ = id => document.getElementById(id);
 const t = (key, vars) => ClubI18n.t(`chat.${key}`, vars);
-let session = null, epoch = 0, models = [], chats = [], current = null, pending = [], active = null;
+let session = null, epoch = 0, models = [], customModels = [], chats = [], current = null, pending = [], active = null;
+let customStatusKey = '', customStatusVars = {}, customBusy = false;
 let statusKey = 'loading', statusVars = {}, gateKey = 'loading', attaching = false, catalogController = null;
+const customKeys = new Map();
+const CUSTOM_PROXY_ORIGIN = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
+const CUSTOM_PROXY_PATH = /^\/functions\/v1\/chat-api-proxy\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const CUSTOM_METADATA = Object.freeze({context_window:128000,max_output_tokens:8192,default_max_output_tokens:8192,reasoning_efforts:[],default_reasoning_effort:null,supports_images:true,supports_pdf:false,preserve_reasoning:false});
 const generations = new Set();
 const renderer = new marked.Renderer();
+function customUrl(value) {
+  try {
+    const url = new globalThis.URL(String(value).trim());
+    url.pathname = url.pathname.replace(/\/+$/, '');
+    if (url.origin !== CUSTOM_PROXY_ORIGIN || url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || !CUSTOM_PROXY_PATH.test(url.pathname)) throw new Error('proxy_url');
+    return `${url.origin}${url.pathname}`;
+  } catch { throw new Error('proxy_url'); }
+}
+function customModel(item) { return item?.source === 'custom'; }
+function customKey(item) { return item?.source === 'custom' ? customKeys.get(item.profileId) || '' : ''; }
+function clearCustomKeys() { customKeys.clear(); $('customApiKey').value = ''; }
+function customForm(item = model()) {
+  $('customModelId').value = item?.source === 'custom' ? item.profileId : '';
+  $('customModelName').value = item?.source === 'custom' ? item.profileName : '';
+  $('customModelKey').value = item?.source === 'custom' ? item.model_key : '';
+  $('customBaseUrl').value = item?.source === 'custom' ? item.base_url : '';
+  $('customApiKey').value = item?.source === 'custom' ? customKey(item) : '';
+}
+function customStatus(key = '', vars = {}) { customStatusKey = key; customStatusVars = vars; $('customModelStatus').textContent = key ? t(key, vars) : ''; }
+async function customRequest(item, body, signal) {
+  const key = customKey(item);
+  if (!key) throw new Error('customKey');
+  const response = await fetch(`${customUrl(item.base_url)}/v1/responses`, {method:'POST',headers:{'Content-Type':'application/json',Accept:'text/event-stream','Authorization':`Bearer ${key}`},body:JSON.stringify({...body,model:item.model_key,stream:true}),signal});
+  if (!response.ok) throw new Error('request');
+  if (response.body && response.headers.get('content-type')?.includes('text/event-stream')) return {response,stream:true};
+  const data = await response.json();
+  const output = data.output || data.response?.output || [];
+  const text = data.output_text || data.text || data.response?.output_text || output.flatMap(item => item.content || []).map(item => item.text || '').join('');
+  return {response:{body:null},stream:false,result:{text,output,usage:data.usage || data.response?.usage || null,status:data.status === 'incomplete' ? 'incomplete' : data.error ? 'failure' : 'success'}};
+}
 renderer.html = ({text}) => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 renderer.image = ({text}) => `[${text || t('image')}]`;
 function markdown(text) {
@@ -27,6 +62,9 @@ function markdown(text) {
   return fragment;
 }
 const model = () => models.find(x => x.id === $('model').value);
+function mergeModels(catalog, saved) {
+  return [...catalog, ...saved.map(item => ({...CUSTOM_METADATA,...item,profileId:item.id,id:`custom:${item.id}`,source:'custom',profileName:item.display_name,display_name:`${item.display_name} · ${t('customBadge')}`}))];
+}
 function status(key, vars = {}) { statusKey = key; statusVars = vars; $('status').textContent = t(key, vars); }
 function quotaReset(quota) {
   const buckets = [{...quota?.global, limit:quota?.global?.daily_limit}, ...(quota?.periods || [])];
@@ -38,8 +76,9 @@ function button(key, handler) {
   node.onclick = handler; return node;
 }
 function controls() {
-  const busy = !!active || attaching;
+  const busy = !!active || attaching || customBusy;
   for (const id of ['send','retry','new','rename','delete','clear','export','files','model','effort']) $(id).disabled = busy || !session || !models.length;
+  for (const id of ['customSave','customDelete','customClearKey','customModelName','customModelKey','customBaseUrl','customApiKey']) $(id).disabled = busy || !session;
   $('stop').disabled = !active;
 }
 function renderMessages() {
@@ -114,6 +153,66 @@ function configureModel() {
   if (!$('effort').options.length) $('effort').add(new Option(t('default'),''));
   $('effort').value = item?.default_reasoning_effort || '';
   render();
+}
+async function loadCustomModels(token, signal) {
+  const response = await request('custom_model_list', {}, signal, token);
+  const data = await response.json();
+  return Array.isArray(data.models) ? data.models : Array.isArray(data) ? data : [];
+}
+async function saveCustomModel(event) {
+  event.preventDefault();
+  if (!session || active || customBusy || !$('customModelForm').reportValidity()) return;
+  const guard = epoch, token = session.access_token;
+  let baseUrl;
+  try { baseUrl = customUrl($('customBaseUrl').value); } catch { return customStatus('customInvalidUrl'); }
+  const id = $('customModelId').value || crypto.randomUUID();
+  const body = {id,display_name:$('customModelName').value.trim(),model_key:$('customModelKey').value.trim(),base_url:baseUrl,expected_version:customModels.find(item => item.id === id)?.version ?? 0};
+  if (!body.display_name || body.display_name.length > 120 || !body.model_key || body.model_key.length > 160) return customStatus('customInvalid');
+  const key = $('customApiKey').value.trim();
+  if (!key && !customKeys.has(id)) return customStatus('customKeyRequired');
+  customBusy = true; controls();
+  try {
+    const response = await request('custom_model_save', body, undefined, token);
+    const data = await response.json();
+    if (data.code === 'conflict') throw Object.assign(new Error('conflict'),{status:409});
+    if (key) customKeys.set(id, key);
+    customModels = customModels.filter(item => item.id !== id).concat(data.model || data);
+    models = mergeModels(models.filter(item => item.source !== 'custom'), customModels);
+    $('model').replaceChildren(...models.map(item => new Option(item.display_name,item.id)));
+    $('model').value = `custom:${id}`;
+    configureModel(); customForm(model()); customStatus('customSaved');
+  } catch (error) { if (guard === epoch) { if (error.status === 409) await refreshCustomProfiles(guard, token); customStatus(error.status === 409 ? 'customConflict' : 'customSaveFailed'); } }
+  finally { if (guard === epoch) { customBusy = false; controls(); } }
+}
+async function deleteCustomModel() {
+  const id = $('customModelId').value;
+  const item = customModels.find(row => row.id === id);
+  if (!item || active || customBusy || !session || !confirm(t('customConfirmDelete'))) return;
+  const guard = epoch, token = session.access_token;
+  customBusy = true; controls();
+  try {
+    await request('custom_model_delete', {id,expected_version:item.version}, undefined, token);
+    if (guard !== epoch) return;
+    customModels = customModels.filter(row => row.id !== id); customKeys.delete(id);
+    models = mergeModels(models.filter(row => row.source !== 'custom'), customModels);
+    $('model').replaceChildren(...models.map(row => new Option(row.display_name,row.id)));
+    configureModel(); customForm(); customStatus('customDeleted');
+  } catch (error) { if (guard === epoch) { if (error.status === 409) await refreshCustomProfiles(guard, token); customStatus(error.status === 409 ? 'customConflict' : 'customDeleteFailed'); } }
+  finally { if (guard === epoch) { customBusy = false; controls(); } }
+}
+async function refreshCustomProfiles(guard, token) {
+  try {
+    const saved = await loadCustomModels(token);
+    if (guard !== epoch) return;
+    const selected = $('model').value;
+    customModels = saved;
+    const validIds = new Set(saved.map(item => item.id));
+    for (const id of customKeys.keys()) if (!validIds.has(id)) customKeys.delete(id);
+    models = mergeModels(models.filter(item => !customModel(item)), saved);
+    $('model').replaceChildren(...models.map(item => new Option(item.display_name,item.id)));
+    if (models.some(item => item.id === selected)) $('model').value = selected;
+    configureModel(); customForm();
+  } catch { if (guard === epoch) customStatus('customSaveFailed'); }
 }
 async function request(action, body = {}, signal, token = session?.access_token) {
   if (!token) throw new Error('login');
@@ -200,23 +299,26 @@ async function generate(retry = false) {
     await persist(chat,guard); persisted = true;
     if (guard !== epoch) return;
     pending = []; $('prompt').value = ''; status(context.truncated ? 'truncated' : 'sending'); render();
-    const response = await request('respond',body,controller.signal);
-    if (!response.body || !response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('request');
-    turn.quotaLimited = response.headers.get('x-chat-quota-limited') === 'true';
-    const result = await readResponses(response.body, value => {
-      if (guard !== epoch || run !== active) return;
-      turn.text = value.text; turn.output = value.output; turn.usage = value.usage;
-      if (value.status !== 'interrupted') turn.status = value.status;
-      renderMessages();
-      if (Date.now() - saveAt > 1000) {
-        saveAt = Date.now(); const snapshot = structuredClone(chat);
-        saveQueue = saveQueue.then(() => chatStore.save(snapshot)).catch(() => { storageError = true; controller.abort(); });
-      }
-    });
+    const response = customModel(item) ? await customRequest(item,{input:context.input,reasoning:body.reasoning_effort ? {effort:body.reasoning_effort} : undefined,max_output_tokens:output},controller.signal) : {response:await request('respond',body,controller.signal),stream:true};
+    let result;
+    if (response.stream) {
+      if (!response.response.body || !response.response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('request');
+      turn.quotaLimited = !customModel(item) && response.response.headers.get('x-chat-quota-limited') === 'true';
+      result = await readResponses(response.response.body, value => {
+        if (guard !== epoch || run !== active) return;
+        turn.text = value.text; turn.output = value.output; turn.usage = value.usage;
+        if (value.status !== 'interrupted') turn.status = value.status;
+        renderMessages();
+        if (Date.now() - saveAt > 1000) {
+          saveAt = Date.now(); const snapshot = structuredClone(chat);
+          saveQueue = saveQueue.then(() => chatStore.save(snapshot)).catch(() => { storageError = true; controller.abort(); });
+        }
+      });
+    } else result = response.result;
     if (guard === epoch) Object.assign(turn,{...result,status:result.status});
   } catch (error) {
     if (turn) turn.status = run.stopped ? 'cancelled' : controller.signal.aborted ? 'interrupted' : 'failure';
-    failureKey = storageError ? 'storage' : ['context','request_too_large','file','pdf','busy','storage','quota','blacklisted'].includes(error.message) ? error.message : run.stopped ? 'cancelled' : 'request';
+    failureKey = storageError ? 'storage' : ['context','request_too_large','file','pdf','busy','storage','quota','blacklisted','customKey'].includes(error.message) ? error.message : run.stopped ? 'cancelled' : 'request';
     const reset = quotaReset(error.quota);
     if (failureKey === 'quota' && reset) { failureKey = 'quotaReset'; failureVars = {reset}; }
     if (guard === epoch) status(failureKey, failureVars);
@@ -246,7 +348,7 @@ async function auth(next, reload = false) {
   for (const run of staleRuns) { run.stopped = false; run.controller.abort(); }
   catalogController?.abort();
   active = null; attaching = false;
-  session = next; models = []; chats = []; current = null; pending = []; $('prompt').value = ''; $('workspace').hidden = true;
+  session = next; models = []; customModels = []; customBusy = false; clearCustomKeys(); customForm(null); customStatus(); chats = []; current = null; pending = []; $('prompt').value = ''; $('workspace').hidden = true;
   $('model').replaceChildren(); gateKey = next ? 'loading' : 'login'; render();
   if (!next) return;
   try {
@@ -266,10 +368,11 @@ async function auth(next, reload = false) {
     catalogController = null;
     await Promise.allSettled(staleRuns.filter(run => run.userId === next.user.id).map(run => run.done));
     if (guard !== epoch) return;
-    let saved;
+    let saved, custom;
     try { saved = await chatStore.list(next.user.id); } catch { throw new Error('storage'); }
+    custom = await loadCustomModels(token, controller.signal);
     if (guard !== epoch) return;
-    models = data.models || []; chats = saved;
+    customModels = custom || []; models = mergeModels(data.models || [], customModels); chats = saved;
     for (const chat of chats) for (const turn of chat.turns) if (turn.status === 'running') { turn.status = 'interrupted'; await persist(chat,guard); }
     if (guard !== epoch) return;
     for (const item of models) $('model').add(new Option(item.display_name,item.id));
@@ -283,7 +386,7 @@ $('prompt').onkeydown = event => { if (event.key === 'Enter' && !event.shiftKey 
 $('stop').onclick = () => { if (active) { active.stopped = true; active.controller.abort(); } };
 $('retry').onclick = () => void generate(true);
 $('new').onclick = newChat;
-$('model').onchange = configureModel;
+$('model').onchange = () => { configureModel(); customForm(); customStatus(); };
 $('files').onchange = async () => {
   const guard = epoch, selected = [...$('files').files], item = model(); $('files').value = '';
   if (!item || active || attaching) return;
@@ -344,7 +447,19 @@ $('export').onclick = async () => {
   }
 };
 $('language').onclick = () => ClubI18n.setLang(ClubI18n.getLang() === 'zh' ? 'en' : 'zh');
-window.addEventListener('club:langchange',render); setTimeout(render,0);
+$('customModelForm').onsubmit = saveCustomModel;
+$('customDelete').onclick = () => void deleteCustomModel();
+$('customClearKey').onclick = () => { const id = $('customModelId').value; if (id) customKeys.delete(id); $('customApiKey').value = ''; customStatus('customKeyCleared'); };
+
+window.addEventListener('pagehide', clearCustomKeys);
+function refreshLocalizedUi() {
+  const selected = $('model').value;
+  models = mergeModels(models.filter(item => !customModel(item)), customModels);
+  $('model').replaceChildren(...models.map(item => new Option(item.display_name,item.id)));
+  if (models.some(item => item.id === selected)) $('model').value = selected;
+  render(); customStatus(customStatusKey, customStatusVars);
+}
+window.addEventListener('club:langchange', refreshLocalizedUi); setTimeout(refreshLocalizedUi,0);
 let authEvent = 0;
 // Capture startup ownership before subscribing: subscription may emit synchronously.
 const initialAuthEvent = authEvent, initialEpoch = epoch;

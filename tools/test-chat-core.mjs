@@ -88,14 +88,14 @@ function uiHarness() {
     window:{supabase:{createClient:()=>({auth:{onAuthStateChange(fn){callback=fn;},getSession:()=>initial.promise}})},addEventListener(){}},
     ClubI18n:{t:key=>key},marked:{Renderer:class {},parse:()=>''},DOMPurify:{sanitize:()=>({querySelectorAll:()=>[]})},
     Option:class {constructor(text,value){this.textContent=text;this.value=value;}},
-    setTimeout(fn){timers.push(fn);},fetch(url,init){const result=deferred();requests.push({body:JSON.parse(init.body),token:init.headers.Authorization,signal:init.signal,...result});return result.promise;}
+    setTimeout(fn){timers.push(fn);},fetch(url,init){const result=deferred(), body=JSON.parse(init.body);requests.push({body,token:init.headers.Authorization,signal:init.signal,...result});if(body.action==='custom_model_list') result.resolve({ok:true,json:async()=>[]});return result.promise;}
   });
   vm.runInContext(chatSource,context,{filename:'chat.js'});
   const evaluate = code => vm.runInContext(code,context);
   return {initial,elements,requests,writes,records,evaluate,store,
     auth(next){callback('SIGNED_IN',next);while(timers.length)timers.shift()();},
     setSaveHook(fn){saveHook=fn;},
-    async login(id){this.auth(account(id));requests.at(-1).resolve(catalog());await settle();}
+    async login(id){this.auth(account(id));requests.at(-1).resolve(catalog());await settle();if(requests.at(-1).body.action==='custom_model_list') requests.at(-1).resolve({ok:true,json:async()=>[]});await settle();}
   };
 }
 {
@@ -108,7 +108,7 @@ function uiHarness() {
   const ui=uiHarness();
   await ui.login('A');
   ui.auth(account('A','fresh'));
-  assert.equal(ui.requests.length,1,'same-user refresh must preserve the loaded workspace');
+  assert.equal(ui.requests.length,2,'same-user refresh must preserve the loaded workspace and refresh custom profiles');
   assert.equal(ui.evaluate('session.access_token'),'fresh');
   ui.evaluate("document.getElementById('prompt').value='hello'; void generate();");await settle();
   assert.equal(ui.requests.at(-1).token,'Bearer fresh','generation must use the refreshed token');
@@ -122,6 +122,8 @@ function uiHarness() {
   ui.requests[0].resolve({ok:false,status:401,json:async()=>({error:'login'})});await settle();
   assert.equal(ui.requests.length,2,'catalog rejected during refresh must retry with the new token');
   assert.equal(ui.requests[1].token,'Bearer fresh');ui.requests[1].resolve(catalog());await settle();
+  assert.equal(ui.requests.length,3,'profile listing follows the successful catalog response');
+  ui.requests[2].resolve({ok:true,json:async()=>[]});await settle();
   assert.equal(ui.elements.get('workspace').hidden,false);
 }
 {

@@ -11,6 +11,7 @@ let providers = [], models = [];
 let proxyRoutes = [], proxyKeys = [], proxyLoaded = false, proxyEditingVersion = 0, proxyPlaintext = '';
 let usage = emptyUsage();
 let directory = [], blacklist = [], directoryLoaded = false, selectedUser = '', selectionEpoch = 0;
+let modelAccess = null, modelAccessDraft = null, modelAccessModelId = '', modelAccessEpoch = 0;
 let globalQuota = null, userQuota = null;
 let testOutput = {visible: false, text: ''};
 const messages = new Map();
@@ -57,7 +58,7 @@ function pages() { return Math.max(1, Math.ceil((usage.total ?? 0) / usage.pageS
 function hasNextPage() { return usage.loaded && (usage.total == null ? usage.rows.length === usage.pageSize : usage.page < pages()); }
 function controls() {
   const disabled = Boolean(active) || !authorized;
-  for (const id of ['providerForm', 'modelForm', 'testForm', 'usageFilter', 'globalQuotaForm', 'quotaUserForm', 'userQuotaForm', 'blacklistForm', 'proxyRouteForm', 'proxyKeyForm']) {
+  for (const id of ['providerForm', 'modelForm', 'modelAccessForm', 'testForm', 'usageFilter', 'globalQuotaForm', 'quotaUserForm', 'userQuotaForm', 'blacklistForm', 'proxyRouteForm', 'proxyKeyForm']) {
     for (const node of $(id).elements) node.disabled = disabled;
     $(id).setAttribute('aria-busy', String(Boolean(active)));
   }
@@ -77,6 +78,10 @@ function controls() {
   $('usagePrev').disabled = disabled || usage.page <= 1;
   $('usageNext').disabled = disabled || !hasNextPage();
   $('testForm').querySelector('button[type="submit"]').disabled = disabled || !$('testModel').value;
+  $('accessModel').disabled = disabled || !models.length;
+  $('accessVisibility').disabled = disabled || !modelAccess;
+  $('accessSelectAll').disabled = disabled || !directoryLoaded || !modelAccess;
+  document.querySelectorAll('[data-access-user]').forEach(node => { node.disabled = disabled || !modelAccess; });
 }
 function current(run) { return active === run && run.epoch === epoch && !run.controller.signal.aborted; }
 function assertCurrent(run) { if (!current(run)) throw new DOMException('Stale account request', 'AbortError'); }
@@ -167,6 +172,45 @@ function renderProviders() {
 }
 function renderModels() {
   $('modelsList').innerHTML = models.length ? table(['modelId', 'modelLabel', 'modelIntroduction', 'modelProvider', 'contextWindow', 'maxOutput', 'enabled', 'edit'], models.map(item => `<tr>${cells([modelKey(item), first(item.display_name, '-'), first(item.introduction, '-'), providerLabel(item.provider_id), item.context_window, item.max_output_tokens])}<td>${badge(item.enabled !== false)}</td><td>${editButton('model', item.id)}</td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t('noModel'))}</div>`;
+  renderAccessModels();
+}
+function renderAccessModels() {
+  const previous = $('accessModel').value;
+  $('accessModel').replaceChildren(new Option(t('selectModel'), ''));
+  for (const item of models) $('accessModel').add(new Option(`${first(item.display_name, modelKey(item))} · ${modelKey(item)}`, item.id));
+  if (models.some(item => item.id === previous)) $('accessModel').value = previous;
+  renderAccessUsers();
+}
+function renderAccessUsers() {
+  const selectedIds = modelAccessDraft?.user_ids || [];
+  $('accessUsers').innerHTML = directoryLoaded && directory.length ? directory.map(item => `<label class="chat-admin-access-user"><input type="checkbox" data-access-user="${escapeHtml(item.user_id)}" ${selectedIds.includes(item.user_id) ? 'checked' : ''}><span>${escapeHtml(userLabel(item))}</span></label>`).join('') : `<div class="chat-admin-empty">${escapeHtml(t(directoryLoaded ? 'noUsers' : 'accessUsersNotLoaded'))}</div>`;
+  $('accessVisibility').value = modelAccessDraft?.visibility || modelAccess?.visibility || 'all';
+  controls();
+}
+async function loadModelAccess(run, modelId = $('accessModel').value, revision = modelAccessEpoch) {
+  if (!modelId) { modelAccess = null; modelAccessDraft = null; modelAccessModelId = ''; renderAccessUsers(); return; }
+  const payload = await request(run, 'admin_model_access_get', {model_id: modelId});
+  assertCurrent(run);
+  if (modelAccessModelId !== modelId || modelAccessEpoch !== revision) throw new DOMException('Stale model access selection', 'AbortError');
+  modelAccess = {model_id: payload.model_id, visibility: payload.visibility, version: payload.version, user_ids: asArray(payload.user_ids)};
+  modelAccessDraft = {visibility: modelAccess.visibility, user_ids: [...modelAccess.user_ids]};
+  renderAccessUsers();
+}
+async function saveModelAccess(run, modelId, revision, body) {
+  setMessage('modelAccessMessage', 'saving');
+  try {
+    const payload = await request(run, 'admin_model_access_save', body);
+    assertCurrent(run);
+    if (modelAccessModelId !== modelId || modelAccessEpoch !== revision) throw new DOMException('Stale model access selection', 'AbortError');
+    modelAccess = {model_id: payload.model_id, visibility: payload.visibility, version: payload.version, user_ids: asArray(payload.user_ids)};
+    modelAccessDraft = {visibility: modelAccess.visibility, user_ids: [...modelAccess.user_ids]};
+    renderAccessUsers(); setMessage('modelAccessMessage', 'accessSaved', 'success');
+  } catch (error) {
+    assertCurrent(run);
+    if (error.status !== 409 || error.message !== 'conflict') throw error;
+    await loadModelAccess(run, modelId, revision);
+    setMessage('modelAccessMessage', 'accessConflict', 'warning');
+  }
 }
 function usageStatus(value) {
   const key = ({completed: 'success', success: 'success', incomplete: 'incomplete', interrupted: 'interrupted', cancelled: 'cancelled', failed: 'failure', failure: 'failure', audited: 'audited', upstream_started: 'running'})[value];
@@ -316,6 +360,16 @@ async function loadAdmin(run) {
     if (error.status === 401 || error.status === 403) throw error;
     setMessage('quotaMessage', errorKey(error), 'error');
   }
+  if ($('accessModel').value) {
+    modelAccessModelId = $('accessModel').value;
+    modelAccessEpoch++;
+    try { await loadModelAccess(run, modelAccessModelId, modelAccessEpoch); }
+    catch (error) {
+      assertCurrent(run);
+      if (error.status === 401 || error.status === 403) throw error;
+      setMessage('modelAccessMessage', errorKey(error), 'error');
+    }
+  }
   try { await loadUsage(run); setMessage('usageMessage'); }
   catch (error) {
     assertCurrent(run);
@@ -331,6 +385,7 @@ function clearSensitive() {
   clearProxyRoute(); $('proxyKeyForm').reset(); $('proxyKeyLabel').value = ''; $('proxyKeyRoute').replaceChildren();
   providers = []; models = []; usage = emptyUsage(); testOutput = {visible: false, text: ''};
   directory = []; blacklist = []; directoryLoaded = false; selectedUser = ''; selectionEpoch++;
+  modelAccess = null; modelAccessDraft = null; modelAccessModelId = ''; modelAccessEpoch++;
   globalQuota = null; userQuota = null; fillGlobalQuota(); fillUserQuota();
   $('quotaUser').replaceChildren();
   clearProvider(); clearModel(); $('testForm').reset(); $('usageFilter').reset();
@@ -487,6 +542,41 @@ $('proxyKeysList').addEventListener('click', event => {
   void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_key_state', {id: item.id, enabled: revoked ? false : !item.enabled, revoked, expected_version: item.version}));
 });
 $('quotaUserForm').addEventListener('submit', event => event.preventDefault());
+$('accessModel').addEventListener('change', () => {
+  if (active || !authorized) return;
+  modelAccessModelId = $('accessModel').value; modelAccessEpoch++; modelAccess = null; modelAccessDraft = null; renderAccessUsers();
+  if (modelAccessModelId) void operation('modelAccessMessage', async run => { setMessage('modelAccessMessage', 'loading'); await loadModelAccess(run, modelAccessModelId, modelAccessEpoch); setMessage('modelAccessMessage'); });
+});
+$('accessVisibility').addEventListener('change', () => {
+  if (!modelAccess) { $('accessVisibility').value = 'all'; return; }
+  modelAccessDraft = {...modelAccessDraft, visibility: $('accessVisibility').value};
+});
+$('accessSelectAll').onclick = () => {
+  if (!modelAccess) return;
+  const user_ids = directory.map(item => item.user_id);
+  modelAccessDraft = {...modelAccessDraft, user_ids};
+  document.querySelectorAll('[data-access-user]').forEach(node => { node.checked = true; });
+};
+$('refreshAccessButton').onclick = () => {
+  if (active || !authorized || !modelAccessModelId) return;
+  modelAccessEpoch++;
+  void operation('modelAccessMessage', async run => { setMessage('modelAccessMessage', 'loading'); await loadModelAccess(run, modelAccessModelId, modelAccessEpoch); setMessage('modelAccessMessage'); });
+};
+$('modelAccessForm').addEventListener('submit', event => {
+  event.preventDefault();
+  if (active || !authorized || !modelAccess || !$('modelAccessForm').reportValidity()) return;
+  const modelId = modelAccessModelId, revision = modelAccessEpoch;
+  const visibility = $('accessVisibility').value;
+  const user_ids = visibility === 'all' ? [] : [...document.querySelectorAll('[data-access-user]:checked')].map(node => node.dataset.accessUser);
+  modelAccessDraft = {visibility, user_ids};
+  const body = {model_id: modelId, visibility, user_ids, expected_version: modelAccess.version};
+  void operation('modelAccessMessage', run => saveModelAccess(run, modelId, revision, body));
+});
+$('accessUsers').addEventListener('change', event => {
+  if (active || !authorized || !event.target.matches('[data-access-user]')) return;
+  if (!modelAccess) { event.target.checked = false; return; }
+  modelAccessDraft = {...modelAccessDraft, user_ids: [...document.querySelectorAll('[data-access-user]:checked')].map(node => node.dataset.accessUser)};
+});
 $('quotaUser').addEventListener('change', () => {
   if (active || !authorized) { $('quotaUser').value = selectedUser; return; }
   selectedUser = $('quotaUser').value; selectionEpoch++; userQuota = null; fillUserQuota();
