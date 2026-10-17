@@ -448,6 +448,7 @@ $('export').onclick = async () => {
 };
 $('language').onclick = () => ClubI18n.setLang(ClubI18n.getLang() === 'zh' ? 'en' : 'zh');
 $('customModelForm').onsubmit = saveCustomModel;
+$('openCustomModel').onclick = () => { const panel = $('customModelPanel'); panel.open = true; panel.scrollIntoView({behavior:'smooth',block:'nearest'}); $('customModelName').focus(); };
 $('customDelete').onclick = () => void deleteCustomModel();
 $('customClearKey').onclick = () => { const id = $('customModelId').value; if (id) customKeys.delete(id); $('customApiKey').value = ''; customStatus('customKeyCleared'); };
 
