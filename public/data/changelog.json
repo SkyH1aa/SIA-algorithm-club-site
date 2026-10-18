@@ -1,4 +1,273 @@
-[{
+[
+  {
+    "date": "2026-10-18",
+    "title": "全站前端体验统一升级与 Chat 管理重组",
+    "enTitle": "Site-wide UI overhaul and Chat admin restructure",
+    "items": [
+      "新增共享设计系统与交互层（club-ui.css / club-shell.js），统一 30 余个页面的面板、按钮、表单、表格、徽章与空状态。",
+      "新增模块启动器：Ctrl/⌘+K 搜索并跳转全部功能与后台入口；管理入口按真实超管身份与已授予权限逐项过滤，未登录不显示任何后台入口。",
+      "首页顶栏精简为核心导航，修复「实力」点击无反应（吸附定时器竞态）；其他页面顶栏新增首页/实力入口，直达能力矩阵。",
+      "语言与主题切换器全站统一为同一款胶囊，修复部分页面被全局 button 规则染成绿色方块、以及首页两行挤压的问题。",
+      "个人中心登录/注册改为单卡片双标签，支持互相切换并自动聚焦首个输入框。",
+      "管理员总览的超管工具改为标签页，六个工具一次只显示一个；28 个功能开关按四类折叠；只读请求分批执行，避免首屏触发 HTTP 429。",
+      "Chat 管理拆成供应商、模型、代理、配额与黑名单、模型授权、测试调用、使用记录七个分区，一次只显示一个。",
+      "修复 file:// 本地打开时登录态无法跨来源复用、Chat 页面 ES module 被拦截导致黑屏、以及 Chat 管理超管判定与总览不一致的问题。",
+      "补齐全站移动端适配：顶栏单行、切换器窄屏收成当前值、统计卡两列、表格与表单单列不溢出。"
+    ],
+    "enItems": [
+      "Added a shared design system and interaction layer (club-ui.css / club-shell.js) unifying panels, buttons, forms, tables, badges, and empty states across 30+ pages.",
+      "Added a module launcher (Ctrl/⌘+K) that searches every feature and admin entry; admin entries are filtered by real super-admin status and granted permissions, and hidden entirely when signed out.",
+      "Slimmed the homepage top bar to core navigation, fixed the unresponsive Proof link (snap-timer race), and added Home/Proof entries to subpage headers.",
+      "Unified language and theme switchers into one shared pill everywhere, fixing pages where global button rules turned them into green blocks and a two-row squeeze on the homepage.",
+      "Rebuilt Member Center sign-in/registration as a single card with two tabs and automatic switching between them.",
+      "Turned the super-admin tools into tabs (one tool at a time), collapsed 28 feature switches into four groups, and batched overview requests to avoid HTTP 429 on first paint.",
+      "Split Chat administration into seven sections: providers, models, proxy, quota and blocklist, model access, test calls, and usage.",
+      "Fixed sign-in state not carrying over under file://, a black screen caused by blocked ES modules on the Chat page, and inconsistent super-admin checks between Chat admin and the main admin hub.",
+      "Completed mobile adaptation across the site: single-row headers, collapsed switchers on narrow screens, two-column stat cards, and non-overflowing tables and forms."
+    ]
+  },
+  {
+    "date": "2026-10-17",
+    "title": "AI Chat 代理、配额与模型授权",
+    "enTitle": "AI Chat proxy, quotas, and model access",
+    "items": [
+      "新增对外 Responses 代理：按路由下发只展示一次的访问密钥，支持启用、停用与永久撤销。",
+      "新增全站与单用户每日/每周/每月 token 配额，以及用户黑名单与原因记录。",
+      "新增模型用户授权：可设置模型对所有人可见，或仅对指定用户可见。",
+      "Chat 管理补齐供应商、模型、用量审计与付费测试调用，并新增一次性明文密钥的复制与清除流程。",
+      "代理与 Chat 函数增加 CORS 白名单、并发租约与乐观并发校验，管理操作不会调用供应商。"
+    ],
+    "enItems": [
+      "Added an outward Responses proxy with per-route access keys shown once, plus enable, disable, and permanent revoke.",
+      "Added site-wide and per-user daily/weekly/monthly token quotas, along with a user blocklist and reason log.",
+      "Added model access control: a model can be visible to everyone or only to assigned users.",
+      "Chat admin now covers providers, models, usage audit, and paid test calls, including one-time plaintext key copy and clear flows.",
+      "Added CORS allowlists, concurrency leases, and optimistic concurrency checks to the proxy and Chat functions; admin operations never call providers."
+    ]
+  },
+  {
+    "date": "2026-10-16",
+    "title": "上线社团 AI Chat 与 Chat 管理后台",
+    "enTitle": "Club AI Chat and Chat admin console launched",
+    "items": [
+      "上线成员 AI Chat：多会话管理、模型选择、流式回复、停止生成与重新生成。",
+      "支持图片与 PDF 附件、上下文估算与自动压缩，聊天记录仅保存在当前浏览器。",
+      "新增自定义模型接入，可填写 Base URL 与密钥，密钥只保存在本机。",
+      "新增 Chat 管理后台：供应商连接、模型参数、用量元数据审计，密钥只存在 Supabase Secret 中。",
+      "Chat 相关页面接入中英双语与日间/暗色主题。"
+    ],
+    "enItems": [
+      "Launched member AI Chat with multi-conversation management, model selection, streaming replies, stop, and regenerate.",
+      "Added image and PDF attachments, context estimation and automatic compaction; conversations stay in the current browser only.",
+      "Added custom model endpoints with Base URL and key, stored locally on the device.",
+      "Added the Chat admin console for provider connections, model parameters, and usage metadata audits; keys live only in Supabase Secrets.",
+      "Wired Chat pages into the bilingual dictionary and light/dark themes."
+    ]
+  },
+  {
+    "date": "2026-10-15",
+    "title": "Gomoku-Satori 展示版与决策剖析实验室",
+    "enTitle": "Gomoku-Satori showcase and decision lab",
+    "items": [
+      "上线从零自研的纯 JavaScript 五子棋引擎 Gomoku-Satori（版本号 11），不使用 Rapfi、WASM 或训练先验。",
+      "Satori 可参与人机对战与模型对战，但不计积分、不上传训练数据、不写排行榜。",
+      "上线决策剖析实验室：逐手展示威胁普查、候选评分、迭代加深、搜索树与 VCF/VCT 证明序列。",
+      "引擎埋点默认关闭，开启追溯不改变落子结果与耗时，并加入断言校验。"
+    ],
+    "enItems": [
+      "Shipped Gomoku-Satori (version 11), an in-house pure-JavaScript engine with no Rapfi, WASM, or trained priors.",
+      "Satori plays both human and model matches but never scores, uploads training data, or writes leaderboards.",
+      "Launched the decision lab exposing threat scans, candidate scores, iterative deepening, search trees, and VCF/VCT proofs per move.",
+      "Tracing is off by default and provably does not change moves or timings, enforced by assertions."
+    ]
+  },
+  {
+    "date": "2026-10-14",
+    "title": "V10Bru·我非我Champion 开放与实验页完善",
+    "enTitle": "V10Bru Champion released and experiment page polish",
+    "items": [
+      "V10Bru·我非我Champion（10.6）全面开放，采用 V10Ultra 同款 Rapfi 配置并叠加全量开局先验，胜局 15 分。",
+      "Champion 的人机与模型对战均上传自身视角胜负平全部结果。",
+      "对战页与实验页同步接入 Champion，并优化模型对战与排行榜展示。",
+      "补充多轮换色验收与资源指纹校验，确认黑白双方对局完整。"
+    ],
+    "enItems": [
+      "Released V10Bru Champion (10.6) with the V10Ultra Rapfi configuration plus a full opening book, worth 15 points per win.",
+      "Champion uploads all win/loss/draw results from its own perspective in both human and model matches.",
+      "Wired Champion into the battle and experiment pages and improved model-match and leaderboard presentation.",
+      "Added repeated color-swap acceptance runs with asset fingerprint checks to confirm complete games on both sides."
+    ]
+  },
+  {
+    "date": "2026-10-13",
+    "title": "V10Thinker 深度验收与对战页优化",
+    "enTitle": "V10Thinker depth validation and battle page improvements",
+    "items": [
+      "完成 V10Thinker 与 V10Flash、V10Exp 的多组换色验收，确认不同深度下的对局完整性。",
+      "对战页补充模型对战结果列与黑白胜负展示。",
+      "优化训练数据策略校验，覆盖更多模型版本组合。"
+    ],
+    "enItems": [
+      "Completed color-swap acceptance runs for V10Thinker against V10Flash and V10Exp at multiple depths.",
+      "Added model-battle result columns and black/white outcome display to the battle page.",
+      "Extended training-data policy checks to cover more model version combinations."
+    ]
+  },
+  {
+    "date": "2026-10-12",
+    "title": "V10Flash 与 V10Thinker 上线",
+    "enTitle": "V10Flash and V10Thinker released",
+    "items": [
+      "上线 V10Flash（10.4）：Rapfi 自由网 + 自研战术层 + 冻结专家系统的三层融合，胜局 15 分。",
+      "V10Flash 决策顺序固定为立即连五、VCF 必胜、必防、专家并行、开局先验、强制败招复核。",
+      "上线 V10Thinker（10.5）：V10Ultra 同款 Rapfi 配置固定 16 层深度，胜局 16 分。",
+      "两者均加入训练数据上传白名单，并生成各自的 file:// 离线包。"
+    ],
+    "enItems": [
+      "Released V10Flash (10.4): a three-layer fusion of the Rapfi free network, an in-house tactical layer, and a frozen expert system, worth 15 points per win.",
+      "V10Flash follows a fixed decision order: immediate win, VCF win, forced block, parallel experts, opening book, then forced-loss recheck.",
+      "Released V10Thinker (10.5): the V10Ultra Rapfi configuration fixed at 16 plies, worth 16 points per win.",
+      "Both joined the training-upload allowlist and ship their own file:// offline packages."
+    ]
+  },
+  {
+    "date": "2026-10-11",
+    "title": "V10Ultra 与 V10Exp 上线",
+    "enTitle": "V10Ultra and V10Exp released",
+    "items": [
+      "上线 V10Ultra（10.1）：Rapfi 自由网决策，胜局 15 分，支持 HTTP 与 file:// 双路径。",
+      "上线 V10Exp（10.3）：Rapfi、V9Thinker 与 V10 专家融合，新增独立证明核心，胜局 15 分。",
+      "V9Mesa、V10Mesa 纳入模型列表并各自计分。",
+      "完善换色验收工具链，记录资源指纹与棋谱重放结果。"
+    ],
+    "enItems": [
+      "Released V10Ultra (10.1) with Rapfi free-network decisions, 15 points per win, working over both HTTP and file://.",
+      "Released V10Exp (10.3), fusing Rapfi with V9Thinker and V10 experts behind an independent proof core, 15 points per win.",
+      "Added V9Mesa and V10Mesa to the model list with their own scores.",
+      "Improved the color-swap acceptance tooling with asset fingerprints and move-by-move replay."
+    ]
+  },
+  {
+    "date": "2026-10-10",
+    "title": "五子棋训练模型拆分与历史模型上架",
+    "enTitle": "Gomoku training models split and legacy versions published",
+    "items": [
+      "拆分 V9、V9Pro、V9Thinker 专用训练模型，按数据边界独立生成，避免版本间胜负污染先验。",
+      "将 V1、V2、V3、V6、V7、V8 历史模型整理到独立目录并接入对战页。",
+      "新增训练数据构建脚本，自动扫描全部期次目录并输出各期局数。"
+    ],
+    "enItems": [
+      "Split dedicated training models for V9, V9Pro, and V9Thinker so priors are not polluted across model versions.",
+      "Moved legacy V1, V2, V3, V6, V7, and V8 models into their own folders and wired them into the battle page.",
+      "Added a training-data build script that scans every period folder and reports per-period game counts."
+    ]
+  },
+  {
+    "date": "2026-10-05",
+    "title": "首页 3D 场景与 iPad 兼容性修复",
+    "enTitle": "Homepage 3D scene and iPad compatibility fixes",
+    "items": [
+      "修复 iPad 上全屏透明 Canvas 合成导致的闪烁色块，触屏设备改用稳定的分层绘制。",
+      "调整章节飞行模式的层级与绘制边界，避免固定层在触控滚动时残留旧画面。",
+      "优化小屏下章节标题、证明带与导航的可读性。"
+    ],
+    "enItems": [
+      "Fixed flashing tiles caused by full-screen transparent canvas compositing on iPad by using stable layered painting on touch devices.",
+      "Adjusted chapter-flight stacking and paint boundaries so fixed layers do not retain stale frames during touch scrolling.",
+      "Improved readability of chapter headings, the proof band, and navigation on small screens."
+    ]
+  },
+  {
+    "date": "2026-09-09",
+    "title": "行于无垠完善与后台细节优化",
+    "enTitle": "Boundless Run polish and admin refinements",
+    "items": [
+      "继续完善行于无垠的操作手感、武器表现与关卡节奏。",
+      "管理员总览与 APPMonitor 发布页细节调整。",
+      "签到与中英词典小幅修正。"
+    ],
+    "enItems": [
+      "Continued polishing Boundless Run controls, weapon feel, and level pacing.",
+      "Refined the admin hub and APPMonitor release page details.",
+      "Made small corrections to check-in and the bilingual dictionary."
+    ]
+  },
+  {
+    "date": "2026-09-06",
+    "title": "行于无垠联机 PK 与战斗系统完善",
+    "enTitle": "Boundless Run online PK and combat improvements",
+    "items": [
+      "完善联机 PK：房间创建与加入、邀请码、实时对战与结果结算。",
+      "补充武器、敌人与场景素材，优化射击与受击反馈。",
+      "增加外部脚本加载监测与错误提示，便于排查 CDN 问题。"
+    ],
+    "enItems": [
+      "Completed online PK with room creation and joining, invite codes, live matches, and result settlement.",
+      "Added weapon, enemy, and scene assets and improved shooting and hit feedback.",
+      "Added monitoring and error messages for external script loading to diagnose CDN issues."
+    ]
+  },
+  {
+    "date": "2026-09-04",
+    "title": "行于无垠联机对战上线",
+    "enTitle": "Boundless Run online battles launched",
+    "items": [
+      "新增实时联机 PK 面板：创建房间、输入邀请码加入、下注与对战。",
+      "接入 Supabase 实时通道，支持双人对战状态同步。",
+      "修复多轮联机中的重连与状态残留问题。"
+    ],
+    "enItems": [
+      "Added a real-time PK panel with room creation, invite-code joining, wagers, and matches.",
+      "Connected Supabase realtime channels for two-player state synchronization.",
+      "Fixed reconnect and stale-state issues across repeated online matches."
+    ]
+  },
+  {
+    "date": "2026-08-29",
+    "title": "行于无垠美术升级与玩法扩充",
+    "enTitle": "Boundless Run art upgrade and gameplay expansion",
+    "items": [
+      "替换角色、敌人、金币与武器为正式素材，并做压缩优化。",
+      "扩充武器系统与关卡内容，调整难度曲线。",
+      "优化页面加载与资源体积。"
+    ],
+    "enItems": [
+      "Replaced placeholder characters, enemies, coins, and weapons with final assets and optimized their size.",
+      "Expanded the weapon system and level content and retuned the difficulty curve.",
+      "Improved page loading and asset footprint."
+    ]
+  },
+  {
+    "date": "2026-08-28",
+    "title": "行于无垠横屏闯关游戏上线",
+    "enTitle": "Boundless Run side-scrolling game launched",
+    "items": [
+      "新增横屏闯关射击游戏「行于无垠」，支持移动、瞄准、射击与装备强化。",
+      "接入首页作品展示与社团功能入口。",
+      "补充游戏素材与基础关卡流程。"
+    ],
+    "enItems": [
+      "Added Boundless Run, a side-scrolling action shooter with movement, aiming, shooting, and upgrades.",
+      "Wired it into the homepage showcase and the club features hub.",
+      "Added game assets and the core level flow."
+    ]
+  },
+  {
+    "date": "2026-08-26",
+    "title": "课程签到日统计与签到体验优化",
+    "enTitle": "Course check-in daily stats and check-in improvements",
+    "items": [
+      "新增课程签到日统计：按日期查询当天记录并显示人数。",
+      "签到结果与状态提示补充日间主题配色。",
+      "优化签到表单在小屏下的排布。"
+    ],
+    "enItems": [
+      "Added daily course check-in statistics with date lookup and attendee counts.",
+      "Added light-theme colors for check-in results and status hints.",
+      "Improved check-in form layout on small screens."
+    ]
+  },
+  {
     "date": "2026-08-25",
     "titleKey": "changelog.entries.v20260825.title",
     "itemKeys": [
@@ -9,14 +278,20 @@
     ],
     "title": "AI 可解释性面板与课程签到入口优化",
     "enTitle": "AI explainability panel and course check-in improvements",
-    "enItems": ["Added optional AI decision panels to Gomoku, Tetris, and Snake.", "Panels show candidate actions, search depth, evaluation, targets, or predicted paths.", "Added a course check-in shortcut to the homepage top bar, opening course check-in by default.", "Fixed light-theme Gomoku stone colors and AI panel checkbox visibility."],
+    "enItems": [
+      "Added optional AI decision panels to Gomoku, Tetris, and Snake.",
+      "Panels show candidate actions, search depth, evaluation, targets, or predicted paths.",
+      "Added a course check-in shortcut to the homepage top bar, opening course check-in by default.",
+      "Fixed light-theme Gomoku stone colors and AI panel checkbox visibility."
+    ],
     "items": [
       "五子棋、俄罗斯方块、贪吃蛇新增可选 AI 决策面板。",
       "面板展示候选动作、搜索深度、评估分、目标落点或预测路径等信息。",
       "首页顶栏新增课程签到快捷入口，进入后默认选择课程签到。",
       "修复日间主题下五子棋黑白棋子颜色和 AI 面板复选框可见性问题。"
     ]
-  }, {
+  },
+  {
     "date": "2026-08-24",
     "titleKey": "changelog.entries.v20260824.title",
     "itemKeys": [
@@ -27,7 +302,12 @@
     ],
     "title": "中英双语与日间/暗色双主题完善",
     "enTitle": "Bilingual dictionary and light/dark themes completed",
-    "enItems": ["Expanded Chinese and English dictionary switching across the homepage and public pages.", "Added light/dark themes with Beijing-time automatic switching.", "Built the light theme around warm paper white and cinnabar orange-red accents.", "Unified theme adaptation across homepage, admin pages, labs, and AI games."],
+    "enItems": [
+      "Expanded Chinese and English dictionary switching across the homepage and public pages.",
+      "Added light/dark themes with Beijing-time automatic switching.",
+      "Built the light theme around warm paper white and cinnabar orange-red accents.",
+      "Unified theme adaptation across homepage, admin pages, labs, and AI games."
+    ],
     "items": [
       "完善首页和公共页面的中英文词典切换。",
       "增加日间/暗色双主题系统，并支持按北京时间自动切换。",
@@ -39,7 +319,12 @@
     "date": "2026-08-23",
     "title": "上线 AI 贪吃蛇多模式页",
     "enTitle": "AI Snake multi-mode page launched",
-    "enItems": ["Added normal play, AI demo, AI assist with dark paths and turn hints, plus two-board versus mode.", "The AI sees only the current apple; AI Play and Assist need no nickname and are not ranked.", "Versus ranking uses player score minus AI score; surrender is not recorded.", "Added Snake to the homepage AI games, flagship works, club features, and project showcase."],
+    "enItems": [
+      "Added normal play, AI demo, AI assist with dark paths and turn hints, plus two-board versus mode.",
+      "The AI sees only the current apple; AI Play and Assist need no nickname and are not ranked.",
+      "Versus ranking uses player score minus AI score; surrender is not recorded.",
+      "Added Snake to the homepage AI games, flagship works, club features, and project showcase."
+    ],
     "items": [
       "新增贪吃蛇成果页：正常游玩、AI 演示、AI 辅助深色轨迹与转向提醒、双窗人机对战",
       "AI 仅感知当前苹果；AI 游玩 / AI 辅助免昵称不记榜；普通与人机对战对齐五子棋昵称流程",
@@ -51,7 +336,19 @@
     "date": "2026-08-22",
     "title": "修复俄罗斯方块 AI 游玩决策失效",
     "enTitle": "Fixed Tetris AI-play decision failures",
-    "enItems": ["Fixed AI animation being blocked from rotating or moving and only soft-dropping in the center.", "AI Play and AI Assist no longer require a nickname or save scores; only normal and versus modes are ranked.", "Added Stop controls for non-ranked AI modes.", "Added optional column beams and hard-drop landing outlines, remembered locally.", "Compressed the one-screen Tetris layout and scaled the board by viewport height.", "Fixed cloud nickname confirmation and made score saving Supabase-only.", "Added mutually exclusive AI soft-drop x1.25 and hard-drop x2 options for versus scoring.", "Added optional AI hard drop for AI Play.", "Updated the project showcase to state that teaching resources and the AI bot platform are live.", "Added mobile touch controls for Tetris.", "Fixed mobile versus controls being pushed outside the viewport."],
+    "enItems": [
+      "Fixed AI animation being blocked from rotating or moving and only soft-dropping in the center.",
+      "AI Play and AI Assist no longer require a nickname or save scores; only normal and versus modes are ranked.",
+      "Added Stop controls for non-ranked AI modes.",
+      "Added optional column beams and hard-drop landing outlines, remembered locally.",
+      "Compressed the one-screen Tetris layout and scaled the board by viewport height.",
+      "Fixed cloud nickname confirmation and made score saving Supabase-only.",
+      "Added mutually exclusive AI soft-drop x1.25 and hard-drop x2 options for versus scoring.",
+      "Added optional AI hard drop for AI Play.",
+      "Updated the project showcase to state that teaching resources and the AI bot platform are live.",
+      "Added mobile touch controls for Tetris.",
+      "Fixed mobile versus controls being pushed outside the viewport."
+    ],
     "items": [
       "修复 AI 游玩动画阶段因 aiBusy 拦截导致无法旋转/平移、只在中间软降的问题",
       "AI 游玩与 AI 辅助改为免昵称、不存档；仅普通游玩与人机对战需要昵称记分",
@@ -70,7 +367,11 @@
     "date": "2026-08-22",
     "title": "上线 AI 俄罗斯方块多模式页",
     "enTitle": "AI Tetris multi-mode page launched",
-    "enItems": ["Added normal play, AI demo, AI assist ghosting, and fair versus mode.", "Versus players share the same piece sequence; AI soft and hard drop are disabled.", "Added Tetris to homepage AI games and flagship works alongside APPMonitor."],
+    "enItems": [
+      "Added normal play, AI demo, AI assist ghosting, and fair versus mode.",
+      "Versus players share the same piece sequence; AI soft and hard drop are disabled.",
+      "Added Tetris to homepage AI games and flagship works alongside APPMonitor."
+    ],
     "items": [
       "新增俄罗斯方块成果页：正常游玩、AI 演示、AI 辅助阴影、公平人机对战",
       "人机对战双方共用同序列方块，AI 禁用软降/硬降；普通榜与对战榜对齐五子棋昵称流程",
@@ -81,7 +382,10 @@
     "date": "2026-08-22",
     "title": "首页导航高亮与移动端提示",
     "enTitle": "Homepage navigation highlight and mobile hint",
-    "enItems": ["Fixed the scroll-progress navigation incorrectly highlighting Proof on Home and Works.", "Added a best-experience-on-PC notice for non-desktop visitors."],
+    "enItems": [
+      "Fixed the scroll-progress navigation incorrectly highlighting Proof on Home and Works.",
+      "Added a best-experience-on-PC notice for non-desktop visitors."
+    ],
     "items": [
       "修复滚动进度导航在首页/作品误高亮「实力」的问题",
       "非电脑端增加「使用 PC 端浏览获得最佳效果」提示弹窗"
@@ -91,7 +395,11 @@
     "date": "2026-08-22",
     "title": "登录入口统一到个人中心",
     "enTitle": "Sign-in moved to Member Center",
-    "enItems": ["Moved registration and sign-in to Member Center and connected Club Drive WebDAV after sign-in.", "Moved Club Drive into Club Features and removed its standalone top-bar link.", "Unified unsigned-user redirects to Member Center."],
+    "enItems": [
+      "Moved registration and sign-in to Member Center and connected Club Drive WebDAV after sign-in.",
+      "Moved Club Drive into Club Features and removed its standalone top-bar link.",
+      "Unified unsigned-user redirects to Member Center."
+    ],
     "items": [
       "登录、注册完整迁移到个人中心，登录后自动连接社团盘 WebDAV",
       "社团盘入口改到社团功能页，官网顶栏不再单独放社团盘",
@@ -102,7 +410,11 @@
     "date": "2026-08-22",
     "title": "上线官网报名系统",
     "enTitle": "Website application system launched",
-    "enItems": ["Added the club_join_applications table and dedicated can_join permission.", "The Join Now button opens a public application form for name, class, contact method, and introduction.", "Administrators can review and delete applications from Admin Hub."],
+    "enItems": [
+      "Added the club_join_applications table and dedicated can_join permission.",
+      "The Join Now button opens a public application form for name, class, contact method, and introduction.",
+      "Administrators can review and delete applications from Admin Hub."
+    ],
     "items": [
       "新增报名表 club_join_applications，并下放独立权限 can_join",
       "首页「立即加入」跳转公开报名页，支持姓名、班级、联系方式类型与选填介绍提交",
@@ -113,7 +425,11 @@
     "date": "2026-08-22",
     "title": "移动端小屏布局修复",
     "enTitle": "Small-screen mobile layout fixes",
-    "enItems": ["Fixed layout competition among the top brand, identity, and mobile menu.", "Added wrapping and shrinking protection for member cards, project status rows, and Hero tags.", "Verified narrow layouts avoid notable horizontal overflow."],
+    "enItems": [
+      "Fixed layout competition among the top brand, identity, and mobile menu.",
+      "Added wrapping and shrinking protection for member cards, project status rows, and Hero tags.",
+      "Verified narrow layouts avoid notable horizontal overflow."
+    ],
     "items": [
       "修复顶部品牌、身份信息与移动菜单在窄屏下的空间竞争",
       "补齐成员卡片、项目状态行与 Hero 技术标签的收缩和换行保护",
@@ -124,7 +440,11 @@
     "date": "2026-08-22",
     "title": "首页动态交互精修",
     "enTitle": "Homepage interaction refinement",
-    "enItems": ["Added top scroll progress and automatic current-section navigation highlight.", "Added subtle card tilt and sheen tracking for precise desktop pointers.", "Disabled nonessential interactions on mobile and reduced-motion mode."],
+    "enItems": [
+      "Added top scroll progress and automatic current-section navigation highlight.",
+      "Added subtle card tilt and sheen tracking for precise desktop pointers.",
+      "Disabled nonessential interactions on mobile and reduced-motion mode."
+    ],
     "items": [
       "新增顶部滚动进度反馈，并让导航自动高亮当前区块",
       "桌面精细指针下加入卡片微倾斜与光泽跟随，保持布局稳定",
@@ -135,7 +455,11 @@
     "date": "2026-08-22",
     "title": "上线成员展示后台",
     "enTitle": "Member showcase administration launched",
-    "enItems": ["Added dedicated can_members permission and an Admin Hub entry.", "Administrators can create, edit, remove, sort, and show member cards.", "Homepage prefers admin data and falls back to static members.json when needed."],
+    "enItems": [
+      "Added dedicated can_members permission and an Admin Hub entry.",
+      "Administrators can create, edit, remove, sort, and show member cards.",
+      "Homepage prefers admin data and falls back to static members.json when needed."
+    ],
     "items": [
       "新增独立权限 can_members，并接入管理员总览入口与权限下放",
       "管理端可增删改首页成员卡片：姓名、班级、简介、排序、是否展示与可选图床图片 URL",
@@ -146,7 +470,11 @@
     "date": "2026-08-22",
     "title": "修复 Hero 大招牌挤扁与证明带首屏可见",
     "enTitle": "Fixed compressed Hero title and first-screen proof strip",
-    "enItems": ["Merged the proof strip into Hero to avoid scroll-snap skipping it.", "Changed Hero to a vertical single-screen layout.", "Compressed first-screen spacing so the proof strip remains visible."],
+    "enItems": [
+      "Merged the proof strip into Hero to avoid scroll-snap skipping it.",
+      "Changed Hero to a vertical single-screen layout.",
+      "Compressed first-screen spacing so the proof strip remains visible."
+    ],
     "items": [
       "证明带并入 Hero 区块，避免 scroll-snap 跳过导致不可见",
       "Hero 改为纵向一屏布局，修复大招牌被横向挤成一条的问题",
@@ -157,7 +485,11 @@
     "date": "2026-08-22",
     "title": "首页技术感视觉精修",
     "enTitle": "Homepage technical visual refinement",
-    "enItems": ["Retained the dark cyan-violet neon character while strengthening hierarchy.", "Added a precise systems-interface feel to Hero, stages, proof strip, and capability cards.", "Protected narrow layouts from decoration and subtitle overflow."],
+    "enItems": [
+      "Retained the dark cyan-violet neon character while strengthening hierarchy.",
+      "Added a precise systems-interface feel to Hero, stages, proof strip, and capability cards.",
+      "Protected narrow layouts from decoration and subtitle overflow."
+    ],
     "items": [
       "保留深色青紫霓虹基因，强化背景层次、边界线与信息层级",
       "Hero、阶段轨道、证明带与能力卡片增加精密系统界面质感",
@@ -168,7 +500,10 @@
     "date": "2026-08-22",
     "title": "首页恢复企业级区块吸附滚动",
     "enTitle": "Restored enterprise-style section snap scrolling",
-    "enItems": ["Restored mandatory desktop scroll snapping between full sections.", "Kept the proof strip within its narrative and used proximity snapping on mobile."],
+    "enItems": [
+      "Restored mandatory desktop scroll snapping between full sections.",
+      "Kept the proof strip within its narrative and used proximity snapping on mobile."
+    ],
     "items": [
       "桌面端恢复 scroll-snap mandatory：轻微滚动即吸附到下一完整区块",
       "证明带不单独吸附，避免打断叙事；移动端改用 proximity，减少动效偏好下关闭吸附"
@@ -178,7 +513,11 @@
     "date": "2026-08-22",
     "title": "首页企业级深色霓虹外观翻新",
     "enTitle": "Homepage enterprise dark-neon refresh",
-    "enItems": ["Reorganized the homepage information architecture from Hero to join section.", "Refined the dark neon visual language into a restrained enterprise style.", "Updated the three-stage club development narrative."],
+    "enItems": [
+      "Reorganized the homepage information architecture from Hero to join section.",
+      "Refined the dark neon visual language into a restrained enterprise style.",
+      "Updated the three-stage club development narrative."
+    ],
     "items": [
       "首页信息架构重排：Hero → 实力证明带 → 能力矩阵 → 旗舰作品 → 成员 / 项目 / 活动 → 加入",
       "保留深色霓虹基因，改为克制企业风：单主 CTA「立即加入」、算法实验室次级、APPMonitor 降为文字入口",
@@ -189,7 +528,11 @@
     "date": "2026-08-22",
     "title": "修复绑定列表误显示未绑定",
     "enTitle": "Fixed bindings incorrectly shown as unbound",
-    "enItems": ["Fixed Admin Hub misclassifying existing name-and-class bindings as unbound.", "Built the binding list from all Auth users with profile-table fallbacks.", "Kept compatibility with older APIs that omit the bound field."],
+    "enItems": [
+      "Fixed Admin Hub misclassifying existing name-and-class bindings as unbound.",
+      "Built the binding list from all Auth users with profile-table fallbacks.",
+      "Kept compatibility with older APIs that omit the bound field."
+    ],
     "items": [
       "修复管理员总览把已有姓名班级误判为「未绑定」的问题（表内数据未丢失）",
       "绑定列表改为以 Auth 全量用户为主，并兜底合并 club_profiles / club_member_profiles",
@@ -200,7 +543,11 @@
     "date": "2026-08-22",
     "title": "管理员总览支持全量账号绑定编辑",
     "enTitle": "Admin Hub supports editing bindings for all accounts",
-    "enItems": ["Name, class, and account binding now lists every registered account.", "Shows an Unbound state when Chinese name or class is missing.", "Super-admins can edit any binding and see bound versus registered totals."],
+    "enItems": [
+      "Name, class, and account binding now lists every registered account.",
+      "Shows an Unbound state when Chinese name or class is missing.",
+      "Super-admins can edit any binding and see bound versus registered totals."
+    ],
     "items": [
       "姓名 · 班级 · 账号绑定改为展示全部已注册账号，不再只显示已绑定记录",
       "未绑定中文姓名或班级时，列表中显示「未绑定」状态",
@@ -211,7 +558,12 @@
     "date": "2026-08-21",
     "title": "算法可视化实验室大幅扩容",
     "enTitle": "Algorithm visualization lab greatly expanded",
-    "enItems": ["Added graph labs for Dijkstra, Bellman-Ford, SPFA, and Floyd-Warshall.", "Added dynamic-programming labs for Fibonacci, LIS, and 0-1 Knapsack.", "Added binary-tree and heap labs with interactive operations.", "Expanded the lab selector to seven entries and updated homepage copy."],
+    "enItems": [
+      "Added graph labs for Dijkstra, Bellman-Ford, SPFA, and Floyd-Warshall.",
+      "Added dynamic-programming labs for Fibonacci, LIS, and 0-1 Knapsack.",
+      "Added binary-tree and heap labs with interactive operations.",
+      "Expanded the lab selector to seven entries and updated homepage copy."
+    ],
     "items": [
       "新增图论实验室：Dijkstra、Bellman–Ford、SPFA、Floyd–Warshall 最短路可视化",
       "新增动态规划实验室：斐波那契递推、LIS、0-1 背包填表与最优方案回溯",
@@ -224,7 +576,12 @@
     "date": "2026-08-21",
     "title": "算法实验室新增数据结构可视化",
     "enTitle": "Data-structure visualizations added to the algorithm lab",
-    "enItems": ["Added interactive stack, queue, and linked-list demonstrations.", "Shows LIFO stack and FIFO queue operations.", "Linked lists support insertion, search, deletion, and highlighted pointer traversal.", "Updated the selector, homepage, and features copy."],
+    "enItems": [
+      "Added interactive stack, queue, and linked-list demonstrations.",
+      "Shows LIFO stack and FIFO queue operations.",
+      "Linked lists support insertion, search, deletion, and highlighted pointer traversal.",
+      "Updated the selector, homepage, and features copy."
+    ],
     "items": [
       "新增数据结构实验室：支持栈、队列与链表的即时操作演示",
       "栈演示 LIFO（push / pop / peek），队列演示 FIFO（enqueue / dequeue / front）",
@@ -236,7 +593,12 @@
     "date": "2026-08-21",
     "title": "上线积分兑换商城",
     "enTitle": "Points redemption mall launched",
-    "enItems": ["Added dedicated can_mall permission and Admin Hub integration.", "Administrators can manage item names, descriptions, prices, stock, status, and images.", "Members can redeem listed items with club points; stock and points update immediately.", "Requires a bound name and class before redemption."],
+    "enItems": [
+      "Added dedicated can_mall permission and Admin Hub integration.",
+      "Administrators can manage item names, descriptions, prices, stock, status, and images.",
+      "Members can redeem listed items with club points; stock and points update immediately.",
+      "Requires a bound name and class before redemption."
+    ],
     "items": [
       "新增独立权限 can_mall，并接入管理员总览与权限下放",
       "管理端可自定义商品名称、说明、价格、库存、上架状态与可选配图 URL；已上架也可编辑",
@@ -248,7 +610,11 @@
     "date": "2026-08-21",
     "title": "活动公告支持再次推送主页",
     "enTitle": "Activities and notices can be promoted again",
-    "enItems": ["Added a Promote to homepage again action for published items.", "Previously dismissed recommendations can be shown once more.", "Undismissed users keep their existing behavior."],
+    "enItems": [
+      "Added a Promote to homepage again action for published items.",
+      "Previously dismissed recommendations can be shown once more.",
+      "Undismissed users keep their existing behavior."
+    ],
     "items": [
       "已发布的活动与公告新增“再次推送主页”按钮",
       "再次推送后，此前点过“不再提醒”的用户会再看到一次首页推荐",
@@ -259,7 +625,11 @@
     "date": "2026-08-21",
     "title": "修复超管名单加载与刷新",
     "enTitle": "Fixed super-admin list loading and refresh",
-    "enItems": ["Completed super-admin list rendering and dedicated refresh logic.", "Added a Refresh super-admin list button.", "Disabled revocation for yourself and when only one super-admin remains."],
+    "enItems": [
+      "Completed super-admin list rendering and dedicated refresh logic.",
+      "Added a Refresh super-admin list button.",
+      "Disabled revocation for yourself and when only one super-admin remains."
+    ],
     "items": [
       "补齐管理员总览超管名单渲染与单独刷新逻辑，解决一直停在“正在读取超管名单”",
       "超管交接区块新增“刷新超管名单”按钮",
@@ -270,7 +640,11 @@
     "date": "2026-08-21",
     "title": "修复超管入口查询失败",
     "enTitle": "Fixed super-admin access query failure",
-    "enItems": ["Fixed incorrect PostgREST OR syntax in the club_super_admins query.", "Switched to exact user_id and email lookups with an initial-admin fallback.", "Still temporarily shows Admin Hub for initial super-admins if the backend does not recognize them."],
+    "enItems": [
+      "Fixed incorrect PostgREST OR syntax in the club_super_admins query.",
+      "Switched to exact user_id and email lookups with an initial-admin fallback.",
+      "Still temporarily shows Admin Hub for initial super-admins if the backend does not recognize them."
+    ],
     "items": [
       "修复 club_super_admins 查询误用 PostgREST or 语法，导致已部署后仍查不到超管",
       "改为按 user_id / email 精确查询，并保留初始超管临时兜底",
@@ -281,7 +655,12 @@
     "date": "2026-08-21",
     "title": "超管交接与动态超管名单",
     "enTitle": "Super-admin handover and dynamic roster",
-    "enItems": ["Moved super-admin management into club_super_admins instead of hard-coded accounts.", "Added super-admin-only handover controls in Admin Hub.", "Prevents self-revocation and always retains at least one super-admin.", "Unified frontend access gates around the staff_access_get result."],
+    "enItems": [
+      "Moved super-admin management into club_super_admins instead of hard-coded accounts.",
+      "Added super-admin-only handover controls in Admin Hub.",
+      "Prevents self-revocation and always retains at least one super-admin.",
+      "Unified frontend access gates around the staff_access_get result."
+    ],
     "items": [
       "超管身份改为 club_super_admins 动态维护，不再在服务器端写死 Haimingadmin / Collen",
       "管理员总览新增仅超管可见的超管交接入口，支持升级与撤销",
@@ -293,7 +672,12 @@
     "date": "2026-08-21",
     "title": "首页推荐弹窗与公告推荐开关",
     "enTitle": "Homepage recommendation modal and notice toggle",
-    "enItems": ["Added a homepage recommendation toggle for published notices.", "Homepage automatically opens only recommended notices and activities.", "Close skips the current item and continues to the next recommendation.", "Do-not-remind applies only to the current item."],
+    "enItems": [
+      "Added a homepage recommendation toggle for published notices.",
+      "Homepage automatically opens only recommended notices and activities.",
+      "Close skips the current item and continues to the next recommendation.",
+      "Do-not-remind applies only to the current item."
+    ],
     "items": [
       "发布/编辑公告新增首页推荐开关，与活动推荐设置保持一致",
       "首页只自动弹出已勾选首页推荐的公告和活动",
@@ -305,7 +689,13 @@
     "date": "2026-08-20",
     "title": "权限下放与活动公告系统",
     "enTitle": "Delegated permissions and events-notices system",
-    "enItems": ["Haimingadmin and Collen can assign five operational permissions.", "Password resets and binding review remain super-admin-only.", "Management panels now follow staff_access instead of hard-coded email gates.", "Added event and notice publishing, registration lists, and homepage updates.", "Added Events and Notices links to Club Features and site navigation."],
+    "enItems": [
+      "Haimingadmin and Collen can assign five operational permissions.",
+      "Password resets and binding review remain super-admin-only.",
+      "Management panels now follow staff_access instead of hard-coded email gates.",
+      "Added event and notice publishing, registration lists, and homepage updates.",
+      "Added Events and Notices links to Club Features and site navigation."
+    ],
     "items": [
       "仅 Haimingadmin / Collen 可分配签到、积分、留言、邀请码、活动公告五项管理权限",
       "密码重置申请、直接改密、姓名班级账号绑定查看仍为超管专属",
@@ -318,7 +708,12 @@
     "date": "2026-08-20",
     "title": "密码重置：申请秘钥 + 管理员直接改密",
     "enTitle": "Password reset: request secret and direct admin reset",
-    "enItems": ["Members can submit reset requests and administrators can issue unique 24-hour secrets.", "Applicants can set a new password without deleting accounts or data.", "Administrators can review requests and reset a selected account directly.", "The system never stores or exposes plaintext passwords."],
+    "enItems": [
+      "Members can submit reset requests and administrators can issue unique 24-hour secrets.",
+      "Applicants can set a new password without deleting accounts or data.",
+      "Administrators can review requests and reset a selected account directly.",
+      "The system never stores or exposes plaintext passwords."
+    ],
     "items": [
       "支持社员提交重置申请，管理员生成 24 小时唯一秘钥",
       "申请者凭秘钥直接设置新密码，不删除账号、不丢失数据",
@@ -330,7 +725,12 @@
     "date": "2026-08-20",
     "title": "官网导航精简与社团功能页",
     "enTitle": "Simplified site navigation and Club Features page",
-    "enItems": ["Simplified the homepage top bar to core navigation.", "Added Club Features as a central entry for labs, Gomoku, teaching resources, check-in, and inbox.", "Moved the changelog entry to Member Center.", "Shows Admin Hub only to super-admins or authorized managers."],
+    "enItems": [
+      "Simplified the homepage top bar to core navigation.",
+      "Added Club Features as a central entry for labs, Gomoku, teaching resources, check-in, and inbox.",
+      "Moved the changelog entry to Member Center.",
+      "Shows Admin Hub only to super-admins or authorized managers."
+    ],
     "items": [
       "首页顶栏精简为核心导航，减少拥挤与垂直堆叠",
       "新增社团功能页，集中算法实验室、五子棋、教学资源、签到兑换、社员留言箱",
@@ -342,7 +742,12 @@
     "date": "2026-08-20",
     "title": "管理员总览、更新日志与绑定查看",
     "enTitle": "Admin Hub, changelog, and binding review",
-    "enItems": ["Added an Admin Hub for Haimingadmin and Collen.", "Grouped check-in, points, inbox, and Club Drive invite management.", "Administrators can inspect name, class, and login-account bindings.", "Launched a public website changelog."],
+    "enItems": [
+      "Added an Admin Hub for Haimingadmin and Collen.",
+      "Grouped check-in, points, inbox, and Club Drive invite management.",
+      "Administrators can inspect name, class, and login-account bindings.",
+      "Launched a public website changelog."
+    ],
     "items": [
       "新增管理员后台总览，仅 Haimingadmin 与 Collen 可访问",
       "汇总签到、积分、留言、社团盘邀请码等管理入口",
@@ -354,7 +759,12 @@
     "date": "2026-08-20",
     "title": "个人中心与社员资料绑定",
     "enTitle": "Member Center and member profile binding",
-    "enItems": ["Added Member Center using existing Club Drive accounts.", "Supports Chinese name and class binding with the points leaderboard.", "Check-in redemption and inbox prefill bound identity details.", "Added an independent profile-binding table without changing old schemas."],
+    "enItems": [
+      "Added Member Center using existing Club Drive accounts.",
+      "Supports Chinese name and class binding with the points leaderboard.",
+      "Check-in redemption and inbox prefill bound identity details.",
+      "Added an independent profile-binding table without changing old schemas."
+    ],
     "items": [
       "新增个人中心，复用现有社团盘账号",
       "支持绑定中文姓名与班级，并关联积分榜",
@@ -367,7 +777,12 @@
     "date": "2026-08-19",
     "title": "五子棋训练数据与课程签到",
     "enTitle": "Gomoku training data and course check-in",
-    "enItems": ["Uploads complete move data to WebDAV gomokudata when the AI loses.", "Added an independent gomoku-training Edge Function without Club Drive access.", "Added course check-in and administrator review to check-in redemption.", "Changed Restart to Surrender during matches and records losses."],
+    "enItems": [
+      "Uploads complete move data to WebDAV gomokudata when the AI loses.",
+      "Added an independent gomoku-training Edge Function without Club Drive access.",
+      "Added course check-in and administrator review to check-in redemption.",
+      "Changed Restart to Surrender during matches and records losses."
+    ],
     "items": [
       "AI 失败时上传完整落子数据到 WebDAV gomokudata 目录",
       "独立 gomoku-training Edge Function，不开放社团盘权限",
@@ -379,7 +794,12 @@
     "date": "2026-08-18",
     "title": "签到兑换与积分系统",
     "enTitle": "Check-in redemption and points system",
-    "enItems": ["Administrators can generate check-in codes with points, usage, and expiry settings.", "Members can redeem points with Chinese names and check-in codes.", "Added pending-name lists and usage-record refresh.", "Launched the member points leaderboard."],
+    "enItems": [
+      "Administrators can generate check-in codes with points, usage, and expiry settings.",
+      "Members can redeem points with Chinese names and check-in codes.",
+      "Added pending-name lists and usage-record refresh.",
+      "Launched the member points leaderboard."
+    ],
     "items": [
       "管理员可生成签到码、设置积分、用量和有效期",
       "普通社员可凭中文姓名与签到码兑换积分",
@@ -391,7 +811,12 @@
     "date": "2026-08-17",
     "title": "官网基础能力完善",
     "enTitle": "Core website capabilities completed",
-    "enItems": ["Connected algorithm visualization lab entries to the homepage projects section.", "Unified teaching-resource downloads through 123 Cloud links.", "Improved search-maze path and wall contrast.", "Kept Club Drive and Member Inbox available."],
+    "enItems": [
+      "Connected algorithm visualization lab entries to the homepage projects section.",
+      "Unified teaching-resource downloads through 123 Cloud links.",
+      "Improved search-maze path and wall contrast.",
+      "Kept Club Drive and Member Inbox available."
+    ],
     "items": [
       "算法可视化实验室入口接入首页项目展示",
       "教学资源下载统一替换为 123 云盘链接",
