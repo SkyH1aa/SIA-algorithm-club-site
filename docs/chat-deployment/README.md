@@ -24,6 +24,17 @@
 6. 发布网站仓库中已经更新的前端脚本。Supabase 的 SQL / Edge 编辑器不负责更新你的静态网站；这一步按网站原有的网页发布方式完成，不要求使用 CLI。仅升级 usage90day 时发布 `public/chat-admin.html`、`public/chat-admin.js`、`public/chat-admin-i18n.js`，成员页脚本和 `public/chat-file-bundle.js` 不因本功能改变。
 7. 打开网站 Chat 管理页配置供应商和模型。保存配置不会自动调用供应商；“测试调用”会产生真实请求，只有你确认后再执行。
 
+## 安全加固更新（Chat 与对外代理）
+
+已有当前三协议/usage90day 版本时，本次只需在 Dashboard **分别全文替换并部署两个 Edge 文件**：`chat-dashboard-index.ts` → `chat`，`chat-api-proxy-dashboard-index.ts` → `chat-api-proxy`。本次未修改 SQL，也不需要为这轮加固重新执行 SQL 或发布前端。尚未安装前述功能的项目仍按完整部署步骤执行。两个 bundle 已包含新的共享请求体读取器，不必另建 `_shared` 文件。
+
+- Chat 管理操作只信任 `club_super_admins` 中匹配已验证用户 UUID 的记录。空表、缺表、读取失败或畸形结果一律拒绝，不再按初始管理员邮箱回退。部署前确认应保留的管理员已经在动态名单中；邮箱本身不再授予 Chat 管理权限。其他站点的管理员引导逻辑不在本次改动范围。
+- 两个入口均按实际流入字节限制请求体为 **12 MiB**；省略或低报 `Content-Length` 不能绕过，非法长度也返回 `413 request_too_large`。固定大小聚合块避免大量微小分片长期驻留。
+- Chat 读取请求体最多 **10 秒**；客户端取消或读取超时返回 `504 timeout` 并取消读取。该 10 秒只限制上传读取，不是模型生成时间限制。慢速网络上传大型附件可能触发超时。代理读取继续使用原有整条请求最多 120 秒的 deadline，不另加 10 秒限制。
+- PowerShell / curl / SDK 携有效成员 JWT 或有效 `cap_` Key 直接调用是设计能力，不是漏洞。CORS 不能防止命令行调用，也不能替代服务端认证。页面维护遮罩不是 API 总闸；需要停止付费调用时，停用供应商/模型或代理路由，必要时撤销代理 Key，并等待在途请求结束。
+
+验证范围与剩余边界见 [安全加固报告](../chat-validation/security-hardening.md)。这只是本地代码和部署材料更新；未自动部署到你的 Supabase 项目。
+
 ## 可折叠思考内容的前端更新
 
 已部署当前三协议后端时，本次思考展示只需发布静态文件：`public/chat-core.js`、`public/chat.js`、`public/chat.css`、`public/chat-i18n.js` 和重建后的 `public/chat-file-bundle.js`。页面 HTML 不需要调整；不需要为此执行 SQL 或重新部署 Edge Functions。旧后端若尚未具备三协议思考转发，应先按上述完整部署步骤更新。

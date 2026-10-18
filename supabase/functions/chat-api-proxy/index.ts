@@ -1,4 +1,5 @@
 import { hashKey, proxyAllowedHeaders, proxyBase, proxyHeaders, proxyKey, proxySecret, proxySetting, ProxyError, UUID, type ProxyEndpoint } from '../_shared/chat-api-proxy.ts';
+import { ChatBodyError, readChatBody } from '../_shared/chat-body.ts';
 
 const MAX_BYTES = 12 * 1024 * 1024;
 function configuredProxyOrigins(): Set<string> {
@@ -96,21 +97,7 @@ export async function handler(request: Request): Promise<Response> {
     const base = await bounded(proxyBase(route.base_url));
     const secret = Deno.env.get(proxySecret(route.secret_name))!;
     const upstreamHeaders = proxyHeaders(request, secret, endpoint);
-    const reader = request.body?.getReader();
-    const chunks: Uint8Array[] = []; let size = 0;
-    if (reader) {
-      try {
-        while (true) {
-          const next = await bounded(reader.read()); if (next.done) break;
-          size += next.value.byteLength;
-          if (size > MAX_BYTES) throw new ProxyError('request_too_large', 413);
-          chunks.push(next.value);
-        }
-      } catch (error) { void reader.cancel().catch(() => {}); throw error; }
-      finally { reader.releaseLock(); }
-    }
-    const bytes = new Uint8Array(size); let offset = 0;
-    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+    const bytes = await readChatBody(request, { maxBytes: MAX_BYTES, signal: controller.signal });
     try { JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); } catch { throw new ProxyError('input', 400); }
     const upstream = await bounded(fetch(`${base}/${endpoint}`, { method: 'POST', redirect: 'error', signal: controller.signal,
       headers: upstreamHeaders, body: bytes }));
@@ -145,7 +132,7 @@ export async function handler(request: Request): Promise<Response> {
     return new Response(stream, { status: upstream.status, headers });
   } catch (error) {
     finish(); controller.abort(); await cleanup();
-    return failure(error instanceof ProxyError ? error.code : 'upstream_unavailable', error instanceof ProxyError ? error.status : 502, request);
+    return failure(error instanceof ProxyError || error instanceof ChatBodyError ? error.code : 'upstream_unavailable', error instanceof ProxyError || error instanceof ChatBodyError ? error.status : 502, request);
   }
 }
 if (typeof Deno.serve === 'function' && !Deno.env.get('CHAT_TEST_MODE')) Deno.serve(handler);

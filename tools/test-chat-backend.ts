@@ -29,6 +29,7 @@ const ASSIGNED_MID = '44444444-4444-4444-8444-444444444444';
 const CUSTOM_ID = '55555555-5555-4555-8555-555555555555';
 const OTHER_UID = '66666666-6666-4666-8666-666666666666';
 let provider: Row, model: Row, profile: boolean, admin: boolean, auditFail: boolean, startFail: boolean, finishFail: boolean, busy: boolean;
+let authEmail: string, adminLookupMode: 'normal' | 'empty' | 'failure' | 'missing' | 'malformed' | 'mismatch';
 let assignedVisible = false, customModels: Row[];
 let dnsMode: string, mode: string, upstreamSignal: AbortSignal | undefined;
 let wire: string | null;
@@ -51,6 +52,7 @@ function reset() {
   provider = { ...providerBase }; providerWrites = []; modelWrites = []; model = { ...modelBase }; profile = true; admin = true;
   proxyRoute = { id: PID, enabled: true, deleted_at: null, version: 3 };
   proxyKey = { id: MID, route_id: PID, enabled: true, revoked_at: null, version: 4 };
+  authEmail = 'local@example.com'; adminLookupMode = 'normal';
   assignedVisible = false; customModels = [];
   auditFail = startFail = finishFail = busy = false; dnsMode = 'a-only'; mode = 'complete';
   audits = []; patches = []; upstreamBodies = []; requests = []; released = finishAttempts = 0; leased = false; usageResult = undefined; usageFailure = false; upstreamSignal = undefined;
@@ -122,13 +124,23 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
   const headers = new Headers(init.headers);
   if (url.pathname === '/auth/v1/user') {
     assert.equal(headers.get('apikey'), 'local-anon');
-    return headers.get('authorization') === 'Bearer invalid' ? json({}, 401) : json({ id: UID, email: 'local@example.com' });
+    return headers.get('authorization') === 'Bearer invalid' ? json({}, 401) : json({ id: UID, email: authEmail });
   }
   assert.equal(headers.get('authorization'), 'Bearer local-service');
   assert.equal(init.redirect, 'error');
   const table = url.pathname.slice('/rest/v1/'.length);
   if (table === 'club_member_profiles') return json(profile ? [{ username: 'local-account', member_name: '测试会员' }] : []);
-  if (table === 'club_super_admins') return json(admin ? [{ user_id: UID }] : []);
+  if (table === 'club_super_admins') {
+    if (adminLookupMode === 'failure') return json({ code: 'local_read_failure' }, 503);
+    if (adminLookupMode === 'missing') return json({ code: '42P01' }, 404);
+    if (adminLookupMode === 'malformed') return json({ user_id: UID });
+    if (adminLookupMode === 'mismatch') return json([{ user_id: OTHER_UID }]);
+    if (adminLookupMode === 'empty') return json([]);
+    // Normal mode retains another administrator after UID is removed.
+    if (!url.searchParams.has('user_id')) return json([{ user_id: OTHER_UID }]);
+    assert.equal(url.searchParams.get('user_id'), `eq.${UID}`);
+    return json(admin ? [{ user_id: UID }] : []);
+  }
   if (table === 'chat_providers') {
     if (init.method === 'POST') {
       const body = JSON.parse(String(init.body));
@@ -274,7 +286,46 @@ let count = 0;
 async function test(name: string, fn: () => Promise<void>) {
   reset(); await fn(); count++; console.log(`PASS ${name}`);
 }
+const protectedAdminBodies = () => [
+  { action: 'admin_get' },
+  { action: 'admin_save_provider', ...providerBase }, { action: 'save_provider', ...providerBase },
+  { action: 'admin_save_model', ...modelBase }, { action: 'save_model', ...modelBase },
+  { action: 'admin_test', model_id: MID, prompt: 'admin check' }, { action: 'test', model_id: MID, prompt: 'admin check' }
+];
 try {
+  for (const lookupMode of ['empty', 'failure', 'missing', 'malformed', 'mismatch'] as const) {
+    await test(`bootstrap email never grants admin with ${lookupMode} dynamic lookup`, async () => {
+      adminLookupMode = lookupMode;
+      admin = false; profile = false;
+      for (const email of ['haimingadmin@club.local', 'collen@club.local', 'HAIMINGADMIN@CLUB.LOCAL']) {
+        authEmail = email;
+        for (const body of protectedAdminBodies()) {
+          await expectStatus(body, 401, null);
+          await expectStatus(body, 401, 'invalid');
+          assert.deepEqual(await (await expectStatus(body, 403)).json(), { error: 'admin' });
+        }
+      }
+      assert.equal(providerWrites.length, 0); assert.equal(modelWrites.length, 0);
+      assert.equal(rpcCalls.length, 0); assert.equal(audits.length, 0); assert.equal(upstreamBodies.length, 0);
+      assert.ok(requests.every(url => url.pathname === '/auth/v1/user' || url.pathname === '/rest/v1/club_super_admins'));
+      assert.ok(requests.filter(url => url.pathname.endsWith('/club_super_admins')).every(url => url.searchParams.get('user_id') === `eq.${UID}`), 'never fall back to global admin-table emptiness');
+    });
+  }
+  await test('bootstrap identity uses dynamic membership and loses admin on the next request after removal', async () => {
+    authEmail = 'haimingadmin@club.local'; profile = false; model.visibility = 'assigned';
+    await expectStatus({ action: 'admin_get' }, 200);
+    await expectStatus({ action: 'admin_save_provider', ...providerBase }, 200);
+    await expectStatus({ action: 'admin_save_model', ...modelBase, visibility: 'assigned' }, 200);
+    await consume({ action: 'admin_test', model_id: MID, prompt: 'listed admin may test assigned model' });
+    assert.equal(providerWrites.length, 1); assert.equal(modelWrites.length, 1); assert.equal(upstreamBodies.length, 1);
+    const rpcCount = rpcCalls.length, auditCount = audits.length;
+    admin = false;
+    for (const body of protectedAdminBodies()) await expectStatus(body, 403);
+    adminLookupMode = 'empty';
+    for (const body of protectedAdminBodies()) await expectStatus(body, 403);
+    assert.equal(providerWrites.length, 1); assert.equal(modelWrites.length, 1); assert.equal(upstreamBodies.length, 1);
+    assert.equal(rpcCalls.length, rpcCount); assert.equal(audits.length, auditCount);
+  });
   await test('proxy administration dynamic superadmin, strict contract, one-time key and conflicts', async () => {
     const save = { action: 'admin_proxy_save', id: null, name: 'proxy', base_url: 'https://provider.example.com/v1', secret_name: 'CHAT_KEY_MOCK', enabled: true, expected_version: 0 };
     admin = false;
@@ -592,7 +643,7 @@ try {
   await test('request cancellation during fetch and before fetch', async () => {
     mode = 'fetch-abort'; const abort = new AbortController(); const result = handler(request(payload(), 'member', abort.signal));
     while (!upstreamSignal) await new Promise(resolve => setTimeout(resolve, 0)); abort.abort(); assert.equal((await result).status, 499); assert.equal(released, 1);
-    reset(); const early = new AbortController(); early.abort(); assert.equal((await handler(request(payload(), 'member', early.signal))).status, 499); assert.equal(released, 1);
+    reset(); const early = new AbortController(); early.abort(); assert.equal((await handler(request(payload(), 'member', early.signal))).status, 504); assert.equal(released, 0); assert.equal(requests.length, 0);
   });
   await test('abort after completion cannot overwrite completed audit', async () => {
     const abort = new AbortController(); const response = await handler(request(payload(), 'member', abort.signal)); await response.text(); abort.abort();
@@ -671,8 +722,17 @@ try {
       else await response.text().catch(() => undefined);
       assert.equal(charged, 102, failure); assert.equal(settlements.length, 1); assert.equal(settlements[0].p_refund, false);
     }
-    reset(); const abort = new AbortController(); abort.abort();
-    await handler(request(payload(), 'member', abort.signal));
+    reset(); const early = new AbortController(); early.abort();
+    assert.equal((await handler(request(payload(), 'member', early.signal))).status, 504);
+    assert.equal(upstreamBodies.length, 0); assert.equal(charged, 0); assert.equal(settlements.length, 0);
+    const abort = new AbortController(), mockFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const response = await mockFetch(input, init);
+      if (String(input).endsWith('/rpc/chat_begin_generation')) abort.abort();
+      return response;
+    }) as typeof fetch;
+    try { assert.equal((await handler(request(payload(), 'member', abort.signal))).status, 499); }
+    finally { globalThis.fetch = mockFetch; }
     assert.equal(upstreamBodies.length, 0); assert.equal(charged, 0); assert.equal(settlements[0].p_refund, true);
   });
   for (const endpoint of ['/v1/responses', '/v1/responses/']) await test(`explicit Responses endpoint ${endpoint}`, async () => {
@@ -917,6 +977,60 @@ try {
       assert.equal(settlements[0].p_refund, true); assert.equal(audits[0].error_code, 'claude_thinking_budget'); assert.equal(audits[0].reasoning_effort, null);
       shrink = 2049; await consume(body); assert.equal(upstreamBodies[0].max_tokens, 2049); assert.deepEqual(upstreamBodies[0].thinking, { type: 'enabled', budget_tokens: 2048 });
     }
+  });
+  await test('streamed bodies enforce actual bytes with absent or understated lengths before auth', async () => {
+    for (const declared of [null, '1']) {
+      let reads = 0, cancelled = false;
+      const chunk = new Uint8Array(64 * 1024);
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) { reads++; controller.enqueue(chunk); },
+        cancel() { cancelled = true; }
+      }, { highWaterMark: 0 });
+      const response = await handler(new Request('http://localhost/chat', {
+        method: 'POST', headers: declared ? { 'content-length': declared } : {}, body
+      }));
+      assert.equal(response.status, 413); assert.deepEqual(await response.json(), { error: 'request_too_large' });
+      assert.equal(reads, 193); assert.equal(cancelled, true); assert.equal(body.locked, false);
+    }
+    assert.equal(requests.length, 0); assert.equal(upstreamBodies.length, 0); assert.equal(rpcCalls.length, 0);
+  });
+  await test('body deadline and request abort cancel slow unauthenticated reads without dispatch', async () => {
+    const originalTimer = globalThis.setTimeout;
+    globalThis.setTimeout = ((fn: () => void, delay?: number) => originalTimer(fn, delay === 10000 ? 5 : delay)) as typeof setTimeout;
+    try {
+      for (const kind of ['deadline', 'abort', 'pre-abort']) {
+        let cancelled = false;
+        const body = new ReadableStream<Uint8Array>({
+          pull() { return new Promise<void>(() => {}); }, cancel() { cancelled = true; }
+        }, { highWaterMark: 0 });
+        const controller = new AbortController();
+        if (kind === 'pre-abort') controller.abort();
+        const pending = handler(new Request('http://localhost/chat', { method: 'POST', body, signal: controller.signal }));
+        if (kind === 'abort') controller.abort();
+        const response = await pending;
+        assert.equal(response.status, 504); assert.deepEqual(await response.json(), { error: 'timeout' });
+        assert.equal(cancelled, true); assert.equal(body.locked, false);
+      }
+    } finally { globalThis.setTimeout = originalTimer; }
+    assert.equal(requests.length, 0); assert.equal(audits.length, 0); assert.equal(upstreamBodies.length, 0);
+  });
+  await test('declared body bounds, invalid UTF-8 and valid small fragments are handled safely', async () => {
+    for (const length of ['12582913', '-1', 'NaN', '1.5']) {
+      const response = await handler(new Request('http://localhost/chat', { method: 'POST', headers: { 'content-length': length }, body: '{}' }));
+      assert.equal(response.status, 413);
+    }
+    assert.equal((await handler(new Request('http://localhost/chat', { method: 'POST', body: Uint8Array.of(255) }))).status, 400);
+    assert.equal(requests.length, 0);
+    for (const declared of [null, '1']) {
+      const bytes = encoder.encode(JSON.stringify({ action: 'catalog' })); let offset = 0;
+      const body = new ReadableStream<Uint8Array>({ pull(controller) {
+        if (offset === bytes.length) controller.close(); else controller.enqueue(bytes.slice(offset, ++offset));
+      } });
+      const response = await handler(new Request('http://localhost/chat', { method: 'POST',
+        headers: { authorization: 'Bearer member', ...(declared ? { 'content-length': declared } : {}) }, body }));
+      assert.equal(response.status, 200); await response.json(); assert.equal(body.locked, false);
+    }
+    assert.equal(upstreamBodies.length, 0);
   });
   await test('HTTP method, malformed body and CORS', async () => {
     assert.equal((await handler(new Request('http://localhost/chat'))).status, 405);

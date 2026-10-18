@@ -265,5 +265,49 @@ try {
       assert.equal(failed.status, 502); assert.doesNotMatch(await failed.text(), /private|secret/); networkError = false;
     }
   });
+  await test('tiny and empty request fragments preserve bytes with bounded aggregation', async () => {
+    const raw = new TextEncoder().encode(` {"opaque":"${'x'.repeat(70000)}你好","tools":[],"stream":false} \r\n`);
+    let offset = 0, empty = false;
+    const input = new ReadableStream<Uint8Array>({ pull(c) {
+      if (offset === raw.length) { c.close(); return; }
+      empty = !empty;
+      c.enqueue(empty ? new Uint8Array() : raw.subarray(offset, ++offset));
+    } });
+    const r = await handler(request(input, { 'content-length': '1' }));
+    assert.equal(r.status, 200); assert.deepEqual(body, raw); await r.arrayBuffer();
+    assert.equal(input.locked, false); assert.equal(releases, 1);
+  });
+  await test('actual body overflow cancels underreported stream and releases admission', async () => {
+    let cancelled = false, reads = 0;
+    const input = new ReadableStream<Uint8Array>({ pull(c) {
+      reads++; c.enqueue(new Uint8Array(64 * 1024));
+    }, cancel() { cancelled = true; } }, { highWaterMark: 0 });
+    const r = await handler(request(input, { 'content-length': '1' }));
+    assert.equal(r.status, 413); assert.equal((await r.json()).error.code, 'request_too_large');
+    assert.equal(reads, 193); assert.equal(cancelled, true); assert.equal(input.locked, false);
+    assert.equal(calls, 0); assert.equal(releases, 1);
+  });
+  await test('body deadline and client abort cancel a pending read and release once', async () => {
+    for (const clientAbort of [false, true]) {
+      Deno.env.set('CHAT_PROXY_TIMEOUT_MS', clientAbort ? '120000' : '20');
+      const abort = new AbortController(); let cancelled = false, started!: () => void;
+      const reading = new Promise<void>(resolve => { started = resolve; });
+      const input = new ReadableStream<Uint8Array>({ pull() { started(); return new Promise(() => {}); }, cancel() { cancelled = true; return new Promise(() => {}); } }, { highWaterMark: 0 });
+      const before = releases;
+      const pending = handler(request(input, {}, `/${RID}/v1/responses`, 'POST', abort.signal));
+      await reading; if (clientAbort) abort.abort();
+      const r = await pending;
+      assert.equal(r.status, 504); assert.equal((await r.json()).error.code, 'timeout');
+      assert.equal(cancelled, true); assert.equal(input.locked, false); assert.equal(releases, before + 1);
+    }
+    assert.equal(calls, 0); assert.equal(releases, 2);
+  });
+  await test('invalid capability never reads request body or acquires a lease', async () => {
+    let reads = 0;
+    const input = new ReadableStream<Uint8Array>({ pull() { reads++; return new Promise(() => {}); } }, { highWaterMark: 0 });
+    assert.equal((await handler(request(input, { authorization: 'Bearer invalid' }))).status, 401);
+    assert.equal(reads, 0); assert.equal(input.locked, false); assert.equal(admissions, 0); assert.equal(calls, 0);
+    await input.cancel();
+  });
   console.log(`${n} proxy groups passed; no real network calls.`);
 } finally { globalThis.fetch=fetchOriginal; Deno.resolveDns=dnsOriginal; }

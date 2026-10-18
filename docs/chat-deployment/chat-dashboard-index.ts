@@ -106,6 +106,82 @@ function proxySetting(name: string, fallback: number, max: number): number {
   return Number(raw);
 }
 
+// Bound both payload bytes and retained storage independently of network chunking.
+class ChatBodyError extends Error {
+  constructor(public code: string, public status: number) { super(code); this.name = 'ChatBodyError'; }
+}
+
+type ChatBodyOptions = { maxBytes: number; signal?: AbortSignal; timeoutMs?: number };
+
+async function readChatBody(request: Request, options: ChatBodyOptions): Promise<Uint8Array<ArrayBuffer>> {
+  const { maxBytes, signal, timeoutMs } = options;
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 0 ||
+      (timeoutMs !== undefined && (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0))) {
+    throw new RangeError('Invalid body reader limits');
+  }
+  const reader = request.body?.getReader();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let rejectRead: ((error: ChatBodyError) => void) | undefined;
+  let interrupted = false;
+  const stop = () => {
+    interrupted = true;
+    rejectRead?.(new ChatBodyError('timeout', 504));
+  };
+  const signals = new Set([request.signal, signal].filter((value): value is AbortSignal => !!value));
+  try {
+    const declared = request.headers.get('content-length');
+    if (declared !== null && (!/^\d+$/.test(declared) || Number(declared) > maxBytes)) {
+      throw new ChatBodyError('request_too_large', 413);
+    }
+    for (const source of signals) {
+      source.addEventListener('abort', stop, { once: true });
+      if (source.aborted) stop();
+    }
+    if (interrupted) throw new ChatBodyError('timeout', 504);
+    if (timeoutMs !== undefined) timer = setTimeout(stop, timeoutMs);
+    if (!reader) return new Uint8Array();
+    const blockSize = 64 * 1024;
+    const blocks: Uint8Array[] = [];
+    let size = 0;
+    while (true) {
+      // A fresh interrupt promise avoids accumulating Promise.race reactions on
+      // one pending abort promise for every tiny chunk.
+      const interrupt = new Promise<never>((_, reject) => { rejectRead = reject; });
+      let next: ReadableStreamReadResult<Uint8Array>;
+      try { next = await Promise.race([reader.read(), interrupt]); }
+      finally { rejectRead = undefined; }
+      if (interrupted) throw new ChatBodyError('timeout', 504);
+      if (next.done) break;
+      if (next.value.byteLength > maxBytes - size) throw new ChatBodyError('request_too_large', 413);
+      // Copy immediately: never retain a network view or its possibly larger backing
+      // buffer. The number of stored blocks is at most ceil(maxBytes / blockSize),
+      // even for one-byte or empty input chunks.
+      let offset = 0;
+      while (offset < next.value.byteLength) {
+        const blockIndex = Math.floor(size / blockSize);
+        const blockOffset = size % blockSize;
+        if (!blocks[blockIndex]) blocks.push(new Uint8Array(Math.min(blockSize, maxBytes - size)));
+        const count = Math.min(next.value.byteLength - offset, blocks[blockIndex].length - blockOffset);
+        blocks[blockIndex].set(next.value.subarray(offset, offset + count), blockOffset);
+        offset += count; size += count;
+      }
+    }
+    const bytes = new Uint8Array(size);
+    for (let index = 0; index < blocks.length; index++) {
+      bytes.set(blocks[index].subarray(0, Math.min(blocks[index].length, size - index * blockSize)), index * blockSize);
+    }
+    return bytes;
+  } catch (error) {
+    // Do not await untrusted stream cancellation: it may itself never settle.
+    if (reader) void reader.cancel(error).catch(() => {});
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    for (const source of signals) source.removeEventListener('abort', stop);
+    reader?.releaseLock();
+  }
+}
+
 // Internal chat adapter. The browser contract remains the Responses API.
 type ProtocolJson = Record<string, unknown>;
 type ChatProtocol = 'responses' | 'messages' | 'chat';
@@ -527,39 +603,22 @@ async function getProfile(userId: string) {
   return rows[0] || null;
 }
 
-// 与 club-drive（管理员总览 / 社员后台）保持同一套判定：
-// 1) club_super_admins 表里存在该用户 → 超管
-// 2) 迁移窗口：表为空时，初始超管邮箱仍可进入，避免两个后台结论矛盾
-// 3) 表读取失败时，只对初始超管邮箱放行（fail-safe，不是任意放行）
-const BOOTSTRAP_SUPER_ADMIN_EMAILS = new Set([
-  'haimingadmin@club.local',
-  'collen@club.local'
-]);
-
-async function isDynamicSuperAdmin(userId: string, email?: string | null): Promise<boolean> {
-  const normalizedEmail = String(email || '').toLowerCase();
-  let rows: Array<{ user_id: string }> = [];
+// Chat 管理权限与 SQL chat_quota_assert_admin 一致：仅信任动态 user_id 名单。
+// 名单为空、缺失或读取失败均关闭权限；初始管理员邮箱不构成授权。
+async function isDynamicSuperAdmin(userId: string): Promise<boolean> {
   try {
-    rows = await restJson<Array<{ user_id: string }>>(
+    const rows = await restJson<Array<{ user_id: string }>>(
       `club_super_admins?user_id=eq.${encodeURIComponent(userId)}&select=user_id&limit=1`
     );
+    return Array.isArray(rows) && rows.length === 1 && rows[0]?.user_id === userId;
   } catch (_error) {
-    // 表不可读：只放行初始超管邮箱，其余一律拒绝。
-    return BOOTSTRAP_SUPER_ADMIN_EMAILS.has(normalizedEmail);
-  }
-  if (rows.length === 1) return true;
-  if (!BOOTSTRAP_SUPER_ADMIN_EMAILS.has(normalizedEmail)) return false;
-  try {
-    const all = await restJson<Array<{ user_id: string }>>('club_super_admins?select=user_id&limit=1');
-    return all.length === 0;
-  } catch (_error) {
-    return true;
+    return false;
   }
 }
 
 async function context(request: Request, admin = false): Promise<RequestContext> {
   const user = await verifyBearer(request);
-  const isAdmin = admin ? await isDynamicSuperAdmin(user.id, user.email) : false;
+  const isAdmin = admin ? await isDynamicSuperAdmin(user.id) : false;
   if (admin && !isAdmin) throw new HttpError('admin', 403);
   const profile = await getProfile(user.id);
   if (!admin && !profile) throw new HttpError('profile', 403);
@@ -1373,15 +1432,13 @@ async function handle(request: Request): Promise<Response> {
   if (origin && !isAllowedOrigin(origin)) return errorResponse(request, 'cors', 403);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(request) });
   if (request.method !== 'POST') return errorResponse(request, 'method', 405);
-  const length = Number(request.headers.get('content-length') || 0);
-  if (length > MAX_REQUEST_BYTES) return errorResponse(request, 'request_too_large', 413);
   try {
-    const raw = await request.text();
-    if (encoder.encode(raw).byteLength > MAX_REQUEST_BYTES) throw new HttpError('request_too_large', 413);
+    const bytes = await readChatBody(request, { maxBytes: MAX_REQUEST_BYTES, timeoutMs: 10000 });
     let parsed: unknown;
-    try { parsed = JSON.parse(raw); } catch { throw new HttpError('input', 400); }
+    try { parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); } catch { throw new HttpError('input', 400); }
     return await main(request, object(parsed));
   } catch (error) {
+    if (error instanceof ChatBodyError) return errorResponse(request, error.code, error.status);
     if (error instanceof HttpError || error instanceof ProxyError || error instanceof ChatProtocolError) return errorResponse(request, error.message, error.status);
     return errorResponse(request, 'server', 500);
   }
