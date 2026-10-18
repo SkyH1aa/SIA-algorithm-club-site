@@ -125,12 +125,23 @@ function estimateInputTokens(input) {
   }
   return tokens;
 }
+function endpointProtocol(pathname) {
+  if (/(?:^|\/)chat\/completions\/?$/i.test(pathname)) return 'chat-completions';
+  if (/(?:^|\/)(?:messages|message)\/?$/i.test(pathname)) return 'messages';
+  return 'responses';
+}
+function endpointURL(baseUrl, protocol = endpointProtocol(new URL(baseUrl).pathname)) {
+  const url = new URL(baseUrl);
+  const parent = url.pathname.replace(/\/+$/,'').replace(/\/(?:responses|messages|message|chat\/completions)$/i,'');
+  url.pathname = `${parent}/${protocol === 'chat-completions' ? 'chat/completions' : protocol}`;
+  return url.href;
+}
 function providerConfig(payload) {
   requireThat(payload.id == null || uuid(payload.id));
   let url;
   try { url = new URL(payload.base_url); } catch { throw new MockError('provider_url'); }
   // Syntactic check only; no DNS lookup and no connection is ever made.
-  requireThat(url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash && (!url.port || url.port === '443') && !/(^|\/)responses\/?$/i.test(url.pathname),'provider_url');
+  requireThat(url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash && (!url.port || url.port === '443'),'provider_url');
   requireThat(!/^(localhost|.*\.localhost|.*\.local|.*\.invalid|.*\.test|.*\.internal)$/i.test(url.hostname) && !/^(127|10|0|192\.168|169\.254)\./.test(url.hostname) && !url.hostname.includes(':'),'provider_url');
   const name = text(payload.secret_name,90,true);
   requireThat(/^CHAT_KEY_[A-Z0-9_]{1,80}$/.test(name),'secret_name');
@@ -179,7 +190,7 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
         requireThat(payload.id === null || uuid(payload.id)); requireThat(typeof payload.enabled === 'boolean');
         const current = payload.id === null ? {version:0} : proxyRow(proxyRoutes,payload.id); checkVersion(payload,current);
         const config = providerConfig(payload);
-        requireThat(!/(^|\/)(response|chat\/completions|models)\/?$/i.test(new URL(config.base_url).pathname),'provider_url');
+        requireThat(!/(^|\/)(response|models)\/?$/i.test(new URL(config.base_url).pathname),'provider_url');
         const route = {id:config.id,name:config.name,base_url:config.base_url,secret_name:config.secret_name,enabled:config.enabled,version:current.version+1,created_at:current.created_at || timestamp,updated_at:timestamp};
         upsert(proxyRoutes,route); return {route};
       }
@@ -204,45 +215,82 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
       }
     }
   }
-  function proxyResponse(req,res,payload,route,key,meta) {
+  function proxyResponse(req,res,payload,route,key,meta,protocol) {
     requireThat(typeof payload.model === 'string' && payload.model.length > 0 && payload.model.length <= 160,'input');
-    requireThat(typeof payload.input === 'string' || Array.isArray(payload.input),'input');
+    if (protocol === 'responses') requireThat(typeof payload.input === 'string' || Array.isArray(payload.input),'input');
+    else {
+      requireThat(Array.isArray(payload.messages) && payload.messages.length > 0 && payload.messages.every(message => message && ['system','developer','user','assistant','tool'].includes(message.role) && (typeof message.content === 'string' || Array.isArray(message.content))),'input');
+      if (protocol === 'messages') integer(payload.max_tokens,1,131072);
+    }
     requireThat(payload.stream === undefined || typeof payload.stream === 'boolean','input');
     requireThat([...proxyLeases.values()].filter(item => item.keyId === key.id).length < 2 && [...proxyLeases.values()].filter(item => item.routeId === route.id).length < 20,'rate_limit',429);
     const scenario = state.scenario;
     // Deterministic local-only failure fixture. Never echo a fabricated upstream body.
     if (scenario === 'failed') throw new MockError('upstream',502);
-    const response = {id:`mock-proxy-${meta.request_id}`,object:'response',model:payload.model,status:'completed',output:[{id:randomUUID(),type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:'MOCK proxy response; no upstream call.',annotations:[]}]}],usage:{input_tokens:1,output_tokens:1,total_tokens:2}};
-    if (!payload.stream) { meta.outcome = 'completed'; json(res,response); return; }
+    const answer = 'MOCK proxy response; no upstream call.', id = `mock-proxy-${meta.request_id}`;
+    const status = scenario === 'incomplete' ? 'incomplete' : 'completed';
+    const response = protocol === 'messages'
+      ? {id,type:'message',role:'assistant',model:payload.model,content:[{type:'text',text:answer}],stop_reason:status === 'incomplete' ? 'max_tokens' : 'end_turn',stop_sequence:null,usage:{input_tokens:1,output_tokens:1}}
+      : protocol === 'chat-completions'
+        ? {id,object:'chat.completion',created:Math.floor(now().getTime()/1000),model:payload.model,choices:[{index:0,message:{role:'assistant',content:answer},finish_reason:status === 'incomplete' ? 'length' : 'stop'}],usage:{prompt_tokens:1,completion_tokens:1,total_tokens:2}}
+        : {id,object:'response',model:payload.model,status,output:[{id:randomUUID(),type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:answer,annotations:[]}]}],usage:{input_tokens:1,output_tokens:1,total_tokens:2},...(status === 'incomplete' ? {incomplete_details:{reason:'max_output_tokens'}} : {})};
+    if (!payload.stream) { meta.outcome = status; json(res,response); return; }
     let timer, ended = false;
     const finish = outcome => { if (ended) return; ended = true; clearInterval(timer); proxyLeases.delete(meta.request_id); meta.outcome = outcome; };
     proxyLeases.set(meta.request_id,{keyId:key.id,routeId:route.id,cancel:() => { finish('cancelled'); res.destroy(); }});
     res.on('close',() => finish('cancelled'));
     res.writeHead(200,{'content-type':'text/event-stream; charset=utf-8','cache-control':'no-store','connection':'keep-alive'}); res.flushHeaders();
-    const event = data => res.write(`event: ${data.type}\ndata: ${JSON.stringify(data)}\n\n`);
-    event({type:'response.created',response:{...response,status:'in_progress',output:[]}});
+    const event = data => res.write(`${protocol === 'chat-completions' ? '' : `event: ${data.type}\n`}data: ${JSON.stringify(data)}\n\n`);
+    const chunk = (delta,finish_reason = null) => ({id,object:'chat.completion.chunk',created:response.created,model:payload.model,choices:[{index:0,delta,finish_reason}]});
+    if (protocol === 'messages') {
+      event({type:'message_start',message:{...response,content:[],stop_reason:null,usage:{input_tokens:1,output_tokens:0}}});
+      event({type:'content_block_start',index:0,content_block:{type:'text',text:''}});
+    } else if (protocol === 'chat-completions') event(chunk({role:'assistant',content:''}));
+    else event({type:'response.created',response:{...response,status:'in_progress',output:[]}});
+    const chunks = ['MOCK ','proxy response; ','no upstream call.'];
     let index = 0;
     timer = setInterval(() => {
       if (ended) return;
-      event({type:'response.output_text.delta',output_index:0,content_index:0,delta:'MOCK '}); index++;
+      const delta = chunks[index++];
+      if (protocol === 'messages') event({type:'content_block_delta',index:0,delta:{type:'text_delta',text:delta}});
+      else if (protocol === 'chat-completions') event(chunk({content:delta}));
+      else event({type:'response.output_text.delta',output_index:0,content_index:0,delta});
       if (scenario === 'interrupted' && index === 1) { finish('interrupted'); res.end(); return; }
-      if (index < 3) return;
-      const status = scenario === 'incomplete' ? 'incomplete' : 'completed';
-      event({type:`response.${status}`,response:{...response,status}}); finish(status); res.end('data: [DONE]\n\n');
+      if (index < chunks.length) return;
+      if (protocol === 'messages') {
+        event({type:'content_block_stop',index:0});
+        event({type:'message_delta',delta:{stop_reason:response.stop_reason,stop_sequence:null},usage:{output_tokens:1}});
+        event({type:'message_stop'});
+      } else if (protocol === 'chat-completions') {
+        event(chunk({},response.choices[0].finish_reason));
+        if (payload.stream_options?.include_usage) event({...chunk({}),choices:[],usage:response.usage});
+      } else event({type:`response.${status}`,response});
+      finish(status); res.end(protocol === 'messages' ? '' : 'data: [DONE]\n\n');
     },scenario === 'slow' ? 1500 : 25);
   }
-  async function proxy(req,res,routeId) {
-    const meta = {mock:true,request_id:randomUUID(),endpoint:'chat-api-proxy',route_id:routeId,outcome:'received'}; record(meta);
+  async function proxy(req,res,routeId,protocol) {
+    const meta = {mock:true,request_id:randomUUID(),endpoint:'chat-api-proxy',protocol,route_id:routeId,outcome:'received'}; record(meta);
     try {
       requireThat(req.method === 'POST','method',405);
-      const authorization = req.headers.authorization || '';
-      requireThat(/^Bearer cap_[A-Za-z0-9_-]{43}$/.test(authorization),'proxy_key',401);
-      const candidate = digest(authorization.slice(7));
+      const authorization = req.headers.authorization, nativeKey = req.headers['x-api-key'];
+      const bearerKey = typeof authorization === 'string' && /^Bearer cap_[A-Za-z0-9_-]{43}$/.test(authorization) ? authorization.slice(7) : null;
+      requireThat(authorization === undefined || bearerKey,'proxy_key',401);
+      requireThat(nativeKey === undefined || (protocol === 'messages' && typeof nativeKey === 'string' && /^cap_[A-Za-z0-9_-]{43}$/.test(nativeKey)),'proxy_key',401);
+      requireThat(bearerKey || nativeKey,'proxy_key',401);
+      requireThat(!bearerKey || !nativeKey || bearerKey === nativeKey,'proxy_key',401);
+      const candidate = digest(bearerKey || nativeKey);
       const key = proxyKeys.find(item => timingSafeEqual(item.hash,candidate));
       requireThat(key && key.route_id === routeId && key.enabled && !key.revoked_at,'proxy_key',401);
       const route = proxyRoutes.find(item => item.id === routeId); requireThat(route?.enabled,'route_disabled',403);
+      // Record only the resolved path; no host, credentials, request body, or upstream fetch.
+      meta.upstream_path = new URL(endpointURL(route.base_url,protocol)).pathname;
+      if (protocol === 'messages') {
+        const version = req.headers['anthropic-version'] ?? '2023-06-01';
+        requireThat(typeof version === 'string' && /^20\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/.test(version) && Number.isFinite(Date.parse(version)) && new Date(version).toISOString().slice(0,10) === version,'header');
+        meta.anthropic_version = version;
+      }
       const {payload,bytes} = await body(req); meta.request_bytes = bytes;
-      proxyResponse(req,res,payload,route,key,meta);
+      proxyResponse(req,res,payload,route,key,meta,protocol);
     } catch (error) { meta.outcome = error instanceof MockError ? error.message : 'server'; throw error; }
   }
   let globalQuota, userQuotas, blacklist, counters, customModels;
@@ -300,7 +348,7 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
     const inputEstimate = estimateInputTokens(input);
     const reservation = reserve(account.id,inputEstimate,requested), max = reservation.max;
     const scenario = state.scenario, requestId = meta.request_id;
-    Object.assign(meta,{model_id:model.id,max_output_tokens:max,reasoning_effort:effort == null ? null : model.reasoning_efforts.includes(effort) ? effort : 'custom',scenario});
+    Object.assign(meta,{model_id:model.id,max_output_tokens:max,reasoning_effort:effort == null ? null : model.reasoning_efforts.includes(effort) ? effort : 'custom',scenario,protocol:endpointProtocol(new URL(provider.base_url).pathname)});
     const usage = {request_id:requestId,user_id:account.id,member_name:account.member_name,username:account.username || account.email || account.id,provider_name:provider.label || provider.name,model_name:model.display_name,action:payload.action,provider_id:provider.id,model_id:model.id,model_key:model.model_key,input_bytes:meta.request_bytes,max_output_tokens:max,reasoning_effort:meta.reasoning_effort,status:'upstream_started',upstream_status:200,input_tokens:null,output_tokens:null,total_tokens:null,error_code:null,started_at:new Date().toISOString(),finished_at:null};
     database.usage.unshift(usage);
     if (database.usage.length > 1000) database.usage.pop();
@@ -390,7 +438,7 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
           requireThat(!Object.hasOwn(payload,'api_key'),'input');
           requireThat(/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$/.test(String(payload.model_key ?? '').trim()),'input');
           const baseUrl = text(payload.base_url,512,true);
-          requireThat(/^https:\/\/jgezpvmlnhycxslqbwcx\.supabase\.co\/functions\/v1\/chat-api-proxy\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/?$/i.test(baseUrl),'proxy_url');
+          requireThat(/^https:\/\/jgezpvmlnhycxslqbwcx\.supabase\.co\/functions\/v1\/chat-api-proxy\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}(?:\/v1)?(?:\/(?:responses|messages|message|chat\/completions))?\/?$/i.test(baseUrl),'proxy_url');
           const version = integer(payload.expected_version,0,Number.MAX_SAFE_INTEGER);
           const existing = customModels.get(payload.id);
           requireThat(!existing || existing.user_id === account.id,'input',403);
@@ -489,8 +537,8 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
       const pathname = decodeURIComponent(new URL(req.url,origin).pathname);
       if (req.method === 'OPTIONS') { res.writeHead(204,{'allow':'GET, HEAD, POST, OPTIONS'}); res.end(); return; }
       if (pathname === '/') { res.writeHead(302,{location:'/setup'}); res.end(); return; }
-      const proxyPath = pathname.match(/^\/(?:functions\/v1|mock)\/chat-api-proxy\/([0-9a-f-]+)\/v1\/responses$/i);
-      if (proxyPath && uuid(proxyPath[1])) { await proxy(req,res,proxyPath[1]); return; }
+      const proxyPath = pathname.match(/^\/(?:functions\/v1|mock)\/chat-api-proxy\/([0-9a-f-]+)\/v1\/(responses|messages|message|chat\/completions)$/i);
+      if (proxyPath && uuid(proxyPath[1])) { await proxy(req,res,proxyPath[1],endpointProtocol(proxyPath[2])); return; }
       if (/^\/(?:functions\/v1|mock)\/chat-api-proxy(?:\/|$)/.test(pathname)) throw new MockError('not_found',404);
       if (pathname === '/mock/chat') { await chat(req,res); return; }
       if (pathname === '/mock/session' && req.method === 'GET') { json(res,publicState()); return; }
@@ -531,6 +579,19 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
 }
 
 async function selfTest() {
+  const providerBase = 'https://mock-provider.example.com';
+  for (const [suffix,protocol] of [['','responses'],['/v1','responses'],['/responses','responses'],['/messages','messages'],['/message','messages'],['/chat/completions','chat-completions']]) {
+    for (const prefix of ['', '/gateway/v1']) {
+      const base_url = providerBase+prefix+suffix;
+      assert.equal(providerConfig({name:'mock',base_url,secret_name:'CHAT_KEY_MOCK'}).base_url,base_url);
+      assert.equal(endpointProtocol(new URL(base_url).pathname),protocol);
+      assert.equal(new URL(endpointURL(base_url)).pathname,`${(prefix+suffix).replace(/\/(responses|messages|message|chat\/completions)$/,'')}/${protocol === 'chat-completions' ? 'chat/completions' : protocol}`);
+      assert.equal(new URL(endpointURL(base_url,'messages')).pathname,`${(prefix+suffix).replace(/\/(responses|messages|message|chat\/completions)$/,'')}/messages`);
+    }
+  }
+  assert.equal(endpointProtocol('/v1/messages/extra'),'responses','infer exact terminal endpoint only');
+  assert.equal(endpointProtocol('/v1/chat/completions/extra'),'responses');
+  for (const base_url of ['http://mock-provider.example.com/v1/messages','https://localhost/v1/responses','https://mock-provider.example.com/v1/message?key=x','https://mock-provider.example.com/v1/chat/completions#fragment','https://user:password@mock-provider.example.com/v1/responses']) assert.throws(() => providerConfig({name:'mock',base_url,secret_name:'CHAT_KEY_MOCK'}),/provider_url/);
   let clock = new Date('2026-10-18T23:59:00Z');
   const server = createMockServer({testPort:true,now:() => clock});
   await new Promise((resolve,reject) => { server.once('error',reject); server.listen(0,'127.0.0.1',resolve); });
@@ -603,6 +664,13 @@ async function selfTest() {
     assert.equal(row.provider_id,providerId); assert.equal(row.model_key,model.model_key);
     assert.equal(row.action,'admin_test'); assert.equal(row.status,'completed');
     assert.ok(row.request_id && row.started_at && row.finished_at); assert.ok(row.total_tokens > 0);
+    for (const suffix of ['responses','messages','message','chat/completions']) {
+      assert.equal((await post({...provider,id:PROVIDER_ID,base_url:`${providerBase}/v1/${suffix}`,auth_header:suffix.startsWith('message') ? 'x-api-key' : 'authorization'})).status,200);
+      const normalized = await readResponses((await post({action:'admin_test',model_id:MODEL_ID,prompt:'native fixture'})).body,()=>{});
+      assert.equal(normalized.status,'success','internal endpoint inference preserves Responses UI contract');
+      const recent = (await (await get('/mock/requests')).json()).requests.at(-1);
+      assert.equal(recent.protocol,endpointProtocol(suffix));
+    }
     const logs = await (await get('/mock/requests')).json();
     for (const action of ACTION_ALIASES.values()) {
       assert.ok(logs.requests.some(item => item.action === action && item.account === 'member' && item.outcome === 'admin'));
@@ -690,10 +758,85 @@ async function selfTest() {
     const proxyRequest = (payload = {model:'client-model-unchanged',input:'mock only'}, apiKey = issued.api_key, resource = endpoint, options = {}) => localFetch(base+resource,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${apiKey}`},body:JSON.stringify(payload),...options});
     assert.equal((await proxyRequest(undefined,'cap_'+'x'.repeat(43))).status,401);
     assert.equal((await proxyRequest(undefined,state.session.access_token)).status,401);
-    for (const suffix of ['models','chat/completions','responses/id','response']) assert.equal((await proxyRequest(undefined,issued.api_key,endpoint.replace(/responses$/,suffix))).status,404);
+    for (const suffix of ['models','responses/id','response','messages/id','chat/completions/id','v1/responses']) assert.equal((await proxyRequest(undefined,issued.api_key,endpoint.replace(/responses$/,suffix))).status,404);
     assert.equal((await localFetch(base+endpoint)).status,405);
     let proxyResult = await (await proxyRequest()).json(); assert.equal(proxyResult.model,'client-model-unchanged');
     assert.equal((await proxyRequest(undefined,issued.api_key,endpoint.replace('/functions/v1/','/mock/'))).status,200);
+    const clubBase = `https://jgezpvmlnhycxslqbwcx.supabase.co/functions/v1/chat-api-proxy/${route.id}`;
+    for (const prefix of ['', '/v1']) {
+      for (const suffix of ['', '/responses','/messages','/message','/chat/completions']) {
+        const custom = {action:'custom_model_save',id:randomUUID(),display_name:'MOCK custom',model_key:'custom-model',base_url:clubBase+prefix+suffix,expected_version:0};
+        const response = await post(custom); assert.equal(response.status,200);
+        assert.equal((await response.json()).base_url,custom.base_url);
+      }
+    }
+    for (const suffix of ['/response','/models','/v1/v1/messages','/messages/extra','?key=x','#fragment']) {
+      assert.equal((await post({action:'custom_model_save',id:randomUUID(),display_name:'bad',model_key:'custom',base_url:clubBase+suffix,expected_version:0})).status,400);
+    }
+    const nativePayload = {model:'native-model-unchanged',messages:[{role:'user',content:'mock only'}],max_tokens:32};
+    const nativeRequest = (resource,payload = nativePayload,headers = {authorization:`Bearer ${issued.api_key}`}) => localFetch(base+resource,{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify(payload)});
+    for (const prefix of ['/functions/v1','/mock']) {
+      for (const version of ['', '/v1']) {
+        for (const suffix of ['responses','messages','message','chat/completions']) {
+          const resource = `${prefix}/chat-api-proxy/${route.id}${version}/${suffix}`, protocol = endpointProtocol(suffix);
+          const payload = protocol === 'responses' ? {model:'native-model-unchanged',input:'mock only'} : nativePayload;
+          const response = await nativeRequest(resource,payload);
+          if (!version) { assert.equal(response.status,404,'actual proxy endpoint requires /v1 even when a stored custom URL omits it'); continue; }
+          assert.equal(response.status,200);
+          const value = await response.json(); assert.equal(value.model,payload.model);
+          if (protocol === 'responses') assert.equal(value.object,'response');
+          else if (protocol === 'messages') { assert.equal(value.type,'message'); assert.equal(value.stop_reason,'end_turn'); assert.equal(value.content[0].type,'text'); }
+          else { assert.equal(value.object,'chat.completion'); assert.equal(value.choices[0].finish_reason,'stop'); }
+        }
+      }
+    }
+    const messagesEndpoint = endpoint.replace(/responses$/,'messages'), completionsEndpoint = endpoint.replace(/responses$/,'chat/completions');
+    for (const [resource,terminal] of [[messagesEndpoint,'message_stop'],[endpoint.replace(/responses$/,'message'),'message_stop'],[completionsEndpoint,'[DONE]']]) {
+      const response = await nativeRequest(resource,{...nativePayload,stream:true,stream_options:{include_usage:true}});
+      assert.match(response.headers.get('content-type'),/text\/event-stream/);
+      const sse = await response.text(); assert.ok(sse.includes(terminal));
+      const events = sse.split('\n').filter(line => line.startsWith('data: {')).map(line => JSON.parse(line.slice(6)));
+      const streamedText = events.map(event => event.delta?.text ?? event.choices?.[0]?.delta?.content ?? '').join('');
+      assert.equal(streamedText,'MOCK proxy response; no upstream call.','native deltas reproduce the JSON fixture text');
+      if (terminal === 'message_stop') {
+        for (const event of ['message_start','content_block_start','content_block_delta','content_block_stop','message_delta','message_stop']) assert.ok(sse.includes(`event: ${event}\n`));
+        assert.doesNotMatch(sse,/\[DONE\]|response\.completed/);
+      } else { assert.match(sse,/chat\.completion\.chunk/); assert.match(sse,/"prompt_tokens":1/); assert.doesNotMatch(sse,/event: /); }
+    }
+    const nativeHeaders = {'x-api-key':issued.api_key};
+    assert.equal((await nativeRequest(messagesEndpoint,nativePayload,nativeHeaders)).status,200);
+    for (const version of ['2023-06-01','2024-02-29','2000-02-29','2099-12-31']) assert.equal((await nativeRequest(messagesEndpoint,nativePayload,{...nativeHeaders,'anthropic-version':version})).status,200);
+    for (const version of ['bad-version','2023-02-29','2024-02-30','2024-04-31','2024-00-01','2024-13-01','2024-01-00','2024-01-32','1999-12-31','2100-01-01']) {
+      const response = await nativeRequest(messagesEndpoint,nativePayload,{...nativeHeaders,'anthropic-version':version});
+      assert.equal(response.status,400); assert.equal((await response.json()).error,'header');
+    }
+    assert.equal((await nativeRequest(messagesEndpoint,nativePayload,{...nativeHeaders,authorization:`Bearer ${issued.api_key}`})).status,200);
+    for (const headers of [{},{'x-api-key':state.session.access_token},{...nativeHeaders,authorization:'Bearer cap_'+'x'.repeat(43)},{...nativeHeaders,authorization:'Basic mock'},{authorization:`Bearer ${issued.api_key}`,'x-api-key':'bad'}]) assert.equal((await nativeRequest(messagesEndpoint,nativePayload,headers)).status,401);
+    assert.equal((await nativeRequest(completionsEndpoint,nativePayload,nativeHeaders)).status,401);
+    assert.equal((await nativeRequest(messagesEndpoint,{model:'x',input:'wrong protocol'},nativeHeaders)).status,400);
+    assert.equal((await nativeRequest(completionsEndpoint,{model:'x',input:'wrong protocol'})).status,400);
+    assert.equal((await nativeRequest(messagesEndpoint,{...nativePayload,max_tokens:undefined},nativeHeaders)).status,400);
+    for (const suffix of ['responses','messages','message','chat/completions']) {
+      const configured = (await (await post({...routeInput,base_url:`${providerBase}/gateway/v1/${suffix}`})).json()).route;
+      assert.ok(configured);
+      const credentials = await (await post({action:'admin_proxy_key_create',route_id:configured.id,label:'native route'})).json();
+      assert.equal((await nativeRequest(messagesEndpoint.replace(route.id,configured.id),nativePayload,{'x-api-key':credentials.api_key})).status,200);
+      const recent = (await (await get('/mock/requests')).json()).requests.at(-1);
+      assert.equal(recent.upstream_path,'/gateway/v1/messages','explicit configured endpoint stripped before client endpoint selection');
+      assert.equal(recent.anthropic_version,'2023-06-01');
+    }
+    state = await setup('admin','incomplete');
+    for (const [resource,reason] of [[messagesEndpoint,'max_tokens'],[completionsEndpoint,'length']]) {
+      const response = await nativeRequest(resource,nativePayload); assert.equal(response.status,200);
+      const value = await response.json(); assert.equal(value.stop_reason ?? value.choices[0].finish_reason,reason);
+      assert.match(await (await nativeRequest(resource,{...nativePayload,stream:true})).text(),new RegExp(reason));
+    }
+    state = await setup('admin','interrupted');
+    for (const resource of [messagesEndpoint,completionsEndpoint]) {
+      const sse = await (await nativeRequest(resource,{...nativePayload,stream:true})).text();
+      assert.doesNotMatch(sse,/message_stop|\[DONE\]/);
+    }
+    state = await setup('admin');
     const otherRoute = (await (await post({...routeInput,name:'Other'})).json()).route;
     assert.equal((await proxyRequest(undefined,issued.api_key,endpoint.replace(route.id,otherRoute.id))).status,401);
     assert.equal((await proxyRequest({model:'x',input:'x'.repeat(LIMIT)})).status,413);
@@ -742,6 +885,7 @@ async function selfTest() {
     assert.ok(!JSON.stringify(proxyLogs).includes(issued.api_key));
     state = await setup('admin','completed',true);
     assert.deepEqual(await (await post({action:'admin_proxy_list'})).json(),{routes:[],keys:[]});
+    console.log('Chat native protocol self-test passed: Responses/Chat Completions/Claude Messages JSON and SSE, exact endpoint inference, message alias normalization, optional /v1 custom URLs, client endpoint selection, native cap_ auth, matching dual credentials, Claude version defaults/validation and incomplete/interrupted fixtures.');
     console.log('Chat proxy self-test passed: admin contracts, safe metadata, one-time 32-byte keys, hash-only storage, versions, route binding, JSON/SSE, model preservation, 401/403/404/405/413/429/502, cancellation, quota/blacklist/session independence, revocation, URL rewrite and reset.');
     console.log('Chat quota/blacklist self-test passed: strict admin auth, directory UUIDs, own snapshot, null/zero/max bounds, version conflicts, both route reservations/headers, UTC day/week/month rollover, no-usage retention, blacklist gates and reset.');
     console.log('Chat mock HTTP self-test passed: local SDK/URL/CSP, fixtures, catalog, permissions, multi-turn SSE, terminal states, cancellation/lease, account switch, admin save/disable/test/usage, redacted metadata, reset and traversal/origin guards.');

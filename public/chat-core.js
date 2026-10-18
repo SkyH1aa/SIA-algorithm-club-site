@@ -53,13 +53,102 @@ export function buildContext(turns, model, outputTokens, prefix = []) {
   return {input: [...prefixItems, ...selected.flat()], truncated};
 }
 
-export function createSSEParser(onEvent) {
+// The URL is the protocol setting; no extra profile/schema field is needed.
+export function chatEndpoint(value, custom = false) {
+  const url = new globalThis.URL(value);
+  const path = url.pathname.replace(/\/+$/, '');
+  let protocol = 'responses', endpoint = path;
+  if (/\/messages?$/i.test(path)) {
+    protocol = 'messages'; endpoint = path.replace(/messages?$/i, 'messages');
+  } else if (/\/chat\/completions$/i.test(path)) protocol = 'chat_completions';
+  else if (!/\/responses$/i.test(path)) endpoint += custom && !/\/v1$/i.test(path) ? '/v1/responses' : '/responses';
+  url.pathname = endpoint;
+  return {url:url.href, protocol};
+}
+
+export function nativeRequest(body, protocol) {
+  if (protocol === 'responses') return {...body, stream:true};
+  if (!['messages','chat_completions'].includes(protocol)) throw new Error('request');
+  const messages = [], system = [];
+  const input = typeof body.input === 'string' ? [{role:'user',content:body.input}] : body.input;
+  if (!Array.isArray(input)) throw new Error('request');
+  const items = body.instructions ? [{role:'system',content:body.instructions}, ...input] : input;
+  for (const item of items) {
+    // Responses encrypted state cannot be replayed as Claude thinking or chat reasoning.
+    if (item.type === 'reasoning' || item.encrypted_content || !['user','assistant','system','developer'].includes(item.role) || (item.type && item.type !== 'message')) throw new Error('request');
+    const parts = typeof item.content === 'string' ? [{type:'input_text',text:item.content}] : item.content;
+    if (!Array.isArray(parts)) throw new Error('request');
+    const content = parts.map(part => {
+      if (['input_text','output_text'].includes(part.type) && typeof part.text === 'string') return {type:'text',text:part.text};
+      if (item.role !== 'user') throw new Error('file');
+      if (part.type === 'input_image') {
+        if (protocol === 'chat_completions') return {type:'image_url',image_url:{url:part.image_url,detail:part.detail || 'auto'}};
+        const match = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(part.image_url);
+        if (!match) throw new Error('file');
+        return {type:'image',source:{type:'base64',media_type:match[1],data:match[2]}};
+      }
+      if (part.type === 'input_file') {
+        const match = /^data:application\/pdf;base64,([A-Za-z0-9+/]+={0,2})$/.exec(part.file_data);
+        if (!match) throw new Error('pdf');
+        return protocol === 'messages' ? {type:'document',source:{type:'base64',media_type:'application/pdf',data:match[1]}} : {type:'file',file:{filename:part.filename || 'document.pdf',file_data:part.file_data}};
+      }
+      throw new Error('request');
+    });
+    if (protocol === 'messages' && ['system','developer'].includes(item.role)) system.push(...content);
+    else {
+      const role = protocol === 'messages' ? item.role : item.role === 'developer' ? 'system' : item.role;
+      const previous = messages.at(-1);
+      if (protocol === 'messages' && previous?.role === role) previous.content.push(...content);
+      else messages.push({role,content});
+    }
+  }
+  const result = {model:body.model,messages,stream:true};
+  if (protocol === 'messages') {
+    result.max_tokens = body.max_output_tokens;
+    if (system.length) result.system = system;
+    // Vendor-specific thinking knobs have no safe generic mapping from Responses effort.
+    if (body.reasoning?.effort && body.reasoning.effort !== 'none') throw new Error('request');
+  } else {
+    result.max_completion_tokens = body.max_output_tokens;
+    result.stream_options = {include_usage:true};
+    if (body.reasoning?.effort) result.reasoning_effort = body.reasoning.effort;
+  }
+  return result;
+}
+
+function nativeOutput(text) {
+  return text ? [{type:'message',role:'assistant',content:[{type:'output_text',text,annotations:[]}]}] : [];
+}
+function nativeStatus(reason, protocol) {
+  if (['length','max_tokens','model_context_window_exceeded'].includes(reason)) return 'incomplete';
+  if ((protocol === 'messages' ? ['end_turn','stop_sequence'] : ['stop']).includes(reason)) return 'success';
+  return 'failure';
+}
+function nativeUsage(usage, protocol, previous = null) {
+  if (!usage) return previous;
+  const input = protocol === 'messages' ? (usage.input_tokens ?? previous?.input_tokens ?? 0) + (usage.cache_creation_input_tokens || 0) + (usage.cache_read_input_tokens || 0) : usage.prompt_tokens || 0;
+  const output = usage.output_tokens ?? usage.completion_tokens ?? previous?.output_tokens ?? 0;
+  return {input_tokens:input,output_tokens:output,total_tokens:protocol === 'messages' ? input + output : usage.total_tokens ?? input + output};
+}
+export function normalizeChatResponse(data, protocol = 'responses') {
+  if (protocol === 'responses') {
+    const response = data.response || data, output = response.output || [];
+    return {text:response.output_text || response.text || output.flatMap(item => item.content || []).map(part => part.text || '').join(''),output,usage:response.usage || null,status:data.error || ['failed','cancelled'].includes(response.status) ? 'failure' : response.status === 'incomplete' ? 'incomplete' : 'success'};
+  }
+  const choice = data.choices?.find(item => item.index === 0) || data.choices?.[0];
+  const text = protocol === 'messages' ? (data.content || []).filter(part => part.type === 'text').map(part => part.text).join('') : typeof choice?.message?.content === 'string' ? choice.message.content : '';
+  const unsupported = protocol === 'messages' ? (data.content || []).some(part => ['tool_use','server_tool_use'].includes(part.type)) : choice?.message?.tool_calls || choice?.message?.function_call;
+  return {text,output:nativeOutput(text),usage:nativeUsage(data.usage,protocol),status:data.error || unsupported ? 'failure' : nativeStatus(protocol === 'messages' ? data.stop_reason : choice?.finish_reason,protocol)};
+}
+
+export function createSSEParser(onEvent, onDone = () => {}) {
   let buffer = '', event = '', data = [];
   function line(value) {
     if (value === '') {
       if (data.length) {
         const raw = data.join('\n');
-        if (raw !== '[DONE]') onEvent(JSON.parse(raw), event);
+        if (raw === '[DONE]') onDone();
+        else onEvent(JSON.parse(raw), event);
       }
       event = ''; data = [];
     } else if (!value.startsWith(':')) {
@@ -85,17 +174,51 @@ export function createSSEParser(onEvent) {
       }
       buffer = buffer.slice(start);
       if (eof && buffer) { line(buffer); buffer = ''; }
+      if (eof) line('');
     }
   };
 }
 
-export async function readResponses(stream, onUpdate) {
+export async function readResponses(stream, onUpdate = () => {}, protocol = 'responses') {
   const reader = stream.getReader(), decoder = new TextDecoder();
   const result = {text:'', output:[], status:'interrupted', usage:null};
-  let terminal = false;
-  const parser = createSSEParser(event => {
+  let terminal = false, finishReason = null, unsupported = false;
+  const blocks = new Map();
+  function updateNative() { result.output = nativeOutput(result.text); }
+  function finishNative() {
+    result.status = unsupported ? 'failure' : nativeStatus(finishReason, protocol);
+    terminal = true; updateNative(); onUpdate({...result});
+  }
+  const parser = createSSEParser((event, eventName) => {
     if (terminal) return;
-    const type = event.type;
+    const type = event.type || eventName;
+    if (protocol !== 'responses') {
+      if (type === 'error' || event.error) { result.status = 'failure'; terminal = true; }
+      else if (protocol === 'messages') {
+        if (type === 'message_start') {
+          result.usage = nativeUsage(event.message?.usage, protocol, result.usage);
+          for (const [index, block] of (event.message?.content || []).entries()) {
+            blocks.set(index, block.type === 'text' ? block.text || '' : '');
+            if (['tool_use','server_tool_use'].includes(block.type)) unsupported = true;
+          }
+        } else if (type === 'content_block_start') {
+          blocks.set(event.index, event.content_block?.type === 'text' ? event.content_block.text || '' : '');
+          if (['tool_use','server_tool_use'].includes(event.content_block?.type)) unsupported = true;
+        } else if (type === 'content_block_delta' && event.delta?.type === 'text_delta') blocks.set(event.index, (blocks.get(event.index) || '') + (event.delta.text || ''));
+        else if (type === 'message_delta') {
+          finishReason = event.delta?.stop_reason || finishReason;
+          result.usage = nativeUsage(event.usage, protocol, result.usage);
+        } else if (type === 'message_stop') { finishNative(); return; }
+        result.text = [...blocks.entries()].sort((a,b) => a[0] - b[0]).map(([,text]) => text).join('');
+      } else {
+        const choice = event.choices?.find(item => item.index === 0);
+        if (typeof choice?.delta?.content === 'string') result.text += choice.delta.content;
+        if (choice?.delta?.tool_calls || choice?.delta?.function_call) unsupported = true;
+        if (choice?.finish_reason) finishReason = choice.finish_reason;
+        result.usage = nativeUsage(event.usage, protocol, result.usage);
+      }
+      updateNative(); onUpdate({...result}); return;
+    }
     if (type === 'response.output_text.delta') result.text += event.delta || '';
     if (['response.completed','response.incomplete','response.failed','error'].includes(type)) {
       terminal = true;
@@ -106,13 +229,14 @@ export async function readResponses(stream, onUpdate) {
       if (full) result.text = full;
     }
     onUpdate({...result});
-  });
+  }, () => { if (!terminal && protocol === 'chat_completions' && finishReason) finishNative(); });
   try {
     while (true) {
       const {value, done} = await reader.read();
       parser.push(done ? decoder.decode() : decoder.decode(value, {stream:true}), done);
       if (done || terminal) break;
     }
+    if (!terminal && protocol === 'chat_completions' && finishReason) finishNative();
     if (terminal) await reader.cancel().catch(() => {});
     return result;
   } finally {

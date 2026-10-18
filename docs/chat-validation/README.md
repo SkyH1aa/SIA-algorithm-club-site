@@ -162,4 +162,24 @@ python tools/test-chat-quota-sql.py --dsn 'host=127.0.0.1 port=5432 dbname=postg
 
 SQL syntax-only 只做 pglast 解析，不验证事务或并发；真实 DSN 测试另需 psycopg、本地 PostgreSQL 与 CREATEDB/CREATEROLE 权限，会创建/删除随机测试数据库。本次未跑真实 PostgreSQL 集成，不声称并发通过。升级需先暂停旧 Edge 新请求并等待旧流结束，再完整主 SQL → Secrets → 两个 Edge（chat 与 chat-api-proxy）→ 前端；历史 `chat_usage` 不回填额度桶，新计量从新版 Edge admission 开始。
 
-本地 mock 只覆盖运行时协议，不能证明手动发布正确。发布前后要分别检查 Dashboard 中 `chat` 与 `chat-api-proxy` 的完整 standalone bundle：`docs/chat-deployment/chat-dashboard-index.ts` 和 `docs/chat-deployment/chat-api-proxy-dashboard-index.ts`，确认没有未解析的 `_shared` import，且修改源函数或 helper 后已重新同步。不要把 bundle、真实 key、service role key 或生产 proxy key 放入 fixture、日志或截图；不要为验证启动生产部署或发送付费上游请求。
+本地 mock 只覆盖运行时协议，不能证明手动发布正确。发布前后要分别检查 Dashboard 中 `chat` 与 `chat-api-proxy` 的完整 standalone bundle：`docs/chat-deployment/chat-dashboard-index.ts` 和 `docs/chat-deployment/chat-api-proxy-dashboard-index.ts`，确认没有未解析的 `_shared` import，且修改源函数或 helper 后已重新同步。用 `node tools/build-chat-dashboard-bundles.mjs` 重建，`node tools/build-chat-dashboard-bundles.mjs --check` 检查源文件一致性。不要把真实 key、service role key 或生产 proxy key 放入 fixture、日志或截图；不要为验证启动生产部署或发送付费上游请求。
+
+## 三种原生 API 协议
+
+本次仅增加协议功能，Chat 和管理页的 HTML/CSS 布局不变。供应商现有 Base URL 表单可填写 `/v1/responses`、`/v1/messages` 或 `/v1/chat/completions` 以选择协议；原有 `/v1` 默认 Responses。内部 Chat 与管理员测试输出仍为 Responses 事件，原生请求转换与用量结算在服务端完成；对外代理三条接口按原生 JSON/SSE 透传，不自动跨协议转换。
+
+验收应覆盖：原生 request body / header、文本和附件转换、system 前缀、碎片 UTF-8/SSE、终止状态、缺失用量、配额缩小输出预算、停止/中断、密钥隔离、Claude `x-api-key` 与冲突凭证、版本头、固定 custom URL 边界。Responses 加密 reasoning 无法跨协议保留，非 Responses 应拒绝该配置/内容。HTTP mock 支持各接口与别名，但生产适配器必须另跑真实 handler mocked integration。
+
+```bash
+node tools/test-chat-core.mjs
+node tools/test-chat-admin.mjs
+node tools/chat-mock-server.mjs --self-test
+python tools/test-chat-proxy-sql.py --syntax-only
+node tools/build-chat-file-bundle.mjs
+node tools/build-chat-dashboard-bundles.mjs
+node tools/build-chat-dashboard-bundles.mjs --check
+# 用已安装 Deno 执行，所有 fetch / DNS / Secrets 都由测试替身处理。
+deno run tools/test-chat-protocol.ts
+deno run --allow-env tools/test-chat-backend.ts
+deno run --allow-env tools/test-chat-api-proxy.ts
+```

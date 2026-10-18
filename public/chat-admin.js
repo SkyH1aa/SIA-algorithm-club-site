@@ -430,15 +430,19 @@ function fillProxyRoute(item) {
   $('proxyRouteName').value = item.name; $('proxyBaseUrl').value = item.base_url;
   $('proxySecretName').value = item.secret_name; $('proxyRouteEnabled').checked = item.enabled;
 }
+function validProviderUrl(value) {
+  const url = new URL(value);
+  const path = url.pathname.replace(/\/+$/, '');
+  const base = path.replace(/\/(?:responses|messages?|chat\/completions)$/i, '');
+  if (value.length > 2048 || url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || (url.port && url.port !== '443') || /%|\\/.test(path) || /(^|\/)(?:responses?|messages?|chat\/completions)(\/|$)/i.test(base)) throw new Error('provider_url');
+  return url;
+}
 function proxyRouteInput() {
   const body = {id: $('proxyRouteId').value || null, name: $('proxyRouteName').value.trim(), base_url: $('proxyBaseUrl').value.trim(), secret_name: $('proxySecretName').value.trim(), enabled: $('proxyRouteEnabled').checked, expected_version: proxyEditingVersion};
   if (!body.name || body.name.length > 120) throw new Error('input');
   if (!/^CHAT_KEY_[A-Z0-9_]{1,80}$/.test(body.secret_name)) throw new Error('secret_name');
-  try {
-    const url = new URL(body.base_url);
-    const path = decodeURIComponent(url.pathname);
-    if (body.base_url.length > 2048 || url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || (url.port && url.port !== '443') || /(^|\/)responses?(\/|$)/i.test(path)) throw new Error();
-  } catch { throw new Error('proxy_url'); }
+  try { validProviderUrl(body.base_url); }
+  catch { throw new Error('proxy_url'); }
   return body;
 }
 function proxyAction(attribute, id, label, danger = false) {
@@ -710,10 +714,8 @@ $('providerForm').addEventListener('submit', event => {
   const body = {id: $('providerId').value || null, name: $('providerName').value.trim(), label: $('providerLabel').value.trim(), base_url: $('providerBaseUrl').value.trim(), secret_name: $('providerSecretName').value.trim(), auth_header: $('providerAuthHeader').value, enabled: $('providerEnabled').checked};
   if (!body.name || body.name.length > 80 || body.label.length > 120) return setMessage('providerMessage', 'providerRequired', 'error');
   if (!/^CHAT_KEY_[A-Z0-9_]{1,80}$/.test(body.secret_name)) return setMessage('providerMessage', 'invalidSecret', 'error');
-  try {
-    const url = new URL(body.base_url);
-    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || (url.port && url.port !== '443') || /(^|\/)responses\/?$/i.test(url.pathname)) throw new Error();
-  } catch { return setMessage('providerMessage', 'invalidUrl', 'error'); }
+  try { validProviderUrl(body.base_url); }
+  catch { return setMessage('providerMessage', 'invalidUrl', 'error'); }
   void operation('providerMessage', async run => {
     setMessage('providerMessage', 'saving');
     await request(run, 'save_provider', body); assertCurrent(run);

@@ -75,14 +75,9 @@ https://<account>.github.io
 
 本地静态服务若运行在 4173 端口，则写 `http://localhost:4173`；如果使用其他端口，按实际 origin 修改。不要把 `https://<account>.github.io/<repository>/public`、`/chat.html` 或 Supabase Function URL 写进 `CHAT_CORS_ORIGINS`。
 
-Edge Function 已经自行校验 Bearer token，并通过 Supabase Auth `/auth/v1/user` 验证当前用户；因此部署时使用独立的函数配置：
+Edge Function 已经自行校验 Bearer token，并通过 Supabase Auth `/auth/v1/user` 验证当前用户。网页手动部署时，在两个函数的配置中关闭网关 JWT 验证（通常为 **Verify JWT with legacy secret** 或类似名称）并保存。这只关闭网关检查，函数内部仍保留身份与权限校验。
 
-```bash
-supabase functions deploy chat --no-verify-jwt
-supabase functions deploy chat-api-proxy --no-verify-jwt
-```
-
-`--no-verify-jwt` 只关闭 Supabase 网关的默认 JWT 校验，方便该函数返回统一的 CORS/错误响应；函数内部仍然必须验证 `Authorization: Bearer <user-access-token>`，并检查成员资料。不要把它理解为允许匿名调用。部署项目和设置 secrets 时按 Supabase CLI 当前登录账号与项目链接执行，避免把 key 直接写在命令历史中。
+不需要 PowerShell 或 Supabase CLI。直接使用 `docs/chat-deployment/README.md` 中的网页步骤；该目录提供完整 SQL 副本及两份可全文粘贴的 Edge 单文件。不要把真实 key 写进代码或命令历史。
 
 ## 4. 配置 provider
 
@@ -96,18 +91,20 @@ supabase functions deploy chat-api-proxy --no-verify-jwt
 
 - `name`：内部稳定名称。
 - `label`：页面显示名称。
-- `base_url`：供应商 Responses API 的版本根地址，必须是 HTTPS 公网 URL，例：`https://api.example.com/v1`。
+- `base_url`：供应商 HTTPS 公网地址。原有 `https://api.example.com/v1` 继续默认使用 Responses；填写具体端点可以选择协议。
 - `secret_name`：与 Edge Function secret 完全一致，例如 `CHAT_KEY_OPENAI`。
-- `auth_header`：选择 `authorization` 或 `x-api-key`，按供应商要求填写。
+- `auth_header`：按供应商要求选择 `authorization` 或 `x-api-key`。原生 Claude 应选择 `x-api-key`；Messages 请求自动带 `anthropic-version: 2023-06-01`。
 - `enabled`：上线前先保持关闭，完成配置和付费验收后再开启。
 
-`base_url` 不要包含 `/responses`。函数会在后端自动请求：
+现有表单和页面布局不变，通过 `base_url` 末尾路径识别内部 Chat 协议：
 
-```text
-<base_url>/responses
-```
+| 地址示例 | 协议 |
+| --- | --- |
+| `https://api.example.com/v1` 或 `https://api.example.com/v1/responses` | OpenAI Responses |
+| `https://api.anthropic.com/v1/messages` | Anthropic Messages（Claude） |
+| `https://api.example.com/v1/chat/completions` | OpenAI Chat Completions |
 
-因此应填写 `https://api.example.com/v1`，不要填写 `https://api.example.com/v1/responses`，也不要填写带查询参数、账号密码、私网地址或本地地址的 URL。函数会拒绝非 HTTPS、含凭据、含 query/hash、私网或不合规的 provider URL。
+`/v1/message` 作为输入别名会规范成 `/v1/messages`。Responses 的标准路径是 `/v1/responses`，不接受 `/v1/response`。不要填写查询参数、账号密码、私网地址或本地地址。函数继续拒绝非 HTTPS、含凭据、含 query/hash、私网或不合规的 provider URL。同一上游若需要多种协议，可在现有表单创建多个 provider，并分别填写具体端点；model 通过其 provider 选择协议。
 
 供应商更换 key 时，按以下顺序执行：
 
@@ -120,7 +117,7 @@ supabase functions deploy chat-api-proxy --no-verify-jwt
 
 ## 5. 配置 model 与兼容性
 
-在 Chat 管理页添加 model 时，按供应商实际 Responses API 能力填写：
+在 Chat 管理页添加 model 时，按所选 provider 的实际协议和模型能力填写：
 
 - `model_key`：供应商 API 接受的模型标识，不能只填页面昵称。
 - `display_name`：成员和管理员看到的名称。
@@ -128,14 +125,14 @@ supabase functions deploy chat-api-proxy --no-verify-jwt
 - `context_window`：模型上下文窗口上限，必须覆盖实际要发送的输入。
 - `max_output_tokens`：允许的最大输出 token。
 - `default_max_output_tokens`：普通请求默认输出 token，不能大于最大值。
-- `reasoning_efforts`：供应商实际支持的 reasoning effort 字符串数组；不支持时留空。
+- `reasoning_efforts`：供应商实际支持的 reasoning effort 字符串数组；不支持时留空。Chat Completions 仅接受适配器识别的 effort；Claude 当前将 `none` 关闭 thinking，`low/medium/high` 分别映射到 1024/4096/8192 的 thinking 预算，并在输出上限内缩小，输出预算必须大于 1024（额度缩小后也适用）。这不是所有 Claude 型号的统一能力声明，使用 adaptive-only 型号时应先留空并核对其原生参数。
 - `default_reasoning_effort`：可选默认 effort，必须包含在供应商支持的值内。
 - `supports_images`：只有模型确实接受 `input_image` 时才打开。
 - `supports_pdf`：只有模型确实接受 PDF `input_file` 时才打开。
 - `preserve_reasoning`：只有模型支持把返回的加密 reasoning 内容原样作为下一轮 assistant continuation 输入时才打开。
 - `enabled`：配置完成并通过低成本测试后再打开。
 
-当前前后端使用 Responses 风格的 `input`、`reasoning`、`max_output_tokens`、SSE 事件和 `/responses` 端点。兼容性不能只看供应商宣传的“Chat Completions 兼容”：必须确认供应商支持本项目实际发送的请求字段、`text/event-stream` 流式返回，以及 `response.output_text.delta`、`response.completed`、`response.incomplete`、`response.failed` 或 `error` 等终止事件。
+内部前端与服务端之间继续使用 Responses 风格的 `input` 和 SSE 事件；服务端按 provider 地址转换为原生 Messages / Chat Completions 请求，并归一化文本、终止状态和用量，管理员测试使用相同路径。现有会话无需迁移。上游必须支持其所选协议的真实流式返回；不能只凭“兼容”宣传判断能力。非 Responses 模型不能开启 `preserve_reasoning`，也不能混入已有的加密 reasoning 项；不兼容时明确拒绝，不静默丢弃。工具调用不能由内部 Chat 执行，仅有工具调用而无可用正文的回复会作为不支持的输出处理。对外代理则保持原生正文透传。
 
 `supports_images` 和 `supports_pdf` 是能力元数据：前端用它们控制附件入口，后端也会再次校验模型 capability、附件类型、大小和数量，因此不能通过数据库配置强行让不支持的模型接受附件。PDF 仅接受 `.pdf`，图片仅接受 png/jpeg/webp data URL。文本较多的 PDF 由浏览器抽取为 `input_text`；低文本或扫描型 PDF 在 `supports_pdf` 打开时走原生 `input_file`，由供应商自行解析，本项目不做 OCR。`preserve_reasoning` 错误打开会导致多轮请求被供应商拒绝或泄漏不兼容的 continuation 数据，应保持关闭直到实际验证通过。
 
@@ -148,7 +145,7 @@ supabase functions deploy chat-api-proxy --no-verify-jwt
 
 这不是前端隐藏功能。`catalog` 按当前用户过滤，`respond` 即使直接提交模型 UUID 也会在服务端重新检查 assignment，未授权返回 `403 model`；猜测、替换或伪造 UUID 不能绕过 assigned 限制。管理员的 `admin_test` 只绕过模型可见性检查以便测试配置，但仍要求管理员 JWT，并继续执行黑名单、额度、并发和上游校验。
 
-成员页的“添加社团代理模型”是另一条用户自有配置路径：仅保存显示名称、模型 ID 和固定社团 proxy 的 base URL 元数据。API key 不接受为 `custom_model_save` 的字段，不写入数据库、Supabase、IndexedDB、日志或 URL，只保存在当前页面内存；刷新页面、关闭标签页、切换设备或重新登录后必须重新输入。固定 proxy 只允许本站规定的 HTTPS host、route UUID 和 `/functions/v1/chat-api-proxy/<route-uuid>` 路径，客户端实际请求为该地址加 `/v1/responses`。
+成员页的“添加社团代理模型”是另一条用户自有配置路径：仅保存显示名称、模型 ID 和固定社团 proxy 的 base URL 元数据。API key 不接受为 `custom_model_save` 的字段，不写入数据库、Supabase、IndexedDB、日志或 URL，只保存在当前页面内存；刷新页面、关闭标签页、切换设备或重新登录后必须重新输入。固定 proxy 只允许本站规定的 HTTPS host 和 route UUID。`/functions/v1/chat-api-proxy/<route-uuid>`（可带 `/v1`）默认 Responses；填写末尾 `/v1/responses`、`/v1/messages` 或 `/v1/chat/completions` 可选择原生协议，也允许不带 `/v1` 的端点后缀。`/message` 是 `/messages` 的输入别名。浏览器按所选端点转换请求并解析返回，不允许任意供应商地址或查询参数。更新已有部署时必须重新执行本仓库 `supabase/club-chat-schema.sql`，同步已有 `chat_custom_models` 的命名 URL CHECK 约束与保存 RPC。
 
 所有 provider 或 model 都可以单独 disabled。供应商不可用、余额不足、接口兼容性变化或正在换 key 时，优先禁用对应 provider/model，并保留 usage 审计记录；不要删除历史配置来绕过问题。
 
@@ -280,10 +277,9 @@ API action 契约：`quota {}` 仅查询本人；`admin_user_directory {}` 返�
 
 ### 手动 Dashboard 部署与 standalone bundle
 
-本项目支持两种手动发布方式，二者都需要先执行完整的 `supabase/club-chat-schema.sql`，再设置 Edge secrets，并在函数内部保留认证校验：
+网页部署直接使用 `docs/chat-deployment/`：先把 `club-chat-schema.sql` 全文粘贴到 SQL Editor 运行，再设置 Edge Secrets，最后分别更新两个函数。详细步骤见该目录 `README.md`，无需 PowerShell 或 CLI。
 
-1. **Supabase Dashboard 编辑器**：打开 Edge Functions，分别创建/编辑 `chat` 和 `chat-api-proxy`，将仓库中的完整 standalone 文件粘贴到对应函数：`docs/chat-deployment/chat-dashboard-index.ts` → `chat`，`docs/chat-deployment/chat-api-proxy-dashboard-index.ts` → `chat-api-proxy`。Dashboard 编辑器不会自动上传 `_shared`，不能粘贴带 `../_shared` import 的源文件，也不能把两个 bundle 合并到一个函数。
-2. **CLI/独立 bundle**：将同样的 standalone 文件作为单文件函数源码发布，或在受控环境中按项目的函数发布流程上传对应函数目录。无论采用哪种方式，更新 `supabase/functions/chat/**`、`supabase/functions/chat-api-proxy/**` 或共享 helper 后，都必须重新生成/同步相应 bundle，并逐项检查 Dashboard 中保存的源码确实是最新版本。
+打开 Edge Functions，分别创建/编辑 `chat` 和 `chat-api-proxy`，将完整 standalone 文件粘贴到对应函数的 `index.ts`：`chat-dashboard-index.ts` → `chat`，`chat-api-proxy-dashboard-index.ts` → `chat-api-proxy`。Dashboard 编辑器不会自动上传 `_shared`，不能粘贴带 `../_shared` import 的源文件，也不能把两个 bundle 合并到一个函数。修改开发源文件或 helper 后，维护者需同步本目录产物；使用者直接粘贴已生成的完整文件即可。SQL 副本与完整主脚本一致，不要重复执行两个路径下的同一脚本。
 
 两个函数均可设置 `verify_jwt=false`（CLI 为 `--no-verify-jwt`），这只关闭 Supabase 网关的默认检查，绝不关闭函数自身的认证：`chat` 仍验证成员 JWT、资料绑定、动态超级管理员、模型 UUID assignment 和 quota/blacklist；proxy 仍验证 `cap_` key 哈希、route UUID 绑定、enabled/revoked 状态和并发租约。发布后手动在 Dashboard 核对源码、Secrets、RLS 和 service_role-only RPC 权限；仓库文件不能证明线上函数已经更新。
 
@@ -311,13 +307,13 @@ proxy key 格式为 `cap_` 加 **32 随机字节的 base64url**（43 字符，�
 
 ### 客户端 URL、浏览器直连与支持范围
 
-路由 `base_url` 填供应商 HTTPS 公网版本根地址（例 `https://api.example.com/v1`），不是 `/response` 或 `/responses`，不带凭据/query/hash。外部客户端使用本站 base：
+路由 `base_url` 填供应商 HTTPS 公网版本根地址（例 `https://api.example.com/v1`）；也可填写一个受支持的具体端点，服务端先去除该后缀，再按客户端原生接口选择路径。不带凭据/query/hash。外部客户端使用本站 base：
 
 ```text
 https://<project-ref>.supabase.co/functions/v1/chat-api-proxy/<route-uuid>/v1
 ```
 
-浏览器直连时也必须使用这个固定 proxy 地址，且只向 **POST `<base>/v1/responses`** 发请求；不能把供应商 URL、任意 Supabase Function URL、`/models`、`/chat/completions`、`/response` 或 `/responses/<id>` 暴露给成员页。前端 custom cloud 表单会固定校验 proxy origin、route UUID 和路径，并用 `Authorization: Bearer cap_...` 调用 `/v1/responses`；这不是供应商原生 API key，也不能通过修改模型 metadata 改成任意上游地址。
+代理提供三个原生 POST 接口：`<route-base>/v1/responses`、`<route-base>/v1/messages`、`<route-base>/v1/chat/completions`；`<route-base>/v1/message` 规范到 `/v1/messages`。`/models`、`/response` 和 `/responses/<id>` 等路径仍不开放。每种接口均支持 `Authorization: Bearer cap_...`；Messages 还支持 Anthropic SDK 的 `x-api-key: cap_...`，同时携带两种凭证时必须完全一致。客户端 key 仅用于社团代理准入；上游认证始终替换为路由 Secret，不转发客户端 key 或 Supabase 凭证。Messages 默认版本为 `2023-06-01`，支持显式合法日期版本及受限的 `anthropic-beta` 头。代理不把一种原生协议转换成另一种，上游必须实际提供所请求的接口。
 
 示例使用标准客户端 SDK 的 `responses.create`：
 
@@ -332,7 +328,31 @@ const response = await client.responses.create({model: 'supplier-model-id', inpu
 // stream:true 使用同一 create 入口，返回 SSE；不需要另一个 URL。
 ```
 
-代理不擅自改写 `model` 或其他 Responses 字段，JSON/SSE 由上游能力决定。不提供按 key 用量套餐、金额硬上限或模型 allowlist：客户端可请求任意上游接受的 model/output，不能把 Chat 额度误认为代理预算。默认在途上限为每 key 2、每 route 20，通过独立 SQL 租约准入（满额 429，租约不是 token 计费）；请求体过大返回 413。租约到期不代表取消已计费的供应商工作。
+```js
+// 同一个 OpenAI client 也可以调用 Chat Completions；上游需支持该接口。
+const completion = await client.chat.completions.create({
+  model: 'supplier-model-id', messages: [{role: 'user', content: 'Hello'}]
+});
+```
+
+Claude / Messages 客户端示例（仅文档，不自动执行）：
+
+```js
+import Anthropic from '@anthropic-ai/sdk';
+const claude = new Anthropic({
+  // Anthropic SDK 自动附加 /v1/messages；这里填不带 /v1 的 route base。
+  baseURL: process.env.CLUB_PROXY_ROUTE_BASE_URL,
+  apiKey: process.env.CLUB_PROXY_KEY
+});
+const message = await claude.messages.create({
+  model: 'claude-model-id', max_tokens: 1024,
+  messages: [{role: 'user', content: 'Hello'}]
+});
+```
+
+将 Claude 加入社团内 Chat：provider 地址填 Claude 或已授权供应商的原生 `/v1/messages` 地址，真实 key 只存 `CHAT_KEY_*` Secret，模型选择此 provider，关闭加密 reasoning 保留，认证选择 `x-api-key`。对外路由可另行指向同一上游并引用适当 Secret；内部 Chat 不回调本站代理，避免循环代理。内部 Chat 配额与对外代理租约保持独立。
+
+代理不擅自改写 `model` 或其他原生请求字段，JSON/SSE 由上游能力决定。不提供按 key 用量套餐、金额硬上限或模型 allowlist：客户端可请求任意上游接受的 model/output，不能把 Chat 额度误认为代理预算。默认在途上限为每 key 2、每 route 20，通过独立 SQL 租约准入（满额 429，租约不是 token 计费）；请求体过大返回 413。租约到期不代表取消已计费的供应商工作。
 
 ### 安全、转售与运行时限制
 

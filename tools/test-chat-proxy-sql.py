@@ -56,6 +56,19 @@ def main():
             actor, member = uuid.uuid4(), uuid.uuid4()
             db.execute('insert into auth.users(id) values (%s),(%s)', (actor, member))
             db.execute('insert into club_super_admins values (%s)', (actor,))
+            route_base = 'https://jgezpvmlnhycxslqbwcx.supabase.co/functions/v1/chat-api-proxy/' + str(uuid.uuid4())
+            for suffix in ('', '/v1', '/responses', '/v1/responses', '/messages', '/v1/messages', '/v1/message', '/chat/completions', '/v1/chat/completions'):
+                model_id = uuid.uuid4()
+                row = db.execute('select chat_custom_model_save(%s,%s,%s,%s,%s,%s)',
+                                 (member, model_id, 'Native model', 'model-id', route_base + suffix, 0)).fetchone()[0]
+                assert row['base_url'] == route_base + suffix
+            for suffix in ('/models', '/v1/response', '/v1/messages/extra', '?target=x'):
+                try:
+                    db.execute('select chat_custom_model_save(%s,%s,%s,%s,%s,%s)',
+                               (member, uuid.uuid4(), 'Invalid', 'model-id', route_base + suffix, 0))
+                    raise AssertionError('invalid native custom URL accepted')
+                except psycopg.errors.InvalidParameterValue:
+                    pass
             def rpc(fn, *values, conn=db):
                 return conn.execute(sql.SQL('select public.{}({})').format(sql.Identifier(fn), sql.SQL(',').join(sql.Placeholder() for _ in values)), values).fetchone()[0]
             def manage(action, data, who=actor, conn=db):

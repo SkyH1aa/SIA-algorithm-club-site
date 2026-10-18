@@ -205,9 +205,15 @@ assert.equal(run('JSON.stringify(proxyKeys).includes("MUST_NOT_RETAIN")'), false
 assert(node('proxyRoutesList').innerHTML.includes('&lt;route&gt;'));
 run('fillProxyRoute(routeFixture)');
 assert.equal(run('proxyRouteInput().expected_version'), 1);
-for (const url of ['https://example.com/response', 'https://example.com/responses/v1', 'https://example.com/%72esponses', 'http://example.com/v1', 'https://x:y@example.com/v1', 'https://example.com/v1?q=1', 'https://example.com:8443/v1']) {
+for (const url of ['https://example.com/response', 'https://example.com/responses/v1', 'https://example.com/%72esponses', 'https://example.com/v1/messages/extra', 'https://example.com/v1/chat/completions/extra', 'http://example.com/v1', 'https://x:y@example.com/v1', 'https://example.com/v1?q=1', 'https://example.com:8443/v1']) {
   node('proxyBaseUrl').value = url;
   assert.throws(() => run('proxyRouteInput()'), /proxy_url/);
+}
+for (const endpoint of ['', '/v1', '/v1/responses', '/v1/messages', '/v1/message', '/v1/chat/completions', '/messages', '/chat/completions']) {
+  const url = 'https://example.com' + endpoint;
+  node('proxyBaseUrl').value = url;
+  assert.equal(run('proxyRouteInput().base_url'),url,'proxy route endpoint remains in metadata');
+  assert.equal(run(`validProviderUrl(${JSON.stringify(url)}).href`),new URL(url).href,'provider endpoint is accepted by the same validator');
 }
 node('proxyBaseUrl').value = route.base_url;
 node('proxySecretName').value = 'sk-real-key';

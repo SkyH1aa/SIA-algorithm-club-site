@@ -1,4 +1,4 @@
-import {MAX_FILE_BYTES, MAX_REQUEST_BYTES, MAX_ATTACHMENTS, buildContext, estimateTokens, readResponses, continuation} from './chat-core.js';
+import {MAX_FILE_BYTES, MAX_REQUEST_BYTES, MAX_ATTACHMENTS, buildContext, estimateTokens, readResponses, continuation, chatEndpoint, nativeRequest, normalizeChatResponse} from './chat-core.js';
 import {chatStore} from './chat-store.js';
 
 const URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
@@ -14,8 +14,8 @@ let compacting = false;
 let statusKey = 'loading', statusVars = {}, gateKey = 'loading', attaching = false, catalogController = null;
 const customKeys = new Map();
 const CUSTOM_PROXY_ORIGIN = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
-const CUSTOM_PROXY_PATH = /^\/functions\/v1\/chat-api-proxy\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const CUSTOM_METADATA = Object.freeze({context_window:128000,max_output_tokens:8192,default_max_output_tokens:8192,reasoning_efforts:[],default_reasoning_effort:null,supports_images:true,supports_pdf:false,preserve_reasoning:false});
+const CUSTOM_PROXY_PATH = /^\/functions\/v1\/chat-api-proxy\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}(?:\/(?:v1(?:\/(?:responses|messages?|chat\/completions))?|responses|messages?|chat\/completions))?$/i;
+const CUSTOM_METADATA = Object.freeze({context_window:128000,max_output_tokens:8192,default_max_output_tokens:8192,reasoning_efforts:[],default_reasoning_effort:null,supports_images:true,supports_pdf:true,preserve_reasoning:false});
 const generations = new Set();
 const ICONS = {
   copy:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.1"/><path d="M5.5 15.5V6.5a2 2 0 0 1 2-2h8"/></svg>',
@@ -128,13 +128,14 @@ function customStatus(key = '', vars = {}) { customStatusKey = key; customStatus
 async function customRequest(item, body, signal) {
   const key = customKey(item);
   if (!key) throw new Error('customKey');
-  const response = await fetch(`${customUrl(item.base_url)}/v1/responses`, {method:'POST',headers:{'Content-Type':'application/json',Accept:'text/event-stream','Authorization':`Bearer ${key}`},body:JSON.stringify({...body,model:item.model_key,stream:true}),signal});
+  const endpoint = chatEndpoint(customUrl(item.base_url), true);
+  const payload = nativeRequest({...body,model:item.model_key,stream:true}, endpoint.protocol);
+  const serialized = JSON.stringify(payload);
+  if (new TextEncoder().encode(serialized).length > MAX_REQUEST_BYTES) throw new Error('request_too_large');
+  const response = await fetch(endpoint.url, {method:'POST',headers:{'Content-Type':'application/json',Accept:'text/event-stream','Authorization':`Bearer ${key}`},body:serialized,signal});
   if (!response.ok) throw new Error('request');
-  if (response.body && response.headers.get('content-type')?.includes('text/event-stream')) return {response,stream:true};
-  const data = await response.json();
-  const output = data.output || data.response?.output || [];
-  const text = data.output_text || data.text || data.response?.output_text || output.flatMap(item => item.content || []).map(item => item.text || '').join('');
-  return {response:{body:null},stream:false,result:{text,output,usage:data.usage || data.response?.usage || null,status:data.status === 'incomplete' ? 'incomplete' : data.error ? 'failure' : 'success'}};
+  if (response.body && response.headers.get('content-type')?.includes('text/event-stream')) return {response,stream:true,protocol:endpoint.protocol};
+  return {response,stream:false,result:normalizeChatResponse(await response.json(), endpoint.protocol)};
 }
 renderer.html = ({text}) => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 renderer.image = ({text}) => `[${text || t('image')}]`;
@@ -527,9 +528,10 @@ async function ensureContextSummary(chat, item, output, guard, force = false) {
       : {response:await request('respond', body, undefined), stream:true};
     if (response.stream) {
       if (!response.response.body || !response.response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('request');
-      const result = await readResponses(response.response.body, () => {});
+      const result = await readResponses(response.response.body, () => {}, response.protocol);
+      if (result.status !== 'success') return summaryPrefix(chat);
       text = (result.text || '').trim();
-    } else text = (response.result?.text || '').trim();
+    } else if (response.result?.status === 'success') text = (response.result.text || '').trim();
   } catch (error) {
     // 取消或切账号时不要重写状态；其余情况静默降级。
     if (guard !== epoch) return summaryPrefix(chat);
@@ -784,6 +786,7 @@ async function saveCustomModel(event) {
   try {
     const response = await request('custom_model_save', body, undefined, token);
     const data = await response.json();
+    if (guard !== epoch) return;
     if (data.code === 'conflict') throw Object.assign(new Error('conflict'),{status:409});
     if (key) customKeys.set(id, key);
     customModels = customModels.filter(item => item.id !== id).concat(data.model || data);
@@ -957,7 +960,7 @@ async function generate({ retryTurnId = null } = {}) {
           saveAt = Date.now(); const snapshot = structuredClone(chat);
           saveQueue = saveQueue.then(() => chatStore.save(snapshot)).catch(() => { storageError = true; controller.abort(); });
         }
-      });
+      }, response.protocol);
     } else result = response.result;
     if (guard === epoch) Object.assign(turn,{...result,status:result.status});
   } catch (error) {

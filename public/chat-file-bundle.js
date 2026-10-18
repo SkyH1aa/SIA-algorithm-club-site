@@ -55,13 +55,101 @@ function buildContext(turns, model, outputTokens, prefix = []) {
   }
   return {input: [...prefixItems, ...selected.flat()], truncated};
 }
-function createSSEParser(onEvent) {
+
+// The URL is the protocol setting; no extra profile/schema field is needed.
+function chatEndpoint(value, custom = false) {
+  const url = new globalThis.URL(value);
+  const path = url.pathname.replace(/\/+$/, '');
+  let protocol = 'responses', endpoint = path;
+  if (/\/messages?$/i.test(path)) {
+    protocol = 'messages'; endpoint = path.replace(/messages?$/i, 'messages');
+  } else if (/\/chat\/completions$/i.test(path)) protocol = 'chat_completions';
+  else if (!/\/responses$/i.test(path)) endpoint += custom && !/\/v1$/i.test(path) ? '/v1/responses' : '/responses';
+  url.pathname = endpoint;
+  return {url:url.href, protocol};
+}
+function nativeRequest(body, protocol) {
+  if (protocol === 'responses') return {...body, stream:true};
+  if (!['messages','chat_completions'].includes(protocol)) throw new Error('request');
+  const messages = [], system = [];
+  const input = typeof body.input === 'string' ? [{role:'user',content:body.input}] : body.input;
+  if (!Array.isArray(input)) throw new Error('request');
+  const items = body.instructions ? [{role:'system',content:body.instructions}, ...input] : input;
+  for (const item of items) {
+    // Responses encrypted state cannot be replayed as Claude thinking or chat reasoning.
+    if (item.type === 'reasoning' || item.encrypted_content || !['user','assistant','system','developer'].includes(item.role) || (item.type && item.type !== 'message')) throw new Error('request');
+    const parts = typeof item.content === 'string' ? [{type:'input_text',text:item.content}] : item.content;
+    if (!Array.isArray(parts)) throw new Error('request');
+    const content = parts.map(part => {
+      if (['input_text','output_text'].includes(part.type) && typeof part.text === 'string') return {type:'text',text:part.text};
+      if (item.role !== 'user') throw new Error('file');
+      if (part.type === 'input_image') {
+        if (protocol === 'chat_completions') return {type:'image_url',image_url:{url:part.image_url,detail:part.detail || 'auto'}};
+        const match = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(part.image_url);
+        if (!match) throw new Error('file');
+        return {type:'image',source:{type:'base64',media_type:match[1],data:match[2]}};
+      }
+      if (part.type === 'input_file') {
+        const match = /^data:application\/pdf;base64,([A-Za-z0-9+/]+={0,2})$/.exec(part.file_data);
+        if (!match) throw new Error('pdf');
+        return protocol === 'messages' ? {type:'document',source:{type:'base64',media_type:'application/pdf',data:match[1]}} : {type:'file',file:{filename:part.filename || 'document.pdf',file_data:part.file_data}};
+      }
+      throw new Error('request');
+    });
+    if (protocol === 'messages' && ['system','developer'].includes(item.role)) system.push(...content);
+    else {
+      const role = protocol === 'messages' ? item.role : item.role === 'developer' ? 'system' : item.role;
+      const previous = messages.at(-1);
+      if (protocol === 'messages' && previous?.role === role) previous.content.push(...content);
+      else messages.push({role,content});
+    }
+  }
+  const result = {model:body.model,messages,stream:true};
+  if (protocol === 'messages') {
+    result.max_tokens = body.max_output_tokens;
+    if (system.length) result.system = system;
+    // Vendor-specific thinking knobs have no safe generic mapping from Responses effort.
+    if (body.reasoning?.effort && body.reasoning.effort !== 'none') throw new Error('request');
+  } else {
+    result.max_completion_tokens = body.max_output_tokens;
+    result.stream_options = {include_usage:true};
+    if (body.reasoning?.effort) result.reasoning_effort = body.reasoning.effort;
+  }
+  return result;
+}
+
+function nativeOutput(text) {
+  return text ? [{type:'message',role:'assistant',content:[{type:'output_text',text,annotations:[]}]}] : [];
+}
+function nativeStatus(reason, protocol) {
+  if (['length','max_tokens','model_context_window_exceeded'].includes(reason)) return 'incomplete';
+  if ((protocol === 'messages' ? ['end_turn','stop_sequence'] : ['stop']).includes(reason)) return 'success';
+  return 'failure';
+}
+function nativeUsage(usage, protocol, previous = null) {
+  if (!usage) return previous;
+  const input = protocol === 'messages' ? (usage.input_tokens ?? previous?.input_tokens ?? 0) + (usage.cache_creation_input_tokens || 0) + (usage.cache_read_input_tokens || 0) : usage.prompt_tokens || 0;
+  const output = usage.output_tokens ?? usage.completion_tokens ?? previous?.output_tokens ?? 0;
+  return {input_tokens:input,output_tokens:output,total_tokens:protocol === 'messages' ? input + output : usage.total_tokens ?? input + output};
+}
+function normalizeChatResponse(data, protocol = 'responses') {
+  if (protocol === 'responses') {
+    const response = data.response || data, output = response.output || [];
+    return {text:response.output_text || response.text || output.flatMap(item => item.content || []).map(part => part.text || '').join(''),output,usage:response.usage || null,status:data.error || ['failed','cancelled'].includes(response.status) ? 'failure' : response.status === 'incomplete' ? 'incomplete' : 'success'};
+  }
+  const choice = data.choices?.find(item => item.index === 0) || data.choices?.[0];
+  const text = protocol === 'messages' ? (data.content || []).filter(part => part.type === 'text').map(part => part.text).join('') : typeof choice?.message?.content === 'string' ? choice.message.content : '';
+  const unsupported = protocol === 'messages' ? (data.content || []).some(part => ['tool_use','server_tool_use'].includes(part.type)) : choice?.message?.tool_calls || choice?.message?.function_call;
+  return {text,output:nativeOutput(text),usage:nativeUsage(data.usage,protocol),status:data.error || unsupported ? 'failure' : nativeStatus(protocol === 'messages' ? data.stop_reason : choice?.finish_reason,protocol)};
+}
+function createSSEParser(onEvent, onDone = () => {}) {
   let buffer = '', event = '', data = [];
   function line(value) {
     if (value === '') {
       if (data.length) {
         const raw = data.join('\n');
-        if (raw !== '[DONE]') onEvent(JSON.parse(raw), event);
+        if (raw === '[DONE]') onDone();
+        else onEvent(JSON.parse(raw), event);
       }
       event = ''; data = [];
     } else if (!value.startsWith(':')) {
@@ -87,16 +175,50 @@ function createSSEParser(onEvent) {
       }
       buffer = buffer.slice(start);
       if (eof && buffer) { line(buffer); buffer = ''; }
+      if (eof) line('');
     }
   };
 }
-async function readResponses(stream, onUpdate) {
+async function readResponses(stream, onUpdate = () => {}, protocol = 'responses') {
   const reader = stream.getReader(), decoder = new TextDecoder();
   const result = {text:'', output:[], status:'interrupted', usage:null};
-  let terminal = false;
-  const parser = createSSEParser(event => {
+  let terminal = false, finishReason = null, unsupported = false;
+  const blocks = new Map();
+  function updateNative() { result.output = nativeOutput(result.text); }
+  function finishNative() {
+    result.status = unsupported ? 'failure' : nativeStatus(finishReason, protocol);
+    terminal = true; updateNative(); onUpdate({...result});
+  }
+  const parser = createSSEParser((event, eventName) => {
     if (terminal) return;
-    const type = event.type;
+    const type = event.type || eventName;
+    if (protocol !== 'responses') {
+      if (type === 'error' || event.error) { result.status = 'failure'; terminal = true; }
+      else if (protocol === 'messages') {
+        if (type === 'message_start') {
+          result.usage = nativeUsage(event.message?.usage, protocol, result.usage);
+          for (const [index, block] of (event.message?.content || []).entries()) {
+            blocks.set(index, block.type === 'text' ? block.text || '' : '');
+            if (['tool_use','server_tool_use'].includes(block.type)) unsupported = true;
+          }
+        } else if (type === 'content_block_start') {
+          blocks.set(event.index, event.content_block?.type === 'text' ? event.content_block.text || '' : '');
+          if (['tool_use','server_tool_use'].includes(event.content_block?.type)) unsupported = true;
+        } else if (type === 'content_block_delta' && event.delta?.type === 'text_delta') blocks.set(event.index, (blocks.get(event.index) || '') + (event.delta.text || ''));
+        else if (type === 'message_delta') {
+          finishReason = event.delta?.stop_reason || finishReason;
+          result.usage = nativeUsage(event.usage, protocol, result.usage);
+        } else if (type === 'message_stop') { finishNative(); return; }
+        result.text = [...blocks.entries()].sort((a,b) => a[0] - b[0]).map(([,text]) => text).join('');
+      } else {
+        const choice = event.choices?.find(item => item.index === 0);
+        if (typeof choice?.delta?.content === 'string') result.text += choice.delta.content;
+        if (choice?.delta?.tool_calls || choice?.delta?.function_call) unsupported = true;
+        if (choice?.finish_reason) finishReason = choice.finish_reason;
+        result.usage = nativeUsage(event.usage, protocol, result.usage);
+      }
+      updateNative(); onUpdate({...result}); return;
+    }
     if (type === 'response.output_text.delta') result.text += event.delta || '';
     if (['response.completed','response.incomplete','response.failed','error'].includes(type)) {
       terminal = true;
@@ -107,13 +229,14 @@ async function readResponses(stream, onUpdate) {
       if (full) result.text = full;
     }
     onUpdate({...result});
-  });
+  }, () => { if (!terminal && protocol === 'chat_completions' && finishReason) finishNative(); });
   try {
     while (true) {
       const {value, done} = await reader.read();
       parser.push(done ? decoder.decode() : decoder.decode(value, {stream:true}), done);
       if (done || terminal) break;
     }
+    if (!terminal && protocol === 'chat_completions' && finishReason) finishNative();
     if (terminal) await reader.cancel().catch(() => {});
     return result;
   } finally {
@@ -177,8 +300,8 @@ let compacting = false;
 let statusKey = 'loading', statusVars = {}, gateKey = 'loading', attaching = false, catalogController = null;
 const customKeys = new Map();
 const CUSTOM_PROXY_ORIGIN = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
-const CUSTOM_PROXY_PATH = /^\/functions\/v1\/chat-api-proxy\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const CUSTOM_METADATA = Object.freeze({context_window:128000,max_output_tokens:8192,default_max_output_tokens:8192,reasoning_efforts:[],default_reasoning_effort:null,supports_images:true,supports_pdf:false,preserve_reasoning:false});
+const CUSTOM_PROXY_PATH = /^\/functions\/v1\/chat-api-proxy\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}(?:\/(?:v1(?:\/(?:responses|messages?|chat\/completions))?|responses|messages?|chat\/completions))?$/i;
+const CUSTOM_METADATA = Object.freeze({context_window:128000,max_output_tokens:8192,default_max_output_tokens:8192,reasoning_efforts:[],default_reasoning_effort:null,supports_images:true,supports_pdf:true,preserve_reasoning:false});
 const generations = new Set();
 const ICONS = {
   copy:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.1"/><path d="M5.5 15.5V6.5a2 2 0 0 1 2-2h8"/></svg>',
@@ -291,13 +414,14 @@ function customStatus(key = '', vars = {}) { customStatusKey = key; customStatus
 async function customRequest(item, body, signal) {
   const key = customKey(item);
   if (!key) throw new Error('customKey');
-  const response = await fetch(`${customUrl(item.base_url)}/v1/responses`, {method:'POST',headers:{'Content-Type':'application/json',Accept:'text/event-stream','Authorization':`Bearer ${key}`},body:JSON.stringify({...body,model:item.model_key,stream:true}),signal});
+  const endpoint = chatEndpoint(customUrl(item.base_url), true);
+  const payload = nativeRequest({...body,model:item.model_key,stream:true}, endpoint.protocol);
+  const serialized = JSON.stringify(payload);
+  if (new TextEncoder().encode(serialized).length > MAX_REQUEST_BYTES) throw new Error('request_too_large');
+  const response = await fetch(endpoint.url, {method:'POST',headers:{'Content-Type':'application/json',Accept:'text/event-stream','Authorization':`Bearer ${key}`},body:serialized,signal});
   if (!response.ok) throw new Error('request');
-  if (response.body && response.headers.get('content-type')?.includes('text/event-stream')) return {response,stream:true};
-  const data = await response.json();
-  const output = data.output || data.response?.output || [];
-  const text = data.output_text || data.text || data.response?.output_text || output.flatMap(item => item.content || []).map(item => item.text || '').join('');
-  return {response:{body:null},stream:false,result:{text,output,usage:data.usage || data.response?.usage || null,status:data.status === 'incomplete' ? 'incomplete' : data.error ? 'failure' : 'success'}};
+  if (response.body && response.headers.get('content-type')?.includes('text/event-stream')) return {response,stream:true,protocol:endpoint.protocol};
+  return {response,stream:false,result:normalizeChatResponse(await response.json(), endpoint.protocol)};
 }
 renderer.html = ({text}) => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 renderer.image = ({text}) => `[${text || t('image')}]`;
@@ -690,9 +814,10 @@ async function ensureContextSummary(chat, item, output, guard, force = false) {
       : {response:await request('respond', body, undefined), stream:true};
     if (response.stream) {
       if (!response.response.body || !response.response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('request');
-      const result = await readResponses(response.response.body, () => {});
+      const result = await readResponses(response.response.body, () => {}, response.protocol);
+      if (result.status !== 'success') return summaryPrefix(chat);
       text = (result.text || '').trim();
-    } else text = (response.result?.text || '').trim();
+    } else if (response.result?.status === 'success') text = (response.result.text || '').trim();
   } catch (error) {
     // 取消或切账号时不要重写状态；其余情况静默降级。
     if (guard !== epoch) return summaryPrefix(chat);
@@ -947,6 +1072,7 @@ async function saveCustomModel(event) {
   try {
     const response = await request('custom_model_save', body, undefined, token);
     const data = await response.json();
+    if (guard !== epoch) return;
     if (data.code === 'conflict') throw Object.assign(new Error('conflict'),{status:409});
     if (key) customKeys.set(id, key);
     customModels = customModels.filter(item => item.id !== id).concat(data.model || data);
@@ -1120,7 +1246,7 @@ async function generate({ retryTurnId = null } = {}) {
           saveAt = Date.now(); const snapshot = structuredClone(chat);
           saveQueue = saveQueue.then(() => chatStore.save(snapshot)).catch(() => { storageError = true; controller.abort(); });
         }
-      });
+      }, response.protocol);
     } else result = response.result;
     if (guard === epoch) Object.assign(turn,{...result,status:result.status});
   } catch (error) {

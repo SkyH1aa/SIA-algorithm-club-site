@@ -24,6 +24,7 @@ const OTHER_UID = '66666666-6666-4666-8666-666666666666';
 let provider: Row, model: Row, profile: boolean, admin: boolean, auditFail: boolean, startFail: boolean, finishFail: boolean, busy: boolean;
 let assignedVisible = false, customModels: Row[];
 let dnsMode: string, mode: string, upstreamSignal: AbortSignal | undefined;
+let wire: string | null;
 let audits: Row[], patches: Row[], upstreamBodies: Array<Row & { input: Array<{ content: Array<{ text: string; image_url: string }> }> }>, requests: URL[], released: number, finishAttempts: number, leased: boolean;
 let quota: Row, admissionCode: string | null, shrink: number | null, conflict: boolean;
 let rpcCalls: Array<{ name: string; body: Row }>, settlements: Row[];
@@ -32,7 +33,7 @@ const directory = { users: [{ user_id: UID, username: 'local-account', member_na
 let usageRange: string | null;
 let terminalGate: Promise<void> | null, terminalReached: (() => void) | null;
 function reset() {
-  terminalGate = null; terminalReached = null;
+  terminalGate = null; terminalReached = null; wire = null;
   quota = { global: { daily_limit: null, version: 0, used: 0, remaining: null, resets_at: '2026-10-17T00:00:00Z' }, user: { daily_limit: null, weekly_limit: null, monthly_limit: null, version: 0 }, periods: [], blacklisted: false, reason: null };
   admissionCode = null; shrink = null; conflict = false; rpcCalls = []; settlements = []; charged = 0;
   provider = { ...providerBase }; model = { ...modelBase }; profile = true; admin = true;
@@ -47,7 +48,7 @@ function event(type: string, extra: Row = {}) { return `data: ${JSON.stringify({
 const completed = event('response.completed', { response: { output: [], usage: { input_tokens: 7, output_tokens: 3, total_tokens: 10 } } });
 const delta = 'event: response.output_text.delta\r\ndata: {"delta":\r\ndata: "你好"}\r\n\r\n';
 function upstreamStream(signal?: AbortSignal) {
-  let content = delta + completed;
+  let content = wire ?? delta + completed;
   if (mode === 'eof') content = delta;
   if (mode === 'unterminated') content = completed.trimEnd();
   if (mode === 'malformed') content = 'data: nope\n\n';
@@ -84,9 +85,14 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
   const url = new URL(input instanceof Request ? input.url : input);
   requests.push(url);
   if (url.origin === 'https://provider.example.com') {
-    assert.equal(url.pathname, '/v1/responses');
+    const base = String(provider.base_url).replace(/\/+$/, '');
+    assert.equal(url.pathname, new URL(/\/(responses|messages?|chat\/completions)$/.test(base) ? base.replace(/\/message$/, '/messages') : `${base}/responses`).pathname);
+    if (/\/messages$/.test(url.pathname)) assert.equal(new Headers(init.headers).get('anthropic-version'), '2023-06-01');
     assert.equal(init.redirect, 'error');
-    assert.equal(new Headers(init.headers).get('authorization'), 'Bearer local-provider-secret');
+    const upstreamHeaders = new Headers(init.headers);
+    if (provider.auth_header === 'x-api-key') {
+      assert.equal(upstreamHeaders.get('x-api-key'), 'local-provider-secret'); assert.equal(upstreamHeaders.get('authorization'), null);
+    } else assert.equal(upstreamHeaders.get('authorization'), 'Bearer local-provider-secret');
     assert.equal(audits.length, 1, 'audit must precede upstream');
     assert.equal(audits[0].status, 'upstream_started', 'start marker must precede fetch');
     upstreamBodies.push(JSON.parse(String(init.body)));
@@ -259,6 +265,12 @@ try {
     const base = { action: 'custom_model_save', id: CUSTOM_ID, display_name: 'Personal', model_key: 'upstream/model', base_url: 'https://jgezpvmlnhycxslqbwcx.supabase.co/functions/v1/chat-api-proxy/' + PID, expected_version: 0 };
     await expectStatus({ action: 'custom_model_list' }, 200);
     await expectStatus(base, 200);
+    for (const suffix of ['', '/', '/v1', '/v1/', '/responses', '/messages', '/message', '/chat/completions', '/v1/responses', '/v1/messages', '/v1/message', '/v1/chat/completions/']) {
+      const base_url = base.base_url + suffix;
+      await expectStatus({ ...base, base_url }, 200);
+      assert.equal(rpcCalls.at(-1)!.body.p_base_url, base_url.replace(/\/+$/, ''));
+    }
+    for (const suffix of ['/v2', '/v1/v1', '/response', '/messages/extra', '/chat/completion', '/v1/chat/completions/extra']) await expectStatus({ ...base, base_url: base.base_url + suffix }, 400);
     assert.equal(rpcCalls.at(-1)!.body.p_user_id, UID);
     for (const bad of [
       { ...base, api_key: 'secret' },
@@ -354,7 +366,7 @@ try {
     dnsMode = 'ipv6-public'; await consume();
   });
   await test('SSRF URL validation blocks credentials, fragments, IP and local hosts', async () => {
-    for (const url of ['http://provider.example.com', 'https://127.0.0.1', 'https://169.254.169.254', 'https://[::1]', 'https://localhost', 'https://x.local', 'https://u:p@provider.example.com', 'https://provider.example.com?x=1', 'https://provider.example.com#x', 'https://provider.example.com:444', 'https://provider.example.com/v1/responses']) { provider.base_url = url; await expectStatus(payload(), 400); }
+    for (const url of ['http://provider.example.com', 'https://127.0.0.1', 'https://169.254.169.254', 'https://[::1]', 'https://localhost', 'https://x.local', 'https://u:p@provider.example.com', 'https://provider.example.com?x=1', 'https://provider.example.com#x', 'https://provider.example.com:444']) { provider.base_url = url; await expectStatus(payload(), 400); }
     assert.equal(upstreamBodies.length, 0);
   });
   for (const failure of ['network', 'http', 'wrong-content']) await test(`upstream ${failure} redaction and release`, async () => {
@@ -471,6 +483,81 @@ try {
     reset(); const abort = new AbortController(); abort.abort();
     await handler(request(payload(), 'member', abort.signal));
     assert.equal(upstreamBodies.length, 0); assert.equal(charged, 0); assert.equal(settlements[0].p_refund, true);
+  });
+  for (const endpoint of ['/v1/responses', '/v1/responses/']) await test(`explicit Responses endpoint ${endpoint}`, async () => {
+    provider.base_url = 'https://provider.example.com' + endpoint;
+    await consume(); assert.equal(audits[0].status, 'completed');
+    await expectStatus({ action: 'admin_save_provider', ...provider }, 200);
+  });
+  const chunk = (value: Row) => `data: ${JSON.stringify(value)}\r\n\r\n`;
+  const chatWire = chunk({ choices: [{ index: 0, delta: { role: 'assistant', content: '你好' }, finish_reason: null }] }) + chunk({ choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] }) + chunk({ choices: [], usage: { prompt_tokens: 7, completion_tokens: 3, total_tokens: 10 } }) + 'data: [DONE]\r\n\r\n';
+  const messagesWire = event('message_start', { message: { usage: { input_tokens: 4, cache_read_input_tokens: 2, cache_creation_input_tokens: 1, output_tokens: 1 } } }) + event('content_block_start', { content_block: { type: 'text', text: '' } }) + event('content_block_delta', { delta: { type: 'text_delta', text: '你好' } }) + event('message_delta', { delta: { stop_reason: 'end_turn' }, usage: { output_tokens: 3 } }) + event('message_stop');
+  for (const format of ['messages', 'message', 'chat/completions']) {
+    const setup = () => {
+      provider.base_url = `https://provider.example.com/v1/${format}`;
+      provider.auth_header = format === 'messages' ? 'x-api-key' : 'authorization';
+      model.preserve_reasoning = false; model.reasoning_efforts = []; model.default_reasoning_effort = null;
+      wire = format === 'chat/completions' ? chatWire : messagesWire;
+    };
+    await test(`${format} translates multi-turn attachments, completion and usage`, async () => {
+      setup(); shrink = 12;
+      const response = await handler(request(payload({ input: [
+        { role: 'system', content: [{ type: 'input_text', text: 'system instruction' }] }, message('first'),
+        { role: 'assistant', content: [{ type: 'output_text', text: 'previous' }] },
+        { role: 'user', content: [{ type: 'input_text', text: 'next' }, { type: 'input_image', image_url: 'data:image/png;base64,aGVsbG8=' }, { type: 'input_file', filename: 'x.pdf', file_data: 'data:application/pdf;base64,JVBERg==' }] }
+      ] })));
+      assert.equal(response.status, 200); assert.equal(response.headers.get('x-chat-max-output-tokens'), '12');
+      const text = await response.text(); assert.match(text, /response.output_text.delta/); assert.match(text, /你好/); assert.match(text, /response.completed/);
+      assert.doesNotMatch(text, /message_delta|chat.completion/);
+      const body = upstreamBodies[0] as Row;
+      assert.equal(body.input, undefined); assert.equal(body.include, undefined);
+      assert.equal(body[format === 'chat/completions' ? 'max_completion_tokens' : 'max_tokens'], 12);
+      assert.equal(audits[0].total_tokens, 10); assert.equal(audits[0].input_tokens, 7); assert.equal(charged, 10); assert.equal(finishAttempts, 1);
+      assert.doesNotMatch(JSON.stringify(audits), /system instruction|previous|aGVsbG8|JVBERg/);
+    });
+    await test(`${format} accepts compatible saves and admin tests`, async () => {
+      setup();
+      await expectStatus({ action: 'admin_save_model', ...model }, 200);
+      await expectStatus({ action: 'admin_save_provider', ...provider }, 200);
+      await consume({ action: 'admin_test', model_id: MID, prompt: 'check native protocol', max_output_tokens: 9 });
+      assert.equal(upstreamBodies[0][format === 'chat/completions' ? 'max_completion_tokens' : 'max_tokens'], 9);
+      assert.equal(audits[0].action, 'admin_test');
+    });
+    await test(`${format} rejects incompatible configured capabilities before quota`, async () => {
+      setup(); model.preserve_reasoning = true;
+      const result = await expectStatus(payload(), 400); assert.equal((await result.json()).error, 'reasoning_history_unsupported');
+      await expectStatus({ action: 'admin_save_model', ...model }, 400);
+      await expectStatus({ action: 'admin_save_provider', ...provider }, 400);
+      model.preserve_reasoning = false; model.reasoning_efforts = ['unsupported'];
+      const result2 = await expectStatus(payload(), 400); assert.equal((await result2.json()).error, 'reasoning_effort_unsupported');
+      assert.equal(audits.length, 0); assert.equal(upstreamBodies.length, 0);
+    });
+    await test(`${format} incomplete and interrupted settlement`, async () => {
+      setup(); wire = format === 'chat/completions' ? chatWire.replace('"stop"', '"length"') : messagesWire.replace('"end_turn"', '"max_tokens"');
+      assert.match(await consume(), /response.incomplete/); assert.equal(audits[0].status, 'incomplete'); assert.equal(charged, 10);
+      reset(); setup(); wire = wire!.slice(0, wire!.indexOf(format === 'chat/completions' ? 'data: [DONE]' : 'data: {"type":"message_stop"'));
+      assert.doesNotMatch(await consume(), /response.completed/); assert.equal(audits[0].status, 'interrupted'); assert.equal(charged, 102);
+    });
+    await test(`${format} cancellation and terminal database failure`, async () => {
+      setup(); mode = 'hanging'; const response = await handler(request(payload())); await response.body!.cancel();
+      assert.equal(audits[0].status, 'cancelled'); assert.equal(finishAttempts, 1); assert.ok(upstreamSignal!.aborted);
+      reset(); setup(); finishFail = true;
+      const failureResponse = await handler(request(payload()));
+      const reader = failureResponse.body!.getReader(); let received = '';
+      await assert.rejects(async () => { while (true) { const part = await reader.read(); if (part.done) break; received += new TextDecoder().decode(part.value); } });
+      assert.doesNotMatch(received, /response.completed/); assert.equal(released, 0); assert.equal(finishAttempts, 1);
+      reset(); setup(); mode = 'hanging'; const abort = new AbortController();
+      const abortResponse = await handler(request(payload(), 'member', abort.signal)); const pending = abortResponse.text(); abort.abort();
+      await assert.rejects(pending); assert.equal(audits[0].status, 'cancelled'); assert.equal(finishAttempts, 1);
+    });
+  }
+  await test('Anthropic thinking budgets track quota and refund before dispatch when too small', async () => {
+    provider.base_url = 'https://provider.example.com/v1/messages'; model.preserve_reasoning = false;
+    model.max_output_tokens = 10000; model.default_max_output_tokens = 9000; model.reasoning_efforts = ['none', 'low', 'medium', 'high']; model.default_reasoning_effort = 'high'; wire = messagesWire;
+    shrink = 1500; await consume(); assert.deepEqual(upstreamBodies[0].thinking, { type: 'enabled', budget_tokens: 1499 });
+    reset(); provider.base_url = 'https://provider.example.com/v1/messages'; model.preserve_reasoning = false;
+    model.max_output_tokens = 10000; model.default_max_output_tokens = 9000; model.default_reasoning_effort = 'high'; wire = messagesWire;
+    shrink = 100; await expectStatus(payload(), 400); assert.equal(upstreamBodies.length, 0); assert.equal(charged, 0); assert.equal(settlements[0].p_refund, true);
   });
   await test('HTTP method, malformed body and CORS', async () => {
     assert.equal((await handler(new Request('http://localhost/chat'))).status, 405);

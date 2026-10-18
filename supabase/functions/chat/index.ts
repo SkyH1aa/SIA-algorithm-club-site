@@ -1,4 +1,5 @@
 import { hashKey, newKey, proxyBase, proxySecret, ProxyError, ROUTE_FIELDS } from '../_shared/chat-api-proxy.ts';
+import { chatEndpoint, ChatProtocolError, parseProtocolSse, protocolEvents, protocolRequest, validateProtocolCapabilities, type ChatProtocol } from '../_shared/chat-protocol.ts';
 
 type Json = Record<string, unknown>;
 type AuthUser = { id: string; email?: string | null };
@@ -287,7 +288,6 @@ async function publicHttpsUrl(value: unknown): Promise<string> {
     !host || host.endsWith('.') || host.includes(':') || !host.includes('.') ||
     /(^|\.)(localhost|local|internal|test|invalid)$|(^|\.)home\.arpa$/i.test(host)) throw new HttpError('provider_url', 400);
   const path = url.pathname.replace(/\/+$/, '');
-  if (/(^|\/)responses$/i.test(path)) throw new HttpError('provider_url', 400);
   if (/^[\d.]+$/.test(host)) {
     if (!isPublicIp(host)) throw new HttpError('provider_url', 400);
   } else {
@@ -458,6 +458,7 @@ async function modelWithProvider(modelId: unknown, enabledOnly = true, userId?: 
   if (!admin && userId && !(await modelAccess(model.id, userId))) throw new HttpError('model', 403);
   validateModel(model);
   provider.base_url = await publicHttpsUrl(provider.base_url);
+  validateProtocolCapabilities(chatEndpoint(provider.base_url).protocol, model);
   secretName(provider.secret_name);
   return { model, provider };
 }
@@ -475,6 +476,10 @@ async function saveProvider(payload: Json) {
     enabled: payload.enabled === undefined ? true : boolean(payload.enabled, true),
     updated_at: new Date().toISOString()
   };
+  if (id) {
+    const attached = await restJson<Model[]>(`chat_models?provider_id=eq.${encodeURIComponent(String(id))}&deleted_at=is.null&select=preserve_reasoning,reasoning_efforts,default_max_output_tokens`);
+    for (const model of attached) validateProtocolCapabilities(chatEndpoint(body.base_url).protocol, model);
+  }
   const rows = await restJson<Provider[]>('chat_providers?on_conflict=id', { method: 'POST', headers: { 'content-type': 'application/json', prefer: 'resolution=merge-duplicates,return=representation' }, body: JSON.stringify(body) });
   return rows[0] ? { id: rows[0].id, name: rows[0].name, label: rows[0].label, base_url: rows[0].base_url, secret_name: rows[0].secret_name, auth_header: rows[0].auth_header, enabled: rows[0].enabled } : null;
 }
@@ -511,7 +516,10 @@ async function saveModel(payload: Json) {
   if (body.visibility !== 'all' && body.visibility !== 'assigned') throw new HttpError('input', 400);
   validateModel(body as Model);
   const providerRows = await providers();
-  if (!providerRows.some(x => x.id === body.provider_id)) throw new HttpError('input', 400);
+  const provider = providerRows.find(x => x.id === body.provider_id);
+  if (!provider) throw new HttpError('input', 400);
+  const protocol = chatEndpoint(provider.base_url).protocol;
+  validateProtocolCapabilities(protocol, body);
   const rows = await restJson<Model[]>('chat_models?on_conflict=id', { method: 'POST', headers: { 'content-type': 'application/json', prefer: 'resolution=merge-duplicates,return=representation' }, body: JSON.stringify(body) });
   return rows[0] || null;
 }
@@ -579,6 +587,7 @@ async function updateUsage(requestId: string, patch: Json) {
 function upstreamHeaders(provider: Provider, key: string): Headers {
   const headers = new Headers({ accept: 'text/event-stream', 'content-type': 'application/json' });
   headers.set(provider.auth_header, provider.auth_header === 'authorization' ? `Bearer ${key}` : key);
+  if (chatEndpoint(provider.base_url).protocol === 'messages') headers.set('anthropic-version', '2023-06-01');
   return headers;
 }
 
@@ -594,7 +603,8 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
   if (effort !== null && !(model.reasoning_efforts as string[]).includes(effort)) throw new HttpError('effort', 400);
   const requestId = crypto.randomUUID();
   const body = { model: model.model_key, input, reasoning: effort ? { effort } : undefined, include: model.preserve_reasoning ? ['reasoning.encrypted_content'] : undefined, max_output_tokens: outputTokens, store: false, stream: true };
-  let serialized = JSON.stringify(body);
+  const { protocol, url: endpoint } = chatEndpoint(provider.base_url);
+  let serialized = JSON.stringify(protocolRequest(protocol, body));
   const inputTokens = estimateInputTokens(input);
   if (inputTokens + outputTokens > model.context_window) throw new HttpError('context', 413);
   if (encoder.encode(serialized).byteLength > MAX_REQUEST_BYTES) throw new HttpError('request_too_large', 413);
@@ -619,7 +629,14 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
     throw new HttpError('database', 503);
   }
   body.max_output_tokens = admission.max_output_tokens as number;
-  serialized = JSON.stringify(body);
+  try {
+    serialized = JSON.stringify(protocolRequest(protocol, body));
+  } catch (error) {
+    // Quota shrink may leave too little room for Anthropic's minimum thinking
+    // budget. Nothing was dispatched, so release the reservation in full.
+    await finishGeneration(requestId, { status: 'failed', error_code: 'reasoning_budget' }, true);
+    throw error;
+  }
   if (request.signal.aborted) {
     await finishGeneration(requestId, { status: 'cancelled', error_code: 'client_cancelled' }, true);
     throw new HttpError('cancelled', 499);
@@ -637,7 +654,7 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
   if (request.signal.aborted) upstreamController.abort();
   let upstream: Response;
   try {
-    upstream = await fetch(`${provider.base_url}/responses`, { method: 'POST', headers: upstreamHeaders(provider, Deno.env.get(provider.secret_name)!), body: serialized, redirect: 'error', signal: upstreamController.signal });
+    upstream = await fetch(endpoint, { method: 'POST', headers: upstreamHeaders(provider, Deno.env.get(provider.secret_name)!), body: serialized, redirect: 'error', signal: upstreamController.signal });
   } catch {
     request.signal.removeEventListener('abort', cancelUpstream);
     await finishGeneration(requestId, { status: request.signal.aborted ? 'cancelled' : 'failed', error_code: request.signal.aborted ? 'client_cancelled' : 'upstream_network' }).catch(() => undefined);
@@ -659,51 +676,10 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
     throw error;
   }
   request.signal.removeEventListener('abort', cancelUpstream);
-  const response = proxyStream(request, upstream.body, upstreamController, requestId);
+  const response = proxyStream(request, upstream.body, upstreamController, requestId, protocol);
   if (body.max_output_tokens < outputTokens) response.headers.set('x-chat-quota-limited', 'true');
   response.headers.set('x-chat-max-output-tokens', String(body.max_output_tokens));
   return response;
-}
-
-function parseSse(onEvent: (event: Json) => void) {
-  let buffer = '', data: string[] = [], eventName = '', eventBytes = 0;
-  const dispatch = () => {
-    if (!data.length) { data = []; eventName = ''; eventBytes = 0; return; }
-    const raw = data.join('\n');
-    if (raw !== '[DONE]') {
-      const event = object(JSON.parse(raw));
-      if (event.type === undefined && eventName) event.type = eventName;
-      onEvent(event);
-    }
-    data = []; eventName = ''; eventBytes = 0;
-  };
-  const line = (value: string) => {
-    if (!value) return dispatch();
-    if (value.startsWith(':')) return;
-    const index = value.indexOf(':');
-    const field = index < 0 ? value : value.slice(0, index);
-    let content = index < 0 ? '' : value.slice(index + 1);
-    if (content.startsWith(' ')) content = content.slice(1);
-    if (field === 'event') eventName = content;
-    if (field === 'data') { data.push(content); eventBytes += content.length + 1; }
-    if (eventBytes > 16 * 1024 * 1024) throw new Error('stream_limit');
-  };
-  return (chunk: string, eof = false) => {
-    buffer += chunk;
-    if (buffer.length + eventBytes > 16 * 1024 * 1024) throw new Error('stream_limit');
-    let start = 0;
-    for (let index = 0; index < buffer.length; index++) {
-      if (buffer[index] !== '\r' && buffer[index] !== '\n') continue;
-      if (buffer[index] === '\r' && index === buffer.length - 1 && !eof) break;
-      line(buffer.slice(start, index));
-      if (buffer[index] === '\r' && buffer[index + 1] === '\n') index++;
-      start = index + 1;
-    }
-    buffer = buffer.slice(start);
-    // SSE does not dispatch an incomplete event at EOF; this avoids inventing a
-    // successful response when an upstream disconnects before its blank line.
-    if (eof) { buffer = ''; data = []; eventName = ''; eventBytes = 0; }
-  };
 }
 
 function terminalUsage(event: Json): Json | null {
@@ -715,12 +691,18 @@ function terminalUsage(event: Json): Json | null {
   return { status: type === 'response.completed' ? 'completed' : type === 'response.incomplete' ? 'incomplete' : 'failed', input_tokens: token(usage.input_tokens), output_tokens: token(usage.output_tokens), total_tokens: token(usage.total_tokens), error_code: type === 'response.completed' ? null : type };
 }
 
-function proxyStream(request: Request, body: ReadableStream<Uint8Array>, upstream: AbortController, requestId: string): Response {
+function proxyStream(request: Request, body: ReadableStream<Uint8Array>, upstream: AbortController, requestId: string, protocol: ChatProtocol): Response {
   const reader = body.getReader();
   const decoder = new TextDecoder('utf-8', { fatal: true });
   let terminal: Json | null = null, cancelled = false;
   let finishing: Promise<void> | null = null;
-  const parser = parseSse(event => { terminal ||= terminalUsage(event); });
+  let converted: string[] = [];
+  const adapter = protocolEvents(protocol, requestId, event => {
+    if (terminal) return;
+    terminal = terminalUsage(event);
+    if (protocol !== 'responses') converted.push(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
+  });
+  const parser = parseProtocolSse(adapter.event, adapter.done);
   const finish = (patch: Json): Promise<void> => {
     if (finishing) return finishing;
     request.signal.removeEventListener('abort', onAbort);
@@ -745,18 +727,23 @@ function proxyStream(request: Request, body: ReadableStream<Uint8Array>, upstrea
     },
     async pull(controller) {
       try {
-        const next = await reader.read();
-        if (cancelled) return;
-        parser(next.done ? decoder.decode() : decoder.decode(next.value, { stream: true }), next.done);
-        if (next.done || terminal) {
-          // Persist the terminal metadata before exposing success to the client.
-          await finish(terminal || { status: 'interrupted', error_code: 'upstream_eof' });
-          upstream.abort();
-          await reader.cancel().catch(() => undefined);
+        while (true) {
+          const next = await reader.read();
           if (cancelled) return;
-          if (!next.done) controller.enqueue(next.value);
-          controller.close();
-        } else controller.enqueue(next.value);
+          parser(next.done ? decoder.decode() : decoder.decode(next.value, { stream: true }), next.done);
+          const data = protocol === 'responses' ? (next.done ? null : next.value) : (converted.length ? encoder.encode(converted.join('')) : null);
+          converted = [];
+          if (next.done || terminal) {
+            // Persist the terminal metadata before exposing success to the client.
+            await finish(terminal || { status: 'interrupted', error_code: 'upstream_eof' });
+            upstream.abort();
+            await reader.cancel().catch(() => undefined);
+            if (cancelled) return;
+            if (data) controller.enqueue(data);
+            controller.close();
+            return;
+          } else if (data) { controller.enqueue(data); return; }
+        }
       } catch {
         upstream.abort();
         await reader.cancel().catch(() => undefined);
@@ -805,7 +792,7 @@ function customProxyBase(value: unknown): string {
   let url: URL;
   try { url = new URL(raw); } catch { throw new HttpError('proxy_url', 400); }
   if (url.protocol !== 'https:' || url.hostname.toLowerCase() !== 'jgezpvmlnhycxslqbwcx.supabase.co' || url.username || url.password || url.search || url.hash || url.port) throw new HttpError('proxy_url', 400);
-  if (!/^\/functions\/v1\/chat-api-proxy\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/?$/i.test(url.pathname)) throw new HttpError('proxy_url', 400);
+  if (!/^\/functions\/v1\/chat-api-proxy\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}(?:\/v1)?(?:\/(?:responses|messages|message|chat\/completions))?\/?$/i.test(url.pathname)) throw new HttpError('proxy_url', 400);
   return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
 }
 
@@ -1005,7 +992,7 @@ async function handle(request: Request): Promise<Response> {
     try { parsed = JSON.parse(raw); } catch { throw new HttpError('input', 400); }
     return await main(request, object(parsed));
   } catch (error) {
-    if (error instanceof HttpError || error instanceof ProxyError) return errorResponse(request, error.message, error.status);
+    if (error instanceof HttpError || error instanceof ProxyError || error instanceof ChatProtocolError) return errorResponse(request, error.message, error.status);
     return errorResponse(request, 'server', 500);
   }
 }

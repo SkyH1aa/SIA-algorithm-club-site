@@ -80,6 +80,7 @@ function uiHarness() {
     value:'',options:[],files:[],disabled:false,hidden:false,textContent:'',
     // 真实 <select> 会按 value 反查当前项，桩必须同样支持，否则读不到默认强度。
     get selectedIndex(){ const i=this.options.findIndex(o=>o.value===this.value); return i<0?0:i; },
+    reportValidity(){return true;},
     replaceChildren(){this.options=[];this.value='';},append(){},prepend(){},before(){},setAttribute(){},querySelectorAll(){return [];},
     add(option){this.options.push(option);if(this.options.length===1)this.value=option.value;}
   }; }
@@ -96,7 +97,7 @@ function uiHarness() {
     // 桩 t() 必须像真实 runtime 一样「缺键返回 key」；否则 effortLabel 无法区分已翻译与回退。
     ClubI18n:{t:key=>DICT.has(key)?`[${key}]`:key,getLang:()=> 'zh'},marked:{Renderer:class {},parse:()=>''},DOMPurify:{sanitize:()=>({querySelectorAll:()=>[]})},
     Option:class {constructor(text,value){this.textContent=text;this.value=value;}},
-    setTimeout(fn){timers.push(fn);},fetch(url,init){const result=deferred(), body=JSON.parse(init.body);requests.push({body,token:init.headers.Authorization,signal:init.signal,...result});if(body.action==='custom_model_list') result.resolve({ok:true,json:async()=>[]});return result.promise;}
+    setTimeout(fn){timers.push(fn);},fetch(url,init){const result=deferred(), body=JSON.parse(init.body);requests.push({url,headers:init.headers,body,token:init.headers.Authorization,signal:init.signal,...result});if(body.action==='custom_model_list') result.resolve({ok:true,json:async()=>[]});return result.promise;}
   });
   vm.runInContext(chatSource,context,{filename:'chat.js'});
   const evaluate = code => vm.runInContext(code,context);
@@ -330,3 +331,120 @@ console.log('Chat UI: edit-and-resend truncation, per-turn retry, and summary-pr
   assert.equal(ui.evaluate("document.getElementById('effortPicker').hidden"), false);
 }
 console.log('Chat UI: reasoning-effort labels map none/xhigh/max and vendor values passed.');
+
+// Native protocols use the same Responses-shaped conversation store and adapters.
+const proxyRoot = 'https://jgezpvmlnhycxslqbwcx.supabase.co/functions/v1/chat-api-proxy/22222222-2222-4222-8222-222222222222';
+const sse = (...events) => events.map(event => `data: ${JSON.stringify(event)}\r\n\r\n`).join('');
+function nativeStream(protocol, text = '原生 reply', reason) {
+  return protocol === 'messages' ? sse(
+    {type:'message_start',message:{usage:{input_tokens:7,output_tokens:0,cache_read_input_tokens:2}}},
+    {type:'content_block_start',index:0,content_block:{type:'text',text:''}},
+    {type:'content_block_delta',index:0,delta:{type:'text_delta',text}},
+    {type:'message_delta',delta:{stop_reason:reason || 'end_turn'},usage:{output_tokens:3}},
+    {type:'message_stop'}
+  ) : sse(
+    {choices:[{index:0,delta:{content:text},finish_reason:null}]},
+    {choices:[{index:0,delta:{},finish_reason:reason || 'stop'}]},
+    {choices:[],usage:{prompt_tokens:9,completion_tokens:3,total_tokens:12}}
+  ) + 'data: [DONE]\r\n\r\n';
+}
+for (const [suffix, protocol, target] of [
+  ['', 'responses','/v1/responses'], ['/v1','responses','/v1/responses'], ['/v1/responses','responses','/v1/responses'],
+  ['/v1/message','messages','/v1/messages'], ['/v1/messages','messages','/v1/messages'], ['/messages','messages','/messages'],
+  ['/v1/chat/completions','chat_completions','/v1/chat/completions'], ['/chat/completions','chat_completions','/chat/completions']
+]) {
+  assert.equal(core.chatEndpoint(proxyRoot + suffix,true).protocol,protocol);
+  assert.equal(core.chatEndpoint(proxyRoot + suffix,true).url,proxyRoot + target);
+  const ui=uiHarness();
+  assert.equal(ui.evaluate(`customUrl(${JSON.stringify(proxyRoot + suffix)})`),proxyRoot + suffix);
+}
+assert.equal(core.chatEndpoint('https://provider.example/v1').url,'https://provider.example/v1/responses');
+for (const invalid of [proxyRoot + '/other',proxyRoot + '/v1/models',proxyRoot + '/v1/messages/extra',proxyRoot + '?key=x',proxyRoot + '#x',proxyRoot.replace('supabase.co','supabase.co.evil.test'),proxyRoot.replace('https://','http://'),proxyRoot.replace('https://','https://user:pass@')]) {
+  const ui=uiHarness();
+  assert.throws(()=>ui.evaluate(`customUrl(${JSON.stringify(invalid)})`),/proxy_url/);
+}
+const nativeInput = [
+  {role:'system',content:[{type:'input_text',text:'compressed summary'}]},
+  {role:'user',content:[{type:'input_text',text:'question'},{type:'input_image',image_url:'data:image/png;base64,aGVsbG8=',detail:'low'},{type:'input_file',filename:'scan.pdf',file_data:'data:application/pdf;base64,JVBERg=='}]},
+  {type:'message',role:'assistant',content:[{type:'output_text',text:'prior answer'}]}
+];
+for (const protocol of ['messages','chat_completions']) {
+  const payload=core.nativeRequest({model:'native',input:nativeInput,max_output_tokens:90},protocol);
+  assert.equal(payload.model,'native'); assert.equal(payload.input,undefined);
+  if (protocol === 'messages') {
+    assert.equal(payload.system[0].text,'compressed summary');
+    assert.equal(payload.messages[0].content[1].source.media_type,'image/png');
+    assert.equal(payload.messages[0].content[2].source.data,'JVBERg==');
+    assert.equal(payload.max_tokens,90);
+  } else {
+    assert.equal(payload.messages[0].role,'system');
+    assert.equal(payload.messages[1].content[1].image_url.detail,'low');
+    assert.equal(payload.messages[1].content[2].file.filename,'scan.pdf');
+    assert.equal(payload.max_completion_tokens,90);
+  }
+  assert.throws(()=>core.nativeRequest({input:[{type:'reasoning',encrypted_content:'opaque'}]},protocol),/request/);
+  assert.throws(()=>core.nativeRequest({input:[{role:'user',content:[{type:'input_file',file_id:'not-portable'}]}]},protocol),/pdf/);
+  const result=await readResponses(stream(nativeStream(protocol)),()=>{},protocol);
+  assert.equal(result.text,'原生 reply');assert.equal(result.status,'success');
+  assert.deepEqual(result.usage,{input_tokens:9,output_tokens:3,total_tokens:12});
+  assert.equal(continuation(result.output,false)[0].content[0].text,'原生 reply');
+  assert.equal((await readResponses(stream(nativeStream(protocol,'partial',protocol === 'messages' ? 'max_tokens' : 'length')),()=>{},protocol)).status,'incomplete');
+  assert.equal((await readResponses(stream(nativeStream(protocol,'partial',protocol === 'messages' ? 'tool_use' : 'tool_calls')),()=>{},protocol)).status,'failure');
+  const partial=protocol === 'messages' ? sse({type:'content_block_delta',index:0,delta:{type:'text_delta',text:'partial'}}) : sse({choices:[{index:0,delta:{content:'partial'}}]});
+  assert.equal((await readResponses(stream(partial),()=>{},protocol)).status,'interrupted');
+  assert.equal((await readResponses(stream(sse({error:{message:'failed'}})),()=>{},protocol)).status,'failure');
+  const json=protocol === 'messages' ? {content:[{type:'text',text:'json answer'}],stop_reason:'end_turn',usage:{input_tokens:2,output_tokens:1}} : {choices:[{index:0,message:{content:'json answer'},finish_reason:'stop'}],usage:{prompt_tokens:2,completion_tokens:1}};
+  assert.equal(core.normalizeChatResponse(json,protocol).text,'json answer');
+  assert.equal(core.normalizeChatResponse(json,protocol).status,'success');
+}
+for (const protocol of ['messages','chat_completions']) {
+  const ui=uiHarness();await ui.login('native-user');
+  const suffix=protocol === 'messages' ? '/v1/message' : '/v1/chat/completions';
+  ui.evaluate(`customModels=[{id:'native-profile',display_name:'Native',model_key:'native-model',base_url:${JSON.stringify(proxyRoot + suffix)}}]; models=mergeModels(models,customModels); customKeys.set('native-profile','MEMORY_ONLY'); document.getElementById('model').replaceChildren(...models.map(item=>new Option(item.display_name,item.id))); document.getElementById('model').value='custom:native-profile'; configureModel();`);
+  ui.evaluate("document.getElementById('prompt').value='native first'; void generate();");await settle();
+  let req=ui.requests.at(-1);
+  assert.equal(req.body.model,'native-model');assert.equal(req.body.input,undefined);
+  assert.equal(req.token,'Bearer MEMORY_ONLY');
+  assert.equal(req.url,proxyRoot + (protocol === 'messages' ? '/v1/messages' : suffix));
+  req.resolve({ok:true,headers:new Headers({'content-type':'text/event-stream'}),body:stream(nativeStream(protocol))});await settle();
+  assert.equal(ui.evaluate('current.turns[0].status'),'success');
+  assert.equal(ui.evaluate('current.turns[0].text'),'原生 reply');
+  ui.evaluate("current.summary={text:'summary carried',turns:0}; document.getElementById('prompt').value='second'; void generate();");await settle();
+  req=ui.requests.at(-1);
+  const messages=req.body.messages;
+  assert(messages.some(message=>message.role === 'assistant' && message.content[0].text === '原生 reply'));
+  assert(protocol === 'messages' ? req.body.system[0].text.includes('summary carried') : messages[0].content[0].text.includes('summary carried'));
+  req.resolve({ok:true,headers:new Headers({'content-type':'text/event-stream'}),body:stream(nativeStream(protocol))});await settle();
+  ui.evaluate("void ensureContextSummary(current,model(),8192,epoch,true)");await settle();
+  req=ui.requests.at(-1);
+  assert(req.body.messages[0].content[0].text.includes('chat.summaryInstruction'),'compression must pass through the native adapter');
+  req.resolve({ok:true,headers:new Headers({'content-type':'text/event-stream'}),body:stream(nativeStream(protocol,'native summary'))});await settle();
+  assert.equal(ui.evaluate('current.summary.text'),'native summary');
+  assert(!JSON.stringify(ui.writes).includes('MEMORY_ONLY'),'API key must never enter conversation persistence');
+  // Switching back to a catalog model must replay only normalized assistant text.
+  ui.evaluate("document.getElementById('model').value=models[0].id; configureModel(); document.getElementById('prompt').value='switched'; void generate();");await settle();
+  req=ui.requests.at(-1);assert.equal(req.body.action,'respond');
+  assert(req.body.input.some(item=>item.role === 'assistant' && item.content[0].type === 'output_text'));
+  req.resolve(okStream());await settle();
+  ui.auth(null);assert.equal(ui.evaluate('customKeys.size'),0);
+}
+console.log('Chat native protocols: URL whitelist/alias/defaults, text/images/PDF, summary/continuation/model switch, usage, JSON/SSE and memory-only keys passed.');
+{
+  const ui=uiHarness();await ui.login('A');
+  ui.evaluate(`document.getElementById('customModelName').value='Saved native'; document.getElementById('customModelKey').value='claude'; document.getElementById('customBaseUrl').value=${JSON.stringify(proxyRoot + '/v1/messages')}; document.getElementById('customApiKey').value='PRIVATE_MEMORY_ONLY'; void saveCustomModel({preventDefault(){}});`);
+  await settle();
+  const req=ui.requests.at(-1);
+  assert.equal(req.body.action,'custom_model_save');
+  assert.equal(req.body.base_url,proxyRoot + '/v1/messages');
+  assert(!JSON.stringify(req.body).includes('PRIVATE_MEMORY_ONLY'));
+  assert.deepEqual(Object.keys(req.body).sort(),['action','id','display_name','model_key','base_url','expected_version'].sort(),'save uses only existing metadata fields');
+  ui.auth(null);
+  req.resolve({ok:true,json:async()=>({model:{id:req.body.id,display_name:'Saved native',model_key:'claude',base_url:req.body.base_url}})});await settle();
+  assert.equal(ui.evaluate('customKeys.size'),0,'late profile save after signout cannot restore a key');
+  assert.equal(ui.evaluate('customModels.length'),0);
+}
+// Bundled core shares scope with the app URL constant: use the platform constructor explicitly.
+const coreSource=await readFile(new URL('../public/chat-core.js',import.meta.url),'utf8');
+const bundledCore=vm.createContext({URL,TextEncoder,TextDecoder,ReadableStream,console});
+vm.runInContext(coreSource.replace(/^export /gm,'') + `\nconst URL='app base URL'; globalThis.bundleEndpoint=chatEndpoint('https://provider.example/v1/messages');`,bundledCore);
+assert.equal(bundledCore.bundleEndpoint.protocol,'messages');

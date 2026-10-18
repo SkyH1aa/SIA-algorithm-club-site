@@ -1,4 +1,4 @@
-import { hashKey, proxyBase, proxySecret, proxySetting, ProxyError, UUID } from '../_shared/chat-api-proxy.ts';
+import { hashKey, proxyAllowedHeaders, proxyBase, proxyHeaders, proxyKey, proxySecret, proxySetting, ProxyError, UUID, type ProxyEndpoint } from '../_shared/chat-api-proxy.ts';
 
 const MAX_BYTES = 12 * 1024 * 1024;
 function configuredProxyOrigins(): Set<string> {
@@ -7,7 +7,8 @@ function configuredProxyOrigins(): Set<string> {
 function cors(request?: Request): Headers {
   const origin = request?.headers.get('origin');
   const configured = configuredProxyOrigins();
-  const headers = new Headers({ 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'authorization, content-type', 'access-control-max-age': '600', 'cache-control': 'no-store', 'vary': 'Origin' });
+  const endpoint = request && /\/v1\/messages?$/.test(new URL(request.url).pathname) ? 'messages' : 'responses';
+  const headers = new Headers({ 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': proxyAllowedHeaders(endpoint).join(', '), 'access-control-max-age': '600', 'cache-control': 'no-store', 'vary': 'Origin' });
   if (configured.size === 0) headers.set('access-control-allow-origin', '*');
   else if (origin && configured.has(origin)) headers.set('access-control-allow-origin', origin);
   return headers;
@@ -33,8 +34,9 @@ export async function handler(request: Request): Promise<Response> {
   // Match the deployed prefix or local function prefix, never arbitrary suffixes.
   const url = new URL(request.url);
   try { assertProxyOrigin(request); } catch (error) { return failure(error instanceof ProxyError ? error.code : 'cors', error instanceof ProxyError ? error.status : 403, request); }
-  const match = url.pathname.match(/^\/(?:functions\/v1\/)?chat-api-proxy\/([^/]+)\/v1\/responses$/);
+  const match = url.pathname.match(/^\/(?:functions\/v1\/)?chat-api-proxy\/([^/]+)\/v1\/(responses|messages|message|chat\/completions)$/);
   if (!match || !UUID.test(match[1]) || url.search) return failure('path', 404, request);
+  const endpoint = (match[2] === 'message' ? 'messages' : match[2]) as ProxyEndpoint;
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(request) });
   if (request.method !== 'POST') return failure('method', 405, request);
   const controller = new AbortController();
@@ -76,13 +78,12 @@ export async function handler(request: Request): Promise<Response> {
     timer = setTimeout(abort, timeout);
     request.signal.addEventListener('abort', abort, { once: true });
     if (request.signal.aborted) abort();
-    const auth = request.headers.get('authorization')?.match(/^Bearer (cap_[A-Za-z0-9_-]{43})$/);
-    if (!auth) throw new ProxyError('invalid_key', 401);
+    const key = proxyKey(request, endpoint);
     if (request.headers.has('content-encoding')) throw new ProxyError('encoding', 415);
     if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(request.headers.get('content-type') || '')) throw new ProxyError('content_type', 415);
     const declared = request.headers.get('content-length');
     if (declared && (!/^\d+$/.test(declared) || Number(declared) > MAX_BYTES)) throw new ProxyError('request_too_large', 413);
-    const digest = await bounded(hashKey(auth[1]));
+    const digest = await bounded(hashKey(key));
     // Do not cancel admission transport: if timeout races DB commit, its eventual
     // result still triggers release. An unreachable response relies on lease expiry.
     const admission = rpc('chat_proxy_admit', { p_route_id: match[1], p_key_hash: digest, p_request_id: requestId, p_key_limit: keyLimit, p_route_limit: routeLimit, p_ttl_ms: timeout + 30000 }).then(async result => {
@@ -94,6 +95,7 @@ export async function handler(request: Request): Promise<Response> {
     const route = result.route as Record<string, unknown>;
     const base = await bounded(proxyBase(route.base_url));
     const secret = Deno.env.get(proxySecret(route.secret_name))!;
+    const upstreamHeaders = proxyHeaders(request, secret, endpoint);
     const reader = request.body?.getReader();
     const chunks: Uint8Array[] = []; let size = 0;
     if (reader) {
@@ -110,8 +112,8 @@ export async function handler(request: Request): Promise<Response> {
     const bytes = new Uint8Array(size); let offset = 0;
     for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
     try { JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); } catch { throw new ProxyError('input', 400); }
-    const upstream = await bounded(fetch(`${base}/responses`, { method: 'POST', redirect: 'error', signal: controller.signal,
-      headers: { authorization: `Bearer ${secret}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream', 'accept-encoding': 'identity' }, body: bytes }));
+    const upstream = await bounded(fetch(`${base}/${endpoint}`, { method: 'POST', redirect: 'error', signal: controller.signal,
+      headers: upstreamHeaders, body: bytes }));
     if (!upstream.ok) {
       void upstream.body?.cancel().catch(() => {});
       throw new ProxyError('upstream_error', upstream.status);

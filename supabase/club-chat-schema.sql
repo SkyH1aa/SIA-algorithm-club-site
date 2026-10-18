@@ -103,12 +103,16 @@ create table if not exists public.chat_custom_models (
     and model_key ~ '^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$'
   ),
   base_url text not null check (
-    base_url ~ '^https://jgezpvmlnhycxslqbwcx\\.supabase\\.co/functions/v1/chat-api-proxy/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/?$'
+    base_url ~ '^https://jgezpvmlnhycxslqbwcx[.]supabase[.]co/functions/v1/chat-api-proxy/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}(/v1)?(/(responses|messages|message|chat/completions))?/?$'
   ),
   version bigint not null default 0 check (version >= 0),
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   unique (user_id, id)
+);
+alter table public.chat_custom_models drop constraint if exists chat_custom_models_base_url_check;
+alter table public.chat_custom_models add constraint chat_custom_models_base_url_check check (
+  base_url ~ '^https://jgezpvmlnhycxslqbwcx[.]supabase[.]co/functions/v1/chat-api-proxy/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}(/v1)?(/(responses|messages|message|chat/completions))?/?$'
 );
 create index if not exists chat_custom_models_user_idx
   on public.chat_custom_models(user_id, updated_at desc);
@@ -194,7 +198,7 @@ begin
   if p_user_id is null or not exists (select 1 from auth.users where id = p_user_id)
     or p_id is null or p_display_name is null or char_length(btrim(p_display_name)) not between 1 and 120
     or p_model_key is null or char_length(btrim(p_model_key)) not between 1 and 160
-    or p_base_url is null or p_base_url !~ '^https://jgezpvmlnhycxslqbwcx\\.supabase\\.co/functions/v1/chat-api-proxy/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/?$'
+    or p_base_url is null or p_base_url !~ '^https://jgezpvmlnhycxslqbwcx[.]supabase[.]co/functions/v1/chat-api-proxy/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}(/v1)?(/(responses|messages|message|chat/completions))?/?$'
     or p_expected_version is null or p_expected_version < 0 then
     raise exception 'Invalid custom model' using errcode = '22023';
   end if;
