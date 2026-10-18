@@ -584,12 +584,14 @@ console.log('PASS provider/model deletion: confirmation, versioned request, list
   };
   sandbox.window.ClubI18n.apply = () => {
     for (const match of html.matchAll(/data-i18n="(chatAdmin\.[^"]+)"/g)) translatedCopy.set(match[1], sandbox.window.ClubI18n.t(match[1]));
-    const protocolSelect = /<select\b[^>]*id="providerApiProtocol"[^>]*>([\s\S]*?)<\/select>/.exec(html);
-    assert(protocolSelect);
-    const optionKeys = [...protocolSelect[1].matchAll(/data-i18n="([^"]+)"/g)].map(match => match[1]);
-    node('providerApiProtocol').options.forEach((option, index) => { option.text = sandbox.window.ClubI18n.t(optionKeys[index]); });
+    for (const id of ['providerApiProtocol', 'modelClaudeThinkingMode']) {
+      const select = [...html.matchAll(/<select\b[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/select>/g)].find(match => match[1] === id);
+      assert(select);
+      const optionKeys = [...select[2].matchAll(/data-i18n="([^"]+)"/g)].map(match => match[1]);
+      node(id).options.forEach((option, index) => { option.text = sandbox.window.ClubI18n.t(optionKeys[index]); });
+    }
     node('providerBaseUrl').title = sandbox.window.ClubI18n.t('chatAdmin.baseUrlHelp');
-    for (const id of ['providerApiProtocolHelp', 'modelApiProtocolHelp']) {
+    for (const id of ['providerApiProtocolHelp', 'modelApiProtocolHelp', 'modelClaudeThinkingHelp']) {
       const tag = [...html.matchAll(/<p\b[^>]*id="([^"]+)"[^>]*data-i18n="([^"]+)"/g)].find(match => match[1] === id);
       assert(tag, `Help must be linked to a translation: ${id}`);
       node(id).textContent = sandbox.window.ClubI18n.t(tag[2]);
@@ -706,7 +708,7 @@ console.log('PASS provider/model deletion: confirmation, versioned request, list
   const beforeModelSave = calls.length;
   reply('save_model', {}); refreshReplies({...provider, api_protocol: 'messages'});
   submit('modelForm'); await settleProxy();
-  assert.deepEqual(calls[beforeModelSave], {action: 'save_model', ...model}, 'Model save keeps existing reasoning settings and has no separate protocol');
+  assert.deepEqual(calls[beforeModelSave], {action: 'save_model', ...model, claude_thinking: {mode: 'omit'}}, 'Legacy Messages save defaults to omit while retaining generic drafts');
   assert.equal(run("errorKey({message:'api_protocol',status:400})"), 'invalidApiProtocol');
   for (const lang of ['zh', 'en']) {
     assert.match(dictionaries[lang].chatAdmin.apiProtocolHelp, /覆盖 URL 后缀|overrides the URL suffix/);
@@ -715,6 +717,97 @@ console.log('PASS provider/model deletion: confirmation, versioned request, list
   }
   assert.equal(dictionaries.zh.chatAdmin.apiProtocol, 'API协议');
   console.log('PASS inherited model protocol, unchanged reasoning save payload and actionable bilingual protocol error mappings');
+
+  // Execute the actual test submit handler, with invalid budgets rejected before confirmation/network.
+  run(source.slice(source.indexOf("$('testForm').addEventListener"), source.indexOf('function refreshUsage(page')));
+  const change = id => node(id).listeners.change();
+  const plain = value => JSON.parse(JSON.stringify(value));
+  modelClick();
+  assert.equal(node('modelClaudeThinkingMode').value, 'omit');
+  assert.equal(node('reasoningEffortsField').hidden, true);
+  assert.equal(node('reasoningEfforts').disabled, true);
+  assert.equal(node('modelClaudeThinkingModeField').hidden, false);
+  node('modelClaudeThinkingMode').value = 'enabled'; change('modelClaudeThinkingMode');
+  node('modelClaudeThinkingBudget').value = '2048';
+  node('modelClaudeThinkingEfforts').value = 'low,high,max';
+  node('modelClaudeDefaultEffort').value = 'high';
+  assert.equal(node('modelClaudeThinkingBudgetField').hidden, false);
+  assert.equal(node('modelClaudeThinkingEfforts').disabled, true);
+  const thinkingDraft = () => ['modelClaudeThinkingMode', 'modelClaudeThinkingBudget', 'modelClaudeThinkingEfforts', 'modelClaudeDefaultEffort', 'reasoningEfforts', 'defaultReasoning'].map(id => node(id).value);
+  const manualDraft = thinkingDraft();
+  node('testOutput').value = '99999';
+  for (const lang of ['zh', 'en']) {
+    language = lang; windowListeners.get('club:langchange')();
+    assert.deepEqual(thinkingDraft(), manualDraft);
+    assert.equal(node('testOutput').value, '99999', 'Language refresh preserves even an invalid manual output draft');
+    assert.equal(node('modelClaudeThinkingHelp').textContent, dictionaries[lang].chatAdmin.claudeThinkingHelp);
+    assert.equal(node('modelClaudeThinkingMode').options[0].text, dictionaries[lang].chatAdmin.claudeThinkingOmit);
+  }
+  for (const [protocol, url, messages] of [['auto', '/v1/message', true], ['auto', '/v1/messages/', true], ['responses', '/v1/messages', false], ['chat', '/v1/messages', false], ['messages', '/v1/chat/completions', true]]) {
+    sandbox.protocolCase = {protocol, url};
+    run("providers=[{...protocolProvider,api_protocol:protocolCase.protocol,base_url:'https://example.com'+protocolCase.url}];providers.push({...protocolProvider,id:'other',api_protocol:'responses'});renderProviderOptions()");
+    change('modelProvider');
+    assert.equal(node('modelClaudeThinkingModeField').hidden, !messages);
+    assert.equal(node('reasoningEfforts').disabled, messages);
+    assert.deepEqual(thinkingDraft(), manualDraft);
+  }
+  node('modelProvider').value = 'other'; change('modelProvider');
+  assert.equal(node('modelClaudeThinkingMode').disabled, true);
+  assert.equal(node('reasoningEfforts').disabled, false);
+  assert.deepEqual(plain(run('claudeThinkingInput(4096)')), {mode: 'omit'});
+  node('modelProvider').value = provider.id; change('modelProvider');
+  assert.deepEqual(thinkingDraft(), manualDraft);
+  assert.deepEqual(plain(run('claudeThinkingInput(4096)')), {mode: 'enabled', budget_tokens: 2048});
+  for (const invalid of ['1023', '1024.5', '4096', '9000', '']) {
+    node('modelClaudeThinkingBudget').value = invalid;
+    const before = calls.length; submit('modelForm');
+    assert.equal(calls.length, before, 'Invalid manual budget never sends');
+    assert.equal(run("messages.get('modelMessage').key"), 'claudeThinkingBudgetInvalid');
+    assert.equal(node('modelClaudeThinkingBudget').value, invalid, 'Never clip invalid budgets');
+  }
+  node('modelClaudeThinkingBudget').value = '2048';
+  for (const [mode, expected] of [['omit', {mode:'omit'}], ['disabled', {mode:'disabled'}], ['enabled', {mode:'enabled',budget_tokens:2048}], ['adaptive', {mode:'adaptive',efforts:['low','high','max'],default_effort:'high'}]]) {
+    node('modelClaudeThinkingMode').value = mode; change('modelClaudeThinkingMode');
+    assert.equal(node('modelClaudeThinkingBudgetField').hidden, mode !== 'enabled');
+    assert.equal(node('modelClaudeThinkingEffortsField').hidden, mode !== 'adaptive');
+    const before = calls.length;
+    reply('save_model', {error: 'claude_thinking'}, 400); submit('modelForm'); await settleProxy();
+    assert.deepEqual(calls[before].claude_thinking, expected, 'Save projects only keys relevant to selected mode');
+    assert.deepEqual(calls[before].reasoning_efforts, model.reasoning_efforts, 'Old generic values are retained but never used as Claude configuration');
+  }
+  for (const [efforts, fallback] of [['low,ultra',''], ['low,low',''], ['low,high','max']]) {
+    node('modelClaudeThinkingEfforts').value = efforts; node('modelClaudeDefaultEffort').value = fallback;
+    const before = calls.length; submit('modelForm'); assert.equal(calls.length, before);
+    assert.equal(run("messages.get('modelMessage').key"), 'claudeEffortInvalid');
+  }
+  node('modelClaudeThinkingEfforts').value = 'low,medium,high,xhigh,max'; node('modelClaudeDefaultEffort').value = '';
+  assert.deepEqual(plain(run('claudeThinkingInput(4096)')), {mode:'adaptive',efforts:['low','medium','high','xhigh','max'],default_effort:null});
+  sandbox.thinkingFixture = {...model, claude_thinking:{mode:'adaptive',efforts:['high','xhigh'],default_effort:null}};
+  run('models=[thinkingFixture]'); modelClick();
+  assert.equal(node('modelClaudeThinkingMode').value, 'adaptive');
+  assert.equal(node('modelClaudeThinkingEfforts').value, 'high,xhigh');
+  assert.equal(node('modelClaudeDefaultEffort').value, '');
+  run("models=[{...protocolModel,claude_thinking:{mode:'enabled',budget_tokens:2048}}];renderModelOptions();$('testModel').value=protocolModel.id;configureTestBudget(true)");
+  assert.equal(node('testOutput').value, '2560', 'Manual thinking test gets answer headroom above budget');
+  node('testPrompt').value = 'Offline validation only';
+  for (const output of ['256', '2048']) {
+    node('testOutput').value = output;
+    const before = calls.length, beforeConfirm = confirmations.length;
+    submit('testForm');
+    assert.equal(calls.length, before); assert.equal(confirmations.length, beforeConfirm);
+    assert.equal(run("messages.get('testMessage').key"), 'claudeThinkingBudgetInvalid');
+  }
+  node('testOutput').value = '3000'; confirmResult = false;
+  const before = confirmations.length; submit('testForm'); assert.equal(confirmations.length, before + 1); confirmResult = true;
+  run("models=[{...protocolModel,max_output_tokens:2100,claude_thinking:{mode:'enabled',budget_tokens:2048}}];configureTestBudget(true)");
+  assert.equal(node('testOutput').value, '2100', 'Headroom stays within model max while exceeding budget');
+  for (const [code, key] of [['claude_thinking','claudeThinkingInvalid'],['claude_thinking_budget','claudeThinkingBudgetInvalid'],['claude_effort','claudeEffortInvalid']]) {
+    sandbox.thinkingError = {message:code,status:400}; assert.equal(run('errorKey(thinkingError)'), key);
+    for (const lang of ['zh','en']) assert(dictionaries[lang].chatAdmin[key]);
+  }
+  node('clearModelButton').onclick();
+  assert.equal(node('modelClaudeThinkingMode').value, 'omit');
+  console.log('PASS Claude real handlers: legacy omit, mode projection, provider resolution/switching, bilingual draft preservation, strict budget/effort validation and safe test headroom');
 }
 assert.equal(queue.length, 0, 'All queued responses must be consumed');
 console.log(`Chat admin VM regression passed (${calls.length} mocked requests; zero network or paid calls).`);

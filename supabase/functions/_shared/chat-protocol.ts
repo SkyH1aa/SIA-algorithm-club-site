@@ -18,14 +18,44 @@ export function chatEndpoint(base: string, setting: ChatProtocolSetting = 'auto'
   if (/\/messages?$/i.test(url)) return { protocol: 'messages', url: url.replace(/\/message$/i, '/messages') };
   return { protocol: 'responses', url: /\/responses$/i.test(url) ? url : `${url}/responses` };
 }
-export function validateProtocolCapabilities(protocol: ChatProtocol, model: { preserve_reasoning: boolean; reasoning_efforts: unknown; default_max_output_tokens?: number }): void {
+export type ClaudeThinkingConfig =
+  | { mode: 'omit' | 'disabled' }
+  | { mode: 'enabled'; budget_tokens: number }
+  | { mode: 'adaptive'; efforts: string[]; default_effort: string | null };
+
+// Missing legacy rows fail safe: never enable thinking from generic effort fields.
+export function normalizeClaudeThinking(value: unknown = undefined, defaultMaxOutputTokens?: number, effectiveMaxTokens?: number): ClaudeThinkingConfig {
+  if (value === undefined) return { mode: 'omit' };
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new ChatProtocolError('claude_thinking');
+  const config = value as ProtocolJson;
+  const mode = config.mode;
+  const keys = mode === 'enabled' ? ['mode', 'budget_tokens'] : mode === 'adaptive' ? ['mode', 'efforts', 'default_effort'] : ['mode'];
+  if (typeof mode !== 'string' || !['omit', 'disabled', 'enabled', 'adaptive'].includes(mode) || Object.keys(config).some(key => !keys.includes(key))) throw new ChatProtocolError('claude_thinking');
+  if (mode === 'omit' || mode === 'disabled') return { mode };
+  if (mode === 'enabled') {
+    const budget = config.budget_tokens;
+    if (!Number.isSafeInteger(budget) || (budget as number) < 1024 ||
+      [defaultMaxOutputTokens, effectiveMaxTokens].some(max => max !== undefined && (!Number.isSafeInteger(max) || (budget as number) >= max))) throw new ChatProtocolError('claude_thinking_budget');
+    return { mode, budget_tokens: budget as number };
+  }
+  const efforts = config.efforts === undefined ? [] : config.efforts;
+  const defaultEffort = config.default_effort === undefined ? null : config.default_effort;
+  if (!Array.isArray(efforts) || efforts.some(effort => typeof effort !== 'string' || !['low', 'medium', 'high', 'xhigh', 'max'].includes(effort)) ||
+    new Set(efforts).size !== efforts.length || (defaultEffort !== null && (typeof defaultEffort !== 'string' || !efforts.includes(defaultEffort)))) throw new ChatProtocolError('claude_thinking');
+  return { mode: 'adaptive', efforts: [...efforts], default_effort: defaultEffort as string | null };
+}
+
+export function validateProtocolCapabilities(protocol: ChatProtocol, model: { preserve_reasoning: boolean; reasoning_efforts: unknown; default_max_output_tokens?: number }, claudeThinking?: unknown): void {
+  const config = normalizeClaudeThinking(claudeThinking, model.default_max_output_tokens);
+  if (protocol !== 'messages' && config.mode !== 'omit') throw new ChatProtocolError('claude_thinking');
   if (protocol === 'responses') return;
   if (model.preserve_reasoning) throw new ChatProtocolError('reasoning_history_unsupported');
-  const supported = protocol === 'messages' ? ['none', 'low', 'medium', 'high'] : ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
+  if (protocol === 'messages') return;
+  const supported = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
   if (!Array.isArray(model.reasoning_efforts) || model.reasoning_efforts.some(x => !supported.includes(String(x)))) throw new ChatProtocolError('reasoning_effort_unsupported');
-  if (protocol === 'messages' && model.reasoning_efforts.some(x => x !== 'none') && model.default_max_output_tokens !== undefined && model.default_max_output_tokens <= 1024) throw new ChatProtocolError('reasoning_budget');
 }
-export function protocolRequest(protocol: ChatProtocol, body: ProtocolJson): ProtocolJson {
+export function protocolRequest(protocol: ChatProtocol, body: ProtocolJson, claudeThinking?: unknown): ProtocolJson {
+  if (protocol !== 'messages' && normalizeClaudeThinking(claudeThinking).mode !== 'omit') throw new ChatProtocolError('claude_thinking');
   if (protocol === 'responses') return body;
   const input = body.input as ProtocolJson[];
   if (input.some(x => x.type === 'reasoning') || body.include) throw new ChatProtocolError('input');
@@ -61,14 +91,12 @@ export function protocolRequest(protocol: ChatProtocol, body: ProtocolJson): Pro
     }
   }
   if (!messages.length || messages[0].role !== 'user') throw new ChatProtocolError();
-  let thinking: ProtocolJson | undefined;
-  if (effort === 'none') thinking = { type: 'disabled' };
-  else if (effort) {
-    const budget = ({ low: 1024, medium: 4096, high: 8192 } as Record<string, number>)[effort];
-    if (!budget || max <= 1024) throw new ChatProtocolError('effort');
-    thinking = { type: 'enabled', budget_tokens: Math.min(budget, max - 1) };
-  }
-  return { model: body.model, messages, ...(system.length ? { system } : {}), max_tokens: max, thinking, stream: true };
+  const config = normalizeClaudeThinking(claudeThinking, undefined, max);
+  if (effort !== undefined && (config.mode !== 'adaptive' || !config.efforts.includes(effort))) throw new ChatProtocolError('claude_effort');
+  const selectedEffort = config.mode === 'adaptive' ? effort ?? config.default_effort : null;
+  const thinking = config.mode === 'omit' ? {} : { thinking: config.mode === 'enabled' ? { type: 'enabled', budget_tokens: config.budget_tokens } : { type: config.mode } };
+  return { model: body.model, messages, ...(system.length ? { system } : {}), max_tokens: max, ...thinking,
+    ...(selectedEffort ? { output_config: { effort: selectedEffort } } : {}), stream: true };
 }
 
 // Bounded SSE framing, including byte-fragmented CRLF and multiline data. An

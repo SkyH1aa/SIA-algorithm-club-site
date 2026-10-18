@@ -66,7 +66,7 @@ console.log('Chat core: fragmented UTF-8/CRLF, multiline data, terminal states, 
 
 // Run the actual UI module in a small DOM/auth/storage harness to control async races.
 const chatSource = (await readFile(new URL('../public/chat.js', import.meta.url), 'utf8')).replace(/^import .*;\r?\n/gm, '').replaceAll('import.meta.url', JSON.stringify(new URL('../public/chat.js', import.meta.url).href));
-const DICT = new Set(['chat.effort_off','chat.effort_low','chat.effort_medium','chat.effort_high','chat.effort_xhigh','chat.effort_max','chat.effortShort','chat.default']);
+const DICT = new Set(['chat.effort_off','chat.effort_low','chat.effort_medium','chat.effort_high','chat.effort_xhigh','chat.effort_max','chat.effortShort','chat.default','chat.claudeEffort','chat.claude_thinking','chat.claude_thinking_budget','chat.claude_effort']);
 const deferred = () => { let resolve, reject; const promise = new Promise((yes,no) => { resolve=yes; reject=no; }); return {promise,resolve,reject}; };
 const account = (id, token = id) => ({user:{id},access_token:token});
 const catalogModel = {id:'test-model',display_name:'Test',introduction:'A model for testing.',context_window:10000,max_output_tokens:100,default_max_output_tokens:50,reasoning_efforts:[]};
@@ -331,6 +331,43 @@ console.log('Chat UI: edit-and-resend truncation, per-turn retry, and summary-pr
   assert.equal(ui.evaluate("document.getElementById('effortPicker').hidden"), false);
 }
 console.log('Chat UI: reasoning-effort labels map none/xhigh/max and vendor values passed.');
+
+{
+  const ui = uiHarness(); await ui.login('Claude');
+  const old = {reasoning_efforts:['low','medium','high'],default_reasoning_effort:'low'};
+  for (const mode of [null, 'omit', 'disabled', 'enabled', 'adaptive']) {
+    const config = mode ? {mode, budget_tokens:1024, efforts:['high','max'], default_effort:'max'} : undefined;
+    ui.evaluate(`Object.assign(models[0],${JSON.stringify({...old,api_protocol:'messages',claude_thinking:config})});configureModel()`);
+    assert.equal(ui.evaluate("document.getElementById('effortPicker').hidden"), mode !== 'adaptive', 'Only dedicated adaptive Messages efforts can show the picker');
+    assert.equal(ui.evaluate("document.getElementById('effort').value"), mode === 'adaptive' ? 'max' : '');
+    if (mode === 'adaptive') {
+      assert.deepEqual(Array.from(ui.evaluate("[...document.getElementById('effort').options].map(row=>row.value)")), ['', 'high', 'max']);
+      assert.equal(ui.evaluate("document.getElementById('effortTriggerText').textContent"), '[chat.claudeEffort] [chat.effort_max]');
+    }
+    ui.evaluate("document.getElementById('effort').value='low';document.getElementById('prompt').value='no stale generic replay';void generate()"); await settle();
+    const req = ui.requests.at(-1);
+    assert.equal(req.body.reasoning_effort, null, 'Even an injected stale generic selection must not reach generation');
+    req.resolve({ok:true,headers:new Headers({'content-type':'text/event-stream'}),body:stream(delta)}); await settle();
+  }
+  ui.evaluate("models[0].claude_thinking={mode:'adaptive',efforts:['high'],default_effort:null};configureModel();document.getElementById('prompt').value='draft retained';document.getElementById('effort').value='high';refreshLocalizedUi()");
+  assert.equal(ui.evaluate("document.getElementById('effort').value"), 'high', 'Language refresh preserves chosen adaptive effort');
+  assert.equal(ui.evaluate("document.getElementById('prompt').value"), 'draft retained');
+  ui.evaluate('void generate()'); await settle();
+  assert.equal(ui.requests.at(-1).body.reasoning_effort, 'high');
+  ui.requests.at(-1).resolve({ok:true,headers:new Headers({'content-type':'text/event-stream'}),body:stream(delta)}); await settle();
+  ui.evaluate("models[0].claude_thinking={mode:'adaptive',efforts:['high'],default_effort:'stale'};configureModel()");
+  assert.equal(ui.evaluate("document.getElementById('effort').value"), '', 'Unlisted default uses native provider default');
+  ui.evaluate("delete models[0].api_protocol;configureModel()");
+  assert.equal(ui.evaluate("document.getElementById('effort').value"), 'low', 'Older catalogs without resolved protocol keep generic compatibility');
+  assert.equal(ui.evaluate("document.getElementById('effortPicker').hidden"), false);
+  for (const error of ['claude_thinking','claude_thinking_budget','claude_effort']) {
+    ui.evaluate("document.getElementById('prompt').value='localized error';void generate()"); await settle();
+    ui.requests.at(-1).resolve({ok:false,status:400,json:async()=>({error})}); await settle();
+    assert.equal(ui.evaluate('statusKey'), error);
+    assert.equal(ui.evaluate("document.getElementById('status').textContent"), `[chat.${error}]`);
+  }
+}
+console.log('Chat UI: Messages omit/nonadaptive suppress old efforts, adaptive native defaults/efforts, language drafts, legacy catalog fallback and localized errors passed.');
 
 // Native protocols use the same Responses-shaped conversation store and adapters.
 const proxyRoot = 'https://jgezpvmlnhycxslqbwcx.supabase.co/functions/v1/chat-api-proxy/22222222-2222-4222-8222-222222222222';

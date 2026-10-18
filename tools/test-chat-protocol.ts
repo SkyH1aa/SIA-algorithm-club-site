@@ -1,6 +1,6 @@
 // Run: deno run tools/test-chat-protocol.ts (no permissions required).
 import { strict as assert } from 'node:assert';
-import { chatEndpoint, ChatProtocolError, parseProtocolSse, protocolEvents, protocolRequest, validateProtocolCapabilities } from '../supabase/functions/_shared/chat-protocol.ts';
+import { chatEndpoint, ChatProtocolError, parseProtocolSse, protocolEvents, protocolRequest, normalizeClaudeThinking, validateProtocolCapabilities } from '../supabase/functions/_shared/chat-protocol.ts';
 type Row = Record<string, unknown>;
 const text = (role: string, value: string) => ({ role, content: [{ type: role === 'assistant' ? 'output_text' : 'input_text', text: value }] });
 const body = { model: 'model', input: [text('system', 'rule'), text('developer', 'more'), text('user', 'question'), text('assistant', 'answer'), text('user', 'next')], max_output_tokens: 9000, stream: true, store: false };
@@ -86,17 +86,58 @@ test('Chat Completions preserves instruction roles, output budget and explicit r
   assert.equal(result.max_completion_tokens, 9000); assert.equal(result.reasoning_effort, 'high'); assert.equal(result.store, false);
   assert.deepEqual(result.stream_options, { include_usage: true });
 });
-test('reasoning capability checks reject encrypted history, unsupported efforts and inadequate budgets', () => {
+test('reasoning capability checks retain history guards and ignore legacy Messages efforts', () => {
   for (const protocol of ['messages', 'chat'] as const) {
     assert.throws(() => validateProtocolCapabilities(protocol, { preserve_reasoning: true, reasoning_efforts: [] }), /reasoning_history_unsupported/);
-    assert.throws(() => validateProtocolCapabilities(protocol, { preserve_reasoning: false, reasoning_efforts: ['invented'] }), /reasoning_effort_unsupported/);
     assert.throws(() => protocolRequest(protocol, { ...body, input: [{ type: 'reasoning', encrypted_content: 'opaque', summary: [] }] }), ChatProtocolError);
     assert.throws(() => protocolRequest(protocol, { ...body, include: ['reasoning.encrypted_content'] }), ChatProtocolError);
   }
-  assert.throws(() => validateProtocolCapabilities('messages', { preserve_reasoning: false, reasoning_efforts: ['low'], default_max_output_tokens: 1024 }), /reasoning_budget/);
-  for (const [effort, budget] of [['low', 1024], ['medium', 4096], ['high', 8192]]) assert.deepEqual(protocolRequest('messages', { ...body, reasoning: { effort } }).thinking, { type: 'enabled', budget_tokens: budget });
-  assert.deepEqual(protocolRequest('messages', { ...body, reasoning: { effort: 'none' } }).thinking, { type: 'disabled' });
-  assert.throws(() => protocolRequest('messages', { ...body, max_output_tokens: 1024, reasoning: { effort: 'low' } }), ChatProtocolError);
+  assert.throws(() => validateProtocolCapabilities('chat', { preserve_reasoning: false, reasoning_efforts: ['invented'] }), /reasoning_effort_unsupported/);
+  validateProtocolCapabilities('messages', { preserve_reasoning: false, reasoning_efforts: ['invented', 'high'], default_max_output_tokens: 100 });
+});
+test('Claude normalization supplies fail-safe defaults and strictly rejects malformed configs', () => {
+  assert.deepEqual(normalizeClaudeThinking(), { mode: 'omit' });
+  assert.deepEqual(normalizeClaudeThinking({ mode: 'adaptive' }), { mode: 'adaptive', efforts: [], default_effort: null });
+  for (const mode of ['omit', 'disabled']) {
+    assert.deepEqual(normalizeClaudeThinking({ mode }), { mode });
+    for (const key of ['budget_tokens', 'efforts', 'default_effort', 'extra']) assert.throws(() => normalizeClaudeThinking({ mode, [key]: null }), /^ChatProtocolError: claude_thinking$/);
+  }
+  for (const config of [null, [], '', true, 1, {}, { mode: 'ENABLED' }, { mode: 'enabled', efforts: [] }, { mode: 'adaptive', budget_tokens: 1024 }, { mode: 'adaptive', efforts: null }, { mode: 'adaptive', efforts: ['high', 'high'] }, { mode: 'adaptive', efforts: ['none'] }, { mode: 'adaptive', efforts: ['HIGH'] }, { mode: 'adaptive', efforts: [1] }, { mode: 'adaptive', default_effort: 'high' }, { mode: 'adaptive', default_effort: false }, { mode: 'adaptive', unknown: true }]) assert.throws(() => normalizeClaudeThinking(config), /^ChatProtocolError: claude_thinking$/);
+  for (const budget_tokens of [undefined, null, '1024', true, 1023, -1, 1024.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) assert.throws(() => normalizeClaudeThinking({ mode: 'enabled', budget_tokens }), /claude_thinking_budget/);
+  for (const max of [1024, 1000]) {
+    assert.throws(() => normalizeClaudeThinking({ mode: 'enabled', budget_tokens: 1024 }, max), /claude_thinking_budget/);
+    assert.throws(() => normalizeClaudeThinking({ mode: 'enabled', budget_tokens: 1024 }, 9000, max), /claude_thinking_budget/);
+  }
+  assert.deepEqual(normalizeClaudeThinking({ mode: 'enabled', budget_tokens: 1024 }, 1025, 1025), { mode: 'enabled', budget_tokens: 1024 });
+});
+test('Claude modes use exact dedicated wire settings without generic budget inference or clipping', () => {
+  for (const config of [undefined, { mode: 'omit' }]) {
+    const result = protocolRequest('messages', body, config);
+    assert.equal('thinking' in result, false); assert.equal('output_config' in result, false);
+  }
+  assert.deepEqual(protocolRequest('messages', body, { mode: 'disabled' }).thinking, { type: 'disabled' });
+  assert.deepEqual(protocolRequest('messages', body, { mode: 'enabled', budget_tokens: 8192 }).thinking, { type: 'enabled', budget_tokens: 8192 });
+  assert.throws(() => protocolRequest('messages', { ...body, max_output_tokens: 8192 }, { mode: 'enabled', budget_tokens: 8192 }), /claude_thinking_budget/);
+  for (const mode of ['omit', 'disabled', 'enabled']) for (const effort of ['none', 'low', 'medium', 'high', 'xhigh', 'max']) assert.throws(() => protocolRequest('messages', { ...body, reasoning: { effort } }, mode === 'enabled' ? { mode, budget_tokens: 1024 } : { mode }), /claude_effort/);
+});
+test('Claude adaptive efforts include all five SDK values and emit only configured selections', () => {
+  const config = { mode: 'adaptive', efforts: ['low', 'medium', 'high', 'xhigh', 'max'], default_effort: 'xhigh' };
+  const result = protocolRequest('messages', body, config);
+  assert.deepEqual(result.thinking, { type: 'adaptive' }); assert.deepEqual(result.output_config, { effort: 'xhigh' });
+  assert.equal('budget_tokens' in (result.thinking as Row), false);
+  for (const effort of config.efforts) assert.deepEqual(protocolRequest('messages', { ...body, reasoning: { effort } }, config).output_config, { effort });
+  for (const effort of ['none', 'minimal', 'custom', '', 1]) assert.throws(() => protocolRequest('messages', { ...body, reasoning: { effort } }, config), /claude_effort/);
+  const noEffort = protocolRequest('messages', body, { mode: 'adaptive' });
+  assert.deepEqual(noEffort.thinking, { type: 'adaptive' }); assert.equal('output_config' in noEffort, false);
+  assert.equal('output_config' in protocolRequest('messages', body, { mode: 'adaptive', efforts: ['high'], default_effort: null }), false);
+});
+test('active Claude config cannot silently survive a non-Messages protocol switch', () => {
+  for (const protocol of ['responses', 'chat'] as const) {
+    for (const config of [{ mode: 'disabled' }, { mode: 'adaptive' }, { mode: 'enabled', budget_tokens: 1024 }]) {
+      assert.throws(() => validateProtocolCapabilities(protocol, { preserve_reasoning: false, reasoning_efforts: [], default_max_output_tokens: 9000 }, config), /^ChatProtocolError: claude_thinking$/);
+      assert.throws(() => protocolRequest(protocol, body, config), /^ChatProtocolError: claude_thinking$/);
+    }
+  }
 });
 test('Chat terminal waits for DONE, retains late usage and complete text, maps reasoning/refusal', () => {
   const frames = [{ choices: [{ index: 0, delta: { content: 'hello', reasoning_content: 'thought', refusal: 'declined' }, finish_reason: null }] }, { choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] }, { choices: [], usage: { prompt_tokens: 11, completion_tokens: 4, total_tokens: 15 } }];

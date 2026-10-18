@@ -64,6 +64,34 @@ create table if not exists public.chat_models (
 alter table public.chat_models
   add column if not exists introduction text;
 
+-- Existing generic effort settings remain stored; Messages now uses this native configuration.
+alter table public.chat_models
+  add column if not exists claude_thinking jsonb not null default '{"mode":"omit"}'::jsonb;
+alter table public.chat_models drop constraint if exists chat_models_claude_thinking_check;
+alter table public.chat_models add constraint chat_models_claude_thinking_check check (
+  coalesce(case when jsonb_typeof(claude_thinking) = 'object' then
+    case claude_thinking->>'mode'
+      when 'omit' then claude_thinking - 'mode' = '{}'::jsonb
+      when 'disabled' then claude_thinking - 'mode' = '{}'::jsonb
+      when 'enabled' then
+        claude_thinking - 'mode' - 'budget_tokens' = '{}'::jsonb
+        and case when jsonb_typeof(claude_thinking->'budget_tokens') = 'number' then
+          (claude_thinking->>'budget_tokens')::numeric >= 1024
+          and (claude_thinking->>'budget_tokens')::numeric < default_max_output_tokens
+          and trunc((claude_thinking->>'budget_tokens')::numeric) = (claude_thinking->>'budget_tokens')::numeric
+        else false end
+      when 'adaptive' then
+        claude_thinking - 'mode' - 'efforts' - 'default_effort' = '{}'::jsonb
+        and jsonb_typeof(coalesce(claude_thinking->'efforts', '[]'::jsonb)) = 'array'
+        and coalesce(claude_thinking->'efforts', '[]'::jsonb) <@ '["low","medium","high","xhigh","max"]'::jsonb
+        and (coalesce(claude_thinking->'default_effort', 'null'::jsonb) = 'null'::jsonb
+          or (jsonb_typeof(claude_thinking->'default_effort') = 'string'
+            and coalesce(claude_thinking->'efforts', '[]'::jsonb) ? (claude_thinking->>'default_effort')))
+      else false
+    end
+  else false end, false)
+);
+
 alter table public.chat_models
   drop constraint if exists chat_models_introduction_length_check;
 alter table public.chat_models

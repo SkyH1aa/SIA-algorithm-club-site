@@ -53,10 +53,41 @@ function text(value, max, required = false) {
   return value.trim() || null;
 }
 function keys(object, allowed) { requireThat(Object.keys(object).every(key => allowed.includes(key))); }
+function claudeThinking(value = {mode:'omit'}, defaultOutput, actualOutput) {
+  requireThat(value && typeof value === 'object' && !Array.isArray(value),'claude_thinking');
+  const {mode} = value;
+  requireThat(['omit','disabled','enabled','adaptive'].includes(mode),'claude_thinking');
+  const allowed = mode === 'enabled' ? ['mode','budget_tokens'] : mode === 'adaptive' ? ['mode','efforts','default_effort'] : ['mode'];
+  requireThat(Object.keys(value).every(key => allowed.includes(key)),'claude_thinking');
+  if (mode === 'enabled') {
+    requireThat(Number.isSafeInteger(value.budget_tokens) && value.budget_tokens >= 1024 &&
+      [defaultOutput,actualOutput].every(max => max === undefined || (Number.isSafeInteger(max) && value.budget_tokens < max)),'claude_thinking_budget');
+    return {mode,budget_tokens:value.budget_tokens};
+  }
+  if (mode !== 'adaptive') return {mode};
+  const efforts = value.efforts === undefined ? [] : value.efforts;
+  const default_effort = value.default_effort === undefined ? null : value.default_effort;
+  requireThat(Array.isArray(efforts) && efforts.every(effort => ['low','medium','high','xhigh','max'].includes(effort)) &&
+    new Set(efforts).size === efforts.length && (default_effort === null || efforts.includes(default_effort)),'claude_thinking');
+  return {mode,efforts:[...efforts],default_effort};
+}
+function effectiveReasoning(model, protocol) {
+  const config = claudeThinking(model.claude_thinking,model.default_max_output_tokens);
+  return {claude_thinking:config,reasoning_efforts:protocol === 'messages' ? config.mode === 'adaptive' ? config.efforts : [] : model.reasoning_efforts,
+    default_reasoning_effort:protocol === 'messages' ? config.mode === 'adaptive' ? config.default_effort : null : model.default_reasoning_effort};
+}
+// Mirrors only the Messages thinking portion of an internal request; no native proxy mutation.
+function messagesThinking(config, actualOutput, effort) {
+  const normalized = claudeThinking(config,undefined,actualOutput);
+  requireThat(effort == null || (normalized.mode === 'adaptive' && normalized.efforts.includes(effort)),'effort');
+  if (normalized.mode === 'omit') return {};
+  if (normalized.mode === 'enabled') return {thinking:{type:'enabled',budget_tokens:normalized.budget_tokens}};
+  return {thinking:{type:normalized.mode},...(effort == null ? {} : {output_config:{effort}})};
+}
 function seed(contextWindow) {
   const provider = {id:PROVIDER_ID,name:'mock',label:'MOCK 本地供应商',base_url:'https://mock-provider.example.com/v1',api_protocol:'auto',secret_name:'CHAT_KEY_MOCK',auth_header:'authorization',enabled:true};
   const stamp = new Date(0).toISOString();
-  const base = {provider_id:provider.id,context_window:contextWindow,max_output_tokens:4096,default_max_output_tokens:512,reasoning_efforts:['none','low','medium','high','xhigh','max'],default_reasoning_effort:'medium',supports_images:true,supports_pdf:true,preserve_reasoning:false,enabled:true,introduction:null,updated_at:stamp,deleted_at:null};
+  const base = {provider_id:provider.id,context_window:contextWindow,max_output_tokens:4096,default_max_output_tokens:512,reasoning_efforts:['none','low','medium','high','xhigh','max'],default_reasoning_effort:'medium',claude_thinking:{mode:'omit'},supports_images:true,supports_pdf:true,preserve_reasoning:false,enabled:true,introduction:null,updated_at:stamp,deleted_at:null};
   return {providers:[provider],models:[{...base,id:MODEL_ID,model_key:'mock-multimodal',display_name:'MOCK 多模态'}, {...base,id:'30000000-0000-4000-8000-000000000002',model_key:'mock-text',display_name:'MOCK 纯文本',supports_images:false,supports_pdf:false}],usage:[]};
 }
 function sessionFor(state) {
@@ -166,13 +197,15 @@ function providerConfig(payload, current) {
   requireThat(payload.auth_header === undefined || ['authorization','x-api-key'].includes(payload.auth_header));
   return {id:payload.id || randomUUID(),name:text(payload.name,80,true),label:text(payload.label,120) || '',base_url:`${url.origin}${url.pathname.replace(/\/+$/,'')}`,api_protocol,secret_name:name,auth_header:payload.auth_header || 'authorization',enabled:payload.enabled === undefined ? true : Boolean(payload.enabled),updated_at:new Date().toISOString(),deleted_at:null};
 }
-function modelConfig(payload, providers) {
+function modelConfig(payload, providers, current) {
   requireThat(payload.id == null || uuid(payload.id));
   requireThat(uuid(payload.provider_id) && providers.some(row => row.id === payload.provider_id));
   const max = integer(payload.max_output_tokens,1,131072), efforts = payload.reasoning_efforts ?? [];
   requireThat(Array.isArray(efforts) && efforts.length <= 12 && efforts.every(value => typeof value === 'string' && value.length > 0 && value.length <= 40));
+  const defaultOutput = integer(payload.default_max_output_tokens,1,max);
+  const thinking = claudeThinking(payload.claude_thinking === undefined ? current?.claude_thinking : payload.claude_thinking,defaultOutput);
   const introduction = payload.introduction == null ? null : text(payload.introduction,1000,true);
-  return {id:payload.id || randomUUID(),provider_id:payload.provider_id,model_key:text(payload.model_key ?? payload.model_id,160,true),display_name:text(payload.display_name,120,true),introduction,context_window:integer(payload.context_window,256,1000000),max_output_tokens:max,default_max_output_tokens:integer(payload.default_max_output_tokens,1,max),reasoning_efforts:efforts,default_reasoning_effort:payload.default_reasoning_effort == null ? null : text(payload.default_reasoning_effort,40,true),supports_images:Boolean(payload.supports_images),supports_pdf:Boolean(payload.supports_pdf),preserve_reasoning:Boolean(payload.preserve_reasoning),enabled:payload.enabled === undefined ? true : Boolean(payload.enabled),updated_at:new Date().toISOString(),deleted_at:null};
+  return {id:payload.id || randomUUID(),provider_id:payload.provider_id,model_key:text(payload.model_key ?? payload.model_id,160,true),display_name:text(payload.display_name,120,true),introduction,context_window:integer(payload.context_window,256,1000000),max_output_tokens:max,default_max_output_tokens:defaultOutput,claude_thinking:thinking,reasoning_efforts:efforts,default_reasoning_effort:payload.default_reasoning_effort == null ? null : text(payload.default_reasoning_effort,40,true),supports_images:Boolean(payload.supports_images),supports_pdf:Boolean(payload.supports_pdf),preserve_reasoning:Boolean(payload.preserve_reasoning),enabled:payload.enabled === undefined ? true : Boolean(payload.enabled),updated_at:new Date().toISOString(),deleted_at:null};
 }
 function upsert(rows, item) { const index = rows.findIndex(row => row.id === item.id); if (index < 0) rows.push(item); else rows[index] = item; return item; }
 function rewriteJS(source, origin) {
@@ -395,14 +428,22 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
     const requested = payload.action === 'admin_test'
       ? integer(payload.max_output_tokens,1,model.max_output_tokens,model.default_max_output_tokens)
       : model.default_max_output_tokens;
-    const effort = payload.reasoning_effort == null ? model.default_reasoning_effort : text(payload.reasoning_effort,40,true);
+    const endpoint = providerEndpoint(provider);
+    const effective = effectiveReasoning(model,endpoint.protocol);
+    const effort = payload.reasoning_effort == null ? effective.default_reasoning_effort : text(payload.reasoning_effort,40,true);
+    if (endpoint.protocol === 'messages') messagesThinking(effective.claude_thinking,requested,effort);
     requireThat(!blacklist.has(account.id),'blacklisted',403);
     requireThat(!leases.has(account.id),'busy',409);
     const inputEstimate = estimateInputTokens(input);
     const reservation = reserve(account.id,inputEstimate,requested), max = reservation.max;
+    try {
+      if (endpoint.protocol === 'messages') messagesThinking(effective.claude_thinking,max,effort);
+    } catch (error) {
+      // Validation occurs before a simulated upstream starts: release the full reservation.
+      reservation.settle(0); throw error;
+    }
     const scenario = state.scenario, requestId = meta.request_id;
-    const endpoint = providerEndpoint(provider);
-    Object.assign(meta,{model_id:model.id,max_output_tokens:max,reasoning_effort:effort == null ? null : model.reasoning_efforts.includes(effort) ? effort : 'custom',scenario,protocol:endpoint.protocol,upstream_path:new URL(endpoint.url).pathname});
+    Object.assign(meta,{model_id:model.id,max_output_tokens:max,reasoning_effort:effort == null ? null : effective.reasoning_efforts.includes(effort) ? effort : 'custom',scenario,protocol:endpoint.protocol,upstream_path:new URL(endpoint.url).pathname});
     const usage = {request_id:requestId,user_id:account.id,member_name:account.member_name,username:account.username || account.email || account.id,provider_name:provider.label || provider.name,model_name:model.display_name,action:payload.action,provider_id:provider.id,model_id:model.id,model_key:model.model_key,input_bytes:meta.request_bytes,max_output_tokens:max,reasoning_effort:meta.reasoning_effort,status:'upstream_started',upstream_status:200,input_tokens:null,output_tokens:null,total_tokens:null,error_code:null,started_at:new Date().toISOString(),finished_at:null};
     database.usage.unshift(usage);
     if (database.usage.length > 1000) database.usage.pop();
@@ -481,7 +522,13 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
           if (id === null) globalQuota = setting; else userQuotas.set(id,{...setting,weekly_limit,monthly_limit});
           result = snapshot(id); break;
         }
-        case 'catalog': requireThat(!blacklist.has(account.id),'blacklisted',403); result = {models:database.models.filter(model => model.enabled && database.providers.some(provider => provider.id === model.provider_id && provider.enabled)).map(({provider_id,model_key,enabled,...model}) => model),bound:true,member_name:account.member_name,quota:snapshot(account.id)}; break;
+        case 'catalog':
+          requireThat(!blacklist.has(account.id),'blacklisted',403);
+          result = {models:database.models.filter(model => model.enabled && database.providers.some(provider => provider.id === model.provider_id && provider.enabled)).map(({provider_id,model_key,enabled,...model}) => {
+            const provider = database.providers.find(row => row.id === provider_id);
+            const protocol = providerEndpoint(provider).protocol;
+            return {...model,api_protocol:protocol === 'chat-completions' ? 'chat' : protocol,...effectiveReasoning(model,protocol)};
+          }),bound:true,member_name:account.member_name,quota:snapshot(account.id)}; break;
         case 'custom_model_list': {
           keys(payload,['action']);
           result = [...customModels.values()].filter(row => row.user_id === account.id).map(({user_id,...row}) => row);
@@ -519,7 +566,7 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
           models: database.models.filter(row => !row.deleted_at).map(model => ({...model,model_id:model.model_key,version:Date.parse(model.updated_at) || 0}))
         }; break;
         case 'admin_save_provider': result = {provider:upsert(database.providers,providerConfig(payload,database.providers.find(row => row.id === payload.id)))}; break;
-        case 'admin_save_model': result = {model:upsert(database.models,modelConfig(payload,database.providers))}; break;
+        case 'admin_save_model': result = {model:upsert(database.models,modelConfig(payload,database.providers,database.models.find(row => row.id === payload.id)))}; break;
         case 'admin_delete_provider': {
           keys(payload,['action','id']);
           requireThat(uuid(payload.id),'input');
@@ -653,6 +700,26 @@ async function selfTest() {
   assert.equal(endpointProtocol('/v1/messages/extra'),'responses','infer exact terminal endpoint only');
   assert.equal(endpointProtocol('/v1/chat/completions/extra'),'responses');
   for (const base_url of ['http://mock-provider.example.com/v1/messages','https://localhost/v1/responses','https://mock-provider.example.com/v1/message?key=x','https://mock-provider.example.com/v1/chat/completions#fragment','https://user:password@mock-provider.example.com/v1/responses']) assert.throws(() => providerConfig({name:'mock',base_url,secret_name:'CHAT_KEY_MOCK'}),/provider_url/);
+  assert.deepEqual(claudeThinking(),{mode:'omit'});
+  for (const config of [{mode:'omit'},{mode:'disabled'},{mode:'enabled',budget_tokens:1024},{mode:'adaptive'},
+    {mode:'adaptive',efforts:[]},{mode:'adaptive',efforts:['low','medium','high','xhigh','max'],default_effort:'max'}]) {
+    const normalized = claudeThinking(config,4096);
+    assert.deepEqual(claudeThinking(normalized,4096),normalized);
+  }
+  for (const config of [null,false,[],{},'adaptive',{mode:'ENABLED'},{mode:'omit',extra:true},{mode:'disabled',budget_tokens:1024},
+    {mode:'enabled'},{mode:'enabled',budget_tokens:1023},{mode:'enabled',budget_tokens:1024.5},{mode:'enabled',budget_tokens:'1024'},
+    {mode:'enabled',budget_tokens:4096},{mode:'enabled',budget_tokens:1024,efforts:[]},{mode:'enabled',budget_tokens:1024,default_effort:null},
+    {mode:'adaptive',budget_tokens:1024},{mode:'adaptive',efforts:null},{mode:'adaptive',efforts:['none']},{mode:'adaptive',efforts:['low','low']},
+    {mode:'adaptive',efforts:['HIGH']},{mode:'adaptive',efforts:['between_tools']},{mode:'adaptive',default_effort:'medium'},
+    {mode:'adaptive',efforts:['medium'],default_effort:3},{mode:'adaptive',extra:true}]) assert.throws(() => claudeThinking(config,4096),/claude_thinking/);
+  assert.deepEqual(messagesThinking({mode:'omit'},1,null),{});
+  assert.deepEqual(messagesThinking({mode:'disabled'},1,null),{thinking:{type:'disabled'}});
+  assert.deepEqual(messagesThinking({mode:'enabled',budget_tokens:1024},1025,null),{thinking:{type:'enabled',budget_tokens:1024}});
+  assert.throws(() => messagesThinking({mode:'enabled',budget_tokens:1024},1024,null),/claude_thinking_budget/);
+  assert.throws(() => messagesThinking({mode:'enabled',budget_tokens:2048},1025,null),/claude_thinking_budget/);
+  for (const mode of ['omit','disabled','enabled']) assert.throws(() => messagesThinking({mode,...(mode === 'enabled' ? {budget_tokens:1024} : {})},4096,'low'),/effort/);
+  assert.deepEqual(messagesThinking({mode:'adaptive'},128,null),{thinking:{type:'adaptive'}});
+  assert.deepEqual(messagesThinking({mode:'adaptive',efforts:['medium']},128,'medium'),{thinking:{type:'adaptive'},output_config:{effort:'medium'}});
   let clock = new Date('2026-10-18T23:59:00Z');
   const server = createMockServer({testPort:true,now:() => clock});
   await new Promise((resolve,reject) => { server.once('error',reject); server.listen(0,'127.0.0.1',resolve); });
@@ -786,6 +853,83 @@ async function selfTest() {
     assert.doesNotMatch(JSON.stringify(logs),/authorization|apikey|access_token|HTTP fixture check|CHAT_KEY_MOCK_CREATED/);
     assert.equal((await localFetch(base+'/mock/setup',{method:'POST',headers:{origin:'https://example.com','content-type':'application/json'},body:'{}'})).status,403);
     assert.equal((await get('/fixtures/%2e%2e%2f%2e%2e%2fAGENTS.md')).status,404);
+    const thinkingProvider = (await (await post({...provider,api_protocol:'messages',base_url:`${providerBase}/v1/responses`})).json()).provider;
+    const thinkingModel = {...model,provider_id:thinkingProvider.id,max_output_tokens:8192,default_max_output_tokens:4096,
+      reasoning_efforts:['none','low','medium','high'],default_reasoning_effort:'high'};
+    let thinkingSaved = (await (await post(thinkingModel)).json()).model;
+    const thinkingId = thinkingSaved.id;
+    assert.deepEqual(thinkingSaved.claude_thinking,{mode:'omit'},'missing create deliberately omits instead of migrating generic high');
+    const storedModel = async () => (await (await post({action:'admin_get'})).json()).models.find(row => row.id === thinkingId);
+    const publicModel = async () => (await (await post({action:'catalog'})).json()).models.find(row => row.id === thinkingId);
+    for (const config of [{mode:'omit'},{mode:'disabled'},{mode:'enabled',budget_tokens:1024},
+      {mode:'adaptive'},{mode:'adaptive',efforts:['low','medium','high','xhigh','max'],default_effort:'medium'}]) {
+      const expected = claudeThinking(config,4096);
+      thinkingSaved = (await (await post({...thinkingModel,id:thinkingId,claude_thinking:config})).json()).model;
+      assert.deepEqual(thinkingSaved.claude_thinking,expected);
+      thinkingSaved = (await (await post({...thinkingModel,id:thinkingId})).json()).model;
+      assert.deepEqual(thinkingSaved.claude_thinking,expected,'omitted update preserves each existing mode');
+      assert.deepEqual((await storedModel()).reasoning_efforts,thinkingModel.reasoning_efforts,'legacy generic settings retained');
+      const visible = await publicModel();
+      assert.equal(visible.api_protocol,'messages','explicit protocol overrides Responses URL suffix');
+      assert.deepEqual(visible.claude_thinking,expected);
+      assert.deepEqual(visible.reasoning_efforts,expected.mode === 'adaptive' ? expected.efforts : []);
+      assert.equal(visible.default_reasoning_effort,expected.mode === 'adaptive' ? expected.default_effort : null);
+      for (const action of ['admin_test','respond']) {
+        const response = await post({action,model_id:thinkingId,input,max_output_tokens:4096});
+        assert.equal(response.status,200);
+        assert.equal((await readResponses(response.body,()=>{})).status,'success');
+      }
+      if (config.mode !== 'adaptive') assert.equal((await post({action:'admin_test',model_id:thinkingId,max_output_tokens:4096,reasoning_effort:'low'})).status,400);
+    }
+    assert.equal((await post({action:'admin_test',model_id:thinkingId,reasoning_effort:'none'})).status,400);
+    assert.equal((await post({action:'admin_test',model_id:thinkingId,reasoning_effort:'unknown'})).status,400);
+    for (const effort of ['low','medium','high','xhigh','max']) {
+      const response = await post({action:'admin_test',model_id:thinkingId,max_output_tokens:128,reasoning_effort:effort});
+      assert.equal(response.status,200); await readResponses(response.body,()=>{});
+    }
+    const stableThinking = await storedModel();
+    for (const config of [null,[],{},false,{mode:'adaptive',efforts:['none']},{mode:'adaptive',efforts:['high','high']},
+      {mode:'adaptive',default_effort:'medium'},{mode:'omit',budget_tokens:1024},{mode:'enabled',budget_tokens:4096},
+      {mode:'enabled',budget_tokens:1024,efforts:[]},{mode:'adaptive',budget_tokens:1024}]) {
+      const count = (await (await post({action:'admin_get'})).json()).models.length;
+      for (const id of [undefined,thinkingId]) assert.equal((await post({...thinkingModel,id,claude_thinking:config})).status,400);
+      assert.deepEqual(await storedModel(),stableThinking,'invalid updates do not mutate stored config');
+      assert.equal((await (await post({action:'admin_get'})).json()).models.length,count,'invalid creates add no models');
+    }
+    for (const api_protocol of ['responses','chat','auto']) {
+      await post({...provider,id:thinkingProvider.id,api_protocol});
+      const visible = await publicModel();
+      assert.equal(visible.api_protocol,api_protocol === 'auto' ? 'responses' : api_protocol);
+      assert.deepEqual(visible.reasoning_efforts,thinkingModel.reasoning_efforts,'other protocols keep generic effort');
+      assert.equal(visible.default_reasoning_effort,'high');
+    }
+    await post({...provider,id:thinkingProvider.id,base_url:`${providerBase}/v1/messages`,api_protocol:'auto'});
+    assert.equal((await publicModel()).api_protocol,'messages','auto resolves Messages before applying effective settings');
+    await post({...thinkingModel,id:thinkingId,claude_thinking:{mode:'enabled',budget_tokens:1024}});
+    for (const max_output_tokens of [1,1023,1024]) {
+      const response = await post({action:'admin_test',model_id:thinkingId,max_output_tokens});
+      assert.equal(response.status,400); assert.equal((await response.json()).error,'claude_thinking_budget');
+    }
+    const exactBudget = await post({action:'admin_test',model_id:thinkingId,max_output_tokens:1025});
+    assert.equal(exactBudget.status,200); await readResponses(exactBudget.body,()=>{});
+    assert.deepEqual((await storedModel()).claude_thinking,{mode:'enabled',budget_tokens:1024},'runtime never clips manual budget');
+    const ownQuota = await (await post({action:'quota'})).json();
+    for (const actual of [1024,1025]) {
+      const before = await (await post({action:'quota'})).json();
+      await post({action:'admin_quota_save',user_id:ACCOUNTS.admin.id,daily_limit:before.periods[0].used+estimateInputTokens(input)+actual,
+        weekly_limit:null,monthly_limit:null,expected_version:before.user.version});
+      for (const action of ['admin_test','respond']) {
+        const response = await post({action,model_id:thinkingId,input,max_output_tokens:4096});
+        if (actual === 1024) {
+          assert.equal(response.status,400); assert.equal((await response.json()).error,'claude_thinking_budget');
+          assert.equal((await (await post({action:'quota'})).json()).periods[0].used,before.periods[0].used,'pre-upstream invalid budget refunds reservation');
+        } else {
+          assert.equal(response.status,200); assert.equal(response.headers.get('x-chat-max-output-tokens'),'1025');
+          await readResponses(response.body,()=>{}); break;
+        }
+      }
+    }
+    assert.equal(ownQuota.user.daily_limit,null);
     state = await setup('admin','completed',true);
     const directory = await (await post({action:'admin_user_directory'})).json();
     assert.equal(directory.users.length,4); assert.deepEqual(directory.blacklist,[]);
@@ -1091,6 +1235,7 @@ async function selfTest() {
     assert.ok(!JSON.stringify(proxyLogs).includes(issued.api_key));
     state = await setup('admin','completed',true);
     assert.deepEqual(await (await post({action:'admin_proxy_list'})).json(),{routes:[],keys:[]});
+    console.log('Chat Claude thinking self-test passed: strict four-mode JSON, omit create/preserve update, retained generic storage, protocol-resolved effective catalog, adaptive efforts/provider default, normalized test/respond SSE, exact manual budgets and quota-shrink rejection/refund; no upstream calls.');
     console.log('Chat supplier protocol self-test passed: auto fixtures/create defaults, persisted enum roundtrips, omitted-update preservation, invalid create/update rejection without mutation, explicit endpoint overrides, chat/chat-completions mapping and normalized admin/member Responses streams.');
     console.log('Chat native protocol self-test passed: Responses/Chat Completions/Claude Messages JSON and SSE, exact endpoint inference, message alias normalization, optional /v1 custom URLs, client endpoint selection, native cap_ auth, matching dual credentials, Claude version defaults/validation and incomplete/interrupted fixtures.');
     console.log('Chat proxy self-test passed: admin-only scope, strict inputs, safe metadata, one-time 32-byte keys, hash-only storage, CAS versions, terminal route tombstones, revoked-only hard deletes, key/route lease cleanup, cascade isolation, route binding, JSON/SSE, model preservation, 401/403/404/405/413/429/502, cancellation, quota/blacklist/session independence, revocation, URL rewrite and reset.');

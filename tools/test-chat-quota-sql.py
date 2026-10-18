@@ -73,6 +73,29 @@ def main():
             db.execute("create table public.club_member_profiles(user_id uuid primary key references auth.users(id), username text, member_name text)")
             db.execute(source)
             legacy_provider = db.execute("insert into chat_providers(name,base_url,secret_name) values ('legacy-protocol','https://invalid.local/v1/messages','CHAT_KEY_TEST') returning id").fetchone()[0]
+            legacy_model = db.execute("insert into chat_models(provider_id,model_key,display_name,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort) values (%s,'legacy-thinking','Legacy thinking',8192,4096,2048,'[\"low\"]'::jsonb,'low') returning id", (legacy_provider,)).fetchone()[0]
+            db.execute("alter table chat_models drop column claude_thinking")
+            db.execute(source)
+            assert db.execute("select claude_thinking,reasoning_efforts,default_reasoning_effort from chat_models where id=%s", (legacy_model,)).fetchone() == ({"mode": "omit"}, ["low"], "low")
+            db.execute("update chat_models set claude_thinking=%s where id=%s", (Jsonb({"mode": "adaptive", "efforts": ["medium", "max"], "default_effort": "medium"}), legacy_model))
+            db.execute(source)
+            assert db.execute("select claude_thinking from chat_models where id=%s", (legacy_model,)).fetchone()[0] == {"mode": "adaptive", "efforts": ["medium", "max"], "default_effort": "medium"}
+            for config in ({"mode": "omit"}, {"mode": "disabled"}, {"mode": "enabled", "budget_tokens": 1024}, {"mode": "adaptive"}, {"mode": "adaptive", "efforts": [], "default_effort": None}, {"mode": "adaptive", "efforts": ["low", "medium", "high", "xhigh", "max"], "default_effort": "max"}):
+                db.execute("update chat_models set claude_thinking=%s where id=%s", (Jsonb(config), legacy_model))
+            for config in (None, [], "adaptive", {}, {"mode": "legacy"}, {"mode": "omit", "budget_tokens": 1024}, {"mode": "disabled", "efforts": []}, {"mode": "enabled"}, {"mode": "enabled", "budget_tokens": "1024"}, {"mode": "enabled", "budget_tokens": 1023}, {"mode": "enabled", "budget_tokens": 1024.5}, {"mode": "enabled", "budget_tokens": 2048}, {"mode": "enabled", "budget_tokens": 1024, "default_effort": None}, {"mode": "adaptive", "budget_tokens": 1024}, {"mode": "adaptive", "efforts": None}, {"mode": "adaptive", "efforts": "low"}, {"mode": "adaptive", "efforts": ["none"]}, {"mode": "adaptive", "efforts": [1]}, {"mode": "adaptive", "efforts": ["low"], "default_effort": "high"}, {"mode": "adaptive", "unknown": True}):
+                try:
+                    db.execute("update chat_models set claude_thinking=%s where id=%s", (Jsonb(config), legacy_model))
+                except psycopg.IntegrityError:
+                    pass
+                else:
+                    raise AssertionError(f"Invalid Claude thinking configuration accepted: {config!r}")
+            db.execute("update chat_models set claude_thinking=%s where id=%s", (Jsonb({"mode": "enabled", "budget_tokens": 1024}), legacy_model))
+            try:
+                db.execute("update chat_models set default_max_output_tokens=1024 where id=%s", (legacy_model,))
+            except psycopg.IntegrityError:
+                pass
+            else:
+                raise AssertionError("Default output cannot shrink to the manual thinking budget")
             db.execute("alter table chat_providers drop column api_protocol")
             db.execute(source)  # Upgrade an installed schema without the protocol column.
             assert db.execute("select api_protocol,base_url from chat_providers where id=%s", (legacy_provider,)).fetchone() == ("auto", "https://invalid.local/v1/messages")

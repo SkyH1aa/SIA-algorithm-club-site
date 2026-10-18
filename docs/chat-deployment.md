@@ -10,7 +10,7 @@
 1. **先执行更新后的 Chat SQL**（第 2 节，包括额度、黑名单与预留结算迁移）；保留现有配置和 usage，不删除重建旧表。
 2. 设置 Edge Function secrets（第 3 节）。
 3. **再部署两个新版 Edge Function `chat` 与 `chat-api-proxy`**，先确认新 RPC 可用。两者均配置 `verify_jwt=false`，但分别在函数内部执行用户 JWT/管理员校验与 proxy key 鉴权。
-4. **最后发布新版静态前端**（第 6 节），避免前端提前调用尚不存在的额度或代理管理接口。
+4. **最后发布新版静态前端**（第 6 节），避免前端提前调用尚不存在的额度或代理管理接口。若既有三协议部署仅升级本次 `claude_thinking`，顺序为完整 SQL → 新版 `chat` bundle → 前端（含 file bundle 与成员 i18n）；本次没有代理行为变化，不必仅为此重部署 `chat-api-proxy`。
 5. 在管理页配置 provider/model 并完成授权后的低成本测试（第 4、5、7 节），再恢复生成入口。
 
 **计量起点**：历史 `chat_usage` 不回填额度桶；新额度只从新版 Edge 的 admission/预留开始累计。旧 usage 继续作为历史审计保留，不能把升级后显示的 used 理解为本日/本周/本月所有历史供应商消耗。
@@ -128,8 +128,9 @@ Edge Function 已经自行校验 Bearer token，并通过 Supabase Auth `/auth/v
 - `context_window`：模型上下文窗口上限，必须覆盖实际要发送的输入。
 - `max_output_tokens`：允许的最大输出 token。
 - `default_max_output_tokens`：普通请求默认输出 token，不能大于最大值。
-- `reasoning_efforts`：供应商实际支持的 reasoning effort 字符串数组；不支持时留空。Chat Completions 仅接受适配器识别的 effort；Claude 当前将 `none` 关闭 thinking，`low/medium/high` 分别映射到 1024/4096/8192 的 thinking 预算，并在输出上限内缩小，输出预算必须大于 1024（额度缩小后也适用）。这不是所有 Claude 型号的统一能力声明，使用 adaptive-only 型号时应先留空并核对其原生参数。
-- `default_reasoning_effort`：可选默认 effort，必须包含在供应商支持的值内。
+- `reasoning_efforts`：Responses / Chat Completions 的通用 effort 字符串数组；不支持时留空。Chat Completions 仅接受适配器识别的值。Messages 保留这些旧字段供以后切回其他协议，但不再用它们生成 thinking 或 effort。
+- `default_reasoning_effort`：通用默认 effort，必须包含在通用数组内；Messages 的有效默认值改由下述专用配置决定。
+- `claude_thinking`：专用于 Messages 的 JSON 对象，模式与规则见下一节；与通用 effort 分开保存。
 - `supports_images`：只有模型确实接受 `input_image` 时才打开。
 - `supports_pdf`：只有模型确实接受 PDF `input_file` 时才打开。
 - `preserve_reasoning`：只有模型支持把返回的加密 reasoning 内容原样作为下一轮 assistant continuation 输入时才打开。
@@ -138,6 +139,30 @@ Edge Function 已经自行校验 Bearer token，并通过 Supabase Auth `/auth/v
 内部前端与服务端之间继续使用 Responses 风格的 `input` 和 SSE 事件；服务端按 provider 地址转换为原生 Messages / Chat Completions 请求，并归一化文本、终止状态和用量，管理员测试使用相同路径。现有会话无需迁移。上游必须支持其所选协议的真实流式返回；不能只凭“兼容”宣传判断能力。非 Responses 模型不能开启 `preserve_reasoning`，也不能混入已有的加密 reasoning 项；不兼容时明确拒绝，不静默丢弃。工具调用不能由内部 Chat 执行，仅有工具调用而无可用正文的回复会作为不支持的输出处理。对外代理则保持原生正文透传。
 
 `supports_images` 和 `supports_pdf` 是能力元数据：前端用它们控制附件入口，后端也会再次校验模型 capability、附件类型、大小和数量，因此不能通过数据库配置强行让不支持的模型接受附件。PDF 仅接受 `.pdf`，图片仅接受 png/jpeg/webp data URL。文本较多的 PDF 由浏览器抽取为 `input_text`；低文本或扫描型 PDF 在 `supports_pdf` 打开时走原生 `input_file`，由供应商自行解析，本项目不做 OCR。`preserve_reasoning` 错误打开会导致多轮请求被供应商拒绝或泄漏不兼容的 continuation 数据，应保持关闭直到实际验证通过。
+
+### Claude Messages 思考配置与旧配置迁移
+
+管理页模型表单单独配置 `claude_thinking`，JSON 只接受以下模式及对应键，未知键、跨模式键、数组或 `null` 都会拒绝：
+
+| 配置 | 内部 Chat 发给 Messages 上游的字段 |
+| --- | --- |
+| `{"mode":"omit"}` | 不发送 `thinking` 或 `output_config.effort`，保留供应商默认行为 |
+| `{"mode":"disabled"}` | `thinking: {type:"disabled"}` |
+| `{"mode":"enabled","budget_tokens":1024}` | `thinking: {type:"enabled",budget_tokens:1024}`，预算原样发送 |
+| `{"mode":"adaptive"}` | `thinking: {type:"adaptive"}`，不发送 effort，使用供应商默认值 |
+| `{"mode":"adaptive","efforts":["medium"],"default_effort":"medium"}` | `thinking: {type:"adaptive"}` 与 `output_config: {effort:"medium"}` |
+
+`budget_tokens` 仅能出现在 `enabled`，必须是至少 1024 的整数，并严格小于模型的**默认输出**。例如手动预算 1024、默认输出 4096、最大输出至少 4096；管理员测试输出也必须大于 1024（如 2048 或 4096）。只增大最大输出而不改默认输出无效。请求发起时还会按测试输出上限及额度收缩后的实际 `max_tokens` 重新检查严格大于关系，失败即拒绝，不缩小预算、不映射 effort、不自动换模式。
+
+`efforts` 与 `default_effort` 仅能出现在 `adaptive`。省略 `efforts` 或填 `[]` 表示不向成员提供 effort 选择；省略默认值或填 `null` 表示不发送默认 effort。非空默认值必须出现在无重复的数组内。允许配置的候选值是 `low`、`medium`、`high`、`xhigh`、`max`，但具体支持范围依模型版本与供应商而变，不能把所有值都勾上当作能力发现。`none` 不是 adaptive effort；关闭思考应明确选择 `disabled`。`output_config.effort` 调节工作量，`thinking.type` 选择思考模式，两者不是同一个开关；手动预算模式不接受 effort。
+
+迁移新增 `chat_models.claude_thinking JSONB NOT NULL`，默认 `{"mode":"omit"}`。新建模型遗漏字段时也用 omit；更新模型遗漏字段时保留原配置。旧 `reasoning_efforts/default_reasoning_effort` 仍存储，但 **Messages 全部忽略其通用值**，不把旧 `low/medium/high` 自动转换成预算，也不把旧 `none` 当作 disabled。需要恢复显式思考的模型由管理员重新选择模式。`catalog` 返回解析后的 `api_protocol` 与专用配置：Messages 只有 adaptive 暴露其有效 effort/default，其余模式为 `[]/null`；Responses / Chat Completions 继续使用通用字段。
+
+原用户使用的 `claude-haiku-5-5` 只能视为该供应商的模型别名，不能据此推定其原生模型、参数转发或能力与 Anthropic 相同。该别名当前应从已知可用的 `omit` 开始；只有用户明确启用且供应商确认支持后，才配置例如 adaptive + medium。Anthropic 官方资料已描述原生 Haiku 5.5 的 adaptive 默认行为、默认 medium、手动 enabled 预算请求返回 400、五种 effort 及 disabled 的 effort 限制（至 high），并不支持 `between_tools`；这些是原生模型文档证据，不能证明第三方别名支持同样的组合。Haiku 5.5 默认省略 thinking 摘要，因此看不到推理内容也不能判断思考关闭；本次没有新增推理内容展示功能。
+
+官方参考：[固定版本模型迁移说明](https://github.com/anthropics/skills/blob/9d630808e4add0a7146de4af9384155d5dee350a/skills/claude-api/shared/model-migration.md)、[固定版本 SDK Messages 类型](https://github.com/anthropics/anthropic-sdk-typescript/blob/ca50812ed769a40510bb2f9e5e232e95cdd376f1/src/resources/messages/messages.ts)（预算至少 1024 且小于 `max_tokens`）、[当前 SDK](https://github.com/anthropics/anthropic-sdk-typescript/blob/main/src/resources/messages/messages.ts)、[Extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking)、[Adaptive thinking](https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking)、[Effort](https://platform.claude.com/docs/en/build-with-claude/effort)。资料与本地校验不能替代供应商确认或真实调用验收；本次没有调用真实上游。
+
+升级此项的顺序为**重新执行完整 Chat SQL → 部署新版 `chat` 单文件 bundle → 发布前端**，包括管理页 HTML/JS/i18n、成员页 JS/i18n 与 `public/chat-file-bundle.js`。维护者由各自源文件重建产物，不手工补改生成的 TypeScript、SQL 副本或离线包。仅此专用配置改动不改变原生 `chat-api-proxy` 行为，无需仅为它重新部署代理；首次安装或升级其他代理功能仍按完整部署步骤执行。`x-api-key`、版本头和 SSE 行为保持原有契约。
 
 ### 模型可见性与 UUID 不能绕过授权
 

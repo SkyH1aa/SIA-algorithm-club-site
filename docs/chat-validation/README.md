@@ -41,6 +41,7 @@ node tools/chat-mock-server.mjs --port 4192
 | slow 期间 setup 切 `member2` | 前端 auth 回调中止旧流并切到另一账号历史；再切回 member 检查旧记录状态 |
 | 连续发两轮 | 模拟回答报告 user 轮数与 assistant 历史条数；请求记录显示 roles/parts 数量，不记录正文 |
 | `light` / `dark` | setup 真实 API 保存后刷新目标页，验证各控件与 Markdown 对比度 |
+| Messages `claude_thinking` | 以 admin 保存 `omit`、`disabled`、`enabled`、`adaptive` 四种合法对象；确认未知键、跨模式键、重复/非法 effort、`none` 和缺失预算均 400。enabled 用预算 1024、默认输出 4096，测试输出用 2048 或 4096；输出 1024 或更低必须 400，且不能把预算缩小后发出。adaptive 可用空数组或供应商确认的 low/medium/high/xhigh/max，默认值必须在数组内。 |
 
 模拟回复包括 Markdown 列表、代码块、链接及一个无害的 `<script>` 文本，方便观察前端渲染/净化行为；mock 不回显用户提示词、附件或任意配置内容。token 数量为本地估算，不能用于计费验证。
 
@@ -151,7 +152,7 @@ mock 仅模拟协议，不执行请求中的 tools/远程 URL、上游项目资�
 
 ## 日志、重置与自检
 
-setup 的“刷新元数据”或 **GET `/mock/requests`** 查看最近最多 500 条记录。只保存服务生成 request ID、时间、受控 action/账号、请求字节数、model UUID、受控 effort / 场景、role/part 数量、附件计数/字节和结果；**不保存请求 headers、apikey、authorization、token、key 值、提示正文、附件内容或供应商配置**。不自动写日志文件。usage 最多保留 1000 条模拟生成记录。
+setup 的“刷新元数据”或 **GET `/mock/requests`** 查看最近最多 500 条记录。只保存服务生成 request ID、时间、受控 action/账号、请求字节数、model UUID、受控 effort / 场景、role/part 数量、附件计数/字节和结果；**不保存请求 headers、apikey、authorization、token、key 值、提示正文、附件内容或供应商配置**。不自动写日志文件；usage 最多保留 1000 条模拟生成记录。`reasoning_effort` 日志字段只用于兼容通用协议；Messages 的请求配置以 `claude_thinking` 为准，并将有效 adaptive effort 记录为受控元数据。日志不保存请求体中的 thinking、预算、headers 或 key。
 
 setup“重置 mock 配置 / usage / 请求记录”取消活动流并恢复初始模型/供应商，同时清空额度设置、黑名单、所有周期计数和记录，保留当前所选设置。重启服务也丢弃内存。浏览器 IndexedDB 独立存在：请使用 Chat 原有“清除此账号本地记录”分别清理两个账号，不通过 fixture 静默删除。验证内存生命周期时，切换账号应中止旧流、拒绝旧 token、保留另一账号的本地历史；刷新/关闭页面应丢失 custom cloud API key，但不应删除 IndexedDB 会话。生产对照检查数据库 lease/usage 在 Edge 重启后仍保留，取消/租约到期不等于供应商退款。
 
@@ -169,6 +170,22 @@ python tools/test-chat-quota-sql.py --dsn 'host=127.0.0.1 port=5432 dbname=postg
 SQL syntax-only 只做 pglast 解析，不验证事务或并发；真实 DSN 测试另需 psycopg、本地 PostgreSQL 与 CREATEDB/CREATEROLE 权限，会创建/删除随机测试数据库。本次未跑真实 PostgreSQL 集成，不声称并发通过。升级需先暂停旧 Edge 新请求并等待旧流结束，再完整主 SQL → Secrets → 两个 Edge（chat 与 chat-api-proxy）→ 前端；历史 `chat_usage` 不回填额度桶，新计量从新版 Edge admission 开始。
 
 本地 mock 只覆盖运行时协议，不能证明手动发布正确。发布前后要分别检查 Dashboard 中 `chat` 与 `chat-api-proxy` 的完整 standalone bundle：`docs/chat-deployment/chat-dashboard-index.ts` 和 `docs/chat-deployment/chat-api-proxy-dashboard-index.ts`，确认没有未解析的 `_shared` import，且修改源函数或 helper 后已重新同步。用 `node tools/build-chat-dashboard-bundles.mjs` 重建，`node tools/build-chat-dashboard-bundles.mjs --check` 检查源文件一致性。不要把真实 key、service role key 或生产 proxy key 放入 fixture、日志或截图；不要为验证启动生产部署或发送付费上游请求。
+
+## Claude Messages 专用 thinking 回归
+
+`claude_thinking` 的有效形态是 `{mode:'omit'|'disabled'|'enabled'|'adaptive', budget_tokens?:number, efforts?:string[], default_effort?:string|null}`，严格限制各模式允许的键。HTTP mock 自检覆盖：
+
+- 新建遗漏字段 → omit；每种模式的更新遗漏字段 → 保留原值。无效创建不增加记录，无效更新不改变旧值。旧通用 effort 仍存储，不自动转换为预算；Messages 运行时忽略旧值。
+- `catalog` 先解析供应商 `api_protocol`（包括 auto 的 URL 推断），再返回专用配置和有效 effort。Messages 仅 adaptive 使用其数组/default，其他模式是 `[]/null`；Responses 与 Chat Completions 保持通用值。目录协议名与后端一致为 `messages`，Chat Completions 为 `chat`。
+- omit 不发 thinking/effort，disabled 只发关闭模式，enabled 只发原始预算，adaptive 可以省略 effort 或单独发 `output_config.effort`。后者调节工作量，不能当作 thinking 开关；none 不在 adaptive 候选值内。low/medium/high/xhigh/max 是否可用由具体模型版本和供应商决定。
+- enabled 的预算必须是整数且至少 1024，严格小于默认输出、管理员测试输出及额度收缩后的实际输出。示例预算 1024、默认输出 4096；1024 拒绝，1025 允许。自检覆盖管理员与成员的预算拒绝、额度预留释放，以及不映射、不裁剪原始预算。
+- 管理员测试与成员 respond 返回归一化 Responses SSE，旧原生代理的 JSON/SSE、`x-api-key`、别名与认证回归继续通过，代理不读取此模型配置。
+
+原用户的第三方别名 `claude-haiku-5-5` 先保持已知可用的 omit；adaptive + medium 只有用户明确启用且供应商确认后才可使用。原生 Anthropic Haiku 5.5 的 [固定版官方迁移文档](https://github.com/anthropics/skills/blob/9d630808e4add0a7146de4af9384155d5dee350a/skills/claude-api/shared/model-migration.md) 已记载 adaptive 默认、默认 medium、手动 enabled 预算返回 400 和 effort 版本边界，但不能证明第三方别名转发兼容。原生模型默认不提供 thinking 摘要，不见推理内容不能判定已关闭；本次未实现额外推理展示。
+
+自检仅创建回环 HTTP 服务，直接断言 mock 自身构造的 thinking 片段及合成流，**不会发原生请求给真实供应商**，不能证明其接受某个模式、预算或 effort。真实后端 source/handler、前端 GUI/i18n、SQL 迁移与额度事务分别由对应测试验收；此次 mock 自检成功不代表这些已运行，也不代表上线部署或供应商付费验收完成。
+
+既有部署升级专用字段需重新执行完整 SQL（`claude_thinking` 非空默认 omit），再更新 `chat` 单文件 bundle，最后发布前端（管理页 HTML/JS/i18n、成员 JS/i18n、`public/chat-file-bundle.js`）。没有本次原生代理行为变更，不必仅为 thinking 配置重部署 `chat-api-proxy`。生成 bundle 与 SQL 副本由对应维护者从源文件同步。
 
 ## 三种原生 API 协议
 

@@ -176,7 +176,7 @@ const model = () => models.find(x => x.id === $('model').value);
 function mergeModels(catalog, saved) {
   return [...catalog, ...saved.map(item => ({...CUSTOM_METADATA,...item,profileId:item.id,id:`custom:${item.id}`,source:'custom',profileName:item.display_name,display_name:`${item.display_name} · ${t('customBadge')}`}))];
 }
-const ERROR_STATUS = new Set(['failure','interrupted','cancelled','storage','request','quota','quotaReset','context','request_too_large','file','pdf','blacklisted','busy','customKey','profile','login']);
+const ERROR_STATUS = new Set(['failure','interrupted','cancelled','storage','request','quota','quotaReset','context','request_too_large','file','pdf','blacklisted','busy','customKey','profile','login','claude_thinking','claude_thinking_budget','claude_effort']);
 function status(key, vars = {}) {
   statusKey = key; statusVars = vars;
   const node = $('status');
@@ -704,11 +704,23 @@ function newChat() {
   status('ready'); render();
   $('prompt').focus?.();
 }
+function modelEfforts(item) {
+  if (item?.api_protocol !== 'messages') return {values: item?.reasoning_efforts || [], defaultValue: item?.default_reasoning_effort || ''};
+  const config = item.claude_thinking;
+  if (config?.mode !== 'adaptive') return {values: [], defaultValue: ''};
+  const values = Array.isArray(config.efforts) ? config.efforts.filter(value => ['low', 'medium', 'high', 'xhigh', 'max'].includes(value)) : [];
+  return {values, defaultValue: values.includes(config.default_effort) ? config.default_effort : ''};
+}
+function selectedEffort(item) {
+  const config = modelEfforts(item), value = $('effort').value;
+  return config.values.includes(value) ? value : null;
+}
 function configureModel() {
-  const item = model(); $('effort').replaceChildren();
-  for (const value of item?.reasoning_efforts || []) { const opt = new Option(value,value); $('effort').add(opt); }
+  const item = model(), config = modelEfforts(item); $('effort').replaceChildren();
+  if (item?.api_protocol === 'messages' && item.claude_thinking?.mode === 'adaptive') $('effort').add(new Option(t('default'), ''));
+  for (const value of config.values) { const opt = new Option(value,value); $('effort').add(opt); }
   if (!$('effort').options.length) $('effort').add(new Option(t('default'),''));
-  $('effort').value = item?.default_reasoning_effort || '';
+  $('effort').value = config.defaultValue;
   syncEffortPicker();
   render();
 }
@@ -748,7 +760,11 @@ function syncEffortPicker() {
   picker.hidden = !meaningful;
   if (!meaningful) { setEffortMenuOpen(false); return; }
   const selected = select.options[select.selectedIndex];
-  if (text) text.textContent = `${t('effortShort')} ${effortLabel(selected?.value)}`;
+  const claude = model()?.api_protocol === 'messages';
+  const label = t(claude ? 'claudeEffort' : 'effort');
+  select.setAttribute('aria-label', label);
+  $('effortTrigger')?.setAttribute('aria-label', label);
+  if (text) text.textContent = `${t(claude ? 'claudeEffort' : 'effortShort')} ${effortLabel(selected?.value)}`;
   if (!menu) return;
   menu.replaceChildren();
   for (const option of select.options) {
@@ -832,7 +848,7 @@ async function request(action, body = {}, signal, token = session?.access_token)
   const response = await fetch(`${URL}/functions/v1/chat`, {method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${token}`},body:JSON.stringify({action,...body}),signal});
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw Object.assign(new Error(response.status === 409 ? 'busy' : response.status === 401 ? 'login' : ['context','request_too_large','file','login','profile','quota','blacklisted'].includes(data.error) ? data.error : 'request'), {status:response.status, quota:data.quota});
+    throw Object.assign(new Error(response.status === 409 ? 'busy' : response.status === 401 ? 'login' : ['context','request_too_large','file','login','profile','quota','blacklisted','claude_thinking','claude_thinking_budget','claude_effort'].includes(data.error) ? data.error : 'request'), {status:response.status, quota:data.quota});
   }
   return response;
 }
@@ -934,7 +950,7 @@ async function generate({ retryTurnId = null } = {}) {
     // 自动压缩已移到「回复完成后」，这里只带上已有摘要作为前缀。
     const summary = summaryPrefix(chat);
     const context = buildContext([...prior,turn],item,output, summary);
-    const body = {model_id:item.id,input:context.input,reasoning_effort:$('effort').value || null,max_output_tokens:output};
+    const body = {model_id:item.id,input:context.input,reasoning_effort:selectedEffort(item),max_output_tokens:output};
     if (new TextEncoder().encode(JSON.stringify({action:'respond',...body})).length > MAX_REQUEST_BYTES) throw new Error('request_too_large');
 
     // 只有请求真正要发出时才改动历史，失败不会提前毁掉对话。
@@ -965,7 +981,7 @@ async function generate({ retryTurnId = null } = {}) {
     if (guard === epoch) Object.assign(turn,{...result,status:result.status});
   } catch (error) {
     if (turn) turn.status = run.stopped ? 'cancelled' : controller.signal.aborted ? 'interrupted' : 'failure';
-    failureKey = storageError ? 'storage' : ['context','request_too_large','file','pdf','busy','storage','quota','blacklisted','customKey'].includes(error.message) ? error.message : run.stopped ? 'cancelled' : 'request';
+    failureKey = storageError ? 'storage' : ['context','request_too_large','file','pdf','busy','storage','quota','blacklisted','customKey','claude_thinking','claude_thinking_budget','claude_effort'].includes(error.message) ? error.message : run.stopped ? 'cancelled' : 'request';
     const reset = quotaReset(error.quota);
     if (failureKey === 'quota' && reset) { failureKey = 'quotaReset'; failureVars = {reset}; }
     if (guard === epoch) status(failureKey, failureVars);

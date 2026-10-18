@@ -126,14 +126,44 @@ function chatEndpoint(base: string, setting: ChatProtocolSetting = 'auto'): { pr
   if (/\/messages?$/i.test(url)) return { protocol: 'messages', url: url.replace(/\/message$/i, '/messages') };
   return { protocol: 'responses', url: /\/responses$/i.test(url) ? url : `${url}/responses` };
 }
-function validateProtocolCapabilities(protocol: ChatProtocol, model: { preserve_reasoning: boolean; reasoning_efforts: unknown; default_max_output_tokens?: number }): void {
+type ClaudeThinkingConfig =
+  | { mode: 'omit' | 'disabled' }
+  | { mode: 'enabled'; budget_tokens: number }
+  | { mode: 'adaptive'; efforts: string[]; default_effort: string | null };
+
+// Missing legacy rows fail safe: never enable thinking from generic effort fields.
+function normalizeClaudeThinking(value: unknown = undefined, defaultMaxOutputTokens?: number, effectiveMaxTokens?: number): ClaudeThinkingConfig {
+  if (value === undefined) return { mode: 'omit' };
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new ChatProtocolError('claude_thinking');
+  const config = value as ProtocolJson;
+  const mode = config.mode;
+  const keys = mode === 'enabled' ? ['mode', 'budget_tokens'] : mode === 'adaptive' ? ['mode', 'efforts', 'default_effort'] : ['mode'];
+  if (typeof mode !== 'string' || !['omit', 'disabled', 'enabled', 'adaptive'].includes(mode) || Object.keys(config).some(key => !keys.includes(key))) throw new ChatProtocolError('claude_thinking');
+  if (mode === 'omit' || mode === 'disabled') return { mode };
+  if (mode === 'enabled') {
+    const budget = config.budget_tokens;
+    if (!Number.isSafeInteger(budget) || (budget as number) < 1024 ||
+      [defaultMaxOutputTokens, effectiveMaxTokens].some(max => max !== undefined && (!Number.isSafeInteger(max) || (budget as number) >= max))) throw new ChatProtocolError('claude_thinking_budget');
+    return { mode, budget_tokens: budget as number };
+  }
+  const efforts = config.efforts === undefined ? [] : config.efforts;
+  const defaultEffort = config.default_effort === undefined ? null : config.default_effort;
+  if (!Array.isArray(efforts) || efforts.some(effort => typeof effort !== 'string' || !['low', 'medium', 'high', 'xhigh', 'max'].includes(effort)) ||
+    new Set(efforts).size !== efforts.length || (defaultEffort !== null && (typeof defaultEffort !== 'string' || !efforts.includes(defaultEffort)))) throw new ChatProtocolError('claude_thinking');
+  return { mode: 'adaptive', efforts: [...efforts], default_effort: defaultEffort as string | null };
+}
+
+function validateProtocolCapabilities(protocol: ChatProtocol, model: { preserve_reasoning: boolean; reasoning_efforts: unknown; default_max_output_tokens?: number }, claudeThinking?: unknown): void {
+  const config = normalizeClaudeThinking(claudeThinking, model.default_max_output_tokens);
+  if (protocol !== 'messages' && config.mode !== 'omit') throw new ChatProtocolError('claude_thinking');
   if (protocol === 'responses') return;
   if (model.preserve_reasoning) throw new ChatProtocolError('reasoning_history_unsupported');
-  const supported = protocol === 'messages' ? ['none', 'low', 'medium', 'high'] : ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
+  if (protocol === 'messages') return;
+  const supported = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
   if (!Array.isArray(model.reasoning_efforts) || model.reasoning_efforts.some(x => !supported.includes(String(x)))) throw new ChatProtocolError('reasoning_effort_unsupported');
-  if (protocol === 'messages' && model.reasoning_efforts.some(x => x !== 'none') && model.default_max_output_tokens !== undefined && model.default_max_output_tokens <= 1024) throw new ChatProtocolError('reasoning_budget');
 }
-function protocolRequest(protocol: ChatProtocol, body: ProtocolJson): ProtocolJson {
+function protocolRequest(protocol: ChatProtocol, body: ProtocolJson, claudeThinking?: unknown): ProtocolJson {
+  if (protocol !== 'messages' && normalizeClaudeThinking(claudeThinking).mode !== 'omit') throw new ChatProtocolError('claude_thinking');
   if (protocol === 'responses') return body;
   const input = body.input as ProtocolJson[];
   if (input.some(x => x.type === 'reasoning') || body.include) throw new ChatProtocolError('input');
@@ -169,14 +199,12 @@ function protocolRequest(protocol: ChatProtocol, body: ProtocolJson): ProtocolJs
     }
   }
   if (!messages.length || messages[0].role !== 'user') throw new ChatProtocolError();
-  let thinking: ProtocolJson | undefined;
-  if (effort === 'none') thinking = { type: 'disabled' };
-  else if (effort) {
-    const budget = ({ low: 1024, medium: 4096, high: 8192 } as Record<string, number>)[effort];
-    if (!budget || max <= 1024) throw new ChatProtocolError('effort');
-    thinking = { type: 'enabled', budget_tokens: Math.min(budget, max - 1) };
-  }
-  return { model: body.model, messages, ...(system.length ? { system } : {}), max_tokens: max, thinking, stream: true };
+  const config = normalizeClaudeThinking(claudeThinking, undefined, max);
+  if (effort !== undefined && (config.mode !== 'adaptive' || !config.efforts.includes(effort))) throw new ChatProtocolError('claude_effort');
+  const selectedEffort = config.mode === 'adaptive' ? effort ?? config.default_effort : null;
+  const thinking = config.mode === 'omit' ? {} : { thinking: config.mode === 'enabled' ? { type: 'enabled', budget_tokens: config.budget_tokens } : { type: config.mode } };
+  return { model: body.model, messages, ...(system.length ? { system } : {}), max_tokens: max, ...thinking,
+    ...(selectedEffort ? { output_config: { effort: selectedEffort } } : {}), stream: true };
 }
 
 // Bounded SSE framing, including byte-fragmented CRLF and multiline data. An
@@ -349,6 +377,7 @@ type Model = {
   default_max_output_tokens: number;
   reasoning_efforts: unknown;
   default_reasoning_effort: string | null;
+  claude_thinking?: unknown;
   supports_images: boolean;
   supports_pdf: boolean;
   preserve_reasoning: boolean;
@@ -733,7 +762,7 @@ async function providers(): Promise<Provider[]> {
 }
 
 async function models(): Promise<Model[]> {
-  return await restJson<Model[]>('chat_models?deleted_at=is.null&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,supports_images,supports_pdf,preserve_reasoning,enabled,visibility,updated_at&order=display_name.asc');
+  return await restJson<Model[]>('chat_models?deleted_at=is.null&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,claude_thinking,supports_images,supports_pdf,preserve_reasoning,enabled,visibility,updated_at&order=display_name.asc');
 }
 
 async function modelAccess(modelId: string, userId: string): Promise<boolean> {
@@ -761,22 +790,34 @@ async function visibleModelIds(items: Model[], userId: string): Promise<Set<stri
   return new Set(items.filter(x => x.visibility !== 'assigned').map(x => x.id).concat(rows.map(x => x.model_id)));
 }
 
+function effectiveReasoning(model: Model, protocol: ChatProtocol) {
+  const config = normalizeClaudeThinking(model.claude_thinking, model.default_max_output_tokens);
+  return {
+    claude_thinking: config,
+    reasoning_efforts: protocol === 'messages' ? config.mode === 'adaptive' ? config.efforts : [] : Array.isArray(model.reasoning_efforts) ? model.reasoning_efforts as string[] : [],
+    default_reasoning_effort: protocol === 'messages' ? config.mode === 'adaptive' ? config.default_effort : null : model.default_reasoning_effort
+  };
+}
+
 async function catalogPayload(items: Model[], providerRows: Provider[], userId: string) {
-  const enabledProviders = new Set(providerRows.filter(x => x.enabled).map(x => x.id));
+  const enabledProviders = new Map(providerRows.filter(x => x.enabled).map(x => [x.id, x]));
   const visible = await visibleModelIds(items, userId);
-  return items.filter(x => x.enabled && enabledProviders.has(x.provider_id) && visible.has(x.id)).map(x => ({
-    id: x.id, display_name: x.display_name, introduction: x.introduction || null, context_window: x.context_window,
-    max_output_tokens: x.max_output_tokens, default_max_output_tokens: x.default_max_output_tokens,
-    reasoning_efforts: Array.isArray(x.reasoning_efforts) ? x.reasoning_efforts : [],
-    default_reasoning_effort: x.default_reasoning_effort, supports_images: x.supports_images,
-    supports_pdf: x.supports_pdf, preserve_reasoning: x.preserve_reasoning
-  }));
+  return items.filter(x => x.enabled && enabledProviders.has(x.provider_id) && visible.has(x.id)).map(x => {
+    const provider = enabledProviders.get(x.provider_id)!;
+    const protocol = chatEndpoint(provider.base_url, provider.api_protocol).protocol;
+    return {
+      id: x.id, display_name: x.display_name, introduction: x.introduction || null, context_window: x.context_window,
+      max_output_tokens: x.max_output_tokens, default_max_output_tokens: x.default_max_output_tokens,
+      api_protocol: protocol, ...effectiveReasoning(x, protocol), supports_images: x.supports_images,
+      supports_pdf: x.supports_pdf, preserve_reasoning: x.preserve_reasoning
+    };
+  });
 }
 
 async function modelWithProvider(modelId: unknown, enabledOnly = true, userId?: string, admin = false): Promise<{ model: Model; provider: Provider }> {
   if (!isUuid(modelId)) throw new HttpError('model', 400);
   const [modelRows, providerRows] = await Promise.all([
-    restJson<Model[]>(`chat_models?id=eq.${encodeURIComponent(modelId)}&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,supports_images,supports_pdf,preserve_reasoning,enabled,visibility&limit=1`),
+    restJson<Model[]>(`chat_models?id=eq.${encodeURIComponent(modelId)}&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,claude_thinking,supports_images,supports_pdf,preserve_reasoning,enabled,visibility&limit=1`),
     providers()
   ]);
   const model = modelRows[0];
@@ -785,7 +826,7 @@ async function modelWithProvider(modelId: unknown, enabledOnly = true, userId?: 
   if (!admin && userId && !(await modelAccess(model.id, userId))) throw new HttpError('model', 403);
   validateModel(model);
   provider.base_url = await publicHttpsUrl(provider.base_url);
-  validateProtocolCapabilities(chatEndpoint(provider.base_url, provider.api_protocol).protocol, model);
+  validateProtocolCapabilities(chatEndpoint(provider.base_url, provider.api_protocol).protocol, model, model.claude_thinking);
   secretName(provider.secret_name);
   return { model, provider };
 }
@@ -813,8 +854,8 @@ async function saveProvider(payload: Json) {
     updated_at: new Date().toISOString()
   };
   if (id) {
-    const attached = await restJson<Model[]>(`chat_models?provider_id=eq.${encodeURIComponent(String(id))}&deleted_at=is.null&select=preserve_reasoning,reasoning_efforts,default_max_output_tokens`);
-    for (const model of attached) validateProtocolCapabilities(chatEndpoint(body.base_url, body.api_protocol).protocol, model);
+    const attached = await restJson<Model[]>(`chat_models?provider_id=eq.${encodeURIComponent(String(id))}&deleted_at=is.null&select=preserve_reasoning,reasoning_efforts,default_max_output_tokens,claude_thinking`);
+    for (const model of attached) validateProtocolCapabilities(chatEndpoint(body.base_url, body.api_protocol).protocol, model, model.claude_thinking);
   }
   const rows = await restJson<Provider[]>('chat_providers?on_conflict=id', { method: 'POST', headers: { 'content-type': 'application/json', prefer: 'resolution=merge-duplicates,return=representation' }, body: JSON.stringify(body) });
   return rows[0] ? { id: rows[0].id, name: rows[0].name, label: rows[0].label, base_url: rows[0].base_url, api_protocol: rows[0].api_protocol, secret_name: rows[0].secret_name, auth_header: rows[0].auth_header, enabled: rows[0].enabled } : null;
@@ -832,17 +873,18 @@ async function saveModel(payload: Json) {
   const efforts = payload.reasoning_efforts === undefined ? [] : payload.reasoning_efforts;
   if (!Array.isArray(efforts) || efforts.length > 12 || efforts.some(x => typeof x !== 'string' || x.length < 1 || x.length > MAX_REASONING_EFFORT)) throw new HttpError('input', 400);
   let visibility: 'all' | 'assigned' = 'all';
-  if (payload.visibility === undefined && id) {
-    const existing = await restJson<Array<{ visibility?: string }>>(`chat_models?id=eq.${encodeURIComponent(id)}&select=visibility&limit=1`);
+  let claudeThinking = payload.claude_thinking;
+  if (id && (payload.visibility === undefined || payload.claude_thinking === undefined)) {
+    const existing = await restJson<Array<{ visibility?: string; claude_thinking?: unknown }>>(`chat_models?id=eq.${encodeURIComponent(id)}&select=visibility,claude_thinking&limit=1`);
     const value = existing[0]?.visibility;
     if (value === 'all' || value === 'assigned') visibility = value;
-  } else if (payload.visibility !== undefined) {
-    visibility = payload.visibility as 'all' | 'assigned';
+    if (payload.claude_thinking === undefined) claudeThinking = existing[0]?.claude_thinking;
   }
+  if (payload.visibility !== undefined) visibility = payload.visibility as 'all' | 'assigned';
   const body = {
     ...(id ? { id } : {}), provider_id: payload.provider_id, model_key: modelKey, display_name: displayName, introduction,
     context_window: integer(payload.context_window, 256, 1000000), max_output_tokens: max,
-    default_max_output_tokens: defaultMax, reasoning_efforts: efforts,
+    default_max_output_tokens: defaultMax, claude_thinking: normalizeClaudeThinking(claudeThinking, defaultMax), reasoning_efforts: efforts,
     default_reasoning_effort: payload.default_reasoning_effort == null ? null : text(payload.default_reasoning_effort, MAX_REASONING_EFFORT, true),
     supports_images: boolean(payload.supports_images), supports_pdf: boolean(payload.supports_pdf),
     preserve_reasoning: boolean(payload.preserve_reasoning), enabled: payload.enabled === undefined ? true : boolean(payload.enabled, true),
@@ -855,7 +897,7 @@ async function saveModel(payload: Json) {
   const provider = providerRows.find(x => x.id === body.provider_id);
   if (!provider) throw new HttpError('input', 400);
   const protocol = chatEndpoint(provider.base_url, provider.api_protocol).protocol;
-  validateProtocolCapabilities(protocol, body);
+  validateProtocolCapabilities(protocol, body, body.claude_thinking);
   const rows = await restJson<Model[]>('chat_models?on_conflict=id', { method: 'POST', headers: { 'content-type': 'application/json', prefer: 'resolution=merge-duplicates,return=representation' }, body: JSON.stringify(body) });
   return rows[0] || null;
 }
@@ -935,12 +977,14 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
   const outputTokens = test
     ? integer(payload.max_output_tokens, 1, model.max_output_tokens, model.default_max_output_tokens)
     : model.default_max_output_tokens;
-  const effort = payload.reasoning_effort == null ? model.default_reasoning_effort : text(payload.reasoning_effort, MAX_REASONING_EFFORT, true);
-  if (effort !== null && !(model.reasoning_efforts as string[]).includes(effort)) throw new HttpError('effort', 400);
+  const { protocol, url: endpoint } = chatEndpoint(provider.base_url, provider.api_protocol);
+  const effective = effectiveReasoning(model, protocol);
+  if (protocol === 'messages' && payload.reasoning_effort != null && typeof payload.reasoning_effort !== 'string') throw new HttpError('claude_effort', 400);
+  const effort = payload.reasoning_effort == null ? effective.default_reasoning_effort : protocol === 'messages' ? payload.reasoning_effort as string : text(payload.reasoning_effort, MAX_REASONING_EFFORT, true);
+  if (effort !== null && !effective.reasoning_efforts.includes(effort)) throw new HttpError(protocol === 'messages' ? 'claude_effort' : 'effort', 400);
   const requestId = crypto.randomUUID();
   const body = { model: model.model_key, input, reasoning: effort ? { effort } : undefined, include: model.preserve_reasoning ? ['reasoning.encrypted_content'] : undefined, max_output_tokens: outputTokens, store: false, stream: true };
-  const { protocol, url: endpoint } = chatEndpoint(provider.base_url, provider.api_protocol);
-  let serialized = JSON.stringify(protocolRequest(protocol, body));
+  let serialized = JSON.stringify(protocolRequest(protocol, body, model.claude_thinking));
   const inputTokens = estimateInputTokens(input);
   if (inputTokens + outputTokens > model.context_window) throw new HttpError('context', 413);
   if (encoder.encode(serialized).byteLength > MAX_REQUEST_BYTES) throw new HttpError('request_too_large', 413);
@@ -966,11 +1010,11 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
   }
   body.max_output_tokens = admission.max_output_tokens as number;
   try {
-    serialized = JSON.stringify(protocolRequest(protocol, body));
+    serialized = JSON.stringify(protocolRequest(protocol, body, model.claude_thinking));
   } catch (error) {
-    // Quota shrink may leave too little room for Anthropic's minimum thinking
-    // budget. Nothing was dispatched, so release the reservation in full.
-    await finishGeneration(requestId, { status: 'failed', error_code: 'reasoning_budget' }, true);
+    // A quota shrink cannot change an exact configured thinking budget. Before
+    // dispatch, invalid reservations are refunded and the lease is released.
+    await finishGeneration(requestId, { status: 'failed', error_code: error instanceof ChatProtocolError ? error.message : 'claude_thinking' }, true);
     throw error;
   }
   if (request.signal.aborted) {
@@ -1247,7 +1291,7 @@ async function main(request: Request, payload: Json): Promise<Response> {
     admin_test: ['model_id', 'prompt', 'max_output_tokens', 'reasoning_effort'],
     admin_usage: ['page', 'pageSize', 'limit', 'from', 'to'],
     admin_save_provider: ['id', 'name', 'label', 'base_url', 'api_protocol', 'secret_name', 'auth_header', 'enabled'],
-    admin_save_model: ['id', 'provider_id', 'model_key', 'model_id', 'display_name', 'introduction', 'context_window', 'max_output_tokens', 'default_max_output_tokens', 'reasoning_efforts', 'default_reasoning_effort', 'supports_images', 'supports_pdf', 'preserve_reasoning', 'enabled', 'visibility'],
+    admin_save_model: ['id', 'provider_id', 'model_key', 'model_id', 'display_name', 'introduction', 'context_window', 'max_output_tokens', 'default_max_output_tokens', 'reasoning_efforts', 'default_reasoning_effort', 'claude_thinking', 'supports_images', 'supports_pdf', 'preserve_reasoning', 'enabled', 'visibility'],
     admin_delete_provider: ['id'],
     admin_delete_model: ['id', 'expected_version'],
     admin_model_access_get: ['model_id'],

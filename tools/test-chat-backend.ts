@@ -39,13 +39,13 @@ let charged: number;
 let proxyRoute: Row | null, proxyKey: Row | null;
 const directory = { users: [{ user_id: UID, username: 'local-account', member_name: '测试会员', bound: true }], blacklist: [{ user_id: PID, reason: 'abuse' }] };
 let usageRange: string | null;
-let providerWrites: Row[];
+let providerWrites: Row[], modelWrites: Row[];
 let terminalGate: Promise<void> | null, terminalReached: (() => void) | null;
 function reset() {
   terminalGate = null; terminalReached = null; wire = null;
   quota = { global: { daily_limit: null, version: 0, used: 0, remaining: null, resets_at: '2026-10-17T00:00:00Z' }, user: { daily_limit: null, weekly_limit: null, monthly_limit: null, version: 0 }, periods: [], blacklisted: false, reason: null };
   admissionCode = null; shrink = null; conflict = false; rpcCalls = []; settlements = []; charged = 0;
-  provider = { ...providerBase }; providerWrites = []; model = { ...modelBase }; profile = true; admin = true;
+  provider = { ...providerBase }; providerWrites = []; modelWrites = []; model = { ...modelBase }; profile = true; admin = true;
   proxyRoute = { id: PID, enabled: true, deleted_at: null, version: 3 };
   proxyKey = { id: MID, route_id: PID, enabled: true, revoked_at: null, version: 4 };
   assignedVisible = false; customModels = [];
@@ -138,10 +138,18 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
     return json([fields ? Object.fromEntries(fields.filter(key => key in provider).map(key => [key, provider[key]])) : provider]);
   }
   if (table === 'chat_models') {
-    const body = init.method === 'POST' ? JSON.parse(String(init.body)) : null;
-    const row = { ...model, ...(body || {}) };
-    if (url.searchParams.get('id')?.includes(ASSIGNED_MID)) return json([{ ...row, id: ASSIGNED_MID, visibility: 'assigned' }]);
-    return json([row]);
+    if (init.method === 'POST') {
+      const body = JSON.parse(String(init.body));
+      modelWrites.push(body);
+      const { updated_at: _updatedAt, ...fields } = body;
+      model = { ...model, ...fields };
+      return json([model]);
+    }
+    if (url.searchParams.get('id')?.includes(ASSIGNED_MID)) return json([{ ...model, id: ASSIGNED_MID, visibility: 'assigned' }]);
+    if (url.searchParams.get('id') && url.searchParams.get('id') !== `eq.${model.id}`) return json([]);
+    // Enforce model projections too: missing dedicated-config SELECTs must fail tests.
+    const fields = url.searchParams.get('select')?.split(',');
+    return json([fields ? Object.fromEntries(fields.filter(key => key in model).map(key => [key, model[key]])) : model]);
   }
   if (table === 'chat_model_access') return json(assignedVisible ? [{ user_id: UID, model_id: MID }] : []);
   if (table === 'chat_custom_models') return json(customModels);
@@ -660,11 +668,15 @@ try {
         assert.deepEqual(await (await expectStatus(body, 400)).json(), { error: 'reasoning_history_unsupported' });
       }
       model.preserve_reasoning = false; model.reasoning_efforts = ['custom-effort']; model.default_reasoning_effort = 'custom-effort';
-      assert.deepEqual(await (await expectStatus(payload(), 400)).json(), { error: 'reasoning_effort_unsupported' });
-      assert.equal(audits.length, 0); assert.equal(upstreamBodies.length, 0); assert.equal(providerWrites.length, 0);
+      if (api_protocol === 'chat') assert.deepEqual(await (await expectStatus(payload(), 400)).json(), { error: 'reasoning_effort_unsupported' });
+      else {
+        wire = messagesWire; await consume();
+        assert.equal(upstreamBodies[0].thinking, undefined); assert.equal(audits[0].reasoning_effort, null);
+      }
+      assert.equal(providerWrites.length, 0);
     }
     reset(); provider.api_protocol = 'messages'; model.preserve_reasoning = false;
-    assert.deepEqual(await (await expectStatus({ action: 'admin_save_provider', ...provider }, 400)).json(), { error: 'reasoning_budget' });
+    await expectStatus({ action: 'admin_save_provider', ...provider }, 200);
     // An explicit Responses selection permits native reasoning even with a Messages suffix.
     reset(); provider.api_protocol = 'responses'; provider.base_url += '/messages';
     await expectStatus({ action: 'admin_save_model', ...model }, 200);
@@ -708,8 +720,14 @@ try {
       const result = await expectStatus(payload(), 400); assert.equal((await result.json()).error, 'reasoning_history_unsupported');
       await expectStatus({ action: 'admin_save_model', ...model }, 400);
       await expectStatus({ action: 'admin_save_provider', ...provider }, 400);
-      model.preserve_reasoning = false; model.reasoning_efforts = ['unsupported'];
-      const result2 = await expectStatus(payload(), 400); assert.equal((await result2.json()).error, 'reasoning_effort_unsupported');
+      model.preserve_reasoning = false;
+      if (format === 'chat/completions') {
+        model.reasoning_efforts = ['unsupported'];
+        const result2 = await expectStatus(payload(), 400); assert.equal((await result2.json()).error, 'reasoning_effort_unsupported');
+      } else {
+        model.claude_thinking = { mode: 'enabled', budget_tokens: 1024 };
+        const result2 = await expectStatus(payload(), 400); assert.equal((await result2.json()).error, 'claude_thinking_budget');
+      }
       assert.equal(audits.length, 0); assert.equal(upstreamBodies.length, 0);
     });
     await test(`${format} incomplete and interrupted settlement`, async () => {
@@ -731,13 +749,125 @@ try {
       await assert.rejects(pending); assert.equal(audits[0].status, 'cancelled'); assert.equal(finishAttempts, 1);
     });
   }
-  await test('Anthropic thinking budgets track quota and refund before dispatch when too small', async () => {
-    provider.base_url = 'https://provider.example.com/v1/messages'; model.preserve_reasoning = false;
-    model.max_output_tokens = 10000; model.default_max_output_tokens = 9000; model.reasoning_efforts = ['none', 'low', 'medium', 'high']; model.default_reasoning_effort = 'high'; wire = messagesWire;
-    shrink = 1500; await consume(); assert.deepEqual(upstreamBodies[0].thinking, { type: 'enabled', budget_tokens: 1499 });
-    reset(); provider.base_url = 'https://provider.example.com/v1/messages'; model.preserve_reasoning = false;
-    model.max_output_tokens = 10000; model.default_max_output_tokens = 9000; model.default_reasoning_effort = 'high'; wire = messagesWire;
-    shrink = 100; await expectStatus(payload(), 400); assert.equal(upstreamBodies.length, 0); assert.equal(charged, 0); assert.equal(settlements[0].p_refund, true);
+  const claudeSetup = (config: unknown = undefined) => {
+    provider.api_protocol = 'messages'; model.preserve_reasoning = false;
+    model.max_output_tokens = 10000; model.default_max_output_tokens = 9000;
+    if (config !== undefined) model.claude_thinking = config;
+    wire = messagesWire;
+  };
+  await test('Claude model save roundtrips all modes, catalog effective efforts and raw admin generic fields', async () => {
+    claudeSetup();
+    const configs = [{ mode: 'omit' }, { mode: 'disabled' }, { mode: 'enabled', budget_tokens: 2048 }, { mode: 'adaptive', efforts: ['low', 'medium', 'high', 'xhigh', 'max'], default_effort: 'max' }, { mode: 'adaptive' }];
+    for (const config of configs) {
+      const expected = config.mode === 'adaptive' ? { efforts: [], default_effort: null, ...config } : config;
+      const saved = await (await expectStatus({ action: 'admin_save_model', ...model, claude_thinking: config }, 200)).json();
+      assert.deepEqual(saved.model.claude_thinking, expected); assert.deepEqual(modelWrites.at(-1)!.claude_thinking, expected);
+      const listed = await (await expectStatus({ action: 'admin_get' }, 200)).json();
+      assert.deepEqual(listed.models[0].claude_thinking, expected);
+      assert.deepEqual(listed.models[0].reasoning_efforts, ['low', 'high']); assert.equal(listed.models[0].default_reasoning_effort, 'low');
+      const catalog = (await (await expectStatus({ action: 'catalog' }, 200)).json()).models[0];
+      assert.equal(catalog.api_protocol, 'messages'); assert.deepEqual(catalog.claude_thinking, expected);
+      assert.deepEqual(catalog.reasoning_efforts, config.mode === 'adaptive' ? expected.efforts : []);
+      assert.equal(catalog.default_reasoning_effort, config.mode === 'adaptive' ? expected.default_effort : null);
+    }
+    assert.equal(upstreamBodies.length, 0);
+  });
+  await test('Claude create omission defaults omit; legacy updates retain existing config even with explicit visibility', async () => {
+    claudeSetup(); const { id: _id, ...fields } = model;
+    const created = await (await expectStatus({ action: 'admin_save_model', ...fields }, 200)).json();
+    assert.deepEqual(created.model.claude_thinking, { mode: 'omit' });
+    for (const config of [{ mode: 'enabled', budget_tokens: 2048 }, { mode: 'adaptive', efforts: ['max'], default_effort: 'max' }]) {
+      model.claude_thinking = config;
+      const { claude_thinking: _config, ...legacy } = model;
+      const saved = await (await expectStatus({ action: 'admin_save_model', ...legacy, visibility: 'all' }, 200)).json();
+      assert.deepEqual(saved.model.claude_thinking, config);
+      const reduced = await expectStatus({ action: 'admin_save_model', ...legacy, default_max_output_tokens: 1024 }, config.mode === 'enabled' ? 400 : 200);
+      if (config.mode === 'enabled') assert.deepEqual(await reduced.json(), { error: 'claude_thinking_budget' });
+    }
+    delete model.claude_thinking;
+    const saved = await (await expectStatus({ action: 'admin_save_model', ...model }, 200)).json();
+    assert.deepEqual(saved.model.claude_thinking, { mode: 'omit' });
+  });
+  await test('Claude invalid configs reject save and runtime before quota or upstream', async () => {
+    claudeSetup();
+    for (const [config, error] of [
+      [null, 'claude_thinking'], [{}, 'claude_thinking'], [{ mode: 'unknown' }, 'claude_thinking'],
+      [{ mode: 'omit', efforts: [] }, 'claude_thinking'], [{ mode: 'disabled', default_effort: null }, 'claude_thinking'],
+      [{ mode: 'enabled', budget_tokens: '1024' }, 'claude_thinking_budget'], [{ mode: 'enabled', budget_tokens: 1023 }, 'claude_thinking_budget'],
+      [{ mode: 'enabled', budget_tokens: 9000 }, 'claude_thinking_budget'], [{ mode: 'enabled', budget_tokens: 2048, extra: true }, 'claude_thinking'],
+      [{ mode: 'adaptive', budget_tokens: 1024 }, 'claude_thinking'], [{ mode: 'adaptive', efforts: ['high', 'high'] }, 'claude_thinking'],
+      [{ mode: 'adaptive', efforts: ['minimal'] }, 'claude_thinking'], [{ mode: 'adaptive', efforts: ['high'], default_effort: 'max' }, 'claude_thinking']
+    ] as Array<[unknown, string]>) {
+      model.claude_thinking = config;
+      for (const body of [{ action: 'admin_save_model', ...model }, payload(), { action: 'admin_test', model_id: MID, prompt: 'test' }, { action: 'admin_save_provider', ...provider }]) assert.deepEqual(await (await expectStatus(body, 400)).json(), { error });
+    }
+    assert.equal(modelWrites.length, 0); assert.equal(providerWrites.length, 0);
+    assert.equal(rpcCalls.filter(call => call.name === 'chat_begin_generation').length, 0); assert.equal(audits.length, 0); assert.equal(upstreamBodies.length, 0);
+  });
+  await test('legacy Messages rows ignore generic efforts and never enable unsolicited thinking', async () => {
+    claudeSetup(); model.default_max_output_tokens = 100;
+    model.reasoning_efforts = ['custom-effort', 'high']; model.default_reasoning_effort = 'custom-effort';
+    for (const body of [payload(), { action: 'admin_test', model_id: MID, prompt: 'test' }]) await consume(body);
+    assert.ok(upstreamBodies.every(body => !('thinking' in body) && !('output_config' in body)));
+    assert.ok(audits.every(row => row.reasoning_effort === null));
+    const catalog = (await (await expectStatus({ action: 'catalog' }, 200)).json()).models[0];
+    assert.deepEqual(catalog.claude_thinking, { mode: 'omit' }); assert.deepEqual(catalog.reasoning_efforts, []); assert.equal(catalog.default_reasoning_effort, null);
+    assert.deepEqual(await (await expectStatus(payload({ reasoning_effort: 'high' }), 400)).json(), { error: 'claude_effort' });
+  });
+  await test('Claude enabled uses exact manual budget and disabled emits explicit disabled with null audit effort', async () => {
+    for (const config of [{ mode: 'enabled', budget_tokens: 2048 }, { mode: 'disabled' }, { mode: 'omit' }]) {
+      reset(); claudeSetup(config); shrink = 3000;
+      for (const body of [payload(), { action: 'admin_test', model_id: MID, prompt: 'test', max_output_tokens: 5000 }]) await consume(body);
+      assert.ok(upstreamBodies.every(body => body.max_tokens === 3000 && !('output_config' in body)));
+      assert.deepEqual(upstreamBodies[0].thinking, config.mode === 'omit' ? undefined : config.mode === 'enabled' ? { type: 'enabled', budget_tokens: 2048 } : { type: 'disabled' });
+      assert.ok(audits.every(row => row.reasoning_effort === null));
+      for (const reasoning_effort of ['low', 'high', 'none', 'max', '', 1, true]) for (const body of [payload({ reasoning_effort }), { action: 'admin_test', model_id: MID, prompt: 'test', reasoning_effort }]) assert.deepEqual(await (await expectStatus(body, 400)).json(), { error: 'claude_effort' });
+      assert.equal(audits.length, 2);
+    }
+  });
+  await test('Claude adaptive uses configured default and override membership for both generation paths and audits', async () => {
+    claudeSetup({ mode: 'adaptive', efforts: ['medium', 'high', 'xhigh', 'max'], default_effort: 'xhigh' });
+    for (const testMode of [false, true]) {
+      for (const effort of [undefined, 'medium', 'high', 'xhigh', 'max']) {
+        const body = testMode ? { action: 'admin_test', model_id: MID, prompt: 'test', reasoning_effort: effort } : payload({ reasoning_effort: effort });
+        await consume(body);
+        assert.deepEqual(upstreamBodies.at(-1)!.thinking, { type: 'adaptive' });
+        assert.deepEqual(upstreamBodies.at(-1)!.output_config, { effort: effort ?? 'xhigh' }); assert.equal(audits.at(-1)!.reasoning_effort, effort ?? 'xhigh');
+      }
+      for (const reasoning_effort of ['low', 'none', 'minimal', 'HIGH', ' high ', '', 1]) {
+        const body = testMode ? { action: 'admin_test', model_id: MID, prompt: 'test', reasoning_effort } : payload({ reasoning_effort });
+        assert.deepEqual(await (await expectStatus(body, 400)).json(), { error: 'claude_effort' });
+      }
+    }
+    model.claude_thinking = { mode: 'adaptive' }; shrink = 10; await consume();
+    assert.deepEqual(upstreamBodies.at(-1)!.thinking, { type: 'adaptive' }); assert.equal(upstreamBodies.at(-1)!.output_config, undefined); assert.equal(audits.at(-1)!.reasoning_effort, null);
+    model.claude_thinking = { mode: 'adaptive', efforts: ['max'], default_effort: null }; await consume();
+    assert.equal(upstreamBodies.at(-1)!.output_config, undefined); assert.equal(audits.at(-1)!.reasoning_effort, null);
+  });
+  await test('Claude active config rejects model/provider switches and runtime on other protocols', async () => {
+    for (const api_protocol of ['responses', 'chat']) for (const config of [{ mode: 'disabled' }, { mode: 'adaptive' }, { mode: 'enabled', budget_tokens: 2048 }]) {
+      reset(); claudeSetup(config); provider.api_protocol = api_protocol;
+      for (const body of [{ action: 'admin_save_model', ...model }, { action: 'admin_save_provider', ...provider }, payload(), { action: 'admin_test', model_id: MID, prompt: 'test' }]) assert.deepEqual(await (await expectStatus(body, 400)).json(), { error: 'claude_thinking' });
+      assert.equal(modelWrites.length, 0); assert.equal(providerWrites.length, 0); assert.equal(audits.length, 0); assert.equal(upstreamBodies.length, 0);
+      provider.api_protocol = 'messages'; await expectStatus({ action: 'admin_save_provider', ...provider }, 200);
+    }
+  });
+  await test('Claude manual admin output rejects equal/lower budget before quota and accepts strict greater boundary', async () => {
+    claudeSetup({ mode: 'enabled', budget_tokens: 2048 });
+    for (const max_output_tokens of [100, 1024, 2047, 2048]) assert.deepEqual(await (await expectStatus({ action: 'admin_test', model_id: MID, prompt: 'test', max_output_tokens }, 400)).json(), { error: 'claude_thinking_budget' });
+    assert.equal(rpcCalls.filter(call => call.name === 'chat_begin_generation').length, 0); assert.equal(audits.length, 0); assert.equal(upstreamBodies.length, 0); assert.equal(charged, 0);
+    await consume({ action: 'admin_test', model_id: MID, prompt: 'test', max_output_tokens: 2049 });
+    assert.deepEqual(upstreamBodies[0].thinking, { type: 'enabled', budget_tokens: 2048 }); assert.equal(upstreamBodies[0].max_tokens, 2049);
+  });
+  await test('Claude quota budget invalidation refunds releases once before dispatch on both generation paths', async () => {
+    for (const testMode of [false, true]) for (const limit of [100, 1024, 2048]) {
+      reset(); claudeSetup({ mode: 'enabled', budget_tokens: 2048 }); shrink = limit;
+      const body = testMode ? { action: 'admin_test', model_id: MID, prompt: 'test' } : payload();
+      assert.deepEqual(await (await expectStatus(body, 400)).json(), { error: 'claude_thinking_budget' });
+      assert.equal(upstreamBodies.length, 0); assert.equal(charged, 0); assert.equal(leased, false); assert.equal(released, 1); assert.equal(finishAttempts, 1);
+      assert.equal(settlements[0].p_refund, true); assert.equal(audits[0].error_code, 'claude_thinking_budget'); assert.equal(audits[0].reasoning_effort, null);
+      shrink = 2049; await consume(body); assert.equal(upstreamBodies[0].max_tokens, 2049); assert.deepEqual(upstreamBodies[0].thinking, { type: 'enabled', budget_tokens: 2048 });
+    }
   });
   await test('HTTP method, malformed body and CORS', async () => {
     assert.equal((await handler(new Request('http://localhost/chat'))).status, 405);

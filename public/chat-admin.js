@@ -17,7 +17,56 @@ let testOutput = {visible: false, text: ''};
 const messages = new Map();
 const API_PROTOCOLS = ['auto', 'responses', 'messages', 'chat'];
 const API_PROTOCOL_LABELS = {auto: 'apiProtocolAuto', responses: 'apiProtocolResponses', messages: 'apiProtocolMessages', chat: 'apiProtocolChat'};
-function providerApiProtocol(item) { return API_PROTOCOLS.includes(item.api_protocol) ? item.api_protocol : 'auto'; }
+function providerApiProtocol(item) { return API_PROTOCOLS.includes(item?.api_protocol) ? item.api_protocol : 'auto'; }
+function resolvedProviderProtocol(item) {
+  const protocol = providerApiProtocol(item);
+  if (protocol !== 'auto') return protocol;
+  try {
+    const path = new URL(item?.base_url).pathname.replace(/\/+$/, '');
+    return /\/messages?$/i.test(path) ? 'messages' : /\/chat\/completions$/i.test(path) ? 'chat' : 'responses';
+  } catch { return 'responses'; }
+}
+function modelUsesMessages(item) { return resolvedProviderProtocol(providers.find(row => row.id === item?.provider_id)) === 'messages'; }
+function refreshThinkingControls() {
+  const messages = modelUsesMessages({provider_id: $('modelProvider').value});
+  const mode = $('modelClaudeThinkingMode').value;
+  const busy = Boolean(active) || !authorized;
+  for (const id of ['reasoningEfforts', 'defaultReasoning']) {
+    $(`${id}Field`).hidden = messages;
+    $(id).disabled = busy || messages;
+  }
+  for (const [id, visible] of [['modelClaudeThinkingMode', messages], ['modelClaudeThinkingBudget', messages && mode === 'enabled'], ['modelClaudeThinkingEfforts', messages && mode === 'adaptive'], ['modelClaudeDefaultEffort', messages && mode === 'adaptive']]) {
+    $(`${id}Field`).hidden = !visible;
+    $(id).disabled = busy || !visible;
+  }
+  $('modelClaudeThinkingBudget').required = messages && mode === 'enabled';
+  $('modelClaudeThinkingHelp').hidden = !messages;
+}
+function fillClaudeThinking(item) {
+  const config = item?.claude_thinking;
+  $('modelClaudeThinkingMode').value = config?.mode || 'omit';
+  $('modelClaudeThinkingBudget').value = config?.budget_tokens ?? 1024;
+  $('modelClaudeThinkingEfforts').value = asArray(config?.efforts).join(',');
+  $('modelClaudeDefaultEffort').value = config?.default_effort || '';
+  refreshThinkingControls();
+}
+function claudeThinkingInput(defaultOutput) {
+  if (!modelUsesMessages({provider_id: $('modelProvider').value})) return {mode: 'omit'};
+  const mode = $('modelClaudeThinkingMode').value;
+  if (mode === 'omit' || mode === 'disabled') return {mode};
+  if (mode === 'enabled') {
+    const budget_tokens = Number($('modelClaudeThinkingBudget').value);
+    if (!validInteger(budget_tokens, 1024, defaultOutput - 1)) throw new Error('claude_thinking_budget');
+    return {mode, budget_tokens};
+  }
+  if (mode === 'adaptive') {
+    const efforts = $('modelClaudeThinkingEfforts').value.split(',').map(value => value.trim()).filter(Boolean);
+    const default_effort = $('modelClaudeDefaultEffort').value.trim() || null;
+    if (efforts.some(value => !['low', 'medium', 'high', 'xhigh', 'max'].includes(value)) || new Set(efforts).size !== efforts.length || (default_effort && !efforts.includes(default_effort))) throw new Error('claude_effort');
+    return {mode, efforts, default_effort};
+  }
+  throw new Error('claude_thinking');
+}
 
 function emptyUsage() { return {rows: [], page: 1, pageSize: 20, total: 0, loaded: false}; }
 function escapeHtml(value) {
@@ -96,6 +145,7 @@ function controls() {
   $('accessVisibility').disabled = disabled || !modelAccess;
   $('accessSelectAll').disabled = disabled || !directoryLoaded || !modelAccess;
   document.querySelectorAll('[data-access-user]').forEach(node => { node.disabled = disabled || !modelAccess; });
+  refreshThinkingControls();
 }
 function current(run) { return active === run && run.epoch === epoch && !run.controller.signal.aborted; }
 function assertCurrent(run) { if (!current(run)) throw new DOMException('Stale account request', 'AbortError'); }
@@ -135,7 +185,7 @@ function errorKey(error) {
   if (blockedTest(error)) return 'testBlacklisted';
   if (error.status === 403 || error.message === 'admin') return 'unauthorized';
   if (error.status === 401 || error.message === 'login') return 'loginExpired';
-  return ({quota_input: 'invalidQuota', busy: 'busy', input: 'invalidInput', model: 'invalidModel', provider_url: 'invalidUrl', api_protocol: 'invalidApiProtocol', reasoning_history_unsupported: 'reasoningHistoryUnsupported', reasoning_effort_unsupported: 'reasoningEffortUnsupported', reasoning_budget: 'reasoningBudget', effort: 'reasoningEffortInvalid', secret_name: 'invalidSecret', secret_missing: 'secretMissing', upstream: 'upstreamFailed', context: 'invalidOutput', database: 'databaseFailed'})[error.message] || 'requestFailed';
+  return ({quota_input: 'invalidQuota', busy: 'busy', input: 'invalidInput', model: 'invalidModel', provider_url: 'invalidUrl', api_protocol: 'invalidApiProtocol', claude_thinking: 'claudeThinkingInvalid', claude_thinking_budget: 'claudeThinkingBudgetInvalid', claude_effort: 'claudeEffortInvalid', reasoning_history_unsupported: 'reasoningHistoryUnsupported', reasoning_effort_unsupported: 'reasoningEffortUnsupported', reasoning_budget: 'reasoningBudget', effort: 'reasoningEffortInvalid', secret_name: 'invalidSecret', secret_missing: 'secretMissing', upstream: 'upstreamFailed', context: 'invalidOutput', database: 'databaseFailed'})[error.message] || 'requestFailed';
 }
 async function operation(messageId, work, {verify = false} = {}) {
   if (active || !session?.user?.id || (!authorized && !verify)) return;
@@ -163,11 +213,15 @@ function renderProviderOptions() {
   if (providers.some(item => item.id === previous)) $('modelProvider').value = previous;
 }
 function availableModels() { return models.filter(item => item.enabled !== false && providers.some(row => row.id === item.provider_id && row.enabled !== false)); }
+let testBudgetModelId = '';
 function configureTestBudget(reset = false) {
   const item = models.find(row => row.id === $('testModel').value);
   const max = item?.max_output_tokens || 131072;
+  const budget = modelUsesMessages(item) && item?.claude_thinking?.mode === 'enabled' ? item.claude_thinking.budget_tokens : 0;
   $('testOutput').max = String(max);
-  if (reset || Number($('testOutput').value) > max) $('testOutput').value = String(Math.min(256, max));
+  // Re-rendering translations must never overwrite an administrator's draft.
+  if (reset || testBudgetModelId !== (item?.id || '')) $('testOutput').value = String(Math.min(budget ? budget + Math.max(256, Math.ceil(budget / 4)) : 256, max));
+  testBudgetModelId = item?.id || '';
 }
 function renderModelOptions() {
   const previous = $('testModel').value, enabled = availableModels();
@@ -402,7 +456,7 @@ async function loadAdmin(run) {
 }
 function clearProvider() { $('providerForm').reset(); $('providerId').value = ''; $('providerApiProtocol').value = 'auto'; }
 function syncDefaultOutputMax() { $('defaultOutputTokens').max = String(Math.min(131072, Math.max(1, Number($('maxOutputTokens').value) || 1))); }
-function clearModel() { $('modelForm').reset(); $('modelConfigId').value = ''; syncDefaultOutputMax(); }
+function clearModel() { $('modelForm').reset(); $('modelConfigId').value = ''; syncDefaultOutputMax(); fillClaudeThinking(null); }
 function clearSensitive() {
   clearProxyPlaintext(); proxyRoutes = []; proxyKeys = []; proxyLoaded = false;
   clearProxyRoute(); $('proxyKeyForm').reset(); $('proxyKeyLabel').value = ''; $('proxyKeyRoute').replaceChildren();
@@ -731,6 +785,7 @@ $('modelsList').addEventListener('click', event => {
   $('reasoningEfforts').value = asArray(item.reasoning_efforts).join(','); $('defaultReasoning').value = item.default_reasoning_effort || '';
   $('supportsImages').checked = item.supports_images === true; $('supportsPdf').checked = item.supports_pdf === true;
   $('preserveReasoning').checked = item.preserve_reasoning === true; $('modelEnabled').checked = item.enabled !== false;
+  fillClaudeThinking(item);
   setMessage('modelMessage'); $('modelId').focus();
 });
 
@@ -757,7 +812,9 @@ $('modelForm').addEventListener('submit', event => {
   const body = {id: $('modelConfigId').value || null, model_key: $('modelId').value.trim(), display_name: $('modelLabel').value.trim(), introduction: $('modelIntroduction').value.trim() || null, provider_id: $('modelProvider').value, context_window: Number($('contextWindow').value), max_output_tokens: Number($('maxOutputTokens').value), default_max_output_tokens: Number($('defaultOutputTokens').value), reasoning_efforts: efforts, default_reasoning_effort: $('defaultReasoning').value.trim() || null, supports_images: $('supportsImages').checked, supports_pdf: $('supportsPdf').checked, preserve_reasoning: $('preserveReasoning').checked, enabled: $('modelEnabled').checked};
   if (!body.model_key || body.model_key.length > 160 || !body.display_name || body.display_name.length > 120 || (body.introduction && body.introduction.length > 1000) || !body.provider_id) return setMessage('modelMessage', 'modelRequired', 'error');
   if (!validInteger(body.context_window, 256, 1000000) || !validInteger(body.max_output_tokens, 1, 131072) || !validInteger(body.default_max_output_tokens, 1, body.max_output_tokens)) return setMessage('modelMessage', 'invalidLimits', 'error');
-  if (efforts.length > 12 || efforts.some(value => value.length > 40) || (body.default_reasoning_effort?.length || 0) > 40) return setMessage('modelMessage', 'invalidReasoning', 'error');
+  if (!modelUsesMessages(body) && (efforts.length > 12 || efforts.some(value => value.length > 40) || (body.default_reasoning_effort?.length || 0) > 40)) return setMessage('modelMessage', 'invalidReasoning', 'error');
+  try { body.claude_thinking = claudeThinkingInput(body.default_max_output_tokens); }
+  catch (error) { return setMessage('modelMessage', errorKey(error), 'error'); }
   void operation('modelMessage', async run => {
     setMessage('modelMessage', 'saving');
     await request(run, 'save_model', body); assertCurrent(run);
@@ -773,6 +830,7 @@ $('testForm').addEventListener('submit', event => {
   const prompt = $('testPrompt').value.trim(), output = Number($('testOutput').value);
   if (!prompt || prompt.length > 12000) return setMessage('testMessage', 'invalidPrompt', 'error');
   if (!validInteger(output, 1, Math.min(131072, item.max_output_tokens))) return setMessage('testMessage', 'invalidOutput', 'error');
+  if (modelUsesMessages(item) && item.claude_thinking?.mode === 'enabled' && output <= item.claude_thinking.budget_tokens) return setMessage('testMessage', 'claudeThinkingBudgetInvalid', 'error');
   if (!window.confirm(t('testConfirm'))) return;
   void operation('testMessage', async run => {
     testOutput = {visible: false, text: ''}; renderTestOutput(); setMessage('testMessage', 'testRunning');
@@ -820,6 +878,8 @@ $('retryButton').onclick = () => void operation('gateMessage', loadAdmin, {verif
 $('clearProviderButton').onclick = () => { if (!active) { clearProvider(); setMessage('providerMessage'); } };
 $('clearModelButton').onclick = () => { if (!active) { clearModel(); setMessage('modelMessage'); } };
 $('maxOutputTokens').addEventListener('input', syncDefaultOutputMax);
+$('modelProvider').addEventListener('change', refreshThinkingControls);
+$('modelClaudeThinkingMode').addEventListener('change', refreshThinkingControls);
 $('testModel').addEventListener('change', () => { configureTestBudget(true); controls(); });
 window.ClubI18n?.mountSwitcher($('languageSwitcher'));
 window.addEventListener('club:langchange', refreshLocalizedUi);
