@@ -72,7 +72,22 @@ def main():
             db.execute("create table public.club_super_admins(user_id uuid primary key references auth.users(id))")
             db.execute("create table public.club_member_profiles(user_id uuid primary key references auth.users(id), username text, member_name text)")
             db.execute(source)
-            db.execute(source)  # Migration must rerun cleanly.
+            legacy_provider = db.execute("insert into chat_providers(name,base_url,secret_name) values ('legacy-protocol','https://invalid.local/v1/messages','CHAT_KEY_TEST') returning id").fetchone()[0]
+            db.execute("alter table chat_providers drop column api_protocol")
+            db.execute(source)  # Upgrade an installed schema without the protocol column.
+            assert db.execute("select api_protocol,base_url from chat_providers where id=%s", (legacy_provider,)).fetchone() == ("auto", "https://invalid.local/v1/messages")
+            db.execute("update chat_providers set api_protocol='chat' where id=%s", (legacy_provider,))
+            db.execute(source)  # Migration must rerun without resetting explicit selections.
+            assert db.execute("select api_protocol from chat_providers where id=%s", (legacy_provider,)).fetchone()[0] == "chat"
+            for protocol in ("auto", "responses", "messages", "chat"):
+                db.execute("update chat_providers set api_protocol=%s where id=%s", (protocol, legacy_provider))
+            for protocol in ("unknown", "", "chat_completions", None):
+                try:
+                    db.execute("update chat_providers set api_protocol=%s where id=%s", (protocol, legacy_provider))
+                except psycopg.IntegrityError:
+                    pass
+                else:
+                    raise AssertionError("Invalid provider API protocol accepted")
             actor, alice, bob, unbound = [uuid.uuid4() for _ in range(4)]
             for uid in (actor, alice, bob, unbound):
                 db.execute("insert into auth.users(id,email) values (%s,%s)", (uid, str(uid) + "@test.local"))

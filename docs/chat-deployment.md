@@ -91,20 +91,23 @@ Edge Function 已经自行校验 Bearer token，并通过 Supabase Auth `/auth/v
 
 - `name`：内部稳定名称。
 - `label`：页面显示名称。
-- `base_url`：供应商 HTTPS 公网地址。原有 `https://api.example.com/v1` 继续默认使用 Responses；填写具体端点可以选择协议。
+- `base_url`：供应商 HTTPS 公网版本根地址，例如 `https://api.example.com/v1`；也可保留具体端点。
+- `api_protocol`：在“API 协议”下拉框选择自动识别、Responses、Claude Messages 或 Chat Completions。模型继承其关联供应商的协议。
 - `secret_name`：与 Edge Function secret 完全一致，例如 `CHAT_KEY_OPENAI`。
 - `auth_header`：按供应商要求选择 `authorization` 或 `x-api-key`。原生 Claude 应选择 `x-api-key`；Messages 请求自动带 `anthropic-version: 2023-06-01`。
 - `enabled`：上线前先保持关闭，完成配置和付费验收后再开启。
 
-现有表单和页面布局不变，通过 `base_url` 末尾路径识别内部 Chat 协议：
+供应商表单提供独立的“API 协议”下拉框。`api_protocol` 保存为 `auto`、`responses`、`messages` 或 `chat`；旧配置默认为 `auto`，继续通过 URL 后缀识别：
 
-| 地址示例 | 协议 |
+| 自动识别时的地址示例 | 协议 |
 | --- | --- |
 | `https://api.example.com/v1` 或 `https://api.example.com/v1/responses` | OpenAI Responses |
 | `https://api.anthropic.com/v1/messages` | Anthropic Messages（Claude） |
 | `https://api.example.com/v1/chat/completions` | OpenAI Chat Completions |
 
-`/v1/message` 作为输入别名会规范成 `/v1/messages`。Responses 的标准路径是 `/v1/responses`，不接受 `/v1/response`。不要填写查询参数、账号密码、私网地址或本地地址。函数继续拒绝非 HTTPS、含凭据、含 query/hash、私网或不合规的 provider URL。同一上游若需要多种协议，可在现有表单创建多个 provider，并分别填写具体端点；model 通过其 provider 选择协议。
+显式选择时，后端先移除地址末尾已有的受支持端点，再追加所选协议的规范端点；显式选择优先于后缀，不改写保存的地址。例如 `https://host/v1/responses` 配合 Messages 会请求 `https://host/v1/messages`。不会自动补 `/v1`，请保留上游实际要求的版本路径。认证头仍独立配置。
+
+`/v1/message` 作为输入别名会规范成 `/v1/messages`。Responses 的标准路径是 `/v1/responses`，不接受 `/v1/response`。不要填写查询参数、账号密码、私网地址或本地地址。函数继续拒绝非 HTTPS、含凭据、含 query/hash、私网或不合规的 provider URL。同一上游若需要多种协议，可创建多个 provider，分别选择协议；model 通过其 provider 选择协议。协议字段迁移必须先运行完整 SQL，再部署 `chat`，最后发布管理页 HTML/JS/i18n。
 
 供应商更换 key 时，按以下顺序执行：
 
@@ -297,11 +300,17 @@ API action 契约：`quota {}` 仅查询本人；`admin_user_directory {}` 返�
 | `admin_proxy_list` | `{}` | `{routes,keys}` |
 | `admin_proxy_save` | `{id:null或UUID,name,base_url,secret_name,enabled,expected_version:0或n}` | `{route}` |
 | `admin_proxy_route_state` | `{id,enabled,expected_version}` | `{route}` |
-| `admin_proxy_route_delete` | `{id,expected_version}` | `{route}`；不可逆墓碑删除，同时永久撤销该路由下的访问密钥 |
+| `admin_proxy_route_delete` | `{id,expected_version}` | `{route}`；不可逆撤销路由（保留失效记录），同时撤销该路由下的访问密钥 |
+| `admin_proxy_route_hard_delete` | `{id,expected_version}` | `{deleted_route_id}`；仅限已撤销路由，物理删除路由、全部关联密钥和租约 |
 | `admin_proxy_key_create` | `{route_id,label}` | `{key:metadata,api_key:一次明文}` |
 | `admin_proxy_key_state` | `{id,enabled,revoked:boolean,expected_version}` | `{key}` |
+| `admin_proxy_key_hard_delete` | `{id,expected_version}` | `{deleted_key_id}`；仅限已撤销密钥，物理删除密钥和关联租约 |
 
-route 字段包括 `id,name,base_url,secret_name,enabled,deleted_at,version,created_at,updated_at`。安全 key metadata 仅为 `id,route_id,label,key_prefix,key_last4,enabled,revoked_at,version,created_at`，不含 hash 或完整 key。新 route 的 `expected_version` 为 0；更新带读取时版本，陈旧版本 `409 conflict`，刷新核对后再操作。route 删除是不可逆墓碑操作：保留 UUID 和安全元数据以避免公开 URL 被复用，但立即停用路由、撤销全部旗下 key、清理活动 lease；删除后的 URL 和 key 永远不能再次准入，已在途的上游请求不会被强制中断。
+route 字段包括 `id,name,base_url,secret_name,enabled,deleted_at,version,created_at,updated_at`。安全 key metadata 仅为 `id,route_id,label,key_prefix,key_last4,enabled,revoked_at,version,created_at`，不含 hash 或完整 key。新 route 的 `expected_version` 为 0；更新或彻底删除均带读取时版本，陈旧版本返回 `409 conflict`，刷新核对后再操作。
+
+撤销路由会保留失效记录，立即停用路由、撤销全部旗下 key、清理活动 lease；撤销不可恢复。管理页为 `deleted_at` 非空的路由及 `revoked_at` 非空的密钥提供“彻底删除”按钮，确认后通过数据库事务实际删除记录，刷新列表也不会再显示。路由彻底删除会一起清除旗下所有密钥及关联租约；单独删除密钥只清除该密钥及其租约。仅停用的记录不符合彻底删除条件，服务端也会拒绝该操作（`409 not_revoked`）。执行完整 SQL、部署函数或打开列表均不会自动清除任何记录。
+
+彻底删除不保留 UUID 或 key 哈希占位。管理接口创建路由仍由数据库生成新 UUID，不允许调用者指定旧 UUID；正常重新创建会得到新的公开 URL，旧 URL/密钥无法准入。已在途的上游请求不会被强制中断，其后续租约释放可安全重复执行。手工用高权限 SQL 重建同 UUID 不属于管理接口保证。彻底删除不会移除 Edge Secrets 中的上游供应商 Key，也不会自动清除成员自行保存的失效代理地址。
 
 proxy key 格式为 `cap_` 加 **32 随机字节的 base64url**（43 字符，无 padding）。创建接口只返回一次完整明文；服务端只持久化哈希与安全 metadata，列表/状态保存不能取回明文或哈希。关闭一次明文提示前由接收者安全保存；丢失则撤销重建。不要把 key 放进仓库、截图、日志或公共示例。key_prefix/key_last4 只用于识别，不可用于认证。
 

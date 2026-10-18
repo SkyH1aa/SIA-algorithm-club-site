@@ -1,12 +1,19 @@
 // Internal chat adapter. The browser contract remains the Responses API.
 type ProtocolJson = Record<string, unknown>;
 export type ChatProtocol = 'responses' | 'messages' | 'chat';
+export type ChatProtocolSetting = 'auto' | ChatProtocol;
 export class ChatProtocolError extends Error {
   status = 400;
   constructor(code = 'input') { super(code); this.name = 'ChatProtocolError'; }
 }
-export function chatEndpoint(base: string): { protocol: ChatProtocol; url: string } {
+export function chatEndpoint(base: string, setting: ChatProtocolSetting = 'auto'): { protocol: ChatProtocol; url: string } {
   const url = base.replace(/\/+$/, '');
+  if (setting !== 'auto') {
+    if (!['responses', 'messages', 'chat'].includes(setting)) throw new ChatProtocolError('api_protocol');
+    // Replace only one recognized terminal endpoint; retain the provider's path.
+    const root = url.replace(/\/(?:responses|messages?|chat\/completions)$/i, '');
+    return { protocol: setting, url: `${root}/${setting === 'chat' ? 'chat/completions' : setting}` };
+  }
   if (/\/chat\/completions$/i.test(url)) return { protocol: 'chat', url };
   if (/\/messages?$/i.test(url)) return { protocol: 'messages', url: url.replace(/\/message$/i, '/messages') };
   return { protocol: 'responses', url: /\/responses$/i.test(url) ? url : `${url}/responses` };

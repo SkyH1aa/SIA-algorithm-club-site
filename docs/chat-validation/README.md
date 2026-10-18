@@ -50,7 +50,7 @@ node tools/chat-mock-server.mjs --port 4192
 
 成员页的 custom cloud 配置只验证合成显示名、模型 ID、固定社团 proxy URL 和一次性内存 key：保存请求不能包含 `api_key`，数据库/接口返回只含 metadata；刷新或关闭页面后 key 必须消失并要求重新输入。固定 URL 必须是规定的 proxy origin、route UUID 和 `/functions/v1/chat-api-proxy/<uuid>` 路径，实际请求为 `POST .../v1/responses`，不应直连上游或暴露任意 `/models`、`/chat/completions` 路径。
 
-当前真实 action 契约只有 upsert 与 `enabled` 软停用，没有 delete action；本 mock 对齐这一点。创建/读取/更新/停用覆盖页面所需的配置 CRUD 生命周期，物理删除通过 setup 重置模拟数据。
+代理管理支持撤销与彻底删除两个阶段，详见下方代理契约；仅停用的路由/密钥不能直接彻底删除。mock 的 setup 重置只用于清空本地测试环境。
 
 ## 额度与黑名单验证
 
@@ -114,9 +114,13 @@ python docs/chat-validation/fixtures/generate-upload-fixtures.py
 - `admin_proxy_list {}` → `{routes,keys}`。
 - `admin_proxy_save {id:null|UUID,name,base_url,secret_name,enabled,expected_version:0|n}` → `{route}`。
 - `admin_proxy_route_state {id,enabled,expected_version}` → `{route}`。
-- `admin_proxy_route_delete {id,expected_version}` → `{route}`；这是不可逆墓碑删除，会立即让 route UUID 失效并撤销旗下全部 key。
+- `admin_proxy_route_delete {id,expected_version}` → `{route}`；不可逆撤销路由并保留失效记录，同时撤销旗下全部 key。
+- `admin_proxy_route_hard_delete {id,expected_version}` → `{deleted_route_id}`；仅限已撤销路由，清除路由及关联密钥/租约。
 - `admin_proxy_key_create {route_id,label}` → `{key:metadata,api_key:一次明文}`。
 - `admin_proxy_key_state {id,enabled,revoked:boolean,expected_version}` → `{key}`。
+- `admin_proxy_key_hard_delete {id,expected_version}` → `{deleted_key_id}`；仅限已撤销密钥，清除密钥及其租约。
+
+新增删除验收覆盖：活动或仅停用记录返回 `409 not_revoked`、旧版本返回 `409 conflict`、非超管拒绝、确认取消不发请求、删除成功从列表消失且重新加载仍不出现、旧 key 无法准入、路由关联记录清理与其他路由不受影响。前端模拟与 HTTP mock 验证交互和契约；SQL integration 脚本提供真实行删除、外键/租约清理、权限和并发断言，需另有本地 PostgreSQL 才能执行。
 
 route 包括 `id,name,base_url,secret_name,enabled,deleted_at,version,created_at,updated_at`；key metadata 只有 `id,route_id,label,key_prefix,key_last4,enabled,revoked_at,version,created_at`。32 随机字节生成 `cap_` + base64url，内部只存 SHA-256 hash；list/状态/日志没有 hash 或完整 key，丢失明文只能撤销重建。route 墓碑删除和 key 撤销均不可恢复；陈旧 expected_version 返回 409。
 
@@ -143,6 +147,8 @@ mock 仅模拟协议，不执行请求中的 tools/远程 URL、上游项目资�
 
 自检新增验证五个管理员契约、32-byte key 和精确 metadata 字段、哈希/明文不出 list/log、版本冲突、路由绑定、JSON/SSE/model 原值、401/403/404/405/413/429/502、取消释放、Chat/session 独立性、撤销、URL 替换与 reset。所有请求限于自检自己创建的回环服务器，绝不自动测试生产或付费供应商。未运行新的 GUI 矩阵，不声称代理页面视觉验收通过。
 
+- `chat_proxy` 管理页删除验收：在本地 mock 中创建合成路由，执行撤销并确认永久删除后，路由立即消失；再次点击“刷新路由与密钥”仍为空。此为浏览器交互与内存 mock 验证，不是线上数据库删除验收。
+
 ## 日志、重置与自检
 
 setup 的“刷新元数据”或 **GET `/mock/requests`** 查看最近最多 500 条记录。只保存服务生成 request ID、时间、受控 action/账号、请求字节数、model UUID、受控 effort / 场景、role/part 数量、附件计数/字节和结果；**不保存请求 headers、apikey、authorization、token、key 值、提示正文、附件内容或供应商配置**。不自动写日志文件。usage 最多保留 1000 条模拟生成记录。
@@ -166,7 +172,9 @@ SQL syntax-only 只做 pglast 解析，不验证事务或并发；真实 DSN 测
 
 ## 三种原生 API 协议
 
-本次仅增加协议功能，Chat 和管理页的 HTML/CSS 布局不变。供应商现有 Base URL 表单可填写 `/v1/responses`、`/v1/messages` 或 `/v1/chat/completions` 以选择协议；原有 `/v1` 默认 Responses。内部 Chat 与管理员测试输出仍为 Responses 事件，原生请求转换与用量结算在服务端完成；对外代理三条接口按原生 JSON/SSE 透传，不自动跨协议转换。
+供应商新增 API 协议下拉框（`auto/responses/messages/chat`），模型继承供应商协议。`auto` 保留 URL 后缀推断和裸 `/v1` 默认 Responses；显式选择覆盖地址末尾已有的端点，在原版本根上追加所选规范端点。验证保存、编辑回填、清空恢复 auto、语言切换不丢未保存选择，以及遗漏字段的旧客户端更新不会重置显式协议。数据库迁移回归在可丢弃本地 PostgreSQL 中模拟旧表缺列、升级默认 auto、重复运行不重置已选协议和无效值拒绝；该数据库回归需要额外运行环境，语法解析不能替代执行。
+
+内部 Chat 与管理员测试输出仍为 Responses 事件，原生请求转换与用量结算在服务端完成；对外代理三条接口按原生 JSON/SSE 透传，不自动跨协议转换。
 
 验收应覆盖：原生 request body / header、文本和附件转换、system 前缀、碎片 UTF-8/SSE、终止状态、缺失用量、配额缩小输出预算、停止/中断、密钥隔离、Claude `x-api-key` 与冲突凭证、版本头、固定 custom URL 边界。Responses 加密 reasoning 无法跨协议保留，非 Responses 应拒绝该配置/内容。HTTP mock 支持各接口与别名，但生产适配器必须另跑真实 handler mocked integration。
 

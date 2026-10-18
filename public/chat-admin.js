@@ -15,6 +15,9 @@ let modelAccess = null, modelAccessDraft = null, modelAccessModelId = '', modelA
 let globalQuota = null, userQuota = null;
 let testOutput = {visible: false, text: ''};
 const messages = new Map();
+const API_PROTOCOLS = ['auto', 'responses', 'messages', 'chat'];
+const API_PROTOCOL_LABELS = {auto: 'apiProtocolAuto', responses: 'apiProtocolResponses', messages: 'apiProtocolMessages', chat: 'apiProtocolChat'};
+function providerApiProtocol(item) { return API_PROTOCOLS.includes(item.api_protocol) ? item.api_protocol : 'auto'; }
 
 function emptyUsage() { return {rows: [], page: 1, pageSize: 20, total: 0, loaded: false}; }
 function escapeHtml(value) {
@@ -85,7 +88,7 @@ function controls() {
   $('proxyKeyRoute').disabled = disabled || !proxyLoaded || !proxyRoutes.length;
   $('createProxyKeyButton').disabled = disabled || !$('proxyKeyRoute').value;
   $('copyProxyKeyButton').disabled = !authorized || !proxyPlaintext;
-  document.querySelectorAll('[data-proxy-edit], [data-proxy-route-state], [data-proxy-key-state], [data-proxy-key-revoke]').forEach(node => { node.disabled = disabled; });
+  document.querySelectorAll('[data-proxy-edit], [data-proxy-route-state], [data-proxy-route-delete], [data-proxy-route-hard-delete], [data-proxy-key-state], [data-proxy-key-revoke], [data-proxy-key-hard-delete]').forEach(node => { node.disabled = disabled; });
   $('usagePrev').disabled = disabled || usage.page <= 1;
   $('usageNext').disabled = disabled || !hasNextPage();
   $('testForm').querySelector('button[type="submit"]').disabled = disabled || !$('testModel').value;
@@ -132,7 +135,7 @@ function errorKey(error) {
   if (blockedTest(error)) return 'testBlacklisted';
   if (error.status === 403 || error.message === 'admin') return 'unauthorized';
   if (error.status === 401 || error.message === 'login') return 'loginExpired';
-  return ({quota_input: 'invalidQuota', busy: 'busy', input: 'invalidInput', model: 'invalidModel', provider_url: 'invalidUrl', secret_name: 'invalidSecret', secret_missing: 'secretMissing', upstream: 'upstreamFailed', context: 'invalidOutput', database: 'databaseFailed'})[error.message] || 'requestFailed';
+  return ({quota_input: 'invalidQuota', busy: 'busy', input: 'invalidInput', model: 'invalidModel', provider_url: 'invalidUrl', api_protocol: 'invalidApiProtocol', reasoning_history_unsupported: 'reasoningHistoryUnsupported', reasoning_effort_unsupported: 'reasoningEffortUnsupported', reasoning_budget: 'reasoningBudget', effort: 'reasoningEffortInvalid', secret_name: 'invalidSecret', secret_missing: 'secretMissing', upstream: 'upstreamFailed', context: 'invalidOutput', database: 'databaseFailed'})[error.message] || 'requestFailed';
 }
 async function operation(messageId, work, {verify = false} = {}) {
   if (active || !session?.user?.id || (!authorized && !verify)) return;
@@ -188,7 +191,7 @@ function rowActions(kind, id, labelKey) {
 }
 function cells(values) { return values.map(value => `<td>${escapeHtml(value)}</td>`).join(''); }
 function renderProviders() {
-  $('providersList').innerHTML = providers.length ? table(['providerId', 'providerLabel', 'baseUrl', 'secretName', 'authHeader', 'enabled', 'actions'], providers.map(item => `<tr>${cells([item.name, first(item.label, '-'), item.base_url, item.secret_name, item.auth_header || 'authorization'])}<td>${badge(item.enabled !== false)}</td><td>${rowActions('provider', item.id, 'deleteProvider')}</td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t('noProvider'))}</div>`;
+  $('providersList').innerHTML = providers.length ? table(['providerId', 'providerLabel', 'baseUrl', 'apiProtocol', 'secretName', 'authHeader', 'enabled', 'actions'], providers.map(item => `<tr>${cells([item.name, first(item.label, '-'), item.base_url, t(API_PROTOCOL_LABELS[providerApiProtocol(item)]), item.secret_name, item.auth_header || 'authorization'])}<td>${badge(item.enabled !== false)}</td><td>${rowActions('provider', item.id, 'deleteProvider')}</td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t('noProvider'))}</div>`;
 }
 function renderModels() {
   $('modelsList').innerHTML = models.length ? table(['modelId', 'modelLabel', 'modelIntroduction', 'modelProvider', 'contextWindow', 'maxOutput', 'enabled', 'actions'], models.map(item => `<tr>${cells([modelKey(item), first(item.display_name, '-'), first(item.introduction, '-'), providerLabel(item.provider_id), item.context_window, item.max_output_tokens])}<td>${badge(item.enabled !== false)}</td><td>${rowActions('model', item.id, 'deleteModel')}</td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t('noModel'))}</div>`;
@@ -397,7 +400,7 @@ async function loadAdmin(run) {
     setMessage('usageMessage', error.message === 'date' ? 'invalidDates' : errorKey(error), 'error');
   }
 }
-function clearProvider() { $('providerForm').reset(); $('providerId').value = ''; }
+function clearProvider() { $('providerForm').reset(); $('providerId').value = ''; $('providerApiProtocol').value = 'auto'; }
 function syncDefaultOutputMax() { $('defaultOutputTokens').max = String(Math.min(131072, Math.max(1, Number($('maxOutputTokens').value) || 1))); }
 function clearModel() { $('modelForm').reset(); $('modelConfigId').value = ''; syncDefaultOutputMax(); }
 function clearSensitive() {
@@ -456,11 +459,11 @@ function renderProxy() {
   const previous = $('proxyKeyRoute').value;
   $('proxyKeyRoute').replaceChildren(new Option(t('proxySelectRoute'), ''));
   for (const item of proxyRoutes.filter(item => !item.deleted_at)) $('proxyKeyRoute').add(new Option(`${item.name}${item.enabled ? '' : ` · ${t('disabledBadge')}`}`, item.id));
-  if (proxyRoutes.some(item => item.id === previous)) $('proxyKeyRoute').value = previous;
-  $('proxyRoutesList').innerHTML = proxyRoutes.length ? table(['proxyName', 'baseUrl', 'secretName', 'proxyClientBase', 'enabled', 'proxyVersion', 'startedAt', 'proxyUpdated', 'proxyActions'], proxyRoutes.map(item => `<tr>${cells([item.name, item.base_url, item.secret_name, proxyBaseURL(item.id)])}<td>${item.deleted_at ? escapeHtml(t('proxyDeleted')) : badge(item.enabled)}</td>${cells([item.version, formatTime(item.created_at), formatTime(item.updated_at)])}<td><div class="chat-admin-actions">${proxyAction('data-proxy-copy-base', item.id, 'proxyCopyBase')}${item.deleted_at ? '' : proxyAction('data-proxy-edit', item.id, 'edit')}${item.deleted_at ? '' : proxyAction('data-proxy-route-state', item.id, item.enabled ? 'proxyDisable' : 'proxyEnable')}${item.deleted_at ? '' : proxyAction('data-proxy-route-delete', item.id, 'proxyDelete', true)}</div></td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t(proxyLoaded ? 'proxyNoRoutes' : 'proxyNotLoaded'))}</div>`;
+  if (proxyRoutes.some(item => item.id === previous && !item.deleted_at)) $('proxyKeyRoute').value = previous;
+  $('proxyRoutesList').innerHTML = proxyRoutes.length ? table(['proxyName', 'baseUrl', 'secretName', 'proxyClientBase', 'enabled', 'proxyVersion', 'startedAt', 'proxyUpdated', 'proxyActions'], proxyRoutes.map(item => `<tr>${cells([item.name, item.base_url, item.secret_name, proxyBaseURL(item.id)])}<td>${item.deleted_at ? escapeHtml(t('proxyDeleted')) : badge(item.enabled)}</td>${cells([item.version, formatTime(item.created_at), formatTime(item.updated_at)])}<td><div class="chat-admin-actions">${proxyAction('data-proxy-copy-base', item.id, 'proxyCopyBase')}${item.deleted_at ? '' : proxyAction('data-proxy-edit', item.id, 'edit')}${item.deleted_at ? '' : proxyAction('data-proxy-route-state', item.id, item.enabled ? 'proxyDisable' : 'proxyEnable')}${item.deleted_at ? proxyAction('data-proxy-route-hard-delete', item.id, 'proxyHardDeleteRoute', true) : proxyAction('data-proxy-route-delete', item.id, 'proxyDelete', true)}</div></td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t(proxyLoaded ? 'proxyNoRoutes' : 'proxyNotLoaded'))}</div>`;
   $('proxyKeysList').innerHTML = proxyKeys.length ? table(['proxyRoute', 'proxyKeyLabel', 'proxyKeyMask', 'status', 'proxyVersion', 'startedAt', 'proxyRevokedAt', 'proxyActions'], proxyKeys.map(item => {
     const route = proxyRoutes.find(route => route.id === item.route_id);
-    return `<tr>${cells([route?.name || item.route_id, item.label, `${item.key_prefix}…${item.key_last4}`])}<td>${item.revoked_at ? escapeHtml(t('proxyRevoked')) : badge(item.enabled)}</td>${cells([item.version, formatTime(item.created_at), formatTime(item.revoked_at)])}<td>${item.revoked_at ? '' : `<div class="chat-admin-actions">${proxyAction('data-proxy-key-state', item.id, item.enabled ? 'proxyDisable' : 'proxyEnable')}${proxyAction('data-proxy-key-revoke', item.id, 'proxyRevoke', true)}</div>`}</td></tr>`;
+    return `<tr>${cells([route?.name || item.route_id, item.label, `${item.key_prefix}…${item.key_last4}`])}<td>${item.revoked_at ? escapeHtml(t('proxyRevoked')) : badge(item.enabled)}</td>${cells([item.version, formatTime(item.created_at), formatTime(item.revoked_at)])}<td><div class="chat-admin-actions">${item.revoked_at ? proxyAction('data-proxy-key-hard-delete', item.id, 'proxyHardDeleteKey', true) : `${proxyAction('data-proxy-key-state', item.id, item.enabled ? 'proxyDisable' : 'proxyEnable')}${proxyAction('data-proxy-key-revoke', item.id, 'proxyRevoke', true)}`}</div></td></tr>`;
   }).join('')) : `<div class="chat-admin-empty">${escapeHtml(t(proxyLoaded ? 'proxyNoKeys' : 'proxyNotLoaded'))}</div>`;
   renderProxyExample();
 }
@@ -480,11 +483,11 @@ async function proxyMutation(run, action, body) {
   try { payload = await request(run, action, body); }
   catch (error) {
     assertCurrent(run);
-    if (error.status !== 409 || error.message !== 'conflict') throw error;
+    if (error.status !== 409 || !['conflict', 'not_revoked'].includes(error.message)) throw error;
     await loadProxy(run);
-    const editing = proxyRoutes.find(item => item.id === $('proxyRouteId').value);
+    const editing = proxyRoutes.find(item => item.id === $('proxyRouteId').value && !item.deleted_at);
     if (editing) fillProxyRoute(editing); else clearProxyRoute();
-    setMessage('proxyMessage', 'proxyConflict', 'warning');
+    setMessage('proxyMessage', error.message === 'not_revoked' ? 'proxyNotRevoked' : 'proxyConflict', 'warning');
     return;
   }
   assertCurrent(run);
@@ -496,6 +499,15 @@ async function proxyMutation(run, action, body) {
       if ($('proxyKeyRoute').value === payload.route.id) $('proxyKeyRoute').value = '';
     } else if ($('proxyRouteId').value === payload.route.id) fillProxyRoute(payload.route);
   }
+  if (action === 'admin_proxy_route_hard_delete' && payload.deleted_route_id) {
+    proxyRoutes = proxyRoutes.filter(item => item.id !== payload.deleted_route_id);
+    proxyKeys = proxyKeys.filter(item => item.route_id !== payload.deleted_route_id);
+    if ($('proxyRouteId').value === payload.deleted_route_id) clearProxyRoute();
+    if ($('proxyKeyRoute').value === payload.deleted_route_id) $('proxyKeyRoute').value = '';
+  }
+  if (action === 'admin_proxy_key_hard_delete' && payload.deleted_key_id) {
+    proxyKeys = proxyKeys.filter(item => item.id !== payload.deleted_key_id);
+  }
   if (payload.key) proxyKeys = proxyKeys.filter(item => item.id !== payload.key.id).concat(safeProxyKey(payload.key));
   if (action === 'admin_proxy_route_delete') await loadProxy(run);
   if (action === 'admin_proxy_key_create') {
@@ -506,7 +518,8 @@ async function proxyMutation(run, action, body) {
     }
     $('proxyKeyLabel').value = '';
   }
-  renderProxy(); setMessage('proxyMessage', action === 'admin_proxy_route_delete' ? 'proxyDeleteSuccess' : 'proxySaved', 'success');
+  const successKey = ({admin_proxy_route_delete: 'proxyDeleteSuccess', admin_proxy_route_hard_delete: 'proxyHardDeleteRouteSuccess', admin_proxy_key_hard_delete: 'proxyHardDeleteKeySuccess'})[action] || 'proxySaved';
+  renderProxy(); setMessage('proxyMessage', successKey, 'success');
 }
 async function copyProxyPlaintext() {
   if (!authorized || !proxyPlaintext) return;
@@ -582,11 +595,17 @@ $('proxyKeyForm').addEventListener('submit', event => {
 });
 $('proxyRoutesList').addEventListener('click', event => {
   if (active || !authorized) return;
-  const button = event.target.closest('[data-proxy-copy-base], [data-proxy-edit], [data-proxy-route-state], [data-proxy-route-delete]');
+  const button = event.target.closest('[data-proxy-copy-base], [data-proxy-edit], [data-proxy-route-state], [data-proxy-route-delete], [data-proxy-route-hard-delete]');
   if (!button) return;
-  const item = proxyRoutes.find(item => item.id === (button.dataset.proxyCopyBase || button.dataset.proxyEdit || button.dataset.proxyRouteState || button.dataset.proxyRouteDelete));
+  const item = proxyRoutes.find(item => item.id === (button.dataset.proxyCopyBase || button.dataset.proxyEdit || button.dataset.proxyRouteState || button.dataset.proxyRouteDelete || button.dataset.proxyRouteHardDelete));
   if (!item) return;
   if (button.dataset.proxyCopyBase) { void copyProxyBase(item.id); return; }
+  if (button.dataset.proxyRouteHardDelete) {
+    if (!item.deleted_at || !window.confirm(t('proxyHardDeleteRouteConfirm', {name: item.name}))) return;
+    void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_route_hard_delete', {id: item.id, expected_version: item.version}));
+    return;
+  }
+  if (item.deleted_at) return;
   if (button.dataset.proxyEdit) { fillProxyRoute(item); $('proxyRouteName').focus(); return; }
   if (button.dataset.proxyRouteDelete) {
     if (!window.confirm(t('proxyDeleteConfirm', {name: item.name}))) return;
@@ -597,9 +616,15 @@ $('proxyRoutesList').addEventListener('click', event => {
 });
 $('proxyKeysList').addEventListener('click', event => {
   if (active || !authorized) return;
-  const button = event.target.closest('[data-proxy-key-state], [data-proxy-key-revoke]');
-  const item = proxyKeys.find(item => item.id === (button?.dataset.proxyKeyState || button?.dataset.proxyKeyRevoke));
-  if (!item || item.revoked_at) return;
+  const button = event.target.closest('[data-proxy-key-state], [data-proxy-key-revoke], [data-proxy-key-hard-delete]');
+  const item = proxyKeys.find(item => item.id === (button?.dataset.proxyKeyState || button?.dataset.proxyKeyRevoke || button?.dataset.proxyKeyHardDelete));
+  if (!item) return;
+  if (button.dataset.proxyKeyHardDelete) {
+    if (!item.revoked_at || !window.confirm(t('proxyHardDeleteKeyConfirm', {label: item.label}))) return;
+    void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_key_hard_delete', {id: item.id, expected_version: item.version}));
+    return;
+  }
+  if (item.revoked_at) return;
   const revoked = Boolean(button.dataset.proxyKeyRevoke);
   if (revoked && !window.confirm(t('proxyRevokeConfirm', {label: item.label}))) return;
   void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_key_state', {id: item.id, enabled: revoked ? false : !item.enabled, revoked, expected_version: item.version}));
@@ -684,6 +709,7 @@ $('providersList').addEventListener('click', event => {
   if (!item) return;
   $('providerId').value = item.id; $('providerName').value = item.name;
   $('providerLabel').value = item.label || ''; $('providerBaseUrl').value = item.base_url;
+  $('providerApiProtocol').value = providerApiProtocol(item);
   $('providerSecretName').value = item.secret_name; $('providerAuthHeader').value = item.auth_header || 'authorization';
   $('providerEnabled').checked = item.enabled !== false; setMessage('providerMessage'); $('providerName').focus();
 });
@@ -711,7 +737,8 @@ $('modelsList').addEventListener('click', event => {
 $('providerForm').addEventListener('submit', event => {
   event.preventDefault();
   if (active || !authorized || !$('providerForm').reportValidity()) return;
-  const body = {id: $('providerId').value || null, name: $('providerName').value.trim(), label: $('providerLabel').value.trim(), base_url: $('providerBaseUrl').value.trim(), secret_name: $('providerSecretName').value.trim(), auth_header: $('providerAuthHeader').value, enabled: $('providerEnabled').checked};
+  const body = {id: $('providerId').value || null, name: $('providerName').value.trim(), label: $('providerLabel').value.trim(), base_url: $('providerBaseUrl').value.trim(), api_protocol: $('providerApiProtocol').value, secret_name: $('providerSecretName').value.trim(), auth_header: $('providerAuthHeader').value, enabled: $('providerEnabled').checked};
+  if (!API_PROTOCOLS.includes(body.api_protocol)) return setMessage('providerMessage', 'invalidApiProtocol', 'error');
   if (!body.name || body.name.length > 80 || body.label.length > 120) return setMessage('providerMessage', 'providerRequired', 'error');
   if (!/^CHAT_KEY_[A-Z0-9_]{1,80}$/.test(body.secret_name)) return setMessage('providerMessage', 'invalidSecret', 'error');
   try { validProviderUrl(body.base_url); }

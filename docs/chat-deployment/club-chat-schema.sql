@@ -7,6 +7,8 @@ create table if not exists public.chat_providers (
   name text not null check (char_length(trim(name)) between 1 and 80),
   label text not null default '' check (char_length(label) <= 120),
   base_url text not null check (char_length(base_url) between 10 and 2048),
+  api_protocol text not null default 'auto' constraint chat_providers_api_protocol_check
+    check (api_protocol in ('auto', 'responses', 'messages', 'chat')),
   secret_name text not null check (secret_name ~ '^CHAT_KEY_[A-Z0-9_]{1,80}$'),
   auth_header text not null default 'authorization' check (auth_header in ('authorization', 'x-api-key')),
   enabled boolean not null default true,
@@ -19,6 +21,13 @@ create unique index if not exists chat_providers_name_uidx
 
 alter table public.chat_providers
   add column if not exists label text not null default '';
+
+-- Existing providers retain URL inference until an explicit protocol is selected.
+alter table public.chat_providers
+  add column if not exists api_protocol text not null default 'auto';
+alter table public.chat_providers drop constraint if exists chat_providers_api_protocol_check;
+alter table public.chat_providers add constraint chat_providers_api_protocol_check
+  check (api_protocol in ('auto', 'responses', 'messages', 'chat'));
 
 -- 删除采用墓碑而非物理删除：chat_usage 对 provider/model 是 on delete restrict，
 -- 物理删除会被历史用量挡住，也会让审计记录失去引用。墓碑行保留 id 与名称，
@@ -889,7 +898,7 @@ returns jsonb language plpgsql security definer set search_path = public as $$
 declare r public.chat_proxy_routes; k public.chat_proxy_keys; rid uuid; result jsonb;
 begin
   perform public.chat_quota_assert_admin(p_actor);
-  if p_action is null or p_action not in ('admin_proxy_list','admin_proxy_save','admin_proxy_route_state','admin_proxy_route_delete','admin_proxy_key_create','admin_proxy_key_state') then
+  if p_action is null or p_action not in ('admin_proxy_list','admin_proxy_save','admin_proxy_route_state','admin_proxy_route_delete','admin_proxy_route_hard_delete','admin_proxy_key_create','admin_proxy_key_state','admin_proxy_key_hard_delete') then
     raise exception 'invalid action';
   end if;
   if p_data is null or jsonb_typeof(p_data) <> 'object' then raise exception 'invalid data'; end if;
@@ -898,7 +907,7 @@ begin
     where (p_action = 'admin_proxy_list')
        or (p_action = 'admin_proxy_save' and key not in ('id','name','base_url','secret_name','enabled','expected_version'))
        or (p_action = 'admin_proxy_route_state' and key not in ('id','enabled','expected_version'))
-       or (p_action = 'admin_proxy_route_delete' and key not in ('id','expected_version'))
+       or (p_action in ('admin_proxy_route_delete','admin_proxy_route_hard_delete','admin_proxy_key_hard_delete') and key not in ('id','expected_version'))
        or (p_action = 'admin_proxy_key_create' and key not in ('route_id','label','key_hash','key_prefix','key_last4'))
        or (p_action = 'admin_proxy_key_state' and key not in ('id','enabled','revoked','expected_version'))
   ) then raise exception 'invalid data'; end if;
@@ -924,7 +933,7 @@ begin
       or jsonb_typeof(p_data->'expected_version') <> 'number'
       or (p_data->>'expected_version') !~ '^[1-9][0-9]*$'
       or (p_data->>'expected_version')::numeric > 9007199254740991 then raise exception 'invalid data'; end if;
-  elsif p_action = 'admin_proxy_route_delete' then
+  elsif p_action in ('admin_proxy_route_delete','admin_proxy_route_hard_delete','admin_proxy_key_hard_delete') then
     if not (p_data ?& array['id','expected_version'])
       or jsonb_typeof(p_data->'id') <> 'string' or (p_data->>'id') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
       or jsonb_typeof(p_data->'expected_version') <> 'number'
@@ -955,12 +964,22 @@ begin
       values(p_data->>'name',p_data->>'base_url',p_data->>'secret_name',(p_data->>'enabled')::boolean,p_actor,p_actor) returning * into r;
     return jsonb_build_object('route',to_jsonb(r)-'created_by'-'updated_by');
   end if;
-  if p_action in ('admin_proxy_save','admin_proxy_route_state','admin_proxy_route_delete') then rid := (p_data->>'id')::uuid;
+  if p_action in ('admin_proxy_save','admin_proxy_route_state','admin_proxy_route_delete','admin_proxy_route_hard_delete') then rid := (p_data->>'id')::uuid;
   elsif p_action = 'admin_proxy_key_create' then rid := (p_data->>'route_id')::uuid;
-  elsif p_action = 'admin_proxy_key_state' then select route_id into rid from public.chat_proxy_keys where id = (p_data->>'id')::uuid;
+  elsif p_action in ('admin_proxy_key_state','admin_proxy_key_hard_delete') then select route_id into rid from public.chat_proxy_keys where id = (p_data->>'id')::uuid;
   else raise exception 'invalid action'; end if;
   select * into r from public.chat_proxy_routes where id = rid for update;
   if not found then return '{"code":"not_found"}'; end if;
+  if p_action = 'admin_proxy_route_hard_delete' then
+    if r.version <> (p_data->>'expected_version')::bigint then return '{"code":"conflict"}'; end if;
+    if r.deleted_at is null then return '{"code":"not_revoked"}'; end if;
+    -- Serialize with admission and key mutations: route, then all child keys.
+    perform id from public.chat_proxy_keys where route_id=rid order by id for update;
+    delete from public.chat_proxy_leases where route_id=rid;
+    delete from public.chat_proxy_keys where route_id=rid;
+    delete from public.chat_proxy_routes where id=rid;
+    return jsonb_build_object('deleted_route_id',rid);
+  end if;
   if p_action = 'admin_proxy_key_create' and r.deleted_at is not null then return '{"code":"deleted"}'; end if;
   if p_action in ('admin_proxy_save','admin_proxy_route_state','admin_proxy_route_delete') then
     if r.deleted_at is not null then return '{"code":"deleted"}'; end if;
@@ -983,7 +1002,14 @@ begin
       values(rid,p_data->>'label',p_data->>'key_hash',p_data->>'key_prefix',p_data->>'key_last4',p_actor,p_actor) returning * into k;
   else
     select * into k from public.chat_proxy_keys where id=(p_data->>'id')::uuid for update;
+    if not found then return '{"code":"not_found"}'; end if;
     if k.version <> (p_data->>'expected_version')::bigint then return '{"code":"conflict"}'; end if;
+    if p_action = 'admin_proxy_key_hard_delete' then
+      if k.revoked_at is null then return '{"code":"not_revoked"}'; end if;
+      delete from public.chat_proxy_leases where key_id=k.id;
+      delete from public.chat_proxy_keys where id=k.id;
+      return jsonb_build_object('deleted_key_id',k.id);
+    end if;
     if k.revoked_at is not null and not (p_data->>'revoked')::boolean then return '{"code":"revoked"}'; end if;
     update public.chat_proxy_keys set enabled=case when (p_data->>'revoked')::boolean then false else (p_data->>'enabled')::boolean end,
       revoked_at=case when (p_data->>'revoked')::boolean then coalesce(revoked_at,now()) else revoked_at end,

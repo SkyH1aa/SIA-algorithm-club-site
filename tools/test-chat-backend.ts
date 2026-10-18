@@ -1,6 +1,7 @@
 // Run: npm exec --yes --package=deno -- deno run --allow-env tools/test-chat-backend.ts
 // No network permission: every fetch and DNS query is intercepted in this process.
 import { strict as assert } from 'node:assert';
+import { chatEndpoint } from '../supabase/functions/_shared/chat-protocol.ts';
 
 Deno.env.set('CHAT_TEST_MODE', '1');
 Deno.env.set('SUPABASE_URL', 'http://127.0.0.1:19999');
@@ -9,6 +10,12 @@ Deno.env.set('SUPABASE_ANON_KEY', 'local-anon');
 Deno.env.set('CHAT_KEY_MOCK', 'local-provider-secret');
 Deno.env.set('CHAT_CORS_ORIGINS', 'http://localhost:4173');
 const { handler } = await import('../supabase/functions/chat/index.ts');
+const { handler: proxyHandler } = await import('../supabase/functions/chat-api-proxy/index.ts');
+const { hashKey } = await import('../supabase/functions/_shared/chat-api-proxy.ts');
+const deletedCredential = 'cap_' + 'A'.repeat(43);
+const siblingCredential = 'cap_' + 'B'.repeat(43);
+const deletedCredentialHash = await hashKey(deletedCredential);
+const siblingCredentialHash = await hashKey(siblingCredential);
 const UID = '11111111-1111-4111-8111-111111111111';
 const PID = '22222222-2222-4222-8222-222222222222';
 const MID = '33333333-3333-4333-8333-333333333333';
@@ -16,7 +23,7 @@ type Row = Record<string, unknown>;
 const originalFetch = globalThis.fetch;
 const originalDns = Deno.resolveDns;
 const encoder = new TextEncoder();
-const providerBase = { id: PID, name: 'mock', label: 'Local Provider', base_url: 'https://provider.example.com/v1', secret_name: 'CHAT_KEY_MOCK', auth_header: 'authorization', enabled: true };
+const providerBase = { id: PID, name: 'mock', label: 'Local Provider', base_url: 'https://provider.example.com/v1', api_protocol: 'auto' as const, secret_name: 'CHAT_KEY_MOCK', auth_header: 'authorization', enabled: true };
 const modelBase = { id: MID, provider_id: PID, model_key: 'local-model', display_name: 'Local Model', introduction: 'A local test model.', context_window: 1000000, max_output_tokens: 1000, default_max_output_tokens: 100, reasoning_efforts: ['low', 'high'], default_reasoning_effort: 'low', supports_images: true, supports_pdf: true, preserve_reasoning: true, enabled: true, visibility: 'all' as const };
 const ASSIGNED_MID = '44444444-4444-4444-8444-444444444444';
 const CUSTOM_ID = '55555555-5555-4555-8555-555555555555';
@@ -29,14 +36,18 @@ let audits: Row[], patches: Row[], upstreamBodies: Array<Row & { input: Array<{ 
 let quota: Row, admissionCode: string | null, shrink: number | null, conflict: boolean;
 let rpcCalls: Array<{ name: string; body: Row }>, settlements: Row[];
 let charged: number;
+let proxyRoute: Row | null, proxyKey: Row | null;
 const directory = { users: [{ user_id: UID, username: 'local-account', member_name: '测试会员', bound: true }], blacklist: [{ user_id: PID, reason: 'abuse' }] };
 let usageRange: string | null;
+let providerWrites: Row[];
 let terminalGate: Promise<void> | null, terminalReached: (() => void) | null;
 function reset() {
   terminalGate = null; terminalReached = null; wire = null;
   quota = { global: { daily_limit: null, version: 0, used: 0, remaining: null, resets_at: '2026-10-17T00:00:00Z' }, user: { daily_limit: null, weekly_limit: null, monthly_limit: null, version: 0 }, periods: [], blacklisted: false, reason: null };
   admissionCode = null; shrink = null; conflict = false; rpcCalls = []; settlements = []; charged = 0;
-  provider = { ...providerBase }; model = { ...modelBase }; profile = true; admin = true;
+  provider = { ...providerBase }; providerWrites = []; model = { ...modelBase }; profile = true; admin = true;
+  proxyRoute = { id: PID, enabled: true, deleted_at: null, version: 3 };
+  proxyKey = { id: MID, route_id: PID, enabled: true, revoked_at: null, version: 4 };
   assignedVisible = false; customModels = [];
   auditFail = startFail = finishFail = busy = false; dnsMode = 'a-only'; mode = 'complete';
   audits = []; patches = []; upstreamBodies = []; requests = []; released = finishAttempts = 0; leased = false; usageRange = '2-3/17'; upstreamSignal = undefined;
@@ -85,16 +96,16 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
   const url = new URL(input instanceof Request ? input.url : input);
   requests.push(url);
   if (url.origin === 'https://provider.example.com') {
-    const base = String(provider.base_url).replace(/\/+$/, '');
-    assert.equal(url.pathname, new URL(/\/(responses|messages?|chat\/completions)$/.test(base) ? base.replace(/\/message$/, '/messages') : `${base}/responses`).pathname);
-    if (/\/messages$/.test(url.pathname)) assert.equal(new Headers(init.headers).get('anthropic-version'), '2023-06-01');
-    assert.equal(init.redirect, 'error');
+    const endpoint = chatEndpoint(String(provider.base_url), provider.api_protocol as Parameters<typeof chatEndpoint>[1]);
+    assert.equal(url.href, endpoint.url);
     const upstreamHeaders = new Headers(init.headers);
+    assert.equal(upstreamHeaders.get('anthropic-version'), endpoint.protocol === 'messages' ? '2023-06-01' : null);
+    assert.equal(init.redirect, 'error');
     if (provider.auth_header === 'x-api-key') {
       assert.equal(upstreamHeaders.get('x-api-key'), 'local-provider-secret'); assert.equal(upstreamHeaders.get('authorization'), null);
     } else assert.equal(upstreamHeaders.get('authorization'), 'Bearer local-provider-secret');
-    assert.equal(audits.length, 1, 'audit must precede upstream');
-    assert.equal(audits[0].status, 'upstream_started', 'start marker must precede fetch');
+    assert.ok(audits.length > 0, 'audit must precede upstream');
+    assert.equal(audits.at(-1)!.status, 'upstream_started', 'start marker must precede fetch');
     upstreamBodies.push(JSON.parse(String(init.body)));
     upstreamSignal = init.signal!;
     if (upstreamSignal?.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -115,7 +126,17 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
   const table = url.pathname.slice('/rest/v1/'.length);
   if (table === 'club_member_profiles') return json(profile ? [{ username: 'local-account', member_name: '测试会员' }] : []);
   if (table === 'club_super_admins') return json(admin ? [{ user_id: UID }] : []);
-  if (table === 'chat_providers') return json(init.method === 'POST' ? [{ ...provider, ...JSON.parse(String(init.body)) }] : [provider]);
+  if (table === 'chat_providers') {
+    if (init.method === 'POST') {
+      const body = JSON.parse(String(init.body));
+      providerWrites.push(body); provider = { ...provider, ...body };
+      return json([provider]);
+    }
+    if (url.searchParams.get('id') && url.searchParams.get('id') !== `eq.${provider.id}`) return json([]);
+    // Honor projections so forgetting api_protocol in the real query is visible.
+    const fields = url.searchParams.get('select')?.split(',');
+    return json([fields ? Object.fromEntries(fields.filter(key => key in provider).map(key => [key, provider[key]])) : provider]);
+  }
   if (table === 'chat_models') {
     const body = init.method === 'POST' ? JSON.parse(String(init.body)) : null;
     const row = { ...model, ...(body || {}) };
@@ -141,9 +162,26 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
       assert.equal(row.p_actor_user_id, UID); assignedVisible = row.p_visibility === 'assigned' && (row.p_user_ids as unknown[]).includes(UID);
       return json({ model_id: row.p_model_id, visibility: row.p_visibility, version: 2, user_ids: row.p_user_ids });
     }
+    if (name === 'chat_proxy_admit') {
+      assert.equal(row.p_route_id, PID);
+      assert.ok([deletedCredentialHash, siblingCredentialHash].includes(row.p_key_hash));
+      assert.ok(!proxyRoute || !proxyRoute.enabled || proxyRoute.deleted_at || (row.p_key_hash === deletedCredentialHash && !proxyKey), 'fixture must deny only deleted/disabled credentials');
+      return json({ code: 'invalid_key' });
+    }
     if (name === 'chat_proxy_admin') {
       assert.equal(row.p_actor, UID);
       if (conflict) return json({ code: 'conflict' });
+      if (['admin_proxy_route_hard_delete', 'admin_proxy_key_hard_delete'].includes(row.p_action)) {
+        const routeAction = row.p_action === 'admin_proxy_route_hard_delete';
+        const target = routeAction ? proxyRoute : proxyKey;
+        assert.deepEqual(Object.keys(row.p_data).sort(), ['expected_version', 'id']);
+        if (!target || target.id !== row.p_data.id) return json({ code: 'not_found' });
+        if (target.version !== row.p_data.expected_version) return json({ code: 'conflict' });
+        if (!(routeAction ? target.deleted_at : target.revoked_at)) return json({ code: 'not_revoked' });
+        if (routeAction) { proxyRoute = null; proxyKey = null; }
+        else proxyKey = null;
+        return json({ [routeAction ? 'deleted_route_id' : 'deleted_key_id']: row.p_data.id });
+      }
       if (row.p_action === 'admin_proxy_list') return json({ routes: [], keys: [] });
       if (row.p_action === 'admin_proxy_key_create') {
         assert.match(row.p_data.key_hash, /^[a-f0-9]{64}$/);
@@ -233,6 +271,68 @@ try {
     for (const bad of [{...save,expected_version:undefined},{...save,enabled:'yes'},{...save,api_key:'must-not-accept'}, {...save,base_url:'https://provider.example.com/v1/response'}, {action:'admin_proxy_key_state',id:MID,enabled:true,expected_version:1}]) await expectStatus(bad,400);
     conflict=true; await expectStatus({...save,id:PID,expected_version:1},409);
     assert.equal(upstreamBodies.length,0);
+  });
+  await test('hard-delete actions authenticate and recheck dynamic admin without RPC', async () => {
+    for (const [action, id] of [['admin_proxy_route_hard_delete', PID], ['admin_proxy_key_hard_delete', MID]]) {
+      const body = { action, id, expected_version: 1 };
+      await expectStatus(body, 401, null);
+      await expectStatus(body, 401, 'invalid');
+      admin = false; await expectStatus(body, 403);
+      admin = true; profile = false;
+      await expectStatus({ action: 'admin_proxy_list' }, 200);
+      admin = false; await expectStatus(body, 403);
+    }
+    assert.ok(rpcCalls.every(call => call.body.p_action === 'admin_proxy_list'));
+    assert.equal(upstreamBodies.length, 0);
+  });
+  await test('hard-delete strict ids, positive safe versions and payload allowlists', async () => {
+    for (const [action, id] of [['admin_proxy_route_hard_delete', PID], ['admin_proxy_key_hard_delete', MID]]) {
+      const valid = { action, id, expected_version: 1 };
+      for (const change of [
+        { id: undefined }, { id: null }, { id: 1 }, { id: 'bad' },
+        { expected_version: undefined }, { expected_version: null }, { expected_version: true },
+        { expected_version: '1' }, { expected_version: 0 }, { expected_version: -1 },
+        { expected_version: 1.5 }, { expected_version: Number.MAX_SAFE_INTEGER + 1 },
+        { enabled: false }, { revoked: true }, { api_key: deletedCredential }, { extra: true }
+      ]) await expectStatus({ ...valid, ...change }, 400);
+    }
+    assert.equal(rpcCalls.length, 0);
+    assert.equal(upstreamBodies.length, 0);
+  });
+  for (const routeAction of [false, true]) await test(`hard-delete ${routeAction ? 'route' : 'key'} eligibility, CAS, missing and deleted credential denial`, async () => {
+    const action = routeAction ? 'admin_proxy_route_hard_delete' : 'admin_proxy_key_hard_delete';
+    const target = (routeAction ? proxyRoute : proxyKey)!;
+    const body = { action, id: target.id, expected_version: target.version };
+    const error = async (data: Row, status: number, code: string) => {
+      assert.deepEqual(await (await expectStatus(data, status)).json(), { error: code });
+    };
+    await error({ ...body, expected_version: Number(target.version) - 1 }, 409, 'conflict');
+    await error(body, 409, 'not_revoked');
+    target.enabled = false;
+    await error(body, 409, 'not_revoked');
+    target[routeAction ? 'deleted_at' : 'revoked_at'] = '2026-10-18T00:00:00Z';
+    await error({ ...body, expected_version: Number(target.version) - 1 }, 409, 'conflict');
+    await error({ ...body, id: OTHER_UID }, 404, 'not_found');
+    admin = false; await expectStatus(body, 403); admin = true;
+    const result = await expectStatus(body, 200);
+    assert.equal(result.headers.get('cache-control'), 'no-store');
+    assert.deepEqual(await result.json(), { [routeAction ? 'deleted_route_id' : 'deleted_key_id']: body.id });
+    assert.deepEqual(rpcCalls.at(-1), { name: 'chat_proxy_admin', body: { p_actor: UID, p_action: action, p_data: { id: body.id, expected_version: body.expected_version } } });
+    await error(body, 404, 'not_found');
+    assert.equal(proxyKey, null);
+    assert.equal(proxyRoute === null, routeAction);
+    // Exercise the real gateway, with deleted credential admission denied by the
+    // RPC fixture before URL validation, DNS, body forwarding or provider fetch.
+    for (const credential of routeAction ? [deletedCredential, siblingCredential] : [deletedCredential]) {
+      const response = await proxyHandler(new Request(`http://localhost/chat-api-proxy/${PID}/v1/responses`, {
+        method: 'POST', headers: { authorization: `Bearer ${credential}`, 'content-type': 'application/json' }, body: '{"model":"mock","input":"hello"}'
+      }));
+      assert.equal(response.status, 401);
+      assert.equal((await response.json()).error.code, 'invalid_key');
+      assert.equal(rpcCalls.at(-1)!.name, 'chat_proxy_admit');
+    }
+    assert.equal(upstreamBodies.length, 0);
+    assert.ok(requests.every(url => url.origin === 'http://127.0.0.1:19999'));
   });
   await test('authentication, profile binding, dynamic admin permission', async () => {
     await expectStatus({ action: 'catalog' }, 401, null); await expectStatus({ action: 'catalog' }, 401, 'invalid');
@@ -342,6 +442,40 @@ try {
   await test('admin configuration actions and aliases validate capabilities', async () => {
     await expectStatus({ action: 'admin_get' }, 200);
     await expectStatus({ action: 'save_provider', ...providerBase }, 200).catch(error => { throw error; });
+  });
+  await test('provider protocol create default, save/read roundtrip and omitted update preservation', async () => {
+    const { id: _id, api_protocol: _protocol, ...fields } = providerBase;
+    const created = await (await expectStatus({ action: 'admin_save_provider', ...fields }, 200)).json();
+    assert.equal(created.provider.api_protocol, 'auto'); assert.equal(providerWrites.at(-1)!.api_protocol, 'auto');
+    model.preserve_reasoning = false; model.reasoning_efforts = []; model.default_reasoning_effort = null;
+    for (const api_protocol of ['messages', 'chat', 'responses', 'auto']) {
+      const saved = await (await expectStatus({ action: 'save_provider', ...providerBase, api_protocol }, 200)).json();
+      assert.equal(saved.provider.api_protocol, api_protocol); assert.equal(provider.api_protocol, api_protocol);
+      const listed = await (await expectStatus({ action: 'admin_get' }, 200)).json();
+      assert.equal(listed.providers[0].api_protocol, api_protocol);
+      assert.equal(listed.providers[0].auth_header, 'authorization');
+      const updated = await (await expectStatus({ action: 'admin_save_provider', ...fields, id: PID, label: 'Edited' }, 200)).json();
+      assert.equal(updated.provider.api_protocol, api_protocol); assert.equal(providerWrites.at(-1)!.api_protocol, api_protocol);
+    }
+    assert.equal(upstreamBodies.length, 0);
+  });
+  await test('omitted provider protocol defaults to auto for an id with no existing row', async () => {
+    const { api_protocol: _protocol, ...fields } = providerBase;
+    const result = await (await expectStatus({ action: 'admin_save_provider', ...fields, id: OTHER_UID }, 200)).json();
+    assert.equal(result.provider.api_protocol, 'auto');
+    const lookup = requests.find(url => url.pathname.endsWith('/chat_providers') && url.searchParams.get('select') === 'api_protocol')!;
+    assert.equal(lookup.searchParams.get('id'), `eq.${OTHER_UID}`); assert.equal(lookup.searchParams.get('deleted_at'), 'is.null');
+    assert.equal(providerWrites[0].api_protocol, 'auto');
+  });
+  await test('provider protocol rejects supplied invalid types/values before persistence', async () => {
+    const { id: _id, ...fields } = providerBase;
+    for (const id of [undefined, PID]) {
+      for (const api_protocol of [null, '', 'AUTO', 'message', 'chat/completions', 'invalid', 0, true, [], {}]) {
+        const result = await expectStatus({ action: 'admin_save_provider', ...fields, id, api_protocol }, 400);
+        assert.deepEqual(await result.json(), { error: 'api_protocol' });
+      }
+    }
+    assert.equal(providerWrites.length, 0); assert.equal(upstreamBodies.length, 0);
   });
   await test('admin model save and invalid configuration', async () => {
     const { id: _id, ...fields } = modelBase;
@@ -492,6 +626,52 @@ try {
   const chunk = (value: Row) => `data: ${JSON.stringify(value)}\r\n\r\n`;
   const chatWire = chunk({ choices: [{ index: 0, delta: { role: 'assistant', content: '你好' }, finish_reason: null }] }) + chunk({ choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] }) + chunk({ choices: [], usage: { prompt_tokens: 7, completion_tokens: 3, total_tokens: 10 } }) + 'data: [DONE]\r\n\r\n';
   const messagesWire = event('message_start', { message: { usage: { input_tokens: 4, cache_read_input_tokens: 2, cache_creation_input_tokens: 1, output_tokens: 1 } } }) + event('content_block_start', { content_block: { type: 'text', text: '' } }) + event('content_block_delta', { delta: { type: 'text_delta', text: '你好' } }) + event('message_delta', { delta: { stop_reason: 'end_turn' }, usage: { output_tokens: 3 } }) + event('message_stop');
+  for (const api_protocol of ['responses', 'messages', 'chat']) {
+    const endpoint = api_protocol === 'chat' ? 'chat/completions' : api_protocol;
+    for (const auth_header of ['authorization', 'x-api-key']) await test(`explicit ${api_protocol} from bare v1 with independent ${auth_header} auth`, async () => {
+      provider.api_protocol = api_protocol; provider.auth_header = auth_header;
+      if (api_protocol !== 'responses') { model.preserve_reasoning = false; model.reasoning_efforts = []; model.default_reasoning_effort = null; }
+      wire = api_protocol === 'chat' ? chatWire : api_protocol === 'messages' ? messagesWire : null;
+      await expectStatus({ action: 'admin_save_provider', ...provider }, 200);
+      await expectStatus({ action: 'admin_save_model', ...model }, 200);
+      for (const body of [payload(), { action: 'admin_test', model_id: MID, prompt: 'check explicit dispatch' }]) {
+        assert.match(await consume(body), /response.completed/);
+        assert.equal(requests.filter(url => url.origin === 'https://provider.example.com').at(-1)!.pathname, `/v1/${endpoint}`);
+        const sent = upstreamBodies.at(-1)!;
+        assert.equal(sent.model, 'local-model');
+        assert.equal(sent[api_protocol === 'responses' ? 'max_output_tokens' : api_protocol === 'chat' ? 'max_completion_tokens' : 'max_tokens'], 100);
+        assert.equal(Array.isArray(sent[api_protocol === 'responses' ? 'input' : 'messages']), true);
+      }
+      assert.equal(audits.length, 2); assert.ok(audits.every(row => row.status === 'completed' && row.total_tokens === 10));
+    });
+    for (const suffix of ['responses', 'messages', 'message', 'chat/completions']) await test(`explicit ${api_protocol} overrides ${suffix} suffix and retains gateway path`, async () => {
+      provider.api_protocol = api_protocol; provider.base_url = `https://provider.example.com/gateway/v1/${suffix}/`;
+      model.preserve_reasoning = false; model.reasoning_efforts = []; model.default_reasoning_effort = null;
+      wire = api_protocol === 'chat' ? chatWire : api_protocol === 'messages' ? messagesWire : null;
+      assert.match(await consume(), /response.completed/);
+      assert.equal(requests.filter(url => url.origin === 'https://provider.example.com').at(-1)!.pathname, `/gateway/v1/${endpoint}`);
+      assert.equal(audits[0].status, 'completed');
+    });
+  }
+  await test('explicit protocols retain capability errors on provider/model saves and both generation paths', async () => {
+    for (const api_protocol of ['messages', 'chat']) {
+      reset(); provider.api_protocol = api_protocol;
+      for (const body of [payload(), { action: 'admin_test', model_id: MID, prompt: 'test' }, { action: 'admin_save_model', ...model }, { action: 'admin_save_provider', ...provider }]) {
+        assert.deepEqual(await (await expectStatus(body, 400)).json(), { error: 'reasoning_history_unsupported' });
+      }
+      model.preserve_reasoning = false; model.reasoning_efforts = ['custom-effort']; model.default_reasoning_effort = 'custom-effort';
+      assert.deepEqual(await (await expectStatus(payload(), 400)).json(), { error: 'reasoning_effort_unsupported' });
+      assert.equal(audits.length, 0); assert.equal(upstreamBodies.length, 0); assert.equal(providerWrites.length, 0);
+    }
+    reset(); provider.api_protocol = 'messages'; model.preserve_reasoning = false;
+    assert.deepEqual(await (await expectStatus({ action: 'admin_save_provider', ...provider }, 400)).json(), { error: 'reasoning_budget' });
+    // An explicit Responses selection permits native reasoning even with a Messages suffix.
+    reset(); provider.api_protocol = 'responses'; provider.base_url += '/messages';
+    await expectStatus({ action: 'admin_save_model', ...model }, 200);
+    await expectStatus({ action: 'admin_save_provider', ...provider }, 200);
+    assert.match(await consume(), /response.completed/);
+    assert.equal(upstreamBodies[0].include instanceof Array, true);
+  });
   for (const format of ['messages', 'message', 'chat/completions']) {
     const setup = () => {
       provider.base_url = `https://provider.example.com/v1/${format}`;

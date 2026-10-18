@@ -75,17 +75,19 @@
       </nav>
 
       <section class="chat-admin-panel chat-admin-section" id="providersSection">
-        <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.providersTitle">供应商配置</h2><p data-i18n="chatAdmin.providersLead">只保存供应商标识、Base URL、认证头和 Supabase Secret 名称，不在页面输入或回显 API Key。</p></div><button id="refreshButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="common.refresh">刷新数据</button></div>
+        <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.providersTitle">供应商配置</h2><p data-i18n="chatAdmin.providersLead">只保存供应商标识、Base URL、API 协议、认证头和 Supabase Secret 名称，不在页面输入或回显 API Key。</p></div><button id="refreshButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="common.refresh">刷新数据</button></div>
         <form id="providerForm" class="chat-admin-form">
           <input id="providerId" type="hidden">
           <label><span data-i18n="chatAdmin.providerId">供应商标识</span><input id="providerName" class="chat-admin-input" required maxlength="80" placeholder="例如 openai" data-i18n-placeholder="chatAdmin.providerIdPlaceholder"></label>
           <label><span data-i18n="chatAdmin.providerLabel">显示名称</span><input id="providerLabel" class="chat-admin-input" maxlength="120" placeholder="例如 OpenAI" data-i18n-placeholder="chatAdmin.providerLabelPlaceholder"></label>
-          <label><span data-i18n="chatAdmin.baseUrl">Base URL</span><input id="providerBaseUrl" class="chat-admin-input" type="url" required maxlength="2048" placeholder="https://api.example.com/v1" data-i18n-placeholder="chatAdmin.baseUrlPlaceholder" data-i18n-title="chatAdmin.baseUrlHelp" title="使用 HTTPS 基础地址，不含 /responses、查询参数或凭据。"></label>
+          <label><span data-i18n="chatAdmin.baseUrl">Base URL</span><input id="providerBaseUrl" class="chat-admin-input" type="url" required maxlength="2048" placeholder="https://api.example.com/v1" data-i18n-placeholder="chatAdmin.baseUrlPlaceholder" data-i18n-title="chatAdmin.baseUrlHelp" title="使用 HTTPS 基础地址或 responses/messages/chat/completions 端点，不含查询参数或凭据。仅自动模式按 URL 推断协议；显式协议覆盖 URL 后缀。"></label>
+          <label><span data-i18n="chatAdmin.apiProtocol">API协议</span><select id="providerApiProtocol" class="chat-admin-input" required aria-describedby="providerApiProtocolHelp"><option value="auto" selected data-i18n="chatAdmin.apiProtocolAuto">自动（按 URL 推断）</option><option value="responses" data-i18n="chatAdmin.apiProtocolResponses">Responses</option><option value="messages" data-i18n="chatAdmin.apiProtocolMessages">Messages（Claude）</option><option value="chat" data-i18n="chatAdmin.apiProtocolChat">Chat Completions</option></select></label>
           <label><span data-i18n="chatAdmin.secretName">Supabase Secret 名称</span><input id="providerSecretName" class="chat-admin-input" required maxlength="89" pattern="CHAT_KEY_[A-Z0-9_]{1,80}" placeholder="CHAT_KEY_OPENAI" data-i18n-placeholder="chatAdmin.secretNamePlaceholder" data-i18n-title="chatAdmin.secretNameHelp" title="CHAT_KEY_ 后接 1–80 个大写字母、数字或下划线。"></label>
           <label><span data-i18n="chatAdmin.authHeader">认证头</span><select id="providerAuthHeader" class="chat-admin-input" required><option value="authorization">authorization</option><option value="x-api-key">x-api-key</option></select></label>
           <label class="chat-admin-check"><input id="providerEnabled" type="checkbox" checked><span data-i18n="chatAdmin.enabled">启用</span></label>
           <div class="chat-admin-actions"><button class="chat-admin-button" type="submit" data-i18n="chatAdmin.saveProvider">保存供应商</button><button id="clearProviderButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="common.clearForm">清空表单</button></div>
         </form>
+        <p id="providerApiProtocolHelp" class="chat-admin-quota-help" data-i18n="chatAdmin.apiProtocolHelp">自动模式沿用 URL 推断：messages/message 结尾使用 Messages，chat/completions 结尾使用 Chat Completions，其余使用 Responses。显式选择协议会覆盖 URL 后缀，由后端使用对应端点。</p>
         <p id="providerMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
         <div id="providersList" class="chat-admin-table-wrap"></div>
       </section>
@@ -97,7 +99,7 @@
           <label><span data-i18n="chatAdmin.modelId">上游模型 ID</span><input id="modelId" class="chat-admin-input" required maxlength="160" placeholder="例如 gpt-4.1-mini" data-i18n-placeholder="chatAdmin.modelIdPlaceholder"></label>
           <label><span data-i18n="chatAdmin.modelLabel">显示名称</span><input id="modelLabel" class="chat-admin-input" required maxlength="120" placeholder="例如 GPT-4.1 mini" data-i18n-placeholder="chatAdmin.modelLabelPlaceholder"></label>
           <label class="chat-admin-model-introduction"><span data-i18n="chatAdmin.modelIntroduction">模型介绍</span><textarea id="modelIntroduction" class="chat-admin-input" rows="3" maxlength="1000" placeholder="介绍模型特点、适用场景或限制" data-i18n-placeholder="chatAdmin.modelIntroductionPlaceholder"></textarea></label>
-          <label><span data-i18n="chatAdmin.modelProvider">供应商</span><select id="modelProvider" class="chat-admin-input" required></select></label>
+          <label><span data-i18n="chatAdmin.modelProvider">供应商</span><select id="modelProvider" class="chat-admin-input" required aria-describedby="modelApiProtocolHelp"></select></label>
           <label><span data-i18n="chatAdmin.contextWindow">上下文窗口</span><input id="contextWindow" class="chat-admin-input" type="number" min="256" max="1000000" step="1" value="8192" required></label>
           <label><span data-i18n="chatAdmin.maxOutput">最大输出 token</span><input id="maxOutputTokens" class="chat-admin-input" type="number" min="1" max="131072" step="1" value="2048" required></label>
           <label><span data-i18n="chatAdmin.defaultOutput">默认输出 token</span><input id="defaultOutputTokens" class="chat-admin-input" type="number" min="1" max="2048" step="1" value="1024" required></label>
@@ -109,6 +111,7 @@
           <label class="chat-admin-check"><input id="modelEnabled" type="checkbox" checked><span data-i18n="chatAdmin.enabled">启用</span></label>
           <div class="chat-admin-actions"><button class="chat-admin-button" type="submit" data-i18n="chatAdmin.saveModel">保存模型</button><button id="clearModelButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="common.clearForm">清空表单</button></div>
         </form>
+        <p id="modelApiProtocolHelp" class="chat-admin-quota-help" data-i18n="chatAdmin.modelApiProtocolHelp">模型继承所选供应商的 API 协议；请在供应商配置中修改。切换协议不会自动修改模型的思考配置或供应商的认证头。</p>
         <p id="modelMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
         <div id="modelsList" class="chat-admin-table-wrap"></div>
       </section>

@@ -24,6 +24,41 @@ test('endpoint inference preserves explicit URLs, aliases message, defaults bare
     assert.equal(result.url, 'https://host.example/v1' + route.replace(/\/message$/, '/messages'));
   }
 });
+test('explicit dispatch appends canonical endpoints to bare paths without inventing v1', () => {
+  for (const protocol of ['responses', 'messages', 'chat'] as const) {
+    const suffix = protocol === 'chat' ? 'chat/completions' : protocol;
+    for (const path of ['', '/v1', '/gateway/custom']) {
+      for (const trailing of ['', '/', '///']) assert.deepEqual(chatEndpoint(`https://host.example${path}${trailing}`, protocol), { protocol, url: `https://host.example${path}/${suffix}` });
+    }
+  }
+});
+test('explicit dispatch overrides each recognized suffix once while retaining its prefix', () => {
+  for (const protocol of ['responses', 'messages', 'chat'] as const) {
+    const suffix = protocol === 'chat' ? 'chat/completions' : protocol;
+    for (const old of ['responses', 'messages', 'message', 'chat/completions', 'MESSAGES', 'Chat/Completions']) {
+      assert.deepEqual(chatEndpoint(`https://host.example/gateway/v1/${old}///`, protocol), { protocol, url: `https://host.example/gateway/v1/${suffix}` });
+    }
+    assert.equal(chatEndpoint('https://host.example/responses/messages', protocol).url, `https://host.example/responses/${suffix}`);
+    for (const path of ['response', 'messages/extra', 'chat/completion']) assert.equal(chatEndpoint(`https://host.example/${path}`, protocol).url, `https://host.example/${path}/${suffix}`);
+  }
+});
+test('auto retains legacy case, terminal alias and unknown-path behavior exactly', () => {
+  const cases = [
+    ['https://host.example', 'responses', 'https://host.example/responses'],
+    ['https://host.example/proxy/Responses///', 'responses', 'https://host.example/proxy/Responses'],
+    ['https://host.example/proxy/MESSAGE/', 'messages', 'https://host.example/proxy/messages'],
+    ['https://host.example/proxy/MESSAGES/', 'messages', 'https://host.example/proxy/MESSAGES'],
+    ['https://host.example/proxy/Chat/Completions/', 'chat', 'https://host.example/proxy/Chat/Completions'],
+    ['https://host.example/messages/extra', 'responses', 'https://host.example/messages/extra/responses']
+  ];
+  for (const [base, protocol, url] of cases) {
+    assert.deepEqual(chatEndpoint(base), { protocol, url });
+    assert.deepEqual(chatEndpoint(base, 'auto'), { protocol, url });
+  }
+});
+test('invalid protocol settings fail clearly instead of dispatching', () => {
+  for (const setting of ['', 'AUTO', 'message', 'chat/completions', null, 1, {}]) assert.throws(() => chatEndpoint('https://host.example/v1', setting as Parameters<typeof chatEndpoint>[1]), /api_protocol/);
+});
 test('native Responses payload including encrypted reasoning stays unchanged', () => {
   const native = { ...body, include: ['reasoning.encrypted_content'], reasoning: { effort: 'custom-effort' } };
   assert.equal(protocolRequest('responses', native), native);

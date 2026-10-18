@@ -109,12 +109,19 @@ function proxySetting(name: string, fallback: number, max: number): number {
 // Internal chat adapter. The browser contract remains the Responses API.
 type ProtocolJson = Record<string, unknown>;
 type ChatProtocol = 'responses' | 'messages' | 'chat';
+type ChatProtocolSetting = 'auto' | ChatProtocol;
 class ChatProtocolError extends Error {
   status = 400;
   constructor(code = 'input') { super(code); this.name = 'ChatProtocolError'; }
 }
-function chatEndpoint(base: string): { protocol: ChatProtocol; url: string } {
+function chatEndpoint(base: string, setting: ChatProtocolSetting = 'auto'): { protocol: ChatProtocol; url: string } {
   const url = base.replace(/\/+$/, '');
+  if (setting !== 'auto') {
+    if (!['responses', 'messages', 'chat'].includes(setting)) throw new ChatProtocolError('api_protocol');
+    // Replace only one recognized terminal endpoint; retain the provider's path.
+    const root = url.replace(/\/(?:responses|messages?|chat\/completions)$/i, '');
+    return { protocol: setting, url: `${root}/${setting === 'chat' ? 'chat/completions' : setting}` };
+  }
   if (/\/chat\/completions$/i.test(url)) return { protocol: 'chat', url };
   if (/\/messages?$/i.test(url)) return { protocol: 'messages', url: url.replace(/\/message$/i, '/messages') };
   return { protocol: 'responses', url: /\/responses$/i.test(url) ? url : `${url}/responses` };
@@ -326,6 +333,7 @@ type Provider = {
   name: string;
   label: string;
   base_url: string;
+  api_protocol: ChatProtocolSetting;
   secret_name: string;
   auth_header: 'authorization' | 'x-api-key';
   enabled: boolean;
@@ -371,7 +379,8 @@ const ACTIONS = new Set([
   'admin_user_directory', 'admin_blacklist_list', 'admin_set_blacklist',
   'admin_model_access_get', 'admin_model_access_save',
   'custom_model_list', 'custom_model_save', 'custom_model_delete',
-  'admin_proxy_list', 'admin_proxy_save', 'admin_proxy_route_state', 'admin_proxy_route_delete', 'admin_proxy_key_create', 'admin_proxy_key_state'
+  'admin_proxy_list', 'admin_proxy_save', 'admin_proxy_route_state', 'admin_proxy_route_delete', 'admin_proxy_route_hard_delete',
+  'admin_proxy_key_create', 'admin_proxy_key_state', 'admin_proxy_key_hard_delete'
 ]);
 const encoder = new TextEncoder();
 
@@ -720,7 +729,7 @@ function validateInput(input: unknown, model: Model): { input: Json[]; inputByte
 }
 
 async function providers(): Promise<Provider[]> {
-  return await restJson<Provider[]>('chat_providers?deleted_at=is.null&select=id,name,label,base_url,secret_name,auth_header,enabled&order=name.asc');
+  return await restJson<Provider[]>('chat_providers?deleted_at=is.null&select=id,name,label,base_url,api_protocol,secret_name,auth_header,enabled&order=name.asc');
 }
 
 async function models(): Promise<Model[]> {
@@ -776,7 +785,7 @@ async function modelWithProvider(modelId: unknown, enabledOnly = true, userId?: 
   if (!admin && userId && !(await modelAccess(model.id, userId))) throw new HttpError('model', 403);
   validateModel(model);
   provider.base_url = await publicHttpsUrl(provider.base_url);
-  validateProtocolCapabilities(chatEndpoint(provider.base_url).protocol, model);
+  validateProtocolCapabilities(chatEndpoint(provider.base_url, provider.api_protocol).protocol, model);
   secretName(provider.secret_name);
   return { model, provider };
 }
@@ -784,8 +793,17 @@ async function modelWithProvider(modelId: unknown, enabledOnly = true, userId?: 
 async function saveProvider(payload: Json) {
   const id = payload.id == null ? undefined : payload.id;
   if (id !== undefined && !isUuid(id)) throw new HttpError('input', 400);
+  let apiProtocol: ChatProtocolSetting = 'auto';
+  if (Object.prototype.hasOwnProperty.call(payload, 'api_protocol')) {
+    if (payload.api_protocol !== 'auto' && payload.api_protocol !== 'responses' && payload.api_protocol !== 'messages' && payload.api_protocol !== 'chat') throw new HttpError('api_protocol', 400);
+    apiProtocol = payload.api_protocol;
+  } else if (id) {
+    const existing = await restJson<Array<Pick<Provider, 'api_protocol'>>>(`chat_providers?id=eq.${encodeURIComponent(id)}&deleted_at=is.null&select=api_protocol&limit=1`);
+    apiProtocol = existing[0]?.api_protocol ?? 'auto';
+  }
   const body = {
     ...(id ? { id } : {}),
+    api_protocol: apiProtocol,
     name: text(payload.name, 80, true),
     label: text(payload.label, 120) || '',
     base_url: await publicHttpsUrl(payload.base_url),
@@ -796,10 +814,10 @@ async function saveProvider(payload: Json) {
   };
   if (id) {
     const attached = await restJson<Model[]>(`chat_models?provider_id=eq.${encodeURIComponent(String(id))}&deleted_at=is.null&select=preserve_reasoning,reasoning_efforts,default_max_output_tokens`);
-    for (const model of attached) validateProtocolCapabilities(chatEndpoint(body.base_url).protocol, model);
+    for (const model of attached) validateProtocolCapabilities(chatEndpoint(body.base_url, body.api_protocol).protocol, model);
   }
   const rows = await restJson<Provider[]>('chat_providers?on_conflict=id', { method: 'POST', headers: { 'content-type': 'application/json', prefer: 'resolution=merge-duplicates,return=representation' }, body: JSON.stringify(body) });
-  return rows[0] ? { id: rows[0].id, name: rows[0].name, label: rows[0].label, base_url: rows[0].base_url, secret_name: rows[0].secret_name, auth_header: rows[0].auth_header, enabled: rows[0].enabled } : null;
+  return rows[0] ? { id: rows[0].id, name: rows[0].name, label: rows[0].label, base_url: rows[0].base_url, api_protocol: rows[0].api_protocol, secret_name: rows[0].secret_name, auth_header: rows[0].auth_header, enabled: rows[0].enabled } : null;
 }
 
 async function saveModel(payload: Json) {
@@ -836,7 +854,7 @@ async function saveModel(payload: Json) {
   const providerRows = await providers();
   const provider = providerRows.find(x => x.id === body.provider_id);
   if (!provider) throw new HttpError('input', 400);
-  const protocol = chatEndpoint(provider.base_url).protocol;
+  const protocol = chatEndpoint(provider.base_url, provider.api_protocol).protocol;
   validateProtocolCapabilities(protocol, body);
   const rows = await restJson<Model[]>('chat_models?on_conflict=id', { method: 'POST', headers: { 'content-type': 'application/json', prefer: 'resolution=merge-duplicates,return=representation' }, body: JSON.stringify(body) });
   return rows[0] || null;
@@ -905,7 +923,7 @@ async function updateUsage(requestId: string, patch: Json) {
 function upstreamHeaders(provider: Provider, key: string): Headers {
   const headers = new Headers({ accept: 'text/event-stream', 'content-type': 'application/json' });
   headers.set(provider.auth_header, provider.auth_header === 'authorization' ? `Bearer ${key}` : key);
-  if (chatEndpoint(provider.base_url).protocol === 'messages') headers.set('anthropic-version', '2023-06-01');
+  if (chatEndpoint(provider.base_url, provider.api_protocol).protocol === 'messages') headers.set('anthropic-version', '2023-06-01');
   return headers;
 }
 
@@ -921,7 +939,7 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
   if (effort !== null && !(model.reasoning_efforts as string[]).includes(effort)) throw new HttpError('effort', 400);
   const requestId = crypto.randomUUID();
   const body = { model: model.model_key, input, reasoning: effort ? { effort } : undefined, include: model.preserve_reasoning ? ['reasoning.encrypted_content'] : undefined, max_output_tokens: outputTokens, store: false, stream: true };
-  const { protocol, url: endpoint } = chatEndpoint(provider.base_url);
+  const { protocol, url: endpoint } = chatEndpoint(provider.base_url, provider.api_protocol);
   let serialized = JSON.stringify(protocolRequest(protocol, body));
   const inputTokens = estimateInputTokens(input);
   if (inputTokens + outputTokens > model.context_window) throw new HttpError('context', 413);
@@ -1082,7 +1100,7 @@ async function adminGet(request: Request) {
   await context(request, true);
   const [providerRows, modelRows] = await Promise.all([providers(), models()]);
   return {
-    providers: providerRows.map(x => ({ id: x.id, name: x.name, label: x.label, base_url: x.base_url, secret_name: x.secret_name, auth_header: x.auth_header, enabled: x.enabled })),
+    providers: providerRows.map(x => ({ id: x.id, name: x.name, label: x.label, base_url: x.base_url, api_protocol: x.api_protocol, secret_name: x.secret_name, auth_header: x.auth_header, enabled: x.enabled })),
     // version 与 chat_model_delete 的乐观并发校验一致（updated_at 毫秒）。
     models: modelRows.map(x => ({ ...x, model_id: x.model_key, version: x.updated_at ? Date.parse(x.updated_at) : 0 }))
   };
@@ -1178,7 +1196,7 @@ async function proxyAdmin(request: Request, action: string, payload: Json): Prom
     if (action === 'admin_proxy_key_create') {
       if (!isUuid(data.route_id)) throw new HttpError('input', 400);
       data.label = text(data.label, 120, true);
-    } else if (action === 'admin_proxy_route_delete') {
+    } else if (['admin_proxy_route_delete', 'admin_proxy_route_hard_delete', 'admin_proxy_key_hard_delete'].includes(action)) {
       if (!isUuid(data.id)) throw new HttpError('input', 400);
       data.expected_version = integer(data.expected_version, 1, Number.MAX_SAFE_INTEGER);
     } else {
@@ -1218,6 +1236,8 @@ async function main(request: Request, payload: Json): Promise<Response> {
     admin_proxy_save: ['id', 'name', 'base_url', 'secret_name', 'enabled', 'expected_version'],
     admin_proxy_route_state: ['id', 'enabled', 'expected_version'],
     admin_proxy_route_delete: ['id', 'expected_version'],
+    admin_proxy_route_hard_delete: ['id', 'expected_version'],
+    admin_proxy_key_hard_delete: ['id', 'expected_version'],
     admin_proxy_key_create: ['route_id', 'label'],
     admin_proxy_key_state: ['id', 'enabled', 'revoked', 'expected_version'],
     catalog: [], quota: [], admin_quota_get: ['user_id'],
@@ -1226,7 +1246,7 @@ async function main(request: Request, payload: Json): Promise<Response> {
     admin_get: [], respond: ['model_id', 'input', 'max_output_tokens', 'reasoning_effort'],
     admin_test: ['model_id', 'prompt', 'max_output_tokens', 'reasoning_effort'],
     admin_usage: ['page', 'pageSize', 'limit', 'from', 'to'],
-    admin_save_provider: ['id', 'name', 'label', 'base_url', 'secret_name', 'auth_header', 'enabled'],
+    admin_save_provider: ['id', 'name', 'label', 'base_url', 'api_protocol', 'secret_name', 'auth_header', 'enabled'],
     admin_save_model: ['id', 'provider_id', 'model_key', 'model_id', 'display_name', 'introduction', 'context_window', 'max_output_tokens', 'default_max_output_tokens', 'reasoning_efforts', 'default_reasoning_effort', 'supports_images', 'supports_pdf', 'preserve_reasoning', 'enabled', 'visibility'],
     admin_delete_provider: ['id'],
     admin_delete_model: ['id', 'expected_version'],

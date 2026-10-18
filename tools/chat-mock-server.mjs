@@ -22,7 +22,17 @@ const ACCOUNTS = {
   loggedout: null
 };
 const SCENARIOS = ['completed','incomplete','interrupted','failed','slow'];
-const PROXY_ACTIONS = ['admin_proxy_list','admin_proxy_save','admin_proxy_route_state','admin_proxy_key_create','admin_proxy_key_state'];
+const PROXY_INPUTS = {
+  admin_proxy_list: [],
+  admin_proxy_save: ['id','name','base_url','secret_name','enabled','expected_version'],
+  admin_proxy_route_state: ['id','enabled','expected_version'],
+  admin_proxy_route_delete: ['id','expected_version'],
+  admin_proxy_route_hard_delete: ['id','expected_version'],
+  admin_proxy_key_create: ['route_id','label'],
+  admin_proxy_key_state: ['id','enabled','revoked','expected_version'],
+  admin_proxy_key_hard_delete: ['id','expected_version']
+};
+const PROXY_ACTIONS = Object.keys(PROXY_INPUTS);
 const ACTIONS = ['catalog','respond','admin_get','admin_save_provider','admin_save_model','admin_delete_provider','admin_delete_model','admin_usage','admin_test','quota','admin_user_directory','admin_quota_get','admin_quota_save','admin_set_blacklist','admin_blacklist_list','custom_model_list','custom_model_save','custom_model_delete',...PROXY_ACTIONS];
 const ACTION_ALIASES = new Map([['save_provider','admin_save_provider'],['save_model','admin_save_model'],['usage','admin_usage'],['test','admin_test']]);
 const PROVIDER_ID = '20000000-0000-4000-8000-000000000001';
@@ -44,7 +54,7 @@ function text(value, max, required = false) {
 }
 function keys(object, allowed) { requireThat(Object.keys(object).every(key => allowed.includes(key))); }
 function seed(contextWindow) {
-  const provider = {id:PROVIDER_ID,name:'mock',label:'MOCK 本地供应商',base_url:'https://mock-provider.example.com/v1',secret_name:'CHAT_KEY_MOCK',auth_header:'authorization',enabled:true};
+  const provider = {id:PROVIDER_ID,name:'mock',label:'MOCK 本地供应商',base_url:'https://mock-provider.example.com/v1',api_protocol:'auto',secret_name:'CHAT_KEY_MOCK',auth_header:'authorization',enabled:true};
   const stamp = new Date(0).toISOString();
   const base = {provider_id:provider.id,context_window:contextWindow,max_output_tokens:4096,default_max_output_tokens:512,reasoning_efforts:['none','low','medium','high','xhigh','max'],default_reasoning_effort:'medium',supports_images:true,supports_pdf:true,preserve_reasoning:false,enabled:true,introduction:null,updated_at:stamp,deleted_at:null};
   return {providers:[provider],models:[{...base,id:MODEL_ID,model_key:'mock-multimodal',display_name:'MOCK 多模态'}, {...base,id:'30000000-0000-4000-8000-000000000002',model_key:'mock-text',display_name:'MOCK 纯文本',supports_images:false,supports_pdf:false}],usage:[]};
@@ -136,8 +146,16 @@ function endpointURL(baseUrl, protocol = endpointProtocol(new URL(baseUrl).pathn
   url.pathname = `${parent}/${protocol === 'chat-completions' ? 'chat/completions' : protocol}`;
   return url.href;
 }
-function providerConfig(payload) {
+function providerEndpoint(provider) {
+  const setting = provider.api_protocol ?? 'auto';
+  // Supplier/backend settings call Chat Completions "chat"; native mock fixtures use "chat-completions".
+  const protocol = setting === 'auto' ? endpointProtocol(new URL(provider.base_url).pathname) : setting === 'chat' ? 'chat-completions' : setting;
+  return {protocol,url:endpointURL(provider.base_url,protocol)};
+}
+function providerConfig(payload, current) {
   requireThat(payload.id == null || uuid(payload.id));
+  const api_protocol = payload.api_protocol === undefined ? current?.api_protocol ?? 'auto' : payload.api_protocol;
+  requireThat(['auto','responses','messages','chat'].includes(api_protocol));
   let url;
   try { url = new URL(payload.base_url); } catch { throw new MockError('provider_url'); }
   // Syntactic check only; no DNS lookup and no connection is ever made.
@@ -146,7 +164,7 @@ function providerConfig(payload) {
   const name = text(payload.secret_name,90,true);
   requireThat(/^CHAT_KEY_[A-Z0-9_]{1,80}$/.test(name),'secret_name');
   requireThat(payload.auth_header === undefined || ['authorization','x-api-key'].includes(payload.auth_header));
-  return {id:payload.id || randomUUID(),name:text(payload.name,80,true),label:text(payload.label,120) || '',base_url:`${url.origin}${url.pathname.replace(/\/+$/,'')}`,secret_name:name,auth_header:payload.auth_header || 'authorization',enabled:payload.enabled === undefined ? true : Boolean(payload.enabled),updated_at:new Date().toISOString(),deleted_at:null};
+  return {id:payload.id || randomUUID(),name:text(payload.name,80,true),label:text(payload.label,120) || '',base_url:`${url.origin}${url.pathname.replace(/\/+$/,'')}`,api_protocol,secret_name:name,auth_header:payload.auth_header || 'authorization',enabled:payload.enabled === undefined ? true : Boolean(payload.enabled),updated_at:new Date().toISOString(),deleted_at:null};
 }
 function modelConfig(payload, providers) {
   requireThat(payload.id == null || uuid(payload.id));
@@ -180,38 +198,71 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
   const keyMetadata = ({hash,...metadata}) => metadata;
   const digest = value => createHash('sha256').update(value).digest();
   const proxyRow = (rows,id) => { requireThat(uuid(id)); const row = rows.find(item => item.id === id); requireThat(row,'not_found',404); return row; };
-  const checkVersion = (payload,row) => { integer(payload.expected_version,0,Number.MAX_SAFE_INTEGER); requireThat(payload.expected_version === row.version,'conflict',409); };
+  const checkVersion = (payload,row) => { requireThat(payload.expected_version === row.version,'conflict',409); };
+  function cancelProxyLeases(matches) {
+    for (const lease of [...proxyLeases.values()]) if (matches(lease)) lease.cancel();
+  }
   function proxyAdmin(payload) {
+    keys(payload,['action',...PROXY_INPUTS[payload.action]]);
+    if (payload.action === 'admin_proxy_key_create') {
+      requireThat(uuid(payload.route_id)); text(payload.label,120,true);
+    } else if (payload.action !== 'admin_proxy_list') {
+      requireThat((payload.action === 'admin_proxy_save' && payload.id === null) || uuid(payload.id));
+      integer(payload.expected_version,payload.id === null ? 0 : 1,Number.MAX_SAFE_INTEGER);
+      if (['admin_proxy_save','admin_proxy_route_state','admin_proxy_key_state'].includes(payload.action)) requireThat(typeof payload.enabled === 'boolean');
+      if (payload.action === 'admin_proxy_key_state') requireThat(typeof payload.revoked === 'boolean');
+    }
     const timestamp = now().toISOString();
     switch (payload.action) {
-      case 'admin_proxy_list': keys(payload,['action']); return {routes:proxyRoutes,keys:proxyKeys.map(keyMetadata)};
+      case 'admin_proxy_list': return {routes:proxyRoutes,keys:proxyKeys.map(keyMetadata)};
       case 'admin_proxy_save': {
-        keys(payload,['action','id','name','base_url','secret_name','enabled','expected_version']);
-        requireThat(payload.id === null || uuid(payload.id)); requireThat(typeof payload.enabled === 'boolean');
-        const current = payload.id === null ? {version:0} : proxyRow(proxyRoutes,payload.id); checkVersion(payload,current);
+        requireThat(typeof payload.base_url === 'string' && payload.base_url.length <= 2048 && !/[\\\s]/.test(payload.base_url),'provider_url');
+        requireThat(typeof payload.secret_name === 'string' && /^CHAT_KEY_[A-Z0-9_]{1,80}$/.test(payload.secret_name),'secret_name');
         const config = providerConfig(payload);
         requireThat(!/(^|\/)(response|models)\/?$/i.test(new URL(config.base_url).pathname),'provider_url');
-        const route = {id:config.id,name:config.name,base_url:config.base_url,secret_name:config.secret_name,enabled:config.enabled,version:current.version+1,created_at:current.created_at || timestamp,updated_at:timestamp};
+        const current = payload.id === null ? {version:0} : proxyRow(proxyRoutes,payload.id);
+        requireThat(!current.deleted_at,'deleted',409); checkVersion(payload,current);
+        const route = {id:config.id,name:config.name,base_url:config.base_url,secret_name:config.secret_name,enabled:config.enabled,deleted_at:null,version:current.version+1,created_at:current.created_at || timestamp,updated_at:timestamp};
         upsert(proxyRoutes,route); return {route};
       }
-      case 'admin_proxy_route_state': {
-        keys(payload,['action','id','enabled','expected_version']); requireThat(typeof payload.enabled === 'boolean');
+      case 'admin_proxy_route_state':
+      case 'admin_proxy_route_delete': {
+        const route = proxyRow(proxyRoutes,payload.id);
+        requireThat(!route.deleted_at,'deleted',409); checkVersion(payload,route);
+        if (payload.action === 'admin_proxy_route_delete') {
+          cancelProxyLeases(lease => lease.routeId === route.id);
+          for (const key of proxyKeys) if (key.route_id === route.id && !key.revoked_at) Object.assign(key,{enabled:false,revoked_at:timestamp,version:key.version+1});
+          route.deleted_at = timestamp;
+        }
+        Object.assign(route,{enabled:route.deleted_at ? false : payload.enabled,version:route.version+1,updated_at:timestamp}); return {route};
+      }
+      case 'admin_proxy_route_hard_delete': {
         const route = proxyRow(proxyRoutes,payload.id); checkVersion(payload,route);
-        Object.assign(route,{enabled:payload.enabled,version:route.version+1,updated_at:timestamp}); return {route};
+        requireThat(route.deleted_at,'not_revoked',409);
+        cancelProxyLeases(lease => lease.routeId === route.id);
+        proxyKeys = proxyKeys.filter(key => key.route_id !== route.id);
+        proxyRoutes = proxyRoutes.filter(row => row.id !== route.id);
+        return {deleted_route_id:route.id};
       }
       case 'admin_proxy_key_create': {
-        keys(payload,['action','route_id','label']); const route = proxyRow(proxyRoutes,payload.route_id);
+        const route = proxyRow(proxyRoutes,payload.route_id);
+        requireThat(!route.deleted_at,'deleted',409);
         const label = text(payload.label,120,true), api_key = `cap_${randomBytes(32).toString('base64url')}`;
         const key = {id:randomUUID(),route_id:route.id,label,key_prefix:api_key.slice(0,12),key_last4:api_key.slice(-4),enabled:true,revoked_at:null,version:1,created_at:timestamp,hash:digest(api_key)};
         proxyKeys.push(key); return {key:keyMetadata(key),api_key};
       }
       case 'admin_proxy_key_state': {
-        keys(payload,['action','id','enabled','revoked','expected_version']);
-        requireThat(typeof payload.enabled === 'boolean' && typeof payload.revoked === 'boolean');
         const key = proxyRow(proxyKeys,payload.id); checkVersion(payload,key);
-        requireThat(!key.revoked_at || (payload.revoked && !payload.enabled),'revoked',409);
+        requireThat(!key.revoked_at || payload.revoked,'revoked',409);
         Object.assign(key,{enabled:payload.revoked ? false : payload.enabled,revoked_at:key.revoked_at || (payload.revoked ? timestamp : null),version:key.version+1});
         return {key:keyMetadata(key)};
+      }
+      case 'admin_proxy_key_hard_delete': {
+        const key = proxyRow(proxyKeys,payload.id); checkVersion(payload,key);
+        requireThat(key.revoked_at,'not_revoked',409);
+        cancelProxyLeases(lease => lease.keyId === key.id);
+        proxyKeys = proxyKeys.filter(row => row.id !== key.id);
+        return {deleted_key_id:key.id};
       }
     }
   }
@@ -281,7 +332,9 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
       const candidate = digest(bearerKey || nativeKey);
       const key = proxyKeys.find(item => timingSafeEqual(item.hash,candidate));
       requireThat(key && key.route_id === routeId && key.enabled && !key.revoked_at,'proxy_key',401);
-      const route = proxyRoutes.find(item => item.id === routeId); requireThat(route?.enabled,'route_disabled',403);
+      const route = proxyRoutes.find(item => item.id === routeId);
+      requireThat(route && !route.deleted_at,'proxy_key',401);
+      requireThat(route.enabled,'route_disabled',403);
       // Record only the resolved path; no host, credentials, request body, or upstream fetch.
       meta.upstream_path = new URL(endpointURL(route.base_url,protocol)).pathname;
       if (protocol === 'messages') {
@@ -348,7 +401,8 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
     const inputEstimate = estimateInputTokens(input);
     const reservation = reserve(account.id,inputEstimate,requested), max = reservation.max;
     const scenario = state.scenario, requestId = meta.request_id;
-    Object.assign(meta,{model_id:model.id,max_output_tokens:max,reasoning_effort:effort == null ? null : model.reasoning_efforts.includes(effort) ? effort : 'custom',scenario,protocol:endpointProtocol(new URL(provider.base_url).pathname)});
+    const endpoint = providerEndpoint(provider);
+    Object.assign(meta,{model_id:model.id,max_output_tokens:max,reasoning_effort:effort == null ? null : model.reasoning_efforts.includes(effort) ? effort : 'custom',scenario,protocol:endpoint.protocol,upstream_path:new URL(endpoint.url).pathname});
     const usage = {request_id:requestId,user_id:account.id,member_name:account.member_name,username:account.username || account.email || account.id,provider_name:provider.label || provider.name,model_name:model.display_name,action:payload.action,provider_id:provider.id,model_id:model.id,model_key:model.model_key,input_bytes:meta.request_bytes,max_output_tokens:max,reasoning_effort:meta.reasoning_effort,status:'upstream_started',upstream_status:200,input_tokens:null,output_tokens:null,total_tokens:null,error_code:null,started_at:new Date().toISOString(),finished_at:null};
     database.usage.unshift(usage);
     if (database.usage.length > 1000) database.usage.pop();
@@ -396,6 +450,7 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
     record(meta);
     try {
       requireThat(ACTIONS.includes(payload.action),'action');
+      if (PROXY_ACTIONS.includes(payload.action)) keys(payload,['action',...PROXY_INPUTS[payload.action]]);
       const account = authenticate(req,payload.action.startsWith('admin_'));
       meta.user_id = account.id;
       if (PROXY_ACTIONS.includes(payload.action)) { const result = proxyAdmin(payload); meta.outcome = 'ok'; json(res,result); return; }
@@ -463,7 +518,7 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
           providers: database.providers.filter(row => !row.deleted_at),
           models: database.models.filter(row => !row.deleted_at).map(model => ({...model,model_id:model.model_key,version:Date.parse(model.updated_at) || 0}))
         }; break;
-        case 'admin_save_provider': result = {provider:upsert(database.providers,providerConfig(payload))}; break;
+        case 'admin_save_provider': result = {provider:upsert(database.providers,providerConfig(payload,database.providers.find(row => row.id === payload.id)))}; break;
         case 'admin_save_model': result = {model:upsert(database.models,modelConfig(payload,database.providers))}; break;
         case 'admin_delete_provider': {
           keys(payload,['action','id']);
@@ -583,7 +638,13 @@ async function selfTest() {
   for (const [suffix,protocol] of [['','responses'],['/v1','responses'],['/responses','responses'],['/messages','messages'],['/message','messages'],['/chat/completions','chat-completions']]) {
     for (const prefix of ['', '/gateway/v1']) {
       const base_url = providerBase+prefix+suffix;
-      assert.equal(providerConfig({name:'mock',base_url,secret_name:'CHAT_KEY_MOCK'}).base_url,base_url);
+      const config = providerConfig({name:'mock',base_url,secret_name:'CHAT_KEY_MOCK'});
+      assert.equal(config.base_url,base_url);
+      assert.equal(config.api_protocol,'auto');
+      assert.deepEqual(providerEndpoint(config),{protocol,url:endpointURL(base_url)});
+      for (const [setting,native] of [['responses','responses'],['messages','messages'],['chat','chat-completions']]) {
+        assert.deepEqual(providerEndpoint({...config,api_protocol:setting}),{protocol:native,url:endpointURL(base_url,native)});
+      }
       assert.equal(endpointProtocol(new URL(base_url).pathname),protocol);
       assert.equal(new URL(endpointURL(base_url)).pathname,`${(prefix+suffix).replace(/\/(responses|messages|message|chat\/completions)$/,'')}/${protocol === 'chat-completions' ? 'chat/completions' : protocol}`);
       assert.equal(new URL(endpointURL(base_url,'messages')).pathname,`${(prefix+suffix).replace(/\/(responses|messages|message|chat\/completions)$/,'')}/messages`);
@@ -597,7 +658,7 @@ async function selfTest() {
   await new Promise((resolve,reject) => { server.once('error',reject); server.listen(0,'127.0.0.1',resolve); });
   try {
     const base = `http://127.0.0.1:${server.address().port}`;
-    const localFetch = (url, options = {}) => fetch(url,options);
+    const localFetch = (url, options = {}) => { assert.equal(new URL(url).origin,base,'self-tests must only call the local mock'); return fetch(url,options); };
     const get = resource => localFetch(base + resource);
     const setup = async (account,scenario = 'completed',reset = false) => (await localFetch(base+'/mock/setup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({account,scenario,theme:'dark',reset})})).json();
     let state = await setup('member');
@@ -642,12 +703,33 @@ async function selfTest() {
     state = await setup('unbound'); assert.equal((await post({action:'catalog'})).status,403);
     state = await setup('loggedout'); assert.equal((await post({action:'catalog'})).status,401);
     state = await setup('admin');
+    assert.ok((await (await post({action:'admin_get'})).json()).providers.every(row => row.api_protocol === 'auto'),'seed suppliers default to auto');
     const fixedUsage = (await (await post({action:'admin_usage',page:1,pageSize:1})).json()).usage.find(item => item.action === 'respond');
     assert.equal(fixedUsage.max_output_tokens,512,'member budget must stay at the configured default');
     const provider = {action:'save_provider',name:'created',label:'MOCK created',base_url:'https://mock-provider.example.com/v1',secret_name:'CHAT_KEY_MOCK_CREATED',enabled:true};
     let saved = await (await post(provider)).json(); assert.ok(uuid(saved.provider.id));
+    assert.equal(saved.provider.api_protocol,'auto','omitted protocol defaults to auto on create');
     const providerId = saved.provider.id;
-    assert.equal((await post({...provider,action:'admin_save_provider',id:providerId,label:'MOCK updated'})).status,200);
+    saved = await (await post({...provider,action:'admin_save_provider',id:providerId,label:'MOCK updated'})).json();
+    assert.equal(saved.provider.api_protocol,'auto','omitted protocol preserves auto on update');
+    const providerRow = async id => (await (await post({action:'admin_get'})).json()).providers.find(row => row.id === id);
+    for (const api_protocol of ['auto','responses','messages','chat']) {
+      saved = await (await post({...provider,id:providerId,api_protocol})).json();
+      assert.equal(saved.provider.api_protocol,api_protocol);
+      assert.deepEqual(await providerRow(providerId),saved.provider,'saved supplier protocol survives admin_get roundtrip');
+      saved = await (await post({...provider,id:providerId,label:'MOCK updated'})).json();
+      assert.equal(saved.provider.api_protocol,api_protocol,'omitted protocol preserves each existing setting');
+    }
+    const beforeInvalid = await providerRow(providerId);
+    for (const api_protocol of [null,'','invalid','chat-completions','AUTO',' responses ',0,false,[],{}]) {
+      for (const id of [undefined,providerId]) {
+        const response = await post({...provider,id,api_protocol});
+        assert.equal(response.status,400);
+        assert.deepEqual(await response.json(),{error:'input',mock:true});
+      }
+      assert.deepEqual(await providerRow(providerId),beforeInvalid,'invalid protocol must not mutate existing supplier');
+    }
+    assert.equal((await (await post({action:'admin_get'})).json()).providers.length,2,'invalid creates do not add suppliers');
     const model = {action:'save_model',provider_id:providerId,model_key:'mock-created',display_name:'MOCK created',introduction:'Created model for local checks.',context_window:2048,max_output_tokens:512,default_max_output_tokens:128,reasoning_efforts:[],supports_images:false,supports_pdf:false};
     saved = await (await post(model)).json(); assert.ok(uuid(saved.model.id));
     assert.equal(saved.model.introduction, model.introduction);
@@ -670,6 +752,28 @@ async function selfTest() {
       assert.equal(normalized.status,'success','internal endpoint inference preserves Responses UI contract');
       const recent = (await (await get('/mock/requests')).json()).requests.at(-1);
       assert.equal(recent.protocol,endpointProtocol(suffix));
+      assert.equal(recent.upstream_path,new URL(endpointURL(`${providerBase}/v1/${suffix}`)).pathname);
+      assert.equal((await providerRow(PROVIDER_ID)).api_protocol,'auto','legacy URL updates preserve auto');
+    }
+    for (const [api_protocol,suffix,protocol,path] of [
+      ['responses','messages','responses','/gateway/v1/responses'],
+      ['chat','messages','chat-completions','/gateway/v1/chat/completions'],
+      ['messages','chat/completions','messages','/gateway/v1/messages'],
+      ['auto','message','messages','/gateway/v1/messages']
+    ]) {
+      const base_url = `${providerBase}/gateway/v1/${suffix}`;
+      saved = await (await post({...provider,id:PROVIDER_ID,base_url,api_protocol})).json();
+      assert.equal(saved.provider.api_protocol,api_protocol);
+      saved = await (await post({...provider,id:PROVIDER_ID,base_url,label:'MOCK protocol preserved'})).json();
+      assert.equal(saved.provider.api_protocol,api_protocol);
+      assert.deepEqual(await providerRow(PROVIDER_ID),saved.provider);
+      for (const action of ['admin_test','respond']) {
+        const normalized = await readResponses((await post({...request,action})).body,()=>{});
+        assert.equal(normalized.status,'success','selected supplier protocol preserves Responses UI contract');
+        const recent = (await (await get('/mock/requests')).json()).requests.at(-1);
+        assert.equal(recent.protocol,protocol,'explicit protocol overrides a different endpoint suffix');
+        assert.equal(recent.upstream_path,path,'resolved endpoint replaces the configured terminal endpoint');
+      }
     }
     const logs = await (await get('/mock/requests')).json();
     for (const action of ACTION_ALIASES.values()) {
@@ -746,9 +850,10 @@ async function selfTest() {
     const routeInput = {action:'admin_proxy_save',id:null,name:'MOCK external',base_url:'https://mock-provider.example.com/v1',secret_name:'CHAT_KEY_MOCK_PROXY',enabled:true,expected_version:0};
     for (const patch of [{expected_version:1},{secret_name:'sk-native'},{enabled:'true'},{base_url:'https://mock-provider.example.com/v1/response'}]) assert.ok((await post({...routeInput,...patch})).status >= 400);
     let route = (await (await post(routeInput)).json()).route;
-    assert.deepEqual(Object.keys(route).sort(),['id','name','base_url','secret_name','enabled','version','created_at','updated_at'].sort());
+    assert.deepEqual(Object.keys(route).sort(),['id','name','base_url','secret_name','enabled','deleted_at','version','created_at','updated_at'].sort());
+    assert.equal(route.deleted_at,null);
     assert.equal(route.version,1);
-    assert.equal((await post({...routeInput,id:route.id,expected_version:0})).status,409);
+    assert.equal((await post({...routeInput,id:route.id,expected_version:0})).status,400);
     route = (await (await post({...routeInput,id:route.id,name:'MOCK updated',expected_version:1})).json()).route;
     assert.equal(route.version,2);
     const issued = await (await post({action:'admin_proxy_key_create',route_id:route.id,label:'MOCK client'})).json();
@@ -879,14 +984,116 @@ async function selfTest() {
     assert.equal((await post({action:'admin_proxy_key_state',id:key.id,enabled:true,revoked:false,expected_version:4})).status,409);
     const listing = await (await post({action:'admin_proxy_list'})).json();
     assert.doesNotMatch(JSON.stringify(listing),/"hash"|"api_key"/); assert.ok(!JSON.stringify(listing).includes(issued.api_key));
+    const expectError = async (payload,status,error) => {
+      const response = await post(payload); assert.equal(response.status,status,JSON.stringify(payload));
+      assert.deepEqual(await response.json(),{error,mock:true});
+    };
+    const deleteActions = ['admin_proxy_route_delete','admin_proxy_route_hard_delete','admin_proxy_key_hard_delete'];
+    for (const action of deleteActions) {
+      const valid = {action,id:action === 'admin_proxy_key_hard_delete' ? key.id : route.id,expected_version:4};
+      for (const expected_version of [undefined,null,0,-1,1.5,'4',true,Number.MAX_SAFE_INTEGER+1]) await expectError({...valid,expected_version},400,'input');
+      for (const id of [undefined,null,'invalid',1,{},[]]) await expectError({...valid,id},400,'input');
+      for (const extra of [{enabled:false},{revoked:true},{force:true},{route_id:route.id},{api_key:'not-allowed'}]) await expectError({...valid,...extra},400,'input');
+      await expectError({...valid,id:randomUUID()},404,'not_found');
+    }
+    const strictInputs = [
+      {...routeInput,id:route.id,expected_version:route.version},
+      {action:'admin_proxy_route_state',id:route.id,enabled:true,expected_version:route.version},
+      {action:'admin_proxy_key_state',id:key.id,enabled:false,revoked:true,expected_version:key.version}
+    ];
+    for (const payload of strictInputs) {
+      for (const field of Object.keys(payload).filter(field => field !== 'action')) {
+        const missing = {...payload}; delete missing[field];
+        await expectError(missing,400,field === 'base_url' ? 'provider_url' : field === 'secret_name' ? 'secret_name' : 'input');
+      }
+      await expectError({...payload,expected_version:0},400,'input');
+      await expectError({...payload,unexpected:true},400,'input');
+    }
+    await expectError({...routeInput,secret_name:' CHAT_KEY_MOCK_PROXY '},400,'secret_name');
+    await expectError({...routeInput,base_url:' https://mock-provider.example.com/v1'},400,'provider_url');
+    for (const patch of [{route_id:undefined},{label:undefined},{label:''},{label:1},{key_hash:'injected'}]) await expectError({action:'admin_proxy_key_create',route_id:route.id,label:'strict',...patch},400,'input');
+    await expectError({action:'admin_proxy_list',id:route.id},400,'input');
+    const adminToken = state.session.access_token;
+    for (const account of ['member','member2','unbound','loggedout']) {
+      state = await setup(account);
+      for (const action of PROXY_ACTIONS) await expectError({action},account === 'loggedout' ? 401 : 403,account === 'loggedout' ? 'login' : 'admin');
+      assert.equal((await post({action:'admin_proxy_list'},adminToken)).status,401,'previous admin session cannot cross accounts');
+    }
+    state = await setup('admin');
+    assert.equal((await post({action:'admin_proxy_list'},adminToken)).status,401,'stale admin session denied');
+    await expectError({action:'admin_proxy_route_hard_delete',id:route.id,expected_version:route.version},409,'not_revoked');
+    const disabledRoute = (await (await post({...routeInput,name:'Disabled, not deleted',enabled:false})).json()).route;
+    await expectError({action:'admin_proxy_route_hard_delete',id:disabledRoute.id,expected_version:disabledRoute.version},409,'not_revoked');
+    const liveKey = (await (await post({action:'admin_proxy_key_create',route_id:route.id,label:'hard delete stream'})).json());
+    await expectError({action:'admin_proxy_key_hard_delete',id:liveKey.key.id,expected_version:1},409,'not_revoked');
+    let disabledKey = (await (await post({action:'admin_proxy_key_state',id:liveKey.key.id,enabled:false,revoked:false,expected_version:1})).json()).key;
+    await expectError({action:'admin_proxy_key_hard_delete',id:disabledKey.id,expected_version:disabledKey.version},409,'not_revoked');
+    disabledKey = (await (await post({action:'admin_proxy_key_state',id:disabledKey.id,enabled:true,revoked:false,expected_version:2})).json()).key;
+    state = await setup('admin','slow');
+    const openProxyStream = async (apiKey,resource = endpoint) => {
+      const signal = AbortSignal.timeout(4000);
+      const response = await proxyRequest({model:'x',input:'local deletion fixture',stream:true},apiKey,resource,{signal});
+      assert.equal(response.status,200);
+      return {closed:response.text().then(() => false,() => !signal.aborted)};
+    };
+    const keyStream = await openProxyStream(liveKey.api_key);
+    const unrelatedKey = (await (await post({action:'admin_proxy_key_create',route_id:otherRoute.id,label:'unrelated stream'})).json());
+    const unrelatedStream = await openProxyStream(unrelatedKey.api_key,endpoint.replace(route.id,otherRoute.id));
+    const revokedKey = (await (await post({action:'admin_proxy_key_state',id:disabledKey.id,enabled:false,revoked:true,expected_version:3})).json()).key;
+    await expectError({action:'admin_proxy_key_hard_delete',id:revokedKey.id,expected_version:3},409,'conflict');
+    assert.deepEqual(await (await post({action:'admin_proxy_key_hard_delete',id:revokedKey.id,expected_version:4})).json(),{deleted_key_id:revokedKey.id});
+    assert.equal(await keyStream.closed,true,'hard key delete cancels its active lease');
+    await expectError({action:'admin_proxy_key_hard_delete',id:revokedKey.id,expected_version:4},404,'not_found');
+    await expectError({action:'admin_proxy_key_state',id:revokedKey.id,enabled:true,revoked:false,expected_version:4},404,'not_found');
+    assert.equal((await proxyRequest(undefined,liveKey.api_key)).status,401);
+    let afterDelete = await (await post({action:'admin_proxy_list'})).json();
+    assert.ok(afterDelete.routes.some(row => row.id === route.id),'hard key delete retains its route');
+    assert.ok(afterDelete.keys.some(row => row.id === issued.key.id),'hard key delete retains other keys');
+    assert.ok(!afterDelete.keys.some(row => row.id === revokedKey.id));
+    const routeKey = (await (await post({action:'admin_proxy_key_create',route_id:route.id,label:'tombstone stream'})).json());
+    const routeStream = await openProxyStream(routeKey.api_key);
+    await expectError({action:'admin_proxy_route_delete',id:route.id,expected_version:route.version-1},409,'conflict');
+    const deletedRoute = (await (await post({action:'admin_proxy_route_delete',id:route.id,expected_version:route.version})).json()).route;
+    assert.equal(deletedRoute.enabled,false); assert.equal(deletedRoute.deleted_at,clock.toISOString()); assert.equal(deletedRoute.version,route.version+1);
+    assert.equal(await routeStream.closed,true,'tombstone removes route leases');
+    assert.equal((await proxyRequest(undefined,routeKey.api_key)).status,401,'tombstone denies proxy admission');
+    afterDelete = await (await post({action:'admin_proxy_list'})).json();
+    assert.deepEqual(afterDelete.routes.find(row => row.id === route.id),deletedRoute,'tombstone remains in admin listing');
+    assert.deepEqual(afterDelete.keys.find(row => row.id === issued.key.id),key,'already revoked key metadata stays unchanged');
+    const tombstoneKeys = afterDelete.keys.filter(row => row.route_id === route.id);
+    assert.ok(tombstoneKeys.length > 1 && tombstoneKeys.every(row => !row.enabled && row.revoked_at));
+    assert.equal(tombstoneKeys.find(row => row.id === routeKey.key.id).version,2);
+    for (const enabled of [true,false]) {
+      await expectError({...routeInput,id:route.id,enabled,expected_version:deletedRoute.version},409,'deleted');
+      await expectError({action:'admin_proxy_route_state',id:route.id,enabled,expected_version:deletedRoute.version},409,'deleted');
+    }
+    await expectError({action:'admin_proxy_key_create',route_id:route.id,label:'cannot recreate'},409,'deleted');
+    await expectError({action:'admin_proxy_route_delete',id:route.id,expected_version:deletedRoute.version},409,'deleted');
+    await expectError({action:'admin_proxy_key_state',id:routeKey.key.id,enabled:true,revoked:false,expected_version:2},409,'revoked');
+    await expectError({action:'admin_proxy_route_hard_delete',id:route.id,expected_version:route.version},409,'conflict');
+    assert.deepEqual(await (await post({action:'admin_proxy_route_hard_delete',id:route.id,expected_version:deletedRoute.version})).json(),{deleted_route_id:route.id});
+    afterDelete = await (await post({action:'admin_proxy_list'})).json();
+    assert.ok(!afterDelete.routes.some(row => row.id === route.id)); assert.ok(!afterDelete.keys.some(row => row.route_id === route.id));
+    await expectError({action:'admin_proxy_route_hard_delete',id:route.id,expected_version:deletedRoute.version},404,'not_found');
+    await expectError({action:'admin_proxy_key_hard_delete',id:routeKey.key.id,expected_version:2},404,'not_found');
+    await expectError({action:'admin_proxy_key_create',route_id:route.id,label:'gone'},404,'not_found');
+    await expectError({...routeInput,id:route.id,expected_version:deletedRoute.version},404,'not_found');
+    assert.equal((await proxyRequest(undefined,routeKey.api_key)).status,401);
+    const liveLogs = (await (await get('/mock/requests')).json()).requests;
+    assert.ok(liveLogs.some(row => row.endpoint === 'chat-api-proxy' && row.route_id === otherRoute.id && row.outcome === 'received'),'deletions leave unrelated leases active');
+    const otherTombstone = (await (await post({action:'admin_proxy_route_delete',id:otherRoute.id,expected_version:otherRoute.version})).json()).route;
+    assert.equal(await unrelatedStream.closed,true);
+    assert.deepEqual(await (await post({action:'admin_proxy_route_hard_delete',id:otherRoute.id,expected_version:otherTombstone.version})).json(),{deleted_route_id:otherRoute.id});
+    state = await setup('admin');
     const proxyLogs = await (await get('/mock/requests')).json();
     assert.ok(proxyLogs.requests.some(item => item.endpoint === 'chat-api-proxy' && item.outcome === 'cancelled'));
     assert.doesNotMatch(JSON.stringify(proxyLogs),/"hash"|"api_key"|client-model-unchanged|CHAT_KEY_MOCK_PROXY/);
     assert.ok(!JSON.stringify(proxyLogs).includes(issued.api_key));
     state = await setup('admin','completed',true);
     assert.deepEqual(await (await post({action:'admin_proxy_list'})).json(),{routes:[],keys:[]});
+    console.log('Chat supplier protocol self-test passed: auto fixtures/create defaults, persisted enum roundtrips, omitted-update preservation, invalid create/update rejection without mutation, explicit endpoint overrides, chat/chat-completions mapping and normalized admin/member Responses streams.');
     console.log('Chat native protocol self-test passed: Responses/Chat Completions/Claude Messages JSON and SSE, exact endpoint inference, message alias normalization, optional /v1 custom URLs, client endpoint selection, native cap_ auth, matching dual credentials, Claude version defaults/validation and incomplete/interrupted fixtures.');
-    console.log('Chat proxy self-test passed: admin contracts, safe metadata, one-time 32-byte keys, hash-only storage, versions, route binding, JSON/SSE, model preservation, 401/403/404/405/413/429/502, cancellation, quota/blacklist/session independence, revocation, URL rewrite and reset.');
+    console.log('Chat proxy self-test passed: admin-only scope, strict inputs, safe metadata, one-time 32-byte keys, hash-only storage, CAS versions, terminal route tombstones, revoked-only hard deletes, key/route lease cleanup, cascade isolation, route binding, JSON/SSE, model preservation, 401/403/404/405/413/429/502, cancellation, quota/blacklist/session independence, revocation, URL rewrite and reset.');
     console.log('Chat quota/blacklist self-test passed: strict admin auth, directory UUIDs, own snapshot, null/zero/max bounds, version conflicts, both route reservations/headers, UTC day/week/month rollover, no-usage retention, blacklist gates and reset.');
     console.log('Chat mock HTTP self-test passed: local SDK/URL/CSP, fixtures, catalog, permissions, multi-turn SSE, terminal states, cancellation/lease, account switch, admin save/disable/test/usage, redacted metadata, reset and traversal/origin guards.');
   } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
