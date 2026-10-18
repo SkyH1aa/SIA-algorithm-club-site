@@ -7,13 +7,13 @@
 ## 0. 部署顺序
 
 0. 升级额度版本前，先暂停旧 Edge 的新生成准入并等待已有流结束（必要时在网关/函数层暂停；仅隐藏前端按钮不足以阻止旧客户端调用）。旧 Edge 不执行新额度准入，不能让它在迁移窗口继续接单。
-1. **先执行更新后的 Chat SQL**（第 2 节，包括额度、黑名单与预留结算迁移）；保留现有配置和 usage，不删除重建旧表。
-2. 设置 Edge Function secrets（第 3 节）。
-3. **再部署两个新版 Edge Function `chat` 与 `chat-api-proxy`**，先确认新 RPC 可用。两者均配置 `verify_jwt=false`，但分别在函数内部执行用户 JWT/管理员校验与 proxy key 鉴权。
-4. **最后发布新版静态前端**（第 6 节），避免前端提前调用尚不存在的额度或代理管理接口。若既有三协议部署仅升级本次 `claude_thinking`，顺序为完整 SQL → 新版 `chat` bundle → 前端（含 file bundle 与成员 i18n）；本次没有代理行为变化，不必仅为此重部署 `chat-api-proxy`。
+1. **先执行更新后的完整 Chat SQL**（第 2 节，包括额度、黑名单、预留结算与 90 天 usage 保留迁移）；不删除重建旧表。按用户明确要求，部署后首次定时清理执行时会不可逆地物理删除超过 90 天且可安全清理的旧 usage 及其关联内部记录，详见第 9 节。
+2. 首次安装设置 Edge Function secrets（第 3 节）；已有安装仅升级 usage90day 时保留现有 Secrets。
+3. 首次安装**再部署两个新版 Edge Function `chat` 与 `chat-api-proxy`**，先确认新 RPC 可用。两者均配置 `verify_jwt=false`，但分别在函数内部执行用户 JWT/管理员校验与 proxy key 鉴权。
+4. **最后发布新版静态前端**（第 6 节），避免前端提前调用尚不存在的接口。已有部署仅升级 usage90day 时，网页部署顺序为**完整 SQL → `chat-dashboard-index.ts` 全文替换 `chat` 并部署 → `public/chat-admin.html`、`public/chat-admin.js`、`public/chat-admin-i18n.js`**。仅此功能不改变 `chat-api-proxy`、成员 Chat 或成员离线 bundle，无需重部署它们。
 5. 在管理页配置 provider/model 并完成授权后的低成本测试（第 4、5、7 节），再恢复生成入口。
 
-**计量起点**：历史 `chat_usage` 不回填额度桶；新额度只从新版 Edge 的 admission/预留开始累计。旧 usage 继续作为历史审计保留，不能把升级后显示的 used 理解为本日/本周/本月所有历史供应商消耗。
+**计量起点**：历史 `chat_usage` 不回填额度桶；新额度只从新版 Edge 的 admission/预留开始累计。usage 在最近 90 天报告窗口内作为审计保留，超过窗口的安全终态记录自动清理；不能把升级后显示的 used 理解为本日/本周/本月所有历史供应商消耗。清理不改额度桶或设置，不返还历史消耗。
 
 ## 1. 上线前确认
 
@@ -50,6 +50,7 @@ supabase/club-chat-schema.sql
 - `chat_generation_leases`
 - `chat_acquire_generation_lease(uuid, uuid, timestamptz)`
 - `chat_release_generation_lease(uuid, uuid)`
+- 90 天 usage 清理 RPC 与其幂等的 pg_cron job `chat-usage-retention-90d`（若目标项目没有 pg_cron，SQL 会给出可见 warning；需由维护者按部署环境提供等价的定时调用）
 
 Chat 表默认启用 RLS，普通 `anon`/`authenticated` 不直接拥有表权限；Edge Function 使用 service role 访问配置和审计记录。不要为了让前端直连而放开这些表。
 
@@ -248,7 +249,7 @@ python tools/test-chat-quota-sql.py --syntax-only
 python tools/test-chat-quota-sql.py --dsn 'host=127.0.0.1 port=5432 dbname=postgres user=postgres'
 ```
 
-syntax-only 需 pglast；真实集成还需 `psycopg[binary]` 和具备 CREATEDB/CREATEROLE 权限的本地 PostgreSQL。脚本创建并删除随机测试数据库，不迁移所给 DSN 的数据库。解析通过不证明事务、并发、RLS 或结算语义；mock 自检也不能代替真实 PostgreSQL 并发测试。本次未运行真实 PG/DSN 集成，不能声称并发已验收。
+syntax-only 需 pglast；真实集成还需 `psycopg[binary]` 和具备 CREATEDB/CREATEROLE 权限的本地 PostgreSQL。脚本创建并删除随机测试数据库，不迁移所给 DSN 的数据库。解析通过不证明事务、并发、RLS 或结算语义；mock 自检也不能代替真实 PostgreSQL 并发测试。本次未运行独立 PostgreSQL 服务器/DSN 集成；usage90day 已在 PGlite PostgreSQL WASM runtime 单连接执行验证（范围见第 9 节），不能声称多连接并发或真实 pg_cron 已验收。
 
 本地检查不等于线上验收；上线前仍需用户自行授权 Supabase SQL、Edge Function 部署、供应商付费调用和静态站发布。
 
@@ -268,7 +269,7 @@ syntax-only 需 pglast；真实集成还需 `psycopg[binary]` 和具备 CREATEDB
 
 API action 契约：`quota {}` 仅查询本人；`admin_user_directory {}` 返回 `{users:[{user_id,username,member_name,bound}],blacklist:[{user_id,reason}]}`；`admin_quota_get {user_id?:null|UUID}` 和 `admin_quota_save {user_id?:null|UUID,daily_limit,weekly_limit,monthly_limit,expected_version}` 中省略/null 目标表示全局（仅每日，周/月为空）；`admin_set_blacklist {user_id,blocked,reason}`；`admin_blacklist_list {}`。额度快照为 `{global:{daily_limit,version,used,remaining,resets_at},user:{daily_limit,weekly_limit,monthly_limit,version},periods:[{period:'day'|'week'|'month',limit,used,remaining,resets_at}],blacklisted,reason}`；不限的 `limit/remaining` 为 null。未被拉黑的 catalog 附带 `quota` 快照。
 
-## 9. 数据边界与使用记录
+## 9. 数据边界、90 天窗口与使用记录
 
 聊天正文和会话历史由当前浏览器的 IndexedDB 保存，数据库表 `chat_usage` 只记录后端审计所需的请求元数据和状态，不是聊天正文存档。清除浏览器站点数据、切换浏览器或切换设备后，本地会话不会自动同步。
 
@@ -281,6 +282,14 @@ API action 契约：`quota {}` 仅查询本人；`admin_user_directory {}` 返�
 - 输入字节数、最大输出 token、reasoning effort 和 request ID。
 
 因此成员姓名、账号和使用时间会进入站点自己的 Chat usage 审计表，并由超级管理员在管理页查看。聊天正文不会因为 IndexedDB 而自动进入 Supabase usage 表，但浏览器、网络设备、供应商 API 和供应商平台日志仍可能保留请求内容、附件、账号标识、IP、时间、计费和安全审计信息，具体取决于供应商条款、保留设置和企业策略。不要在 Chat 中发送密码、service role key、供应商 key、私人证件或不应交给第三方处理的敏感资料。
+
+### 90 天 usage 报告与自动清理
+
+`admin_usage` 始终保留并返回 `usage`、`page`、`pageSize` 和 `total`。`total` 是日期筛选后的全部匹配记录数，不受当前页影响；`from`/`to` 过滤 `started_at`，而且服务端把结果限制在滚动 90 天窗口 `[asof - 2160h, asof)`：下界包含，上界排除，未来记录不会进入报告。管理页也只能看到这 90 天内的记录。`summary` 独立于分页和日期筛选，返回 `{total_records,total_tokens}`；`total_records` 是数字，`total_tokens` 是十进制字符串，避免 `bigint` 累加超过 JavaScript 安全整数后失真。`null` token 不计入 token 总和，但对应的真实记录仍计入 `total_records`；不会用预留量或输入/输出估算补造总 token。没有已知 token 时总和为字符串 `"0"`。窗口起止同时以 `window_start`/`window_end` 返回，便于管理页说明当前 as-of 边界。管理页通过 `admin_usage` 刷新列表和汇总，不额外扩展 `admin_get` 契约。管理读取不触发清理。
+
+完整 SQL 安装清理函数和定时任务，不立即执行删除。部署后首次定时清理执行时会物理删除窗口之外、已完成终态且 `finished_at` 非空、没有 reservation 或 reservation 已结算、也没有未过期 lease 的 usage，以及其关联 allocation、已结算 reservation 和过期 lease。该删除不可逆；未解决的内部计量记录会继续保留但不在报告中显示，等待迟到结算。lease 过期不等于生成已完成，不能因过期就删除未结算记录。清理永远不退还 quota bucket、不改变额度计数，也不把记录重新计入额度。之后由数据库 `pg_cron` 每小时运行命名 job `chat-usage-retention-90d`；重复安装/升级使用幂等的 job 配置。若目标项目提供 `pg_cron`，SQL 会尝试安装扩展并以幂等方式安排任务；扩展不可用、安装或排程失败都会给出可见 warning。部署者必须解决 warning，或提供受控等价的定时调用，否则无人访问时不会有自动物理清理保证。管理页访问不会作为清理兜底，也不会让无人访问时停止自动清理。
+
+因此上线安装定时任务前必须确认旧 usage 的物理删除符合审计要求。列表查询立即按 90 天窗口过滤。数据库定时任务每小时最多清理 1000 条安全过期记录；没有积压且任务正常时通常在下一小时任务清理，有积压时会跨多个小时批次，未结算保护或任务失败也会延长物理保留。quota counters、额度桶和 reservation 结算语义保持不变。本地已在 PGlite 的 PostgreSQL WASM runtime 执行完整 schema 及重复安装，验证 1505 条记录的精确汇总/分页/日期/权限，以及清理外键、保护条件、迟到结算、quota 不变和 1000+1 分批。该运行只使用单连接，未验证独立 PostgreSQL 服务器的多连接并发、真实 pg_cron 或线上 Supabase；不能据此声称生产定时任务已经安装或运行。
 
 ## 10. 上线后回滚
 
@@ -333,7 +342,7 @@ API action 契约：`quota {}` 仅查询本人；`admin_user_directory {}` 返�
 
 route 字段包括 `id,name,base_url,secret_name,enabled,deleted_at,version,created_at,updated_at`。安全 key metadata 仅为 `id,route_id,label,key_prefix,key_last4,enabled,revoked_at,version,created_at`，不含 hash 或完整 key。新 route 的 `expected_version` 为 0；更新或彻底删除均带读取时版本，陈旧版本返回 `409 conflict`，刷新核对后再操作。
 
-撤销路由会保留失效记录，立即停用路由、撤销全部旗下 key、清理活动 lease；撤销不可恢复。管理页为 `deleted_at` 非空的路由及 `revoked_at` 非空的密钥提供“彻底删除”按钮，确认后通过数据库事务实际删除记录，刷新列表也不会再显示。路由彻底删除会一起清除旗下所有密钥及关联租约；单独删除密钥只清除该密钥及其租约。仅停用的记录不符合彻底删除条件，服务端也会拒绝该操作（`409 not_revoked`）。执行完整 SQL、部署函数或打开列表均不会自动清除任何记录。
+撤销路由会保留失效记录，立即停用路由、撤销全部旗下 key、清理活动 lease；撤销不可恢复。管理页为 `deleted_at` 非空的路由及 `revoked_at` 非空的密钥提供“彻底删除”按钮，确认后通过数据库事务实际删除记录，刷新列表也不会再显示。路由彻底删除会一起清除旗下所有密钥及关联租约；单独删除密钥只清除该密钥及其租约。仅停用的记录不符合彻底删除条件，服务端也会拒绝该操作（`409 not_revoked`）。执行完整 SQL、部署函数或打开代理列表均不会自动清除代理路由/密钥；usage 的定时保留任务按第 9 节独立执行。
 
 彻底删除不保留 UUID 或 key 哈希占位。管理接口创建路由仍由数据库生成新 UUID，不允许调用者指定旧 UUID；正常重新创建会得到新的公开 URL，旧 URL/密钥无法准入。已在途的上游请求不会被强制中断，其后续租约释放可安全重复执行。手工用高权限 SQL 重建同 UUID 不属于管理接口保证。彻底删除不会移除 Edge Secrets 中的上游供应商 Key，也不会自动清除成员自行保存的失效代理地址。
 

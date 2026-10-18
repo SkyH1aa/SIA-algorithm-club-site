@@ -409,6 +409,8 @@ begin
     return false;
   end if;
 
+  -- Legacy lease admission must serialize with retention and quota settlement.
+  perform public.chat_quota_lock(p_user_id);
   delete from public.chat_generation_leases
   where user_id = p_user_id and expires_at <= timezone('utc', now());
 
@@ -872,6 +874,141 @@ grant execute on function public.chat_quota_get(uuid),
   public.chat_blacklist_set(uuid,uuid,boolean,text), public.chat_user_directory(uuid),
   public.chat_begin_generation(uuid,uuid,bigint,integer,jsonb),
   public.chat_finish_generation(uuid,jsonb,boolean) to service_role;
+
+-- Administrative usage is read-only. The entire result uses one SQL snapshot
+-- and one database timestamp; filters never narrow the 90 * 24 hour summary.
+create or replace function public.chat_admin_usage(
+  p_actor_user_id uuid, p_page integer, p_page_size integer,
+  p_from timestamptz default null, p_to timestamptz default null
+)
+returns jsonb language plpgsql security definer set search_path = pg_catalog, public
+set timezone = 'UTC' as $$
+declare v_result jsonb;
+begin
+  perform public.chat_quota_assert_admin(p_actor_user_id);
+  if p_page is null or p_page not between 1 and 100000
+    or p_page_size is null or p_page_size not between 1 and 200
+    or (p_from is not null and not isfinite(p_from))
+    or (p_to is not null and not isfinite(p_to))
+    or p_from > p_to then
+    raise exception 'Invalid usage page/date range' using errcode = '22023';
+  end if;
+  with bounds as materialized (
+    select clock_timestamp() as as_of
+  ), retained as materialized (
+    select u.request_id,u.user_id,u.member_name,u.username,u.model_key,u.model_name,
+      u.provider_name,u.action,u.input_bytes,u.max_output_tokens,u.reasoning_effort,
+      u.status,u.upstream_status,u.input_tokens,u.output_tokens,u.total_tokens,
+      u.error_code,u.started_at,u.finished_at
+    from public.chat_usage u cross join bounds b
+    where u.started_at >= b.as_of - interval '2160 hours' and u.started_at < b.as_of
+  ), filtered as materialized (
+    select * from retained
+    where (p_from is null or started_at >= p_from) and (p_to is null or started_at <= p_to)
+  ), page_rows as (
+    select * from filtered order by started_at desc, request_id desc
+    limit p_page_size offset ((p_page::bigint - 1) * p_page_size)
+  )
+  select jsonb_build_object(
+    'usage', (select coalesce(jsonb_agg(to_jsonb(r) order by r.started_at desc,r.request_id desc), '[]'::jsonb) from page_rows r),
+    'page', p_page, 'pageSize', p_page_size,
+    'total', (select count(*) from filtered),
+    'summary', (select jsonb_build_object('total_records',count(*),
+      -- SUM(bigint) is numeric: preserve exact totals beyond JS safe integers.
+      'total_tokens',coalesce(sum(total_tokens),0)::text) from retained),
+    'window_start', b.as_of - interval '2160 hours', 'window_end', b.as_of
+  ) into v_result from bounds b;
+  return v_result;
+end;
+$$;
+
+-- At most 1000 terminal, settled requests per invocation keeps global-lock
+-- occupancy bounded. Outstanding reservations remain settleable after lease
+-- expiry; audited/upstream_started rows are also protected for legacy callers.
+-- No quota bucket, limit, or refund is changed by retention.
+create or replace function public.chat_cleanup_usage()
+returns integer language plpgsql security definer set search_path = pg_catalog, public
+set timezone = 'UTC' as $$
+declare
+  v_as_of timestamptz;
+  v_requests uuid[];
+  v_deleted integer;
+begin
+  perform public.chat_quota_lock(null);
+  v_as_of := clock_timestamp();
+  select array_agg(request_id) into v_requests from (
+    select u.request_id from public.chat_usage u
+    where u.started_at < v_as_of - interval '2160 hours'
+      and u.status not in ('audited','upstream_started')
+      and u.finished_at is not null
+      and not exists (select 1 from public.chat_quota_reservations r
+        where r.request_id=u.request_id and r.settled_at is null)
+      and not exists (select 1 from public.chat_generation_leases l
+        where l.request_id=u.request_id and l.expires_at > v_as_of)
+    order by u.started_at,u.request_id limit 1000
+  ) candidates;
+  if v_requests is null then return 0; end if;
+  -- Preserve global -> users -> reservations -> audits -> leases ordering.
+  perform 1 from public.chat_quota_users where user_id in (
+    select user_id from public.chat_usage where request_id=any(v_requests)
+  ) order by user_id for update;
+  perform 1 from public.chat_quota_reservations where request_id=any(v_requests)
+    order by request_id for update;
+  select array_agg(request_id) into v_requests from (
+    select u.request_id from public.chat_usage u
+    where u.request_id=any(v_requests)
+      and u.started_at < v_as_of - interval '2160 hours'
+      and u.status not in ('audited','upstream_started')
+      and u.finished_at is not null
+      and not exists (select 1 from public.chat_quota_reservations r
+        where r.request_id=u.request_id and r.settled_at is null)
+      and not exists (select 1 from public.chat_generation_leases l
+        where l.request_id=u.request_id and l.expires_at > v_as_of)
+    order by u.request_id for update of u skip locked
+  ) locked_candidates;
+  if v_requests is null then return 0; end if;
+  delete from public.chat_quota_allocations where request_id=any(v_requests);
+  delete from public.chat_quota_reservations where request_id=any(v_requests) and settled_at is not null;
+  delete from public.chat_generation_leases where request_id=any(v_requests) and expires_at <= v_as_of;
+  delete from public.chat_usage where request_id=any(v_requests);
+  get diagnostics v_deleted = row_count;
+  return v_deleted;
+end;
+$$;
+revoke all on function public.chat_admin_usage(uuid,integer,integer,timestamptz,timestamptz),
+  public.chat_cleanup_usage() from public, anon, authenticated;
+grant execute on function public.chat_admin_usage(uuid,integer,integer,timestamptz,timestamptz),
+  public.chat_cleanup_usage() to service_role;
+
+-- Supabase supports pg_cron. Disposable PostgreSQL without it still migrates,
+-- but deployment must configure an external hourly scheduler if this warns.
+do $$
+declare v_job bigint;
+begin
+  if not exists (select 1 from pg_extension where extname='pg_cron') then
+    if not exists (select 1 from pg_available_extensions where name='pg_cron') then
+      raise warning 'Chat retention: pg_cron unavailable. REQUIRED: external hourly scheduler must execute select public.chat_cleanup_usage(); until the expired backlog is drained.';
+      return;
+    end if;
+    begin
+      create extension if not exists pg_cron;
+    exception when others then
+      raise warning 'Chat retention: cannot install pg_cron (%). REQUIRED: configure an external hourly scheduler for select public.chat_cleanup_usage();', SQLERRM;
+      return;
+    end;
+  end if;
+  begin
+    -- Replace existing jobs by name, including any historical duplicates.
+    for v_job in execute 'select jobid from cron.job where jobname = ''chat-usage-retention-90d''' loop
+      execute 'select cron.unschedule($1)' using v_job;
+    end loop;
+    execute 'select cron.schedule($1,$2,$3)' using 'chat-usage-retention-90d', '0 * * * *',
+      'select public.chat_cleanup_usage();';
+  exception when others then
+    raise warning 'Chat retention: hourly pg_cron scheduling failed (%). REQUIRED: configure an external hourly scheduler for select public.chat_cleanup_usage();', SQLERRM;
+  end;
+end;
+$$;
 
 -- Independent Responses gateway. All admission and mutations lock route first,
 -- then key. Expiry recovers capacity after worker termination; no payload stored.

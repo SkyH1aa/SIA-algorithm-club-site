@@ -74,6 +74,26 @@ node tools/chat-mock-server.mjs --port 4192
 
 输入估算与供应商实际 token 不等价：mock 与 Edge 对文本按各片段 UTF-8 字节/3 取整，图片 low/auto/high 分别固定 1024/4096/8192，原生 PDF 固定 8192；mock 的终态 usage 是另一套合成计量（文本总字节/3、每附件 32，加合成输出），刻意不是供应商账单。mock 会按有效输出上限缩短 fixture，并限制合成 output usage；仍不模拟真实 tokenizer、reasoning、费用或供应商多模态解析。生产必须以有效 provider usage 结算，可能实际高于估算；无 usage、崩溃或结算失败保守保留预留，不把“没看到完成”当成零消耗。mock 内存重启清空与生产持久化保留有意不同。
 
+## 90 天 usage 汇总与保留验证
+
+`admin_usage`（兼容别名 `usage`）保留 `usage,page,pageSize,total`，增加 `summary:{total_records,total_tokens}` 与顶层 ISO UTC `window_start,window_end`。窗口按 `started_at` 精确取 `[asof−2160h,asof)`：下界包含，上界排除，未来记录不显示。`from`/`to` 是原有包含端点的时间筛选，最终结果仍被窗口限制；`total` 对应日期过滤后的全部记录，`usage` 是其中一页。summary 对整个 90 天窗口统计，不受 page、pageSize、limit 或日期筛选影响；`total_records` 是数字，`total_tokens` 是十进制字符串，`null` token 被忽略但真实记录仍计数，空总和为 `"0"`。不以预留量或估算量补造 token。
+
+用 admin 打开管理页，刷新 usage、翻页、改每页数量、设置较窄时间段，再清除日期条件；列表和筛选后的 total 应变化，窗口汇总只随窗口内真实记录变化。中英切换和明暗主题下检查汇总标签、数字与窗口提示。普通成员仍被拒绝。管理页继续使用现有 `admin_usage` 加载流程，`admin_get` 没有新增汇总字段。
+
+HTTP 自检内置固定时钟和独立合成行（仅在测试进程内注入，不提供公开写 usage 接口），覆盖：
+
+- 90 天起点前 1ms、起点、起点后 1ms、当前时间前、恰好 as-of 和未来行；只计 `[start,end)`。
+- 一页仅 1 条时全窗口有 4 条，第二页、空页、窄日期段和窗口外条件保持相同 summary；date-filtered total 不受分页影响。
+- `null`、空窗口和高于 `2^53` 的 token 总和，精确返回字符串 `"9007199254740998"`。
+- 非法日期、反向时间范围、非法分页参数拒绝；兼容 `limit` 并把宽筛选限制在报告窗口。
+- 自主定时清理后回拨测试时钟，已过期行仍不能重新出现，以区别物理删除和读取时隐藏。清理并非由 admin read 触发。
+- 保留活动 lease、未结算 reservation 和未完成 usage；过期 lease 不代表完成，迟到结算后才允许删除关联记录。终态还必须有 `finished_at`；无 token 的中断不会凭空退款。
+- quota 快照在清理前后不变；既有完成/中断请求的额度预留与结算回归继续执行。所有 HTTP 请求只能访问自检自己的回环服务器，无 DNS、数据库或上游调用。
+
+mock 默认启动时及每小时物理清理内存中的安全过期记录；usage 不再以 1000 条截断，否则会污染全窗口汇总。mock 不模拟 SQL allocation 表、数据库锁或 pg_cron 本身。生产完整 SQL 只安装清理函数与幂等小时任务 `chat-usage-retention-90d`，首次定时运行才执行不可逆删除；不需要访客触发，列表从部署后读取时立即过滤。若扩展不可用、安装或排程失败，应出现可见 warning 并由部署者解决，不能把 mock 计时器当作生产自动化。未解决的旧计量数据虽对报告隐藏，仍保留待结算；quota buckets/counters 与设置不改、不退款。
+
+本地已在 PGlite 的 PostgreSQL WASM runtime 通过完整 schema 与重复运行、1505 条记录精确汇总/分页/日期/权限，以及清理外键、保护条件、迟到结算、quota 不变和 1000+1 分批测试。这是单连接执行，不能证明独立 PostgreSQL 服务器的多连接并发或真实 pg_cron 已验收；没有线上部署，也未声称上述新 GUI 矩阵已经完成。生产小时任务每次最多清理 1000 条安全过期记录，积压会延长至多个小时，未结算保护或任务失败也会延迟；报告窗口仍立即过滤。仅本功能升级顺序为**完整 SQL → `chat` Dashboard 单文件 bundle → 管理页 HTML/JS/i18n**，不因本功能更新 `chat-api-proxy`、成员页或 `chat-file-bundle.js`。详细网页步骤见 `../chat-deployment/README.md`。
+
 ## 上传 fixtures
 
 setup 有下载链接。下载后使用 Chat 原有文件选择器上传，不依赖浏览器 storage 或网络注入。
@@ -105,7 +125,7 @@ python docs/chat-validation/fixtures/generate-upload-fixtures.py
 - `/mock/chat` 使用真实 action 名称与响应壳：`catalog`、`admin_get`、`admin_save_provider`、`admin_save_model`、`admin_usage`、`admin_test`、`respond`，以及 `quota`、`admin_user_directory`、`admin_quota_get`、`admin_quota_save`、`admin_set_blacklist`、`admin_blacklist_list`。模型/供应商 UUID、字段、权限错误、模型介绍（可选、最多 1000 字符、成员目录可见）、模型能力/大小限制、SSE 终态、逐账号 409 busy 与取消清理均用于前端契约联调。
 - 为适配当前前端，`admin_test` 同时支持页面的 `{prompt}` 与 `{input}`；多轮 input 接受 Responses 顶层 assistant `message` / `reasoning`，也接受 role/content 形式。生产后端与 mock 都支持这些兼容形式；mock 成功仍不能替代真实 Supabase Auth、数据库或供应商验收。
 - 生产后端对 provider URL 执行 HTTPS、公网地址、凭据/query/fragment、端口和 DNS/SSRF 校验，并校验 Secret 名称格式；mock 只做受控语法检查，不做 DNS/SSRF/外部请求。生产与前端/后端都限制每轮最多 4 个附件、请求序列化体积最多 12 MiB；mock 还会把可计量文本限制为 500,000 字节，生产后端按 12 MiB 请求/附件/文本边界校验。生产后端严格校验 PNG/JPEG/WebP 与 PDF data URL 的 base64 格式，mock 也校验 data URL，但不会执行生产 DNS、供应商 secret 或上游请求。
-- 前端和生产后端对单文件均限制 5 MiB；PDF 最多 300 页，PDF.js 抽取文本最多 1,000,000 个字符。mock 的附件自检覆盖 PNG/PDF 和模型能力拒绝，但不替代真实浏览器 PDF.js 提取或供应商对原生 `input_file` 的解析验收。模拟输出按有效输出上限缩短，但不是供应商 tokenizer；`incomplete` 场景确定性提供截断终态。usage 返回精确内存 `total` 便于分页测试；生产后端要求 PostgREST 返回有效的 `Content-Range` 总数，缺失或无效时返回 database 错误，不会把 `null` 当成成功总数。
+- 前端和生产后端对单文件均限制 5 MiB；PDF 最多 300 页，PDF.js 抽取文本最多 1,000,000 个字符。mock 的附件自检覆盖 PNG/PDF 和模型能力拒绝，但不替代真实浏览器 PDF.js 提取或供应商对原生 `input_file` 的解析验收。模拟输出按有效输出上限缩短，但不是供应商 tokenizer；`incomplete` 场景确定性提供截断终态。usage 返回内存精确的筛选后 `total` 和独立的 90 天 `summary` 便于分页/汇总测试；生产通过仅 service-role 可用的动态管理员 RPC 返回一致窗口与总数，不以当前页长度猜测 total 或汇总。
 - 本服务独立实现 mock，不导入正在开发的 Deno 后端，避免改动或依赖其他 agent 的工作。
 
 ## 独立代理管理与外部客户端 mock
@@ -152,7 +172,7 @@ mock 仅模拟协议，不执行请求中的 tools/远程 URL、上游项目资�
 
 ## 日志、重置与自检
 
-setup 的“刷新元数据”或 **GET `/mock/requests`** 查看最近最多 500 条记录。只保存服务生成 request ID、时间、受控 action/账号、请求字节数、model UUID、受控 effort / 场景、role/part 数量、附件计数/字节和结果；**不保存请求 headers、apikey、authorization、token、key 值、提示正文、附件内容或供应商配置**。不自动写日志文件；usage 最多保留 1000 条模拟生成记录。`reasoning_effort` 日志字段只用于兼容通用协议；Messages 的请求配置以 `claude_thinking` 为准，并将有效 adaptive effort 记录为受控元数据。日志不保存请求体中的 thinking、预算、headers 或 key。
+setup 的“刷新元数据”或 **GET `/mock/requests`** 查看最近最多 500 条记录。只保存服务生成 request ID、时间、受控 action/账号、请求字节数、model UUID、受控 effort / 场景、role/part 数量、附件计数/字节和结果；**不保存请求 headers、apikey、authorization、token、key 值、提示正文、附件内容或供应商配置**。不自动写日志文件；usage 按 90 天窗口清理符合安全条件的旧行，未完成/未结算行保持内部保留，不以条数截断。`reasoning_effort` 日志字段只用于兼容通用协议；Messages 的请求配置以 `claude_thinking` 为准，并将有效 adaptive effort 记录为受控元数据。日志不保存请求体中的 thinking、预算、headers 或 key。
 
 setup“重置 mock 配置 / usage / 请求记录”取消活动流并恢复初始模型/供应商，同时清空额度设置、黑名单、所有周期计数和记录，保留当前所选设置。重启服务也丢弃内存。浏览器 IndexedDB 独立存在：请使用 Chat 原有“清除此账号本地记录”分别清理两个账号，不通过 fixture 静默删除。验证内存生命周期时，切换账号应中止旧流、拒绝旧 token、保留另一账号的本地历史；刷新/关闭页面应丢失 custom cloud API key，但不应删除 IndexedDB 会话。生产对照检查数据库 lease/usage 在 Edge 重启后仍保留，取消/租约到期不等于供应商退款。
 
@@ -167,7 +187,7 @@ python tools/test-chat-quota-sql.py --syntax-only
 python tools/test-chat-quota-sql.py --dsn 'host=127.0.0.1 port=5432 dbname=postgres user=postgres'
 ```
 
-SQL syntax-only 只做 pglast 解析，不验证事务或并发；真实 DSN 测试另需 psycopg、本地 PostgreSQL 与 CREATEDB/CREATEROLE 权限，会创建/删除随机测试数据库。本次未跑真实 PostgreSQL 集成，不声称并发通过。升级需先暂停旧 Edge 新请求并等待旧流结束，再完整主 SQL → Secrets → 两个 Edge（chat 与 chat-api-proxy）→ 前端；历史 `chat_usage` 不回填额度桶，新计量从新版 Edge admission 开始。
+SQL syntax-only 只做 pglast 解析，不验证事务或并发；真实 DSN 测试另需 psycopg、本地 PostgreSQL 与 CREATEDB/CREATEROLE 权限，会创建/删除随机测试数据库。本次未运行独立 PostgreSQL 服务器/DSN 集成；usage90day 已在 PGlite PostgreSQL WASM runtime 单连接执行验证（范围见前文），不声称多连接并发或真实 pg_cron 通过。升级需先暂停旧 Edge 新请求并等待旧流结束，再完整主 SQL → Secrets → 两个 Edge（chat 与 chat-api-proxy）→ 前端；历史 `chat_usage` 不回填额度桶，新计量从新版 Edge admission 开始。
 
 本地 mock 只覆盖运行时协议，不能证明手动发布正确。发布前后要分别检查 Dashboard 中 `chat` 与 `chat-api-proxy` 的完整 standalone bundle：`docs/chat-deployment/chat-dashboard-index.ts` 和 `docs/chat-deployment/chat-api-proxy-dashboard-index.ts`，确认没有未解析的 `_shared` import，且修改源函数或 helper 后已重新同步。用 `node tools/build-chat-dashboard-bundles.mjs` 重建，`node tools/build-chat-dashboard-bundles.mjs --check` 检查源文件一致性。不要把真实 key、service role key 或生产 proxy key 放入 fixture、日志或截图；不要为验证启动生产部署或发送付费上游请求。
 

@@ -1,6 +1,6 @@
 # Supabase 网页手动粘贴部署
 
-此目录已包含 Chat 三协议支持、供应商 API 协议下拉配置和已撤销代理路由/密钥彻底删除功能所需的完整后端文件。你不需要安装或运行 PowerShell、Supabase CLI、Deno 或构建命令。以下操作均在 Supabase 网页 Dashboard 完成。
+此目录包含 Chat 三协议支持、供应商 API 协议配置、已撤销代理路由/密钥彻底删除以及 usage90day 所需的完整后端文件。你不需要安装或运行 PowerShell、Supabase CLI、Deno 或构建命令。以下操作均在 Supabase 网页 Dashboard 完成。
 
 ## 文件对应关系
 
@@ -12,17 +12,53 @@
 
 两份 TypeScript 文件都是独立的单文件版本，已内联共享代码及协议适配器。不要改粘 `supabase/functions/` 中带相对 import 的开发源文件，也不要把两份文件拼进同一个函数。只替换一小段旧函数会漏掉其他依赖，必须全文替换。
 
-`club-chat-schema.sql` 是完整主脚本 `supabase/club-chat-schema.sql` 的同步副本，不是另一套迁移。只执行其中一份，不需要把两个路径的文件各执行一次。已有安装也需要执行新版完整脚本，以更新供应商协议字段、自定义模型地址约束和 RPC；保留原有配置和使用记录，不要删除重建已有表。
+`club-chat-schema.sql` 是完整主脚本 `supabase/club-chat-schema.sql` 的同步副本，不是另一套迁移。只执行其中一份，不需要把两个路径的文件各执行一次。已有安装也需要执行新版完整脚本，以更新供应商协议字段、自定义模型地址约束、90 天 usage 报告/清理 RPC 和定时任务；不要删除重建已有表。配置、额度设置和 quota buckets 保留；超过 90 天且符合安全条件的 usage 将按下节自动物理删除，不能承诺永久保留全部历史记录。
 
 ## 网页操作顺序
 
 1. 确认打开的是正确的 Supabase 项目。更新已有服务时，先暂停新请求并等待当前生成结束。
 2. 打开 SQL Editor，新建查询，将本目录 `club-chat-schema.sql` 的全部内容粘贴进去并运行。项目需已有社团账号和成员资料表；若 SQL 报错，保留错误信息，不要用删表来解决。
 3. 在 Edge Functions 的 Secrets 页面配置或确认已有 Secrets。实际供应商 Key 只能保存在这里，不要粘进 TypeScript、SQL、网站脚本或模型配置。
-4. 分别打开 `chat` 和 `chat-api-proxy` 的代码编辑器，将对应单文件全文替换进 `index.ts`，各自点击部署更新；尚不存在的函数可以在网页编辑器创建，名称必须准确。已有三协议部署如果只升级本次 `claude_thinking`，仅需部署新版 `chat`，原生代理行为未改变，不必仅为此重部署代理。
+4. 分别打开 `chat` 和 `chat-api-proxy` 的代码编辑器，将对应单文件全文替换进 `index.ts`，各自点击部署更新；尚不存在的函数可以在网页编辑器创建，名称必须准确。**已有部署仅升级 usage90day 时，只需全文替换 `chat-dashboard-index.ts` 并部署 `chat`**；代理行为未改变，不必仅为此重部署 `chat-api-proxy`。
 5. 在两个函数各自的配置中关闭网关 JWT 验证（通常显示为 **Verify JWT with legacy secret** 或类似名称），保存设置。函数自身仍验证身份：`chat` 验证成员 JWT 和权限；代理验证 `cap_` 访问密钥。尤其代理 Key 不是 Supabase JWT，若保留网关验证会在进入函数前被拒绝。
-6. 发布网站仓库中已经更新的前端脚本。Supabase 的 SQL / Edge 编辑器不负责更新你的静态网站；这一步按网站原有的网页发布方式完成，不要求使用 CLI。本次在供应商配置新增 API 协议下拉框，模型表单增加继承协议说明，其余布局保持原样。
+6. 发布网站仓库中已经更新的前端脚本。Supabase 的 SQL / Edge 编辑器不负责更新你的静态网站；这一步按网站原有的网页发布方式完成，不要求使用 CLI。仅升级 usage90day 时发布 `public/chat-admin.html`、`public/chat-admin.js`、`public/chat-admin-i18n.js`，成员页脚本和 `public/chat-file-bundle.js` 不因本功能改变。
 7. 打开网站 Chat 管理页配置供应商和模型。保存配置不会自动调用供应商；“测试调用”会产生真实请求，只有你确认后再执行。
+
+## 90 天 usage 汇总与无人访问时的自动清理
+
+本功能升级顺序是**完整 SQL → `chat` Dashboard 单文件 bundle → 管理页 HTML/JS/i18n**。函数仍在服务端校验成员 JWT 与动态超级管理员，报告和清理 RPC 仅授予 `service_role`；不要把 RPC 或审计表权限开放给浏览器角色。
+
+`admin_usage` 返回原有 `usage,page,pageSize,total`，新增 `summary:{total_records,total_tokens}` 和顶层 `window_start,window_end`。`total` 是日期筛选后的全部记录数；summary 统计整个滚动窗口，翻页、改变每页数量或日期条件都不改变其统计范围。窗口按 `started_at` 的 UTC 时间计算为 `[asof−2160h,asof)`，包含恰好 90 天的起点，排除 as-of 及未来记录；不会按本地日历或月边界取整。`total_records` 为数字，`total_tokens` 为精确十进制字符串，`null` token 不参与求和但真实记录仍计数，没有已知 token 时返回 `"0"`。管理页通过 `admin_usage` 读取汇总，无需新增 `admin_get` 字段。
+
+SQL 安装清理函数与每小时运行的命名任务 **`chat-usage-retention-90d`**，重复执行脚本会幂等更新任务。若 `pg_cron` 扩展可用，脚本会尝试安装/启用并安排任务；扩展不可用、安装失败或 scheduling 失败会在 SQL 结果中给出可见 warning。必须核对任务已安装且 active，并在后续运行记录中检查成功；看到 warning 时不能当成自动清理已经生效，需要先解决扩展/权限/任务配置或提供等价的受控定时调用。管理读取不执行删除，也没有依赖访客的清理兜底。
+
+在同一项目的 **SQL Editor → 新建查询 → Run** 执行以下只读查询，确认恰有一条命名任务、`schedule` 为 `0 * * * *`、`command` 调用 `public.chat_cleanup_usage()`，且 `active` 为 `true`：
+
+```sql
+select jobid, schedule, command, active
+from cron.job
+where jobname = 'chat-usage-retention-90d';
+```
+
+等待下一次小时任务后，查询最近执行记录，核对 `status` 为 `succeeded`，失败时查看 `return_message`：
+
+```sql
+select r.jobid, r.runid, r.status, r.return_message,
+       r.start_time, r.end_time
+from cron.job_run_details as r
+join cron.job as j on j.jobid = r.jobid
+where j.jobname = 'chat-usage-retention-90d'
+order by r.start_time desc
+limit 10;
+```
+
+刚安装还没有执行记录是正常的；任务列表为空、`active=false`、查询报 `cron` 对象不存在或到时仍没有成功记录，都需检查安装 warning、扩展/权限及任务配置，不能据此确认自动清理已生效。
+
+SQL 安装阶段不会立即删除。**部署后的首次定时清理执行时**，符合条件的旧记录会被不可逆地物理删除；这是用户明确要求的保留策略。条件为 `started_at` 超过 90 天、状态已终结、`finished_at` 非空、没有 reservation 或 reservation 已结算，并且没有未过期 lease；删除关联 allocation、已结算 reservation、过期 lease，再删除 usage。未完成或未结算的内部计量记录继续保留以允许迟到结算，即使 lease 已过期也不直接删除，但它们超出窗口后不会出现在列表或汇总中。
+
+任务运行于数据库，没有访问管理页也会自动执行。列表立即限制最近 90 天；每小时任务最多删除 1000 条安全过期记录，没有积压且任务正常时通常在下一小时任务完成清理。积压会跨多个小时批次，等待结算或任务失败时可能更久。清理不改 quota counters、quota buckets 或额度设置，不退款、不重算额度，也不清除浏览器 IndexedDB 的聊天正文。本站清理不控制供应商自己的日志保留。
+
+本地已在 PGlite 的 PostgreSQL WASM runtime 执行完整 schema 和重复安装，验证 1505 条记录的精确汇总/分页/日期/权限，并通过清理外键、保护条件、迟到结算、quota 不变和 1000+1 分批测试。这是单连接运行，尚未验证独立 PostgreSQL 服务器的多连接并发或真实 pg_cron；也没有运行线上 SQL、部署函数或发送付费请求，不能证明目标项目任务已运行。完整保留与额度边界见 `../chat-deployment.md` 第 9 节。
 
 ## Secrets
 
@@ -94,8 +130,8 @@ JSON 必须是对象，未知键拒绝。只有 enabled 可以有 `budget_tokens
 - 路由先执行“撤销路由”，失效记录旁会出现“彻底删除”；确认后实际删除该路由、其全部访问密钥及关联租约。
 - 密钥先执行“撤销”，记录旁会出现“彻底删除”；确认后实际删除该密钥及其租约。
 - 仅暂时停用的记录不能直接彻底删除。删除后刷新列表也不会再次显示，无法恢复，也无法取回旧密钥。
-- 只执行 SQL 或部署函数不会自动清理旧记录；删除必须由超级管理员在页面逐项确认。上游供应商 Key 所在的 Edge Secret 不会随路由删除。
+- 代理路由/密钥不会因执行 SQL 或部署函数而自动删除，需超级管理员在页面逐项确认；这与前文自动执行的 usage 保留任务是两种独立操作。上游供应商 Key 所在的 Edge Secret 不会随路由删除。
 
 ## 当前验证边界
 
-这些文件已完成本地源文件一致性检查、Deno 类型检查、模拟协议回归及 SQL 语法解析。没有代你登录 Supabase、运行线上 SQL、部署函数或调用真实供应商；本地验证不能证明网页上的旧函数已更新。
+这些文件已完成本地源文件一致性检查、Deno 类型检查、模拟协议回归及 SQL 语法解析；usage90day 的 PostgreSQL 执行验证使用 PGlite WASM runtime，范围与单连接限制见前文。没有代你登录 Supabase、运行线上 SQL、部署函数或调用真实供应商；本地验证不能证明网页上的旧函数已更新或真实 pg_cron 已成功运行。

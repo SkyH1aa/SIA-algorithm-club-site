@@ -38,7 +38,10 @@ let rpcCalls: Array<{ name: string; body: Row }>, settlements: Row[];
 let charged: number;
 let proxyRoute: Row | null, proxyKey: Row | null;
 const directory = { users: [{ user_id: UID, username: 'local-account', member_name: '测试会员', bound: true }], blacklist: [{ user_id: PID, reason: 'abuse' }] };
-let usageRange: string | null;
+let usageResult: unknown, usageFailure: boolean;
+const usageEnd = '2026-10-18T00:00:00.000Z';
+const usageStart = '2026-07-20T00:00:00.000Z';
+const usageRows = Array.from({ length: 1505 }, (_, index) => ({ request_id: String(index), username: 'local-account', member_name: '测试会员', total_tokens: index + 1, started_at: new Date(Date.parse(usageStart) + (index + 1) * 3600000).toISOString(), status: 'completed' }));
 let providerWrites: Row[], modelWrites: Row[];
 let terminalGate: Promise<void> | null, terminalReached: (() => void) | null;
 function reset() {
@@ -50,7 +53,7 @@ function reset() {
   proxyKey = { id: MID, route_id: PID, enabled: true, revoked_at: null, version: 4 };
   assignedVisible = false; customModels = [];
   auditFail = startFail = finishFail = busy = false; dnsMode = 'a-only'; mode = 'complete';
-  audits = []; patches = []; upstreamBodies = []; requests = []; released = finishAttempts = 0; leased = false; usageRange = '2-3/17'; upstreamSignal = undefined;
+  audits = []; patches = []; upstreamBodies = []; requests = []; released = finishAttempts = 0; leased = false; usageResult = undefined; usageFailure = false; upstreamSignal = undefined;
 }
 function json(value: unknown, status = 200, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json', ...headers } });
@@ -198,6 +201,15 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
       }
       return json(row.p_action === 'admin_proxy_key_state' ? { key: { id: MID, enabled: row.p_data.enabled } } : { route: { id: PID, ...row.p_data, version: 1 } });
     }
+    if (name === 'chat_admin_usage') {
+      assert.equal(row.p_actor_user_id, UID);
+      if (usageFailure) return json({ private_error: 'local-provider-secret' }, 503);
+      if (usageResult !== undefined) return json(usageResult);
+      const retained = usageRows.filter(item => item.started_at >= usageStart && item.started_at < usageEnd);
+      const filtered = retained.filter(item => (!row.p_from || item.started_at >= String(row.p_from)) && (!row.p_to || item.started_at <= String(row.p_to))).toReversed();
+      return json({ usage: filtered.slice((Number(row.p_page) - 1) * Number(row.p_page_size), Number(row.p_page) * Number(row.p_page_size)), page: row.p_page, pageSize: row.p_page_size, total: filtered.length,
+        summary: { total_records: retained.length, total_tokens: retained.reduce((sum, item) => sum + BigInt(item.total_tokens), 0n).toString() }, window_start: usageStart, window_end: usageEnd });
+    }
     if (name === 'chat_quota_get') return json(quota);
     if (name === 'chat_quota_save') return json(conflict ? { code: 'conflict' } : quota);
     if (name === 'chat_blacklist_set') return json({ ...quota, blacklisted: row.p_blocked, reason: row.p_reason });
@@ -243,8 +255,7 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
       if (!row || !['audited', 'upstream_started'].includes(String(row.status))) return json([]);
       Object.assign(row, patch); patches.push(patch); return json([row]);
     }
-    assert.equal(headers.get('prefer'), 'count=exact');
-    return json([{ member_name: '测试会员', username: 'local-account', provider_name: 'Local Provider', model_name: 'Local Model', started_at: '2026-10-15T00:00:00Z', finished_at: '2026-10-15T00:01:00Z' }], 200, usageRange ? { 'content-range': usageRange } : {});
+    throw new Error('usage reads must use the aggregate RPC, never PostgREST table pagination');
   }
   throw new Error(`unexpected mock route ${url}`);
 }) as typeof fetch;
@@ -494,13 +505,51 @@ try {
     await expectStatus({ action: 'admin_save_model', ...fields, default_reasoning_effort: 'unknown' }, 400);
     await expectStatus({ action: 'admin_save_model', ...fields, context_window: 256 }, 400);
   });
-  await test('exact usage pagination, metadata columns and UTC date boundaries', async () => {
-    const response = await expectStatus({ action: 'usage', page: 2, pageSize: 2, from: '2026-10-01T08:00:00+08:00', to: '2026-10-16T00:00:00Z' }, 200);
-    const result = await response.json(); assert.equal(result.total, 17); assert.equal(result.page, 2); assert.equal(result.usage[0].username, 'local-account');
-    const query = requests.find(url => url.pathname.endsWith('/chat_usage'))!.searchParams;
-    assert.equal(query.get('offset'), '2'); assert.deepEqual(query.getAll('started_at'), ['gte.2026-10-01T00:00:00.000Z', 'lte.2026-10-16T00:00:00.000Z']);
-    await expectStatus({ action: 'admin_usage', from: 'bad' }, 400); await expectStatus({ action: 'admin_usage', from: '2026-10-16', to: '2026-10-01' }, 400);
-    await expectStatus({ action: 'admin_usage', page: 0 }, 400); usageRange = null; await expectStatus({ action: 'admin_usage' }, 503);
+  await test('usage aggregate RPC preserves global summary across pages, filters and UTC dates', async () => {
+    const all = await (await expectStatus({ action: 'admin_usage' }, 200)).json();
+    assert.equal(all.total, 1505); assert.equal(all.usage.length, 50);
+    assert.deepEqual(all.summary, { total_records: 1505, total_tokens: '1133265' });
+    const result = await (await expectStatus({ action: 'usage', page: 2, pageSize: 2, from: '2026-09-01T08:00:00+08:00', to: '2026-10-16T00:00:00Z' }, 200)).json();
+    assert.equal(result.page, 2); assert.equal(result.pageSize, 2); assert.equal(result.usage.length, 2);
+    assert.equal(result.usage[0].username, 'local-account'); assert.ok(result.total < all.total);
+    assert.deepEqual(result.summary, all.summary);
+    assert.deepEqual(rpcCalls.at(-1), { name: 'chat_admin_usage', body: { p_actor_user_id: UID, p_page: 2, p_page_size: 2, p_from: '2026-09-01T00:00:00.000Z', p_to: '2026-10-16T00:00:00.000Z' } });
+    const past = await (await expectStatus({ action: 'admin_usage', from: '2000-01-01', to: '2001-01-01' }, 200)).json();
+    assert.deepEqual(past.usage, []); assert.equal(past.total, 0); assert.deepEqual(past.summary, all.summary);
+    const wide = await (await expectStatus({ action: 'admin_usage', from: '2000-01-01', to: '2099-01-01', page: 100000, limit: 200 }, 200)).json();
+    assert.deepEqual(wide.usage, []); assert.equal(wide.total, all.total); assert.deepEqual(wide.summary, all.summary);
+    assert.equal(wide.window_start, usageStart); assert.equal(wide.window_end, usageEnd);
+    assert.ok(requests.every(url => !url.pathname.endsWith('/chat_usage')));
+    assert.ok(rpcCalls.every(call => call.name === 'chat_admin_usage'));
+  });
+  await test('usage input validation and dynamic admin checks precede aggregate RPC', async () => {
+    for (const body of [{ from: 'bad' }, { from: 123 }, { from: {} }, { from: '2026-02-30' }, { from: '10/01/2026' }, { from: '2026-10-01T08:00:00' }, { from: '2026-10-16', to: '2026-10-01' }, { page: 0 }, { page: '2' }, { page: 100001 }, { pageSize: 201 }, { pageSize: 1.5 }, { extra: true }]) await expectStatus({ action: 'admin_usage', ...body }, 400);
+    await expectStatus({ action: 'admin_usage' }, 401, null); await expectStatus({ action: 'usage' }, 401, 'invalid');
+    admin = false; await expectStatus({ action: 'admin_usage' }, 403); admin = true;
+    assert.equal(rpcCalls.length, 0);
+    await expectStatus({ action: 'admin_usage' }, 200);
+    admin = false; await expectStatus({ action: 'admin_usage' }, 403);
+    assert.equal(rpcCalls.length, 1); assert.equal(upstreamBodies.length, 0);
+  });
+  await test('usage aggregate exact large token strings, empty results and privacy allowlist', async () => {
+    usageResult = { usage: [{ username: 'local-account', total_tokens: 1, secret_name: 'CHAT_KEY_MOCK', api_key: 'local-provider-secret', prompt: 'private prompt' }], page: 1, pageSize: 50, total: 1,
+      summary: { total_records: 1505, total_tokens: '18446744073709551616', secret: 'local-provider-secret' }, window_start: usageStart, window_end: usageEnd, api_key: 'local-provider-secret' };
+    const response = await expectStatus({ action: 'admin_usage' }, 200);
+    const result = await response.json();
+    assert.equal(result.summary.total_tokens, '18446744073709551616');
+    assert.doesNotMatch(JSON.stringify(result), /CHAT_KEY|local-provider-secret|private prompt|secret|api_key/);
+    usageResult = { usage: [], page: 1, pageSize: 50, total: 0, summary: { total_records: 0, total_tokens: '0' }, window_start: usageStart, window_end: usageEnd };
+    assert.deepEqual(await (await expectStatus({ action: 'admin_usage' }, 200)).json(), usageResult);
+  });
+  await test('usage aggregate errors and malformed contracts fail closed', async () => {
+    const valid = { usage: [], page: 1, pageSize: 50, total: 0, summary: { total_records: 0, total_tokens: '0' }, window_start: usageStart, window_end: usageEnd };
+    for (const change of [{ usage: {} }, { usage: [null] }, { total: -1 }, { total: 1e20 }, { page: 2 }, { pageSize: 1 }, { summary: undefined }, { summary: { total_records: 0, total_tokens: 1 } }, { summary: { total_records: 0, total_tokens: '-1' } }, { summary: { total_records: 0, total_tokens: '1.0' } }, { summary: { total_records: 0.5, total_tokens: '0' } }, { window_start: 'bad' }, { window_end: usageStart }]) {
+      usageResult = { ...valid, ...change };
+      assert.deepEqual(await (await expectStatus({ action: 'admin_usage' }, 503)).json(), { error: 'database' });
+    }
+    usageResult = null; await expectStatus({ action: 'admin_usage' }, 503);
+    usageFailure = true;
+    assert.deepEqual(await (await expectStatus({ action: 'admin_usage' }, 503)).json(), { error: 'database' });
   });
   await test('DNS A-only/AAAA-only valid, absent/private/reserved/error fail closed', async () => {
     for (const bad of ['unavailable', 'absent', 'private', 'mixed', 'reserved', 'ipv6-private']) { dnsMode = bad; await expectStatus(payload(), 400); }

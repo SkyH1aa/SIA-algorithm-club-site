@@ -222,10 +222,42 @@ function utcPeriods(now) {
   return [{period:'day',start:day,end:day+86400000},{period:'week',start:week,end:week+7*86400000},{period:'month',start:month,end:Date.UTC(now.getUTCFullYear(),now.getUTCMonth()+1,1)}];
 }
 
-export function createMockServer({testPort = false, now = () => new Date()} = {}) {
+const USAGE_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
+const TERMINAL_USAGE = new Set(['completed','incomplete','interrupted','failed','cancelled']);
+function usageReport(usage, asof, payload = {}) {
+  const page = integer(payload.page,1,100000,1), pageSize = integer(payload.pageSize ?? payload.limit,1,200,50);
+  const iso = value => { if (value == null || value === '') return null; const date = new Date(String(value)); requireThat(Number.isFinite(date.getTime())); return date.getTime(); };
+  const from = iso(payload.from), to = iso(payload.to);
+  requireThat(from === null || to === null || from <= to);
+  const end = asof.getTime(), start = end - USAGE_WINDOW_MS;
+  const retained = usage.filter(row => { const time = Date.parse(row.started_at); return time >= start && time < end; });
+  // bigint SUM must survive JSON/JavaScript without rounding, including above 2^53.
+  const totalTokens = retained.reduce((sum,row) => sum + (row.total_tokens == null ? 0n : BigInt(row.total_tokens)),0n);
+  const rows = retained.filter(row => { const time = Date.parse(row.started_at); return (from === null || time >= Math.max(start,from)) && (to === null || time <= Math.min(end,to)); })
+    .sort((a,b) => Date.parse(b.started_at) - Date.parse(a.started_at));
+  return {usage:rows.slice((page-1)*pageSize,page*pageSize),page,pageSize,total:rows.length,
+    summary:{total_records:retained.length,total_tokens:totalTokens.toString()},window_start:new Date(start).toISOString(),window_end:asof.toISOString()};
+}
+function pruneUsage(usage, reservations, leases, asof) {
+  const cutoff = asof.getTime() - USAGE_WINDOW_MS;
+  for (let index = usage.length - 1; index >= 0; index--) {
+    const row = usage[index];
+    if (!(Date.parse(row.started_at) < cutoff) || !TERMINAL_USAGE.has(row.status) || !row.finished_at ||
+      (reservations.has(row.request_id) && !reservations.get(row.request_id).settled) ||
+      [...leases.values()].some(lease => lease.request_id === row.request_id && lease.expires_at > asof.getTime())) continue;
+    // Never settle/refund a reservation or touch quota counters as part of retention.
+    reservations.delete(row.request_id);
+    for (const [owner,lease] of leases) if (lease.request_id === row.request_id) leases.delete(owner);
+    usage.splice(index,1);
+  }
+}
+
+export function createMockServer({testPort = false, now = () => new Date(), usageFixtures = [], retentionIntervalMs = 3600000} = {}) {
+  requireThat(testPort || (usageFixtures.length === 0 && retentionIntervalMs === 3600000));
   let state = {account:'member',scenario:'completed',theme:'dark',revision:1};
   let database = seed(32768);
-  const logs = [], leases = new Map();
+  database.usage.push(...structuredClone(usageFixtures));
+  const logs = [], leases = new Map(), reservations = new Map();
   let proxyRoutes = [], proxyKeys = [];
   const proxyLeases = new Map();
   const keyMetadata = ({hash,...metadata}) => metadata;
@@ -408,7 +440,7 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
     const add = delta => { for (const [owner,period] of entries) { const key = counterKey(owner,period); counters.set(key,(counters.get(key) || 0)+delta); } };
     add(amount);
     let settled = false;
-    return {max,limited:max < requested,settle(actual) { if (!settled) { settled = true; add(actual-amount); } }};
+    return {max,limited:max < requested,get settled() { return settled; },settle(actual) { if (!settled) { settled = true; add(actual-amount); } }};
   }
   function record(value) { logs.push(value); if (logs.length > 500) logs.shift(); }
   function publicState() { return {...state,mock:true,session:sessionFor(state),accounts:Object.keys(ACCOUNTS),scenarios:SCENARIOS}; }
@@ -444,17 +476,17 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
     }
     const scenario = state.scenario, requestId = meta.request_id;
     Object.assign(meta,{model_id:model.id,max_output_tokens:max,reasoning_effort:effort == null ? null : effective.reasoning_efforts.includes(effort) ? effort : 'custom',scenario,protocol:endpoint.protocol,upstream_path:new URL(endpoint.url).pathname});
-    const usage = {request_id:requestId,user_id:account.id,member_name:account.member_name,username:account.username || account.email || account.id,provider_name:provider.label || provider.name,model_name:model.display_name,action:payload.action,provider_id:provider.id,model_id:model.id,model_key:model.model_key,input_bytes:meta.request_bytes,max_output_tokens:max,reasoning_effort:meta.reasoning_effort,status:'upstream_started',upstream_status:200,input_tokens:null,output_tokens:null,total_tokens:null,error_code:null,started_at:new Date().toISOString(),finished_at:null};
+    const usage = {request_id:requestId,user_id:account.id,member_name:account.member_name,username:account.username || account.email || account.id,provider_name:provider.label || provider.name,model_name:model.display_name,action:payload.action,provider_id:provider.id,model_id:model.id,model_key:model.model_key,input_bytes:meta.request_bytes,max_output_tokens:max,reasoning_effort:meta.reasoning_effort,status:'upstream_started',upstream_status:200,input_tokens:null,output_tokens:null,total_tokens:null,error_code:null,started_at:now().toISOString(),finished_at:null};
     database.usage.unshift(usage);
-    if (database.usage.length > 1000) database.usage.pop();
+    reservations.set(requestId,reservation);
     let timer, ended = false;
     const finish = (status, error = null) => {
       if (ended) return;
       ended = true; clearInterval(timer); leases.delete(account.id);
-      Object.assign(usage,{status,error_code:error,finished_at:new Date().toISOString()});
+      Object.assign(usage,{status,error_code:error,finished_at:now().toISOString()});
       Object.assign(meta,{outcome:status,finished_at:usage.finished_at});
     };
-    leases.set(account.id,{cancel:() => { finish('cancelled','environment_reset'); res.destroy(); }});
+    leases.set(account.id,{request_id:requestId,expires_at:now().getTime()+15*60000,cancel:() => { finish('cancelled','environment_reset'); res.destroy(); }});
     res.on('close',() => finish('cancelled','client_cancelled'));
     res.writeHead(200,{'content-type':'text/event-stream; charset=utf-8','cache-control':'no-cache, no-transform','x-chat-request-id':requestId,'x-chat-max-output-tokens':String(max),...(reservation.limited ? {'x-chat-quota-limited':'true'} : {}),'connection':'keep-alive'});
     res.flushHeaders();
@@ -593,11 +625,8 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
           break;
         }
         case 'admin_usage': {
-          const page = integer(payload.page,1,100000,1), pageSize = integer(payload.pageSize ?? payload.limit,1,200,50);
-          const iso = value => { if (value == null || value === '') return null; const date = new Date(value); requireThat(!Number.isNaN(date.getTime())); return date.toISOString(); };
-          const from = iso(payload.from), to = iso(payload.to); requireThat(!from || !to || from <= to);
-          const rows = database.usage.filter(row => (!from || row.started_at >= from) && (!to || row.started_at <= to));
-          result = {usage:rows.slice((page-1)*pageSize,page*pageSize),page,pageSize,total:rows.length}; break;
+          keys(payload,['action','page','pageSize','limit','from','to']);
+          result = usageReport(database.usage,now(),payload); break;
         }
       }
       meta.outcome = 'ok'; meta.finished_at = new Date().toISOString(); json(res,result);
@@ -652,7 +681,7 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
         if (payload.contextWindow !== undefined) requireThat(Number.isInteger(payload.contextWindow) && payload.contextWindow >= 256 && payload.contextWindow <= 1000000);
         if (payload.contextWindow !== undefined) state.contextWindow = payload.contextWindow;
         if (payload.contextWindow !== undefined) database = seed(payload.contextWindow);
-        if (payload.reset) { for (const lease of [...leases.values(),...proxyLeases.values()]) lease.cancel(); proxyRoutes = []; proxyKeys = []; database = seed(state.contextWindow || 32768); resetQuotas(); logs.length = 0; }
+        if (payload.reset) { for (const lease of [...leases.values(),...proxyLeases.values()]) lease.cancel(); proxyRoutes = []; proxyKeys = []; database = seed(state.contextWindow || 32768); reservations.clear(); resetQuotas(); logs.length = 0; }
         if (state.account !== payload.account || payload.reset) state.revision++;
         Object.assign(state,{account:payload.account,scenario:payload.scenario,theme:payload.theme});
         json(res,publicState()); return;
@@ -676,11 +705,77 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
       json(res,{error:error instanceof MockError ? error.message : error instanceof URIError ? 'input' : 'server',mock:true},error instanceof MockError ? error.status : error instanceof URIError ? 400 : 500);
     }
   });
-  server.on('close',() => { for (const lease of [...leases.values(),...proxyLeases.values()]) lease.cancel(); });
+  // Autonomous cleanup, including when no administrator visits. Reads never mutate storage.
+  pruneUsage(database.usage,reservations,leases,now());
+  const retentionTimer = setInterval(() => pruneUsage(database.usage,reservations,leases,now()),retentionIntervalMs);
+  retentionTimer.unref();
+  server.on('close',() => { clearInterval(retentionTimer); for (const lease of [...leases.values(),...proxyLeases.values()]) lease.cancel(); });
   return server;
 }
 
+async function usageSelfTest() {
+  let clock = new Date('2026-10-18T12:34:56.789Z');
+  const end = clock.getTime(), start = end-USAGE_WINDOW_MS;
+  const row = (request_id,time,total_tokens = 1,status = 'completed') => ({request_id,started_at:new Date(time).toISOString(),finished_at:status === 'upstream_started' ? null : new Date(time+1).toISOString(),status,total_tokens});
+  const fixtures = [row('expired',start-1,999),row('boundary',start,2),row('early',start+1,3),
+    row('current',end-2,'9007199254740993'),row('null',end-1,null),row('asof',end,100),row('future',end+1,200)];
+  const stored = structuredClone(fixtures);
+  stored.push(row('pending',start-1,null,'upstream_started'),row('unsettled',start-1,null),row('live',start-1,7),row('expired-lease',start-1,9),{...row('unfinished',start-1),finished_at:null});
+  const reservations = new Map([['unsettled',{settled:false}],['live',{settled:true}],['expired-lease',{settled:true}]]);
+  const leases = new Map([['live',{request_id:'live',expires_at:end+1}],['expired',{request_id:'expired-lease',expires_at:end-1}]]);
+  pruneUsage(stored,reservations,leases,clock);
+  assert.deepEqual(stored.map(item => item.request_id),['boundary','early','current','null','asof','future','pending','unsettled','live','unfinished']);
+  assert.ok(!reservations.has('expired-lease') && !leases.has('expired'));
+  assert.ok(reservations.has('unsettled') && leases.has('live'));
+  // Expired lease alone does not finish pending accounting; late settlement remains possible.
+  leases.get('live').expires_at = end-1;
+  reservations.get('unsettled').settled = true;
+  pruneUsage(stored,reservations,leases,clock);
+  assert.ok(stored.some(item => item.request_id === 'pending'));
+  assert.ok(!stored.some(item => ['live','unsettled'].includes(item.request_id)));
+  const server = createMockServer({testPort:true,now:() => clock,usageFixtures:fixtures,retentionIntervalMs:5});
+  await new Promise((resolve,reject) => { server.once('error',reject); server.listen(0,'127.0.0.1',resolve); });
+  try {
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const local = (resource,payload,token) => {
+      const url = new URL(resource,base); assert.equal(url.origin,base,'usage self-test cannot call an upstream');
+      return fetch(url,{method:'POST',headers:{'content-type':'application/json',...(token ? {authorization:`Bearer ${token}`} : {})},body:JSON.stringify(payload)});
+    };
+    const state = await (await local('/mock/setup',{account:'admin',scenario:'completed',theme:'dark'})).json();
+    const post = payload => local('/mock/chat',payload,state.session.access_token);
+    const report = async payload => { const response = await post({action:'admin_usage',...payload}); assert.equal(response.status,200); return response.json(); };
+    const first = await report({pageSize:1});
+    assert.equal(first.total,4); assert.deepEqual(first.usage.map(item => item.request_id),['null']);
+    assert.deepEqual(first.summary,{total_records:4,total_tokens:'9007199254740998'});
+    assert.equal(first.window_start,new Date(start).toISOString()); assert.equal(first.window_end,clock.toISOString());
+    const second = await report({page:2,pageSize:1});
+    assert.deepEqual(second.usage.map(item => item.request_id),['current']); assert.equal(second.total,4); assert.deepEqual(second.summary,first.summary);
+    const dated = await report({from:new Date(start).toISOString(),to:new Date(start+1).toISOString(),pageSize:1});
+    assert.equal(dated.total,2); assert.deepEqual(dated.usage.map(item => item.request_id),['early']); assert.deepEqual(dated.summary,first.summary);
+    const broad = await report({from:new Date(start-1000).toISOString(),to:new Date(end+1000).toISOString()});
+    assert.equal(broad.total,4); assert.deepEqual(broad.summary,first.summary);
+    for (const filters of [{from:new Date(end).toISOString()},{to:new Date(start-1).toISOString()},{page:99,pageSize:1}]) {
+      const empty = await report(filters); assert.deepEqual(empty.usage,[]); assert.deepEqual(empty.summary,first.summary);
+    }
+    assert.equal((await report({limit:2})).pageSize,2);
+    for (const filters of [{page:0},{pageSize:201},{from:'invalid'},{from:new Date(end).toISOString(),to:new Date(start).toISOString()}]) assert.equal((await post({action:'admin_usage',...filters})).status,400);
+    const generated = await post({action:'admin_test',model_id:MODEL_ID,prompt:'retention quota fixture',max_output_tokens:32});
+    assert.equal(generated.status,200);
+    assert.match(await generated.text(),/response.completed/);
+    const beforeQuota = await (await post({action:'quota'})).json();
+    assert.ok(beforeQuota.global.used > 0 && beforeQuota.periods.every(period => period.used > 0),'retention test must preserve real nonzero counters');
+    clock = new Date(end+USAGE_WINDOW_MS+2);
+    await new Promise(resolve => setTimeout(resolve,25)); // Autonomous tick, no admin read triggers deletion.
+    clock = new Date(end);
+    assert.equal((await report({})).total,0,'expired rows were physically removed even without visitors');
+    assert.deepEqual((await report({})).summary,{total_records:0,total_tokens:'0'});
+    assert.deepEqual(await (await post({action:'quota'})).json(),beforeQuota);
+  } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
+  console.log('Chat usage90day self-test passed: exact UTC bounds, future exclusion, null-safe decimal SUM above 2^53, independent summary/page/date totals, validation, autonomous physical prune, unresolved/live accounting protection and unchanged quotas; loopback only.');
+}
+
 async function selfTest() {
+  await usageSelfTest();
   const providerBase = 'https://mock-provider.example.com';
   for (const [suffix,protocol] of [['','responses'],['/v1','responses'],['/responses','responses'],['/messages','messages'],['/message','messages'],['/chat/completions','chat-completions']]) {
     for (const prefix of ['', '/gateway/v1']) {
@@ -770,6 +865,7 @@ async function selfTest() {
     state = await setup('unbound'); assert.equal((await post({action:'catalog'})).status,403);
     state = await setup('loggedout'); assert.equal((await post({action:'catalog'})).status,401);
     state = await setup('admin');
+    clock = new Date(clock.getTime()+1); // Reports exclude starts exactly at their as-of timestamp.
     assert.ok((await (await post({action:'admin_get'})).json()).providers.every(row => row.api_protocol === 'auto'),'seed suppliers default to auto');
     const fixedUsage = (await (await post({action:'admin_usage',page:1,pageSize:1})).json()).usage.find(item => item.action === 'respond');
     assert.equal(fixedUsage.max_output_tokens,512,'member budget must stay at the configured default');
@@ -804,6 +900,7 @@ async function selfTest() {
     result = await readResponses((await post({action:'test',model_id:modelId,prompt:'test',max_output_tokens:128})).body,()=>{}); assert.equal(result.status,'success');
     assert.equal((await post({...model,action:'admin_save_model',id:modelId,enabled:false})).status,200);
     result = await readResponses((await post({action:'admin_test',model_id:MODEL_ID,prompt:'test',max_output_tokens:128})).body,()=>{}); assert.equal(result.status,'success');
+    clock = new Date(clock.getTime()+1);
     const usage = await (await post({action:'usage',page:1,pageSize:2})).json(); assert.equal(usage.usage.length,2); assert.ok(usage.total >= 7);
     const canonicalUsage = await (await post({action:'admin_usage',page:1,pageSize:2})).json(); assert.deepEqual(canonicalUsage,usage);
     const row = usage.usage.find(item => item.model_id === modelId);

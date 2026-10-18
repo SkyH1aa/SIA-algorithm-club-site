@@ -60,8 +60,8 @@
       <section class="chat-admin-grid chat-admin-summary-grid" aria-label="Chat 概览" data-i18n-aria="chatAdmin.summary">
         <div class="chat-admin-panel chat-admin-stat"><small data-i18n="chatAdmin.providerCount">供应商</small><strong id="providerCount">--</strong></div>
         <div class="chat-admin-panel chat-admin-stat"><small data-i18n="chatAdmin.modelCount">启用模型</small><strong id="modelCount">--</strong></div>
-        <div class="chat-admin-panel chat-admin-stat"><small data-i18n="chatAdmin.usageCount">当前页用量记录</small><strong id="usageCount">--</strong></div>
-        <div class="chat-admin-panel chat-admin-stat"><small data-i18n="chatAdmin.totalTokens">当前页 token</small><strong id="totalTokens">--</strong></div>
+        <div class="chat-admin-panel chat-admin-stat"><small data-i18n="chatAdmin.usageCount">90天内总记录</small><strong id="usageCount">--</strong></div>
+        <div class="chat-admin-panel chat-admin-stat"><small data-i18n="chatAdmin.totalTokens">90天内总token</small><strong id="totalTokens">--</strong></div>
       </section>
 
       <nav class="club-tabs chat-admin-tabs" data-club-tabs role="tablist" aria-label="Chat 管理分区">
@@ -209,7 +209,7 @@
       </section>
 
       <section class="chat-admin-panel chat-admin-section" id="usageSection">
-        <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.usageTitle">使用记录</h2><p data-i18n="chatAdmin.usageLead">仅展示姓名、账号、模型、供应商、时间、状态和 token 等用量元数据，不展示对话内容。</p></div><button id="refreshUsageButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.refreshUsage">刷新用量</button></div>
+        <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.usageTitle">使用记录</h2><p data-i18n="chatAdmin.usageLead">仅展示滚动90天内的姓名、账号、模型、供应商、时间、状态和 token 等用量元数据，不展示对话内容。超过90天的记录自动清理；概览总计不受分页和日期筛选影响。</p></div><button id="refreshUsageButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.refreshUsage">刷新用量</button></div>
         <form id="usageFilter" class="chat-admin-filter-form">
           <label><span data-i18n="chatAdmin.from">开始时间</span><input id="usageFrom" class="chat-admin-input" type="datetime-local"></label>
           <label><span data-i18n="chatAdmin.to">结束时间</span><input id="usageTo" class="chat-admin-input" type="datetime-local"></label>

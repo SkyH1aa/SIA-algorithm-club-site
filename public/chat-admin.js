@@ -68,7 +68,7 @@ function claudeThinkingInput(defaultOutput) {
   throw new Error('claude_thinking');
 }
 
-function emptyUsage() { return {rows: [], page: 1, pageSize: 20, total: 0, loaded: false}; }
+function emptyUsage() { return {rows: [], page: 1, pageSize: 20, total: 0, summary: null, loaded: false}; }
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char]));
 }
@@ -293,14 +293,20 @@ function usageStatus(value) {
   const key = ({completed: 'success', success: 'success', incomplete: 'incomplete', interrupted: 'interrupted', cancelled: 'cancelled', failed: 'failure', failure: 'failure', audited: 'audited', upstream_started: 'running'})[value];
   return key ? t(`usageStatus.${key}`) : first(value, '-');
 }
+function formatUsageTokens(value) {
+  const locale = window.ClubI18n?.getLang() === 'en' ? 'en-US' : 'zh-CN';
+  if (typeof value === 'string' && /^\d+$/.test(value)) return BigInt(value).toLocaleString(locale);
+  return Number.isInteger(value) && value >= 0 ? value.toLocaleString(locale) : '--';
+}
 function renderUsage() {
   $('usageList').innerHTML = usage.rows.length ? table(['identity', 'account', 'model', 'provider', 'startedAt', 'finishedAt', 'status', 'inputTokens', 'outputTokens', 'total', 'requestId'], usage.rows.map(item => {
     const model = models.find(row => row.id === item.model_id);
     return `<tr>${cells([first(item.member_name, item.name, '-'), first(item.username, item.account, item.email, item.user_id, '-'), first(item.model_key, model && modelKey(model), '-'), first(item.provider_name, item.provider_label, item.provider?.name, providerLabel(first(item.provider_id, model?.provider_id))), formatTime(first(item.started_at, item.created_at)), formatTime(item.finished_at), usageStatus(item.status), first(item.input_tokens, 0), first(item.output_tokens, 0), first(item.total_tokens, 0), first(item.request_id, item.id, '-')])}</tr>`;
   }).join('')) : `<div class="chat-admin-empty">${escapeHtml(t('noRows'))}</div>`;
   $('usagePageLabel').textContent = t(usage.total == null ? 'pageUnknown' : 'page', {page: usage.page, pages: pages()});
-  $('usageCount').textContent = usage.loaded ? String(usage.rows.length) : '--';
-  $('totalTokens').textContent = usage.loaded ? String(usage.rows.reduce((sum, row) => sum + Number(row.total_tokens || 0), 0)) : '--';
+  // Only the server summary covers the rolling 90-day window, independent of filters and pages.
+  $('usageCount').textContent = Number.isFinite(usage.summary?.total_records) ? String(usage.summary.total_records) : '--';
+  $('totalTokens').textContent = formatUsageTokens(usage.summary?.total_tokens);
 }
 function quotaValue(value) { return value == null ? t('unlimited') : String(value); }
 function userLabel(item) { return `${first(item.username, item.user_id)} · ${first(item.member_name, t('noMemberName'))}`; }
@@ -410,7 +416,7 @@ async function loadUsage(run, query = usageQuery()) {
   const payload = await request(run, 'usage', query);
   assertCurrent(run);
   const rows = asArray(payload.usage || payload.rows);
-  usage = {rows, page: query.page, pageSize: query.pageSize, total: Number.isFinite(payload.total) ? payload.total : null, loaded: true};
+  usage = {rows, page: query.page, pageSize: query.pageSize, total: Number.isFinite(payload.total) ? payload.total : null, summary: payload.summary ?? null, loaded: true};
   renderUsage();
 }
 async function loadAdmin(run) {

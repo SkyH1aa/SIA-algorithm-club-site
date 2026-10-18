@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
+import {readResponses} from '../public/chat-core.js';
 
 // No browser, credentials, network, or provider calls: run the real management
 // functions with a minimal DOM and a queued fetch double.
@@ -67,7 +68,7 @@ const confirmations = [], clipboard = [];
 const queue = [], calls = [];
 const windowListeners = new Map(), scheduledRefreshes = [];
 const sandbox = vm.createContext({
-  console, DOMException, AbortController, URL, Map, Date, Number, String, Boolean,
+  console, DOMException, AbortController, URL, Map, Date, Number, String, Boolean, readResponses,
   setTimeout: callback => { scheduledRefreshes.push(callback); },
   Option: function(text, value) { return {text, value}; },
   document: {getElementById: node, querySelectorAll: proxyActionNodes},
@@ -86,7 +87,9 @@ const sandbox = vm.createContext({
     const reply = queue.shift();
     assert.equal(body.action, reply.action);
     await reply.beforeReply?.();
-    return {ok: reply.status < 400, status: reply.status, json: async () => reply.payload};
+    return {ok: reply.status < 400, status: reply.status, json: async () => reply.payload,
+      headers: {get: name => name === 'content-type' && reply.payload?.getReader ? 'text/event-stream' : null},
+      body: reply.payload?.getReader ? reply.payload : null};
   }
 });
 const start = source.indexOf('const SUPABASE_URL');
@@ -568,6 +571,7 @@ console.log('PASS bilingual revoke/permanent-removal copy, confirmation variable
 }
 console.log('PASS provider/model deletion: confirmation, versioned request, list refresh and empty state');
 // Protocol controls use the real edit/save/reset and language-change handlers.
+const translatedCopy = new Map();
 {
   const handlersStart = source.indexOf("$('providersList').addEventListener");
   const handlersEnd = source.indexOf("$('testForm').addEventListener");
@@ -576,7 +580,6 @@ console.log('PASS provider/model deletion: confirmation, versioned request, list
   sandbox.window.ClubI18n.mountSwitcher = () => {};
   run(source.slice(source.indexOf("$('clearProviderButton').onclick"), source.indexOf('function updateSession(next)')));
   assert.equal(scheduledRefreshes.length, 1, 'Delayed i18n boot must schedule a refresh');
-  const translatedCopy = new Map();
   sandbox.window.ClubI18n.t = (key, vars = {}) => {
     const text = key.split('.').reduce((value, part) => value?.[part], dictionaries[language]);
     assert.equal(typeof text, 'string', `Missing ${language} translation: ${key}`);
@@ -808,6 +811,100 @@ console.log('PASS provider/model deletion: confirmation, versioned request, list
   node('clearModelButton').onclick();
   assert.equal(node('modelClaudeThinkingMode').value, 'omit');
   console.log('PASS Claude real handlers: legacy omit, mode projection, provider resolution/switching, bilingual draft preservation, strict budget/effort validation and safe test headroom');
+}
+// The rolling-window summary is authoritative across the actual usage and test handlers.
+{
+  run(source.slice(source.indexOf('function refreshUsage(page'), source.indexOf("$('clearProviderButton').onclick")));
+  const summary = {total_records: 1234, total_tokens: '9007199254740993'};
+  const windowBounds = {window_start: '2026-07-20T12:00:00Z', window_end: '2026-10-18T12:00:00Z'};
+  const rows = [{request_id: 'page-row', total_tokens: 7, input_tokens: 3, output_tokens: 4}];
+  const usageReply = (overrides = {}, beforeReply) => reply('usage', {usage: rows, page: 1, pageSize: 20, total: 61, summary, ...windowBounds, ...overrides}, 200, beforeReply);
+  const submitUsage = () => node('usageFilter').listeners.submit({preventDefault() {}});
+  const summaryValues = () => [node('usageCount').textContent, node('totalTokens').textContent];
+  const expected = ['1234', BigInt(summary.total_tokens).toLocaleString('en-US')];
+  const adminReplies = () => {
+    reply('admin_get', {providers: [sandbox.protocolProvider], models: [sandbox.protocolModel]});
+    reply('admin_proxy_list', {routes: [], keys: []});
+    reply('admin_user_directory', {users: [], blacklist: []});
+    reply('admin_quota_get', snapshot);
+  };
+  run("clearSensitive();session={user:{id:'admin'},access_token:'mock-token'};authorized=true;active=null");
+  assert.deepEqual(summaryValues(), ['--', '--']);
+  adminReplies(); usageReply({}, () => assert.deepEqual(summaryValues(), ['--', '--'], 'Initial pending usage must not invent totals'));
+  node('refreshButton').onclick(); await settleProxy();
+  assert.deepEqual(summaryValues(), expected, 'Initial admin load must fetch the summary, including exact >2^53 tokens');
+  assert.equal(run('usage.rows.length'), 1);
+  assert.equal(run('usage.total'), 61, 'Filtered total remains separate from 90-day record count');
+  assert.equal(node('usageNext').disabled, false);
+  usageReply({page: 2, usage: [{total_tokens: 99}]});
+  node('usageNext').onclick(); await settleProxy();
+  assert.equal(calls.at(-1).page, 2);
+  assert.deepEqual(summaryValues(), expected, 'Changing pages must not replace aggregate with page totals');
+  node('usageFrom').value = '2026-10-01T10:00'; node('usageTo').value = '2026-10-18T10:00'; node('usagePageSize').value = '50';
+  usageReply({usage: [], total: 0, pageSize: 50}); submitUsage(); await settleProxy();
+  assert.equal(calls.at(-1).from, new Date(node('usageFrom').value).toISOString());
+  assert.equal(calls.at(-1).to, new Date(node('usageTo').value).toISOString());
+  assert.equal(calls.at(-1).page, 1); assert.equal(calls.at(-1).pageSize, 50);
+  assert.deepEqual(summaryValues(), expected, 'An empty date-filtered page still shows the global window summary');
+  assert.equal(node('usageNext').disabled, true, 'Pagination uses filtered total');
+  assert(node('usageList').innerHTML.includes(dictionaries[language].chatAdmin.noRows));
+  node('providerLabel').value = 'Unsaved provider'; node('testPrompt').value = 'Unsaved test';
+  const drafts = ['usageFrom', 'usageTo', 'usagePageSize', 'providerLabel', 'testPrompt'].map(id => node(id).value);
+  const beforeLanguage = calls.length;
+  for (const lang of ['zh', 'en']) {
+    language = lang; windowListeners.get('club:langchange')();
+    assert.deepEqual(summaryValues(), expected);
+    assert.deepEqual(['usageFrom', 'usageTo', 'usagePageSize', 'providerLabel', 'testPrompt'].map(id => node(id).value), drafts);
+    assert.equal(translatedCopy.get('chatAdmin.usageCount'), dictionaries[lang].chatAdmin.usageCount);
+    assert.equal(translatedCopy.get('chatAdmin.totalTokens'), dictionaries[lang].chatAdmin.totalTokens);
+    assert.equal(translatedCopy.get('chatAdmin.usageLead'), dictionaries[lang].chatAdmin.usageLead);
+  }
+  assert.equal(calls.length, beforeLanguage, 'Language refresh preserves drafts and never requests data');
+  for (const value of [0, null]) {
+    usageReply({usage: [{input_tokens: 10, output_tokens: 20, total_tokens: value}], summary: {total_records: 9, total_tokens: 4567}});
+    node('refreshUsageButton').onclick(); await settleProxy();
+    assert.deepEqual(summaryValues(), ['9', '4,567'], 'Zero/null row totals cannot replace the backend summary');
+    assert(node('usageList').innerHTML.includes('<td>0</td>'), 'Record total stays zero rather than being derived from input/output');
+  }
+  usageReply({usage: [], total: 0, summary: {total_records: 0, total_tokens: '0'}});
+  node('refreshUsageButton').onclick(); await settleProxy(); assert.deepEqual(summaryValues(), ['0', '0']);
+  usageReply({summary: null}); node('refreshUsageButton').onclick(); await settleProxy();
+  assert.deepEqual(summaryValues(), ['--', '--'], 'Missing summary must never fall back to filtered total or page sum');
+  for (const value of [null, undefined, '', '1.5', 'bad', -1, Infinity]) {
+    sandbox.invalidTokens = value; assert.equal(run('formatUsageTokens(invalidTokens)'), '--');
+  }
+  // Real test submission consumes a local SSE stream, then refreshes quota and usage.
+  node('testModel').value = sandbox.protocolModel.id; node('testPrompt').value = 'Offline test'; node('testOutput').value = '256';
+  const stream = new ReadableStream({start(controller) {
+    controller.enqueue(new TextEncoder().encode('data: {"type":"response.completed","response":{"output":[],"usage":{"total_tokens":1}}}\n\n'));
+    controller.close();
+  }});
+  reply('test', stream); reply('admin_quota_get', snapshot);
+  usageReply({summary: {total_records: 1235, total_tokens: '9007199254740994'}});
+  const beforeTest = calls.length;
+  node('testForm').listeners.submit({preventDefault() {}}); await settleProxy();
+  assert.deepEqual(calls.slice(beforeTest).map(item => item.action), ['test', 'admin_quota_get', 'usage']);
+  assert.deepEqual(summaryValues(), ['1235', '9,007,199,254,740,994']);
+  assert.equal(run("messages.get('testMessage').key"), 'testComplete');
+  usageReply({}, () => run('updateSession(null)'));
+  node('refreshUsageButton').onclick(); await settleProxy();
+  assert.equal(run('usage.summary'), null); assert.deepEqual(summaryValues(), ['--', '--'], 'Late response after signout cannot restore summary');
+  run("session={user:{id:'old'},access_token:'mock-token'};authorized=true;usage.summary={total_records:7,total_tokens:'99'};renderUsage()");
+  reply('admin_get', {authorized: false}); run("updateSession({user:{id:'new'},access_token:'mock-token'})");
+  assert.equal(run('usage.summary'), null); assert.deepEqual(summaryValues(), ['--', '--'], 'Account switch clears summary immediately');
+  await settleProxy();
+  for (const status of [401, 403]) {
+    run("authorized=true;usage.summary={total_records:7,total_tokens:'99'};renderUsage()");
+    reply('usage', {error: status === 401 ? 'login' : 'admin'}, status);
+    node('refreshUsageButton').onclick(); await settleProxy();
+    assert.equal(run('usage.summary'), null); assert.deepEqual(summaryValues(), ['--', '--']);
+  }
+  assert.equal(dictionaries.zh.chatAdmin.usageCount, '90天内总记录');
+  assert.equal(dictionaries.zh.chatAdmin.totalTokens, '90天内总token');
+  assert.match(html, /chatAdmin\.usageCount">90天内总记录/); assert.match(html, /chatAdmin\.totalTokens">90天内总token/);
+  assert.match(dictionaries.zh.chatAdmin.usageLead, /滚动90天/); assert.match(dictionaries.zh.chatAdmin.usageLead, /自动清理/);
+  assert.match(dictionaries.en.chatAdmin.usageLead, /rolling 90-day/); assert.match(dictionaries.en.chatAdmin.usageLead, /automatically removed/);
+  console.log('PASS rolling-90-day summaries: initial/test refresh, exact large totals, pagination/filters, zero/null/missing/empty, bilingual drafts and auth/stale reset');
 }
 assert.equal(queue.length, 0, 'All queued responses must be consumed');
 console.log(`Chat admin VM regression passed (${calls.length} mocked requests; zero network or paid calls).`);

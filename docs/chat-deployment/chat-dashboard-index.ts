@@ -1201,36 +1201,44 @@ async function customModelAdmin(request: Request, action: string, payload: Json)
 
 function isoFilter(value: unknown): string | null {
   if (value == null || value === '') return null;
-  const parsed = new Date(String(value));
-  if (Number.isNaN(parsed.getTime())) throw new HttpError('input', 400);
+  // Date-only inputs mean UTC midnight; timestamps require an explicit zone.
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2}))?$/.test(value)) throw new HttpError('input', 400);
+  const parsed = new Date(value);
+  const day = new Date(value.slice(0, 10));
+  if (Number.isNaN(parsed.getTime()) || Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== value.slice(0, 10)) throw new HttpError('input', 400);
   return parsed.toISOString();
 }
 
+const USAGE_FIELDS = ['request_id', 'user_id', 'member_name', 'username', 'model_key', 'model_name', 'provider_name', 'action', 'input_bytes', 'max_output_tokens', 'reasoning_effort', 'status', 'upstream_status', 'input_tokens', 'output_tokens', 'total_tokens', 'error_code', 'started_at', 'finished_at'];
+
 async function adminUsage(request: Request, payload: Json) {
-  await context(request, true);
+  const ctx = await context(request, true);
   const page = integer(payload.page, 1, 100000, 1);
   const limit = integer(payload.pageSize ?? payload.limit, 1, 200, 50);
   const from = isoFilter(payload.from);
   const to = isoFilter(payload.to);
   if (from && to && from > to) throw new HttpError('input', 400);
-  const filters = [
-    from ? `started_at=gte.${encodeURIComponent(from)}` : '',
-    to ? `started_at=lte.${encodeURIComponent(to)}` : ''
-  ].filter(Boolean);
-  const offset = (page - 1) * limit;
-  const query = [
-    'select=request_id,user_id,member_name,username,model_key,model_name,provider_name,action,input_bytes,max_output_tokens,reasoning_effort,status,upstream_status,input_tokens,output_tokens,total_tokens,error_code,started_at,finished_at',
-    'order=started_at.desc', `limit=${limit}`, `offset=${offset}`
-  ];
-  const response = await rest(`chat_usage?${[...filters, ...query].join('&')}`, { headers: { prefer: 'count=exact' } });
-  if (!response.ok) throw new HttpError('database', 503);
-  const range = response.headers.get('content-range')?.match(/^(?:\d+-\d+|\*)\/(\d+)$/);
-  if (!range) throw new HttpError('database', 503);
-  const total = Number(range[1]);
-  if (!Number.isSafeInteger(total)) throw new HttpError('database', 503);
-  const rows = await response.json();
-  if (!Array.isArray(rows)) throw new HttpError('database', 503);
-  return { usage: rows, page, pageSize: limit, total };
+  const raw = await rpc('chat_admin_usage', {
+    p_actor_user_id: ctx.user.id, p_page: page, p_page_size: limit, p_from: from, p_to: to
+  });
+  const record = (value: unknown): value is Json => value !== null && typeof value === 'object' && !Array.isArray(value);
+  const count = (value: unknown): value is number => Number.isSafeInteger(value) && Number(value) >= 0;
+  if (!record(raw) || !Array.isArray(raw.usage) || raw.usage.length > limit || raw.usage.some(row => !record(row))
+    || raw.page !== page || raw.pageSize !== limit || !count(raw.total) || !record(raw.summary)
+    || !count(raw.summary.total_records) || raw.total > raw.summary.total_records
+    || raw.usage.length > raw.total
+    || typeof raw.summary.total_tokens !== 'string' || !/^(0|[1-9]\d*)$/.test(raw.summary.total_tokens)
+    || typeof raw.window_start !== 'string' || typeof raw.window_end !== 'string'
+    || !Number.isFinite(Date.parse(raw.window_start)) || !Number.isFinite(Date.parse(raw.window_end))
+    || Date.parse(raw.window_end) - Date.parse(raw.window_start) !== 2160 * 60 * 60 * 1000) {
+    throw new HttpError('database', 503);
+  }
+  return {
+    usage: raw.usage.map(row => Object.fromEntries(USAGE_FIELDS.filter(key => key in row).map(key => [key, row[key]]))),
+    page, pageSize: limit, total: raw.total,
+    summary: { total_records: raw.summary.total_records, total_tokens: raw.summary.total_tokens },
+    window_start: raw.window_start, window_end: raw.window_end
+  };
 }
 
 async function proxyAdmin(request: Request, action: string, payload: Json): Promise<Response> {
