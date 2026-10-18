@@ -10,6 +10,7 @@
   <script src="public/SceneDirector.js?v=20261005-ipad-flow-v7"></script>
     <title>算法社 · Algorithm Club</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="public/club-auth-storage.js"></script>
     <script src="public/i18n-dict.js"></script>
     <script src="public/i18n.js"></script>
     <script src="public/member-identity.js" defer></script>
@@ -297,7 +298,7 @@
       }
       .member-identity:not([hidden]) { display: inline-flex; }
 
-      .nav { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+      .nav { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; justify-content: flex-end; }
       .nav a {
         padding: 8px 11px;
         border: 1px solid transparent;
@@ -342,6 +343,15 @@
       .nav a[data-admin-only],
       .nav a[data-admin-only][hidden] { display: none !important; }
       .nav a[data-admin-only].is-visible { display: inline-flex !important; }
+      /* #langSwitcherHost 是 i18n/theme 共同挂载点：必须是单行，否则窄屏
+         会把语言切换器留在上一行、主题切换器折到下一行。 */
+      #langSwitcherHost {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        flex-wrap: nowrap;
+        flex-shrink: 0;
+      }
       .lang-switcher,
       .theme-switcher {
         display: inline-flex;
@@ -1373,6 +1383,45 @@
         .hero, .join-section { grid-template-columns: 1fr; }
         .member-grid, .project-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
+      /* 中等宽度：先压缩装饰信息，避免导航与切换器折行 */
+      @media (max-width: 1240px) {
+        .zone-readout { display: none; }
+        .club-launcher-button span,
+        .club-launcher-button kbd { display: none; }
+        .club-launcher-button { padding: 8px; }
+        .nav a { padding: 7px 9px; font-size: 12.5px; }
+      }
+      /* 平板及以下：导航收进汉堡菜单，顶栏保持单行 */
+      @media (max-width: 900px) {
+        .menu-button { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 40px; }
+        .nav {
+          position: absolute;
+          top: 68px;
+          right: 18px;
+          left: 18px;
+          display: none;
+          flex-direction: column;
+          align-items: stretch;
+          flex-wrap: nowrap;
+          padding: 10px;
+          border: 1px solid rgba(0, 229, 255, 0.2);
+          border-radius: 12px;
+          background: #060b17;
+          box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+          z-index: 30;
+        }
+        .nav.open { display: flex; }
+        .nav a { padding: 11px 12px; }
+        .nav a[data-admin-only].is-visible { display: flex !important; }
+        .nav #langSwitcherHost { margin: 8px 4px 4px; align-self: flex-start; }
+        .nav .lang-switcher,
+        .nav .theme-switcher { display: inline-flex; align-self: flex-start; margin: 0; }
+        html[data-theme="light"] .nav.open {
+          background: #FFFFFF;
+          border-color: #E5E5EA;
+          box-shadow: 0 18px 44px rgba(28, 28, 30, 0.16);
+        }
+      }
       @media (max-width: 767px) {
         .topbar {
           gap: 8px;
@@ -1409,8 +1458,13 @@
           padding: 10px;
           border: 1px solid rgba(0, 229, 255, 0.2);
           border-radius: 12px;
-          background: rgba(4, 8, 20, 0.96);
-          box-shadow: var(--shadow);
+          background: #060b17;
+          box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+          z-index: 30;
+        }
+        html[data-theme="light"] .nav.open {
+          background: #FFFFFF;
+          box-shadow: 0 18px 44px rgba(28, 28, 30, 0.16);
         }
         .nav.open { display: flex; }
         .nav a { padding: 11px 12px; }
@@ -1514,7 +1568,9 @@
         }
       }
     </style>
-  <script src="public/service-prompts.js"></script><script src="public/service-gate.js"></script></head>
+  <script src="public/service-prompts.js"></script><script src="public/service-gate.js"></script>
+  <link rel="stylesheet" href="public/club-ui.css">
+</head>
   <body>
     <div class="ambient-background" aria-hidden="true">
       <div class="ambient-orb orb-cyan"></div>
@@ -1538,14 +1594,12 @@
       <button class="menu-button" type="button" id="menuButton" data-i18n-aria="common.openNav" aria-label="打开导航">☰</button>
       <nav class="nav" id="nav">
         <a href="#home" data-i18n="nav.home">首页</a>
-        <a href="#proof" data-i18n="nav.proof">实力</a>
+        <a href="#capabilities" data-i18n="nav.proof">实力</a>
         <a href="#gomoku" data-i18n="nav.works">作品</a>
         <a href="#members" data-i18n="nav.members">成员</a>
         <a href="#join" data-i18n="nav.join">加入</a>
         <a class="nav-emphasis" href="public/club-features.html" data-i18n="nav.features">社团功能</a>
-        <a href="public/member-center.html" data-i18n="nav.memberCenter">个人中心</a>
-        <a class="nav-guide" href="public/guide.html" data-i18n="nav.guide" data-i18n-aria="nav.guideAria" aria-label="打开使用指引">使用指引</a>
-        <a class="nav-checkin" href="public/member-checkin.html?type=course" data-i18n="nav.course.checkin" data-i18n-aria="nav.course.checkinAria" aria-label="打开课程签到">课程签到</a>
+        <a class="nav-account" href="public/member-center.html" data-i18n="nav.memberCenter">个人中心</a>
         <a href="public/admin-hub.html" data-admin-only hidden data-i18n="nav.admin">管理员总览</a>
         <div id="langSwitcherHost"></div>
       </nav>
@@ -1575,11 +1629,6 @@
               <a class="secondary-action" href="public/visualization-lab.html" data-i18n="home.enterLab">进入算法实验室</a>
             </div>
             <a class="hero-side-link" href="public/appmonitor.html" data-i18n="home.appmonitorLink">APPMonitor 发布页 →</a>
-            <div class="hero-metrics" data-i18n-aria="home.metricsAria" aria-label="关键能力摘要">
-              <span><strong>10</strong> <span data-i18n="home.metricGomoku">代五子棋 AI</span></span>
-              <span><strong>4</strong> <span data-i18n="home.metricModes">模式方块 / 蛇</span></span>
-              <span><strong>7</strong> <span data-i18n="home.metricLabs">大算法实验室</span></span>
-            </div>
           </div>
           <aside class="hero-panel" data-i18n-aria="home.stageAria" aria-label="三阶段建设轨道">
             <div class="panel-head"><span>STAGE TRACK</span><strong data-i18n="home.stageDone">三阶段已完工</strong></div>
@@ -2224,9 +2273,10 @@
       window.addEventListener('resize', updateScrollProgress, { passive: true });
       updateScrollProgress();
 
+      // 「实力」对应能力矩阵章节；#proof 只是首页内的实力证明带，不再单独占导航项。
       const sectionNavMap = [
         ['home', '#home'],
-        ['proof', '#proof'],
+        ['proof', '#capabilities'],
         ['gomoku', '#gomoku'],
         ['members', '#members'],
         ['join', '#join']
@@ -3589,6 +3639,9 @@
           if (flight && !reducedMotion && !snapLock) {
             clearTimeout(snapTimer);
             snapTimer = setTimeout(() => {
+              // 定时器可能在 goToZone 启动平滑滚动之后才触发：必须重新检查锁，
+              // 否则会按点击瞬间的旧位置把页面吸回上一章（表现为「点了没反应」）。
+              if (snapLock) return;
               const currentMax = Math.max(1, root.scrollHeight - innerHeight);
               const chapter = Math.round((scrollY / currentMax) * (zones.length - 1));
               const snapTop = chapter / (zones.length - 1) * currentMax;
@@ -3635,14 +3688,18 @@
           const at = zones.findIndex(zone => zone.id === id || (id === 'proof' && zone.id === 'home'));
           if (at < 0) return false;
           if (flight) {
+            // 任何一次跳转都必须先取消待执行的吸附定时器，否则它会在动画中途
+            // 按旧位置把页面吸回去。
+            clearTimeout(snapTimer);
+            clearTimeout(wheelUnlockTimer);
             if (at !== chapterAtDisplay()) {
               const currentMax = Math.max(1, root.scrollHeight - innerHeight);
               direction = at > chapterAtDisplay() ? 1 : -1;
               if (particleConductor.enabled) particleConductor.transition(sections[chapterAtDisplay()], sections[at], direction);
               snapLock = true;
-              clearTimeout(wheelUnlockTimer);
               scrollTo({ top: (at / (zones.length - 1)) * currentMax, behavior: 'smooth' });
-              wheelUnlockTimer = setTimeout(() => { snapLock = false; }, 980);
+              // 平滑滚动跨越多个章节时可能超过 1 秒，锁要覆盖整段动画。
+              wheelUnlockTimer = setTimeout(() => { snapLock = false; }, 1400);
             }
             if (id === 'proof') sections[0].scrollTop = document.getElementById('proof').offsetTop;
           } else document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -3728,7 +3785,8 @@
       })();
 
       init();
-    
+
     </script>
+    <script src="public/club-shell.js"></script>
   </body>
 </html>

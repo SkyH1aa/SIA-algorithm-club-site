@@ -69,7 +69,7 @@ function controls() {
     for (const node of $(id).elements) node.disabled = disabled || !selectedUser || !userQuota;
   }
   $('retryButton').disabled = Boolean(active) || !session;
-  document.querySelectorAll('[data-edit-provider], [data-edit-model]').forEach(node => { node.disabled = disabled; });
+  document.querySelectorAll('[data-edit-provider], [data-edit-model], [data-delete-provider], [data-delete-model]').forEach(node => { node.disabled = disabled; });
   $('refreshProxyButton').disabled = disabled;
   $('proxyKeyRoute').disabled = disabled || !proxyLoaded || !proxyRoutes.length;
   $('createProxyKeyButton').disabled = disabled || !$('proxyKeyRoute').value;
@@ -115,6 +115,8 @@ function errorKey(error) {
   if (error.message === 'proxy_url') return 'proxyInvalidUrl';
   if (error.message === 'busy') return 'busy';
   if (error.status === 409 && error.message === 'conflict') return 'quotaConflict';
+  if (error.status === 409 && error.message === 'deleted') return 'alreadyDeleted';
+  if (error.status === 404 && error.message === 'not_found') return 'alreadyDeleted';
   if (error.status === 429 && error.message === 'quota') return 'testQuota';
   if (blockedTest(error)) return 'testBlacklisted';
   if (error.status === 403 || error.message === 'admin') return 'unauthorized';
@@ -166,12 +168,19 @@ function table(headers, rows) {
   return `<table class="chat-admin-table"><thead><tr>${headers.map(key => `<th scope="col">${escapeHtml(t(key))}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
 }
 function editButton(kind, id) { return `<button class="chat-admin-button chat-admin-secondary" type="button" data-edit-${kind}="${escapeHtml(id)}">${escapeHtml(t('edit'))}</button>`; }
+// 删除与编辑同处一个操作单元格；危险操作单独用 danger 样式区分。
+function deleteButton(kind, id, labelKey) {
+  return `<button class="chat-admin-button chat-admin-danger" type="button" data-delete-${kind}="${escapeHtml(id)}">${escapeHtml(t(labelKey))}</button>`;
+}
+function rowActions(kind, id, labelKey) {
+  return `<div class="chat-admin-actions">${editButton(kind, id)}${deleteButton(kind, id, labelKey)}</div>`;
+}
 function cells(values) { return values.map(value => `<td>${escapeHtml(value)}</td>`).join(''); }
 function renderProviders() {
-  $('providersList').innerHTML = providers.length ? table(['providerId', 'providerLabel', 'baseUrl', 'secretName', 'authHeader', 'enabled', 'edit'], providers.map(item => `<tr>${cells([item.name, first(item.label, '-'), item.base_url, item.secret_name, item.auth_header || 'authorization'])}<td>${badge(item.enabled !== false)}</td><td>${editButton('provider', item.id)}</td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t('noProvider'))}</div>`;
+  $('providersList').innerHTML = providers.length ? table(['providerId', 'providerLabel', 'baseUrl', 'secretName', 'authHeader', 'enabled', 'actions'], providers.map(item => `<tr>${cells([item.name, first(item.label, '-'), item.base_url, item.secret_name, item.auth_header || 'authorization'])}<td>${badge(item.enabled !== false)}</td><td>${rowActions('provider', item.id, 'deleteProvider')}</td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t('noProvider'))}</div>`;
 }
 function renderModels() {
-  $('modelsList').innerHTML = models.length ? table(['modelId', 'modelLabel', 'modelIntroduction', 'modelProvider', 'contextWindow', 'maxOutput', 'enabled', 'edit'], models.map(item => `<tr>${cells([modelKey(item), first(item.display_name, '-'), first(item.introduction, '-'), providerLabel(item.provider_id), item.context_window, item.max_output_tokens])}<td>${badge(item.enabled !== false)}</td><td>${editButton('model', item.id)}</td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t('noModel'))}</div>`;
+  $('modelsList').innerHTML = models.length ? table(['modelId', 'modelLabel', 'modelIntroduction', 'modelProvider', 'contextWindow', 'maxOutput', 'enabled', 'actions'], models.map(item => `<tr>${cells([modelKey(item), first(item.display_name, '-'), first(item.introduction, '-'), providerLabel(item.provider_id), item.context_window, item.max_output_tokens])}<td>${badge(item.enabled !== false)}</td><td>${rowActions('model', item.id, 'deleteModel')}</td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t('noModel'))}</div>`;
   renderAccessModels();
 }
 function renderAccessModels() {
@@ -503,6 +512,36 @@ async function copyProxyBase(id) {
 }
 function validInteger(value, min, max) { return Number.isInteger(value) && value >= min && value <= max; }
 
+/* 删除供应商：会连带删除其下全部模型，因此确认文案必须写明数量。 */
+async function removeProvider(item) {
+  if (active || !authorized || !item) return;
+  const children = models.filter(row => row.provider_id === item.id).length;
+  if (!window.confirm(t('providerDeleteConfirm', {name: item.label || item.name, n: children}))) return;
+  const messageId = 'providerMessage';
+  void operation(messageId, async run => {
+    setMessage(messageId, 'deleting');
+    await request(run, 'admin_delete_provider', {id: item.id}); assertCurrent(run);
+    // 若正在编辑这条供应商，清空表单避免继续往已删除记录上保存。
+    if ($('providerId').value === item.id) clearProvider();
+    await loadAdmin(run);
+    setMessage(messageId, 'providerDeleted', 'success', {n: children});
+  });
+}
+
+/* 删除模型：只影响这一条，但会让正在编辑/测试它的表单失效。 */
+async function removeModel(item) {
+  if (active || !authorized || !item) return;
+  if (!window.confirm(t('modelDeleteConfirm', {name: item.display_name || modelKey(item)}))) return;
+  const messageId = 'modelMessage';
+  void operation(messageId, async run => {
+    setMessage(messageId, 'deleting');
+    await request(run, 'admin_delete_model', {id: item.id, expected_version: Number(item.version) || 0}); assertCurrent(run);
+    if ($('modelConfigId').value === item.id) clearModel();
+    await loadAdmin(run);
+    setMessage(messageId, 'modelDeleted', 'success');
+  });
+}
+
 $('refreshQuotaButton').onclick = () => void operation('quotaMessage', loadQuotaDirectory);
 $('refreshProxyButton').onclick = () => void operation('proxyMessage', async run => { await loadProxy(run); setMessage('proxyMessage'); });
 $('clearProxyRouteButton').onclick = () => { if (!active) clearProxyRoute(); };
@@ -619,6 +658,12 @@ $('blacklistForm').addEventListener('submit', event => {
 });
 $('providersList').addEventListener('click', event => {
   if (active || !authorized) return;
+  const deleteHit = event.target.closest('[data-delete-provider]');
+  if (deleteHit) {
+    const target = providers.find(row => row.id === deleteHit.dataset.deleteProvider);
+    if (target) void removeProvider(target);
+    return;
+  }
   const button = event.target.closest('[data-edit-provider]');
   const item = providers.find(row => row.id === button?.dataset.editProvider);
   if (!item) return;
@@ -629,6 +674,12 @@ $('providersList').addEventListener('click', event => {
 });
 $('modelsList').addEventListener('click', event => {
   if (active || !authorized) return;
+  const deleteHit = event.target.closest('[data-delete-model]');
+  if (deleteHit) {
+    const target = models.find(row => row.id === deleteHit.dataset.deleteModel);
+    if (target) void removeModel(target);
+    return;
+  }
   const button = event.target.closest('[data-edit-model]');
   const item = models.find(row => row.id === button?.dataset.editModel);
   if (!item) return;
@@ -641,6 +692,7 @@ $('modelsList').addEventListener('click', event => {
   $('preserveReasoning').checked = item.preserve_reasoning === true; $('modelEnabled').checked = item.enabled !== false;
   setMessage('modelMessage'); $('modelId').focus();
 });
+
 $('providerForm').addEventListener('submit', event => {
   event.preventDefault();
   if (active || !authorized || !$('providerForm').reportValidity()) return;

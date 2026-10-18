@@ -106,6 +106,27 @@
   }
 
   let latestSession = null;
+  // 共享外壳（跳转模块、后台模块栏）据此过滤入口：未登录或没有对应权限时
+  // 不显示任何管理入口，避免把后台暴露给普通访客。
+  let latestAccess = { isSuperAdmin: false, permissions: emptyPermissions() };
+  let accessReady = false;
+  const accessListeners = new Set();
+
+  function emitAccess() {
+    accessReady = true;
+    const detail = { session: latestSession, access: latestAccess, ready: true };
+    accessListeners.forEach((listener) => {
+      try { listener(detail); } catch (_error) { /* ignore */ }
+    });
+    try {
+      window.dispatchEvent(new CustomEvent('club:staffaccess', { detail }));
+    } catch (_error) { /* ignore */ }
+  }
+
+  function setAccess(access) {
+    latestAccess = access || { isSuperAdmin: false, permissions: emptyPermissions() };
+    emitAccess();
+  }
 
   function memberLabelText(username) {
     if (window.ClubI18n && typeof window.ClubI18n.t === 'function') {
@@ -137,18 +158,34 @@
     renderIdentityLabel(latestSession);
 
     if (!session?.user?.id) {
+      setAccess(null);
       applyAdminVisibility(false);
       return;
     }
 
+    setAccess(null);
     const access = await fetchStaffAccess(session);
+    // 期间可能已经切换账号：只接受属于当前会话的结果。
+    if (latestSession !== session) return;
+    setAccess(access);
     applyAdminVisibility(hasStaffAccess(access));
   }
 
   window.ClubStaffAccess = {
     emptyPermissions,
     hasStaffAccess,
-    fetchStaffAccess
+    fetchStaffAccess,
+    // 供其它脚本按权限过滤入口（未完成时返回 ready:false）。
+    getAccess: () => latestAccess,
+    isReady: () => accessReady,
+    isLoggedIn: () => Boolean(latestSession?.user?.id),
+    getSession: () => latestSession,
+    has: (key) => Boolean(latestAccess.isSuperAdmin || (latestAccess.permissions && latestAccess.permissions['can_' + key])),
+    subscribe: (listener) => {
+      accessListeners.add(listener);
+      if (accessReady) listener({ session: latestSession, access: latestAccess, ready: true });
+      return () => accessListeners.delete(listener);
+    }
   };
 
   function start() {

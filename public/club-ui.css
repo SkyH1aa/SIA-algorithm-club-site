@@ -1,0 +1,2338 @@
+/*
+ * club-ui.css — 算法社全站次级页面共享设计系统
+ *
+ * 适用：public/ 下的功能页、社员页与全部管理后台（body.club-page）。
+ * 主页 index.html 保留自己的 3D / 滚动特效样式，不引用本文件。
+ *
+ * 规则：
+ * 1. 只定义 --club-* 令牌，不覆盖 theme.css 的全站主题变量。
+ * 2. 默认暗色；亮色用 html[data-theme="light"] body.club-page 覆盖，
+ *    并用 !important 压过 theme.css 的全站 !important 规则。
+ * 3. 所有交互元素保证 3:1 以上对比度，主按钮亮色用 #C2410C。
+ */
+
+/* ============================================================
+   1. 令牌
+   ============================================================ */
+body.club-page,
+.club-launcher {
+  --club-bg: #060a12;
+  --club-bg-glow-a: rgba(53, 208, 224, 0.10);
+  --club-bg-glow-b: rgba(124, 92, 255, 0.10);
+  --club-surface: #0c1320;
+  --club-surface-2: #101a2a;
+  --club-surface-3: #162236;
+  --club-line: rgba(132, 170, 214, 0.16);
+  --club-line-strong: rgba(132, 190, 225, 0.32);
+  --club-text: #e8f1fb;
+  --club-text-soft: #c2d2e4;
+  --club-muted: #90a4bb;
+  --club-accent: #3ad4e6;
+  --club-accent-strong: #7ce7f2;
+  --club-accent-soft: rgba(58, 212, 230, 0.12);
+  --club-accent-line: rgba(58, 212, 230, 0.40);
+  --club-on-accent: #04141a;
+  --club-ok: #56d9a0;
+  --club-ok-soft: rgba(86, 217, 160, 0.12);
+  --club-warn: #f2c66d;
+  --club-warn-soft: rgba(242, 198, 109, 0.12);
+  --club-danger: #ff8095;
+  --club-danger-soft: rgba(255, 128, 149, 0.12);
+  --club-info: #8fb4ff;
+  --club-info-soft: rgba(143, 180, 255, 0.12);
+  --club-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
+  --club-shadow-sm: 0 8px 22px rgba(0, 0, 0, 0.22);
+  --club-radius: 14px;
+  --club-radius-sm: 9px;
+  --club-radius-pill: 999px;
+  --club-topbar: 62px;
+  --club-max: 1240px;
+  --club-gap: 18px;
+  --club-font: "Inter", "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+  --club-mono: ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace;
+}
+
+html[data-theme="light"] body.club-page,
+html[data-theme="light"] .club-launcher {
+  --club-bg: #f3f4f7;
+  --club-bg-glow-a: rgba(194, 65, 12, 0.05);
+  --club-bg-glow-b: rgba(66, 78, 120, 0.05);
+  --club-surface: #ffffff;
+  --club-surface-2: #f8f9fb;
+  --club-surface-3: #eef0f4;
+  --club-line: #e2e5eb;
+  --club-line-strong: #cdd2db;
+  --club-text: #17181c;
+  --club-text-soft: #33363d;
+  --club-muted: #5b6069;
+  --club-accent: #c2410c;
+  --club-accent-strong: #9a3412;
+  --club-accent-soft: #fdf0ea;
+  --club-accent-line: rgba(194, 65, 12, 0.35);
+  --club-on-accent: #ffffff;
+  --club-ok: #16794c;
+  --club-ok-soft: #e8f6ef;
+  --club-warn: #8a5600;
+  --club-warn-soft: #fdf3e0;
+  --club-danger: #b4233b;
+  --club-danger-soft: #fdeef1;
+  --club-info: #2f4f8f;
+  --club-info-soft: #eef2fb;
+  --club-shadow: 0 10px 30px rgba(23, 24, 28, 0.07);
+  --club-shadow-sm: 0 4px 14px rgba(23, 24, 28, 0.06);
+}
+
+/* ============================================================
+   2. 基础
+   ============================================================ */
+body.club-page {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--club-text);
+  font-family: var(--club-font);
+  font-size: 15px;
+  line-height: 1.65;
+  background:
+    radial-gradient(ellipse 60% 42% at 8% -4%, var(--club-bg-glow-a), transparent 60%),
+    radial-gradient(ellipse 52% 40% at 96% 2%, var(--club-bg-glow-b), transparent 62%),
+    var(--club-bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body.club-page *,
+body.club-page *::before,
+body.club-page *::after { box-sizing: border-box; }
+
+body.club-page h1,
+body.club-page h2,
+body.club-page h3,
+body.club-page h4 { margin: 0 0 10px; color: var(--club-text); line-height: 1.25; letter-spacing: -0.015em; }
+body.club-page h1 { font-size: clamp(30px, 4.2vw, 44px); font-weight: 760; letter-spacing: -0.03em; }
+body.club-page h2 { font-size: 21px; font-weight: 700; }
+body.club-page h3 { font-size: 17px; font-weight: 700; }
+body.club-page p { margin: 0 0 12px; color: var(--club-text-soft); }
+body.club-page a { color: inherit; text-decoration: none; }
+body.club-page img { max-width: 100%; }
+body.club-page code,
+body.club-page kbd { font-family: var(--club-mono); font-size: 0.92em; }
+body.club-page ::selection { background: var(--club-accent-soft); color: var(--club-text); }
+
+body.club-page :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--club-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+body.club-page .hidden { display: none !important; }
+body.club-page [hidden] { display: none !important; }
+
+/* 跳到主内容 */
+.club-skip {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1200;
+  padding: 10px 14px;
+  border-radius: var(--club-radius-sm);
+  background: var(--club-accent);
+  color: var(--club-on-accent);
+  font-weight: 700;
+  transform: translateY(-160%);
+  transition: transform 0.18s ease;
+}
+.club-skip:focus { transform: translateY(0); }
+
+/* ============================================================
+   3. 顶栏
+   ============================================================ */
+body.club-page .topbar,
+body.club-page .club-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: var(--club-topbar);
+  padding: 10px clamp(16px, 3vw, 30px);
+  border-bottom: 1px solid var(--club-line);
+  background: color-mix(in srgb, var(--club-bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  body.club-page .topbar { background: var(--club-bg); }
+}
+
+body.club-page .topbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: var(--club-max);
+  margin: 0 auto;
+  padding: 0;
+}
+
+body.club-page .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+body.club-page .brand-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--club-accent-line);
+  border-radius: 9px;
+  background: var(--club-accent-soft);
+  color: var(--club-accent);
+  font-weight: 800;
+  font-size: 15px;
+}
+body.club-page .brand strong,
+body.club-page .brand small { display: block; }
+body.club-page .brand strong { font-size: 14px; font-weight: 750; line-height: 1.25; color: var(--club-text); }
+body.club-page .brand small {
+  color: var(--club-muted);
+  font-family: var(--club-mono);
+  font-size: 10px;
+  line-height: 1.3;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+body.club-page .club-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  margin-left: 6px;
+  padding-left: 16px;
+  border-left: 1px solid var(--club-line);
+  color: var(--club-muted);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.club-page .club-crumb strong { color: var(--club-text-soft); font-weight: 600; }
+
+body.club-page .member-identity,
+body.club-page .identity {
+  display: none;
+  margin-left: auto;
+  padding: 5px 11px;
+  border: 1px solid var(--club-accent-line);
+  border-radius: var(--club-radius-pill);
+  background: var(--club-accent-soft);
+  color: var(--club-accent);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+body.club-page .member-identity:not([hidden]),
+body.club-page .identity:not([hidden]) { display: inline-flex; }
+
+body.club-page .topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+body.club-page .back {
+  padding: 7px 11px;
+  border: 1px solid transparent;
+  border-radius: var(--club-radius-sm);
+  color: var(--club-muted);
+  font-size: 13px;
+  white-space: nowrap;
+  transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+body.club-page .back:hover {
+  border-color: var(--club-line);
+  background: var(--club-surface-2);
+  color: var(--club-text);
+}
+
+/* 语言 / 主题切换：压缩成紧凑胶囊 */
+body.club-page .lang-switcher,
+body.club-page .theme-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  margin: 0;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-pill);
+  background: var(--club-surface-2);
+  flex-shrink: 0;
+}
+body.club-page .lang-switcher button,
+body.club-page .theme-switcher button {
+  border: 0;
+  border-radius: var(--club-radius-pill);
+  background: transparent;
+  color: var(--club-muted);
+  padding: 5px 9px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+body.club-page .lang-switcher button:hover,
+body.club-page .theme-switcher button:hover { color: var(--club-text); }
+body.club-page .lang-switcher button.is-active,
+body.club-page .theme-switcher button.is-active {
+  background: var(--club-accent);
+  color: var(--club-on-accent);
+}
+
+/* 模块启动器按钮 */
+body.club-page .club-launcher-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-surface-2);
+  color: var(--club-text-soft);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+body.club-page .club-launcher-button:hover {
+  border-color: var(--club-accent-line);
+  background: var(--club-accent-soft);
+  color: var(--club-accent);
+}
+body.club-page .club-launcher-button svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+body.club-page .club-launcher-button kbd {
+  padding: 2px 5px;
+  border: 1px solid var(--club-line);
+  border-radius: 4px;
+  color: var(--club-muted);
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+/* ============================================================
+   4. 布局
+   ============================================================ */
+body.club-page main {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: var(--club-max);
+  margin: 0 auto;
+  padding: clamp(24px, 4vw, 44px) clamp(16px, 3vw, 30px) 72px;
+}
+
+body.club-page .club-page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+}
+body.club-page .club-page-head > div { max-width: 740px; }
+body.club-page .club-page-head h1 { margin-bottom: 8px; }
+body.club-page .club-page-head .lead { margin: 0; color: var(--club-muted); font-size: 15px; line-height: 1.75; }
+body.club-page .club-page-head .club-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+body.club-page .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  color: var(--club-accent);
+  font-family: var(--club-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+body.club-page .eyebrow::before {
+  content: "";
+  width: 16px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.7;
+}
+body.club-page .lead { max-width: 760px; margin: 0 0 20px; color: var(--club-muted); line-height: 1.75; }
+body.club-page .intro { margin: 0 0 14px; color: var(--club-muted); font-size: 13.5px; line-height: 1.7; }
+body.club-page .hint { margin: 6px 0 0; color: var(--club-muted); font-size: 12px; line-height: 1.55; }
+body.club-page .note {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border: 1px dashed var(--club-line-strong);
+  border-radius: var(--club-radius-sm);
+  color: var(--club-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+body.club-page .required { color: var(--club-danger); }
+
+/* 通用栅格 */
+body.club-page .layout { display: grid; grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr); gap: var(--club-gap); align-items: start; }
+body.club-page .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--club-gap); align-items: start; }
+body.club-page .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+body.club-page .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+body.club-page .hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: 24px;
+  align-items: end;
+  margin: 0 0 24px;
+}
+body.club-page .hero > div > .lead,
+body.club-page .hero > div > p { margin-bottom: 0; }
+body.club-page .member-content.hidden,
+body.club-page .auth-view.hidden { display: none; }
+body.club-page .auth-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--club-gap); align-items: start; }
+body.club-page .auth-grid .panel { margin: 0; }
+body.club-page .auth-view { margin-bottom: var(--club-gap); }
+body.club-page .admin-panel { display: none; }
+body.club-page .admin-panel.active { display: block; }
+body.club-page .muted-box { max-width: 240px; color: var(--club-muted); font-size: 12px; line-height: 1.55; white-space: pre-wrap; }
+body.club-page .message-card .class-name { color: var(--club-muted); font-size: 12.5px; }
+body.club-page .refresh-button { min-height: 32px; padding: 6px 11px; font-size: 12.5px; }
+
+/* ============================================================
+   5. 面板 / 卡片
+   ============================================================ */
+body.club-page .panel,
+body.club-page .card,
+body.club-page .section,
+body.club-page .panel-block,
+body.club-page .club-panel {
+  position: relative;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius);
+  background: var(--club-surface);
+  box-shadow: var(--club-shadow-sm);
+}
+body.club-page .panel,
+body.club-page .panel-block,
+body.club-page .club-panel { padding: 22px; margin: 0 0 var(--club-gap); }
+body.club-page .panel:last-child { margin-bottom: 0; }
+body.club-page .panel > h2:first-child,
+body.club-page .panel > h3:first-child { margin-top: 0; }
+body.club-page .panel-head,
+body.club-page .panel-heading,
+body.club-page .section-head,
+body.club-page .admin-head,
+body.club-page .points-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+body.club-page .panel-head h2,
+body.club-page .panel-heading h2,
+body.club-page .section-head h2,
+body.club-page .admin-head h2,
+body.club-page .points-head h2 { margin-bottom: 4px; }
+body.club-page .panel-head .intro:last-child,
+body.club-page .section-head .intro:last-child { margin-bottom: 0; }
+body.club-page .panel-intro { margin: 0; color: var(--club-muted); font-size: 13px; line-height: 1.65; }
+
+/* 登录门禁：历史页面用「.active / .hidden」控制显隐，
+   基础样式只负责排版，不能无条件 display:grid，否则门禁永远可见。 */
+body.club-page .member-gate,
+body.club-page .gate,
+body.club-page .denied {
+  min-height: 260px;
+  place-items: center;
+  padding: 36px 24px;
+  text-align: center;
+}
+/* 两类门禁机制并存：
+   1. 社员页用 .member-gate + .active（默认隐藏）
+   2. 后台 / 商城页用 .gate + .hidden（默认可见，登录后加 hidden） */
+body.club-page .member-gate { display: none; }
+body.club-page .member-gate.active { display: grid; }
+body.club-page .gate:not(.member-gate) { display: grid; }
+body.club-page .gate.active { display: grid; }
+body.club-page .denied:not(.hidden) { display: grid; }
+body.club-page .denied.hidden { display: none !important; }
+body.club-page .gate.hidden,
+body.club-page .member-gate.hidden { display: none !important; }
+body.club-page .member-gate strong,
+body.club-page .gate strong,
+body.club-page .denied strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--club-accent);
+  font-size: 20px;
+}
+body.club-page .member-gate p,
+body.club-page .gate p,
+body.club-page .denied p { max-width: 520px; margin: 0 auto 16px; color: var(--club-muted); }
+body.club-page .member-gate .button,
+body.club-page .gate .button,
+body.club-page .denied .button { margin: 0 auto; }
+
+/* 状态卡 / 概览卡 */
+body.club-page .status-panel,
+body.club-page .status-card,
+body.club-page .session-card {
+  padding: 18px 20px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius);
+  background: var(--club-surface);
+  box-shadow: var(--club-shadow-sm);
+}
+body.club-page .status-panel strong,
+body.club-page .status-card strong,
+body.club-page .session-card strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--club-accent);
+  font-size: 16px;
+}
+body.club-page .status-panel span,
+body.club-page .status-card span,
+body.club-page .session-card span { color: var(--club-muted); font-size: 13px; line-height: 1.65; }
+body.club-page .hero-card {
+  padding: 20px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius);
+  background: linear-gradient(140deg, var(--club-accent-soft), transparent 62%), var(--club-surface);
+}
+body.club-page .hero-card strong { display: block; margin-bottom: 6px; color: var(--club-accent); font-size: 16px; }
+body.club-page .hero-card span { color: var(--club-muted); font-size: 13px; line-height: 1.7; }
+
+/* 统计条 */
+body.club-page .stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: var(--club-gap);
+}
+body.club-page .stat {
+  padding: 15px 16px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-surface);
+}
+body.club-page .stat small { display: block; margin-bottom: 4px; color: var(--club-muted); font-size: 11.5px; letter-spacing: 0.02em; }
+body.club-page .stat strong { color: var(--club-text); font-size: 24px; font-weight: 750; line-height: 1.2; font-variant-numeric: tabular-nums; }
+body.club-page .stat span { display: block; margin-top: 2px; color: var(--club-muted); font-size: 12px; }
+
+/* 入口卡片 */
+body.club-page .card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 132px;
+  padding: 18px;
+  color: var(--club-text);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+body.club-page a.card:hover {
+  transform: translateY(-2px);
+  border-color: var(--club-accent-line);
+  box-shadow: var(--club-shadow);
+  background: var(--club-surface-2);
+}
+body.club-page .card strong { display: block; font-size: 16px; font-weight: 700; }
+body.club-page .card p { margin: 6px 0 0; color: var(--club-muted); font-size: 13px; line-height: 1.6; }
+body.club-page .card span { margin-top: 14px; color: var(--club-accent); font-size: 12.5px; font-weight: 650; }
+body.club-page .card-body { padding: 16px; }
+body.club-page .cover {
+  display: grid;
+  place-items: center;
+  min-height: 132px;
+  border-bottom: 1px solid var(--club-line);
+  background: var(--club-surface-2);
+  color: var(--club-muted);
+  font-size: 12px;
+  overflow: hidden;
+}
+body.club-page .cover img { width: 100%; height: 132px; object-fit: cover; display: block; }
+
+/* ============================================================
+   6. 按钮
+   ============================================================ */
+body.club-page .button,
+body.club-page .btn,
+body.club-page .primary-action,
+body.club-page .secondary-action,
+body.club-page .row-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--club-accent-line);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-accent);
+  color: var(--club-on-accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: filter 0.16s ease, background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+body.club-page .button:hover,
+body.club-page .primary-action:hover { filter: brightness(1.08); }
+body.club-page .button:active,
+body.club-page .primary-action:active { transform: translateY(1px); }
+body.club-page .button:disabled,
+body.club-page .row-button:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+
+body.club-page .button.secondary,
+body.club-page .secondary-action,
+body.club-page .row-button {
+  border-color: var(--club-line-strong);
+  background: var(--club-surface-2);
+  color: var(--club-text-soft);
+}
+body.club-page .button.secondary:hover,
+body.club-page .secondary-action:hover,
+body.club-page .row-button:hover {
+  border-color: var(--club-accent-line);
+  background: var(--club-accent-soft);
+  color: var(--club-accent);
+  filter: none;
+}
+body.club-page .button.danger,
+body.club-page .danger.button,
+body.club-page .row-button.delete {
+  border-color: color-mix(in srgb, var(--club-danger) 55%, transparent);
+  background: var(--club-danger-soft);
+  color: var(--club-danger);
+}
+body.club-page .button.danger:hover,
+body.club-page .row-button.delete:hover { filter: brightness(1.1); }
+body.club-page .button.ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--club-muted);
+}
+body.club-page .button.ghost:hover { background: var(--club-surface-2); color: var(--club-text); }
+
+body.club-page .actions,
+body.club-page .form-actions,
+body.club-page .hero-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+body.club-page .actions button,
+body.club-page .actions a { flex: 0 0 auto; }
+body.club-page .form-actions { justify-content: flex-end; }
+body.club-page .form-actions .message { flex: 1 1 200px; min-height: 0; margin: 0; }
+
+/* ============================================================
+   7. 表单
+   ============================================================ */
+body.club-page .form { display: grid; gap: 13px; }
+body.club-page .form.inline { grid-template-columns: repeat(2, minmax(0, 1fr)) auto; align-items: end; }
+body.club-page .form.perm { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; }
+body.club-page .field { display: grid; gap: 6px; min-width: 0; }
+body.club-page .label {
+  display: block;
+  margin: 0;
+  color: var(--club-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+body.club-page .input,
+body.club-page .select,
+body.club-page .textarea,
+body.club-page input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+body.club-page select,
+body.club-page textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-surface-2);
+  color: var(--club-text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+body.club-page .textarea,
+body.club-page textarea { min-height: 92px; resize: vertical; }
+body.club-page .input::placeholder,
+body.club-page .textarea::placeholder,
+body.club-page input::placeholder,
+body.club-page textarea::placeholder { color: var(--club-muted); opacity: 0.85; }
+body.club-page .input:focus,
+body.club-page .select:focus,
+body.club-page .textarea:focus,
+body.club-page input:focus,
+body.club-page select:focus,
+body.club-page textarea:focus {
+  border-color: var(--club-accent);
+  background: var(--club-surface);
+  box-shadow: 0 0 0 3px var(--club-accent-soft);
+}
+body.club-page .input[readonly] { background: var(--club-surface-3); color: var(--club-muted); }
+body.club-page select option { background: var(--club-surface); color: var(--club-text); }
+body.club-page input[type="checkbox"],
+body.club-page input[type="radio"] { accent-color: var(--club-accent); width: 15px; height: 15px; }
+body.club-page input[type="file"] { font-size: 13px; color: var(--club-muted); }
+
+body.club-page .checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  padding: 13px 14px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-surface-2);
+}
+body.club-page .checks label,
+body.club-page .form .checks label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--club-text-soft);
+  font-size: 13px;
+  cursor: pointer;
+}
+body.club-page .form > .label + .input,
+body.club-page .form > .label + .textarea,
+body.club-page .form > .label + .select { margin-top: -6px; }
+
+body.club-page .member-form,
+body.club-page .message-form,
+body.club-page .admin-grid,
+body.club-page .invite-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+body.club-page .member-form .button,
+body.club-page .admin-grid .button { white-space: nowrap; }
+body.club-page .message-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+body.club-page .message-form .form-wide { grid-column: 1 / -1; }
+body.club-page .invite-grid { grid-template-columns: minmax(0, 1fr) auto; }
+body.club-page .bind-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+}
+body.club-page .contact-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px; }
+
+/* ============================================================
+   8. 表格
+   ============================================================ */
+body.club-page .table-wrap,
+body.club-page .report-table-wrap {
+  width: 100%;
+  overflow: auto;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-surface);
+  -webkit-overflow-scrolling: touch;
+}
+body.club-page .table,
+body.club-page .points-table,
+body.club-page .invite-table,
+body.club-page table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 640px;
+  font-size: 13.5px;
+}
+body.club-page .table-wrap > .table { border: 0; }
+body.club-page .table th,
+body.club-page .points-table th,
+body.club-page .invite-table th,
+body.club-page th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--club-line);
+  background: var(--club-surface-2);
+  color: var(--club-muted);
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  text-align: left;
+  white-space: nowrap;
+}
+body.club-page .table td,
+body.club-page .points-table td,
+body.club-page .invite-table td,
+body.club-page td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--club-line);
+  color: var(--club-text-soft);
+  text-align: left;
+  vertical-align: middle;
+}
+body.club-page .table tbody tr:last-child td,
+body.club-page .points-table tbody tr:last-child td,
+body.club-page .invite-table tbody tr:last-child td { border-bottom: 0; }
+body.club-page .table tbody tr:hover td,
+body.club-page .points-table tbody tr:hover td,
+body.club-page .invite-table tbody tr:hover td { background: var(--club-surface-2); }
+body.club-page td.actions { white-space: nowrap; }
+body.club-page td.actions .button,
+body.club-page td .row-button { min-height: 30px; padding: 5px 10px; font-size: 12px; }
+
+body.club-page .thumb {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--club-line);
+  border-radius: 7px;
+  object-fit: cover;
+  background: var(--club-surface-2);
+}
+body.club-page .perm-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+
+/* ============================================================
+   9. 徽章 / 提示 / 空状态 / 加载
+   ============================================================ */
+body.club-page .badge,
+body.club-page .tag,
+body.club-page .status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-pill);
+  background: var(--club-surface-2);
+  color: var(--club-muted);
+  font-size: 11.5px;
+  font-weight: 650;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+body.club-page .badge.on,
+body.club-page .badge.approved,
+body.club-page .badge.used,
+body.club-page .status-pill { border-color: color-mix(in srgb, var(--club-ok) 45%, transparent); background: var(--club-ok-soft); color: var(--club-ok); }
+body.club-page .badge.off { border-color: var(--club-line); background: var(--club-surface-2); color: var(--club-muted); }
+body.club-page .badge.pending { border-color: color-mix(in srgb, var(--club-warn) 50%, transparent); background: var(--club-warn-soft); color: var(--club-warn); }
+body.club-page .badge.cancelled,
+body.club-page .badge.expired,
+body.club-page .badge.rejected { border-color: color-mix(in srgb, var(--club-danger) 45%, transparent); background: var(--club-danger-soft); color: var(--club-danger); }
+
+body.club-page .message {
+  min-height: 20px;
+  margin: 10px 0 0;
+  color: var(--club-muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+body.club-page .message.error { color: var(--club-danger); }
+body.club-page .message.success { color: var(--club-ok); }
+body.club-page .message.warning { color: var(--club-warn); }
+
+body.club-page .empty {
+  padding: 30px 16px;
+  color: var(--club-muted);
+  font-size: 13px;
+  text-align: center;
+}
+body.club-page .empty.loading,
+body.club-page .loading {
+  color: var(--club-accent);
+  font-size: 13px;
+}
+body.club-page .empty.loading::after {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: 8px;
+  border: 2px solid var(--club-accent-soft);
+  border-top-color: var(--club-accent);
+  border-radius: 50%;
+  vertical-align: -2px;
+  animation: club-spin 0.8s linear infinite;
+}
+@keyframes club-spin { to { transform: rotate(360deg); } }
+
+body.club-page .notice {
+  display: none;
+  padding: 13px 15px;
+  border: 1px solid color-mix(in srgb, var(--club-warn) 45%, transparent);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-warn-soft);
+}
+body.club-page .notice.active { display: block; }
+body.club-page .notice strong { display: block; margin-bottom: 3px; color: var(--club-warn); font-size: 13.5px; }
+body.club-page .notice p { margin: 0; color: var(--club-text-soft); font-size: 13px; }
+body.club-page .notice a { color: var(--club-accent); text-decoration: underline; text-underline-offset: 2px; }
+body.club-page .drive-status {
+  padding: 13px 15px;
+  margin-bottom: var(--club-gap);
+  border: 1px solid color-mix(in srgb, var(--club-ok) 40%, transparent);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-ok-soft);
+}
+body.club-page .drive-status strong { display: block; margin-bottom: 2px; color: var(--club-ok); font-size: 13.5px; }
+body.club-page .drive-status span { color: var(--club-text-soft); font-size: 13px; }
+body.club-page .drive-status.warn { border-color: color-mix(in srgb, var(--club-warn) 42%, transparent); background: var(--club-warn-soft); }
+body.club-page .drive-status.warn strong { color: var(--club-warn); }
+
+body.club-page .secret-box {
+  display: none;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px dashed var(--club-accent-line);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-accent-soft);
+  color: var(--club-text);
+  line-height: 1.7;
+}
+body.club-page .secret-box.active { display: block; }
+body.club-page .secret-box code,
+body.club-page .secret-box strong { color: var(--club-accent); font-family: var(--club-mono); }
+
+/* ============================================================
+   10. 社员中心
+   ============================================================ */
+body.club-page .profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+body.club-page .profile-item {
+  padding: 13px 14px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-surface-2);
+}
+body.club-page .profile-item small { display: block; margin-bottom: 4px; color: var(--club-muted); font-size: 11.5px; }
+body.club-page .profile-item strong { display: block; color: var(--club-text); font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
+body.club-page .profile-item strong.accent { color: var(--club-ok); font-size: 22px; font-variant-numeric: tabular-nums; }
+
+body.club-page .quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+body.club-page .quick-link {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 15px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-surface-2);
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+body.club-page .quick-link:hover {
+  transform: translateY(-2px);
+  border-color: var(--club-accent-line);
+  background: var(--club-accent-soft);
+}
+body.club-page .quick-link strong { color: var(--club-text); font-size: 14px; }
+body.club-page .quick-link span { color: var(--club-muted); font-size: 12.5px; line-height: 1.55; }
+body.club-page .quick-link[data-admin-only] { display: none; }
+body.club-page .quick-link[data-admin-only].is-visible { display: flex; }
+
+body.club-page .theme-picker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+body.club-page .theme-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  padding: 13px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-surface-2);
+  color: var(--club-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+body.club-page .theme-option:hover { border-color: var(--club-accent-line); }
+body.club-page .theme-option.is-active { border-color: var(--club-accent); background: var(--club-accent-soft); }
+body.club-page .theme-option strong { font-size: 13.5px; }
+body.club-page .theme-option span { color: var(--club-muted); font-size: 12px; line-height: 1.5; }
+body.club-page .theme-hint { margin: 10px 0 0; color: var(--club-muted); font-size: 12.5px; }
+
+/* ============================================================
+   11. 积分 / 商城 / 留言
+   ============================================================ */
+body.club-page .points-head { align-items: center; }
+body.club-page .points-accent { color: var(--club-ok); font-size: 30px; font-weight: 750; line-height: 1.15; font-variant-numeric: tabular-nums; }
+body.club-page .points-value { color: var(--club-ok); font-weight: 700; font-variant-numeric: tabular-nums; }
+body.club-page .admin-points-table { margin-top: 14px; }
+body.club-page .member-row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+body.club-page .redeem-btn { width: 100%; margin-top: 12px; }
+body.club-page .meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+body.club-page .price { color: var(--club-accent); font-weight: 750; font-size: 14px; }
+body.club-page .stock,
+body.club-page .desc { color: var(--club-muted); font-size: 12.5px; }
+
+body.club-page .message-list { display: grid; gap: 10px; margin-top: 14px; }
+body.club-page .message-card {
+  padding: 14px 16px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-surface-2);
+}
+body.club-page .message-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+body.club-page .message-card-head strong { color: var(--club-text); font-size: 14px; }
+body.club-page .message-card-head span,
+body.club-page .message-card time { color: var(--club-muted); font-size: 12px; }
+body.club-page .message-card p { margin: 0; color: var(--club-text-soft); font-size: 13.5px; white-space: pre-wrap; }
+body.club-page .message-actions { display: flex; gap: 6px; margin-top: 10px; }
+
+/* ============================================================
+   12. 社团盘
+   ============================================================ */
+body.club-page .drive-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+body.club-page .drive-meta { color: var(--club-muted); font-size: 12.5px; font-family: var(--club-mono); }
+body.club-page .drive-tools { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+body.club-page .drive-tools .input { flex: 1 1 220px; min-width: 180px; }
+body.club-page .crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-bottom: 12px; font-size: 13px; }
+body.club-page .crumb {
+  padding: 4px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--club-muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+body.club-page .crumb:hover { background: var(--club-surface-2); color: var(--club-text); }
+body.club-page .crumb.current { border-color: var(--club-accent-line); background: var(--club-accent-soft); color: var(--club-accent); }
+body.club-page .file-list { border: 1px solid var(--club-line); border-radius: var(--club-radius-sm); overflow: hidden; }
+body.club-page .file-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 90px 90px auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--club-line);
+  font-size: 13px;
+}
+body.club-page .file-row:last-child { border-bottom: 0; }
+body.club-page .file-row:hover { background: var(--club-surface-2); }
+body.club-page .file-name { color: var(--club-text); overflow-wrap: anywhere; }
+body.club-page .file-name.folder { color: var(--club-accent); cursor: pointer; font-weight: 600; }
+body.club-page .file-type,
+body.club-page .file-size { color: var(--club-muted); font-size: 12px; font-family: var(--club-mono); }
+body.club-page .row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+body.club-page .transfer {
+  display: none;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--club-accent-line);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-accent-soft);
+}
+body.club-page .transfer.active { display: block; }
+body.club-page .transfer-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px; font-size: 12.5px; }
+body.club-page .transfer-label { color: var(--club-text); font-weight: 650; }
+body.club-page .transfer-value { color: var(--club-accent); font-family: var(--club-mono); }
+body.club-page .transfer progress { width: 100%; height: 6px; accent-color: var(--club-accent); }
+body.club-page .transfer-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 6px; }
+body.club-page .transfer-detail { color: var(--club-muted); font-size: 12px; }
+body.club-page .transfer-cancel {
+  padding: 4px 9px;
+  border: 1px solid var(--club-line-strong);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--club-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+body.club-page .invite-used { color: var(--club-muted); }
+body.club-page .invite-unused { color: var(--club-ok); font-weight: 650; }
+
+/* ============================================================
+   13. 签到
+   ============================================================ */
+body.club-page .admin { display: grid; gap: var(--club-gap); margin-top: var(--club-gap); }
+body.club-page .admin-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+body.club-page .code-result {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px dashed var(--club-accent-line);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-accent-soft);
+  font-size: 12.5px;
+  color: var(--club-muted);
+}
+body.club-page .code-result strong { color: var(--club-accent); font-family: var(--club-mono); font-size: 20px; letter-spacing: 0.08em; }
+body.club-page .all-users { max-width: 260px; }
+body.club-page .user-use { display: flex; gap: 8px; justify-content: space-between; font-size: 12px; color: var(--club-text-soft); }
+body.club-page .user-use time { color: var(--club-muted); }
+body.club-page .attendance-filter { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+body.club-page .attendance-count { color: var(--club-muted); font-size: 12.5px; }
+
+/* ============================================================
+   14. 时间线 / 更新日志 / 活动
+   ============================================================ */
+body.club-page .timeline { display: grid; gap: 10px; }
+body.club-page .timeline .panel,
+body.club-page .timeline .entry { margin: 0; }
+body.club-page .entry { padding: 18px 20px; }
+body.club-page .entry-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+body.club-page .entry .date,
+body.club-page .timeline-date { color: var(--club-accent); font-family: var(--club-mono); font-size: 12px; font-weight: 700; letter-spacing: 0.03em; }
+body.club-page .entry ul { margin: 8px 0 0; padding-left: 20px; color: var(--club-text-soft); font-size: 13.5px; line-height: 1.8; }
+body.club-page .entry li::marker { color: var(--club-accent); }
+
+body.club-page .list { display: grid; gap: 10px; margin-top: 12px; }
+body.club-page .list > .card { min-height: 0; }
+body.club-page .signup-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--club-line);
+}
+body.club-page .signup-form .label { margin: 0; }
+
+/* ============================================================
+   15. 社团功能 / 资源
+   ============================================================ */
+body.club-page .resource-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+body.club-page .resource-card {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius);
+  background: var(--club-surface);
+  box-shadow: var(--club-shadow-sm);
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+body.club-page .resource-card:hover { transform: translateY(-2px); border-color: var(--club-accent-line); }
+body.club-page .resource-card p { flex: 1 1 auto; color: var(--club-muted); font-size: 13px; }
+body.club-page .resource-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+body.club-page .info-list { margin: 0 0 14px; padding: 0; list-style: none; display: grid; gap: 10px; }
+body.club-page .info-list li {
+  padding: 12px 14px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-surface-2);
+  color: var(--club-text-soft);
+  font-size: 13px;
+  line-height: 1.65;
+}
+body.club-page .info-list strong { color: var(--club-text); }
+body.club-page .welcome {
+  padding: 12px 14px;
+  border: 1px solid var(--club-accent-line);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-accent-soft);
+  color: var(--club-accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+body.club-page .guide-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+body.club-page .guide-grid .panel { margin: 0; }
+body.club-page .guide-grid .panel-wide { grid-column: 1 / -1; }
+
+/* ============================================================
+   16. 外壳组件：分类标签、章节内导航、侧栏
+   ============================================================ */
+body.club-page .club-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 0 20px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-pill);
+  background: var(--club-surface);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+body.club-page .club-tabs::-webkit-scrollbar { display: none; }
+body.club-page .club-tabs button {
+  flex: 0 0 auto;
+  padding: 8px 15px;
+  border: 1px solid transparent;
+  border-radius: var(--club-radius-pill);
+  background: transparent;
+  color: var(--club-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+body.club-page .club-tabs button:hover { background: var(--club-surface-2); color: var(--club-text); }
+body.club-page .club-tabs button[aria-selected="true"] {
+  background: var(--club-accent);
+  border-color: var(--club-accent);
+  color: var(--club-on-accent);
+}
+body.club-page [data-club-tabpanel][hidden] { display: none !important; }
+
+/* 页内章节导航（长表单页） */
+body.club-page .club-section-nav {
+  position: sticky;
+  top: calc(var(--club-topbar) + 8px);
+  z-index: 40;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  margin: 0 0 18px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-pill);
+  background: color-mix(in srgb, var(--club-bg) 88%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+body.club-page .club-section-nav::-webkit-scrollbar { display: none; }
+body.club-page .club-section-nav a {
+  flex: 0 0 auto;
+  padding: 7px 13px;
+  border-radius: var(--club-radius-pill);
+  color: var(--club-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+body.club-page .club-section-nav a:hover { background: var(--club-surface-2); color: var(--club-text); }
+body.club-page .club-section-nav a.is-active { background: var(--club-accent-soft); color: var(--club-accent); }
+
+/* 管理后台横向模块栏 */
+body.club-page .club-admin-rail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px clamp(16px, 3vw, 30px);
+  border-bottom: 1px solid var(--club-line);
+  background: var(--club-surface);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+body.club-page .club-admin-rail::-webkit-scrollbar { display: none; }
+body.club-page .club-admin-rail .club-admin-rail-inner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  max-width: var(--club-max);
+  margin: 0 auto;
+}
+body.club-page .club-admin-rail a {
+  flex: 0 0 auto;
+  padding: 6px 11px;
+  border: 1px solid transparent;
+  border-radius: var(--club-radius-pill);
+  color: var(--club-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+body.club-page .club-admin-rail a:hover { background: var(--club-surface-2); color: var(--club-text); }
+body.club-page .club-admin-rail a[aria-current="page"] {
+  border-color: var(--club-accent-line);
+  background: var(--club-accent-soft);
+  color: var(--club-accent);
+}
+body.club-page .club-admin-rail .club-admin-rail-label {
+  flex: 0 0 auto;
+  margin-right: 6px;
+  color: var(--club-muted);
+  font-family: var(--club-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   17. 模块启动器（命令面板）
+   ============================================================ */
+.club-launcher {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(12px, 8vh, 90px) 16px 24px;
+  background: rgba(2, 5, 10, 0.66);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+html[data-theme="light"] .club-launcher { background: rgba(23, 24, 28, 0.34); }
+.club-launcher.is-open { display: flex; }
+.club-launcher-panel {
+  width: min(680px, 100%);
+  max-height: min(76vh, 720px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--club-line-strong);
+  border-radius: 16px;
+  background: var(--club-surface);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+  animation: club-pop 0.16s ease-out;
+}
+@keyframes club-pop { from { opacity: 0; transform: translateY(-6px) scale(0.99); } }
+.club-launcher-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--club-line);
+}
+.club-launcher-search svg { width: 17px; height: 17px; fill: none; stroke: var(--club-muted); stroke-width: 1.8; flex: 0 0 auto; }
+.club-launcher-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--club-text);
+  font: inherit;
+  font-size: 15px;
+  outline: none;
+}
+.club-launcher-search input::placeholder { color: var(--club-muted); }
+.club-launcher-search kbd {
+  padding: 2px 6px;
+  border: 1px solid var(--club-line);
+  border-radius: 4px;
+  color: var(--club-muted);
+  font-size: 10px;
+}
+.club-launcher-results { overflow-y: auto; padding: 8px; overscroll-behavior: contain; }
+.club-launcher-group {
+  padding: 10px 10px 4px;
+  color: var(--club-muted);
+  font-family: var(--club-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.club-launcher-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--club-text-soft);
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.club-launcher-item .club-launcher-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--club-line);
+  border-radius: 7px;
+  background: var(--club-surface-2);
+  color: var(--club-accent);
+  font-family: var(--club-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+.club-launcher-item .club-launcher-copy { display: grid; gap: 1px; min-width: 0; }
+.club-launcher-item strong { color: var(--club-text); font-weight: 650; }
+.club-launcher-item small { color: var(--club-muted); font-size: 11.5px; }
+.club-launcher-item.is-active,
+.club-launcher-item:hover { border-color: var(--club-accent-line); background: var(--club-accent-soft); }
+.club-launcher-item[hidden] { display: none !important; }
+.club-launcher-empty { padding: 26px 12px; color: var(--club-muted); font-size: 13px; text-align: center; }
+.club-launcher-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 15px;
+  border-top: 1px solid var(--club-line);
+  color: var(--club-muted);
+  font-size: 11px;
+}
+
+/* 回到顶部 */
+.club-to-top {
+  position: fixed;
+  right: clamp(14px, 2.4vw, 26px);
+  bottom: clamp(14px, 2.4vw, 26px);
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--club-line-strong);
+  border-radius: 50%;
+  background: var(--club-surface);
+  color: var(--club-muted);
+  box-shadow: var(--club-shadow-sm);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 0.18s ease, transform 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+.club-to-top.is-visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.club-to-top:hover { border-color: var(--club-accent-line); color: var(--club-accent); }
+.club-to-top svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+/* ============================================================
+   18. 管理总览专用
+   ============================================================ */
+body.club-page .club-admin-layout {
+  display: grid;
+  grid-template-columns: 214px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+body.club-page .club-admin-side {
+  position: sticky;
+  top: calc(var(--club-topbar) + 16px);
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius);
+  background: var(--club-surface);
+  box-shadow: var(--club-shadow-sm);
+}
+body.club-page .club-admin-side .club-admin-side-label {
+  padding: 6px 10px 8px;
+  color: var(--club-muted);
+  font-family: var(--club-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+body.club-page .club-admin-side a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  color: var(--club-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+body.club-page .club-admin-side a:hover { background: var(--club-surface-2); color: var(--club-text); }
+body.club-page .club-admin-side a[aria-current="page"] {
+  background: var(--club-accent-soft);
+  color: var(--club-accent);
+}
+body.club-page .club-admin-side a .club-admin-side-code {
+  font-family: var(--club-mono);
+  font-size: 10.5px;
+  opacity: 0.8;
+}
+body.club-page .club-admin-side .club-admin-side-foot {
+  margin-top: 6px;
+  padding: 9px 10px;
+  border-top: 1px solid var(--club-line);
+  color: var(--club-muted);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+body.club-page .club-overview-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(260px, 0.7fr);
+  gap: 20px;
+  align-items: stretch;
+  margin-bottom: var(--club-gap);
+}
+body.club-page .club-overview-hero .status-card { display: grid; align-content: center; }
+body.club-page .club-profile-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius);
+  background: linear-gradient(135deg, var(--club-accent-soft), transparent 60%), var(--club-surface);
+}
+body.club-page .club-profile-banner .club-profile-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--club-accent-line);
+  border-radius: 50%;
+  background: var(--club-surface-2);
+  color: var(--club-accent);
+  font-size: 18px;
+  font-weight: 750;
+}
+body.club-page .club-profile-banner strong { display: block; color: var(--club-text); font-size: 15px; }
+body.club-page .club-profile-banner span { color: var(--club-muted); font-size: 12.5px; }
+
+/* 权限勾选矩阵压缩 */
+body.club-page .checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 640px) { body.club-page .checks { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   19. 响应式
+   ============================================================ */
+@media (max-width: 1080px) {
+  body.club-page .club-admin-layout { grid-template-columns: 1fr; }
+  body.club-page .club-admin-side {
+    position: static;
+    display: flex;
+    gap: 4px;
+    padding: 7px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  body.club-page .club-admin-side::-webkit-scrollbar { display: none; }
+  body.club-page .club-admin-side .club-admin-side-label,
+  body.club-page .club-admin-side .club-admin-side-foot { display: none; }
+  body.club-page .club-admin-side a { flex: 0 0 auto; white-space: nowrap; }
+}
+
+@media (max-width: 900px) {
+  body.club-page .hero,
+  body.club-page .layout,
+  body.club-page .club-overview-hero { grid-template-columns: 1fr; }
+  body.club-page .form.inline,
+  body.club-page .form.perm,
+  body.club-page .admin-grid,
+  body.club-page .member-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.club-page .club-crumb { display: none; }
+}
+
+@media (max-width: 720px) {
+  /* 统计卡在手机上保持两列，避免一屏只放得下一张卡。 */
+  body.club-page .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  body.club-page .stat { padding: 11px 12px; }
+  body.club-page .stat small { font-size: 11px; }
+  body.club-page .stat strong { font-size: 19px; }
+  body.club-page .topbar,
+  body.club-page .club-topbar { gap: 10px; padding: 9px 14px; }
+  body.club-page .brand small { display: none; }
+  body.club-page .club-launcher-button span,
+  body.club-page .club-launcher-button kbd { display: none; }
+  body.club-page .club-launcher-button { padding: 8px; }
+  body.club-page main { padding: 20px 14px 60px; }
+  body.club-page .panel,
+  body.club-page .panel-block,
+  body.club-page .club-panel { padding: 16px; }
+  body.club-page .hero { gap: 16px; }
+  body.club-page .grid,
+  body.club-page .grid-2,
+  body.club-page .grid-3,
+  body.club-page .guide-grid,
+  body.club-page .signup-form,
+  body.club-page .bind-grid,
+  body.club-page .member-form,
+  body.club-page .message-form,
+  body.club-page .admin-grid,
+  body.club-page .form.inline,
+  body.club-page .form.perm,
+  body.club-page .profile-grid,
+  body.club-page .quick-grid,
+  body.club-page .theme-picker,
+  body.club-page .checks { grid-template-columns: 1fr; }
+  body.club-page .contact-row { grid-template-columns: 1fr; }
+  body.club-page .file-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; }
+  body.club-page .file-type,
+  body.club-page .file-size { font-size: 11px; }
+  body.club-page .row-actions { grid-column: 1 / -1; justify-content: flex-start; }
+  body.club-page .actions .button,
+  body.club-page .hero-actions .button { flex: 1 1 auto; }
+  body.club-page .club-page-head { gap: 14px; margin-bottom: 20px; }
+  body.club-page .club-page-head h1 { font-size: 28px; }
+  body.club-page .lang-switcher,
+  body.club-page .theme-switcher { zoom: 0.94; }
+  body.club-page .table,
+  body.club-page .points-table,
+  body.club-page .invite-table,
+  body.club-page table { min-width: 560px; }
+  body.club-page .club-launcher-panel { max-height: 84vh; }
+}
+
+@media (max-width: 560px) {
+  /* 品牌本身已链接首页：窄屏去掉重复的「返回官网」，把空间留给语言/主题切换。 */
+  body.club-page .topbar .back,
+  body.club-page .club-topbar .back { display: none; }
+  body.club-page .topbar-inner,
+  body.club-page .club-topbar { gap: 8px; }
+  body.club-page .brand { min-width: 0; }
+  body.club-page .brand > span:last-child { min-width: 0; overflow: hidden; }
+  body.club-page .brand strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.club-page .topbar-actions { gap: 6px; }
+  body.club-page .lang-switcher,
+  body.club-page .theme-switcher { zoom: 1; padding: 2px; }
+  body.club-page .lang-switcher button,
+  body.club-page .theme-switcher button { padding: 5px 7px; font-size: 10.5px; }
+}
+
+@media (max-width: 420px) {
+  body.club-page .member-identity,
+  body.club-page .identity { display: none !important; }
+  body.club-page .brand strong { font-size: 13px; }
+}
+
+/* 触屏 / 减少动效 */
+@media (hover: none) {
+  body.club-page a.card:hover,
+  body.club-page .resource-card:hover,
+  body.club-page .quick-link:hover { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.club-page *,
+  body.club-page *::before,
+  body.club-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   20. 亮色关键覆盖（压过 theme.css 的 !important）
+   ============================================================ */
+html[data-theme="light"] body.club-page .panel,
+html[data-theme="light"] body.club-page .card,
+html[data-theme="light"] body.club-page .section,
+html[data-theme="light"] body.club-page .panel-block,
+html[data-theme="light"] body.club-page .club-panel,
+html[data-theme="light"] body.club-page .resource-card,
+html[data-theme="light"] body.club-page .club-admin-side,
+html[data-theme="light"] body.club-page .table-wrap,
+html[data-theme="light"] body.club-page .club-tabs,
+html[data-theme="light"] body.club-page .club-section-nav {
+  background: #FFFFFF !important;
+  border-color: var(--club-line) !important;
+  color: var(--club-text) !important;
+  box-shadow: var(--club-shadow-sm) !important;
+}
+html[data-theme="light"] body.club-page .card-body,
+html[data-theme="light"] body.club-page .profile-item,
+html[data-theme="light"] body.club-page .quick-link,
+html[data-theme="light"] body.club-page .info-list li,
+html[data-theme="light"] body.club-page .message-card,
+html[data-theme="light"] body.club-page .checks,
+html[data-theme="light"] body.club-page .cover,
+html[data-theme="light"] body.club-page .file-row:hover,
+html[data-theme="light"] body.club-page .theme-option,
+html[data-theme="light"] body.club-page .stat {
+  background: var(--club-surface-2) !important;
+  border-color: var(--club-line) !important;
+  color: var(--club-text) !important;
+}
+html[data-theme="light"] body.club-page .input,
+html[data-theme="light"] body.club-page .select,
+html[data-theme="light"] body.club-page .textarea,
+html[data-theme="light"] body.club-page input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+html[data-theme="light"] body.club-page select,
+html[data-theme="light"] body.club-page textarea {
+  background: #FFFFFF !important;
+  border-color: var(--club-line) !important;
+  color: var(--club-text) !important;
+}
+html[data-theme="light"] body.club-page .input::placeholder,
+html[data-theme="light"] body.club-page textarea::placeholder,
+html[data-theme="light"] body.club-page input::placeholder { color: #7a808a !important; opacity: 1 !important; }
+html[data-theme="light"] body.club-page .button,
+html[data-theme="light"] body.club-page .primary-action {
+  background: var(--club-accent) !important;
+  border-color: var(--club-accent) !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+}
+html[data-theme="light"] body.club-page .button:hover,
+html[data-theme="light"] body.club-page .primary-action:hover {
+  background: var(--club-accent-strong) !important;
+  border-color: var(--club-accent-strong) !important;
+}
+html[data-theme="light"] body.club-page .button.secondary,
+html[data-theme="light"] body.club-page .secondary-action,
+html[data-theme="light"] body.club-page .row-button,
+html[data-theme="light"] body.club-page .button.ghost {
+  background: #FFFFFF !important;
+  border-color: var(--club-line-strong) !important;
+  color: var(--club-text-soft) !important;
+  box-shadow: none !important;
+}
+html[data-theme="light"] body.club-page .button.secondary:hover,
+html[data-theme="light"] body.club-page .secondary-action:hover,
+html[data-theme="light"] body.club-page .row-button:hover {
+  background: var(--club-accent-soft) !important;
+  border-color: var(--club-accent-line) !important;
+  color: var(--club-accent) !important;
+}
+html[data-theme="light"] body.club-page .button.danger,
+html[data-theme="light"] body.club-page .row-button.delete {
+  background: var(--club-danger-soft) !important;
+  border-color: color-mix(in srgb, var(--club-danger) 40%, transparent) !important;
+  color: var(--club-danger) !important;
+}
+html[data-theme="light"] body.club-page .table th,
+html[data-theme="light"] body.club-page .points-table th,
+html[data-theme="light"] body.club-page .invite-table th,
+html[data-theme="light"] body.club-page th {
+  background: var(--club-surface-2) !important;
+  color: var(--club-muted) !important;
+  border-color: var(--club-line) !important;
+}
+html[data-theme="light"] body.club-page .table td,
+html[data-theme="light"] body.club-page .points-table td,
+html[data-theme="light"] body.club-page .invite-table td,
+html[data-theme="light"] body.club-page td {
+  color: var(--club-text-soft) !important;
+  border-color: var(--club-line) !important;
+}
+html[data-theme="light"] body.club-page .topbar,
+html[data-theme="light"] body.club-page .club-topbar,
+html[data-theme="light"] body.club-page .club-admin-rail {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-color: var(--club-line) !important;
+}
+html[data-theme="light"] body.club-page .club-section-nav {
+  background: rgba(243, 244, 247, 0.92) !important;
+}
+html[data-theme="light"] body.club-page .badge,
+html[data-theme="light"] body.club-page .tag,
+html[data-theme="light"] body.club-page .status-pill {
+  background: var(--club-surface-2) !important;
+  color: var(--club-muted) !important;
+  border-color: var(--club-line) !important;
+}
+html[data-theme="light"] body.club-page .badge.on,
+html[data-theme="light"] body.club-page .badge.approved,
+html[data-theme="light"] body.club-page .badge.used { background: var(--club-ok-soft) !important; color: var(--club-ok) !important; border-color: #b9dfcd !important; }
+html[data-theme="light"] body.club-page .badge.pending { background: var(--club-warn-soft) !important; color: var(--club-warn) !important; }
+html[data-theme="light"] body.club-page .badge.cancelled,
+html[data-theme="light"] body.club-page .badge.expired,
+html[data-theme="light"] body.club-page .badge.rejected { background: var(--club-danger-soft) !important; color: var(--club-danger) !important; }
+html[data-theme="light"] body.club-page .notice { background: var(--club-warn-soft) !important; border-color: #e8cf9d !important; }
+html[data-theme="light"] body.club-page .notice p { color: #5a4a2c !important; }
+html[data-theme="light"] body.club-page .drive-status { background: var(--club-ok-soft) !important; border-color: #b9dfcd !important; }
+html[data-theme="light"] body.club-page .drive-status span { color: #33503f !important; }
+html[data-theme="light"] body.club-page .drive-status.warn { background: var(--club-warn-soft) !important; border-color: #e8cf9d !important; }
+html[data-theme="light"] body.club-page .club-admin-rail a[aria-current="page"],
+html[data-theme="light"] body.club-page .club-admin-side a[aria-current="page"],
+html[data-theme="light"] body.club-page .club-section-nav a.is-active {
+  background: var(--club-accent-soft) !important;
+  color: var(--club-accent) !important;
+  border-color: var(--club-accent-line) !important;
+}
+html[data-theme="light"] body.club-page .back:hover,
+html[data-theme="light"] body.club-page .club-launcher-button:hover { background: var(--club-accent-soft) !important; color: var(--club-accent) !important; border-color: var(--club-accent-line) !important; }
+html[data-theme="light"] body.club-page .club-launcher-panel,
+html[data-theme="light"] .club-launcher-panel { background: #FFFFFF !important; border-color: var(--club-line-strong) !important; }
+html[data-theme="light"] .club-launcher-item:hover,
+html[data-theme="light"] .club-launcher-item.is-active { background: var(--club-accent-soft) !important; }
+html[data-theme="light"] .club-launcher-search input { color: #17181c !important; }
+html[data-theme="light"] body.club-page .code-result { background: var(--club-accent-soft) !important; }
+html[data-theme="light"] body.club-page .file-list { background: #FFFFFF !important; border-color: var(--club-line) !important; }
+html[data-theme="light"] body.club-page .secret-box { background: var(--club-accent-soft) !important; }
+html[data-theme="light"] body.club-page .hero-card,
+html[data-theme="light"] body.club-page .club-profile-banner,
+html[data-theme="light"] body.club-page .transfer { background: var(--club-accent-soft) !important; border-color: var(--club-accent-line) !important; }
+
+/* 兼容旧标记中的语义徽章与状态卡 */
+body.club-page .badge.cyan { border-color: var(--club-accent-line); background: var(--club-accent-soft); color: var(--club-accent); }
+body.club-page .badge.green { border-color: color-mix(in srgb, var(--club-ok) 45%, transparent); background: var(--club-ok-soft); color: var(--club-ok); }
+body.club-page .panel.status,
+body.club-page .status {
+  padding: 18px 20px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius);
+  background: var(--club-surface);
+}
+body.club-page .status strong { display: block; margin-bottom: 4px; color: var(--club-accent); font-size: 16px; }
+body.club-page .status span { color: var(--club-muted); font-size: 13px; line-height: 1.65; }
+body.club-page .content { display: block; }
+body.club-page .content.hidden { display: none !important; }
+
+/* 兼容旧标记里内联 style 中的 var(--cyan) / var(--muted) 引用 */
+body.club-page {
+  --cyan: var(--club-accent);
+  --violet: var(--club-info);
+  --green: var(--club-ok);
+  --danger: var(--club-danger);
+  --warn: var(--club-warn);
+  --muted: var(--club-muted);
+  --text: var(--club-text);
+  --line: var(--club-line);
+  --panel: var(--club-surface);
+  --bg: var(--club-bg);
+}
+
+/* 筛选模式的标签页：只显示当前分组 */
+body.club-page .club-tab-hidden { display: none !important; }
+
+/* 主页：启动器按钮沿用主页顶栏配色，不改变 3D / 滚动效果 */
+body:not(.club-page) .club-launcher-button {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid rgba(0, 229, 255, 0.22);
+  border-radius: 10px;
+  background: rgba(0, 229, 255, 0.06);
+  color: var(--muted, #8fa3b8);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+body:not(.club-page) .club-launcher-button:hover {
+  border-color: rgba(0, 229, 255, 0.45);
+  background: rgba(0, 229, 255, 0.12);
+  color: var(--cyan, #00e5ff);
+}
+html[data-theme="light"] body:not(.club-page) .club-launcher-button {
+  border-color: rgba(224, 122, 95, 0.3);
+  background: #FFFFFF;
+  color: #48484A;
+}
+html[data-theme="light"] body:not(.club-page) .club-launcher-button:hover {
+  border-color: #E07A5F;
+  color: #A73A29;
+}
+@media (max-width: 900px) {
+  body:not(.club-page) .club-launcher-button span,
+  body:not(.club-page) .club-launcher-button kbd { display: none; }
+  body:not(.club-page) .club-launcher-button { padding: 8px; }
+}
+
+/* 主页顶栏里的启动器按钮：尺寸与图标必须显式声明，
+   否则会继承主页 svg / button 的全局样式而撑成大圆。 */
+body:not(.club-page) .club-launcher-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: auto;
+  min-width: 0;
+  min-height: 34px;
+  height: auto;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: rgba(0, 229, 255, 0.06);
+  color: var(--muted, #8fa3b8);
+  font-size: 12.5px;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+body:not(.club-page) .club-launcher-button svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+}
+body:not(.club-page) .club-launcher-button kbd {
+  padding: 1px 4px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-family: var(--mono, ui-monospace, Consolas, monospace);
+  font-size: 9.5px;
+  line-height: 1.3;
+  opacity: 0.7;
+}
+
+/* 语言 / 主题切换器在次级页始终可见：放不下时收成只剩当前值，而不是整块隐藏。
+   theme.js 会在切换时回写按钮文本，这里只负责窄屏的尺寸与可见性。 */
+@media (max-width: 720px) {
+  body.club-page .topbar-actions .lang-switcher,
+  body.club-page .topbar-actions .theme-switcher {
+    display: inline-flex;
+    flex: 0 0 auto;
+  }
+  body.club-page .topbar-actions .lang-switcher button:not(.is-active),
+  body.club-page .topbar-actions .theme-switcher button:not(.is-active) { display: none; }
+  body.club-page .topbar-actions .lang-switcher button,
+  body.club-page .topbar-actions .theme-switcher button { padding: 5px 8px; }
+}
+
+/* 实验室 / 游戏页顶栏：语言与主题切换器固定在右上角，
+   不参与原有 flex / block 排版，避免把标题挤走或撑高页头。 */
+header.club-topbar-host { position: relative; }
+.club-topbar-utils {
+  position: absolute;
+  top: 6px;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex: 0 0 auto;
+  max-width: 45%;
+}
+.club-topbar-utils .lang-switcher,
+.club-topbar-utils .theme-switcher { margin: 0; flex: 0 0 auto; }
+.club-topbar-utils .lang-switcher { zoom: 0.92; }
+.club-topbar-utils .theme-switcher { zoom: 0.92; }
+@media (max-width: 720px) {
+  .club-topbar-utils {
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    max-width: none;
+    margin-left: auto;
+  }
+  .club-topbar-utils .lang-switcher,
+  .club-topbar-utils .theme-switcher { zoom: 1; }
+}
+
+/* 正文里的强调链接：亮色下用深橙，避免硬编码青色在白底上对比不足 */
+body.club-page .link-accent { color: var(--club-accent); text-decoration: underline; text-underline-offset: 2px; }
+body.club-page .link-accent:hover { color: var(--club-accent-strong); }
+
+/* ============================================================
+   21. 语言 / 主题切换器：全站统一胶囊
+   ------------------------------------------------------------
+   许多功能页（gomoku / tetris / snake / platformant …）自带
+   `button { background:#4CAF50 }` 这类全局规则，且 .lang-switcher
+   的样式过去只写在首页内联 CSS 里，导致其它页面切换器变成绿色方块。
+   这里用类选择器（高于标签选择器）统一全部页面的外观。
+   ============================================================ */
+.lang-switcher,
+.theme-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.45);
+  box-shadow: none;
+  flex-shrink: 0;
+  line-height: 1;
+  vertical-align: middle;
+}
+.lang-switcher button,
+.theme-switcher button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
+  color: rgba(226, 232, 240, 0.78);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transform: none;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+.lang-switcher button:hover,
+.theme-switcher button:hover {
+  background: rgba(148, 163, 184, 0.16);
+  color: #f8fafc;
+}
+.lang-switcher button.is-active,
+.theme-switcher button.is-active {
+  background: var(--club-accent, #22d3ee);
+  background-image: none;
+  color: var(--club-on-accent, #04161d);
+  box-shadow: none;
+}
+.lang-switcher button:focus-visible,
+.theme-switcher button:focus-visible {
+  outline: 2px solid var(--club-accent, #22d3ee);
+  outline-offset: 2px;
+}
+
+html[data-theme="light"] .lang-switcher,
+html[data-theme="light"] .theme-switcher {
+  border-color: #E5E5EA;
+  background: #FFFFFF;
+}
+html[data-theme="light"] .lang-switcher button,
+html[data-theme="light"] .theme-switcher button { color: #48484A; }
+html[data-theme="light"] .lang-switcher button:hover,
+html[data-theme="light"] .theme-switcher button:hover { background: #F3F4F7; color: #1C1C1E; }
+html[data-theme="light"] .lang-switcher button.is-active,
+html[data-theme="light"] .theme-switcher button.is-active {
+  background: var(--club-accent, #C2410C);
+  color: #FFFFFF;
+}
+
+/* 实验室 / 游戏页：合并成一行，固定在页头右上角 */
+@media (min-width: 721px) {
+  .club-topbar-utils {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+/* 次级页顶栏的站点导航：首页 / 实力 / 社团功能 */
+body.club-page .club-site-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  flex: 0 0 auto;
+}
+body.club-page .club-site-nav a {
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--club-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+body.club-page .club-site-nav a:hover {
+  background: var(--club-surface-2);
+  color: var(--club-text);
+}
+body.club-page .club-site-nav a[aria-current="page"] {
+  border-color: var(--club-accent-line);
+  background: var(--club-accent-soft);
+  color: var(--club-accent);
+}
+@media (max-width: 860px) {
+  body.club-page .club-site-nav { display: none; }
+}
+
+/* ============================================================
+   22. 个人中心：单卡片登录 / 注册
+   ============================================================ */
+body.club-page .club-auth-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(360px, 0.78fr);
+  gap: 0;
+  width: min(100%, 980px);
+  margin: clamp(12px, 3vw, 40px) auto 0;
+  border: 1px solid var(--club-line);
+  border-radius: 18px;
+  background: var(--club-surface);
+  box-shadow: var(--club-shadow);
+  overflow: hidden;
+}
+body.club-page .club-auth-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: clamp(24px, 3.4vw, 40px);
+  border-right: 1px solid var(--club-line);
+  background:
+    radial-gradient(ellipse 90% 70% at 0% 0%, var(--club-accent-soft), transparent 62%),
+    var(--club-surface-2);
+}
+body.club-page .club-auth-aside h1 { margin: 0; font-size: clamp(26px, 3.4vw, 34px); }
+body.club-page .club-auth-lead { margin: 0; color: var(--club-muted); font-size: 14px; line-height: 1.75; }
+body.club-page .club-auth-points {
+  display: grid;
+  gap: 14px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+body.club-page .club-auth-points li { display: flex; gap: 11px; align-items: flex-start; }
+body.club-page .club-auth-points > li > span {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--club-accent-line);
+  border-radius: 8px;
+  background: var(--club-accent-soft);
+  color: var(--club-accent);
+  font-family: var(--club-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+body.club-page .club-auth-points strong { display: block; color: var(--club-text); font-size: 13.5px; }
+body.club-page .club-auth-points p { margin: 2px 0 0; color: var(--club-muted); font-size: 12.5px; line-height: 1.6; }
+body.club-page .club-auth-back {
+  margin-top: auto;
+  padding-top: 8px;
+  color: var(--club-muted);
+  font-size: 12.5px;
+}
+body.club-page .club-auth-back:hover { color: var(--club-accent); }
+
+body.club-page .club-auth-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: clamp(22px, 3vw, 36px);
+}
+body.club-page .club-auth-status strong { display: block; color: var(--club-accent); font-size: 15px; }
+body.club-page .club-auth-status span { color: var(--club-muted); font-size: 12.5px; }
+body.club-page .club-auth-tabs { margin: 0; }
+body.club-page .club-auth-tabs button { flex: 1 1 0; text-align: center; }
+body.club-page .club-auth-form { gap: 14px; }
+body.club-page .club-auth-submit { width: 100%; min-height: 44px; margin-top: 4px; font-size: 14px; }
+body.club-page .club-auth-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 2px 0 0;
+  color: var(--club-muted);
+  font-size: 12.5px;
+}
+/* 状态提示固定在表单底部，不随错误/成功换行把按钮挤走 */
+body.club-page .club-auth-card #authMessage {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--club-radius-sm);
+  text-align: center;
+}
+body.club-page .club-auth-card #authMessage.error { background: var(--club-danger-soft); }
+body.club-page .club-auth-card #authMessage.success { background: var(--club-ok-soft); }
+body.club-page .club-auth-card #authMessage:empty { display: none; }
+body.club-page .club-auth-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--club-accent);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+body.club-page .club-auth-link:hover { color: var(--club-accent-strong); }
+body.club-page .club-auth-aux {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 12px;
+  margin: 12px 0 0;
+  color: var(--club-muted);
+  font-size: 12px;
+  line-height: 1.65;
+  text-align: center;
+}
+body.club-page .club-auth-card .message { margin: 0; min-height: 18px; text-align: center; }
+body.club-page input[data-invalid] { border-color: var(--club-danger) !important; }
+
+@media (max-width: 860px) {
+  body.club-page .club-auth-shell { grid-template-columns: 1fr; }
+  body.club-page .club-auth-aside { border-right: 0; border-bottom: 1px solid var(--club-line); }
+  body.club-page .club-auth-points { display: none; }
+  body.club-page .club-auth-back { display: none; }
+}
+
+html[data-theme="light"] body.club-page .club-auth-shell { background: #FFFFFF !important; border-color: var(--club-line) !important; }
+html[data-theme="light"] body.club-page .club-auth-aside { background: var(--club-accent-soft) !important; border-color: var(--club-line) !important; }
+html[data-theme="light"] body.club-page .club-auth-card { background: #FFFFFF !important; }
+
+/* 页面标题节奏：各页统一 eyebrow → h1 → lead 的间距 */
+body.club-page main > .eyebrow:first-child,
+body.club-page main > .club-page-head .eyebrow { margin-bottom: 8px; }
+body.club-page main > h1 { margin: 0 0 8px; }
+body.club-page main > .lead { margin: 0 0 22px; }
+body.club-page main > .hero + .lead { margin-top: 0; }
+
+/* flex 顶栏里的切换器：正常流排在行尾，绝不覆盖返回链接 / 启动器 */
+.club-topbar-utils-inline {
+  position: static;
+  /* 与标题之间留出呼吸空间，避免贴在一起 */
+  margin-left: auto;
+  padding-left: 18px;
+  flex: 0 0 auto;
+  max-width: none;
+}
+@media (max-width: 720px) {
+  .club-topbar-utils-inline { margin-left: 0; padding-left: 0; }
+}
+
+/* 手机端：实验室/游戏页的切换器收成「当前值」两个胶囊，
+   否则 语言(2) + 主题(3) 共 5 个按钮并排会撑出横向滚动。 */
+@media (max-width: 620px) {
+  .club-topbar-utils .lang-switcher button:not(.is-active),
+  .club-topbar-utils .theme-switcher button:not(.is-active) { display: none; }
+  .club-topbar-utils { max-width: 100%; }
+  .club-topbar-utils .lang-switcher,
+  .club-topbar-utils .theme-switcher { zoom: 1; }
+}
+
+/* block 顶栏（gomoku / gomoku-experiments）：切换器贴右上角，
+   同时给标题行留出右侧净空，避免与「V10 自由棋实验室」等链接相撞。 */
+.club-topbar-utils-float {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  z-index: 5;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  max-width: none;
+}
+header.club-topbar-host { position: relative; }
+header.club-topbar-host > a:first-child,
+header.club-topbar-host > .page-header > a:first-child { padding-right: 0; }
+@media (max-width: 720px) {
+  .club-topbar-utils-float { position: static; margin-left: 0; }
+}
+
+/* 手机端：内容卡片不得溢出视口（网格子项默认 min-width:auto 会撑破） */
+@media (max-width: 720px) {
+  body.club-page main { padding-left: 14px; padding-right: 14px; }
+  body.club-page .layout,
+  body.club-page .grid,
+  body.club-page .grid-2,
+  body.club-page .grid-3,
+  body.club-page .auth-grid,
+  body.club-page .panel,
+  body.club-page .card { min-width: 0; max-width: 100%; }
+  body.club-page .layout > *,
+  body.club-page .grid > *,
+  body.club-page .grid-2 > *,
+  body.club-page .grid-3 > * { min-width: 0; }
+}
+
+/* ============================================================
+   23. 管理总览 · 站点服务里的功能开关分组
+   ============================================================ */
+body.club-page .club-feature-group {
+  margin: 10px 0;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-sm);
+  background: var(--club-surface-2);
+  overflow: hidden;
+}
+body.club-page .club-feature-group > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  color: var(--club-text);
+  font-size: 13.5px;
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+}
+body.club-page .club-feature-group > summary::-webkit-details-marker { display: none; }
+body.club-page .club-feature-group > summary::after {
+  content: "▾";
+  margin-left: 8px;
+  color: var(--club-muted);
+  font-size: 11px;
+  transition: transform 0.16s ease;
+}
+body.club-page .club-feature-group[open] > summary::after { transform: rotate(180deg); }
+body.club-page .club-feature-group > summary small {
+  margin-left: auto;
+  padding: 1px 7px;
+  border: 1px solid var(--club-line);
+  border-radius: 999px;
+  color: var(--club-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+body.club-page .club-feature-group > summary:hover { background: var(--club-accent-soft); }
+body.club-page .club-feature-group-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--club-line);
+}
+body.club-page .club-feature-field {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--club-line);
+  border-radius: 8px;
+  background: var(--club-surface);
+}
+body.club-page .club-feature-field legend {
+  padding: 0 4px;
+  color: var(--club-text);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+body.club-page .club-feature-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  font-size: 12px;
+}
+body.club-page .club-feature-toggles span { display: inline-flex; align-items: center; gap: 6px; }
+body.club-page .club-feature-field .input { min-height: 34px; font-size: 12.5px; padding: 6px 9px; }
+html[data-theme="light"] body.club-page .club-feature-group,
+html[data-theme="light"] body.club-page .club-feature-field { background: #FFFFFF !important; border-color: var(--club-line) !important; }
+html[data-theme="light"] body.club-page .club-feature-group > summary:hover { background: var(--club-accent-soft) !important; }

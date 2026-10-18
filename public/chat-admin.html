@@ -6,14 +6,16 @@
   <title>Chat 管理 · 算法社</title>
   <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="chat-admin.css">
+  <link rel="stylesheet" href="club-ui.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="club-auth-storage.js"></script>
   <script src="theme.js"></script>
   <script src="member-identity.js"></script>
   <script src="i18n-dict.js"></script>
   <script src="i18n.js"></script>
   <script src="chat-admin-i18n.js"></script>
 </head>
-<body class="chat-admin-page">
+<body class="chat-admin-page club-page">
   <header class="chat-admin-header">
     <div class="chat-admin-header-inner">
       <a class="chat-admin-brand" href="admin-hub.html"><span class="chat-admin-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small data-i18n="chatAdmin.title">Chat 管理</small></span></a>
@@ -25,6 +27,7 @@
       </div>
     </div>
   </header>
+  <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div>
 
   <main>
     <section id="loginGate" class="chat-admin-panel chat-admin-gate">
@@ -202,5 +205,6 @@
     </div>
   </main>
   <script type="module" src="chat-admin.js"></script>
+  <script src="club-shell.js"></script>
 </body>
 </html>

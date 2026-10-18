@@ -2,21 +2,21 @@
 <html lang="zh-CN" data-i18n-title-key="pages.eventsAdmin.title">
 <head>
   <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="club-ui.css">
   <script src="theme.js"></script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>活动公告管理 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="club-auth-storage.js"></script>
   <script src="member-identity.js" defer></script>
   <script src="i18n-dict.js"></script>
   <script src="i18n.js"></script>
-<style>
-    :root{--bg:#030712;--panel:rgba(9,18,38,.84);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--green:#72f3c2;--danger:#ff718a;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 12% 0,rgba(0,229,255,.14),transparent 28%),radial-gradient(circle at 88% 10%,rgba(146,120,255,.16),transparent 30%),var(--bg)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.82);backdrop-filter:blur(18px)}.topbar-inner{max-width:1200px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted)}main{max-width:1200px;margin:auto;padding:56px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}h1{margin:0 0 12px;font-size:clamp(36px,7vw,64px)}.lead{max-width:760px;color:var(--muted);line-height:1.8;margin:0 0 24px}.panel{padding:22px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);margin-bottom:16px}.panel h2{margin:0 0 8px}.intro{margin:0 0 16px;color:var(--muted);line-height:1.7}.gate,.denied{min-height:240px;display:grid;place-items:center;text-align:center}.hidden{display:none!important}.button{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:rgba(0,229,255,.12);color:var(--text);cursor:pointer;font:inherit}.button.secondary{border-color:var(--line);background:transparent}.button.danger{border-color:rgba(255,113,138,.55);background:rgba(255,113,138,.12)}.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form{display:grid;gap:10px}.label{color:var(--muted);font-size:13px}.input,.textarea,.select{width:100%;padding:11px 13px;color:var(--text);border:1px solid var(--line);border-radius:8px;background:rgba(2,7,18,.76);outline:none;font:inherit}.textarea{min-height:96px;resize:vertical}.checks{display:flex;flex-wrap:wrap;gap:12px;color:var(--muted);font-size:13px}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:760px}.table th,.table td{padding:11px 8px;border-bottom:1px solid rgba(107,169,224,.14);text-align:left;vertical-align:top}.table th{color:var(--muted);font-size:13px;font-weight:500}.actions{display:flex;gap:8px;flex-wrap:wrap}.message{min-height:22px;margin:10px 0 0;color:var(--muted);font-size:13px}.message.error{color:var(--danger)}.message.success{color:var(--green)}.empty{padding:24px 0;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}@media(max-width:900px){.grid-2{grid-template-columns:1fr}.identity{display:none!important}main{padding:42px 16px 70px}}
-  </style>
 <script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
-<body>
+<body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Events Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a></div></header>
-  <main>
+
+  <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div><main>
     <section id="gate" class="panel gate"><div><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="admin.eventsGateLead">活动公告管理需要对应权限。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
     <section id="denied" class="panel denied hidden"><div><strong data-i18n="admin.eventsDenied">无活动管理权限</strong><p class="intro" data-i18n="admin.eventsDeniedLead">请联系 Haimingadmin / Collen 开通「活动和公告系统内容管理」权限。</p></div></section>
     <div id="content" class="hidden">
@@ -24,7 +24,8 @@
       <h1 data-i18n="pages.eventsAdmin.h1">活动与公告管理</h1>
       <p class="lead" data-i18n="admin.eventsLead">发布社团通知、活动报名、课程安排、比赛信息；设置截止时间、活动状态，并查看报名名单。首页最新公告会读取这里发布的内容。</p>
 
-      <section class="panel">
+      <div class="club-tabs" data-club-tabs role="tablist" aria-label="活动管理"><button type="button" role="tab" aria-selected="true" aria-controls="annPanel" data-tab-target="annPanel">公告</button><button type="button" role="tab" aria-selected="false" aria-controls="eventPanel" data-tab-target="eventPanel">活动</button><button type="button" role="tab" aria-selected="false" aria-controls="signupPanel" data-tab-target="signupPanel">报名名单</button></div>
+      <section class="panel" id="annPanel">
         <h2 data-i18n="admin.annTitle">发布 / 编辑公告</h2>
         <p class="intro" data-i18n="admin.annIntro">公告可用于社团通知、课程安排、比赛信息，并支持置顶及首页推荐弹窗。</p>
         <form class="form" id="announcementForm">
@@ -55,7 +56,7 @@
         <div class="table-wrap" id="announcementList" style="margin-top:16px"><div class="empty loading" data-i18n="admin.loadingAnn">正在读取公告…</div></div>
       </section>
 
-      <section class="panel">
+      <section class="panel" id="eventPanel">
         <h2 data-i18n="admin.eventTitle">发布 / 编辑活动</h2>
         <p class="intro" data-i18n="admin.eventIntro">可设置活动状态、报名截止时间、是否开放报名，以及是否推荐到首页。</p>
         <form class="form" id="eventForm">
@@ -110,7 +111,7 @@
         <div class="table-wrap" id="eventList" style="margin-top:16px"><div class="empty loading" data-i18n="admin.loadingEvents">正在读取活动…</div></div>
       </section>
 
-      <section class="panel">
+      <section class="panel" id="signupPanel">
         <h2 data-i18n="admin.signupsTitle">报名名单</h2>
         <p class="intro" data-i18n="admin.signupsIntro">选择活动后查看报名名单，并可取消/拒绝报名。</p>
         <div class="actions" style="margin-bottom:12px">
@@ -461,7 +462,7 @@
 
     supabaseClient.auth.onAuthStateChange((_event, session) => { void updateSession(session); });
     supabaseClient.auth.getSession().then(({ data: { session } }) => updateSession(session));
-  
+
     window.addEventListener('club:langchange', () => {
       try {
         if (window.ClubI18n?.apply) ClubI18n.apply(document);
@@ -469,5 +470,6 @@
       } catch (_e) {}
     });
   </script>
+  <script src="club-shell.js"></script>
 </body>
 </html>

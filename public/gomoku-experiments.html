@@ -2,11 +2,13 @@
 <html lang="zh-CN">
 <head>
   <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="club-ui.css">
   <script src="theme.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>实验室 · 算法社 AI 五子棋挑战</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="club-auth-storage.js"></script>
   <script src="member-identity.js"></script>
     <script src="i18n-dict.js"></script>
   <script src="i18n.js"></script>
@@ -30,7 +32,7 @@
     .page-header a { color: #49e7ff; text-decoration: none; }
     .page-header h1 { margin: 8px 0; }
     .page-header p { color: #91a9b8; }
-    .game-layout { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 24px; align-items: start; }
+    .game-layout { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 24px; align-items: start; min-width: 0; }
     .panel { padding: 20px; border: 1px solid rgba(73, 231, 255, .24); border-radius: 12px; background: rgba(13, 28, 47, .84); box-shadow: 0 16px 42px rgba(0,0,0,.22); }
     .setup { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
     .setup select { min-width: 150px; padding: 10px 12px; border: 1px solid #31536a; border-radius: 6px; background: #081522; color: #fff; font-size: 15px; }
@@ -63,13 +65,17 @@
     .ai-countdown[hidden] { display: none; }
     .ai-countdown-track { height: 6px; margin-top: 5px; overflow: hidden; border: 1px solid rgba(255,209,102,.35); border-radius: 999px; background: rgba(8,17,38,.65); }
     .ai-countdown-fill { height: 100%; width: 100%; transform-origin: left center; background: linear-gradient(90deg, #49e7ff, #ffd166, #ff6b6b); transition: width .2s linear; }
-    @media (max-width: 860px) { .game-layout { grid-template-columns: 1fr; } }
+    @media (max-width: 860px) {
+      .game-layout { grid-template-columns: minmax(0, 1fr); }
+      .game-layout > * { min-width: 0; }
+      input, .setup select { min-width: 0; width: 100%; }
+    }
     @media (max-width: 520px) { .board { margin: 0 auto; } }
-    
+
     .game-container {
       text-align: center;
     }
-    
+
     .ambient-background{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}.ambient-orb{position:absolute;width:min(48vw,620px);aspect-ratio:1;border-radius:50%;filter:blur(72px);opacity:.18;mix-blend-mode:screen;animation:drift-orb 18s ease-in-out infinite alternate}.orb-cyan{top:-18%;left:-12%;background:#00e5ff}.orb-violet{top:20%;right:-16%;background:#7c4dff;animation-delay:-7s}.ambient-grid{position:absolute;inset:-80px;background-image:linear-gradient(rgba(0,229,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.055) 1px,transparent 1px);background-size:72px 72px;opacity:.45;animation:grid-shift 26s linear infinite}#particleCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:.75}.pointer-glow{position:fixed;z-index:0;width:420px;height:420px;left:var(--pointer-x,50%);top:var(--pointer-y,14%);transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(73,231,255,.1),transparent 68%);pointer-events:none}.page-shell{position:relative;z-index:1}.page-header,.game-layout,.leaderboard,.panel{scroll-snap-align:start}.panel,.page-header{transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease}.panel:hover{border-color:rgba(73,231,255,.45);box-shadow:0 22px 60px rgba(0,0,0,.3),0 0 30px rgba(73,231,255,.08)}@keyframes drift-orb{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(7%,5%,0) scale(1.1)}}@keyframes grid-shift{to{transform:translate3d(72px,72px,0)}}.reveal-ready{opacity:0;transform:translateY(24px);transition:opacity .75s ease,transform .75s ease}.reveal-ready.is-visible{opacity:1;transform:none}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.ambient-orb,.ambient-grid{animation:none}.pointer-glow{display:none}.reveal-ready{opacity:1;transform:none;transition:none}.panel,.page-header{transition:none}}
     .board {
       --cell-size: 30px;
@@ -86,7 +92,7 @@
       justify-self: center;
       max-width: 100%;
     }
-    
+
     .cell {
       width: var(--cell-size);
       height: var(--cell-size);
@@ -99,7 +105,7 @@
       .board { --cell-size: min(30px, calc((100vw - 52px) / 15)); }
       .game-layout { gap: 14px; }
     }
-    
+
     .cell::before {
       content: '';
       position: absolute;
@@ -111,12 +117,12 @@
       background-color: #333;
       border-radius: 50%;
     }
-    
+
     .black {
       background-color: #000;
       border-radius: 50%;
     }
-    
+
     .white {
       background-color: #fff;
       border-radius: 50%;
@@ -134,13 +140,13 @@
       --board-highlight: #c2410c;
       --board-highlight-shadow: rgba(194, 65, 12, .38);
     }
-    
+
     .status {
       margin: 20px 0;
       font-size: 18px;
       font-weight: bold;
     }
-    
+
     button {
       padding: 10px 20px;
       font-size: 16px;
@@ -150,7 +156,7 @@
       border: none;
       border-radius: 4px;
     }
-    
+
     button:hover {
       background-color: #45a049;
     }
@@ -596,7 +602,7 @@
     function initBoard() {
       const boardElement = document.getElementById('board');
       boardElement.innerHTML = '';
-      
+
       for (let i = 0; i < BOARD_SIZE; i++) {
         for (let j = 0; j < BOARD_SIZE; j++) {
           const cell = document.createElement('div');
@@ -644,10 +650,10 @@
     // 落子
     function makeMove(row, col) {
       if (gameover || board[row][col] !== 0 || currentPlayer !== playerColor) return;
-      
+
       placePiece(row, col, playerColor);
       moveCount++;
-      
+
       if (!checkWin(row, col, playerColor)) {
         if (isBoardFull()) {
           gameover = true;
@@ -744,7 +750,7 @@
       experimentSearchHistory.push({move:gameMoves.length+1,model:getModelName(version),color:battleColor,...engine?.lastSearch});
       placePiece(move.row, move.col, battleColor);
       moveCount++;
-      
+
       if (!checkWin(move.row, move.col, battleColor)) {
         if (isBoardFull()) {
           gameover = true;
@@ -768,7 +774,7 @@
           }
         }
       }
-      
+
       if (emptyCells.length > 0) {
         // 优先选择靠近棋盘中心或已有棋子的位置
         const center = Math.floor(BOARD_SIZE / 2);
@@ -777,12 +783,12 @@
             const distB = Math.abs(b.row - center) + Math.abs(b.col - center);
             return distA - distB;
         });
-        
+
         // 随机选择前10个较好的位置之一
         const topMoves = emptyCells.slice(0, Math.min(10, emptyCells.length));
         return topMoves[Math.floor(Math.random() * topMoves.length)];
       }
-      
+
       return null;
     }
 
@@ -819,31 +825,31 @@
       // 检查八个方向是否有五连
       for (let [dx, dy] of directions) {
         let count = 1;
-        
+
         // 向一个方向计数
         for (let i = 1; i <= 4; i++) {
           const newRow = row + dx * i;
           const newCol = col + dy * i;
-          if (newRow >= 0 && newRow < BOARD_SIZE && newCol >= 0 && newCol < BOARD_SIZE && 
+          if (newRow >= 0 && newRow < BOARD_SIZE && newCol >= 0 && newCol < BOARD_SIZE &&
               board[newRow][newCol] === player) {
             count++;
           } else {
             break;
           }
         }
-        
+
         // 向相反方向计数
         for (let i = 1; i <= 4; i++) {
           const newRow = row - dx * i;
           const newCol = col - dy * i;
-          if (newRow >= 0 && newRow < BOARD_SIZE && newCol >= 0 && newCol < BOARD_SIZE && 
+          if (newRow >= 0 && newRow < BOARD_SIZE && newCol >= 0 && newCol < BOARD_SIZE &&
               board[newRow][newCol] === player) {
             count++;
           } else {
             break;
           }
         }
-        
+
         if (count >= 5) {
           gameover = true;
           if (isModelBattle) {
@@ -857,7 +863,7 @@
           return true;
         }
       }
-      
+
       return false;
     }
 
@@ -985,7 +991,7 @@
       resizeParticles(); drawParticles(); window.addEventListener('resize', resizeParticles, { passive: true });
       window.addEventListener('pagehide', () => cancelAnimationFrame(animationFrame), { once: true });
     }
-  
+
     window.addEventListener('club:langchange', () => {
       try {
         if (typeof ClubI18n?.apply === 'function') ClubI18n.apply(document);
@@ -1001,5 +1007,6 @@
       } catch (_e) {}
     });
 </script>
+  <script src="club-shell.js"></script>
 </body>
 </html>

@@ -147,6 +147,7 @@ assert.equal(node('blacklistReason').value, 'unsaved draft');
 assert.equal(node('userDailyLimit').value, '123');
 console.log('PASS dynamic language refresh preserves unsaved form values');
 
+
 reply('admin_quota_get', snapshot, 200, () => run("selectedUser='another-user';selectionEpoch++"));
 await assert.rejects(run('loadQuota(testRun)'), {name: 'AbortError'});
 assert.equal(node('userDailyLimit').value, '123', 'Stale selection must not fill inputs');
@@ -311,3 +312,52 @@ assert.equal(queue.length, 0);
 assert(!/localStorage|indexedDB|console\.(?:log|debug|info)/.test(source), 'No key persistence or logging');
 console.log('PASS real signout/account switch clears memory and DOM; late issuance cannot restore plaintext');
 console.log(`Chat admin VM regression passed (${calls.length} mocked requests; zero network or paid calls).`);
+
+// 删除供应商/模型：确认取消不请求、确认后带正确参数、墓碑后列表刷新。
+{
+  run('active=null; authorized=true');
+  const providerFixture = {id: '22222222-2222-4222-8222-222222222222', name: 'mockprov', label: 'Mock', base_url: 'https://mock.example.com/v1', secret_name: 'CHAT_KEY_MOCK', auth_header: 'authorization', enabled: true};
+  const modelA = {id: '33333333-3333-4333-8333-333333333333', provider_id: providerFixture.id, model_key: 'm-a', display_name: 'Model A', introduction: null, context_window: 8192, max_output_tokens: 1024, default_max_output_tokens: 512, reasoning_efforts: [], default_reasoning_effort: null, supports_images: false, supports_pdf: false, preserve_reasoning: false, enabled: true, visibility: 'all', updated_at: '2026-01-01T00:00:00.000Z', version: Date.parse('2026-01-01T00:00:00.000Z')};
+  const modelB = {...modelA, id: '44444444-4444-4444-8444-444444444444', model_key: 'm-b', display_name: 'Model B'};
+  sandbox.providerFixture = providerFixture; sandbox.modelA = modelA; sandbox.modelB = modelB;
+  // providers/models 是脚本内的 let 绑定，必须通过 run() 赋值，直接写 sandbox 覆盖不到。
+  run('providers = [providerFixture]; models = [modelA, modelB]; renderProviders(); renderModels();');
+  assert(node('providersList').innerHTML.includes(`data-delete-provider="${providerFixture.id}"`), 'provider row must expose a delete button');
+  assert(node('modelsList').innerHTML.includes(`data-delete-model="${modelA.id}"`), 'model row must expose a delete button');
+
+  // 列表监听器注册在脚本后半段（测试只求值配置区），这里直接调用同名处理函数。
+  // 取消确认：不应发出任何请求。
+  const beforeCancel = calls.length;
+  confirmResult = false;
+  await run('removeProvider(providerFixture)');
+  await run('removeModel(modelA)');
+  assert.equal(calls.length, beforeCancel, 'cancelling the confirmation must not call the backend');
+  assert(confirmations.at(-2).includes('providerDeleteConfirm'));
+  assert(confirmations.at(-1).includes('modelDeleteConfirm'));
+
+  // 删除模型：使用列表里的 version，并在成功后刷新列表。
+  confirmResult = true;
+  reply('admin_delete_model', {result: {deleted: true, id: modelA.id}}, 200);
+  reply('admin_get', {providers: [providerFixture], models: [modelB]});
+  reply('admin_proxy_list', {routes: [], keys: []});
+  await run('removeModel(modelA)');
+  while (run('Boolean(active)')) await new Promise(resolve => setTimeout(resolve, 0));
+  const deleteCall = calls.find(call => call.action === 'admin_delete_model');
+  assert.deepEqual(JSON.parse(JSON.stringify(deleteCall)), {action: 'admin_delete_model', id: modelA.id, expected_version: modelA.version});
+  assert.equal(run("messages.get('modelMessage').key"), 'modelDeleted');
+
+  // 删除供应商：成功后列表为空，并清空正在编辑的表单。
+  reply('admin_delete_provider', {result: {deleted: true, id: providerFixture.id, models: 1}}, 200);
+  reply('admin_get', {providers: [], models: []});
+  reply('admin_proxy_list', {routes: [], keys: []});
+  run(`document.getElementById('providerId').value = ${JSON.stringify(providerFixture.id)}`);
+  await run('removeProvider(providerFixture)');
+  while (run('Boolean(active)')) await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.find(call => call.action === 'admin_delete_provider'))), {action: 'admin_delete_provider', id: providerFixture.id});
+  assert.equal(run("messages.get('providerMessage').key"), 'providerDeleted');
+  assert.equal(node('providerId').value, '', 'deleting the provider being edited must clear the form');
+  assert(node('providersList').innerHTML.includes('noProvider'));
+  // 本块用独立 run 执行，结束时把后续用例依赖的状态恢复原样。
+  run('active=null; authorized=true; selectedUser=userId; selectionEpoch=1');
+}
+console.log('PASS provider/model deletion: confirmation, versioned request, list refresh and empty state');

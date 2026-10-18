@@ -2,35 +2,73 @@
 <html lang="zh-CN" data-i18n-title-key="pages.adminHub.title">
 <head>
   <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="club-ui.css">
   <script src="theme.js"></script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>管理员总览 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="club-auth-storage.js"></script>
   <script src="member-identity.js"></script>
   <script src="i18n-dict.js?v=20261016"></script>
   <script src="i18n.js"></script>
-<style>
-    :root{--bg:#030712;--panel:rgba(9,18,38,.84);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--violet:#9278ff;--green:#72f3c2;--danger:#ff718a;--warn:#ffd166;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 10% 0,rgba(0,229,255,.14),transparent 28%),radial-gradient(circle at 90% 8%,rgba(146,120,255,.16),transparent 30%),var(--bg)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.82);backdrop-filter:blur(18px)}.topbar-inner{max-width:1200px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted)}.back:hover{color:var(--cyan)}main{max-width:1200px;margin:auto;padding:56px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}h1{margin:0;font-size:clamp(40px,7vw,74px);letter-spacing:-1.5px;line-height:.98}h2{margin:0 0 8px;font-size:22px}.lead{max-width:760px;color:var(--muted);line-height:1.8;font-size:16px}.panel{border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(16px)}.gate,.denied{min-height:280px;display:grid;place-items:center;text-align:center;padding:28px}.gate strong,.denied strong{display:block;margin-bottom:10px;color:var(--cyan);font-size:24px}.gate p,.denied p{margin:0 0 18px;color:var(--muted);line-height:1.8}.hidden{display:none!important}.button{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:rgba(0,229,255,.12);color:var(--text);cursor:pointer;font:inherit}.button:hover{background:rgba(0,229,255,.22)}.button.secondary{border-color:var(--line);background:transparent}.button.danger{border-color:rgba(255,113,138,.55);background:rgba(255,113,138,.12)}.button:disabled{opacity:.45;cursor:not-allowed;pointer-events:none}.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr);gap:24px;align-items:end;margin:28px 0}.status-card{padding:22px}.status-card strong{display:block;margin-bottom:8px;color:var(--cyan);font-size:20px}.status-card span{color:var(--muted);font-size:13px;line-height:1.7}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}.stat{padding:18px;border:1px solid rgba(107,169,224,.18);border-radius:12px;background:rgba(0,10,28,.45)}.stat small{display:block;margin-bottom:8px;color:var(--muted);font-size:12px}.stat strong{font-size:28px;color:var(--green)}.section{padding:24px;margin-bottom:18px}.section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:16px}.intro{margin:0;color:var(--muted);line-height:1.7}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.card{display:flex;min-height:150px;flex-direction:column;justify-content:space-between;padding:18px;border:1px solid rgba(107,169,224,.2);border-radius:12px;background:linear-gradient(145deg,rgba(0,229,255,.07),rgba(146,120,255,.08));transition:transform .2s ease,border-color .2s ease}.card:hover{transform:translateY(-3px);border-color:rgba(0,229,255,.65)}.card strong{font-size:18px}.card p{margin:10px 0 0;color:var(--muted);line-height:1.65;font-size:14px}.card span{margin-top:16px;color:var(--cyan);font-size:13px}.form{display:grid;gap:12px;max-width:520px}.form.inline{grid-template-columns:1fr 1fr auto;align-items:end;max-width:none}.form.perm{grid-template-columns:1.1fr 1fr;max-width:none;align-items:start}.label{color:var(--muted);font-size:13px}.input{width:100%;padding:12px 14px;color:var(--text);border:1px solid var(--line);border-radius:8px;background:rgba(2,7,18,.76);outline:none}.input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1)}.checks{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;border:1px solid rgba(107,169,224,.18);border-radius:10px;background:rgba(0,10,28,.35)}.checks label{display:flex;gap:8px;align-items:center;color:var(--text);font-size:14px}.secret-box{margin-top:14px;padding:14px 16px;border:1px dashed rgba(0,229,255,.45);border-radius:10px;background:rgba(0,229,255,.08);color:var(--cyan);line-height:1.7;display:none}.secret-box.active{display:block}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:820px}.table th,.table td{padding:12px 8px;border-bottom:1px solid rgba(107,169,224,.14);text-align:left;vertical-align:top}.table th{color:var(--muted);font-size:13px;font-weight:500}.actions{display:flex;gap:8px;flex-wrap:wrap}.badge{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid var(--line);color:var(--muted)}.badge.pending{border-color:rgba(255,209,102,.5);color:var(--warn)}.badge.approved{border-color:rgba(0,229,255,.5);color:var(--cyan)}.badge.used{border-color:rgba(114,243,194,.5);color:var(--green)}.badge.cancelled,.badge.expired{border-color:rgba(255,113,138,.45);color:var(--danger)}.badge.on{border-color:rgba(114,243,194,.5);color:var(--green)}.badge.off{border-color:rgba(145,168,194,.35);color:var(--muted)}.message{min-height:22px;margin:12px 0 0;color:var(--muted);font-size:13px;line-height:1.6}.message.error{color:var(--danger)}.message.success{color:var(--green)}.empty{padding:34px 0;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}.perm-tags{display:flex;flex-wrap:wrap;gap:6px}@media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr)}.form.inline,.form.perm{grid-template-columns:1fr}}@media(max-width:900px){.hero,.stats,.grid{grid-template-columns:1fr 1fr}}@media(max-width:640px){.topbar-inner{padding:13px 16px}.identity{display:none!important}main{padding:42px 16px 70px}.hero,.stats,.grid,.checks{grid-template-columns:1fr}.section{padding:18px}}
-  </style>
 <script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
-<body>
+<body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Admin Hub</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
+  <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div>
   <main>
-    <section id="gate" class="panel gate"><div><strong data-i18n="admin.loginFirst">请先登录管理账号</strong><p data-i18n="admin.gateLead">管理员总览对超管，以及被授予任一管理权限的账号开放。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+    <section id="gate" class="panel gate"><div><strong data-i18n="admin.loginFirst">请先登录管理账号</strong><p data-i18n="admin.gateLead">管理员总览对超管，以及被授予任一管理权限的账号开放。</p><p id="fileLoginHint" class="hint" hidden data-i18n="admin.fileLoginHint">当前用本地文件（file://）打开。浏览器会按来源隔离登录态，请在本页打开的个人中心里登录一次，之后各模块即可复用。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
     <section id="denied" class="panel denied hidden"><div><strong data-i18n="admin.noPerm">无管理权限</strong><p data-i18n="admin.deniedLead">当前账号没有可管理的模块。请联系现任超管开通对应权限。</p><a class="button" href="member-center.html" data-i18n="common.backMember">返回个人中心</a></div></section>
     <div id="content" class="hidden">
-      <section class="hero"><div><p class="eyebrow">ADMIN OVERVIEW</p><h1 data-i18n="pages.adminHub.h1">管理员总览</h1><p class="lead" data-i18n="admin.hubLead">按权限显示可用管理入口。密码重置、直接改密、姓名班级绑定编辑、权限分配、超管交接仅现任超管可用。</p></div><div class="panel status-card"><strong id="statusTitle" data-i18n="admin.statusLoggedIn">管理账号已登录</strong><span id="statusHint" data-i18n="admin.statusLoading">正在读取管理数据…</span></div></section>
-      <section class="stats" id="statsSection">
-        <div class="panel stat" data-stat="bindings"><small data-i18n="admin.statBoundReg">已绑定 / 注册</small><strong id="statBindings">--</strong></div>
-        <div class="panel stat" data-stat="resets"><small data-i18n="admin.statPendingResets">待处理重置</small><strong id="statPendingResets">--</strong></div>
-        <div class="panel stat" data-stat="checkin"><small data-i18n="admin.statCodes">签到码</small><strong id="statCodes">--</strong></div>
-        <div class="panel stat" data-stat="checkin"><small data-i18n="admin.statCourse">课程签到待审</small><strong id="statCourse">--</strong></div>
-        <div class="panel stat" data-stat="points"><small data-i18n="admin.statPoints">积分榜人数</small><strong id="statPoints">--</strong></div>
+      <section class="club-page-head">
+        <div>
+          <p class="eyebrow">ADMIN OVERVIEW</p>
+          <h1 data-i18n="pages.adminHub.h1">管理员总览</h1>
+          <p class="lead" data-i18n="admin.hubLead">按权限显示可用管理入口。密码重置、直接改密、姓名班级绑定编辑、权限分配、超管交接仅现任超管可用。</p>
+        </div>
+        <div class="club-head-actions">
+          <button class="button secondary" id="refreshButton" type="button" data-i18n="admin.refreshOverview">刷新概览</button>
+        </div>
       </section>
-      <section class="panel section"><div class="section-head"><div><h2 data-i18n="admin.panel">管理面板入口</h2><p class="intro" data-i18n="admin.panelIntro">只显示你当前拥有的管理权限对应入口。</p></div><button class="button secondary" id="refreshButton" type="button" data-i18n="admin.refreshOverview">刷新概览</button></div><div class="grid" id="entryGrid"></div></section>
 
-      <section class="panel section hidden" id="superAdminsSection">
+      <section class="club-profile-banner" aria-live="polite">
+        <span class="club-profile-avatar" id="adminAvatar" aria-hidden="true">A</span>
+        <div>
+          <strong id="statusTitle" data-i18n="admin.statusLoggedIn">管理账号已登录</strong>
+          <span id="statusHint" data-i18n="admin.statusLoading">正在读取管理数据…</span>
+        </div>
+      </section>
+
+      <section class="stats" id="statsSection">
+        <div class="stat" data-stat="bindings"><small data-i18n="admin.statBoundReg">已绑定 / 注册</small><strong id="statBindings">--</strong></div>
+        <div class="stat" data-stat="resets"><small data-i18n="admin.statPendingResets">待处理重置</small><strong id="statPendingResets">--</strong></div>
+        <div class="stat" data-stat="checkin"><small data-i18n="admin.statCodes">签到码</small><strong id="statCodes">--</strong></div>
+        <div class="stat" data-stat="checkin"><small data-i18n="admin.statCourse">课程签到待审</small><strong id="statCourse">--</strong></div>
+        <div class="stat" data-stat="points"><small data-i18n="admin.statPoints">积分榜人数</small><strong id="statPoints">--</strong></div>
+      </section>
+
+      <section class="panel section" id="entrySection">
+        <div class="section-head"><div><h2 data-i18n="admin.panel">管理面板入口</h2><p class="intro" data-i18n="admin.panelIntro">只显示你当前拥有的管理权限对应入口。</p></div></div>
+        <div class="grid" id="entryGrid"></div>
+      </section>
+
+      <section id="superToolsSection">
+        <div class="section-head" style="margin:26px 0 12px">
+          <div>
+            <h2 data-i18n="admin.superToolsTitle">超管工具</h2>
+            <p class="intro" data-i18n="admin.superToolsIntro">账号、权限与站点配置集中在这里，按需切换即可，不再一次铺满整页。</p>
+          </div>
+        </div>
+        <div class="club-tabs" data-club-tabs role="tablist" aria-label="超管工具">
+          <button type="button" role="tab" aria-selected="true" aria-controls="siteServiceSection" data-tab-target="siteServiceSection" data-i18n="admin.tabService">站点服务</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="permissionsSection" data-tab-target="permissionsSection" data-i18n="admin.permTitle">权限下放</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="superAdminsSection" data-tab-target="superAdminsSection" data-i18n="admin.superTitle">超管交接</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="bindingsSection" data-tab-target="bindingsSection" data-i18n="admin.bindingsTitle">姓名绑定</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="resetsSection" data-tab-target="resetsSection" data-i18n="admin.resetsTitle">密码重置</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="appMonitorReleasesSection" data-tab-target="appMonitorReleasesSection" data-i18n="admin.tabReleases">版本发布</button>
+        </div>
+
+      <section class="panel section" id="superAdminsSection">
         <div class="section-head">
           <div>
             <h2 data-i18n="admin.superTitle">超管交接</h2>
@@ -53,7 +91,7 @@
         <div class="table-wrap" id="superAdminsList" style="margin-top:16px"><div class="empty loading" data-i18n="admin.loadingSuper">正在读取超管名单…</div></div>
       </section>
 
-      <section class="panel section hidden" id="permissionsSection">
+      <section class="panel section" id="permissionsSection">
         <div class="section-head">
           <div>
             <h2 data-i18n="admin.permTitle">权限下放</h2>
@@ -86,7 +124,7 @@
         <div class="table-wrap" id="permissionsList" style="margin-top:16px"><div class="empty loading" data-i18n="admin.loadingPerm">正在读取权限列表…</div></div>
       </section>
 
-      <section class="panel section hidden" id="siteServiceSection">
+      <section class="panel section" id="siteServiceSection">
         <div class="section-head"><div><h2 data-i18n="admin.siteServiceTitle">网站服务运行开关</h2><p class="intro" data-i18n="admin.siteServiceIntro">仅超管可用。暂停后所有网站页面将显示不可用提示。</p></div></div>
         <form class="form" id="siteServiceForm">
           <label class="label"><input type="checkbox" id="siteServiceEnabled" checked> <span data-i18n="admin.siteServiceRunning">网站服务运行中</span></label>
@@ -103,7 +141,7 @@
         <p class="message" id="siteServiceMessage" role="status"></p>
       </section>
 
-      <section class="panel section hidden" id="appMonitorReleasesSection">
+      <section class="panel section" id="appMonitorReleasesSection">
         <div class="section-head"><div><h2 data-i18n="admin.appmonitorReleasesTitle">APPMonitor 版本发布</h2><p class="intro" data-i18n="admin.appmonitorReleasesIntro">仅超管可编辑。V7.0 及更早版本保留在发布页中；在这里管理 V7.5 及之后的版本。</p></div></div>
         <form class="form" id="appMonitorReleaseForm">
           <input type="hidden" id="appMonitorReleaseId">
@@ -118,7 +156,7 @@
         <div class="table-wrap" id="appMonitorReleasesList" style="margin-top:16px"></div>
       </section>
 
-      <section class="panel section hidden" id="resetsSection">
+      <section class="panel section" id="resetsSection">
         <div class="section-head">
           <div>
             <h2 data-i18n="admin.resetsTitle">密码重置申请</h2>
@@ -128,9 +166,8 @@
         <div class="table-wrap" id="resetsList"><div class="empty loading" data-i18n="admin.loadingResets">正在读取重置申请…</div></div>
         <div class="secret-box" id="secretBox"></div>
         <p class="message" id="resetsMessage" role="status"></p>
-      </section>
 
-      <section class="panel section hidden" id="directResetSection">
+        <hr style="margin:22px 0 18px;border:0;border-top:1px solid var(--club-line)">
         <div class="section-head">
           <div>
             <h2 data-i18n="admin.directTitle">直接修改账号密码</h2>
@@ -150,8 +187,9 @@
         </form>
         <p class="message" id="directResetMessage" role="status"></p>
       </section>
+      </section>
 
-      <section class="panel section hidden" id="bindingsSection">
+      <section class="panel section" id="bindingsSection">
         <div class="section-head">
           <div>
             <h2 data-i18n="admin.bindingsTitle">姓名 · 班级 · 账号绑定</h2>
@@ -186,7 +224,15 @@
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const $ = id => document.getElementById(id);
     let currentSession = null;
+    // file:// 下浏览器按 origin 隔离登录态：提示用户在本页登录一次，
+    // 而不是让管理请求静默失败后显示一堆「请求失败」。
+    if (location.protocol === 'file:') {
+      const hint = $('fileLoginHint');
+      if (hint) hint.hidden = false;
+    }
     let currentAccess = { isSuperAdmin: false, permissions: window.ClubStaffAccess.emptyPermissions() };
+    // 超管工具的标签页只初始化一次；后续异步刷新不再覆写面板显隐。
+    let adminTabsReady = false;
 
     const ENTRY_DEFS = [
       { key: 'checkin', href: 'member-checkin.html', titleKey: 'admin.entryCheckin', descKey: 'admin.entryCheckinDesc', shortKey: 'admin.entryShortCheckin' },
@@ -200,11 +246,49 @@
       { key: 'chat', href: 'chat-admin.html', titleKey: 'admin.entryChat', descKey: 'admin.entryChatDesc', shortKey: 'admin.entryShortChat', superOnly: true }
     ];
     const t = (key, vars) => (window.ClubI18n ? ClubI18n.t(key, vars) : key);
-    const FEATURE_DEFS = [
-      ['chat','admin.featureChat'],['member-center','admin.featureMemberCenter'],['member-profile','admin.featureMemberProfile'],['checkin','admin.featureCheckin'],['course-checkin','admin.featureCourseCheckin'],['points','admin.featurePoints'],['mall','admin.featureMall'],['messages','admin.featureMessages'],['drive','admin.featureDrive'],['events','admin.featureEvents'],['join','admin.featureJoin'],['gomoku','admin.featureGomoku'],['tetris','admin.featureTetris'],['snake','admin.featureSnake'],['platformer','admin.featurePlatformer'],['club-features','admin.featureClubFeatures'],['visualization-lab','admin.featureVisualizationLab'],['sorting-lab','admin.featureSortingLab'],['search-lab','admin.featureSearchLab'],['ds-lab','admin.featureDsLab'],['graph-lab','admin.featureGraphLab'],['dp-lab','admin.featureDpLab'],['tree-lab','admin.featureTreeLab'],['heap-lab','admin.featureHeapLab'],['gomoku-satori-lab','admin.featureSatoriLab'],['resources','admin.featureResources'],['guide','admin.featureGuide'],['changelog','admin.featureChangelog']
+    // 功能开关按用途分组折叠：28 项全部铺开会让「站点服务」标签长达近万像素。
+    const FEATURE_GROUPS = [
+      ['member', 'admin.featureGroupMember', [
+        ['chat','admin.featureChat'],['member-center','admin.featureMemberCenter'],['member-profile','admin.featureMemberProfile'],
+        ['checkin','admin.featureCheckin'],['course-checkin','admin.featureCourseCheckin'],['points','admin.featurePoints'],
+        ['mall','admin.featureMall'],['messages','admin.featureMessages'],['drive','admin.featureDrive'],
+        ['events','admin.featureEvents'],['join','admin.featureJoin']
+      ]],
+      ['games', 'admin.featureGroupGames', [
+        ['gomoku','admin.featureGomoku'],['tetris','admin.featureTetris'],['snake','admin.featureSnake'],['platformer','admin.featurePlatformer']
+      ]],
+      ['labs', 'admin.featureGroupLabs', [
+        ['club-features','admin.featureClubFeatures'],['visualization-lab','admin.featureVisualizationLab'],
+        ['sorting-lab','admin.featureSortingLab'],['search-lab','admin.featureSearchLab'],['ds-lab','admin.featureDsLab'],
+        ['graph-lab','admin.featureGraphLab'],['dp-lab','admin.featureDpLab'],['tree-lab','admin.featureTreeLab'],
+        ['heap-lab','admin.featureHeapLab'],['gomoku-satori-lab','admin.featureSatoriLab']
+      ]],
+      ['content', 'admin.featureGroupContent', [
+        ['resources','admin.featureResources'],['guide','admin.featureGuide'],['changelog','admin.featureChangelog']
+      ]]
     ];
+    const FEATURE_DEFS = FEATURE_GROUPS.reduce((all, [, , items]) => all.concat(items), []);
     function renderFeatureSettings(values) {
-      $('featureSettingsList').innerHTML = `<h3>${t('admin.featureSettingsTitle')}</h3>` + FEATURE_DEFS.map(([key,labelKey]) => { const item = values[key] || {}; return `<fieldset data-feature="${key}" style="margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:8px"><legend>${escapeHtml(t(labelKey))}</legend><label class="label"><input type="checkbox" data-enabled ${item.enabled !== false ? 'checked' : ''}> ${escapeHtml(t('admin.featureEnabled'))} <input type="checkbox" data-random ${item.random ? 'checked' : ''}> ${escapeHtml(t('admin.featureRandom'))}</label><input class="input" data-title-zh placeholder="${escapeHtml(t('admin.featureTitleZh'))}" value="${escapeHtml(item.title_zh || '')}"><input class="input" data-subtitle-zh placeholder="${escapeHtml(t('admin.featureSubtitleZh'))}" value="${escapeHtml(item.subtitle_zh || '')}"><input class="input" data-title-en placeholder="${escapeHtml(t('admin.featureTitleEn'))}" value="${escapeHtml(item.title_en || '')}"><input class="input" data-subtitle-en placeholder="${escapeHtml(t('admin.featureSubtitleEn'))}" value="${escapeHtml(item.subtitle_en || '')}"></fieldset>`; }).join('');
+      const fieldFor = (key, labelKey) => {
+        const item = values[key] || {};
+        return `<fieldset data-feature="${key}" class="club-feature-field">
+          <legend>${escapeHtml(t(labelKey))}</legend>
+          <label class="label club-feature-toggles">
+            <span><input type="checkbox" data-enabled ${item.enabled !== false ? 'checked' : ''}> ${escapeHtml(t('admin.featureEnabled'))}</span>
+            <span><input type="checkbox" data-random ${item.random ? 'checked' : ''}> ${escapeHtml(t('admin.featureRandom'))}</span>
+          </label>
+          <input class="input" data-title-zh placeholder="${escapeHtml(t('admin.featureTitleZh'))}" value="${escapeHtml(item.title_zh || '')}">
+          <input class="input" data-subtitle-zh placeholder="${escapeHtml(t('admin.featureSubtitleZh'))}" value="${escapeHtml(item.subtitle_zh || '')}">
+          <input class="input" data-title-en placeholder="${escapeHtml(t('admin.featureTitleEn'))}" value="${escapeHtml(item.title_en || '')}">
+          <input class="input" data-subtitle-en placeholder="${escapeHtml(t('admin.featureSubtitleEn'))}" value="${escapeHtml(item.subtitle_en || '')}">
+        </fieldset>`;
+      };
+      $('featureSettingsList').innerHTML = `<h3>${escapeHtml(t('admin.featureSettingsTitle'))}</h3>` +
+        FEATURE_GROUPS.map(([group, labelKey, items], index) => `
+          <details class="club-feature-group"${index === 0 ? ' open' : ''}>
+            <summary><span>${escapeHtml(t(labelKey))}</span><small>${items.length}</small></summary>
+            <div class="club-feature-group-body">${items.map(([key, itemLabel]) => fieldFor(key, itemLabel)).join('')}</div>
+          </details>`).join('');
     }
     function collectFeatureSettings() { const values = {}; document.querySelectorAll('[data-feature]').forEach(node => { values[node.dataset.feature] = { enabled: node.querySelector('[data-enabled]').checked, random: node.querySelector('[data-random]').checked, title_zh: node.querySelector('[data-title-zh]').value, subtitle_zh: node.querySelector('[data-subtitle-zh]').value, title_en: node.querySelector('[data-title-en]').value, subtitle_en: node.querySelector('[data-subtitle-en]').value }; }); return values; }
     let appMonitorReleases = [];
@@ -255,16 +339,29 @@
 
     async function call(action, body = {}) {
       if (!currentSession) throw new Error(t('admin.loginAdminFirst'));
-      const response = await fetch(FUNCTION_URL, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${currentSession.access_token}`
-        },
-        body: JSON.stringify({ action, ...body })
-      });
+      let response;
+      try {
+        response = await fetch(FUNCTION_URL, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            authorization: `Bearer ${currentSession.access_token}`
+          },
+          body: JSON.stringify({ action, ...body })
+        });
+      } catch (error) {
+        // 网络层失败（离线 / 被拦截 / DNS）与「无权限」是两回事，要分开提示。
+        const network = new Error(t('admin.networkFailed'));
+        network.cause = error;
+        throw network;
+      }
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || t('admin.requestFailed'));
+      if (!response.ok) {
+        const detail = payload.error || `HTTP ${response.status}`;
+        const failure = new Error(response.status === 401 ? t('admin.sessionExpired') : detail);
+        failure.status = response.status;
+        throw failure;
+      }
       return payload;
     }
 
@@ -520,13 +617,30 @@
 
     function applySectionVisibility() {
       const superAdmin = Boolean(currentAccess.isSuperAdmin);
-      $('superAdminsSection').classList.toggle('hidden', !superAdmin);
-      $('permissionsSection').classList.toggle('hidden', !superAdmin);
-      $('resetsSection').classList.toggle('hidden', !superAdmin);
-      $('directResetSection').classList.toggle('hidden', !superAdmin);
-      $('bindingsSection').classList.toggle('hidden', !superAdmin);
-      $('siteServiceSection').classList.toggle('hidden', !superAdmin);
-      $('appMonitorReleasesSection').classList.toggle('hidden', !superAdmin);
+      // 超管工具由 ClubShell 的标签页托管显隐：
+      // 这里只负责「整个超管工具区」是否出现，绝不逐个写面板的 hidden，
+      // 否则一次权限刷新就会把全部面板重新摊开，越切越长。
+      const tabPanelIds = ['siteServiceSection', 'permissionsSection', 'superAdminsSection', 'bindingsSection', 'resetsSection', 'appMonitorReleasesSection'];
+      tabPanelIds.forEach(id => {
+        const node = $(id);
+        if (!node) return;
+        node.classList.remove('hidden');
+        // 只有非超管时才整体隐藏；超管时把显隐完全交还给标签页。
+        if (!superAdmin) node.hidden = true;
+      });
+      $('superToolsSection').classList.toggle('hidden', !superAdmin);
+      if (superAdmin) {
+        const tabs = document.querySelector('#superToolsSection [data-club-tabs]');
+        if (tabs) {
+          // 重新激活当前标签，确保「恰好一个面板可见」在任何异步刷新后仍成立。
+          const active = tabs.querySelector('[role="tab"][aria-selected="true"]') || tabs.querySelector('[role="tab"]');
+          if (active) {
+            tabs.dataset.activeTab = '';
+            active.click();
+          }
+          adminTabsReady = true;
+        }
+      }
       document.querySelectorAll('#statsSection [data-stat="bindings"], #statsSection [data-stat="resets"]').forEach(node => {
         node.classList.toggle('hidden', !superAdmin);
       });
@@ -537,6 +651,18 @@
         node.classList.toggle('hidden', !permOn('points'));
       });
       renderEntries();
+    }
+
+    // Supabase 网关会对同一来源的并发 Edge Function 调用限流（HTTP 429）。
+    // 总览一次需要 6 个只读请求，改成小并发串行执行，避免首屏就触发限流。
+    async function runSequentially(promises, batchSize = 2) {
+      const results = new Array(promises.length);
+      for (let start = 0; start < promises.length; start += batchSize) {
+        const slice = promises.slice(start, start + batchSize);
+        const settled = await Promise.all(slice.map(promise => promise.catch(error => ({ __error: error }))));
+        settled.forEach((value, index) => { results[start + index] = value; });
+      }
+      return results;
     }
 
     async function refreshOverview(options = {}) {
@@ -574,7 +700,7 @@
       }
 
       try {
-        const results = await Promise.all(tasks.map(promise => promise.catch(error => ({ __error: error }))));
+        const results = await runSequentially(tasks);
         const byLabel = Object.fromEntries(labels.map((label, index) => [label, results[index]]));
         let hintParts = [t('admin.accountLabel', { username: usernameFromSession(currentSession) })];
         if (currentAccess.isSuperAdmin) hintParts.push(t('admin.roleSuper'));
@@ -829,5 +955,6 @@
     supabaseClient.auth.onAuthStateChange((_event, session) => { void updateSession(session); });
     supabaseClient.auth.getSession().then(({ data: { session } }) => updateSession(session));
   </script>
+  <script src="club-shell.js"></script>
 </body>
 </html>

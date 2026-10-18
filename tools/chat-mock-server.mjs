@@ -23,7 +23,7 @@ const ACCOUNTS = {
 };
 const SCENARIOS = ['completed','incomplete','interrupted','failed','slow'];
 const PROXY_ACTIONS = ['admin_proxy_list','admin_proxy_save','admin_proxy_route_state','admin_proxy_key_create','admin_proxy_key_state'];
-const ACTIONS = ['catalog','respond','admin_get','admin_save_provider','admin_save_model','admin_usage','admin_test','quota','admin_user_directory','admin_quota_get','admin_quota_save','admin_set_blacklist','admin_blacklist_list','custom_model_list','custom_model_save','custom_model_delete',...PROXY_ACTIONS];
+const ACTIONS = ['catalog','respond','admin_get','admin_save_provider','admin_save_model','admin_delete_provider','admin_delete_model','admin_usage','admin_test','quota','admin_user_directory','admin_quota_get','admin_quota_save','admin_set_blacklist','admin_blacklist_list','custom_model_list','custom_model_save','custom_model_delete',...PROXY_ACTIONS];
 const ACTION_ALIASES = new Map([['save_provider','admin_save_provider'],['save_model','admin_save_model'],['usage','admin_usage'],['test','admin_test']]);
 const PROVIDER_ID = '20000000-0000-4000-8000-000000000001';
 const MODEL_ID = '30000000-0000-4000-8000-000000000001';
@@ -45,7 +45,8 @@ function text(value, max, required = false) {
 function keys(object, allowed) { requireThat(Object.keys(object).every(key => allowed.includes(key))); }
 function seed(contextWindow) {
   const provider = {id:PROVIDER_ID,name:'mock',label:'MOCK 本地供应商',base_url:'https://mock-provider.example.com/v1',secret_name:'CHAT_KEY_MOCK',auth_header:'authorization',enabled:true};
-  const base = {provider_id:provider.id,context_window:contextWindow,max_output_tokens:4096,default_max_output_tokens:512,reasoning_efforts:['none','low','medium','high','xhigh','max'],default_reasoning_effort:'medium',supports_images:true,supports_pdf:true,preserve_reasoning:false,enabled:true,introduction:null};
+  const stamp = new Date(0).toISOString();
+  const base = {provider_id:provider.id,context_window:contextWindow,max_output_tokens:4096,default_max_output_tokens:512,reasoning_efforts:['none','low','medium','high','xhigh','max'],default_reasoning_effort:'medium',supports_images:true,supports_pdf:true,preserve_reasoning:false,enabled:true,introduction:null,updated_at:stamp,deleted_at:null};
   return {providers:[provider],models:[{...base,id:MODEL_ID,model_key:'mock-multimodal',display_name:'MOCK 多模态'}, {...base,id:'30000000-0000-4000-8000-000000000002',model_key:'mock-text',display_name:'MOCK 纯文本',supports_images:false,supports_pdf:false}],usage:[]};
 }
 function sessionFor(state) {
@@ -134,7 +135,7 @@ function providerConfig(payload) {
   const name = text(payload.secret_name,90,true);
   requireThat(/^CHAT_KEY_[A-Z0-9_]{1,80}$/.test(name),'secret_name');
   requireThat(payload.auth_header === undefined || ['authorization','x-api-key'].includes(payload.auth_header));
-  return {id:payload.id || randomUUID(),name:text(payload.name,80,true),label:text(payload.label,120) || '',base_url:`${url.origin}${url.pathname.replace(/\/+$/,'')}`,secret_name:name,auth_header:payload.auth_header || 'authorization',enabled:payload.enabled === undefined ? true : Boolean(payload.enabled)};
+  return {id:payload.id || randomUUID(),name:text(payload.name,80,true),label:text(payload.label,120) || '',base_url:`${url.origin}${url.pathname.replace(/\/+$/,'')}`,secret_name:name,auth_header:payload.auth_header || 'authorization',enabled:payload.enabled === undefined ? true : Boolean(payload.enabled),updated_at:new Date().toISOString(),deleted_at:null};
 }
 function modelConfig(payload, providers) {
   requireThat(payload.id == null || uuid(payload.id));
@@ -142,7 +143,7 @@ function modelConfig(payload, providers) {
   const max = integer(payload.max_output_tokens,1,131072), efforts = payload.reasoning_efforts ?? [];
   requireThat(Array.isArray(efforts) && efforts.length <= 12 && efforts.every(value => typeof value === 'string' && value.length > 0 && value.length <= 40));
   const introduction = payload.introduction == null ? null : text(payload.introduction,1000,true);
-  return {id:payload.id || randomUUID(),provider_id:payload.provider_id,model_key:text(payload.model_key ?? payload.model_id,160,true),display_name:text(payload.display_name,120,true),introduction,context_window:integer(payload.context_window,256,1000000),max_output_tokens:max,default_max_output_tokens:integer(payload.default_max_output_tokens,1,max),reasoning_efforts:efforts,default_reasoning_effort:payload.default_reasoning_effort == null ? null : text(payload.default_reasoning_effort,40,true),supports_images:Boolean(payload.supports_images),supports_pdf:Boolean(payload.supports_pdf),preserve_reasoning:Boolean(payload.preserve_reasoning),enabled:payload.enabled === undefined ? true : Boolean(payload.enabled)};
+  return {id:payload.id || randomUUID(),provider_id:payload.provider_id,model_key:text(payload.model_key ?? payload.model_id,160,true),display_name:text(payload.display_name,120,true),introduction,context_window:integer(payload.context_window,256,1000000),max_output_tokens:max,default_max_output_tokens:integer(payload.default_max_output_tokens,1,max),reasoning_efforts:efforts,default_reasoning_effort:payload.default_reasoning_effort == null ? null : text(payload.default_reasoning_effort,40,true),supports_images:Boolean(payload.supports_images),supports_pdf:Boolean(payload.supports_pdf),preserve_reasoning:Boolean(payload.preserve_reasoning),enabled:payload.enabled === undefined ? true : Boolean(payload.enabled),updated_at:new Date().toISOString(),deleted_at:null};
 }
 function upsert(rows, item) { const index = rows.findIndex(row => row.id === item.id); if (index < 0) rows.push(item); else rows[index] = item; return item; }
 function rewriteJS(source, origin) {
@@ -410,9 +411,37 @@ export function createMockServer({testPort = false, now = () => new Date()} = {}
           customModels.delete(payload.id);
           result = {deleted:true,id:payload.id}; break;
         }
-        case 'admin_get': result = {providers:database.providers,models:database.models.map(model => ({...model,model_id:model.model_key}))}; break;
+        case 'admin_get': result = {
+          providers: database.providers.filter(row => !row.deleted_at),
+          models: database.models.filter(row => !row.deleted_at).map(model => ({...model,model_id:model.model_key,version:Date.parse(model.updated_at) || 0}))
+        }; break;
         case 'admin_save_provider': result = {provider:upsert(database.providers,providerConfig(payload))}; break;
         case 'admin_save_model': result = {model:upsert(database.models,modelConfig(payload,database.providers))}; break;
+        case 'admin_delete_provider': {
+          keys(payload,['action','id']);
+          requireThat(uuid(payload.id),'input');
+          const provider = database.providers.find(row => row.id === payload.id);
+          requireThat(provider,'not_found',404);
+          requireThat(!provider.deleted_at,'deleted',409);
+          const stamp = now().toISOString();
+          const affected = database.models.filter(row => row.provider_id === provider.id && !row.deleted_at);
+          for (const model of affected) Object.assign(model,{enabled:false,deleted_at:stamp,updated_at:stamp});
+          Object.assign(provider,{enabled:false,deleted_at:stamp,updated_at:stamp});
+          result = {result:{deleted:true,id:provider.id,name:provider.name,models:affected.length}};
+          break;
+        }
+        case 'admin_delete_model': {
+          keys(payload,['action','id','expected_version']);
+          requireThat(uuid(payload.id),'input');
+          const model = database.models.find(row => row.id === payload.id);
+          requireThat(model,'not_found',404);
+          requireThat(!model.deleted_at,'deleted',409);
+          requireThat(integer(payload.expected_version,0,Number.MAX_SAFE_INTEGER) === (Date.parse(model.updated_at) || 0),'conflict',409);
+          const stamp = now().toISOString();
+          Object.assign(model,{enabled:false,deleted_at:stamp,updated_at:stamp});
+          result = {result:{deleted:true,id:model.id,model_key:model.model_key}};
+          break;
+        }
         case 'admin_usage': {
           const page = integer(payload.page,1,100000,1), pageSize = integer(payload.pageSize ?? payload.limit,1,200,50);
           const iso = value => { if (value == null || value === '') return null; const date = new Date(value); requireThat(!Number.isNaN(date.getTime())); return date.toISOString(); };

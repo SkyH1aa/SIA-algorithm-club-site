@@ -2,63 +2,18 @@
 <html lang="zh-CN" data-i18n-title-key="pages.mall.title">
 <head>
   <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="club-ui.css">
   <script src="theme.js"></script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>积分商城 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="club-auth-storage.js"></script>
   <script src="member-identity.js" defer></script>
   <script src="i18n-dict.js"></script>
   <script src="i18n.js"></script>
-<style>
-    :root{--bg:#030712;--panel:rgba(9,18,38,.84);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--violet:#9278ff;--green:#72f3c2;--danger:#ff718a;--warn:#ffd166;--shadow:0 24px 70px rgba(0,0,0,.34)}
-    *{box-sizing:border-box}html{min-height:100%;background:var(--bg)}
-    body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 12% 0,rgba(0,229,255,.14),transparent 28%),radial-gradient(circle at 88% 10%,rgba(146,120,255,.16),transparent 30%),var(--bg)}
-    a{color:inherit;text-decoration:none}
-    .topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.82);backdrop-filter:blur(18px)}
-    .topbar-inner{max-width:1180px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-    .brand{display:flex;align-items:center;gap:10px}
-    .brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan)}
-    .brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}
-    .identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px}
-    .identity:not([hidden]){display:inline-flex}
-    .back{color:var(--muted)}.back:hover{color:var(--cyan)}
-    main{max-width:1180px;margin:auto;padding:56px 22px 90px}
-    .eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}
-    .hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr);gap:24px;align-items:end;margin-bottom:24px}
-    h1{margin:0;font-size:clamp(40px,7vw,74px);letter-spacing:-1.5px;line-height:.98}
-    .lead{margin:14px 0 0;max-width:680px;color:var(--muted);line-height:1.8;font-size:16px}
-    .panel{padding:22px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow)}
-    .status strong{display:block;margin-bottom:8px;color:var(--cyan);font-size:20px}
-    .status span{color:var(--muted);font-size:13px;line-height:1.7}
-    .points-accent{color:var(--green);font-weight:700;font-size:28px}
-    .notice{display:none;margin-bottom:18px;padding:16px 18px;border:1px solid rgba(255,209,102,.45);border-radius:12px;background:rgba(255,209,102,.08)}
-    .notice.active{display:block}.notice strong{display:block;margin-bottom:6px;color:var(--warn)}.notice p{margin:0;color:#f6e7b8;line-height:1.7}
-    .section-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px}
-    .section-head h2{margin:0 0 6px}.intro{margin:0;color:var(--muted);line-height:1.7}
-    .button{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:rgba(0,229,255,.12);color:var(--text);cursor:pointer;font:inherit}
-    .button:hover{background:rgba(0,229,255,.22)}.button.secondary{border-color:var(--line);background:transparent}
-    .button:disabled{opacity:.55;cursor:not-allowed}
-    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-    .card{display:flex;flex-direction:column;border:1px solid rgba(107,169,224,.2);border-radius:14px;overflow:hidden;background:linear-gradient(160deg,rgba(0,229,255,.06),rgba(146,120,255,.08));box-shadow:var(--shadow)}
-    .cover{min-height:120px;max-height:280px;background:rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;overflow:hidden}
-    .cover img{display:block;width:100%;height:auto;max-height:280px;object-fit:contain;object-position:center;background:rgba(0,0,0,.18)}
-    .card-body{display:flex;flex:1;flex-direction:column;padding:16px;position:relative;z-index:1;background:rgba(9,18,38,.92)}
-    .card-body h3{margin:0 0 8px;font-size:18px}
-    .desc{margin:0;color:var(--muted);font-size:13px;line-height:1.65;min-height:42px}
-    .meta{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:14px 0;font-size:13px}
-    .price{color:var(--green);font-weight:700;font-size:18px}
-    .stock{color:var(--muted)}
-    .card .button{width:100%;margin-top:auto}
-    .message{min-height:22px;margin:12px 0 0;color:var(--muted);font-size:13px;line-height:1.6}
-    .message.error{color:var(--danger)}.message.success{color:var(--green)}
-    .empty{padding:42px 0;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}
-    .gate{min-height:240px;display:grid;place-items:center;text-align:center}.hidden{display:none!important}
-    @media(max-width:980px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(max-width:760px){.hero{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.identity{display:none!important}main{padding:42px 16px 70px}}
-  </style>
 <script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
-<body>
+<body class="club-page">
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Points Mall</small></span></a>
@@ -84,7 +39,7 @@
 
       <section id="bindNotice" class="notice">
         <strong data-i18n="mall.bindTitle">兑换前请先绑定姓名与班级</strong>
-        <p data-i18n="mall.bindHint" data-i18n-mode="html">积分商城按积分榜扣分。请先到<a href="member-center.html" style="color:var(--cyan);text-decoration:underline">个人中心</a>设置中文姓名和班级，并确认积分榜已有对应记录后再兑换。</p>
+        <p data-i18n="mall.bindHint" data-i18n-mode="html">积分商城按积分榜扣分。请先到<a class="link-accent" href="member-center.html" style="text-decoration:underline">个人中心</a>设置中文姓名和班级，并确认积分榜已有对应记录后再兑换。</p>
       </section>
 
       <section class="panel">
@@ -243,5 +198,6 @@
     supabaseClient.auth.getSession().then(({ data: { session } }) => { void updateSession(session); });
     window.addEventListener('club:langchange', () => { updateProfileUi(); void loadProducts(); if (window.ClubI18n) ClubI18n.apply(document); });
   </script>
+  <script src="club-shell.js"></script>
 </body>
 </html>

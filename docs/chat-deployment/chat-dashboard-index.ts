@@ -94,6 +94,7 @@ type Model = {
   preserve_reasoning: boolean;
   enabled: boolean;
   visibility: 'all' | 'assigned';
+  updated_at?: string;
 };
 
 type RequestContext = {
@@ -113,6 +114,7 @@ const IMAGE_TOKEN_ESTIMATE = { low: 1024, auto: 4096, high: 8192 };
 const PDF_TOKEN_ESTIMATE = 8192;
 const ACTIONS = new Set([
   'catalog', 'respond', 'admin_get', 'admin_save_provider', 'admin_save_model',
+  'admin_delete_provider', 'admin_delete_model',
   'admin_usage', 'admin_test', 'quota', 'admin_quota_get', 'admin_quota_save',
   'admin_user_directory', 'admin_blacklist_list', 'admin_set_blacklist',
   'admin_model_access_get', 'admin_model_access_save',
@@ -125,6 +127,18 @@ function configuredOrigins(): Set<string> {
   return new Set((Deno.env.get('CHAT_CORS_ORIGINS') || '').split(',').map(x => x.trim()).filter(Boolean));
 }
 
+// 本地 file:// 打开页面时 Origin 是字面量 "null"；仅当 CHAT_CORS_ALLOW_FILE=true 时放行。
+// 放行的是 CORS 层，不是授权：仍需有效成员 JWT 与动态超管身份。
+function allowsFileOrigin(): boolean {
+  return String(Deno.env.get('CHAT_CORS_ALLOW_FILE') || '').toLowerCase() === 'true';
+}
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  if (origin === 'null') return allowsFileOrigin();
+  return configuredOrigins().has(origin);
+}
+
 function corsHeaders(request: Request): Headers {
   const headers = new Headers({
     'access-control-allow-headers': 'authorization, apikey, content-type',
@@ -134,7 +148,7 @@ function corsHeaders(request: Request): Headers {
     vary: 'Origin'
   });
   const origin = request.headers.get('origin');
-  if (origin && configuredOrigins().has(origin)) headers.set('access-control-allow-origin', origin);
+  if (isAllowedOrigin(origin)) headers.set('access-control-allow-origin', origin === 'null' ? 'null' : origin!);
   return headers;
 }
 
@@ -430,11 +444,11 @@ function validateInput(input: unknown, model: Model): { input: Json[]; inputByte
 }
 
 async function providers(): Promise<Provider[]> {
-  return await restJson<Provider[]>('chat_providers?select=id,name,label,base_url,secret_name,auth_header,enabled&order=name.asc');
+  return await restJson<Provider[]>('chat_providers?deleted_at=is.null&select=id,name,label,base_url,secret_name,auth_header,enabled&order=name.asc');
 }
 
 async function models(): Promise<Model[]> {
-  return await restJson<Model[]>('chat_models?select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,supports_images,supports_pdf,preserve_reasoning,enabled,visibility&order=display_name.asc');
+  return await restJson<Model[]>('chat_models?deleted_at=is.null&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,supports_images,supports_pdf,preserve_reasoning,enabled,visibility,updated_at&order=display_name.asc');
 }
 
 async function modelAccess(modelId: string, userId: string): Promise<boolean> {
@@ -804,7 +818,11 @@ function proxyStream(request: Request, body: ReadableStream<Uint8Array>, upstrea
 async function adminGet(request: Request) {
   await context(request, true);
   const [providerRows, modelRows] = await Promise.all([providers(), models()]);
-  return { providers: providerRows.map(x => ({ id: x.id, name: x.name, label: x.label, base_url: x.base_url, secret_name: x.secret_name, auth_header: x.auth_header, enabled: x.enabled })), models: modelRows.map(x => ({ ...x, model_id: x.model_key })) };
+  return {
+    providers: providerRows.map(x => ({ id: x.id, name: x.name, label: x.label, base_url: x.base_url, secret_name: x.secret_name, auth_header: x.auth_header, enabled: x.enabled })),
+    // version 与 chat_model_delete 的乐观并发校验一致（updated_at 毫秒）。
+    models: modelRows.map(x => ({ ...x, model_id: x.model_key, version: x.updated_at ? Date.parse(x.updated_at) : 0 }))
+  };
 }
 
 async function modelAccessAdmin(request: Request, action: string, payload: Json): Promise<Json> {
@@ -947,6 +965,8 @@ async function main(request: Request, payload: Json): Promise<Response> {
     admin_usage: ['page', 'pageSize', 'limit', 'from', 'to'],
     admin_save_provider: ['id', 'name', 'label', 'base_url', 'secret_name', 'auth_header', 'enabled'],
     admin_save_model: ['id', 'provider_id', 'model_key', 'model_id', 'display_name', 'introduction', 'context_window', 'max_output_tokens', 'default_max_output_tokens', 'reasoning_efforts', 'default_reasoning_effort', 'supports_images', 'supports_pdf', 'preserve_reasoning', 'enabled', 'visibility'],
+    admin_delete_provider: ['id'],
+    admin_delete_model: ['id', 'expected_version'],
     admin_model_access_get: ['model_id'],
     admin_model_access_save: ['model_id', 'visibility', 'user_ids', 'expected_version'],
     custom_model_list: [],
@@ -960,6 +980,8 @@ async function main(request: Request, payload: Json): Promise<Response> {
   if (action === 'admin_get') return json(request, await adminGet(request));
   if (action === 'admin_save_provider') return json(request, { provider: await saveProviderAfterAuth(request, payload) });
   if (action === 'admin_save_model') return json(request, { model: await saveModelAfterAuth(request, payload) });
+  if (action === 'admin_delete_provider') return json(request, { result: await deleteProviderAfterAuth(request, payload) });
+  if (action === 'admin_delete_model') return json(request, { result: await deleteModelAfterAuth(request, payload) });
   if (action === 'admin_usage') return json(request, await adminUsage(request, payload));
   if (action === 'quota') return json(request, await quotaSnapshot((await context(request)).user.id));
   if (['admin_quota_get', 'admin_quota_save', 'admin_user_directory', 'admin_blacklist_list', 'admin_set_blacklist'].includes(action)) {
@@ -987,9 +1009,33 @@ async function saveModelAfterAuth(request: Request, payload: Json) {
   return saveModel(payload);
 }
 
+/* 删除是墓碑操作，由 SQL 函数完成，这里只做参数校验与错误映射。 */
+function deletedResult(result: Json): Json {
+  const code = (result as { code?: unknown }).code;
+  if (code === 'conflict') throw new HttpError('conflict', 409);
+  if (code === 'not_found') throw new HttpError('not_found', 404);
+  if (code === 'deleted') throw new HttpError('deleted', 409);
+  return result;
+}
+
+async function deleteProviderAfterAuth(request: Request, payload: Json) {
+  const ctx = await context(request, true);
+  if (!isUuid(payload.id)) throw new HttpError('input', 400);
+  return deletedResult(object(await rpc('chat_provider_delete', { p_actor_user_id: ctx.user.id, p_provider_id: payload.id })));
+}
+
+async function deleteModelAfterAuth(request: Request, payload: Json) {
+  const ctx = await context(request, true);
+  if (!isUuid(payload.id)) throw new HttpError('input', 400);
+  return deletedResult(object(await rpc('chat_model_delete', {
+    p_actor_user_id: ctx.user.id, p_model_id: payload.id,
+    p_expected_version: integer(payload.expected_version, 0, Number.MAX_SAFE_INTEGER)
+  })));
+}
+
 async function handle(request: Request): Promise<Response> {
   const origin = request.headers.get('origin');
-  if (origin && !configuredOrigins().has(origin)) return errorResponse(request, 'cors', 403);
+  if (origin && !isAllowedOrigin(origin)) return errorResponse(request, 'cors', 403);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(request) });
   if (request.method !== 'POST') return errorResponse(request, 'method', 405);
   const length = Number(request.headers.get('content-length') || 0);

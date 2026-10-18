@@ -5,42 +5,90 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>个人中心 · 算法社</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="club-auth-storage.js"></script>
   <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="club-ui.css">
   <script src="theme.js"></script>
   <script src="member-identity.js"></script>
   <script src="i18n-dict.js"></script>
   <script src="i18n.js"></script>
-<style>
-    :root{--bg:#030712;--panel:rgba(9,18,38,.82);--line:rgba(107,169,224,.24);--text:#eef8ff;--muted:#91a8c2;--cyan:#00e5ff;--violet:#9278ff;--green:#72f3c2;--danger:#ff718a;--warn:#ffd166;--shadow:0 24px 70px rgba(0,0,0,.34)}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-width:320px;color:var(--text);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 8% 5%,rgba(0,229,255,.14),transparent 31%),radial-gradient(circle at 92% 12%,rgba(146,120,255,.16),transparent 30%),var(--bg)}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;background-image:linear-gradient(rgba(0,229,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.06) 1px,transparent 1px);background-size:64px 64px;mask-image:linear-gradient(to bottom,#000,transparent 88%)}a{color:inherit;text-decoration:none}.topbar{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);background:rgba(3,7,18,.8);backdrop-filter:blur(18px)}.topbar-inner{max-width:1180px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid rgba(0,229,255,.7);border-radius:9px;color:var(--cyan);box-shadow:0 0 24px rgba(0,229,255,.18)}.brand strong,.brand small{display:block}.brand small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}.identity{display:none;margin-left:auto;padding:6px 10px;border:1px solid rgba(0,229,255,.35);border-radius:999px;color:var(--cyan);font-size:12px;white-space:nowrap}.identity:not([hidden]){display:inline-flex}.back{color:var(--muted);font-size:14px}.back:hover{color:var(--cyan)}main{position:relative;z-index:1;max-width:1180px;margin:auto;padding:62px 22px 90px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;letter-spacing:2px;text-transform:uppercase}.hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:28px;align-items:end;margin-bottom:28px}.hero h1{margin:0;font-size:clamp(42px,8vw,82px);line-height:.98;letter-spacing:-2px;text-shadow:0 0 28px rgba(0,229,255,.3)}.hero p{max-width:650px;color:var(--muted);font-size:17px;line-height:1.8}.panel{border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(16px)}.session-card{padding:22px}.session-card strong{display:block;margin-bottom:8px;color:var(--cyan);font-size:20px}.session-card span{color:var(--muted);font-size:13px;line-height:1.7}.member-content.hidden,.auth-view.hidden{display:none}.auth-view{margin-bottom:18px}.auth-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.panel-block{padding:24px;margin-bottom:18px}.panel h2{margin:0 0 8px;font-size:22px}.intro{margin:0 0 16px;color:var(--muted);line-height:1.7}.form{display:grid;gap:12px}.field label,.label{display:block;margin-bottom:7px;color:var(--muted);font-size:13px}.input{width:100%;padding:12px;color:var(--text);border:1px solid var(--line);border-radius:8px;background:rgba(2,7,18,.8);font:inherit;outline:none}.input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1)}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}.button{display:inline-flex;justify-content:center;align-items:center;border:1px solid rgba(0,229,255,.55);border-radius:8px;padding:11px 15px;color:var(--text);background:rgba(0,229,255,.12);cursor:pointer;font:inherit}.button:hover{background:rgba(0,229,255,.22)}.button.secondary{border-color:var(--line);background:transparent}.button.danger{border-color:rgba(255,113,138,.5);background:rgba(255,113,138,.1)}.button:disabled{opacity:.55;cursor:not-allowed}.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}.notice{display:none;margin-bottom:18px;padding:16px 18px;border:1px solid rgba(255,209,102,.45);border-radius:12px;background:rgba(255,209,102,.08)}.notice.active{display:block}.notice strong{display:block;margin-bottom:6px;color:var(--warn)}.notice p{margin:0;color:#f6e7b8;line-height:1.7}.profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}.profile-item{padding:16px;border:1px solid rgba(107,169,224,.18);border-radius:10px;background:rgba(0,10,28,.45)}.profile-item small{display:block;margin-bottom:7px;color:var(--muted);font-size:12px}.profile-item strong{display:block;overflow-wrap:anywhere;font-size:16px}.profile-item strong.accent{color:var(--green);font-size:25px}.bind-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;margin-top:18px}.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}.quick-link{display:flex;min-height:116px;flex-direction:column;justify-content:space-between;padding:16px;border:1px solid rgba(107,169,224,.2);border-radius:10px;background:linear-gradient(145deg,rgba(0,229,255,.08),rgba(146,120,255,.08));transition:transform .2s ease,border-color .2s ease,background .2s ease}.quick-link:hover{transform:translateY(-3px);border-color:rgba(0,229,255,.65);background:rgba(0,229,255,.13)}.quick-link strong{font-size:16px}.quick-link span{color:var(--muted);font-size:13px;line-height:1.6}.quick-link[data-admin-only]{display:none}.quick-link[data-admin-only].is-visible{display:flex}.points-table{width:100%;border-collapse:collapse;margin-top:18px}.points-table th,.points-table td{padding:11px 8px;border-bottom:1px solid rgba(107,169,224,.14);text-align:left}.points-table th{color:var(--muted);font-size:13px;font-weight:500}.points-table th:last-child,.points-table td:last-child{text-align:right}.points-value{color:var(--green);font-weight:700}.message{min-height:23px;margin:14px 0 0;color:var(--muted);font-size:13px;line-height:1.6}.message.error{color:var(--danger)}.message.success{color:var(--green)}.empty{padding:35px 0;text-align:center;color:var(--muted)}.loading{color:var(--cyan)}.drive-status{margin-top:14px;padding:14px 16px;border:1px solid rgba(114,243,194,.28);border-radius:10px;background:rgba(114,243,194,.08)}.drive-status strong{display:block;margin-bottom:6px;color:var(--green)}.drive-status span{color:#cdeedf;font-size:13px;line-height:1.7}.drive-status.warn{border-color:rgba(255,209,102,.4);background:rgba(255,209,102,.08)}.drive-status.warn strong{color:var(--warn)}.drive-status.warn span{color:#f6e7b8}@media(max-width:900px){.bind-grid{grid-template-columns:1fr}.bind-grid .button{width:100%}}@media(max-width:760px){.hero,.auth-grid{grid-template-columns:1fr}.topbar-inner{padding:13px 16px}.identity{display:none!important}main{padding:44px 16px 70px}.panel-block{padding:18px}.profile-grid,.quick-grid{grid-template-columns:1fr 1fr}.hero h1{letter-spacing:-1px}.points-table{font-size:14px}.points-table th,.points-table td{padding:10px 5px}}@media(max-width:430px){.profile-grid,.quick-grid{grid-template-columns:1fr}.back{font-size:13px}}
-  </style>
 <script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
-<body>
+<body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
   <main>
     <section id="authView" class="auth-view">
-      <section class="hero"><div><p class="eyebrow">MEMBER CENTER</p><h1 data-i18n="memberCenter.h1">个人中心</h1><p data-i18n="memberCenter.lead">登录、注册与资料绑定统一在这里完成。登录成功后会自动连接社团盘（123 云盘 WebDAV），再从社团功能进入文件管理。</p></div><div class="panel session-card"><strong id="authHeroStatus" data-i18n="memberCenter.notLoggedIn">尚未登录</strong><span id="authHeroHint" data-i18n="memberCenter.authHint">使用邀请码注册，或直接登录现有社团账号。</span></div></section>
-      <section class="auth-grid">
-        <div class="panel panel-block">
-          <h2 data-i18n="memberCenter.loginTitle">登录账号</h2>
-          <p class="intro"><span data-i18n="memberCenter.loginIntro">登录后即可使用个人中心、社团盘与全部社员功能。</span><a href="password-reset.html" style="color:#00e5ff;margin-left:6px" data-i18n="memberCenter.forgot">忘记密码？</a></p>
-          <form class="form" id="loginForm">
-            <div class="field"><label for="loginUsername" data-i18n="memberCenter.username">用户名</label><input class="input" id="loginUsername" autocomplete="username" required maxlength="40"></div>
-            <div class="field"><label for="loginPassword" data-i18n="memberCenter.password">密码</label><input class="input" id="loginPassword" type="password" autocomplete="current-password" required minlength="6"></div>
-            <div class="actions"><button class="button" type="submit" data-i18n="memberCenter.loginBtn">登录</button></div>
-          </form>
+      <div class="club-auth-shell">
+        <aside class="club-auth-aside">
+          <p class="eyebrow">MEMBER CENTER</p>
+          <h1 data-i18n="memberCenter.h1">个人中心</h1>
+          <p class="club-auth-lead" data-i18n="memberCenter.lead">登录、注册与资料绑定在这里完成。登录后自动连接社团盘（123 云盘 WebDAV）。</p>
+          <ul class="club-auth-points">
+            <li><span>01</span><div><strong data-i18n="memberCenter.authPoint1Title">一份账号，全站通用</strong><p data-i18n="memberCenter.authPoint1Body">个人中心、社团盘、签到、积分、商城与 AI Chat 共用同一个社团账号。</p></div></li>
+            <li><span>02</span><div><strong data-i18n="memberCenter.authPoint2Title">登录后自动绑定</strong><p data-i18n="memberCenter.authPoint2Body">首次进入会引导填写中文姓名与班级，积分与签到随即生效。</p></div></li>
+            <li><span>03</span><div><strong data-i18n="memberCenter.authPoint3Title">注册需要邀请码</strong><p data-i18n="memberCenter.authPoint3Body">邀请码由管理员发放，注册即创建你的社团盘专属目录。</p></div></li>
+          </ul>
+          <a class="club-auth-back" href="../index.html" data-i18n="common.backSite">← 返回官网</a>
+        </aside>
+
+        <div class="club-auth-card">
+          <div class="club-auth-status">
+            <strong id="authHeroStatus" data-i18n="memberCenter.notLoggedIn">尚未登录</strong>
+            <span id="authHeroHint" data-i18n="memberCenter.authHint">使用邀请码注册，或直接登录现有社团账号。</span>
+          </div>
+
+          <div class="club-tabs club-auth-tabs" data-club-tabs role="tablist" aria-label="登录或注册">
+            <button type="button" role="tab" aria-selected="true" aria-controls="authLoginPanel" data-tab-target="authLoginPanel" data-i18n="memberCenter.loginTitle">登录账号</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="authSignupPanel" data-tab-target="authSignupPanel" data-i18n="memberCenter.registerTitle">注册账号</button>
+          </div>
+
+          <section id="authLoginPanel" role="tabpanel">
+            <form class="form club-auth-form" id="loginForm" novalidate>
+              <div class="field">
+                <label class="label" for="loginUsername" data-i18n="memberCenter.username">用户名</label>
+                <input class="input" id="loginUsername" autocomplete="username" required maxlength="40" placeholder="例如 aabbcc" data-i18n-placeholder="memberCenter.usernamePlaceholder">
+              </div>
+              <div class="field">
+                <label class="label" for="loginPassword" data-i18n="memberCenter.password">密码</label>
+                <input class="input" id="loginPassword" type="password" autocomplete="current-password" required minlength="6" placeholder="至少 6 位" data-i18n-placeholder="memberCenter.passwordPlaceholder">
+              </div>
+              <button class="button club-auth-submit" type="submit" data-i18n="memberCenter.loginBtn">登录</button>
+              <p class="club-auth-switch">
+                <span data-i18n="memberCenter.noAccount">还没有账号？</span>
+                <button type="button" class="club-auth-link" data-auth-switch="signup" data-i18n="memberCenter.goRegister">使用邀请码注册</button>
+              </p>
+            </form>
+            <div class="club-auth-aux">
+              <a class="link-accent" href="password-reset.html" data-i18n="memberCenter.forgot">忘记密码？</a>
+              <span data-i18n="memberCenter.loginIntro">登录后即可使用个人中心、社团盘与全部社员功能。</span>
+            </div>
+          </section>
+
+          <section id="authSignupPanel" role="tabpanel" hidden>
+            <form class="form club-auth-form" id="signupForm" novalidate>
+              <div class="field">
+                <label class="label" for="signupUsername" data-i18n="memberCenter.username">用户名</label>
+                <input class="input" id="signupUsername" autocomplete="username" required maxlength="40" placeholder="3–64 位字母、数字或下划线" data-i18n-placeholder="memberCenter.usernameRulePlaceholder">
+              </div>
+              <div class="field">
+                <label class="label" for="signupPassword" data-i18n="memberCenter.password">密码</label>
+                <input class="input" id="signupPassword" type="password" autocomplete="new-password" required minlength="6" placeholder="至少 6 位" data-i18n-placeholder="memberCenter.passwordPlaceholder">
+              </div>
+              <div class="field">
+                <label class="label" for="signupInviteCode" data-i18n="memberCenter.inviteCode">邀请码</label>
+                <input class="input" id="signupInviteCode" autocomplete="off" required maxlength="14" placeholder="例如 ABCD-EFGH-JKLM" data-i18n-placeholder="memberCenter.invitePlaceholder">
+              </div>
+              <button class="button club-auth-submit" type="submit" data-i18n="memberCenter.registerBtn">注册并进入</button>
+              <p class="club-auth-switch">
+                <span data-i18n="memberCenter.haveAccount">已经有账号？</span>
+                <button type="button" class="club-auth-link" data-auth-switch="login" data-i18n="memberCenter.goLogin">直接登录</button>
+              </p>
+            </form>
+            <p class="club-auth-aux" data-i18n="memberCenter.registerIntro">无需邮箱验证。注册成功后会自动登录，并创建你的社团盘专属目录。</p>
+          </section>
+
+          <p id="authMessage" class="message" role="status"></p>
         </div>
-        <div class="panel panel-block">
-          <h2 data-i18n="memberCenter.registerTitle">注册账号</h2>
-          <p class="intro" data-i18n="memberCenter.registerIntro">无需邮箱验证。注册成功后会自动登录，并创建你的社团盘专属目录。</p>
-          <form class="form" id="signupForm">
-            <div class="field"><label for="signupUsername" data-i18n="memberCenter.username">用户名</label><input class="input" id="signupUsername" autocomplete="username" required maxlength="40"></div>
-            <div class="field"><label for="signupPassword" data-i18n="memberCenter.password">密码</label><input class="input" id="signupPassword" type="password" autocomplete="new-password" required minlength="6"></div>
-            <div class="field"><label for="signupInviteCode" data-i18n="memberCenter.inviteCode">邀请码</label><input class="input" id="signupInviteCode" autocomplete="off" required maxlength="14" placeholder="例如 ABCD-EFGH-JKLM" data-i18n-placeholder="memberCenter.invitePlaceholder"></div>
-            <div class="actions"><button class="button secondary" type="submit" data-i18n="memberCenter.registerBtn">注册并进入</button></div>
-          </form>
-        </div>
-      </section>
-      <p id="authMessage" class="message" role="status"></p>
+      </div>
     </section>
 
     <div id="content" class="member-content hidden">
@@ -78,10 +126,37 @@
       document.querySelector('#authView .hero p').textContent = ClubI18n.t('memberCenter.serviceDebugLead');
     }
     if (serviceDebug) {
-      document.querySelector('#signupForm')?.closest('.panel')?.remove();
+      // 超管临时登录只需要登录表单：隐藏注册标签与面板。
+      const signupTab = document.querySelector('#authSignupPanel');
+      const signupTabButton = document.querySelector('.club-auth-tabs [data-tab-target="authSignupPanel"]');
+      if (signupTab) signupTab.remove();
+      if (signupTabButton) signupTabButton.remove();
       applyServiceDebugCopy();
       window.addEventListener('club:langchange', applyServiceDebugCopy);
     }
+
+    // 单卡片登录 / 注册切换：标签与文本链接都走同一套标签页逻辑。
+    document.querySelectorAll('[data-auth-switch]').forEach(button => {
+      button.addEventListener('click', () => {
+        const target = button.dataset.authSwitch === 'signup' ? 'authSignupPanel' : 'authLoginPanel';
+        if (window.ClubShell) window.ClubShell.setTab(document.querySelector('.club-auth-tabs'), target);
+        const firstInput = document.querySelector('#' + target + ' input');
+        if (firstInput) firstInput.focus({ preventScroll: true });
+      });
+    });
+    // 表单校验失败时给出页面内提示，而不是依赖浏览器气泡（移动端体验更一致）。
+    ['loginForm', 'signupForm'].forEach(formId => {
+      const form = document.getElementById(formId);
+      if (!form) return;
+      form.addEventListener('submit', () => {
+        form.querySelectorAll('[data-invalid]').forEach(n => n.removeAttribute('data-invalid'));
+      });
+      form.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', () => {
+          if (input.value) input.removeAttribute('data-invalid');
+        });
+      });
+    });
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -329,5 +404,6 @@
       if (window.ClubTheme?.refreshPickerUI) window.ClubTheme.refreshPickerUI();
     });
   </script>
+  <script src="club-shell.js"></script>
 </body>
 </html>

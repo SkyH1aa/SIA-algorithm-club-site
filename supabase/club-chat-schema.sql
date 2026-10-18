@@ -20,6 +20,16 @@ create unique index if not exists chat_providers_name_uidx
 alter table public.chat_providers
   add column if not exists label text not null default '';
 
+-- 删除采用墓碑而非物理删除：chat_usage 对 provider/model 是 on delete restrict，
+-- 物理删除会被历史用量挡住，也会让审计记录失去引用。墓碑行保留 id 与名称，
+-- 但不再出现在管理列表、catalog 和任何可用性判断中，且不可复活。
+alter table public.chat_providers
+  add column if not exists deleted_at timestamptz;
+
+-- 唯一索引只约束「未删除」的行，删除后可以重新创建同名供应商或同一上游模型。
+drop index if exists public.chat_providers_name_uidx;
+create unique index if not exists chat_providers_name_uidx
+  on public.chat_providers (lower(name)) where deleted_at is null;
 create table if not exists public.chat_models (
   id uuid primary key default gen_random_uuid(),
   provider_id uuid not null references public.chat_providers(id) on delete cascade,
@@ -53,6 +63,15 @@ alter table public.chat_models
 
 create index if not exists chat_models_enabled_idx
   on public.chat_models (enabled, display_name);
+
+-- 模型同样用墓碑删除；唯一约束改为只对未删除行生效，
+-- 否则删除后再建同一上游模型会撞上 old unique(provider_id, model_key)。
+alter table public.chat_models
+  add column if not exists deleted_at timestamptz;
+alter table public.chat_models
+  drop constraint if exists chat_models_provider_id_model_key_key;
+create unique index if not exists chat_models_provider_key_uidx
+  on public.chat_models (provider_id, model_key) where deleted_at is null;
 
 -- Model visibility is independent from the existing enabled switch. Existing
 -- models remain available to every bound member after this additive migration.
@@ -212,12 +231,67 @@ begin
 end;
 $$;
 
+create or replace function public.chat_model_delete(
+  p_actor_user_id uuid, p_model_id uuid, p_expected_version bigint
+)
+returns jsonb language plpgsql security definer set search_path = pg_catalog, public as $$
+declare v public.chat_models; v_version bigint;
+begin
+  perform public.chat_quota_assert_admin(p_actor_user_id);
+  if p_model_id is null or p_expected_version is null or p_expected_version < 0 then
+    raise exception 'Invalid model delete' using errcode = '22023';
+  end if;
+  select * into v from public.chat_models where id = p_model_id for update;
+  if not found then return jsonb_build_object('code','not_found'); end if;
+  if v.deleted_at is not null then return jsonb_build_object('code','deleted'); end if;
+  v_version := coalesce(extract(epoch from v.updated_at) * 1000, 0)::bigint;
+  if v_version <> p_expected_version then return jsonb_build_object('code','conflict'); end if;
+  -- 墓碑删除：保留 usage 审计引用，同时让 catalog/可用性判断彻底看不到它。
+  update public.chat_models
+    set enabled = false, deleted_at = clock_timestamp(), updated_at = clock_timestamp()
+    where id = p_model_id returning * into v;
+  delete from public.chat_model_access where model_id = p_model_id;
+  return jsonb_build_object('deleted', true, 'id', p_model_id, 'model_key', v.model_key);
+end;
+$$;
+
+create or replace function public.chat_provider_delete(
+  p_actor_user_id uuid, p_provider_id uuid
+)
+returns jsonb language plpgsql security definer set search_path = pg_catalog, public as $$
+declare v public.chat_providers; v_models integer;
+begin
+  perform public.chat_quota_assert_admin(p_actor_user_id);
+  if p_provider_id is null then
+    raise exception 'Invalid provider delete' using errcode = '22023';
+  end if;
+  select * into v from public.chat_providers where id = p_provider_id for update;
+  if not found then return jsonb_build_object('code','not_found'); end if;
+  if v.deleted_at is not null then return jsonb_build_object('code','deleted'); end if;
+  -- 供应商删除会连带墓碑其下所有模型：留下可用模型却指向已删供应商只会造成孤儿配置。
+  select count(*) into v_models from public.chat_models where provider_id = p_provider_id and deleted_at is null;
+  update public.chat_models
+    set enabled = false, deleted_at = clock_timestamp(), updated_at = clock_timestamp()
+    where provider_id = p_provider_id and deleted_at is null;
+  delete from public.chat_model_access
+    where model_id in (select id from public.chat_models where provider_id = p_provider_id);
+  update public.chat_providers
+    set enabled = false, deleted_at = clock_timestamp(), updated_at = clock_timestamp()
+    where id = p_provider_id returning * into v;
+  return jsonb_build_object('deleted', true, 'id', p_provider_id, 'name', v.name, 'models', v_models);
+end;
+$$;
+
 revoke all on function public.chat_model_access_get(uuid,uuid), public.chat_model_access_save(uuid,uuid,text,uuid[],bigint),
   public.chat_custom_model_list(uuid), public.chat_custom_model_save(uuid,uuid,text,text,text,bigint),
-  public.chat_custom_model_delete(uuid,uuid,bigint) from public, anon, authenticated;
+  public.chat_custom_model_delete(uuid,uuid,bigint),
+  public.chat_model_delete(uuid,uuid,bigint), public.chat_provider_delete(uuid,uuid)
+  from public, anon, authenticated;
 grant execute on function public.chat_model_access_get(uuid,uuid), public.chat_model_access_save(uuid,uuid,text,uuid[],bigint),
   public.chat_custom_model_list(uuid), public.chat_custom_model_save(uuid,uuid,text,text,text,bigint),
-  public.chat_custom_model_delete(uuid,uuid,bigint) to service_role;
+  public.chat_custom_model_delete(uuid,uuid,bigint),
+  public.chat_model_delete(uuid,uuid,bigint), public.chat_provider_delete(uuid,uuid)
+  to service_role;
 
 create table if not exists public.chat_usage (
   id uuid primary key default gen_random_uuid(),
