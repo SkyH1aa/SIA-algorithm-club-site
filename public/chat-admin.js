@@ -53,6 +53,17 @@ function setGate() {
   $('loginGate').hidden = logged;
   $('deniedGate').hidden = !logged || authorized;
   $('adminContent').hidden = !logged || !authorized;
+  applyAdminTab();
+}
+// 各分区由标签页托管：每次进入控制台都重新应用当前分区，
+// 避免重新认证或刷新数据后把多个分区同时展开。
+function applyAdminTab() {
+  // 部分测试桩只实现了 getElementById；缺少 querySelector 时跳过即可。
+  if (typeof document.querySelector !== 'function') return;
+  const nav = document.querySelector('.chat-admin-tabs');
+  if (!nav || $('adminContent').hidden) return;
+  const active = nav.querySelector('[role="tab"][aria-selected="true"]') || nav.querySelector('[role="tab"]');
+  if (active) { nav.dataset.activeTab = ''; active.click(); }
 }
 function pages() { return Math.max(1, Math.ceil((usage.total ?? 0) / usage.pageSize)); }
 function hasNextPage() { return usage.loaded && (usage.total == null ? usage.rows.length === usage.pageSize : usage.page < pages()); }

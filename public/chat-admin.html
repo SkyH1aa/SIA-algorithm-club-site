@@ -64,7 +64,17 @@
         <div class="chat-admin-panel chat-admin-stat"><small data-i18n="chatAdmin.totalTokens">当前页 token</small><strong id="totalTokens">--</strong></div>
       </section>
 
-      <section class="chat-admin-panel chat-admin-section">
+      <nav class="club-tabs chat-admin-tabs" data-club-tabs role="tablist" aria-label="Chat 管理分区">
+        <button type="button" role="tab" aria-selected="true" aria-controls="providersSection" data-tab-target="providersSection" data-i18n="chatAdmin.tabProviders">供应商</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="modelsSection" data-tab-target="modelsSection" data-i18n="chatAdmin.tabModels">模型</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="proxySection" data-tab-target="proxySection" data-i18n="chatAdmin.tabProxy">代理</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="quotaSection" data-tab-target="quotaSection" data-i18n="chatAdmin.tabQuota">配额与黑名单</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="modelAccessSection" data-tab-target="modelAccessSection" data-i18n="chatAdmin.tabAccess">模型授权</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="testSection" data-tab-target="testSection" data-i18n="chatAdmin.tabTest">测试调用</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="usageSection" data-tab-target="usageSection" data-i18n="chatAdmin.tabUsage">使用记录</button>
+      </nav>
+
+      <section class="chat-admin-panel chat-admin-section" id="providersSection">
         <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.providersTitle">供应商配置</h2><p data-i18n="chatAdmin.providersLead">只保存供应商标识、Base URL、认证头和 Supabase Secret 名称，不在页面输入或回显 API Key。</p></div><button id="refreshButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="common.refresh">刷新数据</button></div>
         <form id="providerForm" class="chat-admin-form">
           <input id="providerId" type="hidden">
@@ -80,7 +90,7 @@
         <div id="providersList" class="chat-admin-table-wrap"></div>
       </section>
 
-      <section class="chat-admin-panel chat-admin-section">
+      <section class="chat-admin-panel chat-admin-section" id="modelsSection">
         <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.modelsTitle">模型配置</h2><p data-i18n="chatAdmin.modelsLead">模型参数用于普通 Chat 目录和管理员测试。供应商密钥仍由后端 Secret 读取。</p></div></div>
         <form id="modelForm" class="chat-admin-form chat-admin-model-form">
           <input id="modelConfigId" type="hidden">
@@ -134,7 +144,7 @@
         <p id="proxyMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
       </section>
 
-      <section class="chat-admin-panel chat-admin-section">
+      <section class="chat-admin-panel chat-admin-section" id="quotaSection">
         <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.quotaTitle">配额与黑名单</h2><p data-i18n="chatAdmin.quotaLead">按 token 限制用量。留空表示不限，0 表示阻止调用；每项上限为 1,000,000,000,000。</p></div><button id="refreshQuotaButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.refreshQuota">刷新配额与用户</button></div>
         <h3 data-i18n="chatAdmin.globalQuota">全站每日配额</h3>
         <form id="globalQuotaForm" class="chat-admin-form">
@@ -178,7 +188,7 @@
         </form>
         <p id="modelAccessMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
       </section>
-      <section class="chat-admin-panel chat-admin-section">
+      <section class="chat-admin-panel chat-admin-section" id="testSection">
         <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.testTitle">管理员测试调用</h2><p data-i18n="chatAdmin.testLead">测试会真实调用供应商，可能产生费用。每次点击测试前都必须再次确认。</p></div></div>
         <form id="testForm" class="chat-admin-test-form">
           <label><span data-i18n="chatAdmin.testModel">测试模型</span><select id="testModel" class="chat-admin-input" required></select></label>
@@ -190,7 +200,7 @@
         <p id="testMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
       </section>
 
-      <section class="chat-admin-panel chat-admin-section">
+      <section class="chat-admin-panel chat-admin-section" id="usageSection">
         <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.usageTitle">使用记录</h2><p data-i18n="chatAdmin.usageLead">仅展示姓名、账号、模型、供应商、时间、状态和 token 等用量元数据，不展示对话内容。</p></div><button id="refreshUsageButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.refreshUsage">刷新用量</button></div>
         <form id="usageFilter" class="chat-admin-filter-form">
           <label><span data-i18n="chatAdmin.from">开始时间</span><input id="usageFrom" class="chat-admin-input" type="datetime-local"></label>

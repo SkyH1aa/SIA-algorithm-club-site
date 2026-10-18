@@ -1,5 +1,6 @@
 (() => {
   const zh = {
+    tabProviders: '供应商', tabModels: '模型', tabProxy: '代理', tabQuota: '配额与黑名单', tabAccess: '模型授权', tabTest: '测试调用', tabUsage: '使用记录',
     proxyTitle: '对外 Responses 代理', proxyLead: '仅支持 POST /responses。管理操作不会调用供应商。上游密钥只引用 Supabase CHAT_KEY_* Secret；下发密钥仅展示一次。',
     proxyRefresh: '刷新路由与密钥', proxyName: '路由名称', proxySave: '保存路由', proxyRoute: '路由', proxyKeysTitle: '路由访问密钥', proxyKeyLabel: '密钥标签', proxyCreateKey: '生成新密钥',
     proxyUrlHelp: 'HTTPS 上游基础地址，不得含 response/responses 路径、凭据、查询参数或非 443 端口。这里不输入真实密钥。', proxyInvalidUrl: '请填写 HTTPS 上游基础地址，不含 response/responses 路径、凭据、查询参数或非 443 端口。',
@@ -62,6 +63,7 @@
     usageStatus: {success: '成功', incomplete: '未完成', interrupted: '已中断', cancelled: '已取消', failure: '失败', audited: '已登记', running: '调用中'}
   };
   const en = {
+    tabProviders: 'Providers', tabModels: 'Models', tabProxy: 'Proxy', tabQuota: 'Quota & blocklist', tabAccess: 'Model access', tabTest: 'Test call', tabUsage: 'Usage',
     proxyTitle: 'External Responses proxy', proxyLead: 'POST /responses only. Management never calls a provider. Upstream keys reference Supabase CHAT_KEY_* Secrets; issued access keys are shown once.',
     proxyRefresh: 'Refresh routes and keys', proxyName: 'Route name', proxySave: 'Save route', proxyRoute: 'Route', proxyKeysTitle: 'Route access keys', proxyKeyLabel: 'Key label', proxyCreateKey: 'Generate new key',
     proxyUrlHelp: 'HTTPS upstream base URL without response/responses path segments, credentials, query parameters, or ports other than 443. Do not enter real keys here.', proxyInvalidUrl: 'Use an HTTPS upstream base URL without response/responses path segments, credentials, query parameters, or ports other than 443.',

@@ -487,7 +487,9 @@
 
   // 实验室 / 游戏页沿用各自顶栏：把语言与主题切换器合并成一组，避免换行。
   function mountUtilityGroup() {
-    var bar = document.querySelector('header.topbar') || document.querySelector('header.page-header');
+    var bar = document.querySelector('header.topbar') ||
+      document.querySelector('header.page-header') ||
+      document.querySelector('.chat-admin-header-inner');
     if (!bar) return;
     // 官网首页有自己的顶栏布局：#langSwitcherHost 已在导航内，主题切换器由
     // theme.js 紧跟其后挂载。这里不能再套绝对定位组，否则会挤成两行。
