@@ -116,8 +116,71 @@ export function nativeRequest(body, protocol) {
   return result;
 }
 
-function nativeOutput(text) {
-  return text ? [{type:'message',role:'assistant',content:[{type:'output_text',text,annotations:[]}]}] : [];
+// Only a leading, explicit, unambiguous block is a compatibility thinking channel.
+// Keep uncertain prefixes buffered while streaming; completed unmatched markup is literal.
+function leadingThinking(text, complete = true) {
+  const literal = {text,thinking:'',removed:0};
+  const prefix = /^(\s*)/.exec(text)[0];
+  if (/(?:^|\n)(?: {4}|[^\S\n]*\t)/.test(prefix)) return literal; // Markdown indented code
+  const rest = text.slice(prefix.length), open = '<think>', close = '</think>';
+  if (!complete && rest && open.startsWith(rest)) return {text:'',thinking:'',removed:text.length};
+  if (!rest.startsWith(open)) return literal;
+  const end = rest.indexOf(close, open.length);
+  const body = rest.slice(open.length, end < 0 ? undefined : end);
+  // Code, quoted/escaped tag examples, nested tags and repeated delimiters are ambiguous.
+  if (body.includes('<think>') || /[`\\]/.test(body) || /["'“‘]\s*$/.test(body)) return literal;
+  if (end < 0) {
+    if (complete) return literal;
+    let pending = body;
+    for (let size = Math.min(close.length - 1, pending.length); size > 0; size--) {
+      if (close.startsWith(pending.slice(-size))) { pending = pending.slice(0, -size); break; }
+    }
+    return {text:'',thinking:pending,removed:text.length};
+  }
+  const answer = rest.slice(end + close.length);
+  if (answer.includes('<think>') || answer.includes(close)) return literal;
+  return {text:answer,thinking:body,removed:prefix.length + end + close.length};
+}
+
+function answerText(output) {
+  return (output || []).filter(item => item.type === 'message' && item.role === 'assistant')
+    .flatMap(item => item.content || []).filter(part => part.type === 'output_text' && typeof part.text === 'string').map(part => part.text).join('');
+}
+function summaryText(output) {
+  return (output || []).filter(item => item.type === 'reasoning').flatMap(item => item.summary || [])
+    .filter(part => part.type === 'summary_text' && typeof part.text === 'string').map(part => part.text).filter(Boolean).join('\n\n');
+}
+function combineThinking(provider, tagged) {
+  return provider && tagged && provider !== tagged ? provider + '\n\n' + tagged : provider || tagged;
+}
+
+/** Read provider-exposed summaries from saved normalized output. Never inspect opaque state. */
+export function thinkingText(output) {
+  return combineThinking(summaryText(output), leadingThinking(answerText(output)).thinking);
+}
+export const readableThinking = thinkingText;
+
+function nativeOutput(text, thinking = '') {
+  return [
+    ...(thinking ? [{type:'reasoning',summary:[{type:'summary_text',text:thinking}]}] : []),
+    ...(text ? [{type:'message',role:'assistant',content:[{type:'output_text',text,annotations:[]}]}] : [])
+  ];
+}
+function readableOutput(output, fallback = '', complete = true) {
+  const raw = answerText(output) || fallback;
+  const tagged = leadingThinking(raw, complete);
+  let remaining = tagged.removed;
+  let clean = (output || []).map(item => item.type !== 'message' || item.role !== 'assistant' ? item : {
+    ...item,content:(item.content || []).map(part => {
+      if (part.type !== 'output_text' || typeof part.text !== 'string') return part;
+      const count = Math.min(remaining, part.text.length); remaining -= count;
+      return {...part,text:part.text.slice(count)};
+    })
+  });
+  if (!answerText(output) && tagged.text) clean = clean.concat(nativeOutput(tagged.text));
+  const provider = summaryText(output), thinking = combineThinking(provider, tagged.thinking);
+  if (tagged.thinking && provider !== tagged.thinking) clean = clean.concat([{type:'reasoning',summary:[{type:'summary_text',text:tagged.thinking}]}]);
+  return {text:tagged.text,thinking,output:clean};
 }
 function nativeStatus(reason, protocol) {
   if (['length','max_tokens','model_context_window_exceeded'].includes(reason)) return 'incomplete';
@@ -133,12 +196,16 @@ function nativeUsage(usage, protocol, previous = null) {
 export function normalizeChatResponse(data, protocol = 'responses') {
   if (protocol === 'responses') {
     const response = data.response || data, output = response.output || [];
-    return {text:response.output_text || response.text || output.flatMap(item => item.content || []).map(part => part.text || '').join(''),output,usage:response.usage || null,status:data.error || ['failed','cancelled'].includes(response.status) ? 'failure' : response.status === 'incomplete' ? 'incomplete' : 'success'};
+    return {...readableOutput(output, response.output_text || response.text || ''),usage:response.usage || null,status:data.error || ['failed','cancelled'].includes(response.status) ? 'failure' : response.status === 'incomplete' ? 'incomplete' : 'success'};
   }
   const choice = data.choices?.find(item => item.index === 0) || data.choices?.[0];
-  const text = protocol === 'messages' ? (data.content || []).filter(part => part.type === 'text').map(part => part.text).join('') : typeof choice?.message?.content === 'string' ? choice.message.content : '';
+  const text = protocol === 'messages' ? (data.content || []).filter(part => part.type === 'text' && typeof part.text === 'string').map(part => part.text).join('') : typeof choice?.message?.content === 'string' ? choice.message.content : '';
+  const thinking = protocol === 'messages' ? (data.content || []).filter(part => part.type === 'thinking' && typeof part.thinking === 'string').map(part => part.thinking).filter(Boolean).join('\n\n') : chatThinking(choice?.message);
   const unsupported = protocol === 'messages' ? (data.content || []).some(part => ['tool_use','server_tool_use'].includes(part.type)) : choice?.message?.tool_calls || choice?.message?.function_call;
-  return {text,output:nativeOutput(text),usage:nativeUsage(data.usage,protocol),status:data.error || unsupported ? 'failure' : nativeStatus(protocol === 'messages' ? data.stop_reason : choice?.finish_reason,protocol)};
+  return {...readableOutput(nativeOutput(text,thinking)),usage:nativeUsage(data.usage,protocol),status:data.error || unsupported ? 'failure' : nativeStatus(protocol === 'messages' ? data.stop_reason : choice?.finish_reason,protocol)};
+}
+function chatThinking(message) {
+  return typeof message?.reasoning_content === 'string' ? message.reasoning_content : typeof message?.reasoning === 'string' ? message.reasoning : '';
 }
 
 export function createSSEParser(onEvent, onDone = () => {}) {
@@ -181,13 +248,65 @@ export function createSSEParser(onEvent, onDone = () => {}) {
 
 export async function readResponses(stream, onUpdate = () => {}, protocol = 'responses') {
   const reader = stream.getReader(), decoder = new TextDecoder();
-  const result = {text:'', output:[], status:'interrupted', usage:null};
+  const result = {text:'',thinking:'',output:[],status:'interrupted',usage:null};
   let terminal = false, finishReason = null, unsupported = false;
-  const blocks = new Map();
-  function updateNative() { result.output = nativeOutput(result.text); }
+  let rawText = '', rawThinking = '';
+  // Adapter streams can give both reasoning and answer the same output_index.
+  // Keep their namespaces separate until final output establishes canonical order.
+  const blocks = new Map(), items = new Map(), messages = new Map();
+  const ordered = map => [...map.entries()].sort((a,b) => a[0] - b[0]).map(([,value]) => value);
+  function itemIndex(event, map = items) {
+    if (Number.isInteger(event.output_index)) return event.output_index;
+    const id = event.item_id || event.item?.id;
+    for (const [index,item] of map) if (id && item.id === id) return index;
+    return id ? map.size : 0;
+  }
+  function mergeItem(index, incoming, map = items) {
+    if (!incoming) return;
+    const previous = map.get(index) || {}, next = {...previous,...incoming};
+    for (const field of ['summary','content']) {
+      if (!previous[field] && !incoming[field]) continue;
+      next[field] = (previous[field] || []).slice();
+      for (const [i,part] of (incoming[field] || []).entries()) {
+        next[field][i] = {...next[field][i],...part};
+        // Empty final placeholders must not erase readable partial summaries.
+        if (!part.text && previous[field]?.[i]?.text) next[field][i].text = previous[field][i].text;
+      }
+    }
+    map.set(index,next);
+  }
+  function reconcile(finalOutput) {
+    for (const [map,isMessage] of [[items,false],[messages,true]]) {
+      const previous = new Map(map), used = new Set();
+      map.clear();
+      const finals = finalOutput.map((item,index) => [index,item]).filter(([,item]) => (item.type === 'message') === isMessage);
+      for (const [index,item] of finals) {
+        const compatible = ([key,old]) => !used.has(key) && old.type === item.type && (!item.id || !old.id || old.id === item.id);
+        const candidates = [...previous].filter(compatible);
+        const match = candidates.find(([,old]) => item.id && old.id === item.id) || candidates.find(([key]) => key === index) || candidates[0];
+        if (match) { used.add(match[0]); map.set(index,match[1]); }
+        mergeItem(index,item,map);
+      }
+      // A shortened/absent final output must not discard previously exposed partials.
+      let index = finalOutput.length;
+      for (const [key,item] of previous) if (!used.has(key)) {
+        while (map.has(index)) index++;
+        map.set(index++,item);
+      }
+    }
+  }
+  function publish(complete = terminal) {
+    const output = protocol === 'responses' ? [...items,...messages].sort((a,b) => a[0] - b[0]).map(([,item]) => item) : nativeOutput(rawText,rawThinking);
+    Object.assign(result,readableOutput(output,protocol === 'responses' ? rawText : '',complete));
+    onUpdate({...result});
+  }
   function finishNative() {
     result.status = unsupported ? 'failure' : nativeStatus(finishReason, protocol);
-    terminal = true; updateNative(); onUpdate({...result});
+    terminal = true; publish();
+  }
+  function putBlock(index, block) {
+    blocks.set(index, {...block});
+    if (['tool_use','server_tool_use'].includes(block.type)) unsupported = true;
   }
   const parser = createSSEParser((event, eventName) => {
     if (terminal) return;
@@ -197,38 +316,63 @@ export async function readResponses(stream, onUpdate = () => {}, protocol = 'res
       else if (protocol === 'messages') {
         if (type === 'message_start') {
           result.usage = nativeUsage(event.message?.usage, protocol, result.usage);
-          for (const [index, block] of (event.message?.content || []).entries()) {
-            blocks.set(index, block.type === 'text' ? block.text || '' : '');
-            if (['tool_use','server_tool_use'].includes(block.type)) unsupported = true;
-          }
-        } else if (type === 'content_block_start') {
-          blocks.set(event.index, event.content_block?.type === 'text' ? event.content_block.text || '' : '');
-          if (['tool_use','server_tool_use'].includes(event.content_block?.type)) unsupported = true;
-        } else if (type === 'content_block_delta' && event.delta?.type === 'text_delta') blocks.set(event.index, (blocks.get(event.index) || '') + (event.delta.text || ''));
-        else if (type === 'message_delta') {
+          for (const [index,block] of (event.message?.content || []).entries()) putBlock(index,block);
+        } else if (type === 'content_block_start') putBlock(event.index,event.content_block || {});
+        else if (type === 'content_block_delta') {
+          const delta = event.delta || {}, previous = blocks.get(event.index);
+          if (delta.type === 'text_delta') putBlock(event.index,{...previous,type:'text',text:(previous?.text || '') + (delta.text || '')});
+          if (delta.type === 'thinking_delta' && (!previous || previous.type === 'thinking')) putBlock(event.index,{type:'thinking',thinking:(typeof previous?.thinking === 'string' ? previous.thinking : '') + (typeof delta.thinking === 'string' ? delta.thinking : '')});
+        } else if (type === 'message_delta') {
           finishReason = event.delta?.stop_reason || finishReason;
           result.usage = nativeUsage(event.usage, protocol, result.usage);
         } else if (type === 'message_stop') { finishNative(); return; }
-        result.text = [...blocks.entries()].sort((a,b) => a[0] - b[0]).map(([,text]) => text).join('');
+        rawText = ordered(blocks).filter(block => block.type === 'text').map(block => block.text || '').join('');
+        rawThinking = ordered(blocks).filter(block => block.type === 'thinking' && typeof block.thinking === 'string').map(block => block.thinking).filter(Boolean).join('\n\n');
       } else {
         const choice = event.choices?.find(item => item.index === 0);
-        if (typeof choice?.delta?.content === 'string') result.text += choice.delta.content;
-        if (choice?.delta?.tool_calls || choice?.delta?.function_call) unsupported = true;
+        if (typeof choice?.delta?.content === 'string') rawText += choice.delta.content;
+        rawThinking += chatThinking(choice?.delta);
+        if (choice?.message) {
+          if (typeof choice.message.content === 'string' && choice.message.content) rawText = choice.message.content;
+          if (chatThinking(choice.message)) rawThinking = chatThinking(choice.message);
+        }
+        if (choice?.delta?.tool_calls || choice?.delta?.function_call || choice?.message?.tool_calls || choice?.message?.function_call) unsupported = true;
         if (choice?.finish_reason) finishReason = choice.finish_reason;
         result.usage = nativeUsage(event.usage, protocol, result.usage);
       }
-      updateNative(); onUpdate({...result}); return;
+      publish(); return;
     }
-    if (type === 'response.output_text.delta') result.text += event.delta || '';
+    if (['response.output_item.added','response.output_item.done'].includes(type)) {
+      const map = event.item?.type === 'message' ? messages : items;
+      mergeItem(itemIndex(event,map),event.item,map);
+    }
+    else if (['response.reasoning_summary_text.delta','response.reasoning_summary_text.done','response.reasoning_summary_part.added','response.reasoning_summary_part.done'].includes(type)) {
+      const index = itemIndex(event), previous = items.get(index) || {type:'reasoning',id:event.item_id};
+      const summary = (previous.summary || []).slice(), partIndex = event.summary_index ?? 0;
+      const old = summary[partIndex]?.text || '';
+      if (type.endsWith('.delta')) summary[partIndex] = {type:'summary_text',text:old + (typeof event.delta === 'string' ? event.delta : '')};
+      else {
+        const part = event.part || {type:'summary_text',text:event.text};
+        if (part.type === 'summary_text') summary[partIndex] = {type:'summary_text',text:typeof part.text === 'string' && part.text ? part.text : old};
+      }
+      items.set(index,{...previous,summary});
+    } else if (type === 'response.output_text.delta' || type === 'response.output_text.done') {
+      if (Number.isInteger(event.output_index) || event.item_id) {
+        const index = itemIndex(event,messages), previous = messages.get(index) || {type:'message',role:'assistant',id:event.item_id};
+        const content = (previous.content || []).slice(), partIndex = event.content_index ?? 0;
+        content[partIndex] = {type:'output_text',text:type.endsWith('.delta') ? (content[partIndex]?.text || '') + (event.delta || '') : event.text || content[partIndex]?.text || ''};
+        messages.set(index,{...previous,content});
+      } else if (type.endsWith('.delta')) rawText += event.delta || '';
+      else if (typeof event.text === 'string') rawText = event.text;
+    }
     if (['response.completed','response.incomplete','response.failed','error'].includes(type)) {
       terminal = true;
       result.status = type === 'response.completed' ? 'success' : type === 'response.incomplete' ? 'incomplete' : 'failure';
-      result.output = event.response?.output || [];
-      result.usage = event.response?.usage || null;
-      const full = result.output.filter(x => x.type === 'message').flatMap(x => x.content || []).filter(x => x.type === 'output_text').map(x => x.text).join('');
-      if (full) result.text = full;
+      reconcile(event.response?.output || []);
+      if (event.response?.output_text || event.response?.text) rawText = event.response.output_text || event.response.text;
+      result.usage = event.response?.usage || result.usage;
     }
-    onUpdate({...result});
+    publish();
   }, () => { if (!terminal && protocol === 'chat_completions' && finishReason) finishNative(); });
   try {
     while (true) {
@@ -240,16 +384,17 @@ export async function readResponses(stream, onUpdate = () => {}, protocol = 'res
     if (terminal) await reader.cancel().catch(() => {});
     return result;
   } finally {
-    if (!terminal) await reader.cancel().catch(() => {});
+    // Flush unmatched markup literally on EOF, cancellation or read error as well.
+    if (!terminal) { publish(true); await reader.cancel().catch(() => {}); }
     reader.releaseLock();
   }
 }
 
 export function continuation(output, preserveReasoning) {
-  return (output || []).flatMap(item => {
+  return readableOutput(output || []).output.flatMap(item => {
     if (item.type === 'reasoning' && preserveReasoning && typeof item.encrypted_content === 'string') return [{type:'reasoning', encrypted_content:item.encrypted_content, summary:[]}];
     if (item.type !== 'message' || item.role !== 'assistant') return [];
-    const content = (item.content || []).filter(x => x.type === 'output_text').map(x => ({type:'output_text', text:x.text, annotations:[]}));
+    const content = (item.content || []).filter(x => x.type === 'output_text' && typeof x.text === 'string' && x.text).map(x => ({type:'output_text', text:x.text, annotations:[]}));
     return content.length ? [{type:'message', role:'assistant', content}] : [];
   });
 }

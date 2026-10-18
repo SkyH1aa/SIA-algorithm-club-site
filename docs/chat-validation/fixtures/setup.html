@@ -6,7 +6,7 @@
 <p class="mock-warning">此服务仅监听当前本机联调端口（由启动参数决定）。账号、配置、生成与 usage 全为内存模拟；没有线上登录、数据库或模型调用。请只使用测试内容。</p>
 <form id="setupForm">
 <label>模拟账号 <select id="account" name="account"><option value="admin">admin · MOCK 管理员</option><option value="member">member · MOCK 社员 A</option><option value="member2">member2 · MOCK 社员 B（账号隔离）</option><option value="unbound">unbound · 已登录但未绑定</option><option value="loggedout">loggedout · 未登录</option></select></label>
-<label>生成场景 <select id="scenario" name="scenario"><option value="completed">completed · 正常完成</option><option value="incomplete">incomplete · 输出截断终态</option><option value="interrupted">interrupted · 部分输出后 EOF，无终态</option><option value="failed">failed · response.failed</option><option value="slow">slow · 每 1.5 秒一片，测试停止/切换账号</option></select></label>
+<label>生成场景 <select id="scenario" name="scenario"><option value="completed">completed · 正常完成</option><option value="incomplete">incomplete · 输出截断终态</option><option value="interrupted">interrupted · 部分输出后 EOF，无终态</option><option value="failed">failed · response.failed</option><option value="slow">slow · 每 1.5 秒一片，测试停止/切换账号</option><option value="thinking">thinking · 合成推理摘要与正文</option><option value="thinking-only">thinking-only · 仅合成推理摘要</option><option value="thinking-interrupted">thinking-interrupted · 推理摘要中途 EOF</option></select></label>
 <label>真实 ClubTheme 主题 <select id="theme" name="theme"><option value="dark">dark · 暗色</option><option value="light">light · 亮色</option><option value="auto">auto · 北京时间自动</option></select></label>
 <button type="submit">应用 mock 设置</button><button id="reset" type="button">重置 mock 配置 / usage / 请求记录</button>
 </form>

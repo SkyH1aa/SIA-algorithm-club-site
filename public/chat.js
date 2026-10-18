@@ -1,4 +1,4 @@
-import {MAX_FILE_BYTES, MAX_REQUEST_BYTES, MAX_ATTACHMENTS, buildContext, estimateTokens, readResponses, continuation, chatEndpoint, nativeRequest, normalizeChatResponse} from './chat-core.js';
+import {MAX_FILE_BYTES, MAX_REQUEST_BYTES, MAX_ATTACHMENTS, buildContext, estimateTokens, readResponses, continuation, chatEndpoint, nativeRequest, normalizeChatResponse, readableThinking} from './chat-core.js';
 import {chatStore} from './chat-store.js';
 
 const URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
@@ -214,6 +214,22 @@ function controls() {
 
 /* ---------- 消息渲染（增量：只有轮次集合变化才重建，流式时只更新正文） ---------- */
 let rendered = {key:'', nodes:[]};
+// Disclosure state is view-only; never add translated labels or UI state to saved turns.
+const thinkingOpen = new WeakMap();
+function turnThinking(turn) {
+  if (typeof turn.thinking === 'string' && turn.thinking.trim()) return turn.thinking;
+  return readableThinking(turn.output);
+}
+function syncThinking(node, turn) {
+  const text = turnThinking(turn);
+  node.thinking.hidden = !text.trim();
+  node.thinkingLabel.textContent = t(turn.status === 'running' ? 'thinkingRunning' : 'thinking');
+  node.thinkingNote.textContent = t('thinkingNote');
+  if (text !== node.thinkingValue) {
+    node.thinkingValue = text;
+    node.thinkingBody.textContent = text;
+  }
+}
 
 function emptyState() {
   const wrap = document.createElement('div'); wrap.className = 'chat-empty';
@@ -303,14 +319,24 @@ function turnNode(turn, index, total) {
   // 每一轮都可重试；重试较早的轮次会重新生成该轮并丢弃其后的问答。
   aiActions.append(iconButton(ICONS.retry, 'regenerate', () => { if (!active) void regenerate(turn.id); }));
   aiHead.append(aiLabel, aiMeta, pill, aiActions);
+  const thinking = document.createElement('details'); thinking.className = 'chat-thinking';
+  thinking.open = thinkingOpen.get(turn) || false;
+  thinking.ontoggle = () => thinkingOpen.set(turn, thinking.open);
+  const thinkingLabel = document.createElement('summary');
+  const thinkingNote = document.createElement('p'); thinkingNote.className = 'chat-thinking-note';
+  const thinkingBody = document.createElement('div'); thinkingBody.className = 'chat-thinking-body';
+  thinking.append(thinkingLabel, thinkingNote, thinkingBody);
   const mark = document.createElement('div'); mark.className = 'chat-markdown';
+  mark.hidden = !(turn.text || '').trim();
   mark.append(markdown(turn.text));
-  aiBody.append(aiHead, mark);
+  aiBody.append(aiHead, thinking, mark);
   assistant.append(aiAvatar, aiBody);
 
   classOn(assistant, 'is-streaming', turn.status === 'running');
   wrap.append(user, assistant);
-  return {wrap, assistant, mark, pill, meta:aiMeta, text:turn.text || '', status:turn.status, actions:userActions, aiActions};
+  const node = {wrap, assistant, mark, thinking, thinkingLabel, thinkingNote, thinkingBody, thinkingValue:'', turn, pill, meta:aiMeta, text:turn.text || '', status:turn.status, actions:userActions, aiActions};
+  syncThinking(node, turn);
+  return node;
 }
 
 /* 压缩分隔条：插在消息流开头，说明「更早的内容已被摘要」，摘要本身可展开查看。 */
@@ -344,6 +370,8 @@ function renderMessages() {
   // 语言也纳入 key：动态文案（角色、状态、复制）必须随语言重建，不能只换静态节点。
   const key = `${ClubI18n.getLang?.() || 'zh'}|${current.turns.map(turn => turn.id).join('|')}|${current.summary?.createdAt || 0}`;
   if (key !== rendered.key) {
+    // Read the native property before rebuilding; toggle events may still be queued.
+    for (const node of rendered.nodes) thinkingOpen.set(node.turn, node.thinking.open);
     box.replaceChildren();
     rendered = {key, nodes:[]};
     if (current.summary?.text) box.append(compactionNode(current.summary));
@@ -363,6 +391,8 @@ function renderMessages() {
         node.mark.replaceChildren();
         node.mark.append(markdown(node.text));
       }
+      node.mark.hidden = !node.text.trim();
+      syncThinking(node, turn);
       if (turn.status !== node.status) {
         node.status = turn.status;
         node.pill.className = `chat-status-pill is-${turn.status}`;
@@ -943,7 +973,7 @@ async function generate({ retryTurnId = null } = {}) {
   generations.add(run); active = run; controls();
   let turn, persisted = false, saveAt = 0, saveQueue = Promise.resolve(), storageError = false, failureKey = '', failureVars = {};
   try {
-    turn = {id:crypto.randomUUID(),prompt,attachments:files,input:inputFor(prompt,files,item),output:[],text:'',status:'running',modelId:item.id,modelName:item.display_name,createdAt:Date.now()};
+    turn = {id:crypto.randomUUID(),prompt,attachments:files,input:inputFor(prompt,files,item),output:[],text:'',thinking:'',status:'running',modelId:item.id,modelName:item.display_name,createdAt:Date.now()};
     // 先把这一轮的输入历史确定下来：编辑/重试都从被替换轮之前截断。
     const kept = chat.turns.slice(0, editIndex >= 0 ? editIndex : retryIndex >= 0 ? retryIndex : chat.turns.length);
     const prior = kept.filter(x => x.status === 'success').map(x => ({...x,output:continuation(x.output,x.modelId === item.id && item.preserve_reasoning)}));
@@ -969,7 +999,7 @@ async function generate({ retryTurnId = null } = {}) {
       turn.quotaLimited = !customModel(item) && response.response.headers.get('x-chat-quota-limited') === 'true';
       result = await readResponses(response.response.body, value => {
         if (guard !== epoch || run !== active) return;
-        turn.text = value.text; turn.output = value.output; turn.usage = value.usage;
+        turn.text = value.text; turn.thinking = typeof value.thinking === 'string' ? value.thinking : turn.thinking || ''; turn.output = value.output; turn.usage = value.usage;
         if (value.status !== 'interrupted') turn.status = value.status;
         renderMessages();
         if (Date.now() - saveAt > 1000) {
@@ -978,7 +1008,10 @@ async function generate({ retryTurnId = null } = {}) {
         }
       }, response.protocol);
     } else result = response.result;
-    if (guard === epoch) Object.assign(turn,{...result,status:result.status});
+    if (guard === epoch) {
+      const finalThinking = typeof result.thinking === 'string' ? result.thinking : turn.thinking || '';
+      Object.assign(turn,{...result,thinking:finalThinking,status:result.status});
+    }
   } catch (error) {
     if (turn) turn.status = run.stopped ? 'cancelled' : controller.signal.aborted ? 'interrupted' : 'failure';
     failureKey = storageError ? 'storage' : ['context','request_too_large','file','pdf','busy','storage','quota','blacklisted','customKey','claude_thinking','claude_thinking_budget','claude_effort'].includes(error.message) ? error.message : run.stopped ? 'cancelled' : 'request';

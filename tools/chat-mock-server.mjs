@@ -21,7 +21,7 @@ const ACCOUNTS = {
   unbound: {id:'10000000-0000-4000-8000-000000000004', email:'mock-unbound@example.invalid', member_name:null, admin:false, bound:false},
   loggedout: null
 };
-const SCENARIOS = ['completed','incomplete','interrupted','failed','slow'];
+const SCENARIOS = ['completed','incomplete','interrupted','failed','slow','thinking','thinking-only','thinking-interrupted'];
 const PROXY_INPUTS = {
   admin_proxy_list: [],
   admin_proxy_save: ['id','name','base_url','secret_name','enabled','expected_version'],
@@ -495,25 +495,40 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
     const turn = meta.roles.user;
     const answer = `**MOCK / 本地模拟**\n\n第 ${turn} 轮；已收到 ${meta.roles.assistant} 条 assistant 历史。\n\n文本片段 ${meta.parts.input_text}，图片 ${meta.parts.input_image}，原生 PDF ${meta.parts.input_file}。\n\n- 场景：${scenario}\n- 此内容由 fixture 生成，无线上模型调用。\n\n\`\`\`js\nconsole.log('mock only');\n\`\`\`\n\n[本地设置](/setup)\n\n<script>MOCK_UNSAFE_HTML</script>\n`;
     // This fixture uses a synthetic byte/3 tokenizer, not a provider tokenizer.
+    const thinking = scenario.startsWith('thinking') ? 'MOCK 合成推理摘要：先确认问题，再核对条件，最后组织回答。\n这只是界面测试文本，并非任何真实模型的内部思考。\n<script>MOCK_THINKING_HTML</script>' : '';
     const answerTokens = Math.ceil(Buffer.byteLength(answer)/3);
-    const outputText = answerTokens <= max ? answer : answer.slice(0,Math.max(1,Math.floor(answer.length*max/answerTokens)));
-    const chunks = outputText.match(/[\s\S]{1,18}/g);
-    let index = 0, collected = '';
+    const thinkingText = thinking.slice(0,Math.floor(max*3/2));
+    const thinkingTokens = Math.ceil(Buffer.byteLength(thinkingText)/3);
+    const answerBudget = max - thinkingTokens;
+    const outputText = scenario === 'thinking-only' ? '' : answerTokens <= answerBudget ? answer : answer.slice(0,Math.max(0,Math.floor(answer.length*answerBudget/answerTokens)));
+    const chunks = [
+      ...(thinkingText.match(/[\s\S]{1,18}/g) || []).map(delta => ({type:'response.reasoning_summary_text.delta',delta})),
+      ...(outputText.match(/[\s\S]{1,18}/g) || []).map(delta => ({type:'response.output_text.delta',delta}))
+    ];
+    let index = 0, collected = '', collectedThinking = '';
     timer = setInterval(() => {
       if (ended) return;
-      if (index < chunks.length) { const delta = chunks[index++]; collected += delta; event({type:'response.output_text.delta',output_index:0,content_index:0,delta}); }
-      if (scenario === 'interrupted' && index >= 3) { finish('incomplete','upstream_eof'); res.end(); return; }
+      if (index < chunks.length) {
+        const chunk = chunks[index++];
+        if (chunk.type === 'response.reasoning_summary_text.delta') collectedThinking += chunk.delta;
+        else collected += chunk.delta;
+        event({...chunk,output_index:0,content_index:0});
+      }
+      if ((scenario === 'interrupted' || scenario === 'thinking-interrupted') && index >= 3) { finish('incomplete','upstream_eof'); res.end(); return; }
       if (index < chunks.length) return;
-      const terminal = scenario === 'slow' ? 'completed' : scenario;
-      const tokens = {input_tokens:Math.ceil(meta.text_bytes / 3) + meta.attachment_count * 32,output_tokens:Math.min(max,Math.ceil(Buffer.byteLength(collected) / 3))};
+      const terminal = scenario === 'slow' || scenario.startsWith('thinking') ? 'completed' : scenario;
+      const tokens = {input_tokens:Math.ceil(meta.text_bytes / 3) + meta.attachment_count * 32,output_tokens:Math.min(max,Math.ceil(Buffer.byteLength(collected + collectedThinking) / 3))};
       tokens.total_tokens = tokens.input_tokens + tokens.output_tokens;
-      const output = [{id:`mock-message-${requestId}`,type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:collected,annotations:[]}]}];
+      const output = [
+        ...(collectedThinking ? [{id:`mock-reasoning-${requestId}`,type:'reasoning',summary:[{type:'summary_text',text:collectedThinking}]}] : []),
+        ...(collected ? [{id:`mock-message-${requestId}`,type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:collected,annotations:[]}]}] : [])
+      ];
       Object.assign(usage,tokens);
       reservation.settle(tokens.total_tokens);
       finish(terminal,terminal === 'completed' ? null : `response.${terminal}`);
       event({type:`response.${terminal}`,response:{id:`mock-${requestId}`,object:'response',status:terminal,output,usage:tokens,...(terminal === 'incomplete' ? {incomplete_details:{reason:'max_output_tokens'}} : {}),...(terminal === 'failed' ? {error:{code:'mock_failure',message:'MOCK simulated failure'}} : {})}});
       res.end('data: [DONE]\r\n\r\n');
-    }, scenario === 'slow' ? 1500 : 25);
+    }, scenario === 'slow' ? 1500 : scenario === 'thinking' ? 180 : 25);
   }
   async function chat(req,res) {
     requireThat(req.method === 'POST','method',405);
@@ -650,6 +665,9 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
       const sdk = /<script\b[^>]*\bsrc=["']https:\/\/[^"']*supabase-js[^"']*["'][^>]*>\s*<\/script>/gi;
       requireThat(sdk.test(html),'sdk_reference_changed',500); sdk.lastIndex = 0;
       html = html.replace(sdk,'<script src="/fixtures/mock-supabase.js"></script>');
+      const nonce = randomBytes(18).toString('base64');
+      html = html.replace(/<script(?![^>]*\bsrc=)([^>]*)>/gi,`<script nonce="${nonce}"$1>`);
+      res.setHeader('content-security-policy',CSP.replace("script-src 'self'",`script-src 'self' 'nonce-${nonce}'`));
       data = Buffer.from(html);
     }
     res.writeHead(200,{'content-type':MIME[ext] || 'application/octet-stream','content-length':data.length});
@@ -852,6 +870,16 @@ async function selfTest() {
     assert.equal((await post({...request,max_output_tokens:999999})).status,400);
     for (const [scenario,status] of [['incomplete','incomplete'],['interrupted','interrupted'],['failed','failure']]) {
       state = await setup('member',scenario); result = await readResponses((await post(request)).body,()=>{}); assert.equal(result.status,status);
+    }
+    for (const scenario of ['thinking','thinking-only','thinking-interrupted']) {
+      state = await setup('member',scenario);
+      const updates = [];
+      result = await readResponses((await post(request)).body,value => updates.push(value));
+      assert.match(result.thinking,/MOCK 合成推理摘要/);
+      assert.ok(updates.some(value => value.thinking && !value.text),'thinking is exposed before the answer');
+      assert.equal(result.status,scenario === 'thinking-interrupted' ? 'interrupted' : 'success');
+      assert.equal(result.text.length === 0,scenario !== 'thinking');
+      assert.ok(!JSON.stringify(continuation(result.output,true)).includes('MOCK 合成推理摘要'),'readable thinking is excluded from continuation');
     }
     state = await setup('member','slow');
     const controller = new AbortController();

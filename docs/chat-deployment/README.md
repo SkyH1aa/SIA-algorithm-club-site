@@ -24,6 +24,12 @@
 6. 发布网站仓库中已经更新的前端脚本。Supabase 的 SQL / Edge 编辑器不负责更新你的静态网站；这一步按网站原有的网页发布方式完成，不要求使用 CLI。仅升级 usage90day 时发布 `public/chat-admin.html`、`public/chat-admin.js`、`public/chat-admin-i18n.js`，成员页脚本和 `public/chat-file-bundle.js` 不因本功能改变。
 7. 打开网站 Chat 管理页配置供应商和模型。保存配置不会自动调用供应商；“测试调用”会产生真实请求，只有你确认后再执行。
 
+## 可折叠思考内容的前端更新
+
+已部署当前三协议后端时，本次思考展示只需发布静态文件：`public/chat-core.js`、`public/chat.js`、`public/chat.css`、`public/chat-i18n.js` 和重建后的 `public/chat-file-bundle.js`。页面 HTML 不需要调整；不需要为此执行 SQL 或重新部署 Edge Functions。旧后端若尚未具备三协议思考转发，应先按上述完整部署步骤更新。
+
+折叠区展示供应商实际返回的 thinking / reasoning / reasoning summary，并随浏览器本地会话保存。仅开启模型思考强度不保证上游返回可读内容；没有返回时不会出现空的思考区，也不能从加密推理或签名恢复内部过程。普通正文和搜索结果不会自动归为思考；只有明确的开头 `<think>…</think>` 块会分离。复制答案和后续普通对话上下文不包含展示用思考文本。具体支持范围与本地验证场景见 `../chat-validation/README.md`。
+
 ## 90 天 usage 汇总与无人访问时的自动清理
 
 本功能升级顺序是**完整 SQL → `chat` Dashboard 单文件 bundle → 管理页 HTML/JS/i18n**。函数仍在服务端校验成员 JWT 与动态超级管理员，报告和清理 RPC 仅授予 `service_role`；不要把 RPC 或审计表权限开放给浏览器角色。

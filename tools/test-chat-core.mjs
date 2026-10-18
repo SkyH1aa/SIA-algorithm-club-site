@@ -66,7 +66,7 @@ console.log('Chat core: fragmented UTF-8/CRLF, multiline data, terminal states, 
 
 // Run the actual UI module in a small DOM/auth/storage harness to control async races.
 const chatSource = (await readFile(new URL('../public/chat.js', import.meta.url), 'utf8')).replace(/^import .*;\r?\n/gm, '').replaceAll('import.meta.url', JSON.stringify(new URL('../public/chat.js', import.meta.url).href));
-const DICT = new Set(['chat.effort_off','chat.effort_low','chat.effort_medium','chat.effort_high','chat.effort_xhigh','chat.effort_max','chat.effortShort','chat.default','chat.claudeEffort','chat.claude_thinking','chat.claude_thinking_budget','chat.claude_effort']);
+const DICT = new Set(['chat.thinking','chat.thinkingRunning','chat.thinkingNote','chat.effort_off','chat.effort_low','chat.effort_medium','chat.effort_high','chat.effort_xhigh','chat.effort_max','chat.effortShort','chat.default','chat.claudeEffort','chat.claude_thinking','chat.claude_thinking_budget','chat.claude_effort']);
 const deferred = () => { let resolve, reject; const promise = new Promise((yes,no) => { resolve=yes; reject=no; }); return {promise,resolve,reject}; };
 const account = (id, token = id) => ({user:{id},access_token:token});
 const catalogModel = {id:'test-model',display_name:'Test',introduction:'A model for testing.',context_window:10000,max_output_tokens:100,default_max_output_tokens:50,reasoning_efforts:[]};
@@ -74,14 +74,17 @@ const catalog = () => ({ok:true,json:async () => ({models:[catalogModel]})});
 const tick = () => new Promise(resolve => setImmediate(resolve));
 async function settle() { for (let i=0;i<8;i++) await tick(); }
 function uiHarness() {
-  const elements = new Map(), timers = [], requests = [], writes = [], records = new Map(), initial = deferred();
-  let callback, saveHook;
-  function element() { return {
+  const elements = new Map(), timers = [], requests = [], writes = [], records = new Map(), initial = deferred(), copied = [];
+  let callback, saveHook, lang = 'zh';
+  function element(tagName = 'div') { return {
+    tagName:String(tagName).toUpperCase(),children:[],attributes:{},innerHTML:'',open:false,
     value:'',options:[],files:[],disabled:false,hidden:false,textContent:'',
     // 真实 <select> 会按 value 反查当前项，桩必须同样支持，否则读不到默认强度。
     get selectedIndex(){ const i=this.options.findIndex(o=>o.value===this.value); return i<0?0:i; },
     reportValidity(){return true;},
-    replaceChildren(){this.options=[];this.value='';},append(){},prepend(){},before(){},setAttribute(){},querySelectorAll(){return [];},
+    replaceChildren(...nodes){this.options=[];this.value='';this.children=[];this.append(...nodes);},
+    append(...nodes){this.children.push(...nodes);this.options.push(...nodes.filter(node=>node instanceof context.Option));if(!this.value&&this.options.length)this.value=this.options[0].value;},
+    prepend(...nodes){this.children.unshift(...nodes);},before(){},setAttribute(key,value){this.attributes[key]=String(value);},querySelectorAll(){return [];},
     add(option){this.options.push(option);if(this.options.length===1)this.value=option.value;}
   }; }
   const store = {
@@ -95,13 +98,15 @@ function uiHarness() {
     document:{getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},createElement:element},
     window:{supabase:{createClient:()=>({auth:{onAuthStateChange(fn){callback=fn;},getSession:()=>initial.promise}})},addEventListener(){}},
     // 桩 t() 必须像真实 runtime 一样「缺键返回 key」；否则 effortLabel 无法区分已翻译与回退。
-    ClubI18n:{t:key=>DICT.has(key)?`[${key}]`:key,getLang:()=> 'zh'},marked:{Renderer:class {},parse:()=>''},DOMPurify:{sanitize:()=>({querySelectorAll:()=>[]})},
+    ClubI18n:{t:key=>DICT.has(key)?`[${lang === 'en' ? 'en:' : ''}${key}]`:key,getLang:()=>lang},marked:{Renderer:class {},parse:()=>''},DOMPurify:{sanitize:()=>({querySelectorAll:()=>[]})},
+    navigator:{clipboard:{async writeText(value){copied.push(value);}}},
     Option:class {constructor(text,value){this.textContent=text;this.value=value;}},
     setTimeout(fn){timers.push(fn);},fetch(url,init){const result=deferred(), body=JSON.parse(init.body);requests.push({url,headers:init.headers,body,token:init.headers.Authorization,signal:init.signal,...result});if(body.action==='custom_model_list') result.resolve({ok:true,json:async()=>[]});return result.promise;}
   });
   vm.runInContext(chatSource,context,{filename:'chat.js'});
   const evaluate = code => vm.runInContext(code,context);
-  return {initial,elements,requests,writes,records,evaluate,store,
+  return {initial,elements,requests,writes,records,evaluate,store,copied,
+    setLang(value){lang=value;evaluate('refreshLocalizedUi()');},
     auth(next){callback('SIGNED_IN',next);while(timers.length)timers.shift()();},
     setSaveHook(fn){saveHook=fn;},
     async login(id){this.auth(account(id));requests.at(-1).resolve(catalog());await settle();if(requests.at(-1).body.action==='custom_model_list') requests.at(-1).resolve({ok:true,json:async()=>[]});await settle();}
@@ -214,6 +219,60 @@ for (const [terminal,key] of [['response.incomplete','quotaTruncated'],['respons
   assert.equal(ui.elements.get('modelIntroductionText').textContent,'Second introduction');
 }
 console.log('Chat UI: auth isolation, fixed output budget, introductions, quota/blacklist errors, reset variables and limited SSE preservation passed.');
+
+// Exercise the real disclosure nodes and generation persistence, without a paid provider.
+{
+  const ui = uiHarness(); await ui.login('thinking-ui');
+  const exposed = '<img src=x onerror=alert(1)>\nReadable provider summary';
+  ui.evaluate(`current.turns=[{id:'thinking-turn',prompt:'question',input:[],output:[],text:'Answer only',thinking:${JSON.stringify(exposed)},status:'running'}];renderMessages()`);
+  let node = ui.evaluate('rendered.nodes[0]');
+  assert.equal(node.thinking.tagName, 'DETAILS');
+  assert.equal(node.thinkingLabel.tagName, 'SUMMARY');
+  assert.equal(node.thinking.open, false, 'thinking starts collapsed');
+  assert.equal(node.thinking.hidden, false);
+  assert.equal(node.thinkingLabel.textContent, '[chat.thinkingRunning]');
+  assert.equal(node.thinkingBody.textContent, exposed, 'provider text is assigned through textContent');
+  assert.equal(node.thinkingBody.innerHTML, '', 'provider text never uses the raw HTML setter');
+  assert.equal(node.thinkingBody.children.length, 0);
+  assert.ok(node.assistant.children[1].children.indexOf(node.thinking) < node.assistant.children[1].children.indexOf(node.mark), 'thinking precedes the answer');
+  node.thinking.open = true;
+  ui.evaluate("current.turns[0].thinking+=' streamed';current.turns[0].text+=' streamed';renderMessages()");
+  assert.equal(ui.evaluate('rendered.nodes[0]'), node, 'streaming updates preserve the native details node');
+  assert.equal(node.thinking.open, true);
+  node.aiActions.children[0].onclick(); await settle();
+  assert.equal(ui.copied.at(-1), 'Answer only streamed', 'copy must contain only the answer');
+  ui.setLang('en'); node = ui.evaluate('rendered.nodes[0]');
+  assert.equal(node.thinking.open, true, 'language rebuild preserves an opened disclosure even before toggle fires');
+  assert.equal(node.thinkingLabel.textContent, '[en:chat.thinkingRunning]');
+  assert.equal(node.thinkingNote.textContent, '[en:chat.thinkingNote]');
+  assert.equal(ui.evaluate('current.turns[0].thinking'), exposed + ' streamed', 'language changes leave stored provider text untouched');
+  node.thinking.open = false;
+  ui.setLang('zh'); node = ui.evaluate('rendered.nodes[0]');
+  assert.equal(node.thinking.open, false, 'language rebuild also preserves a closed disclosure');
+  ui.evaluate("current.turns[0].status='interrupted';current.turns[0].text='';renderMessages()");
+  assert.equal(node.thinkingLabel.textContent, '[chat.thinking]');
+  assert.equal(node.mark.hidden, true, 'thinking-only output never gets an empty answer bubble');
+  assert.equal(node.thinking.hidden, false);
+  ui.evaluate("current.turns[0].thinking='';current.turns[0].text='search_results and ordinary prose';renderMessages()");
+  assert.equal(node.thinking.hidden, true, 'ordinary answer prose is never classified as thinking');
+  assert.equal(node.mark.hidden, false);
+  ui.evaluate("current.turns[0].output=[{type:'reasoning',encrypted_content:'SECRET',summary:[{type:'summary_text',text:'Older readable summary'}]}];renderMessages()");
+  assert.equal(node.thinkingBody.textContent, 'Older readable summary', 'older saved output summaries remain readable');
+  assert.equal(node.thinking.hidden, false);
+}
+for (const outcome of ['success','interrupted','cancelled']) {
+  const ui = uiHarness(); await ui.login(`thinking-${outcome}`);
+  const exposed = `retained ${outcome} thinking`;
+  ui.evaluate(`readResponses=async (_body,onUpdate)=>{onUpdate({text:'',thinking:${JSON.stringify(exposed)},output:[],status:'running'});${outcome === 'success' ? "return {text:'final answer',thinking:'final thinking',output:[],status:'success'};" : `active.stopped=${outcome === 'cancelled'};active.controller.abort();throw new Error('aborted');`}};document.getElementById('prompt').value='thinking persistence';void generate()`);
+  await settle();
+  ui.requests.at(-1).resolve({ok:true,headers:new Headers({'content-type':'text/event-stream'}),body:stream('')}); await settle();
+  assert.equal(ui.evaluate('current.turns[0].status'), outcome);
+  const expected = outcome === 'success' ? 'final thinking' : exposed;
+  assert.equal(ui.evaluate('current.turns[0].thinking'), expected);
+  assert.equal(ui.writes.at(-1).turns[0].thinking, expected, 'whole-conversation storage retains received thinking');
+  assert.equal(ui.writes.at(-1).turns[0].text, outcome === 'success' ? 'final answer' : '');
+}
+console.log('Chat UI: native thinking disclosure, safe text, answer-only copy, streaming/language state, legacy summaries and success/interruption/cancellation persistence passed.');
 
 /* ---------- 编辑重发 / 指定轮次重试 / 上下文压缩 ---------- */
 const completedEvent = `data: ${JSON.stringify({type:'response.completed',response:{output:[{type:'message',role:'assistant',content:[{type:'output_text',text:'你好！'}]}],usage:{output_tokens:3}}})}\n\n`;

@@ -873,6 +873,42 @@ html[data-theme="light"] .chat-theme-toggle .chat-icon-moon { display: block; }
   overflow-wrap: anywhere;
 }
 
+/* 助手可读思考摘要：原生 details 默认折叠，正文前展示；只显示供应商明确暴露的摘要。 */
+.chat-thinking {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--chat-accent) 28%, var(--chat-line));
+  border-radius: 11px;
+  background: var(--chat-accent-soft);
+  color: var(--chat-muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.chat-thinking[hidden] { display: none; }
+.chat-thinking summary {
+  cursor: pointer;
+  color: var(--chat-accent);
+  font-weight: 650;
+  list-style: none;
+}
+.chat-thinking summary::-webkit-details-marker { display: none; }
+.chat-thinking summary::before { content: "▸ "; color: var(--chat-faint); }
+.chat-thinking[open] summary::before { content: "▾ "; }
+.chat-thinking summary:hover { color: var(--chat-text); }
+.chat-thinking-note {
+  margin: 6px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid color-mix(in srgb, var(--chat-accent) 20%, transparent);
+  color: var(--chat-faint);
+  font-size: 11px;
+}
+.chat-thinking-body {
+  margin-top: 5px;
+  color: var(--chat-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 /* 助手正文 */
 .chat-markdown {
   padding: 14px 17px;

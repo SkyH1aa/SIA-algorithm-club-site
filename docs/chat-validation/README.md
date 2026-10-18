@@ -38,6 +38,9 @@ node tools/chat-mock-server.mjs --port 4192
 | `interrupted` | 三段增量后正常 EOF，不发终态，Chat 应保留部分文本并标中断；当前 mock usage 审计记 `incomplete/upstream_eof`（真实后端记录 `interrupted/upstream_eof`） |
 | `failed` | 部分/完整增量后 `response.failed`，保留可用于状态测试的模拟输出 |
 | `slow` | 每 1.5 秒一段，通常持续约半分钟；点击停止后连接关闭、usage 记 cancelled、逐用户锁释放 |
+| `thinking` | 先流式发送合成 `response.reasoning_summary_text.delta`，再发送正文；最终 reasoning.summary 不应让思考文本重复。默认折叠，可展开，流式更新后保持展开状态 |
+| `thinking-only` | 只有合成推理摘要，显示折叠区，不显示“无文本”正文占位 |
+| `thinking-interrupted` | 合成推理摘要三片后 EOF；保留部分思考与中断状态 |
 | slow 期间 setup 切 `member2` | 前端 auth 回调中止旧流并切到另一账号历史；再切回 member 检查旧记录状态 |
 | 连续发两轮 | 模拟回答报告 user 轮数与 assistant 历史条数；请求记录显示 roles/parts 数量，不记录正文 |
 | `light` / `dark` | setup 真实 API 保存后刷新目标页，验证各控件与 Markdown 对比度 |
@@ -73,6 +76,16 @@ node tools/chat-mock-server.mjs --port 4192
 所有周期是 UTC 日历：日 UTC 午夜、周一 UTC 午夜、每月 1 日 UTC 午夜；`resets_at` 为 ISO UTC。HTTP 自检通过可注入的 mock 时钟覆盖日/周/月边界，不需要改系统时间或等待。周期在请求开始时固定，跨午夜的结算仍计入原预留周期。
 
 输入估算与供应商实际 token 不等价：mock 与 Edge 对文本按各片段 UTF-8 字节/3 取整，图片 low/auto/high 分别固定 1024/4096/8192，原生 PDF 固定 8192；mock 的终态 usage 是另一套合成计量（文本总字节/3、每附件 32，加合成输出），刻意不是供应商账单。mock 会按有效输出上限缩短 fixture，并限制合成 output usage；仍不模拟真实 tokenizer、reasoning、费用或供应商多模态解析。生产必须以有效 provider usage 结算，可能实际高于估算；无 usage、崩溃或结算失败保守保留预留，不把“没看到完成”当成零消耗。mock 内存重启清空与生产持久化保留有意不同。
+
+## 可折叠的思考内容
+
+成员页分别保存 `turn.thinking` 和正文；折叠区只展示供应商明确返回的可读内容或推理摘要。支持 Responses 的 reasoning summary、Chat Completions 的 reasoning_content / 字符串 reasoning，以及 Claude Messages 的 thinking / thinking_delta。历史 Responses reasoning.summary 也可读取。只有明确位于开头、完整且无歧义的 `<think>…</think>` 块会从正文分离；代码、引述、未闭合标记和普通 `<search_results>` 保持正文。供应商未返回可读内容时不显示空折叠区；encrypted_content、签名与 redacted_thinking 不会转换为展示文本。
+
+思考内容随现有 IndexedDB 会话保存和 JSON 导出。复制回答、上下文压缩和普通 assistant 历史只使用正文；原有允许保留的加密推理续传规则继续生效。界面不会恢复上游未公开的内部推理，也不会因开启 effort 就假定一定有可展示内容。
+
+本地 `thinking*` 场景全部是明确标记的合成文本，没有真实模型调用。用 `thinking` 检查初始折叠、展开后流式更新、结束后不重复、收起再展开、刷新后内容保留，以及中英/明暗主题；用另外两个场景检查仅思考和中断状态。思考中的 `<script>` 应原样显示为文字，不创建 HTML 节点。
+
+2026-10-18 本地验收：专项思考、核心/UI、管理页及完整 mock HTTP 自检通过。浏览器实际确认默认折叠、点击展开、中英切换保留展开状态、刷新恢复思考内容、正文不混入思考和思考区不生成 script 节点；通过 `ClubTheme.setMode` 核对明暗主题的计算颜色不同且保持文本可见。截图工具连续报 surface preparation timeout，未完成截图视觉验收；没有调用真实供应商。mock HTML 的原有内联启动脚本现使用每次响应独立的 CSP nonce，仍保持 connect-src 仅限本地同源。
 
 ## 90 天 usage 汇总与保留验证
 
