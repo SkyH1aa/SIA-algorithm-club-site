@@ -5,7 +5,7 @@
 // 页面完全不执行（表现为黑屏）。这里把 chat-core / chat-store / chat.js
 // 内联成一个普通脚本，只改变加载方式，不改任何运行逻辑。
 //
-// 产物：public/chat-file-bundle.js（由 chat.html 在 file:// 时加载）
+// 产物：public/chat-file-bundle.js（chat.html / assistant.html 的 file:// 共用包）
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,7 +39,8 @@ const storeNames = [...exportNames(store)];
 
 // import.meta 在普通脚本里不合法：file:// 包没有模块基址语义，
 // 用脚本自身的 URL 顶替（pdf worker 仍指向同目录 vendor/chat/）。
-const chatBaseUrl = "document.currentScript ? document.currentScript.src : location.href";
+// Capture during execution: currentScript is null inside later source-card/PDF callbacks.
+const chatBaseUrl = '__chatModuleUrl';
 const appBody = app
   .replace(/import\.meta\.url/g, chatBaseUrl)
   // 去掉两条静态 import
@@ -54,6 +55,7 @@ const appBody = app
 const bundle = `/* 自动生成，请勿手改：node tools/build-chat-file-bundle.mjs */
 (function () {
   'use strict';
+  const __chatModuleUrl = document.currentScript ? document.currentScript.src : location.href;
   /* ---- chat-core.js ---- */
 ${stripModuleSyntax(core)}
   /* ---- chat-store.js ---- */

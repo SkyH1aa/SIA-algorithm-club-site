@@ -72,6 +72,7 @@
         <button type="button" role="tab" aria-selected="false" aria-controls="modelAccessSection" data-tab-target="modelAccessSection" data-i18n="chatAdmin.tabAccess">模型授权</button>
         <button type="button" role="tab" aria-selected="false" aria-controls="testSection" data-tab-target="testSection" data-i18n="chatAdmin.tabTest">测试调用</button>
         <button type="button" role="tab" aria-selected="false" aria-controls="usageSection" data-tab-target="usageSection" data-i18n="chatAdmin.tabUsage">使用记录</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="assistantSection" data-tab-target="assistantSection" data-i18n="chatAdmin.tabAssistant">助手知识库</button>
       </nav>
 
       <section class="chat-admin-panel chat-admin-section" id="providersSection">
@@ -219,6 +220,41 @@
         <p id="usageMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
         <div id="usageList" class="chat-admin-table-wrap"></div>
         <div class="chat-admin-pagination"><button id="usagePrev" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.previous">上一页</button><span id="usagePageLabel"></span><button id="usageNext" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.next">下一页</button></div>
+      </section>
+
+      <section class="chat-admin-panel chat-admin-section" id="assistantSection">
+        <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.assistantTitle">助手知识库与发布</h2><p data-i18n="chatAdmin.assistantLead">配置公开助手并维护知识草稿。保存启用开关会立即影响可用性；固定模型、欢迎语、建议问题和补充指令需发布后生效。</p></div><button id="refreshAssistantButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="common.refresh">刷新数据</button></div>
+        <form id="assistantConfigForm" class="chat-admin-form assistant-admin-config-form">
+          <label class="chat-admin-check"><input id="assistantEnabled" type="checkbox"><span data-i18n="chatAdmin.assistantEnabled">启用助手</span></label>
+          <label><span data-i18n="chatAdmin.assistantModel">固定模型</span><select id="assistantModelId" class="chat-admin-input"></select></label>
+          <label class="assistant-admin-wide"><span data-i18n="chatAdmin.assistantWelcome">欢迎语</span><textarea id="assistantWelcome" class="chat-admin-input" rows="3" maxlength="2000"></textarea></label>
+          <label class="assistant-admin-wide"><span data-i18n="chatAdmin.assistantSuggestions">建议问题（每行一条）</span><textarea id="assistantSuggestions" class="chat-admin-input" rows="4" maxlength="4000"></textarea></label>
+          <label class="assistant-admin-wide"><span data-i18n="chatAdmin.assistantSupplement">补充系统指令</span><textarea id="assistantSupplement" class="chat-admin-input" rows="5" maxlength="12000"></textarea></label>
+          <div class="chat-admin-actions assistant-admin-wide"><button class="chat-admin-button" type="submit" data-i18n="chatAdmin.assistantSaveConfig">保存助手配置</button></div>
+        </form>
+        <p id="assistantConfigMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+        <hr class="chat-admin-divider">
+        <div class="chat-admin-section-head"><div><h3 data-i18n="chatAdmin.documentsTitle">知识文档草稿</h3><p data-i18n="chatAdmin.documentsLead">保存或导入只更新草稿。归档文档不参与新发布；保存或导入相同 slug 可恢复。支持 JSON、Markdown 与纯文本文件（最多 4 MB），正文最多 50,000 字符。</p></div></div>
+        <form id="assistantDocumentForm" class="chat-admin-form assistant-admin-document-form">
+          <input id="assistantDocumentOriginalSlug" type="hidden">
+          <label><span data-i18n="chatAdmin.documentSlug">Slug</span><input id="assistantDocumentSlug" class="chat-admin-input" maxlength="80" required pattern="[a-z0-9][a-z0-9_-]*"></label>
+          <label><span data-i18n="chatAdmin.documentTitle">标题</span><input id="assistantDocumentTitle" class="chat-admin-input" maxlength="200" required></label>
+          <label><span data-i18n="chatAdmin.documentCategory">分类</span><input id="assistantDocumentCategory" class="chat-admin-input" maxlength="100"></label>
+          <label><span data-i18n="chatAdmin.documentLanguage">语言</span><input id="assistantDocumentLanguage" class="chat-admin-input" value="zh-CN" maxlength="20" required></label>
+          <label><span data-i18n="chatAdmin.documentSource">来源路径</span><input id="assistantDocumentSource" class="chat-admin-input" maxlength="300" placeholder="/public/guide.html"></label>
+          <label><span data-i18n="chatAdmin.documentKeywords">关键词（逗号分隔）</span><input id="assistantDocumentKeywords" class="chat-admin-input" maxlength="3240"></label>
+          <label class="assistant-admin-wide"><span data-i18n="chatAdmin.documentContent">正文</span><textarea id="assistantDocumentContent" class="chat-admin-input assistant-admin-content" rows="12" maxlength="50000" required></textarea></label>
+          <div class="chat-admin-actions assistant-admin-wide"><button class="chat-admin-button" type="submit" data-i18n="chatAdmin.documentSave">保存文档草稿</button><button id="clearAssistantDocumentButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="common.clearForm">清空表单</button></div>
+        </form>
+        <div class="assistant-admin-import-row"><label class="chat-admin-button chat-admin-secondary"><span data-i18n="chatAdmin.importJson">导入 JSON</span><input id="assistantJsonFile" type="file" accept="application/json,.json" hidden></label><label class="chat-admin-button chat-admin-secondary"><span data-i18n="chatAdmin.importMarkdown">导入 Markdown / 文本</span><input id="assistantMarkdownFile" type="file" accept="text/markdown,.md,.markdown,text/plain,.txt" hidden></label><button id="assistantImportButton" class="chat-admin-button" type="button" data-i18n="chatAdmin.importDocuments">提交 JSON 导入</button></div>
+        <p id="assistantDocumentMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+        <div id="assistantDocumentPreview" class="assistant-admin-preview" hidden><strong data-i18n="chatAdmin.previewTitle">安全预览</strong><pre id="assistantPreviewText"></pre></div>
+        <div id="assistantDocumentsList" class="chat-admin-table-wrap"></div>
+        <hr class="chat-admin-divider">
+        <div class="chat-admin-section-head"><div><h3 data-i18n="chatAdmin.releaseTitle">发布版本</h3><p data-i18n="chatAdmin.releaseLead">发布版本不可修改；回滚只选择既有版本并以当前版本号提交。</p></div></div>
+        <div class="chat-admin-actions"><button id="assistantPublishButton" class="chat-admin-button" type="button" data-i18n="chatAdmin.publish">发布不可变版本</button><select id="assistantRollbackRelease" class="chat-admin-input assistant-admin-release-select"><option value="" data-i18n="chatAdmin.selectRelease">选择要回滚的版本</option></select><button id="assistantRollbackButton" class="chat-admin-button chat-admin-danger" type="button" data-i18n="chatAdmin.rollback">回滚到所选版本</button></div>
+        <p id="assistantReleaseMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+        <div id="assistantReleasesList" class="chat-admin-table-wrap"></div>
       </section>
     </div>
   </main>

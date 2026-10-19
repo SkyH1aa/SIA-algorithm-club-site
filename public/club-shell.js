@@ -16,6 +16,15 @@
   'use strict';
 
   var STORAGE_KEY = 'algorithm-club-launcher-recents';
+  var shellScriptURL = document.currentScript && document.currentScript.src;
+
+  function mountAssistantLauncher() {
+    if (!shellScriptURL || document.querySelector('script[data-club-assistant-loader]')) return;
+    var script = document.createElement('script');
+    script.src = new URL('assistant-launcher.js', shellScriptURL).href;
+    script.setAttribute('data-club-assistant-loader', '');
+    document.head.appendChild(script);
+  }
 
   function t(key, fallback) {
     var value = global.ClubI18n && typeof global.ClubI18n.t === 'function'
@@ -813,6 +822,7 @@
     setupTabs(document);
     setupSectionNav();
     mountToTop();
+    mountAssistantLauncher();
     bindKeys();
     // i18n / theme 的切换器注入时机晚于本脚本，补一次兜底归位。
     setTimeout(function () { mountLanguageSwitcher(); refreshLocalizedChrome(); }, 0);

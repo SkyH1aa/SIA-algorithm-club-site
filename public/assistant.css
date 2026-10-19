@@ -1,0 +1,31 @@
+.assistant-workspace .chat-main-header { justify-content: space-between; }
+.assistant-workspace .chat-model-picker,
+.assistant-workspace .chat-main-actions,
+.assistant-workspace #effortPicker,
+.assistant-workspace .assistant-custom-settings,
+.assistant-workspace .assistant-effort-note { display: none !important; }
+.assistant-fixed-label { color: var(--chat-muted); font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.assistant-source-release { display: block; margin-top: 7px; color: var(--chat-muted); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.assistant-sources { display: grid; gap: 8px; margin-top: 14px; }
+.assistant-sources[hidden] { display: none; }
+.assistant-source { display: block; padding: 12px 14px; border: 1px solid var(--chat-line-strong); border-radius: 12px; color: var(--chat-text); background: var(--chat-surface-2); text-decoration: none; overflow-wrap: anywhere; }
+.assistant-source:hover { color: var(--chat-text); border-color: var(--chat-accent); background: var(--chat-accent-soft); }
+.assistant-source:focus-visible { outline: 2px solid var(--chat-accent); outline-offset: 3px; }
+.assistant-source strong { display: block; font-size: 13px; color: var(--chat-accent); }
+.assistant-source span { font-size: 11px; color: var(--chat-muted); }
+.assistant-source p { margin: 5px 0 0; font-size: 12px; line-height: 1.6; color: var(--chat-muted); white-space: pre-wrap; }
+.assistant-embedded .chat-brand-copy small,
+.assistant-embedded .chat-topbar-divider,
+.assistant-embedded .chat-header-chat-title,
+.assistant-embedded .chat-back { display: none; }
+.assistant-embedded .chat-topbar { gap: 7px; }
+.assistant-embedded .chat-main-header { min-height: 35px; padding-top: 5px; padding-bottom: 5px; }
+.assistant-embedded .chat-empty { padding-top: 20px; padding-bottom: 20px; }
+.assistant-embedded .chat-empty-mark { width: 44px; height: 44px; margin-bottom: 12px; }
+.assistant-embedded .chat-empty h2 { font-size: 23px; }
+.assistant-embedded .chat-privacy { margin-top: 5px; }
+@media (max-width:600px) {
+  .assistant-workspace .chat-suggestions { grid-template-columns: minmax(0,1fr); }
+  .assistant-workspace .chat-suggestion { padding: 10px 12px; }
+  .assistant-workspace .chat-brand-copy strong { font-size: 14px; }
+}

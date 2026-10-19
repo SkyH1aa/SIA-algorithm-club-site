@@ -1207,3 +1207,164 @@ returns void language sql security definer set search_path=public as $$
 $$;
 revoke all on function public.chat_proxy_admin(uuid,text,jsonb), public.chat_proxy_admit(uuid,text,uuid,integer,integer,integer), public.chat_proxy_release(uuid) from public,anon,authenticated;
 grant execute on function public.chat_proxy_admin(uuid,text,jsonb), public.chat_proxy_admit(uuid,text,uuid,integer,integer,integer), public.chat_proxy_release(uuid) to service_role;
+
+-- Club assistant: drafts and immutable releases are service-role only. All draft
+-- mutations serialize on one config row and use its monotonically increasing version.
+alter table public.chat_usage drop constraint if exists chat_usage_action_check;
+alter table public.chat_usage add constraint chat_usage_action_check
+  check (action in ('respond','admin_test','assistant_respond','assistant_compact'));
+
+create table if not exists public.chat_assistant_config (
+  singleton boolean primary key default true check (singleton),
+  enabled boolean not null default false,
+  model_id uuid references public.chat_models(id),
+  system_prompt text not null default '' check (char_length(system_prompt) <= 12000),
+  welcome text not null default '' check (char_length(welcome) <= 2000),
+  suggestions jsonb not null default '[]'::jsonb check (jsonb_typeof(suggestions)='array'),
+  current_release_id uuid,
+  version bigint not null default 0 check (version >= 0),
+  updated_by uuid references auth.users(id), updated_at timestamptz not null default now()
+);
+insert into public.chat_assistant_config(singleton) values(true) on conflict do nothing;
+create table if not exists public.chat_assistant_documents (
+  slug text primary key check (slug ~ '^[a-z0-9][a-z0-9_-]{0,79}$'),
+  title text not null check (char_length(btrim(title)) between 1 and 200),
+  category text not null check (char_length(category)<=100),
+  source_path text not null check (char_length(source_path)<=300),
+  language text not null check (char_length(btrim(language)) between 1 and 20),
+  content text not null check (char_length(btrim(content)) between 1 and 50000),
+  keywords jsonb not null check (jsonb_typeof(keywords)='array'),
+  archived boolean not null default false,
+  updated_by uuid references auth.users(id), updated_at timestamptz not null default now()
+);
+create table if not exists public.chat_assistant_releases (
+  id uuid primary key default gen_random_uuid(),
+  config jsonb not null check (jsonb_typeof(config)='object'),
+  documents jsonb not null check (jsonb_typeof(documents)='array'),
+  created_by uuid not null references auth.users(id), created_at timestamptz not null default now()
+);
+alter table public.chat_assistant_config drop constraint if exists chat_assistant_config_release_fk;
+alter table public.chat_assistant_config add constraint chat_assistant_config_release_fk
+  foreign key(current_release_id) references public.chat_assistant_releases(id);
+alter table public.chat_assistant_config enable row level security;
+alter table public.chat_assistant_documents enable row level security;
+alter table public.chat_assistant_releases enable row level security;
+revoke all on public.chat_assistant_config,public.chat_assistant_documents,public.chat_assistant_releases from public,anon,authenticated;
+grant select,insert,update,delete on public.chat_assistant_config,public.chat_assistant_documents to service_role;
+grant select,insert on public.chat_assistant_releases to service_role;
+
+create or replace function public.chat_assistant_immutable()
+returns trigger language plpgsql set search_path=pg_catalog,public as $$
+begin raise exception 'Published assistant releases are immutable' using errcode='42501'; end;
+$$;
+drop trigger if exists chat_assistant_release_immutable on public.chat_assistant_releases;
+create trigger chat_assistant_release_immutable before update or delete on public.chat_assistant_releases
+  for each row execute function public.chat_assistant_immutable();
+
+create or replace function public.chat_assistant_runtime()
+returns jsonb language sql security definer set search_path=pg_catalog,public as $$
+  select jsonb_build_object('enabled',c.enabled,'release',case when r.id is null then null else
+    jsonb_build_object('id',r.id,'config',r.config,'documents',r.documents) end)
+  from public.chat_assistant_config c left join public.chat_assistant_releases r on r.id=c.current_release_id where c.singleton;
+$$;
+
+create or replace function public.chat_assistant_admin(p_actor_user_id uuid,p_action text,p_data jsonb)
+returns jsonb language plpgsql security definer set search_path=pg_catalog,public as $$
+declare c public.chat_assistant_config; d jsonb; v_docs jsonb; rid uuid; v_keys text[];
+begin
+  perform public.chat_quota_assert_admin(p_actor_user_id);
+  if p_action is null or p_action not in ('assistant_admin_get','assistant_admin_config_save','assistant_admin_document_save',
+    'assistant_admin_document_archive','assistant_admin_publish','assistant_admin_rollback','assistant_admin_import')
+    or p_data is null or jsonb_typeof(p_data)<>'object' then raise exception 'Invalid assistant action' using errcode='22023'; end if;
+  v_keys := case p_action
+    when 'assistant_admin_get' then array[]::text[]
+    when 'assistant_admin_config_save' then array['expected_version','enabled','model_id','system_prompt','welcome','suggestions']
+    when 'assistant_admin_document_save' then array['expected_version','document']
+    when 'assistant_admin_document_archive' then array['expected_version','slug']
+    when 'assistant_admin_rollback' then array['expected_version','release_id']
+    when 'assistant_admin_import' then array['expected_version','documents']
+    else array['expected_version'] end;
+  if exists(select 1 from jsonb_object_keys(p_data) k where not(k=any(v_keys)))
+    or not(p_data ?& v_keys) then raise exception 'Invalid assistant fields' using errcode='22023'; end if;
+  select * into c from public.chat_assistant_config where singleton for update;
+  if p_action<>'assistant_admin_get' then
+    if jsonb_typeof(p_data->'expected_version')<>'number' or (p_data->>'expected_version') !~ '^(0|[1-9][0-9]*)$'
+      or (p_data->>'expected_version')::numeric>9007199254740991 then raise exception 'Invalid version' using errcode='22023'; end if;
+    if c.version<>(p_data->>'expected_version')::bigint then return '{"code":"conflict"}'::jsonb; end if;
+  end if;
+  if p_action='assistant_admin_config_save' then
+    if jsonb_typeof(p_data->'enabled')<>'boolean' or jsonb_typeof(p_data->'model_id') not in ('null','string')
+      or jsonb_typeof(p_data->'system_prompt')<>'string' or length(p_data->>'system_prompt')>12000
+      or jsonb_typeof(p_data->'welcome')<>'string' or length(p_data->>'welcome')>2000
+      or jsonb_typeof(p_data->'suggestions')<>'array' then raise exception 'Invalid assistant config' using errcode='22023'; end if;
+    if jsonb_array_length(p_data->'suggestions')>8 or exists(select 1 from jsonb_array_elements(p_data->'suggestions') s
+      where jsonb_typeof(s)<>'string' or length(btrim(s#>>'{}')) not between 1 and 200) then raise exception 'Invalid suggestions' using errcode='22023'; end if;
+    if p_data->>'model_id' is not null and not exists(select 1 from public.chat_models m join public.chat_providers p on p.id=m.provider_id
+      where m.id=(p_data->>'model_id')::uuid and m.enabled and p.enabled and m.visibility='all' and m.deleted_at is null and p.deleted_at is null)
+      then return '{"code":"assistant_model"}'::jsonb; end if;
+    if (p_data->>'enabled')::boolean and p_data->>'model_id' is null then return '{"code":"assistant_model"}'::jsonb; end if;
+    update public.chat_assistant_config set enabled=(p_data->>'enabled')::boolean,model_id=(p_data->>'model_id')::uuid,
+      system_prompt=p_data->>'system_prompt',welcome=p_data->>'welcome',suggestions=p_data->'suggestions' where singleton;
+  elsif p_action in ('assistant_admin_document_save','assistant_admin_import') then
+    if p_action='assistant_admin_document_save' then v_docs:=jsonb_build_array(p_data->'document');
+    else
+      if jsonb_typeof(p_data->'documents')<>'array' then raise exception 'Invalid documents' using errcode='22023'; end if;
+      v_docs:=p_data->'documents';
+    end if;
+    if jsonb_array_length(v_docs) not between 1 and 200 then raise exception 'Invalid document count' using errcode='22023'; end if;
+    if (select count(*) from jsonb_array_elements(v_docs))<>(select count(distinct x->>'slug') from jsonb_array_elements(v_docs) x)
+      then raise exception 'Duplicate slug' using errcode='22023'; end if;
+    for d in select value from jsonb_array_elements(v_docs) loop
+      if jsonb_typeof(d)<>'object' or not(d ?& array['slug','title','category','source_path','language','content','keywords'])
+        or exists(select 1 from jsonb_object_keys(d) k where k not in ('slug','title','category','source_path','language','content','keywords'))
+        or jsonb_typeof(d->'slug')<>'string' or (d->>'slug') !~ '^[a-z0-9][a-z0-9_-]{0,79}$'
+        or jsonb_typeof(d->'title')<>'string' or length(btrim(d->>'title')) not between 1 and 200
+        or jsonb_typeof(d->'category')<>'string' or length(d->>'category')>100
+        or jsonb_typeof(d->'source_path')<>'string' or length(d->>'source_path')>300
+        or jsonb_typeof(d->'language')<>'string' or length(btrim(d->>'language')) not between 1 and 20
+        or jsonb_typeof(d->'content')<>'string' or length(btrim(d->>'content')) not between 1 and 50000
+        or jsonb_typeof(d->'keywords')<>'array' then raise exception 'Invalid document' using errcode='22023'; end if;
+      if jsonb_array_length(d->'keywords')>40 or exists(select 1 from jsonb_array_elements(d->'keywords') k
+        where jsonb_typeof(k)<>'string' or length(btrim(k#>>'{}')) not between 1 and 80) then raise exception 'Invalid keywords' using errcode='22023'; end if;
+      if coalesce(d->>'source_path','')<>'' and ((d->>'source_path') !~ '^/[A-Za-z0-9_/-]+[.]html(#[A-Za-z0-9_-]+)?$' or position('//' in d->>'source_path')>0)
+        then raise exception 'Invalid source path' using errcode='22023'; end if;
+      insert into public.chat_assistant_documents(slug,title,category,source_path,language,content,keywords,updated_by)
+        values(d->>'slug',d->>'title',d->>'category',d->>'source_path',d->>'language',d->>'content',d->'keywords',p_actor_user_id)
+        on conflict(slug) do update set title=excluded.title,category=excluded.category,source_path=excluded.source_path,language=excluded.language,
+          content=excluded.content,keywords=excluded.keywords,archived=false,updated_by=p_actor_user_id,updated_at=clock_timestamp();
+    end loop;
+    if (select count(*) from public.chat_assistant_documents)>200 or (select coalesce(sum(octet_length(content)),0) from public.chat_assistant_documents)>2000000
+      then raise exception 'Assistant corpus limit' using errcode='22023'; end if;
+  elsif p_action='assistant_admin_document_archive' then
+    if jsonb_typeof(p_data->'slug')<>'string' then raise exception 'Invalid slug' using errcode='22023'; end if;
+    update public.chat_assistant_documents set archived=true,updated_by=p_actor_user_id,updated_at=clock_timestamp() where slug=p_data->>'slug';
+    if not found then return '{"code":"not_found"}'::jsonb; end if;
+  elsif p_action in ('assistant_admin_publish','assistant_admin_rollback') then
+    if p_action='assistant_admin_publish' then
+      if not exists(select 1 from public.chat_models m join public.chat_providers p on p.id=m.provider_id where m.id=c.model_id and m.enabled and p.enabled
+        and m.visibility='all' and m.deleted_at is null and p.deleted_at is null) then return '{"code":"assistant_model"}'::jsonb; end if;
+      select coalesce(jsonb_agg(to_jsonb(x)-'archived'-'updated_by'-'updated_at' order by slug),'[]'::jsonb) into v_docs from public.chat_assistant_documents x where not archived;
+      if jsonb_array_length(v_docs)=0 then return '{"code":"assistant_documents"}'::jsonb; end if;
+      insert into public.chat_assistant_releases(config,documents,created_by)
+        values(to_jsonb(c)-'updated_by'-'updated_at'-'singleton'-'current_release_id',v_docs,p_actor_user_id) returning id into rid;
+    else
+      if jsonb_typeof(p_data->'release_id')<>'string' then raise exception 'Invalid release' using errcode='22023'; end if;
+      select id into rid from public.chat_assistant_releases where id=(p_data->>'release_id')::uuid;
+      if not found then return '{"code":"not_found"}'::jsonb; end if;
+      if not exists(select 1 from public.chat_assistant_releases r join public.chat_models m on m.id=(r.config->>'model_id')::uuid
+        join public.chat_providers p on p.id=m.provider_id where r.id=rid and m.enabled and p.enabled and m.visibility='all' and m.deleted_at is null and p.deleted_at is null)
+        then return '{"code":"assistant_model"}'::jsonb; end if;
+    end if;
+    update public.chat_assistant_config set current_release_id=rid where singleton;
+  end if;
+  if p_action<>'assistant_admin_get' then
+    update public.chat_assistant_config set version=version+1,updated_at=clock_timestamp(),updated_by=p_actor_user_id where singleton;
+  end if;
+  return jsonb_build_object('config',(select to_jsonb(x)-'singleton' from public.chat_assistant_config x where singleton),
+    'documents',coalesce((select jsonb_agg(to_jsonb(x) order by slug) from public.chat_assistant_documents x),'[]'::jsonb),
+    'releases',coalesce((select jsonb_agg(jsonb_build_object('id',id,'created_at',created_at,'created_by',created_by,
+      'document_count',jsonb_array_length(documents),'model_id',config->'model_id') order by created_at desc,id) from public.chat_assistant_releases),'[]'::jsonb));
+end;
+$$;
+revoke all on function public.chat_assistant_immutable(),public.chat_assistant_runtime(),public.chat_assistant_admin(uuid,text,jsonb) from public,anon,authenticated;
+grant execute on function public.chat_assistant_runtime(),public.chat_assistant_admin(uuid,text,jsonb) to service_role;

@@ -73,8 +73,10 @@ const catalogModel = {id:'test-model',display_name:'Test',introduction:'A model 
 const catalog = () => ({ok:true,json:async () => ({models:[catalogModel]})});
 const tick = () => new Promise(resolve => setImmediate(resolve));
 async function settle() { for (let i=0;i<8;i++) await tick(); }
-function uiHarness() {
-  const elements = new Map(), timers = [], requests = [], writes = [], records = new Map(), initial = deferred(), copied = [];
+function uiHarness({assistant = false, embedded = false, protocol = 'https:'} = {}) {
+  const elements = new Map(), timers = [], requests = [], writes = [], records = new Map(), initial = deferred(), copied = [], messages = [], events = new Map(), documentEvents = new Map(), databases = [];
+  const origin = protocol === 'file:' ? 'null' : 'https://club.example';
+  const frameParent = {postMessage(data,target){messages.push({data,target});}};
   let callback, saveHook, lang = 'zh';
   function element(tagName = 'div') { return {
     tagName:String(tagName).toUpperCase(),children:[],attributes:{},innerHTML:'',open:false,
@@ -94,18 +96,22 @@ function uiHarness() {
     async clear(userId) { for(const [key,chat] of records)if(chat.userId===userId)records.delete(key); }
   };
   const context = vm.createContext({
-    ...core,chatStore:store,AbortController,TextEncoder,TextDecoder,Blob,structuredClone,crypto,URL,console,
-    document:{getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},createElement:element},
-    window:{supabase:{createClient:()=>({auth:{onAuthStateChange(fn){callback=fn;},getSession:()=>initial.promise}})},addEventListener(){}},
+    ...core,chatStore:store,createChatStore(name){databases.push(name);return store;},AbortController,TextEncoder,TextDecoder,Blob,structuredClone,crypto,URL,URLSearchParams,console,
+    location: {pathname:`/project/public/${assistant ? 'assistant' : 'chat'}.html`,search:embedded ? '?embed=1' : '',protocol,origin},
+    parent: embedded ? frameParent : undefined,
+    document:{getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},createElement:element,querySelectorAll:()=>[],addEventListener(type,handler){documentEvents.set(type,handler);}},
+    window:{supabase:{createClient:()=>({auth:{onAuthStateChange(fn){callback=fn;},getSession:()=>initial.promise}})},addEventListener(type,handler){events.set(type,handler);}},
     // 桩 t() 必须像真实 runtime 一样「缺键返回 key」；否则 effortLabel 无法区分已翻译与回退。
     ClubI18n:{t:key=>DICT.has(key)?`[${lang === 'en' ? 'en:' : ''}${key}]`:key,getLang:()=>lang},marked:{Renderer:class {},parse:()=>''},DOMPurify:{sanitize:()=>({querySelectorAll:()=>[]})},
     navigator:{clipboard:{async writeText(value){copied.push(value);}}},
     Option:class {constructor(text,value){this.textContent=text;this.value=value;}},
     setTimeout(fn){timers.push(fn);},fetch(url,init){const result=deferred(), body=JSON.parse(init.body);requests.push({url,headers:init.headers,body,token:init.headers.Authorization,signal:init.signal,...result});if(body.action==='custom_model_list') result.resolve({ok:true,json:async()=>[]});return result.promise;}
   });
-  vm.runInContext(chatSource,context,{filename:'chat.js'});
+  const source = assistant ? chatSource.replaceAll(JSON.stringify(new URL('../public/chat.js', import.meta.url).href), JSON.stringify(protocol === 'file:' ? 'file:///site/project/public/chat.js' : 'https://club.example/project/public/chat.js')) : chatSource;
+  vm.runInContext(source,context,{filename:'chat.js'});
   const evaluate = code => vm.runInContext(code,context);
-  return {initial,elements,requests,writes,records,evaluate,store,copied,
+  return {initial,elements,requests,writes,records,evaluate,store,copied,messages,events,documentEvents,databases,
+    message(data,source = frameParent,messageOrigin = origin){events.get('message')?.({data,source,origin:messageOrigin});},
     setLang(value){lang=value;evaluate('refreshLocalizedUi()');},
     auth(next){callback('SIGNED_IN',next);while(timers.length)timers.shift()();},
     setSaveHook(fn){saveHook=fn;},
@@ -544,3 +550,69 @@ const coreSource=await readFile(new URL('../public/chat-core.js',import.meta.url
 const bundledCore=vm.createContext({URL,TextEncoder,TextDecoder,ReadableStream,console});
 vm.runInContext(coreSource.replace(/^export /gm,'') + `\nconst URL='app base URL'; globalThis.bundleEndpoint=chatEndpoint('https://provider.example/v1/messages');`,bundledCore);
 assert.equal(bundledCore.bundleEndpoint.protocol,'messages');
+
+// Dedicated assistant uses the same controller with isolated storage and server-managed requests.
+for (const protocol of ['https:', 'file:']) {
+  const ui = uiHarness({assistant:true,embedded:true,protocol});
+  assert.deepEqual(ui.databases,['club-ai-assistant']);
+  assert.equal(ui.messages[0].data.action,'ready','ready must precede authentication');
+  assert.equal(ui.requests.length,0);
+  ui.message({type:'club-assistant',action:'sync',modal:true},{},protocol === 'file:' ? 'null' : 'https://club.example');
+  assert.equal(ui.evaluate('assistantModal'),false,'untrusted window cannot synchronize frame');
+  ui.message({type:'club-assistant',action:'sync',modal:true},undefined,'https://evil.example');
+  assert.equal(ui.evaluate('assistantModal'),false,'wrong origin rejected');
+  ui.message({type:'club-assistant',action:'sync',modal:true});
+  assert.equal(ui.evaluate('assistantModal'),true);
+  ui.evaluate('globalThis.focused="";globalThis.firstFocus={tabIndex:0,getClientRects:()=>[{}],focus:()=>{focused="first"}};globalThis.lastFocus={tabIndex:0,getClientRects:()=>[{}],focus:()=>{focused="last"}};document.querySelectorAll=()=>[firstFocus,lastFocus]');
+  ui.message({type:'club-assistant',action:'focus',direction:'first'});assert.equal(ui.evaluate('focused'),'first');
+  ui.message({type:'club-assistant',action:'focus',direction:'last'});assert.equal(ui.evaluate('focused'),'last');
+  ui.evaluate('document.activeElement=lastFocus');
+  ui.documentEvents.get('keydown')({key:'Tab',shiftKey:false,preventDefault(){}});
+  assert.equal(ui.messages.at(-1).data.direction,'next');
+  ui.evaluate('document.activeElement=firstFocus');
+  ui.documentEvents.get('keydown')({key:'Tab',shiftKey:true,preventDefault(){}});
+  assert.equal(ui.messages.at(-1).data.direction,'previous');
+  ui.message({type:'club-assistant',action:'sync',modal:false});
+  const count=ui.messages.length;ui.documentEvents.get('keydown')({key:'Tab',shiftKey:true,preventDefault(){}});
+  assert.equal(ui.messages.length,count,'desktop leaves native tab order alone');
+  ui.evaluate('document.querySelectorAll=()=>[]');
+  ui.auth(account('assistant-user'));
+  assert.equal(ui.requests.at(-1).body.action,'assistant_catalog');
+  ui.requests.at(-1).resolve({ok:true,json:async()=>({models:[{...catalogModel,context_window:10000,default_max_output_tokens:50}],assistant:{reserve_tokens:1000,welcome:'Welcome',suggestions:['Question']}})}); await settle();
+  assert.equal(ui.requests.length,1,'assistant never loads custom model profiles');
+  assert.equal(ui.elements.get('assistantModelName').textContent,catalogModel.display_name,'configured model name is visible before any answer');
+  ui.setLang('en');assert.equal(ui.elements.get('assistantModelName').textContent,catalogModel.display_name,'language refresh preserves the configured name');
+  assert.equal(ui.evaluate('contextBudget(model(),50)'),8950);
+  assert.equal(ui.evaluate('summaryPrefix({summary:{text:"memory"}}).length'),0,'summary sent once as explicit field');
+  ui.evaluate('current.summary={text:"memory",turns:0};document.getElementById("prompt").value="question";void generate()'); await settle();
+  const request=ui.requests.at(-1);
+  assert.deepEqual(Object.keys(request.body).sort(),['action','input','summary']);
+  assert.equal(request.body.action,'assistant_respond'); assert.equal(request.body.summary,'memory');
+  assert.ok(request.body.input.every(item=>item.role!=='system'));
+  const sources=[{id:'S1',title:'Club page',source_path:'/public/member-center.html',excerpt:'Safe text <img>'},{id:'S2',title:'Unused',source_path:'/index.html'}];
+  request.resolve({ok:true,headers:new Headers({'content-type':'text/event-stream','x-chat-assistant-sources':encodeURIComponent(JSON.stringify(sources)),'x-chat-assistant-release':'11111111-1111-4111-8111-111111111111'}),body:stream(`data: {"type":"response.output_text.delta","delta":"Answer [S1] [S99]"}
+
+data: {"type":"response.completed"}
+
+`)}); await settle();
+  assert.equal(ui.evaluate('current.turns[0].sources.length'),2);
+  assert.equal(ui.evaluate('rendered.nodes[0].sources.children.length'),1,'only cited valid sources rendered');
+  assert.equal(ui.evaluate('rendered.nodes[0].sources.children[0].href'),'member-center.html');
+  assert.equal(ui.evaluate('assistantPagePath("index.html")'),'../index.html');
+  assert.equal(ui.evaluate('assistantPagePath("public/member-center.html")'),'member-center.html');
+  assert.equal(ui.evaluate('assistantPagePath("../index.html")'),'');
+  assert.equal(ui.writes.at(-1).turns[0].releaseId,'11111111-1111-4111-8111-111111111111');
+  assert.match(ui.evaluate('rendered.nodes[0].sources.children[0].children.at(-1).textContent'),/11111111-1111-4111-8111-111111111111$/,'source shows persisted publication version');
+  ui.evaluate('current.turns[0].assistantRelease="22222222-2222-4222-8222-222222222222";renderMessages()');
+  assert.match(ui.evaluate('rendered.nodes[0].sources.children[0].children.at(-1).textContent'),/22222222-2222-4222-8222-222222222222$/,'version-only updates refresh source metadata');
+  ui.evaluate('current.turns=Array.from({length:6},(_,i)=>({id:String(i),prompt:"question",text:"answer",input:[],output:[],status:"success"}));current.summary=undefined;compactJob=compactNow()');await settle();
+  const compact=ui.requests.at(-1);assert.equal(compact.body.action,'assistant_compact');
+  ui.message({type:'club-assistant',action:'suspend'});assert.equal(compact.signal.aborted,true,'suspend aborts compaction');
+  compact.reject(new Error('aborted'));await settle();
+  assert.equal(ui.evaluate('compacting'),false);
+  assert.equal(ui.evaluate('suspended'),true);
+}
+assert.throws(()=>buildContext(turns,{context_window:100},10,[],95),/context/);
+for (const path of ['javascript:alert(1)','https://evil.example/a.html','//evil/a.html','../a.html','public/%2e%2e/a.html','public/a.html?x=1','public/a.html\\evil']) assert.equal(core.assistantSourcePath(path),'');
+assert.equal(core.assistantSources('%invalid').length,0);
+console.log('Assistant UI: catalog contract, isolated store, ready before auth, trusted frame sync, reserve, one summary, citations, project-root paths and compaction suspend passed.');

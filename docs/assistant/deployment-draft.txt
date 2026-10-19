@@ -1,0 +1,33 @@
+Assistant administration deployment draft (instructions only)
+
+1. Follow docs/chat-deployment/README.md using the Supabase web Dashboard:
+   paste the complete club-chat-schema.sql into SQL Editor, then replace the chat
+   Edge Function index.ts with chat-dashboard-index.ts and deploy updates. Publish
+   the updated static site assets through the site's existing publishing process.
+   No PowerShell, Supabase CLI or build commands are required for deployment.
+   This file executes no deployment.
+2. Sign in to public/chat-admin.html using the existing dynamic super-admin roster.
+   Open Assistant knowledge and press Refresh to load the assistant state/version.
+3. Select an enabled, nondeleted model visible to all users, backed by an enabled,
+   nondeleted provider. The frontend filters admin_get; the backend authorizes it.
+   Saving enabled=false immediately disables runtime availability. Other saved
+   model/welcome/suggestion/instruction edits enter the next published snapshot.
+4. Review docs/assistant/source-manifest.json and current public pages. Pick seed.json,
+   review the safe text preview, then explicitly submit JSON import. This saves drafts
+   without publishing. The join-page ECA statement requires freshness verification;
+   account, event, points and shop records are never part of this seed.
+5. Save/review configuration and draft changes. On version conflict, writes stop
+   without automatic retry. Refresh, compare current values and preserved drafts,
+   and intentionally resubmit. Archived drafts can be restored by saving/importing
+   the same slug and count toward total corpus limits.
+6. Explicitly Publish after verifying saved model and active documents. Publication
+   creates an immutable snapshot. Rollback submits the current version and an
+   existing release ID; it changes only the active release pointer, keeping drafts.
+   The historical model still has to be enabled and public for rollback/runtime.
+7. Verify assistant login/binding, source links, quota, separate local history,
+   attachments, language/theme behavior and disable/rollback after deployment.
+   Deployment and live publication remain separate administrator actions.
+
+All management uses assistant_admin_* through the existing authenticated Chat edge
+function. Super-admin authorization and optimistic version checks stay authoritative
+on the server. No seed upload, publication, upstream call or deployment runs automatically.

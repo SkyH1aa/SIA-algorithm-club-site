@@ -1,3 +1,4 @@
+import { AssistantError, assistantConfigData, assistantDocument, assistantInput, assistantPrompt, assistantReserve, type AssistantRelease } from '../_shared/chat-assistant.ts';
 import { hashKey, newKey, proxyBase, proxySecret, ProxyError, ROUTE_FIELDS } from '../_shared/chat-api-proxy.ts';
 import { ChatBodyError, readChatBody } from '../_shared/chat-body.ts';
 import { chatEndpoint, ChatProtocolError, parseProtocolSse, protocolEvents, protocolRequest, normalizeClaudeThinking, validateProtocolCapabilities, type ChatProtocol, type ChatProtocolSetting } from '../_shared/chat-protocol.ts';
@@ -50,6 +51,9 @@ const MAX_REASONING_EFFORT = 40;
 const IMAGE_TOKEN_ESTIMATE = { low: 1024, auto: 4096, high: 8192 };
 const PDF_TOKEN_ESTIMATE = 8192;
 const ACTIONS = new Set([
+  'assistant_catalog', 'assistant_respond', 'assistant_compact',
+  'assistant_admin_get', 'assistant_admin_config_save', 'assistant_admin_document_save', 'assistant_admin_document_archive',
+  'assistant_admin_publish', 'assistant_admin_rollback', 'assistant_admin_import',
   'catalog', 'respond', 'admin_get', 'admin_save_provider', 'admin_save_model',
   'admin_delete_provider', 'admin_delete_model',
   'admin_usage', 'admin_test', 'quota', 'admin_quota_get', 'admin_quota_save',
@@ -83,7 +87,7 @@ function corsHeaders(request: Request): Headers {
   const headers = new Headers({
     'access-control-allow-headers': 'authorization, apikey, content-type',
     'access-control-allow-methods': 'POST, OPTIONS',
-    'access-control-expose-headers': 'X-Chat-Request-Id, X-Chat-Quota-Limited, X-Chat-Max-Output-Tokens',
+    'access-control-expose-headers': 'X-Chat-Request-Id, X-Chat-Quota-Limited, X-Chat-Max-Output-Tokens, X-Chat-Assistant-Sources, X-Chat-Assistant-Release',
     'access-control-max-age': '600',
     vary: 'Origin'
   });
@@ -448,7 +452,7 @@ async function catalogPayload(items: Model[], providerRows: Provider[], userId: 
 async function modelWithProvider(modelId: unknown, enabledOnly = true, userId?: string, admin = false): Promise<{ model: Model; provider: Provider }> {
   if (!isUuid(modelId)) throw new HttpError('model', 400);
   const [modelRows, providerRows] = await Promise.all([
-    restJson<Model[]>(`chat_models?id=eq.${encodeURIComponent(modelId)}&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,claude_thinking,supports_images,supports_pdf,preserve_reasoning,enabled,visibility&limit=1`),
+    restJson<Model[]>(`chat_models?id=eq.${encodeURIComponent(modelId)}&deleted_at=is.null&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,claude_thinking,supports_images,supports_pdf,preserve_reasoning,enabled,visibility&limit=1`),
     providers()
   ]);
   const model = modelRows[0];
@@ -600,8 +604,8 @@ function upstreamHeaders(provider: Provider, key: string): Headers {
   return headers;
 }
 
-async function callResponses(request: Request, ctx: RequestContext, payload: Json, test = false): Promise<Response> {
-  const { model, provider } = await modelWithProvider(payload.model_id, true, ctx.user.id, test && ctx.isAdmin);
+async function callResponses(request: Request, ctx: RequestContext, payload: Json, test = false, selected?: { model: Model; provider: Provider }, auditAction?: 'assistant_respond' | 'assistant_compact'): Promise<Response> {
+  const { model, provider } = selected || await modelWithProvider(payload.model_id, true, ctx.user.id, test && ctx.isAdmin);
   const rawInput = test ? [{ role: 'user', content: [{ type: 'input_text', text: text(payload.prompt, MAX_INPUT_TEXT, true) }] }] : payload.input;
   const { input } = validateInput(rawInput, model);
   if (!test && payload.max_output_tokens !== undefined) integer(payload.max_output_tokens, 1, model.max_output_tokens);
@@ -623,7 +627,7 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
   const admission = await rpc('chat_begin_generation', {
     p_user_id: ctx.user.id, p_request_id: requestId, p_input_tokens: inputTokens, p_output_tokens: outputTokens,
     p_audit: { member_name: ctx.profile?.member_name || null, username: ctx.profile?.username || ctx.user.email || ctx.user.id,
-      provider_name: provider.label || provider.name, model_name: model.display_name, action: test ? 'admin_test' : 'respond',
+      provider_name: provider.label || provider.name, model_name: model.display_name, action: auditAction || (test ? 'admin_test' : 'respond'),
       provider_id: provider.id, model_id: model.id, model_key: model.model_key,
       input_bytes: encoder.encode(serialized).byteLength, max_output_tokens: outputTokens, reasoning_effort: effort, status: 'audited' }
   }) as Json | null;
@@ -911,10 +915,88 @@ async function proxyAdmin(request: Request, action: string, payload: Json): Prom
   return response;
 }
 
+async function assistantRuntime(userId: string) {
+  const runtime = await rpc('chat_assistant_runtime', {}) as { enabled?: boolean; release?: AssistantRelease } | null;
+  const release = runtime?.release;
+  if (runtime?.enabled !== true || !release?.id || !isUuid(release.id) || !release.config || !isUuid(release.config.model_id) ||
+    !Array.isArray(release.documents) || release.documents.length > 200) throw new HttpError('assistant_unavailable', 503);
+  let selected: { model: Model; provider: Provider };
+  try {
+    selected = await modelWithProvider(release.config.model_id, true, userId);
+    if (selected.model.visibility !== 'all') throw new Error('assistant_model');
+  } catch { throw new HttpError('assistant_unavailable', 503); }
+  return { release, selected };
+}
+
+async function assistantAction(request: Request, action: string, payload: Json): Promise<Response> {
+  const ctx = await context(request);
+  const quota = await quotaSnapshot(ctx.user.id);
+  if (quota.blacklisted === true) throw new HttpError('blacklisted', 403);
+  const { release, selected } = await assistantRuntime(ctx.user.id);
+  if (action === 'assistant_catalog') {
+    const response = json(request, { models: await catalogPayload([selected.model], [selected.provider], ctx.user.id),
+      assistant: { welcome: release.config.welcome, suggestions: release.config.suggestions,
+        release_id: release.id, reserve_tokens: assistantReserve(release) }, bound: true, member_name: ctx.profile!.member_name, quota });
+    response.headers.set('cache-control', 'no-store');
+    return response;
+  }
+  const safe = assistantInput(payload.input, payload.summary);
+  // Validate untrusted content before adding our one privileged system message.
+  validateInput(safe, selected.model);
+  const prepared = assistantPrompt(release, safe, action === 'assistant_compact');
+  const response = await callResponses(request, ctx, { input: prepared.input }, false, selected, action as 'assistant_respond' | 'assistant_compact');
+  response.headers.set('x-chat-assistant-sources', encodeURIComponent(JSON.stringify(prepared.sources)));
+  response.headers.set('x-chat-assistant-release', release.id);
+  response.headers.set('cache-control', 'no-store');
+  return response;
+}
+
+async function assistantAdmin(request: Request, action: string, payload: Json): Promise<Response> {
+  const ctx = await context(request, true);
+  const data: Json = { ...payload }; delete data.action;
+  if (action !== 'assistant_admin_get') data.expected_version = integer(data.expected_version, 0, Number.MAX_SAFE_INTEGER);
+  if (action === 'assistant_admin_config_save') {
+    Object.assign(data, assistantConfigData(data));
+    if (data.model_id !== null) {
+      if (!isUuid(data.model_id)) throw new HttpError('input', 400);
+      const selected = await modelWithProvider(data.model_id, true, ctx.user.id, true);
+      if (selected.model.visibility !== 'all') throw new HttpError('assistant_model', 400);
+    } else if (data.enabled) throw new HttpError('assistant_model', 400);
+  }
+  if (action === 'assistant_admin_document_save') data.document = assistantDocument(data.document);
+  if (action === 'assistant_admin_document_archive') {
+    if (typeof data.slug !== 'string' || !/^[a-z0-9][a-z0-9_-]{0,79}$/.test(data.slug)) throw new HttpError('input', 400);
+  }
+  if (action === 'assistant_admin_rollback' && !isUuid(data.release_id)) throw new HttpError('input', 400);
+  if (action === 'assistant_admin_import') {
+    if (!Array.isArray(data.documents) || data.documents.length < 1 || data.documents.length > 200) throw new HttpError('input', 400);
+    data.documents = data.documents.map(assistantDocument);
+    if (new Set((data.documents as Array<{slug:string}>).map(x => x.slug)).size !== (data.documents as unknown[]).length) throw new HttpError('input', 400);
+  }
+  const response = await rest('rpc/chat_assistant_admin', { method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ p_actor_user_id: ctx.user.id, p_action: action, p_data: data }) });
+  const result = await response.json().catch(() => null) as Json | null;
+  if (!response.ok) {
+    if (result?.code === '42501') throw new HttpError('admin', 403);
+    if (['22023','22P02','23514','23502'].includes(String(result?.code))) throw new HttpError('input', 400);
+    throw new HttpError('database', 503);
+  }
+  if (!result || typeof result !== 'object' || Array.isArray(result)) throw new HttpError('database', 503);
+  if (result.code) throw new HttpError(String(result.code), result.code === 'conflict' ? 409 : result.code === 'not_found' ? 404 : 400);
+  const output = json(request, result); output.headers.set('cache-control', 'no-store'); return output;
+}
+
 async function main(request: Request, payload: Json): Promise<Response> {
   const action = ({ save_provider: 'admin_save_provider', save_model: 'admin_save_model', usage: 'admin_usage', test: 'admin_test' } as Record<string, string>)[String(payload.action)] || payload.action;
   if (typeof action !== 'string' || !ACTIONS.has(action)) throw new HttpError('action', 400);
   const allowed: Record<string, string[]> = {
+    assistant_catalog: [], assistant_respond: ['input','summary'], assistant_compact: ['input','summary'],
+    assistant_admin_get: [],
+    assistant_admin_config_save: ['expected_version','enabled','model_id','system_prompt','welcome','suggestions'],
+    assistant_admin_document_save: ['expected_version','document'],
+    assistant_admin_document_archive: ['expected_version','slug'],
+    assistant_admin_publish: ['expected_version'], assistant_admin_rollback: ['expected_version','release_id'],
+    assistant_admin_import: ['expected_version','documents'],
     admin_proxy_list: [],
     admin_proxy_save: ['id', 'name', 'base_url', 'secret_name', 'enabled', 'expected_version'],
     admin_proxy_route_state: ['id', 'enabled', 'expected_version'],
@@ -940,6 +1022,8 @@ async function main(request: Request, payload: Json): Promise<Response> {
     custom_model_delete: ['id', 'expected_version']
   };
   allowKeys(payload, ['action', ...allowed[action]]);
+  if (action.startsWith('assistant_admin_')) return await assistantAdmin(request, action, payload);
+  if (action.startsWith('assistant_')) return await assistantAction(request, action, payload);
   if (action.startsWith('admin_proxy_')) return await proxyAdmin(request, action, payload);
   if (action === 'admin_model_access_get' || action === 'admin_model_access_save') return json(request, await modelAccessAdmin(request, action, payload));
   if (action.startsWith('custom_model_')) return json(request, await customModelAdmin(request, action, payload));
@@ -1011,6 +1095,7 @@ async function handle(request: Request): Promise<Response> {
     return await main(request, object(parsed));
   } catch (error) {
     if (error instanceof ChatBodyError) return errorResponse(request, error.code, error.status);
+    if (error instanceof AssistantError) return errorResponse(request, error.message, error.status);
     if (error instanceof HttpError || error instanceof ProxyError || error instanceof ChatProtocolError) return errorResponse(request, error.message, error.status);
     return errorResponse(request, 'server', 500);
   }

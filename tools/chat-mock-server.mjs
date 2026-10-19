@@ -4,11 +4,13 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {randomUUID, randomBytes, createHash, timingSafeEqual} from 'node:crypto';
 import assert from 'node:assert/strict';
+import {assistantInputs, createAssistantFixture} from '../docs/assistant-validation/fixtures/assistant-fixture.mjs';
 
 // Deliberately standalone: never import the backend, read credentials, or fetch an upstream.
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = path.join(ROOT, 'public');
 const FIXTURES = path.join(ROOT, 'docs/chat-validation/fixtures');
+const ASSISTANT_FIXTURES = path.join(ROOT, 'docs/assistant-validation/fixtures');
 const portArgument = process.argv.indexOf('--port');
 const PORT = portArgument < 0 ? 4191 : Number(process.argv[portArgument+1]);
 if (!Number.isInteger(PORT) || PORT < 1024 || PORT > 65535) throw new Error('Invalid --port (1024..65535)');
@@ -21,7 +23,7 @@ const ACCOUNTS = {
   unbound: {id:'10000000-0000-4000-8000-000000000004', email:'mock-unbound@example.invalid', member_name:null, admin:false, bound:false},
   loggedout: null
 };
-const SCENARIOS = ['completed','incomplete','interrupted','failed','slow','thinking','thinking-only','thinking-interrupted'];
+const SCENARIOS = ['completed','incomplete','interrupted','failed','slow','cancel','thinking','thinking-only','thinking-interrupted'];
 const PROXY_INPUTS = {
   admin_proxy_list: [],
   admin_proxy_save: ['id','name','base_url','secret_name','enabled','expected_version'],
@@ -33,7 +35,7 @@ const PROXY_INPUTS = {
   admin_proxy_key_hard_delete: ['id','expected_version']
 };
 const PROXY_ACTIONS = Object.keys(PROXY_INPUTS);
-const ACTIONS = ['catalog','respond','admin_get','admin_save_provider','admin_save_model','admin_delete_provider','admin_delete_model','admin_usage','admin_test','quota','admin_user_directory','admin_quota_get','admin_quota_save','admin_set_blacklist','admin_blacklist_list','custom_model_list','custom_model_save','custom_model_delete',...PROXY_ACTIONS];
+const ACTIONS = ['catalog','respond','admin_get','admin_save_provider','admin_save_model','admin_delete_provider','admin_delete_model','admin_usage','admin_test','quota','admin_user_directory','admin_quota_get','admin_quota_save','admin_set_blacklist','admin_blacklist_list','custom_model_list','custom_model_save','custom_model_delete',...PROXY_ACTIONS,...Object.keys(assistantInputs),'admin_model_access_get','admin_model_access_save'];
 const ACTION_ALIASES = new Map([['save_provider','admin_save_provider'],['save_model','admin_save_model'],['usage','admin_usage'],['test','admin_test']]);
 const PROVIDER_ID = '20000000-0000-4000-8000-000000000001';
 const MODEL_ID = '30000000-0000-4000-8000-000000000001';
@@ -87,7 +89,7 @@ function messagesThinking(config, actualOutput, effort) {
 function seed(contextWindow) {
   const provider = {id:PROVIDER_ID,name:'mock',label:'MOCK 本地供应商',base_url:'https://mock-provider.example.com/v1',api_protocol:'auto',secret_name:'CHAT_KEY_MOCK',auth_header:'authorization',enabled:true};
   const stamp = new Date(0).toISOString();
-  const base = {provider_id:provider.id,context_window:contextWindow,max_output_tokens:4096,default_max_output_tokens:512,reasoning_efforts:['none','low','medium','high','xhigh','max'],default_reasoning_effort:'medium',claude_thinking:{mode:'omit'},supports_images:true,supports_pdf:true,preserve_reasoning:false,enabled:true,introduction:null,updated_at:stamp,deleted_at:null};
+  const base = {provider_id:provider.id,context_window:contextWindow,max_output_tokens:4096,default_max_output_tokens:512,reasoning_efforts:['none','low','medium','high','xhigh','max'],default_reasoning_effort:'medium',claude_thinking:{mode:'omit'},supports_images:true,supports_pdf:true,preserve_reasoning:false,enabled:true,visibility:'all',introduction:null,updated_at:stamp,deleted_at:null};
   return {providers:[provider],models:[{...base,id:MODEL_ID,model_key:'mock-multimodal',display_name:'MOCK 多模态'}, {...base,id:'30000000-0000-4000-8000-000000000002',model_key:'mock-text',display_name:'MOCK 纯文本',supports_images:false,supports_pdf:false}],usage:[]};
 }
 function sessionFor(state) {
@@ -205,7 +207,9 @@ function modelConfig(payload, providers, current) {
   const defaultOutput = integer(payload.default_max_output_tokens,1,max);
   const thinking = claudeThinking(payload.claude_thinking === undefined ? current?.claude_thinking : payload.claude_thinking,defaultOutput);
   const introduction = payload.introduction == null ? null : text(payload.introduction,1000,true);
-  return {id:payload.id || randomUUID(),provider_id:payload.provider_id,model_key:text(payload.model_key ?? payload.model_id,160,true),display_name:text(payload.display_name,120,true),introduction,context_window:integer(payload.context_window,256,1000000),max_output_tokens:max,default_max_output_tokens:defaultOutput,claude_thinking:thinking,reasoning_efforts:efforts,default_reasoning_effort:payload.default_reasoning_effort == null ? null : text(payload.default_reasoning_effort,40,true),supports_images:Boolean(payload.supports_images),supports_pdf:Boolean(payload.supports_pdf),preserve_reasoning:Boolean(payload.preserve_reasoning),enabled:payload.enabled === undefined ? true : Boolean(payload.enabled),updated_at:new Date().toISOString(),deleted_at:null};
+  const visibility = payload.visibility === undefined ? current?.visibility ?? 'all' : payload.visibility;
+  requireThat(['all','assigned'].includes(visibility));
+  return {visibility,id:payload.id || randomUUID(),provider_id:payload.provider_id,model_key:text(payload.model_key ?? payload.model_id,160,true),display_name:text(payload.display_name,120,true),introduction,context_window:integer(payload.context_window,256,1000000),max_output_tokens:max,default_max_output_tokens:defaultOutput,claude_thinking:thinking,reasoning_efforts:efforts,default_reasoning_effort:payload.default_reasoning_effort == null ? null : text(payload.default_reasoning_effort,40,true),supports_images:Boolean(payload.supports_images),supports_pdf:Boolean(payload.supports_pdf),preserve_reasoning:Boolean(payload.preserve_reasoning),enabled:payload.enabled === undefined ? true : Boolean(payload.enabled),updated_at:new Date().toISOString(),deleted_at:null};
 }
 function upsert(rows, item) { const index = rows.findIndex(row => row.id === item.id); if (index < 0) rows.push(item); else rows[index] = item; return item; }
 function rewriteJS(source, origin) {
@@ -252,10 +256,11 @@ function pruneUsage(usage, reservations, leases, asof) {
   }
 }
 
-export function createMockServer({testPort = false, now = () => new Date(), usageFixtures = [], retentionIntervalMs = 3600000} = {}) {
+export function createMockServer({testPort = false, now = () => new Date(), usageFixtures = [], retentionIntervalMs = 3600000, assistantMode = false} = {}) {
   requireThat(testPort || (usageFixtures.length === 0 && retentionIntervalMs === 3600000));
-  let state = {account:'member',scenario:'completed',theme:'dark',revision:1};
+  let state = {account:'member',scenario:'completed',theme:'dark',revision:1,assistantAvailable:true,serviceEnabled:true};
   let database = seed(32768);
+  const assistant = createAssistantFixture({modelId:MODEL_ID,requireThat,integer,uuid,now});
   database.usage.push(...structuredClone(usageFixtures));
   const logs = [], leases = new Map(), reservations = new Map();
   let proxyRoutes = [], proxyKeys = [];
@@ -411,8 +416,8 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
       proxyResponse(req,res,payload,route,key,meta,protocol);
     } catch (error) { meta.outcome = error instanceof MockError ? error.message : 'server'; throw error; }
   }
-  let globalQuota, userQuotas, blacklist, counters, customModels;
-  function resetQuotas() { globalQuota = {daily_limit:null,version:0}; userQuotas = new Map(); blacklist = new Map(); counters = new Map(); customModels = new Map(); }
+  let globalQuota, userQuotas, blacklist, counters, customModels, modelGrants;
+  function resetQuotas() { globalQuota = {daily_limit:null,version:0}; userQuotas = new Map(); blacklist = new Map(); counters = new Map(); customModels = new Map(); modelGrants = new Map(); }
   resetQuotas();
   function target(value, optional = true) {
     if (optional && value == null) return null;
@@ -451,7 +456,7 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
     requireThat(admin || account.bound,'profile',403);
     return account;
   }
-  function stream(req, res, payload, account, meta) {
+  function stream(req, res, payload, account, meta, fixture = {}) {
     const model = database.models.find(row => row.id === payload.model_id), provider = model && database.providers.find(row => row.id === model.provider_id);
     requireThat(uuid(payload.model_id) && model?.enabled && provider?.enabled,'model');
     const input = payload.action === 'admin_test' && payload.input === undefined ? [{role:'user',content:[{type:'input_text',text:text(payload.prompt,500000) || 'Reply with MOCK OK.'}]}] : payload.input;
@@ -488,12 +493,12 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
     };
     leases.set(account.id,{request_id:requestId,expires_at:now().getTime()+15*60000,cancel:() => { finish('cancelled','environment_reset'); res.destroy(); }});
     res.on('close',() => finish('cancelled','client_cancelled'));
-    res.writeHead(200,{'content-type':'text/event-stream; charset=utf-8','cache-control':'no-cache, no-transform','x-chat-request-id':requestId,'x-chat-max-output-tokens':String(max),...(reservation.limited ? {'x-chat-quota-limited':'true'} : {}),'connection':'keep-alive'});
+    res.writeHead(200,{'content-type':'text/event-stream; charset=utf-8','cache-control':'no-cache, no-transform','x-chat-request-id':requestId,'x-chat-max-output-tokens':String(max),...(reservation.limited ? {'x-chat-quota-limited':'true'} : {}),'connection':'keep-alive',...fixture.headers});
     res.flushHeaders();
     const event = data => { if (!res.destroyed) res.write(`event: ${data.type}\r\ndata: ${JSON.stringify(data)}\r\n\r\n`); };
     event({type:'response.created',response:{id:`mock-${requestId}`,object:'response',status:'in_progress',output:[]}});
     const turn = meta.roles.user;
-    const answer = `**MOCK / 本地模拟**\n\n第 ${turn} 轮；已收到 ${meta.roles.assistant} 条 assistant 历史。\n\n文本片段 ${meta.parts.input_text}，图片 ${meta.parts.input_image}，原生 PDF ${meta.parts.input_file}。\n\n- 场景：${scenario}\n- 此内容由 fixture 生成，无线上模型调用。\n\n\`\`\`js\nconsole.log('mock only');\n\`\`\`\n\n[本地设置](/setup)\n\n<script>MOCK_UNSAFE_HTML</script>\n`;
+    const answer = fixture.answer ?? `**MOCK / 本地模拟**\n\n第 ${turn} 轮；已收到 ${meta.roles.assistant} 条 assistant 历史。\n\n文本片段 ${meta.parts.input_text}，图片 ${meta.parts.input_image}，原生 PDF ${meta.parts.input_file}。\n\n- 场景：${scenario}\n- 此内容由 fixture 生成，无线上模型调用。\n\n\`\`\`js\nconsole.log('mock only');\n\`\`\`\n\n[本地设置](/setup)\n\n<script>MOCK_UNSAFE_HTML</script>\n`;
     // This fixture uses a synthetic byte/3 tokenizer, not a provider tokenizer.
     const thinking = scenario.startsWith('thinking') ? 'MOCK 合成推理摘要：先确认问题，再核对条件，最后组织回答。\n这只是界面测试文本，并非任何真实模型的内部思考。\n<script>MOCK_THINKING_HTML</script>' : '';
     const answerTokens = Math.ceil(Buffer.byteLength(answer)/3);
@@ -516,7 +521,7 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
       }
       if ((scenario === 'interrupted' || scenario === 'thinking-interrupted') && index >= 3) { finish('incomplete','upstream_eof'); res.end(); return; }
       if (index < chunks.length) return;
-      const terminal = scenario === 'slow' || scenario.startsWith('thinking') ? 'completed' : scenario;
+      const terminal = scenario === 'slow' || scenario === 'cancel' || scenario.startsWith('thinking') ? 'completed' : scenario;
       const tokens = {input_tokens:Math.ceil(meta.text_bytes / 3) + meta.attachment_count * 32,output_tokens:Math.min(max,Math.ceil(Buffer.byteLength(collected + collectedThinking) / 3))};
       tokens.total_tokens = tokens.input_tokens + tokens.output_tokens;
       const output = [
@@ -528,7 +533,7 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
       finish(terminal,terminal === 'completed' ? null : `response.${terminal}`);
       event({type:`response.${terminal}`,response:{id:`mock-${requestId}`,object:'response',status:terminal,output,usage:tokens,...(terminal === 'incomplete' ? {incomplete_details:{reason:'max_output_tokens'}} : {}),...(terminal === 'failed' ? {error:{code:'mock_failure',message:'MOCK simulated failure'}} : {})}});
       res.end('data: [DONE]\r\n\r\n');
-    }, scenario === 'slow' ? 1500 : scenario === 'thinking' ? 180 : 25);
+    }, scenario === 'slow' ? 1500 : scenario === 'cancel' ? 1500 : scenario === 'thinking' ? 180 : 25);
   }
   async function chat(req,res) {
     requireThat(req.method === 'POST','method',405);
@@ -539,12 +544,39 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
     try {
       requireThat(ACTIONS.includes(payload.action),'action');
       if (PROXY_ACTIONS.includes(payload.action)) keys(payload,['action',...PROXY_INPUTS[payload.action]]);
-      const account = authenticate(req,payload.action.startsWith('admin_'));
+      if (Object.hasOwn(assistantInputs,payload.action)) keys(payload,['action',...assistantInputs[payload.action]]);
+      const account = authenticate(req,payload.action.startsWith('admin_') || payload.action.startsWith('assistant_admin_'));
       meta.user_id = account.id;
+      if (payload.action.startsWith('assistant_admin_')) { json(res,assistant.admin(payload,account.id,database)); meta.outcome = 'ok'; return; }
+      if (payload.action.startsWith('assistant_')) {
+        requireThat(!blacklist.has(account.id),'blacklisted',403);
+        const {release,model} = assistant.runtime(database,state.assistantAvailable);
+        if (payload.action === 'assistant_catalog') {
+          const {provider_id,model_key,enabled,visibility,...visible} = model;
+          json(res,{models:[{...visible,api_protocol:'responses',...effectiveReasoning(model,'responses')}],assistant:{welcome:release.config.welcome,suggestions:release.config.suggestions,release_id:release.id,reserve_tokens:256},bound:true,member_name:account.member_name,quota:snapshot(account.id)});
+          meta.outcome = 'ok'; return;
+        }
+        stream(req,res,{action:payload.action,model_id:model.id,input:assistant.input(payload)},account,meta,assistant.streamOptions(release,payload.action === 'assistant_compact'));
+        return;
+      }
       if (PROXY_ACTIONS.includes(payload.action)) { const result = proxyAdmin(payload); meta.outcome = 'ok'; json(res,result); return; }
       if (['respond','admin_test'].includes(payload.action)) { stream(req,res,payload,account,meta); return; }
       let result;
       switch (payload.action) {
+        case 'admin_model_access_get':
+        case 'admin_model_access_save': {
+          const saving = payload.action === 'admin_model_access_save';
+          keys(payload,saving ? ['action','model_id','visibility','user_ids','expected_version'] : ['action','model_id']);
+          requireThat(uuid(payload.model_id));
+          const model = database.models.find(row => row.id === payload.model_id && !row.deleted_at); requireThat(model,'not_found',404);
+          if (saving) {
+            requireThat(['all','assigned'].includes(payload.visibility) && Array.isArray(payload.user_ids) && payload.user_ids.length <= 500 && payload.user_ids.every(uuid) && new Set(payload.user_ids).size === payload.user_ids.length);
+            requireThat(integer(payload.expected_version,0,Number.MAX_SAFE_INTEGER) === (Date.parse(model.updated_at) || 0),'conflict',409);
+            model.visibility = payload.visibility; model.updated_at = new Date(Math.max(now().getTime(),(Date.parse(model.updated_at) || 0)+1)).toISOString();
+            modelGrants.set(model.id,[...payload.user_ids]);
+          }
+          result = {model_id:model.id,visibility:model.visibility ?? 'all',version:Date.parse(model.updated_at) || 0,user_ids:modelGrants.get(model.id) || []}; break;
+        }
         case 'quota': keys(payload,['action']); result = snapshot(account.id); break;
         case 'admin_user_directory':
           keys(payload,['action']);
@@ -649,8 +681,13 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
   }
   async function staticFile(req,res,pathname,origin) {
     let base = PUBLIC, relative = pathname.slice(1);
-    if (pathname === '/setup' || pathname === '/setup/') { base = FIXTURES; relative = 'setup.html'; }
+    if (pathname === '/index.html') { base = ROOT; relative = 'index.html'; }
+    else if (pathname === '/setup' || pathname === '/setup/') { base = assistantMode ? ASSISTANT_FIXTURES : FIXTURES; relative = assistantMode ? 'assistant-setup.html' : 'setup.html'; }
+    else if (pathname === '/assistant-fixtures' || pathname === '/assistant-fixtures/') { base = ASSISTANT_FIXTURES; relative = 'assistant-setup.html'; }
+    else if (pathname === '/launcher-host.html') { base = ASSISTANT_FIXTURES; relative = 'launcher-host.html'; }
     else if (pathname.startsWith('/fixtures/')) { base = FIXTURES; relative = pathname.slice('/fixtures/'.length); }
+    else if (pathname.startsWith('/assistant-fixtures/')) { base = ASSISTANT_FIXTURES; relative = pathname.slice('/assistant-fixtures/'.length); }
+    else if (pathname.startsWith('/public/')) { base = PUBLIC; relative = pathname.slice('/public/'.length); }
     const target = path.resolve(base,relative);
     const inside = candidate => candidate.startsWith(base + path.sep);
     requireThat(inside(target),'not_found',404);
@@ -659,11 +696,13 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
     const info = await stat(real); requireThat(info.isFile(),'not_found',404);
     let data = await readFile(real);
     const ext = path.extname(real).toLowerCase();
+    const productionHtml = base === PUBLIC || base === ROOT;
     if (base === PUBLIC && ['.js','.mjs'].includes(ext)) data = Buffer.from(rewriteJS(data.toString('utf8'),origin));
-    if (base === PUBLIC && ['chat.html','chat-admin.html'].includes(relative)) {
-      let html = data.toString('utf8');
+    if (productionHtml && ext === '.html') {
+      let html = rewriteJS(data.toString('utf8'),origin);
       const sdk = /<script\b[^>]*\bsrc=["']https:\/\/[^"']*supabase-js[^"']*["'][^>]*>\s*<\/script>/gi;
-      requireThat(sdk.test(html),'sdk_reference_changed',500); sdk.lastIndex = 0;
+      if (['chat.html','chat-admin.html','assistant.html'].includes(relative)) requireThat(sdk.test(html),'sdk_reference_changed',500);
+      sdk.lastIndex = 0;
       html = html.replace(sdk,'<script src="/fixtures/mock-supabase.js"></script>');
       const nonce = randomBytes(18).toString('base64');
       html = html.replace(/<script(?![^>]*\bsrc=)([^>]*)>/gi,`<script nonce="${nonce}"$1>`);
@@ -678,7 +717,7 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
     res.setHeader('content-security-policy',CSP); res.setHeader('x-content-type-options','nosniff'); res.setHeader('referrer-policy','no-referrer');
     try {
       const host = req.headers.host || '';
-      const allowedPort = testPort ? server.address()?.port : PORT;
+      const allowedPort = server.address()?.port;
       requireThat([`localhost:${allowedPort}`,`127.0.0.1:${allowedPort}`].includes(host),'localhost_only',403);
       const origin = `http://${host}`;
       requireThat(!req.headers.origin || req.headers.origin === origin,'cors',403);
@@ -693,21 +732,23 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
       if (pathname === '/mock/session' && req.method === 'GET') { json(res,publicState()); return; }
       if (pathname === '/mock/requests' && req.method === 'GET') { json(res,{mock:true,requests:logs}); return; }
       if (pathname === '/mock/setup' && req.method === 'POST') {
-        const {payload} = await body(req); keys(payload,['account','scenario','theme','reset','contextWindow']);
+        const {payload} = await body(req); keys(payload,['account','scenario','theme','reset','contextWindow','assistantAvailable','serviceEnabled']);
         requireThat(Object.hasOwn(ACCOUNTS,payload.account) && SCENARIOS.includes(payload.scenario) && ['auto','light','dark'].includes(payload.theme));
         // 可选：把模拟模型的上下文窗口调小，用于在本地复现自动压缩阈值。
         if (payload.contextWindow !== undefined) requireThat(Number.isInteger(payload.contextWindow) && payload.contextWindow >= 256 && payload.contextWindow <= 1000000);
         if (payload.contextWindow !== undefined) state.contextWindow = payload.contextWindow;
         if (payload.contextWindow !== undefined) database = seed(payload.contextWindow);
-        if (payload.reset) { for (const lease of [...leases.values(),...proxyLeases.values()]) lease.cancel(); proxyRoutes = []; proxyKeys = []; database = seed(state.contextWindow || 32768); reservations.clear(); resetQuotas(); logs.length = 0; }
+        if (payload.reset) { for (const lease of [...leases.values(),...proxyLeases.values()]) lease.cancel(); proxyRoutes = []; proxyKeys = []; database = seed(state.contextWindow || 32768); reservations.clear(); resetQuotas(); logs.length = 0; assistant.reset(); }
         if (state.account !== payload.account || payload.reset) state.revision++;
-        Object.assign(state,{account:payload.account,scenario:payload.scenario,theme:payload.theme});
+        Object.assign(state,{account:payload.account,scenario:payload.scenario,theme:payload.theme,
+          ...(payload.assistantAvailable === undefined ? {} : {assistantAvailable:Boolean(payload.assistantAvailable)}),
+          ...(payload.serviceEnabled === undefined ? {} : {serviceEnabled:Boolean(payload.serviceEnabled)})});
         json(res,publicState()); return;
       }
       if (pathname === '/mock/club-drive' && req.method === 'POST') {
         const {payload} = await body(req);
         record({mock:true,request_id:randomUUID(),endpoint:'club-drive',action:['site_service_status','member_theme_get','member_theme_set','staff_access_get'].includes(payload.action) ? payload.action : 'unknown',account:state.account,started_at:new Date().toISOString()});
-        if (payload.action === 'site_service_status') { json(res,{enabled:true,feature_settings:{},mock:true}); return; }
+        if (payload.action === 'site_service_status') { json(res,{enabled:state.serviceEnabled !== false,feature_settings:{},mock:true}); return; }
         if (payload.action === 'member_theme_get' || payload.action === 'member_theme_set') {
           requireThat(sessionFor(state) && req.headers.authorization === `Bearer ${sessionFor(state).access_token}`,'login',401);
           if (payload.action === 'member_theme_set') { requireThat(['auto','light','dark'].includes(payload.themeMode)); state.theme = payload.themeMode; }
@@ -1369,10 +1410,12 @@ async function selfTest() {
   } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
 }
 
-if (process.argv.includes('--self-test')) await selfTest();
-else {
-  const server = createMockServer();
-  server.on('error',error => { console.error(error.code === 'EADDRINUSE' ? `MOCK port ${PORT} is already in use; stop that server before starting another.` : 'MOCK server could not start.'); process.exitCode = 1; });
-  server.listen(PORT,'127.0.0.1',() => console.log(`MOCK ONLY — ${ORIGIN}/setup\nStatic public/ + in-memory auth/chat; no upstream calls. Ctrl+C to stop.`));
-  for (const signal of ['SIGINT','SIGTERM']) process.on(signal,() => { server.closeAllConnections(); server.close(() => process.exit(0)); });
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  if (process.argv.includes('--self-test')) await selfTest();
+  else {
+    const server = createMockServer();
+    server.on('error',error => { console.error(error.code === 'EADDRINUSE' ? `MOCK port ${PORT} is already in use; stop that server before starting another.` : 'MOCK server could not start.'); process.exitCode = 1; });
+    server.listen(PORT,'127.0.0.1',() => console.log(`MOCK ONLY — ${ORIGIN}/setup\nStatic public/ + in-memory auth/chat; no upstream calls. Ctrl+C to stop.`));
+    for (const signal of ['SIGINT','SIGTERM']) process.on(signal,() => { server.closeAllConnections(); server.close(() => process.exit(0)); });
+  }
 }

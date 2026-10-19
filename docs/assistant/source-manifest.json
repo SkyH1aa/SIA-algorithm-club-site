@@ -1,0 +1,91 @@
+{
+  "status": "manual-draft-unpublished",
+  "review_date": "2026-10-19",
+  "method": "Reviewed repository HTML and user-facing translation strings only. Selectors below name literal HTML IDs or data-i18n attributes; translation_keys name rendered copy in the listed script. No member data, authenticated API response, admin-only panel or upstream service was used as knowledge.",
+  "sources": [
+    {
+      "repository_file": "index.html",
+      "source_path": "/index.html",
+      "document_slugs": ["club-overview", "faq-unknown-contact"],
+      "selectors": ["#home", "#capabilities", "#gomoku", "#join", "[data-i18n=\"home.joinCardDesc\"]"],
+      "fact_scope": "Club directions, public game/lab/resource navigation, beginner welcome and the public contact QR entry. No contact identity or QR contents were extracted."
+    },
+    {
+      "repository_file": "public/guide.html",
+      "source_path": "/public/guide.html",
+      "document_slugs": ["public-guide", "checkin-operation"],
+      "selectors": ["[data-i18n=\"guide.quickStartText\"]", "[data-i18n=\"guide.accountText\"]", "[data-i18n=\"guide.featuresText\"]", "[data-i18n=\"guide.checkinText\"]", "[data-i18n=\"guide.themeText\"]"],
+      "fact_scope": "Navigation, invitation registration/binding, code check-in versus review-pending course check-in, bilingual and Beijing-time theme behavior. No award amounts or review guarantees."
+    },
+    {
+      "repository_file": "public/club-features.html",
+      "source_path": "/public/club-features.html",
+      "document_slugs": ["public-resources", "checkin-operation", "store-operation", "faq-unknown-contact", "member-login-binding"],
+      "selectors": ["[data-i18n=\"features.resourcesDesc\"]", "[data-i18n=\"features.checkinDesc\"]", "[data-i18n=\"features.mallDesc\"]", "[data-i18n=\"features.messagesDesc\"]", "[data-i18n=\"features.chatDesc\"]"],
+      "fact_scope": "Public entry descriptions only: Python/C++ materials, code/course check-in, points exchange, feedback and login/binding requirement for Chat. No gated textbook body, shop items, prices or member messages were imported."
+    },
+    {
+      "repository_file": "public/resources.html",
+      "source_path": "/public/resources.html",
+      "document_slugs": ["public-resources"],
+      "selectors": ["#memberGate", "[data-i18n=\"resources.gateHint\"]"],
+      "fact_scope": "Login gate only. Resource synopsis is sourced from the public club-features entry, not gated content or PDF/download targets."
+    },
+    {
+      "repository_file": "public/visualization-lab.html",
+      "source_path": "/public/visualization-lab.html",
+      "document_slugs": ["public-visualization-labs"],
+      "selectors": ["#pageTitle", "[data-i18n=\"lab.common.chooseLead\"]", "[data-i18n=\"lab.common.sort\"]", "[data-i18n=\"lab.common.search\"]", "[data-i18n=\"lab.common.ds\"]", "[data-i18n=\"lab.common.graph\"]", "[data-i18n=\"lab.common.dp\"]", "[data-i18n=\"lab.common.tree\"]", "[data-i18n=\"lab.common.heap\"]", "[data-i18n=\"lab.common.satoriDesc\"]"],
+      "fact_scope": "Experiment categories and displayed learning purposes, without model-strength claims."
+    },
+    {
+      "repository_file": "public/join.html",
+      "source_path": "/public/join.html",
+      "document_slugs": ["public-join", "faq-unknown-contact"],
+      "selectors": ["[data-i18n=\"join.lead\"]", "[data-i18n=\"join.timeBody\"]", "[data-i18n=\"join.teachBody\"]", "[data-i18n=\"join.name\"]", "[data-i18n=\"join.className\"]", "[data-i18n=\"join.contact\"]"],
+      "fact_scope": "Beginner welcome, teaching directions, application field labels and explicitly source-bound static ECA wording.",
+      "freshness_boundary": "The Tuesday/Thursday 15:45–17:10 text is a statement in this source snapshot, not live confirmation of any week, holiday or changed schedule. Recheck current announcements or contact the club. No submitted application was read."
+    },
+    {
+      "repository_file": "public/member-center.html",
+      "source_path": "/public/member-center.html",
+      "document_slugs": ["member-login-binding", "points-operation", "store-operation", "faq-unknown-contact"],
+      "selectors": ["#authView", "[data-i18n=\"memberCenter.authPoint1Body\"]", "[data-i18n=\"memberCenter.authPoint3Body\"]", "#loginForm", "#signupForm", "[data-i18n=\"memberCenter.forgot\"]", "[data-i18n=\"memberCenter.bindNoticeBody\"]", "[data-i18n=\"memberCenter.bindTitle\"]", "[data-i18n=\"memberCenter.qlPointsDesc\"]"],
+      "fact_scope": "Static self-service account, invitation, binding, password-reset and points navigation instructions. No profile, name, class, account ID or points record was read."
+    },
+    {
+      "repository_file": "public/chat.html",
+      "source_path": "/public/chat.html",
+      "document_slugs": ["chat-history-attachments", "chat-quota-guidance"],
+      "selectors": ["[data-i18n=\"chat.localOnly\"]", "[data-i18n=\"chat.clear\"]", "[data-i18n=\"chat.privacy\"]", "[data-i18n=\"chat.limits\"]", "[data-i18n=\"chat.export\"]", "[data-i18n=\"chat.estimate\"]"],
+      "copy_repository_file": "public/chat-i18n.js",
+      "translation_keys": ["chat.privacy", "chat.limits", "chat.login", "chat.quota", "chat.quotaReset", "chat.quotaTruncated", "chat.estimate", "chat.confirmClear"],
+      "fact_scope": "Local history, export/clear behavior, provider transmission, displayed attachment bounds and UTC quota error guidance. No quota value, paid plan, fixed free allowance, conversation or attachment content."
+    },
+    {
+      "repository_file": "public/assistant.html",
+      "source_path": "/public/assistant.html",
+      "document_slugs": ["assistant-usage"],
+      "selectors": ["[data-i18n=\"assistant.title\"]", "#assistantModelName", "[data-i18n=\"assistant.privacy\"]"],
+      "copy_repository_file": "public/assistant-i18n.js",
+      "translation_keys": ["assistant.emptyBody", "assistant.privacy", "assistant.assistant_unavailable", "assistant.fixedModel"],
+      "fact_scope": "Public assistant purpose, source checking, club-configured model and separate local record/privacy copy. Describes the current implementation draft, not proof of deployment or enabled runtime availability."
+    },
+    {
+      "repository_file": "public/events.html",
+      "source_path": "/public/events.html",
+      "document_slugs": ["events-operation"],
+      "selectors": ["[data-i18n=\"events.lead\"]", "[data-i18n=\"events.signupIntro\"]", "#announcementList", "#eventList"],
+      "code_anchors": ["function renderEvents(items)"],
+      "fact_scope": "Static event/signup purpose and card labels for status, location, start and deadline. No fetched announcement, event, deadline, participant or signup result was read."
+    },
+    {
+      "repository_file": "public/member-points.html",
+      "source_path": "/public/member-points.html",
+      "document_slugs": ["points-operation"],
+      "selectors": ["#memberGate", "[data-i18n=\"points.sessionHint\"]", "[data-i18n=\"points.refreshBoard\"]"],
+      "fact_scope": "Member-only gate and refresh instruction. No ranking rows, balances, identities or admin controls."
+    }
+  ],
+  "review_boundary": "Knowledge consists of verified static public feature descriptions and conservative self-service navigation. Member-gated pages contribute gate labels only unless the same general instruction is already exposed by public member-center, guide or club-features copy. Operational outcomes, live schedules, events, points, prices and inventory remain unknown. The FAQ's unknown/contact advice is editorial navigation guidance grounded in the contact, invitation and feedback entries; it is not evidence of an action or resolution. Source paths are root-relative HTML URLs. Import is manual and drafts stay unpublished until explicit publication."
+}

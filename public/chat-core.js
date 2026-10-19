@@ -4,6 +4,33 @@ export const MAX_ATTACHMENTS = 4;
 const IMAGE_TOKEN_ESTIMATE = {low:1024,auto:4096,high:8192};
 const PDF_TOKEN_ESTIMATE = 8192;
 
+// Accept only site HTML pages, without traversal, external URLs or script schemes.
+export function assistantSourcePath(value) {
+  if (typeof value !== 'string' || value.length > 512 || /[\\\s\u0000-\u001f]/.test(value)) return '';
+  let decoded;
+  try { decoded = decodeURIComponent(value); } catch { return ''; }
+  if (decoded !== value || value.startsWith('//') || !/^\/?(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+\.html(?:#[A-Za-z0-9_-]+)?$/.test(value)) return '';
+  return value.replace(/^\//, '');
+}
+export function assistantSources(header) {
+  if (typeof header !== 'string' || header.length > 12 * 1024) return [];
+  try {
+    const data = JSON.parse(decodeURIComponent(header));
+    if (!Array.isArray(data)) return [];
+    const seen = new Set();
+    return data.slice(0, 100).flatMap(item => {
+      const path = assistantSourcePath(item?.source_path);
+      if (!path || !/^S[1-9]\d{0,3}$/.test(item?.id) || seen.has(item.id) || typeof item.title !== 'string') return [];
+      seen.add(item.id);
+      return [{id:item.id,slug:String(item.slug || '').slice(0,160),title:item.title.slice(0,300),category:String(item.category || '').slice(0,100),source_path:path,language:String(item.language || '').slice(0,20),excerpt:String(item.excerpt || '').slice(0,2000)}];
+    });
+  } catch { return []; }
+}
+export function citedAssistantSources(text, sources) {
+  const cited = new Set([...String(text || '').matchAll(/\[(S[1-9]\d{0,3})\]/g)].map(match => match[1]));
+  return (Array.isArray(sources) ? sources : []).filter(source => cited.has(source.id) && assistantSourcePath(source.source_path));
+}
+
 export function estimateTokens(value) {
   let tokens = 0;
   for (const item of value || []) {
@@ -25,8 +52,8 @@ export function estimateTokens(value) {
  * prefix 是压缩摘要等「永远保留」的输入项：它们不参与从旧到新的丢弃，
  * 但必须先占用预算，否则摘要会把最后一轮挤出上下文。
  */
-export function buildContext(turns, model, outputTokens, prefix = []) {
-  const budget = model.context_window - outputTokens;
+export function buildContext(turns, model, outputTokens, prefix = [], reserveTokens = 0) {
+  const budget = model.context_window - outputTokens - Math.max(0, Number(reserveTokens) || 0);
   if (budget <= 0) throw new Error('context');
   const prefixItems = prefix || [];
   const prefixTokens = estimateTokens(prefixItems);

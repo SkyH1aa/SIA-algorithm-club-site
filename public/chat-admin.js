@@ -13,6 +13,9 @@ let usage = emptyUsage();
 let directory = [], blacklist = [], directoryLoaded = false, selectedUser = '', selectionEpoch = 0;
 let modelAccess = null, modelAccessDraft = null, modelAccessModelId = '', modelAccessEpoch = 0;
 let globalQuota = null, userQuota = null;
+let assistantState = {config: null, documents: [], releases: []};
+let assistantImportDocuments = [];
+let assistantFormHydrated = false;
 let testOutput = {visible: false, text: ''};
 const messages = new Map();
 const API_PROTOCOLS = ['auto', 'responses', 'messages', 'chat'];
@@ -146,6 +149,7 @@ function controls() {
   $('accessSelectAll').disabled = disabled || !directoryLoaded || !modelAccess;
   document.querySelectorAll('[data-access-user]').forEach(node => { node.disabled = disabled || !modelAccess; });
   refreshThinkingControls();
+  assistantControls();
 }
 function current(run) { return active === run && run.epoch === epoch && !run.controller.signal.aborted; }
 function assertCurrent(run) { if (!current(run)) throw new DOMException('Stale account request', 'AbortError'); }
@@ -176,6 +180,10 @@ async function request(run, action, body = {}, stream = false) {
 }
 function blockedTest(error) { return error.status === 403 && error.message === 'blacklisted' && ['test', 'admin_test'].includes(error.action); }
 function errorKey(error) {
+  if (error.message === 'assistantInput') return 'assistantInvalidInput';
+  if (error.message === 'assistantFile') return 'assistantInvalidFile';
+  if (error.message === 'assistant_model') return 'assistantUnavailableModel';
+  if (error.message === 'assistant_documents') return 'assistantEmptyCorpus';
   if (error.message === 'proxy_url') return 'proxyInvalidUrl';
   if (error.message === 'busy') return 'busy';
   if (error.status === 409 && error.message === 'conflict') return 'quotaConflict';
@@ -402,9 +410,113 @@ async function refreshTestQuota(run, userId, revision) {
 }
 function refreshLocalizedUi() {
   window.ClubI18n?.apply(document);
-  renderProviderOptions(); renderModelOptions(); renderProviders(); renderModels(); renderUsage(); renderQuotaDirectory(); renderQuota(); renderProxy();
+  renderProviderOptions(); renderModelOptions(); renderProviders(); renderModels(); renderUsage(); renderQuotaDirectory(); renderQuota(); renderProxy(); renderAssistant();
   for (const id of messages.keys()) renderMessage(id);
   renderTestOutput(); controls();
+}
+function renderAssistant() {
+  const selectedModel = assistantFormHydrated ? $('assistantModelId').value : assistantState.config?.model_id || '';
+  if (!assistantFormHydrated) {
+    const config = assistantState.config || {};
+    $('assistantEnabled').checked = config.enabled === true;
+    $('assistantWelcome').value = config.welcome || '';
+    $('assistantSupplement').value = config.system_prompt || '';
+    $('assistantSuggestions').value = asArray(config.suggestions).join('\n');
+    assistantFormHydrated = true;
+  }
+  $('assistantModelId').replaceChildren(new Option(t('assistantSelectModel'), ''));
+  for (const item of assistantEligibleModels()) $('assistantModelId').add(new Option(`${first(item.display_name, item.model_key)} · ${item.model_key}`, item.id));
+  if (assistantEligibleModels().some(item => item.id === selectedModel)) $('assistantModelId').value = selectedModel;
+  $('assistantDocumentsList').innerHTML = assistantState.documents.length ? table(['documentSlug', 'documentTitle', 'documentCategory', 'documentLanguage', 'documentSource', 'documentStatus', 'actions'], assistantState.documents.map(item => `<tr>${cells([item.slug, item.title, item.category, item.language, item.source_path, t(item.archived ? 'archived' : 'draft')])}<td><div class="chat-admin-actions"><button class="chat-admin-button chat-admin-secondary" type="button" data-assistant-edit="${escapeHtml(item.slug)}">${escapeHtml(t('edit'))}</button>${item.archived ? '' : `<button class="chat-admin-button chat-admin-danger" type="button" data-assistant-archive="${escapeHtml(item.slug)}">${escapeHtml(t('archive'))}</button>`}</div></td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t(assistantState.config ? 'noDocuments' : 'assistantNotLoaded'))}</div>`;
+  const previousRelease = $('assistantRollbackRelease').value;
+  $('assistantRollbackRelease').replaceChildren(new Option(t('selectRelease'), ''));
+  for (const item of assistantState.releases) $('assistantRollbackRelease').add(new Option(`${item.id} · ${formatTime(item.created_at)}`, item.id));
+  if (assistantState.releases.some(item => item.id === previousRelease)) $('assistantRollbackRelease').value = previousRelease;
+  $('assistantReleasesList').innerHTML = assistantState.releases.length ? table(['releaseId', 'releaseDocumentCount', 'assistantModel', 'releaseCreated', 'releaseStatus'], assistantState.releases.map(item => `<tr>${cells([item.id, item.document_count, item.model_id, formatTime(item.created_at), t(assistantState.config?.current_release_id === item.id ? 'currentRelease' : 'immutableRelease')])}</tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t(assistantState.config ? 'noReleases' : 'assistantNotLoaded'))}</div>`;
+}
+function assistantConfigInput() {
+  const welcome = $('assistantWelcome').value.trim();
+  const suggestions = $('assistantSuggestions').value.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
+  const system_prompt = $('assistantSupplement').value.trim();
+  const model_id = $('assistantModelId').value || null;
+  if (welcome.length > 2000 || suggestions.length > 8 || suggestions.some(value => value.length > 200) || system_prompt.length > 12000 || ($('assistantEnabled').checked && !model_id)) throw new Error('assistantInput');
+  return {expected_version: Number(assistantState.config?.version) || 0, enabled: $('assistantEnabled').checked, model_id, system_prompt, welcome, suggestions};
+}
+function assistantEligibleModels() {
+  return models.filter(item => item.enabled === true && !item.deleted_at && item.visibility === 'all' && providers.some(provider => provider.id === item.provider_id && provider.enabled === true && !provider.deleted_at));
+}
+function assistantControls() {
+  const disabled = Boolean(active) || !authorized;
+  for (const id of ['assistantConfigForm', 'assistantDocumentForm']) {
+    for (const node of $(id).elements) node.disabled = disabled || !assistantState.config;
+    $(id).setAttribute('aria-busy', String(Boolean(active)));
+  }
+  for (const id of ['refreshAssistantButton', 'assistantJsonFile', 'assistantMarkdownFile']) $(id).disabled = disabled;
+  $('assistantEnabled').disabled = disabled || !assistantState.config;
+  $('assistantModelId').required = $('assistantEnabled').checked;
+  $('assistantImportButton').disabled = disabled || !assistantState.config || !assistantImportDocuments.length;
+  $('assistantPublishButton').disabled = disabled || !assistantState.config;
+  $('assistantRollbackRelease').disabled = disabled || !assistantState.config || !assistantState.releases.length;
+  $('assistantRollbackButton').disabled = disabled || !assistantState.config || !assistantState.releases.some(item => item.id === $('assistantRollbackRelease').value);
+  document.querySelectorAll('[data-assistant-edit], [data-assistant-archive]').forEach(node => { node.disabled = disabled || !assistantState.config; });
+}
+function validAssistantDocument(document) {
+  const fields = ['slug', 'title', 'category', 'source_path', 'language', 'content'];
+  if (!document || fields.some(field => typeof document[field] !== 'string') || Object.keys(document).some(field => ![...fields, 'keywords'].includes(field)) || !/^[a-z0-9][a-z0-9_-]{0,79}$/.test(document.slug) || !document.title.trim() || document.title.length > 200 || document.category.length > 100 || document.source_path.length > 300 || (document.source_path && (!/^\/[A-Za-z0-9_/-]+\.html(?:#[A-Za-z0-9_-]+)?$/.test(document.source_path) || document.source_path.includes('//'))) || !document.language.trim() || document.language.length > 20 || !document.content.trim() || document.content.length > 50000 || !Array.isArray(document.keywords) || document.keywords.length > 40 || document.keywords.some(value => typeof value !== 'string' || !value.trim() || value.length > 80)) throw new Error('assistantInput');
+  return Object.fromEntries([...fields, 'keywords'].map(field => [field, document[field]]));
+}
+function assistantDocumentInput() {
+  const document = Object.fromEntries([['slug', 'Slug'], ['title', 'Title'], ['category', 'Category'], ['source_path', 'Source'], ['language', 'Language'], ['content', 'Content']].map(([field, suffix]) => [field, $(`assistantDocument${suffix}`).value]));
+  document.keywords = $('assistantDocumentKeywords').value.split(',').map(value => value.trim()).filter(Boolean);
+  return {expected_version: assistantState.config.version, document: validAssistantDocument(document)};
+}
+function assistantPreview(text = $('assistantDocumentContent').value) {
+  $('assistantPreviewText').textContent = text;
+  $('assistantDocumentPreview').hidden = !text;
+}
+function clearAssistantDocument() {
+  $('assistantDocumentForm').reset();
+  $('assistantDocumentOriginalSlug').value = '';
+  $('assistantDocumentSlug').readOnly = false;
+  assistantPreview('');
+}
+function fillAssistantDocument(item) {
+  clearAssistantDocument();
+  for (const [field, suffix] of [['slug', 'Slug'], ['title', 'Title'], ['category', 'Category'], ['source_path', 'Source'], ['language', 'Language'], ['content', 'Content']]) $(`assistantDocument${suffix}`).value = item[field] || '';
+  $('assistantDocumentOriginalSlug').value = item.slug;
+  $('assistantDocumentSlug').readOnly = true;
+  $('assistantDocumentKeywords').value = asArray(item.keywords).join(', ');
+  assistantPreview();
+}
+// All assistant requests share the existing authenticated request/epoch boundary.
+const assistantActions = {get: 'assistant_admin_get', config: 'assistant_admin_config_save', document: 'assistant_admin_document_save', archive: 'assistant_admin_document_archive', publish: 'assistant_admin_publish', rollback: 'assistant_admin_rollback', import: 'assistant_admin_import'};
+function loadAssistantPayload(payload, hydrate = false) {
+  assistantState = {config: payload.config, documents: asArray(payload.documents), releases: asArray(payload.releases)};
+  if (hydrate) { assistantFormHydrated = false; $('assistantModelId').value = payload.config?.model_id || ''; }
+  renderAssistant(); assistantControls();
+}
+async function loadAssistant(run) {
+  const payload = await request(run, assistantActions.get); assertCurrent(run);
+  loadAssistantPayload(payload, true);
+  for (const id of ['assistantConfigMessage', 'assistantDocumentMessage', 'assistantReleaseMessage']) setMessage(id);
+}
+async function assistantMutation(run, action, body, messageId) {
+  setMessage(messageId, 'saving');
+  try {
+    const payload = await request(run, action, body); assertCurrent(run);
+    loadAssistantPayload(payload, action === assistantActions.config);
+    if (action === assistantActions.import) assistantImportDocuments = [];
+    if (action === assistantActions.document || action === assistantActions.archive) clearAssistantDocument();
+    setMessage(messageId, action === assistantActions.publish ? 'assistantPublished' : action === assistantActions.rollback ? 'assistantRolledBack' : 'assistantSaved', 'success');
+  } catch (error) {
+    assertCurrent(run);
+    if (error.status === 409 && error.message === 'conflict') {
+      // Keep unsaved form/file contents, require an explicit reload before any further write.
+      assistantState.config = null; assistantControls();
+      setMessage(messageId, 'assistantConflict', 'warning'); return;
+    }
+    throw error;
+  }
 }
 function usageQuery(page = usage.page) {
   const from = $('usageFrom').value ? new Date($('usageFrom').value) : null;
@@ -464,6 +576,8 @@ function clearProvider() { $('providerForm').reset(); $('providerId').value = ''
 function syncDefaultOutputMax() { $('defaultOutputTokens').max = String(Math.min(131072, Math.max(1, Number($('maxOutputTokens').value) || 1))); }
 function clearModel() { $('modelForm').reset(); $('modelConfigId').value = ''; syncDefaultOutputMax(); fillClaudeThinking(null); }
 function clearSensitive() {
+  assistantState = {config: null, documents: [], releases: []}; assistantImportDocuments = []; assistantFormHydrated = false;
+  clearAssistantDocument(); $('assistantConfigForm').reset(); $('assistantJsonFile').value = ''; $('assistantMarkdownFile').value = '';
   clearProxyPlaintext(); proxyRoutes = []; proxyKeys = []; proxyLoaded = false;
   clearProxyRoute(); $('proxyKeyForm').reset(); $('proxyKeyLabel').value = ''; $('proxyKeyRoute').replaceChildren();
   providers = []; models = []; usage = emptyUsage(); testOutput = {visible: false, text: ''};
@@ -474,7 +588,7 @@ function clearSensitive() {
   clearProvider(); clearModel(); $('testForm').reset(); $('usageFilter').reset();
   $('modelProvider').replaceChildren(); $('testModel').replaceChildren();
   messages.clear();
-  for (const id of ['statusHint', 'gateMessage', 'providerMessage', 'modelMessage', 'testMessage', 'usageMessage', 'quotaMessage', 'globalQuotaMessage', 'userQuotaMessage', 'blacklistMessage', 'proxyMessage', 'proxyCopyMessage']) setMessage(id);
+  for (const id of ['statusHint', 'gateMessage', 'providerMessage', 'modelMessage', 'testMessage', 'usageMessage', 'quotaMessage', 'globalQuotaMessage', 'userQuotaMessage', 'blacklistMessage', 'proxyMessage', 'proxyCopyMessage', 'assistantConfigMessage', 'assistantDocumentMessage', 'assistantReleaseMessage']) setMessage(id);
   for (const id of ['providerCount', 'modelCount', 'usageCount', 'totalTokens']) $(id).textContent = '--';
   refreshLocalizedUi();
 }
@@ -630,6 +744,93 @@ async function removeModel(item) {
   });
 }
 
+function assistantOperation(messageId, work) {
+  if (!assistantState.config || active || !authorized) return;
+  void operation(messageId, work);
+}
+$('refreshAssistantButton').onclick = () => void operation('assistantConfigMessage', async run => {
+  setMessage('assistantConfigMessage', 'loading'); await loadAssistant(run);
+  setMessage('assistantConfigMessage', 'assistantLoaded', 'success');
+});
+$('assistantEnabled').addEventListener('change', assistantControls);
+$('assistantConfigForm').addEventListener('submit', event => {
+  event.preventDefault();
+  if (active || !authorized || !assistantState.config || !$('assistantConfigForm').reportValidity()) return;
+  let body;
+  try { body = assistantConfigInput(); if (body.model_id && !assistantEligibleModels().some(item => item.id === body.model_id)) throw new Error('assistant_model'); }
+  catch (error) { return setMessage('assistantConfigMessage', errorKey(error), 'error'); }
+  assistantOperation('assistantConfigMessage', run => assistantMutation(run, assistantActions.config, body, 'assistantConfigMessage'));
+});
+$('assistantDocumentForm').addEventListener('submit', event => {
+  event.preventDefault();
+  if (active || !authorized || !assistantState.config || !$('assistantDocumentForm').reportValidity()) return;
+  let body;
+  try { body = assistantDocumentInput(); } catch (error) { return setMessage('assistantDocumentMessage', errorKey(error), 'error'); }
+  assistantOperation('assistantDocumentMessage', run => assistantMutation(run, assistantActions.document, body, 'assistantDocumentMessage'));
+});
+$('clearAssistantDocumentButton').onclick = () => { if (!active && authorized) { clearAssistantDocument(); setMessage('assistantDocumentMessage'); } };
+$('assistantDocumentContent').addEventListener('input', () => assistantPreview());
+$('assistantDocumentsList').addEventListener('click', event => {
+  if (active || !authorized || !assistantState.config) return;
+  const button = event.target.closest('[data-assistant-edit], [data-assistant-archive]');
+  const item = assistantState.documents.find(item => item.slug === (button?.dataset.assistantEdit || button?.dataset.assistantArchive));
+  if (!item) return;
+  if (button.dataset.assistantEdit) {
+    fillAssistantDocument(item); $('assistantDocumentTitle').focus(); return;
+  }
+  if (item.archived || !window.confirm(t('archiveConfirm', {title: item.title}))) return;
+  assistantOperation('assistantDocumentMessage', run => assistantMutation(run, assistantActions.archive, {slug: item.slug, expected_version: assistantState.config.version}, 'assistantDocumentMessage'));
+});
+async function readAssistantFile(kind) {
+  const node = $(kind === 'json' ? 'assistantJsonFile' : 'assistantMarkdownFile'), file = node.files?.[0];
+  if (active || !authorized || !file) return;
+  return operation('assistantDocumentMessage', async run => {
+    try {
+      if (file.size > 4000000) throw new Error('assistantFile');
+      const text = await file.text();
+      assertCurrent(run);
+      if (kind === 'json') {
+        const payload = JSON.parse(text);
+        if (!payload || !Array.isArray(payload.documents) || payload.documents.length < 1 || payload.documents.length > 200) throw new Error('assistantFile');
+        const documents = payload.documents.map(validAssistantDocument);
+        if (new Set(documents.map(item => item.slug)).size !== documents.length) throw new Error('assistantFile');
+        assistantImportDocuments = documents;
+        assistantPreview(documents.map(item => `${item.title}\n${item.source_path}\n\n${item.content}`).join('\n\n---\n\n'));
+        setMessage('assistantDocumentMessage', 'assistantImportReady', '', {count: documents.length});
+      } else {
+        if (!/\.(?:md|markdown|txt)$/i.test(file.name) || !text.trim() || text.length > 50000) throw new Error('assistantFile');
+        clearAssistantDocument();
+        $('assistantDocumentContent').value = text;
+        $('assistantDocumentTitle').value = file.name.replace(/\.[^.]+$/, '').slice(0, 200);
+        assistantPreview(text);
+        setMessage('assistantDocumentMessage', 'assistantMarkdownReady');
+      }
+    } catch (error) {
+      assertCurrent(run);
+      if (kind === 'json') assistantImportDocuments = [];
+      throw new Error(error.message === 'assistantInput' ? 'assistantInput' : 'assistantFile');
+    } finally {
+      if (current(run)) node.value = '';
+    }
+  });
+}
+$('assistantJsonFile').addEventListener('change', () => void readAssistantFile('json'));
+$('assistantMarkdownFile').addEventListener('change', () => void readAssistantFile('markdown'));
+$('assistantImportButton').onclick = () => {
+  if (active || !authorized || !assistantState.config || !assistantImportDocuments.length || !window.confirm(t('importConfirm', {count: assistantImportDocuments.length}))) return;
+  const body = {expected_version: assistantState.config.version, documents: assistantImportDocuments};
+  assistantOperation('assistantDocumentMessage', run => assistantMutation(run, assistantActions.import, body, 'assistantDocumentMessage'));
+};
+$('assistantPublishButton').onclick = () => {
+  if (active || !authorized || !assistantState.config || !window.confirm(t('publishConfirm'))) return;
+  assistantOperation('assistantReleaseMessage', run => assistantMutation(run, assistantActions.publish, {expected_version: assistantState.config.version}, 'assistantReleaseMessage'));
+};
+$('assistantRollbackRelease').addEventListener('change', assistantControls);
+$('assistantRollbackButton').onclick = () => {
+  const release_id = $('assistantRollbackRelease').value;
+  if (active || !authorized || !assistantState.config || !assistantState.releases.some(item => item.id === release_id) || !window.confirm(t('rollbackConfirm', {release: release_id}))) return;
+  assistantOperation('assistantReleaseMessage', run => assistantMutation(run, assistantActions.rollback, {release_id, expected_version: assistantState.config.version}, 'assistantReleaseMessage'));
+};
 $('refreshQuotaButton').onclick = () => void operation('quotaMessage', loadQuotaDirectory);
 $('refreshProxyButton').onclick = () => void operation('proxyMessage', async run => { await loadProxy(run); setMessage('proxyMessage'); });
 $('clearProxyRouteButton').onclick = () => { if (!active) clearProxyRoute(); };

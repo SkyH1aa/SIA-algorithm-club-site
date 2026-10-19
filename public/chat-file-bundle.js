@@ -1,12 +1,40 @@
 /* 自动生成，请勿手改：node tools/build-chat-file-bundle.mjs */
 (function () {
   'use strict';
+  const __chatModuleUrl = document.currentScript ? document.currentScript.src : location.href;
   /* ---- chat-core.js ---- */
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_REQUEST_BYTES = 12 * 1024 * 1024;
 const MAX_ATTACHMENTS = 4;
 const IMAGE_TOKEN_ESTIMATE = {low:1024,auto:4096,high:8192};
 const PDF_TOKEN_ESTIMATE = 8192;
+
+// Accept only site HTML pages, without traversal, external URLs or script schemes.
+function assistantSourcePath(value) {
+  if (typeof value !== 'string' || value.length > 512 || /[\\\s\u0000-\u001f]/.test(value)) return '';
+  let decoded;
+  try { decoded = decodeURIComponent(value); } catch { return ''; }
+  if (decoded !== value || value.startsWith('//') || !/^\/?(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+\.html(?:#[A-Za-z0-9_-]+)?$/.test(value)) return '';
+  return value.replace(/^\//, '');
+}
+function assistantSources(header) {
+  if (typeof header !== 'string' || header.length > 12 * 1024) return [];
+  try {
+    const data = JSON.parse(decodeURIComponent(header));
+    if (!Array.isArray(data)) return [];
+    const seen = new Set();
+    return data.slice(0, 100).flatMap(item => {
+      const path = assistantSourcePath(item?.source_path);
+      if (!path || !/^S[1-9]\d{0,3}$/.test(item?.id) || seen.has(item.id) || typeof item.title !== 'string') return [];
+      seen.add(item.id);
+      return [{id:item.id,slug:String(item.slug || '').slice(0,160),title:item.title.slice(0,300),category:String(item.category || '').slice(0,100),source_path:path,language:String(item.language || '').slice(0,20),excerpt:String(item.excerpt || '').slice(0,2000)}];
+    });
+  } catch { return []; }
+}
+function citedAssistantSources(text, sources) {
+  const cited = new Set([...String(text || '').matchAll(/\[(S[1-9]\d{0,3})\]/g)].map(match => match[1]));
+  return (Array.isArray(sources) ? sources : []).filter(source => cited.has(source.id) && assistantSourcePath(source.source_path));
+}
 function estimateTokens(value) {
   let tokens = 0;
   for (const item of value || []) {
@@ -28,8 +56,8 @@ function estimateTokens(value) {
  * prefix 是压缩摘要等「永远保留」的输入项：它们不参与从旧到新的丢弃，
  * 但必须先占用预算，否则摘要会把最后一轮挤出上下文。
  */
-function buildContext(turns, model, outputTokens, prefix = []) {
-  const budget = model.context_window - outputTokens;
+function buildContext(turns, model, outputTokens, prefix = [], reserveTokens = 0) {
+  const budget = model.context_window - outputTokens - Math.max(0, Number(reserveTokens) || 0);
   if (budget <= 0) throw new Error('context');
   const prefixItems = prefix || [];
   const prefixTokens = estimateTokens(prefixItems);
@@ -399,44 +427,59 @@ function continuation(output, preserveReasoning) {
 }
 
   /* ---- chat-store.js ---- */
-let database;
-function open() {
-  if (!database) database = new Promise((resolve,reject) => {
-    const request = indexedDB.open('club-ai-chat',1);
-    request.onupgradeneeded = () => {
-      const store = request.result.createObjectStore('conversations',{keyPath:['userId','id']});
-      store.createIndex('userId','userId');
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => { database = null; reject(request.error); };
-    request.onblocked = () => { database = null; reject(new Error('storage')); };
-  });
-  return database;
+function createChatStore(name = 'club-ai-chat') {
+  let database;
+  function open() {
+    if (!database) database = new Promise((resolve,reject) => {
+      const request = indexedDB.open(name,1);
+      request.onupgradeneeded = () => {
+        const store = request.result.createObjectStore('conversations',{keyPath:['userId','id']});
+        store.createIndex('userId','userId');
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => { database = null; reject(request.error); };
+      request.onblocked = () => { database = null; reject(new Error('storage')); };
+    });
+    return database;
+  }
+  async function transaction(mode, operation) {
+    const db = await open();
+    return new Promise((resolve,reject) => {
+      const tx = db.transaction('conversations',mode);
+      let value;
+      tx.oncomplete = () => resolve(value);
+      tx.onerror = tx.onabort = () => reject(tx.error || new Error('storage'));
+      operation(tx.objectStore('conversations'), result => { value = result; });
+    });
+  }
+  return {
+    list(userId) { return transaction('readonly',(store,done) => { const r=store.index('userId').getAll(userId); r.onsuccess=()=>done(r.result.sort((a,b)=>b.updatedAt-a.updatedAt)); }); },
+    save(conversation) { return transaction('readwrite',store=>store.put(conversation)); },
+    delete(userId,id) { return transaction('readwrite',store=>store.delete([userId,id])); },
+    clear(userId) { return transaction('readwrite',store=>{ const r=store.index('userId').openKeyCursor(userId); r.onsuccess=()=>{ const cursor=r.result; if(cursor){store.delete(cursor.primaryKey);cursor.continue();} }; }); }
+  };
 }
-async function transaction(mode, operation) {
-  const db = await open();
-  return new Promise((resolve,reject) => {
-    const tx = db.transaction('conversations',mode);
-    let value;
-    tx.oncomplete = () => resolve(value);
-    tx.onerror = tx.onabort = () => reject(tx.error || new Error('storage'));
-    operation(tx.objectStore('conversations'), result => { value = result; });
-  });
-}
-const chatStore = {
-  list(userId) { return transaction('readonly',(store,done) => { const r=store.index('userId').getAll(userId); r.onsuccess=()=>done(r.result.sort((a,b)=>b.updatedAt-a.updatedAt)); }); },
-  save(conversation) { return transaction('readwrite',store=>store.put(conversation)); },
-  delete(userId,id) { return transaction('readwrite',store=>store.delete([userId,id])); },
-  clear(userId) { return transaction('readwrite',store=>{ const r=store.index('userId').openKeyCursor(userId); r.onsuccess=()=>{ const cursor=r.result; if(cursor){store.delete(cursor.primaryKey);cursor.continue();} }; }); }
-};
+
+// Keep the original database and schema unchanged for the general chat workspace.
+const chatStore = createChatStore();
 
   /* ---- chat.js（原 import 已改写为普通绑定） ---- */
+
+const ASSISTANT_MODE = /(?:^|\/)assistant\.html$/i.test(globalThis.location?.pathname || '');
+const workspaceStore = ASSISTANT_MODE ? createChatStore('club-ai-assistant') : chatStore;
+let assistantConfig = {reserve_tokens:0};
+const assistantReserve = () => ASSISTANT_MODE ? Math.max(0, Number(assistantConfig.reserve_tokens) || 0) : 0;
+const assistantFrame = ASSISTANT_MODE && globalThis.parent && globalThis.parent !== globalThis && new globalThis.URLSearchParams(location.search).get('embed') === '1';
+let compactController = null, compactJob = null, suspended = false, applyingParentSync = false, assistantModal = false;
 
 const URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
 const KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
 const client = window.supabase.createClient(URL, KEY);
 const $ = id => document.getElementById(id);
-const t = (key, vars) => ClubI18n.t(`chat.${key}`, vars);
+const t = (key, vars) => {
+  if (ASSISTANT_MODE) { const value = ClubI18n.t(`assistant.${key}`, vars); if (value !== `assistant.${key}`) return value; }
+  return ClubI18n.t(`chat.${key}`, vars);
+};
 let session = null, epoch = 0, models = [], customModels = [], chats = [], current = null, pending = [], active = null;
 let memberName = '';
 let customStatusKey = '', customStatusVars = {}, customBusy = false;
@@ -526,6 +569,10 @@ function setSettingsOpen(open) {
   }
 }
 function syncHeaderUi() {
+  if (ASSISTANT_MODE) {
+    const fixedModel = $('assistantModelName');
+    if (fixedModel) fixedModel.textContent = model()?.display_name || t('fixedModel');
+  }
   const title = $('headerChatTitle');
   if (title) title.textContent = current?.title || t('new');
   const count = $('conversationCount');
@@ -607,7 +654,7 @@ const model = () => models.find(x => x.id === $('model').value);
 function mergeModels(catalog, saved) {
   return [...catalog, ...saved.map(item => ({...CUSTOM_METADATA,...item,profileId:item.id,id:`custom:${item.id}`,source:'custom',profileName:item.display_name,display_name:`${item.display_name} · ${t('customBadge')}`}))];
 }
-const ERROR_STATUS = new Set(['failure','interrupted','cancelled','storage','request','quota','quotaReset','context','request_too_large','file','pdf','blacklisted','busy','customKey','profile','login','claude_thinking','claude_thinking_budget','claude_effort']);
+const ERROR_STATUS = new Set(['assistant_unavailable','failure','interrupted','cancelled','storage','request','quota','quotaReset','context','request_too_large','file','pdf','blacklisted','busy','customKey','profile','login','claude_thinking','claude_thinking_budget','claude_effort']);
 function status(key, vars = {}) {
   statusKey = key; statusVars = vars;
   const node = $('status');
@@ -635,7 +682,8 @@ function controls() {
   if (trigger) trigger.disabled = busy || !session || !models.length;
   const effortTrigger = $('effortTrigger');
   if (effortTrigger) effortTrigger.disabled = busy || !session;
-  $('stop').disabled = !active;
+  $('stop').disabled = !active && !compacting;
+  notifyAssistant('state', {busy});
   const prompt = $('prompt');
   // 压缩期间锁定输入，明确告诉用户现在不能发送，而不是静默吞掉回车。
   if (prompt) prompt.disabled = compacting;
@@ -662,20 +710,56 @@ function syncThinking(node, turn) {
   }
 }
 
+function assistantPagePath(value) {
+  const path = assistantSourcePath(value);
+  if (!path) return '';
+  const root = new globalThis.URL('../', __chatModuleUrl);
+  const target = new globalThis.URL(path.startsWith('public/') || path === 'index.html' || path.startsWith('index.html#') ? path : `public/${path}`, root);
+  const publicBase = new globalThis.URL('public/', root);
+  return target.pathname.startsWith(publicBase.pathname) ? target.href.slice(publicBase.href.length) : `../${path}`;
+}
+function syncSources(node, turn) {
+  if (!ASSISTANT_MODE) { node.sources.hidden = true; return; }
+  const sources = citedAssistantSources(turn.text, turn.sources);
+  const savedRelease = turn.assistantRelease || turn.releaseId;
+  const release = typeof savedRelease === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(savedRelease) ? savedRelease : '';
+  const key = JSON.stringify([sources,release,ClubI18n.getLang?.()]);
+  if (key === node.sourcesKey) return;
+  node.sourcesKey = key;
+  node.sources.replaceChildren(); node.sources.hidden = !sources.length;
+  for (const source of sources) {
+    const path = assistantPagePath(source.source_path);
+    if (!path) continue;
+    const card = document.createElement('a'); card.className = 'assistant-source'; card.href = path;
+    const title = document.createElement('strong'); title.textContent = `[${source.id}] ${source.title}`;
+    const category = document.createElement('span'); category.textContent = source.category || '';
+    const excerpt = document.createElement('p'); excerpt.textContent = source.excerpt || '';
+    card.append(title, category, excerpt);
+    if (release) {
+      const version = document.createElement('small'); version.className = 'assistant-source-release';
+      version.textContent = `${t('publicationVersion')}: ${release}`;
+      card.append(version);
+    }
+    card.onclick = event => { if (assistantFrame) { event.preventDefault(); notifyAssistant('navigate', {path:card.href}); } };
+    node.sources.append(card);
+  }
+}
+
 function emptyState() {
   const wrap = document.createElement('div'); wrap.className = 'chat-empty';
   const mark = document.createElement('div'); mark.className = 'chat-empty-mark'; mark.textContent = '✦';
   const title = document.createElement('h2'); title.textContent = t('emptyTitle');
-  const body = document.createElement('p'); body.textContent = t('emptyBody');
+  const body = document.createElement('p'); body.textContent = ASSISTANT_MODE && assistantConfig.welcome ? assistantConfig.welcome : t('emptyBody');
   const grid = document.createElement('div'); grid.className = 'chat-suggestions';
-  for (let i = 1; i <= 4; i++) {
+  const suggestions = ASSISTANT_MODE ? (Array.isArray(assistantConfig.suggestions) ? assistantConfig.suggestions.filter(value => typeof value === 'string').slice(0,8) : []) : null;
+  for (let i = 1; i <= (ASSISTANT_MODE ? suggestions.length : 4); i++) {
     const card = document.createElement('button'); card.type = 'button'; card.className = 'chat-suggestion';
-    const strong = document.createElement('strong'); strong.textContent = t(`suggest${i}Title`);
-    const span = document.createElement('span'); span.textContent = t(`suggest${i}Desc`);
+    const strong = document.createElement('strong'); strong.textContent = ASSISTANT_MODE ? suggestions[i - 1] : t(`suggest${i}Title`);
+    const span = document.createElement('span'); span.textContent = ASSISTANT_MODE ? '' : t(`suggest${i}Desc`);
     card.append(strong, span);
     card.onclick = () => {
-      if (active || !session || !models.length) return;
-      $('prompt').value = t(`suggest${i}Prompt`);
+      if (isBusy() || !session || !models.length) return;
+      $('prompt').value = ASSISTANT_MODE ? suggestions[i - 1] : t(`suggest${i}Prompt`);
       resetPromptHeight();
       $('prompt').focus?.();
       $('prompt').scrollIntoView?.({behavior:'smooth', block:'nearest'});
@@ -760,13 +844,15 @@ function turnNode(turn, index, total) {
   const mark = document.createElement('div'); mark.className = 'chat-markdown';
   mark.hidden = !(turn.text || '').trim();
   mark.append(markdown(turn.text));
-  aiBody.append(aiHead, thinking, mark);
+  const sources = document.createElement('div'); sources.className = 'assistant-sources';
+  aiBody.append(aiHead, thinking, mark, sources);
   assistant.append(aiAvatar, aiBody);
 
   classOn(assistant, 'is-streaming', turn.status === 'running');
   wrap.append(user, assistant);
-  const node = {wrap, assistant, mark, thinking, thinkingLabel, thinkingNote, thinkingBody, thinkingValue:'', turn, pill, meta:aiMeta, text:turn.text || '', status:turn.status, actions:userActions, aiActions};
+  const node = {wrap, assistant, mark, thinking, thinkingLabel, thinkingNote, thinkingBody, thinkingValue:'', turn, pill, meta:aiMeta, sources, sourcesKey:null, text:turn.text || '', status:turn.status, actions:userActions, aiActions};
   syncThinking(node, turn);
+  syncSources(node, turn);
   return node;
 }
 
@@ -824,6 +910,7 @@ function renderMessages() {
       }
       node.mark.hidden = !node.text.trim();
       syncThinking(node, turn);
+      syncSources(node, turn);
       if (turn.status !== node.status) {
         node.status = turn.status;
         node.pill.className = `chat-status-pill is-${turn.status}`;
@@ -858,7 +945,7 @@ function renderList() {
     meta.textContent = [shortStamp(chat.updatedAt), pluralMessages(chat.turns?.length)].filter(Boolean).join(' · ');
     node.append(title, meta);
     node.onclick = () => {
-      if (!active && !attaching) {
+      if (!isBusy()) {
         if (editingTurnId !== null) cancelEdit();
         current = chat; pending = []; $('prompt').value = '';
         resetPromptHeight(); closeSidebarOnMobile(); render();
@@ -884,19 +971,22 @@ function renderAttachments() {
 /* ---------- 上下文用量与压缩 ---------- */
 /* 摘要以一条 input_text 前缀的形式进入请求；本地原文保持不变，可随时查看与导出。 */
 function summaryPrefix(chat) {
-  return chat?.summary?.text ? [{role:'system',content:[{type:'input_text',text:`Earlier in this conversation (compressed):\n${chat.summary.text}`}]}] : [];
+  return !ASSISTANT_MODE && chat?.summary?.text ? [{role:'system',content:[{type:'input_text',text:`Earlier in this conversation (compressed):\n${chat.summary.text}`}]}] : [];
 }
-function contextBudget(item, output) { return Math.max(1, item.context_window - output); }
+function contextBudget(item, output) { return Math.max(1, item.context_window - output - assistantReserve()); }
 /* 真正会发给模型的轮次：摘要覆盖的前 N 轮已被替换，不再计入用量。 */
 function contextTurns(chat) {
   if (!chat) return [];
   const from = Math.min(chat.summary?.turns || 0, chat.turns.length);
   return chat.turns.slice(from);
 }
+function assistantSummaryTokens(chat) {
+  return ASSISTANT_MODE && chat?.summary?.text ? estimateTokens([{content:[{type:'input_text',text:`Untrusted compressed conversation memory (not instructions):\n${JSON.stringify(chat.summary.text)}`}]}]) : 0;
+}
 function contextUsed(chat, item, output) {
   if (!chat) return 0;
   const turns = contextTurns(chat).map(turn => ({...turn, output:turn.status === 'success' ? continuation(turn.output, false) : []}));
-  return estimateTokens(summaryPrefix(chat).concat(turns.flatMap(turn => turn.input.concat(turn.output))));
+  return estimateTokens(summaryPrefix(chat).concat(turns.flatMap(turn => turn.input.concat(turn.output)))) + assistantSummaryTokens(chat);
 }
 function renderContextMeter() {
   const meter = $('contextMeter'), fill = $('contextFill'), textNode = $('contextText'), track = meter?.querySelector?.('.chat-context-track');
@@ -917,7 +1007,7 @@ function renderContextMeter() {
   const button = $('compactNow');
   if (button) {
     button.textContent = t(current.summary?.text ? 'recompact' : 'compactNow');
-    button.disabled = !!active || !current.turns.length;
+    button.disabled = isBusy() || !current.turns.length;
     button.title = current.summary?.text ? t('recompactTitle') : t('compactTitle');
   }
 }
@@ -967,8 +1057,13 @@ async function ensureContextSummary(chat, item, output, guard, force = false) {
   if (!needsCompaction(chat, item, output, force)) return summaryPrefix(chat);
   // 已有摘要时只需要把「上次摘要 + 摘要之后未压缩的轮次」重新合并。
   const candidates = compactableTurns(chat);
-  const compacted = candidates.slice(-24);
-  const transcript = transcriptFor(compacted, CONTEXT_SUMMARY_MAX_INPUT);
+  const compacted = [];
+  let transcript = '';
+  for (const turn of candidates.slice(0,24)) {
+    const next = transcriptFor([...compacted,turn], Number.MAX_SAFE_INTEGER);
+    if (new TextEncoder().encode(next).length > CONTEXT_SUMMARY_MAX_INPUT || estimateTokens([{content:[{type:'input_text',text:next + t('summaryInstruction') + (ASSISTANT_MODE ? '' : t('summaryInstructionCarry'))}]}]) + (ASSISTANT_MODE ? assistantSummaryTokens(chat) : estimateTokens(summaryPrefix(chat))) >= contextBudget(item,output)) break;
+    compacted.push(turn); transcript = next;
+  }
   if (!transcript.trim()) return summaryPrefix(chat);
 
   const instruction = [
@@ -982,11 +1077,13 @@ async function ensureContextSummary(chat, item, output, guard, force = false) {
     max_output_tokens: Math.min(item.default_max_output_tokens, 2048)
   };
   status('compacting');
+  const controller = new AbortController();
+  compactController = controller;
   let text = '';
   try {
     const response = customModel(item)
-      ? await customRequest(item, {input:body.input, max_output_tokens:body.max_output_tokens}, undefined)
-      : {response:await request('respond', body, undefined), stream:true};
+      ? await customRequest(item, {input:body.input, max_output_tokens:body.max_output_tokens}, controller.signal)
+      : {response:await request(ASSISTANT_MODE ? 'assistant_compact' : 'respond', ASSISTANT_MODE ? {input:[{role:'user',content:[{type:'input_text',text:transcript}]}], ...(chat.summary?.text ? {summary:chat.summary.text} : {})} : body, controller.signal), stream:true};
     if (response.stream) {
       if (!response.response.body || !response.response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('request');
       const result = await readResponses(response.response.body, () => {}, response.protocol);
@@ -998,8 +1095,8 @@ async function ensureContextSummary(chat, item, output, guard, force = false) {
     if (guard !== epoch) return summaryPrefix(chat);
     if (error?.message === 'busy' || error?.status === 409) throw error;
     return summaryPrefix(chat);
-  }
-  if (guard !== epoch) return summaryPrefix(chat);
+  } finally { if (compactController === controller) compactController = null; }
+  if (guard !== epoch || controller.signal.aborted || suspended) return summaryPrefix(chat);
   if (!text) return summaryPrefix(chat);
   // 记录累计被摘要覆盖的轮次数（多次压缩要累加），而不是这一次的轮数。
   const covered = Math.min(chat.summary?.turns || 0, chat.turns.length) + compacted.length;
@@ -1154,7 +1251,7 @@ function render() {
 }
 async function persist(chat, guard) {
   chat.updatedAt = Date.now();
-  try { await chatStore.save(chat); }
+  try { await workspaceStore.save(chat); }
   catch { if (guard === epoch) status('storage'); throw new Error('storage'); }
 }
 function newChat() {
@@ -1217,7 +1314,7 @@ function syncEffortPicker() {
   const select = $('effort'), picker = $('effortPicker'), text = $('effortTriggerText'), menu = $('effortMenu');
   if (!select || !picker) return;
   // 少于两项（只有「默认」）时没有可切换的内容，隐藏胶囊以免占位。
-  const meaningful = select.options.length > 1;
+  const meaningful = !ASSISTANT_MODE && select.options.length > 1;
   picker.hidden = !meaningful;
   if (!meaningful) { setEffortMenuOpen(false); return; }
   const selected = select.options[select.selectedIndex];
@@ -1309,7 +1406,7 @@ async function request(action, body = {}, signal, token = session?.access_token)
   const response = await fetch(`${URL}/functions/v1/chat`, {method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${token}`},body:JSON.stringify({action,...body}),signal});
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw Object.assign(new Error(response.status === 409 ? 'busy' : response.status === 401 ? 'login' : ['context','request_too_large','file','login','profile','quota','blacklisted','claude_thinking','claude_thinking_budget','claude_effort'].includes(data.error) ? data.error : 'request'), {status:response.status, quota:data.quota});
+    throw Object.assign(new Error(response.status === 409 ? 'busy' : response.status === 401 ? 'login' : ['assistant_unavailable','context','request_too_large','file','login','profile','quota','blacklisted','claude_thinking','claude_thinking_budget','claude_effort'].includes(data.error) ? data.error : 'request'), {status:response.status, quota:data.quota});
   }
   return response;
 }
@@ -1330,7 +1427,7 @@ async function prepareFile(file, item) {
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (new TextDecoder().decode(bytes.slice(0,5)) !== '%PDF-') throw new Error('file');
     const pdfjs = await import('./vendor/chat/pdf.mjs');
-    pdfjs.GlobalWorkerOptions.workerSrc = new globalThis.URL('./vendor/chat/pdf.worker.mjs',document.currentScript ? document.currentScript.src : location.href).href;
+    pdfjs.GlobalWorkerOptions.workerSrc = new globalThis.URL('./vendor/chat/pdf.worker.mjs',__chatModuleUrl).href;
     const task = pdfjs.getDocument({data:bytes,isEvalSupported:false,useSystemFonts:true});
     let pdf, text = '', pages = 0;
     try {
@@ -1371,7 +1468,7 @@ function inputFor(prompt, files, item) {
  *  - 重试某轮（retryTurnId）：删除该轮及之后的轮次，用原提示词重新生成
  */
 function generateGate() {
-  if (compacting) return false;
+  if (compacting || suspended) return false;
   return !(isBusy() || !session || !model());
 }
 
@@ -1407,15 +1504,19 @@ async function generate({ retryTurnId = null } = {}) {
     turn = {id:crypto.randomUUID(),prompt,attachments:files,input:inputFor(prompt,files,item),output:[],text:'',thinking:'',status:'running',modelId:item.id,modelName:item.display_name,createdAt:Date.now()};
     // 先把这一轮的输入历史确定下来：编辑/重试都从被替换轮之前截断。
     const kept = chat.turns.slice(0, editIndex >= 0 ? editIndex : retryIndex >= 0 ? retryIndex : chat.turns.length);
-    const prior = kept.filter(x => x.status === 'success').map(x => ({...x,output:continuation(x.output,x.modelId === item.id && item.preserve_reasoning)}));
-    // 自动压缩已移到「回复完成后」，这里只带上已有摘要作为前缀。
-    const summary = summaryPrefix(chat);
-    const context = buildContext([...prior,turn],item,output, summary);
+    const summaryValid = !chat.summary || kept.length >= chat.summary.turns;
+    const effectiveChat = summaryValid ? {...chat,turns:kept} : {turns:kept};
+    const prior = contextTurns(effectiveChat).filter(x => x.status === 'success').map(x => ({...x,output:continuation(x.output,x.modelId === item.id && item.preserve_reasoning && !ASSISTANT_MODE)}));
+    // Reserve includes the server's fixed rules and knowledge, plus a separately sent summary.
+    const summary = summaryPrefix(effectiveChat);
+    const summaryTokens = assistantSummaryTokens(effectiveChat);
+    const context = buildContext([...prior,turn],item,output, summary, assistantReserve() + summaryTokens);
     const body = {model_id:item.id,input:context.input,reasoning_effort:selectedEffort(item),max_output_tokens:output};
     if (new TextEncoder().encode(JSON.stringify({action:'respond',...body})).length > MAX_REQUEST_BYTES) throw new Error('request_too_large');
 
     // 只有请求真正要发出时才改动历史，失败不会提前毁掉对话。
     chat.turns = kept;
+    if (!summaryValid) delete chat.summary;
     chat.turns.push(turn);
     if (!chat.title) chat.title = prompt.slice(0,60) || files[0]?.name || '';
     await persist(chat,guard); persisted = true;
@@ -1423,10 +1524,15 @@ async function generate({ retryTurnId = null } = {}) {
     pending = []; $('prompt').value = ''; resetPromptHeight();
     editingTurnId = null; setEditBanner(false);
     status(context.truncated ? 'truncated' : 'sending'); render();
-    const response = customModel(item) ? await customRequest(item,{input:context.input,reasoning:body.reasoning_effort ? {effort:body.reasoning_effort} : undefined,max_output_tokens:output},controller.signal) : {response:await request('respond',body,controller.signal),stream:true};
+    const response = customModel(item) ? await customRequest(item,{input:context.input,reasoning:body.reasoning_effort ? {effort:body.reasoning_effort} : undefined,max_output_tokens:output},controller.signal) : {response:await request(ASSISTANT_MODE ? 'assistant_respond' : 'respond',ASSISTANT_MODE ? {input:context.input,...(effectiveChat.summary?.text ? {summary:effectiveChat.summary.text} : {})} : body,controller.signal),stream:true};
     let result;
     if (response.stream) {
       if (!response.response.body || !response.response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('request');
+      if (ASSISTANT_MODE) {
+        turn.sources = assistantSources(response.response.headers.get('x-chat-assistant-sources'));
+        const release = response.response.headers.get('x-chat-assistant-release');
+        turn.releaseId = /^[0-9a-f-]{36}$/i.test(release || '') ? release : '';
+      }
       turn.quotaLimited = !customModel(item) && response.response.headers.get('x-chat-quota-limited') === 'true';
       result = await readResponses(response.response.body, value => {
         if (guard !== epoch || run !== active) return;
@@ -1435,7 +1541,7 @@ async function generate({ retryTurnId = null } = {}) {
         renderMessages();
         if (Date.now() - saveAt > 1000) {
           saveAt = Date.now(); const snapshot = structuredClone(chat);
-          saveQueue = saveQueue.then(() => chatStore.save(snapshot)).catch(() => { storageError = true; controller.abort(); });
+          saveQueue = saveQueue.then(() => workspaceStore.save(snapshot)).catch(() => { storageError = true; controller.abort(); });
         }
       }, response.protocol);
     } else result = response.result;
@@ -1445,7 +1551,7 @@ async function generate({ retryTurnId = null } = {}) {
     }
   } catch (error) {
     if (turn) turn.status = run.stopped ? 'cancelled' : controller.signal.aborted ? 'interrupted' : 'failure';
-    failureKey = storageError ? 'storage' : ['context','request_too_large','file','pdf','busy','storage','quota','blacklisted','customKey','claude_thinking','claude_thinking_budget','claude_effort'].includes(error.message) ? error.message : run.stopped ? 'cancelled' : 'request';
+    failureKey = storageError ? 'storage' : ['assistant_unavailable','context','request_too_large','file','pdf','busy','storage','quota','blacklisted','customKey','claude_thinking','claude_thinking_budget','claude_effort'].includes(error.message) ? error.message : run.stopped ? 'cancelled' : 'request';
     const reset = quotaReset(error.quota);
     if (failureKey === 'quota' && reset) { failureKey = 'quotaReset'; failureVars = {reset}; }
     if (guard === epoch) status(failureKey, failureVars);
@@ -1464,7 +1570,7 @@ async function generate({ retryTurnId = null } = {}) {
       render();
     }
     // 回复结束后再判断是否需要压缩：此时用量才包含这一轮的完整回答。
-    if (guard === epoch && persisted && turn?.status === 'success') await autoCompact(chat, item, guard);
+    if (guard === epoch && !suspended && persisted && turn?.status === 'success') { compactJob = autoCompact(chat, item, guard); await compactJob; }
   }
 }
 
@@ -1473,7 +1579,7 @@ async function generate({ retryTurnId = null } = {}) {
  * 完成或失败后都会解锁，并保留一条可读的状态提示。
  */
 async function autoCompact(chat, item, guard) {
-  if (compacting || active) return;
+  if (compacting || active || suspended) return;
   const output = item.default_max_output_tokens;
   if (!needsCompaction(chat, item, output)) return;
   compacting = true;
@@ -1487,8 +1593,7 @@ async function autoCompact(chat, item, guard) {
   } catch (error) {
     if (guard === epoch) status(error?.message === 'busy' ? 'busy' : 'compactFailed');
   } finally {
-    compacting = false;
-    if (guard === epoch) { render(); }
+    if (guard === epoch) { compacting = false; render(); }
   }
 }
 async function auth(next, reload = false) {
@@ -1497,10 +1602,12 @@ async function auth(next, reload = false) {
     session = next;
     return;
   }
+  const staleCompact = compactJob;
+  compactController?.abort();
   const guard = ++epoch, staleRuns = [...generations];
   for (const run of staleRuns) { run.stopped = false; run.controller.abort(); }
   catalogController?.abort();
-  active = null; attaching = false;
+  active = null; attaching = false; compacting = false; assistantConfig = {reserve_tokens:0};
   session = next; models = []; customModels = []; customBusy = false; memberName = ''; clearCustomKeys(); customForm(null); customStatus(); chats = []; current = null; pending = []; $('prompt').value = ''; $('workspace').hidden = true;
   $('model').replaceChildren(); gateKey = next ? 'loading' : 'login'; render();
   if (!next) return;
@@ -1509,23 +1616,24 @@ async function auth(next, reload = false) {
     catalogController = controller;
     let token = next.access_token, response;
     try {
-      response = await request('catalog',{},controller.signal,token);
+      response = await request(ASSISTANT_MODE ? 'assistant_catalog' : 'catalog',{},controller.signal,token);
     } catch (error) {
       // Retry once only when this account has received a newer token.
       if (error.status !== 401 || guard !== epoch || session?.user.id !== next.user.id || session.access_token === token || controller.signal.aborted) throw error;
       token = session.access_token;
-      response = await request('catalog',{},controller.signal,token);
+      response = await request(ASSISTANT_MODE ? 'assistant_catalog' : 'catalog',{},controller.signal,token);
     }
     const data = await response.json();
     if (guard !== epoch) return;
     catalogController = null;
-    await Promise.allSettled(staleRuns.filter(run => run.userId === next.user.id).map(run => run.done));
+    await Promise.allSettled([...staleRuns.filter(run => run.userId === next.user.id).map(run => run.done), staleCompact].filter(Boolean));
     if (guard !== epoch) return;
     let saved, custom;
-    try { saved = await chatStore.list(next.user.id); } catch { throw new Error('storage'); }
-    custom = await loadCustomModels(token, controller.signal);
+    try { saved = await workspaceStore.list(next.user.id); } catch { throw new Error('storage'); }
+    custom = ASSISTANT_MODE ? [] : await loadCustomModels(token, controller.signal);
     if (guard !== epoch) return;
-    customModels = custom || []; models = mergeModels(data.models || [], customModels); chats = saved;
+    assistantConfig = ASSISTANT_MODE ? (data.assistant || {reserve_tokens:0}) : {reserve_tokens:0};
+    customModels = custom || []; models = mergeModels(ASSISTANT_MODE ? (data.models || []).slice(0,1) : data.models || [], customModels); chats = saved;
     memberName = data.member_name || '';
     for (const chat of chats) for (const turn of chat.turns) if (turn.status === 'running') { turn.status = 'interrupted'; await persist(chat,guard); }
     if (guard !== epoch) return;
@@ -1535,7 +1643,7 @@ async function auth(next, reload = false) {
     $('workspace').hidden = false;
     setSidebarOpen(!globalThis.matchMedia?.('(max-width: 760px)').matches);
     render();
-  } catch (error) { if (guard === epoch) { catalogController = null; gateKey = ['storage','profile','login','blacklisted','quota'].includes(error.message) ? error.message : 'request'; render(); } }
+  } catch (error) { if (guard === epoch) { catalogController = null; gateKey = ['assistant_unavailable','storage','profile','login','blacklisted','quota'].includes(error.message) ? error.message : 'request'; render(); } }
 }
 
 /* ---------- 输入框自适应高度 ---------- */
@@ -1554,6 +1662,65 @@ function updateScrollButton() {
   buttonNode.hidden = !(distance > 160);
 }
 
+/* The iframe never receives or posts credentials. Only its same-site parent controls lifecycle. */
+let lastAssistantBusy = null;
+function notifyAssistant(action, fields = {}) {
+  if (!assistantFrame) return;
+  if (action === 'state') { if (lastAssistantBusy === fields.busy) return; lastAssistantBusy = fields.busy; }
+  parent.postMessage({type:'club-assistant',action,...fields}, location.protocol === 'file:' ? '*' : location.origin);
+}
+function stopWork() {
+  if (active) { active.stopped = true; active.controller.abort(); }
+  compactController?.abort();
+}
+function suspendWorkspace() {
+  suspended = true;
+  clearCustomKeys(); catalogController?.abort(); compactController?.abort();
+  for (const run of generations) run.controller.abort();
+  if (current) {
+    for (const turn of current.turns) if (turn.status === 'running') turn.status = 'interrupted';
+    void persist(current, epoch).catch(() => {});
+  }
+}
+function syncAssistantPreference() {
+  if (applyingParentSync) return;
+  notifyAssistant('sync', {lang:ClubI18n.getLang?.() === 'en' ? 'en' : 'zh',theme:window.ClubTheme?.getTheme?.() || 'dark',mode:window.ClubTheme?.getMode?.() || 'auto'});
+}
+function assistantTabbable() {
+  const scope = $('chatSettings')?.classList?.contains('is-open') ? $('chatSettings') : document;
+  return [...(scope.querySelectorAll?.('a[href],button,input,textarea,select,summary,[tabindex]') || [])].filter(node => !node.disabled && node.tabIndex >= 0 && !node.closest?.('[hidden],[inert]') && node.getClientRects?.().length);
+}
+function receiveAssistantMessage(event) {
+  if (!assistantFrame || event.source !== parent || event.origin !== (location.protocol === 'file:' ? 'null' : location.origin)) return;
+  const data = event.data;
+  if (!data || data.type !== 'club-assistant') return;
+  if (data.action === 'stop') stopWork();
+  else if (data.action === 'suspend') suspendWorkspace();
+  else if (data.action === 'focus' && ['first','last'].includes(data.direction)) {
+    const targets = assistantTabbable();
+    (data.direction === 'last' ? targets.at(-1) : targets[0])?.focus?.();
+  } else if (data.action === 'sync') {
+    suspended = false;
+    assistantModal = data.modal === true;
+    applyingParentSync = true;
+    try {
+      if (['zh','en'].includes(data.lang) && ClubI18n.getLang?.() !== data.lang) ClubI18n.setLang(data.lang, {persist:false});
+      if (['auto','dark','light'].includes(data.mode)) window.ClubTheme?.setMode(data.mode, {persist:false,syncRemote:false});
+      else if (['dark','light'].includes(data.theme)) window.ClubTheme?.setMode(data.theme, {persist:false,syncRemote:false});
+    } finally { applyingParentSync = false; }
+  }
+}
+window.addEventListener('message', receiveAssistantMessage);
+window.addEventListener('club:themechange', syncAssistantPreference);
+window.addEventListener('club:thememodechange', syncAssistantPreference);
+if (ASSISTANT_MODE) {
+  classOn(document.body, 'assistant-workspace');
+  if (assistantFrame) {
+    classOn(document.body, 'assistant-embedded');
+    for (const link of document.querySelectorAll?.('a[href="member-center.html"]') || []) link.onclick = event => { event.preventDefault(); notifyAssistant('navigate', {path:'member-center.html'}); };
+  }
+}
+
 /* ---------- 事件绑定 ---------- */
 $('composer').onsubmit = event => { event.preventDefault(); void generate(); };
 $('sidebarToggle').onclick = () => setSidebarOpen(!$('workspace').classList.contains('sidebar-open'));
@@ -1565,7 +1732,7 @@ $('settingsBackdrop').onclick = () => setSettingsOpen(false);
 $('chatSearch').oninput = () => renderList();
 $('prompt').oninput = () => resetPromptHeight();
 $('prompt').onkeydown = event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void generate(); } };
-$('stop').onclick = () => { if (active) { active.stopped = true; active.controller.abort(); } };
+$('stop').onclick = () => stopWork();
 $('retry').onclick = () => { const last = current?.turns.at(-1); if (last) regenerate(last.id); };
 $('new').onclick = () => { newChat(); closeSidebarOnMobile(); };
 $('scrollBottom').onclick = () => { const box = $('messages'); box.scrollTo?.({top:box.scrollHeight, behavior:'smooth'}); if (!box.scrollTo) box.scrollTop = box.scrollHeight; };
@@ -1574,7 +1741,7 @@ $('model').onchange = () => { syncModelTrigger(); configureModel(); customForm()
 $('effort').onchange = () => syncEffortPicker();
 $('effortTrigger').onclick = () => setEffortMenuOpen($('effortMenu').hidden);
 $('editCancel').onclick = () => cancelEdit();
-$('compactNow').onclick = () => void compactNow();
+$('compactNow').onclick = () => { compactJob = compactNow(); };
 $('modelTrigger').onclick = () => setModelMenuOpen($('modelMenu').hidden, true);
 $('modelTrigger').onkeydown = event => {
   if (['ArrowDown','ArrowUp'].includes(event.key)) { event.preventDefault(); setModelMenuOpen(true, true); }
@@ -1604,16 +1771,16 @@ $('files').onchange = async () => {
   finally { if (guard === epoch) { attaching = false; controls(); } }
 };
 $('rename').onclick = async () => {
-  if (!current || active) return;
+  if (!current || isBusy()) return;
   const chat = current, guard = epoch, title = prompt(t('renamePrompt'),chat.title);
   if (title === null) return; chat.title = title.trim().slice(0,120);
   try { await persist(chat,guard); if (guard === epoch) renderList(); } catch {}
 };
 $('delete').onclick = async () => {
-  if (!current || active || !confirm(t('confirmDelete'))) return;
+  if (!current || isBusy() || !confirm(t('confirmDelete'))) return;
   const id = current.id, userId = session.user.id, guard = epoch;
   try {
-    await chatStore.delete(userId,id);
+    await workspaceStore.delete(userId,id);
     if (guard !== epoch) return;
     chats = chats.filter(x => x.id !== id); current = chats[0] || null;
     if (!current) newChat();
@@ -1623,10 +1790,10 @@ $('delete').onclick = async () => {
   }
 };
 $('clear').onclick = async () => {
-  if (active || !session || !confirm(t('confirmClear'))) return;
+  if (isBusy() || !session || !confirm(t('confirmClear'))) return;
   const guard = epoch, userId = session.user.id;
   try {
-    await chatStore.clear(userId);
+    await workspaceStore.clear(userId);
     if (guard !== epoch) return;
     chats = []; current = null; newChat();
   } catch {
@@ -1634,7 +1801,7 @@ $('clear').onclick = async () => {
   }
 };
 $('export').onclick = async () => {
-  if (!current || active) return;
+  if (!current || isBusy()) return;
   const guard = epoch;
   try {
     const chat = structuredClone(current);
@@ -1674,22 +1841,30 @@ async function compactNow() {
   } catch (error) {
     if (guard === epoch) status(error?.message === 'busy' ? 'busy' : 'compactFailed');
   } finally {
-    compacting = false;
-    if (guard === epoch) render();
+    if (guard === epoch) { compacting = false; render(); }
   }
 }
 
 document.addEventListener?.('keydown', event => {
-  if (event.key !== 'Escape') return;
+  if (assistantFrame && assistantModal && event.key === 'Tab') {
+    const tabbable = assistantTabbable();
+    if (tabbable.length && ((event.shiftKey && document.activeElement === tabbable[0]) || (!event.shiftKey && document.activeElement === tabbable.at(-1)))) {
+      event.preventDefault(); notifyAssistant('focus', {direction:event.shiftKey ? 'previous' : 'next'}); return;
+    }
+  }
+  if (event.key !== 'Escape' || event.defaultPrevented) return;
+  event.preventDefault();
   if (!($('modelMenu')?.hidden)) { setModelMenuOpen(false); $('modelTrigger')?.focus?.(); return; }
   if (!($('effortMenu')?.hidden)) { setEffortMenuOpen(false); $('effortTrigger')?.focus?.(); return; }
   if (editingTurnId !== null) { cancelEdit(); return; }
   if (!($('chatSettings')?.hidden)) { setSettingsOpen(false); return; }
-  if (active) { active.stopped = true; active.controller.abort(); return; }
-  if (globalThis.matchMedia?.('(max-width: 760px)').matches) setSidebarOpen(false);
+  if (active || compacting) { stopWork(); return; }
+  if (globalThis.matchMedia?.('(max-width: 760px)').matches && $('workspace')?.classList?.contains('sidebar-open')) { setSidebarOpen(false); return; }
+  notifyAssistant('close');
 });
 
-window.addEventListener('pagehide', clearCustomKeys);
+window.addEventListener('pagehide', suspendWorkspace);
+window.addEventListener('pageshow', () => { suspended = false; });
 function refreshLocalizedUi() {
   const selected = $('model').value;
   models = mergeModels(models.filter(item => !customModel(item)), customModels);
@@ -1697,7 +1872,9 @@ function refreshLocalizedUi() {
   if (models.some(item => item.id === selected)) $('model').value = selected;
   render(); customStatus(customStatusKey, customStatusVars);
 }
-window.addEventListener('club:langchange', refreshLocalizedUi); setTimeout(refreshLocalizedUi,0);
+window.addEventListener('club:langchange', () => { refreshLocalizedUi(); syncAssistantPreference(); }); setTimeout(refreshLocalizedUi,0);
+// Readiness describes the initialized controller, never authentication or catalog availability.
+if (ASSISTANT_MODE) { gateKey = 'loading'; syncGatePanel(); notifyAssistant('ready'); notifyAssistant('state', {busy:isBusy()}); }
 let authEvent = 0;
 // Capture startup ownership before subscribing: subscription may emit synchronously.
 const initialAuthEvent = authEvent, initialEpoch = epoch;
@@ -1707,8 +1884,8 @@ client.auth.onAuthStateChange((_event,next) => {
 });
 client.auth.getSession().then(({data,error}) => {
   if (authEvent !== initialAuthEvent || epoch !== initialEpoch) return;
-  if (error) { status('login'); return; }
+  if (error) { void auth(null); return; }
   void auth(data.session);
-}).catch(() => { if (authEvent === initialAuthEvent && epoch === initialEpoch) status('login'); });
+}).catch(() => { if (authEvent === initialAuthEvent && epoch === initialEpoch) void auth(null); });
 
 })();

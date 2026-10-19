@@ -906,5 +906,142 @@ const translatedCopy = new Map();
   assert.match(dictionaries.en.chatAdmin.usageLead, /rolling 90-day/); assert.match(dictionaries.en.chatAdmin.usageLead, /automatically removed/);
   console.log('PASS rolling-90-day summaries: initial/test refresh, exact large totals, pagination/filters, zero/null/missing/empty, bilingual drafts and auth/stale reset');
 }
+// Assistant management exercises real handlers against the shared versioned contract.
+{
+  const plain = value => JSON.parse(JSON.stringify(value));
+  const modelId = '55555555-5555-4555-8555-555555555555';
+  const document = {slug:'public-test',title:'<unsafe title>',category:'',source_path:'/public/guide.html',language:'zh-CN',content:'<script>unsafe()</script>',keywords:['guide']};
+  const releases = [{id:'66666666-6666-4666-8666-666666666666',document_count:1,model_id:modelId,created_at:'2026-10-19T00:00:00Z'}, {id:'77777777-7777-4777-8777-777777777777',document_count:2,model_id:modelId,created_at:'2026-10-18T00:00:00Z'}];
+  let version = 0;
+  const payload = (changes = {}) => ({config:{version:version++,enabled:false,model_id:modelId,welcome:'Welcome',suggestions:['Where?'],system_prompt:'Public guidance',current_release_id:releases[0].id,...changes},documents:[{...document,archived:false}],releases});
+  const init = () => {
+    run("clearSensitive();session={user:{id:'admin'},access_token:'mock-token'};authorized=true;active=null");
+    sandbox.assistantModels = [
+      {id:modelId,provider_id:'public-provider',enabled:true,visibility:'all',display_name:'Public',model_key:'public'},
+      {id:'disabled',provider_id:'public-provider',enabled:false,visibility:'all'},
+      {id:'assigned',provider_id:'public-provider',enabled:true,visibility:'assigned'},
+      {id:'deleted',provider_id:'public-provider',enabled:true,visibility:'all',deleted_at:'2026-10-19'},
+      {id:'disabled-provider',provider_id:'off-provider',enabled:true,visibility:'all'},
+      {id:'deleted-provider',provider_id:'gone-provider',enabled:true,visibility:'all'}
+    ];
+    run("models=assistantModels;providers=[{id:'public-provider',enabled:true},{id:'off-provider',enabled:false},{id:'gone-provider',enabled:true,deleted_at:'2026-10-19'}]");
+  };
+  const refresh = async () => { reply('assistant_admin_get',payload());node('refreshAssistantButton').onclick();await settleProxy(); };
+  const submit = id => node(id).listeners.submit({preventDefault(){}});
+  const clickDocument = dataset => node('assistantDocumentsList').listeners.click({target:{closest:()=>({dataset})}});
+  const file = (kind,text,name='draft.md') => {node(kind==='json'?'assistantJsonFile':'assistantMarkdownFile').files=[{name,size:Buffer.byteLength(text),text:async()=>text}];};
+  init();
+  const initialCalls = calls.length;
+  reply('assistant_admin_get',{error:'database'},503);node('refreshAssistantButton').onclick();await settleProxy();
+  assert(run('authorized'),'Assistant schema failure does not revoke ordinary admin access');
+  assert.equal(run('assistantState.config'),null);
+  assert(node('assistantPublishButton').disabled);
+  await refresh();
+  assert.deepEqual(calls[initialCalls+1],{action:'assistant_admin_get'});
+  assert.deepEqual(plain(run('assistantEligibleModels().map(item=>item.id)')),[modelId]);
+  assert.equal(node('assistantModelId').value,modelId);
+  assert(node('assistantDocumentsList').innerHTML.includes('&lt;unsafe title&gt;'));
+  assert(node('assistantReleasesList').innerHTML.includes(dictionaries[language].chatAdmin.currentRelease));
+  assert(!('current' in releases[0]),'Current status comes from config.current_release_id');
+  node('assistantModelId').value='';node('assistantEnabled').checked=false;
+  node('assistantEnabled').listeners.change();assert.equal(node('assistantModelId').required,false);
+  const priorVersion=run('assistantState.config.version');
+  reply('assistant_admin_config_save',payload({model_id:null}));submit('assistantConfigForm');await settleProxy();
+  assert.deepEqual(calls.at(-1),{action:'assistant_admin_config_save',expected_version:priorVersion,enabled:false,model_id:null,system_prompt:'Public guidance',welcome:'Welcome',suggestions:['Where?']});
+  node('assistantEnabled').checked=true;node('assistantEnabled').listeners.change();assert(node('assistantModelId').required);
+  const beforeInvalid=calls.length;submit('assistantConfigForm');assert.equal(calls.length,beforeInvalid);
+  node('assistantModelId').value='assigned';submit('assistantConfigForm');assert.equal(calls.length,beforeInvalid);
+  node('assistantEnabled').checked=false;node('assistantModelId').value='';
+  node('assistantWelcome').value='unsaved welcome';node('assistantSuggestions').value='unsaved question';node('assistantSupplement').value='unsaved instruction';
+  node('assistantRollbackRelease').value=releases[1].id;
+  language=language==='zh'?'en':'zh';run('refreshLocalizedUi()');
+  assert.equal(node('assistantModelId').value,'','Language refresh preserves deliberate empty model');
+  assert.equal(node('assistantWelcome').value,'unsaved welcome');assert.equal(node('assistantRollbackRelease').value,releases[1].id);
+  sandbox.assistantDocumentFixture=document;run('fillAssistantDocument(assistantDocumentFixture)');
+  assert.equal(node('assistantPreviewText').textContent,document.content);assert.equal(node('assistantPreviewText').innerHTML,'');
+  assert.equal(node('assistantDocumentSlug').readOnly,true);
+  const saveVersion=run('assistantState.config.version');
+  reply('assistant_admin_document_save',payload());submit('assistantDocumentForm');await settleProxy();
+  assert.deepEqual(calls.at(-1),{action:'assistant_admin_document_save',expected_version:saveVersion,document});
+  assert.equal(node('assistantWelcome').value,'unsaved welcome','Document mutation preserves config drafts');
+  const archiveVersion=run('assistantState.config.version');
+  const archivedPayload=payload();archivedPayload.documents[0].archived=true;
+  reply('assistant_admin_document_archive',archivedPayload);clickDocument({assistantArchive:document.slug});await settleProxy();
+  assert.deepEqual(calls.at(-1),{action:'assistant_admin_document_archive',expected_version:archiveVersion,slug:document.slug});
+  clickDocument({assistantEdit:document.slug});assert.equal(node('assistantDocumentContent').value,document.content,'Archived draft can be restored by saving');
+  file('json',JSON.stringify({documents:[document]}),'seed.json');const beforeFile=calls.length;
+  await run("readAssistantFile('json')");assert.equal(calls.length,beforeFile,'Reading an import does not save or publish');
+  assert.equal(run('assistantImportDocuments.length'),1);assert.equal(node('assistantPreviewText').innerHTML,'');
+  const importVersion=run('assistantState.config.version');
+  reply('assistant_admin_import',payload());node('assistantImportButton').onclick();await settleProxy();
+  assert.deepEqual(calls.at(-1),{action:'assistant_admin_import',expected_version:importVersion,documents:[document]});
+  assert(node('assistantImportButton').disabled);assert.equal(run('assistantImportDocuments.length'),0);
+  for (const content of ['x'.repeat(50000),'<img src=x onerror=unsafe()>']) {
+    file('markdown',content,'x'.repeat(220)+'.txt');await run("readAssistantFile('markdown')");
+    assert.equal(node('assistantDocumentContent').value,content);assert.equal(node('assistantDocumentTitle').value.length,200);
+    assert.equal(node('assistantPreviewText').textContent,content);assert.equal(node('assistantPreviewText').innerHTML,'');
+  }
+  file('markdown','x'.repeat(50001));await run("readAssistantFile('markdown')");assert.equal(run("messages.get('assistantDocumentMessage').key"),'assistantInvalidFile');
+  for (const invalid of [{...document,slug:'BAD'},{...document,source_path:'//evil.example/file.html'},{...document,source_path:'https://example.com/file.html'},{...document,title:'x'.repeat(201)},{...document,content:'x'.repeat(50001)},{...document,keywords:Array(41).fill('x')},{...document,archived:false}]) {
+    sandbox.invalidDocument=invalid;assert.throws(()=>run('validAssistantDocument(invalidDocument)'),/assistantInput/);
+  }
+  file('json',JSON.stringify({documents:[document,document]}),'duplicate.json');await run("readAssistantFile('json')");assert.equal(run('assistantImportDocuments.length'),0);
+  const publishVersion=run('assistantState.config.version');confirmResult=false;const beforeCancel=calls.length;
+  node('assistantPublishButton').onclick();node('assistantRollbackButton').onclick();assert.equal(calls.length,beforeCancel);confirmResult=true;
+  reply('assistant_admin_publish',payload());node('assistantPublishButton').onclick();await settleProxy();
+  assert.deepEqual(calls.at(-1),{action:'assistant_admin_publish',expected_version:publishVersion});
+  node('assistantRollbackRelease').value=releases[1].id;const rollbackVersion=run('assistantState.config.version');
+  reply('assistant_admin_rollback',payload({current_release_id:releases[1].id}));node('assistantRollbackButton').onclick();await settleProxy();
+  assert.deepEqual(calls.at(-1),{action:'assistant_admin_rollback',expected_version:rollbackVersion,release_id:releases[1].id});
+  assert.equal(node('assistantWelcome').value,'unsaved welcome');
+  file('json',JSON.stringify({documents:[document]}),'seed.json');await run("readAssistantFile('json')");
+  node('assistantDocumentContent').value='unsaved document';node('assistantModelId').value=modelId;
+  reply('assistant_admin_config_save',{error:'conflict'},409);const beforeConflict=calls.length;
+  submit('assistantConfigForm');await settleProxy();assert.equal(calls.length,beforeConflict+1,'409 neither retries nor reloads');
+  assert.equal(run('assistantState.config'),null);assert(node('assistantPublishButton').disabled);assert(node('assistantRollbackButton').disabled);
+  assert.equal(node('assistantWelcome').value,'unsaved welcome');assert.equal(node('assistantDocumentContent').value,'unsaved document');assert.equal(run('assistantImportDocuments.length'),1);
+  node('assistantPublishButton').onclick();node('assistantImportButton').onclick();assert.equal(calls.length,beforeConflict+1);
+  language=language==='zh'?'en':'zh';run('refreshLocalizedUi()');
+  assert.equal(node('assistantConfigMessage').textContent,dictionaries[language].chatAdmin.assistantConflict);
+  await refresh();assert.equal(node('assistantWelcome').value,'Welcome');assert.equal(node('assistantDocumentContent').value,'unsaved document');assert.equal(run('assistantImportDocuments.length'),1);
+  assert.equal(run("messages.get('assistantConfigMessage').key"),'assistantLoaded');
+  // A pending file read shares the busy boundary; signout invalidates its eventual text.
+  let finishRead;node('assistantMarkdownFile').files=[{name:'late.md',size:4,text:()=>new Promise(resolve=>{finishRead=resolve;})}];
+  const pending=run("readAssistantFile('markdown')");assert(run('Boolean(active)'));assert(node('assistantPublishButton').disabled);
+  run('updateSession(null)');finishRead('late');await pending;
+  assert.equal(node('assistantDocumentContent').value,'');assert.equal(node('assistantPreviewText').textContent,'');
+  assert.equal(run('assistantImportDocuments.length'),0);
+  for (const status of [401,403]) {
+    init();await refresh();reply('assistant_admin_publish',{error:status===401?'login':'admin'},status);
+    node('assistantPublishButton').onclick();await settleProxy();assert(!run('authorized'));assert.equal(run('assistantState.config'),null);
+  }
+  init();await refresh();reply('assistant_admin_publish',payload(),200,()=>run('updateSession(null)'));
+  node('assistantPublishButton').onclick();await settleProxy();assert.equal(run('assistantState.releases.length'),0);
+  assert.equal(run('errorKey({message:"assistant_documents"})'),'assistantEmptyCorpus');
+  console.log('PASS assistant real handlers: exact actions/version progression, model eligibility, safe imports, file limits, immutable release selection, 409 draft retention, bilingual drafts and stale/auth clearing');
+  const seed=JSON.parse(await readFile(new URL('../docs/assistant/seed.json',import.meta.url),'utf8'));
+  const manifest=JSON.parse(await readFile(new URL('../docs/assistant/source-manifest.json',import.meta.url),'utf8'));
+  assert(seed.documents.length>=14 && seed.documents.length<=200);
+  assert.equal(new Set(seed.documents.map(item=>item.slug)).size,seed.documents.length);
+  assert(seed.documents.reduce((sum,item)=>sum+Buffer.byteLength(item.content),0)<=2000000);
+  for (const item of seed.documents) {
+    sandbox.seedDocument=item;run('validAssistantDocument(seedDocument)');
+    assert(manifest.sources.some(source=>source.source_path===item.source_path && source.document_slugs.includes(item.slug)),`Missing provenance for ${item.slug}`);
+  }
+  for (const entry of manifest.sources) {
+    const original=await readFile(new URL('../'+entry.repository_file,import.meta.url),'utf8');
+    assert.equal('/'+entry.repository_file,entry.source_path);
+    for (const selector of entry.selectors) {
+      const literal=selector.startsWith('#')?`id="${selector.slice(1)}"`:selector.slice(1,-1);
+      assert(original.includes(literal),`Unknown source selector ${entry.repository_file}: ${selector}`);
+    }
+    if (entry.copy_repository_file) {
+      const copy=await readFile(new URL('../'+entry.copy_repository_file,import.meta.url),'utf8');
+      for (const key of entry.translation_keys) assert(copy.includes(key.split('.').at(-1)+':'),`Missing public copy ${key}`);
+    }
+  }
+  assert.match(seed.documents.find(item=>item.slug==='public-join').content,/不是.*实时确认/);
+  console.log('PASS expanded unpublished seed: document bounds, unique slugs, safe root-relative paths, concrete provenance selectors and source-bound schedule');
+}
 assert.equal(queue.length, 0, 'All queued responses must be consumed');
 console.log(`Chat admin VM regression passed (${calls.length} mocked requests; zero network or paid calls).`);
