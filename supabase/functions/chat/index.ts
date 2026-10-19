@@ -1,5 +1,6 @@
-import { AssistantError, assistantConfigData, assistantDocument, assistantInput, assistantPrompt, assistantReserve, type AssistantRelease } from '../_shared/chat-assistant.ts';
-import { LIVE_MAX_RESULT_BYTES, planAssistantLive, readAssistantLive, type LiveEnvelope, type LivePlan } from '../_shared/chat-assistant-live.ts';
+import { AssistantError, assistantConfigData, assistantDocument, assistantInput, assistantPrompt, assistantToolReserve, assistantToolPrompt, assistantToolSource, type AssistantRelease } from '../_shared/chat-assistant.ts';
+import { ASSISTANT_READ_TOOLS, executeAssistantReadTool } from '../_shared/chat-assistant-tools.ts';
+import { assistantToolBudget, runAssistantToolLoop } from '../_shared/chat-assistant-tool-loop.ts';
 import { hashKey, newKey, proxyBase, proxySecret, ProxyError, ROUTE_FIELDS } from '../_shared/chat-api-proxy.ts';
 import { ChatBodyError, readChatBody } from '../_shared/chat-body.ts';
 import { chatEndpoint, ChatProtocolError, parseProtocolSse, protocolEvents, protocolRequest, normalizeClaudeThinking, validateProtocolCapabilities, type ChatProtocol, type ChatProtocolSetting } from '../_shared/chat-protocol.ts';
@@ -725,6 +726,122 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
   return response;
 }
 
+async function callAssistantTools(request: Request, ctx: RequestContext, release: AssistantRelease, selected: { model: Model; provider: Provider }, safe: Json[]): Promise<Response> {
+  const { model, provider } = selected;
+  const { protocol, url: endpoint } = chatEndpoint(provider.base_url, provider.api_protocol);
+  const prepared = assistantToolPrompt(release, safe, ASSISTANT_READ_TOOLS);
+  const input = prepared.input as Json[];
+  validateInput(input, model);
+  const schemaBytes = encoder.encode(JSON.stringify(ASSISTANT_READ_TOOLS)).byteLength;
+  const baseTokens = estimateInputTokens(input);
+  const budget = assistantToolBudget(baseTokens, schemaBytes);
+  const outputTokens = model.default_max_output_tokens;
+  if (budget.perTurnInputTokens + outputTokens > model.context_window) throw new HttpError('context', 413);
+  const effective = effectiveReasoning(model, protocol);
+  const effort = effective.default_reasoning_effort;
+  const body: Json = { model: model.model_key, input, reasoning: effort ? { effort } : undefined,
+    include: model.preserve_reasoning ? ['reasoning.encrypted_content'] : undefined,
+    max_output_tokens: outputTokens, store: false, stream: true };
+  // Capability validation precedes admission; native tool history stays server-owned.
+  protocolRequest(protocol, body, model.claude_thinking);
+  const initialBytes = encoder.encode(JSON.stringify(body)).byteLength + schemaBytes;
+  if (initialBytes > MAX_REQUEST_BYTES) throw new HttpError('request_too_large', 413);
+  const requestId = crypto.randomUUID();
+  const admission = await rpc('chat_begin_generation', {
+    p_user_id: ctx.user.id, p_request_id: requestId,
+    p_input_tokens: budget.reservedInputTokens, p_output_tokens: outputTokens,
+    p_audit: { member_name: ctx.profile?.member_name || null, username: ctx.profile?.username || ctx.user.email || ctx.user.id,
+      provider_name: provider.label || provider.name, model_name: model.display_name, action: 'assistant_respond',
+      provider_id: provider.id, model_id: model.id, model_key: model.model_key,
+      input_bytes: initialBytes, max_output_tokens: outputTokens, reasoning_effort: effort, status: 'audited' }
+  }) as Json | null;
+  if (!admission || typeof admission.allowed !== 'boolean') throw new HttpError('database', 503);
+  if (!admission.allowed) {
+    if (admission.code === 'quota' || admission.code === 'quota_exceeded') return json(request, { error: 'quota', quota: admission.quota }, 429);
+    if (admission.code === 'busy') throw new HttpError('busy', 409);
+    if (admission.code === 'blacklisted') throw new HttpError('blacklisted', 403);
+    throw new HttpError('database', 503);
+  }
+  const sources: Json[] = [...prepared.sources] as Json[];
+  let started = false, settled = false, inputBytes = 0;
+  try {
+    const maximum = admission.max_output_tokens;
+    if (!Number.isInteger(maximum) || Number(maximum) < 1 || Number(maximum) > outputTokens) throw new HttpError('database', 503);
+    const memberToken = authToken(request);
+    if (!memberToken) throw new HttpError('login', 401);
+    if (request.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    const result = await runAssistantToolLoop({
+      protocol, body, claudeThinking: model.claude_thinking, tools: ASSISTANT_READ_TOOLS,
+      signal: request.signal, maxRequestBytes: MAX_REQUEST_BYTES,
+      maxInputTokens: model.context_window - Number(maximum), outputBudget: Number(maximum),
+      estimate: (_wire, historyBytes) => baseTokens + Math.ceil((schemaBytes + historyBytes) / 3) + 256,
+      dispatch: async (serialized, signal) => {
+        if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+        inputBytes += encoder.encode(serialized).byteLength;
+        await updateUsage(requestId, { input_bytes: inputBytes });
+        if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+        if (!started) {
+          // Once this transition is attempted, uncertainty retains the reservation.
+          started = true;
+          await updateUsage(requestId, { status: 'upstream_started' });
+        }
+        const response = await fetch(endpoint, { method: 'POST', headers: upstreamHeaders(provider, Deno.env.get(provider.secret_name)!),
+          body: serialized, redirect: 'error', signal });
+        try { await updateUsage(requestId, { upstream_status: response.status }); }
+        catch (error) { void response.body?.cancel().catch(() => undefined); throw error; }
+        return response;
+      },
+      execute: async (name, args, signal) => {
+        const envelope = await executeAssistantReadTool(name, args, {
+          projectUrl: Deno.env.get('SUPABASE_URL') || '', anonKey: Deno.env.get('SUPABASE_ANON_KEY') || '',
+          memberToken, signal
+        });
+        const citation = assistantToolSource(envelope, `S${sources.length + 1}`);
+        if (!citation.source) return { status: 'unavailable', error: 'source_unavailable', data: [] };
+        if (sources.length >= 12 || encodeURIComponent(JSON.stringify([...sources, citation.source])).length >= 12000) {
+          return { status: 'unavailable', error: 'source_budget', data: [] };
+        }
+        sources.push(citation.source as Json);
+        return citation.result;
+      }
+    });
+    if (request.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    const finalPatch = { status: result.status, ...result.usage,
+      error_code: result.status === 'completed' ? null : `response.${result.status}` };
+    try {
+      await finishGeneration(requestId, finalPatch);
+    } catch (error) {
+      try { await finishGeneration(requestId, finalPatch); }
+      catch { throw error; }
+    }
+    settled = true;
+    const headers = corsHeaders(request);
+    headers.set('content-type', 'text/event-stream; charset=utf-8');
+    headers.set('cache-control', 'no-store, no-transform');
+    headers.set('x-chat-request-id', requestId);
+    headers.set('x-chat-max-output-tokens', String(maximum));
+    if (Number(maximum) < outputTokens) headers.set('x-chat-quota-limited', 'true');
+    headers.set('x-chat-assistant-release', release.id);
+    headers.set('x-chat-assistant-sources', encodeURIComponent(JSON.stringify(sources)));
+    const events = result.events.map(event => {
+      if (!['response.completed', 'response.incomplete', 'response.failed'].includes(String(event.type))) return event;
+      return { ...event, response: { ...object(event.response), usage: result.usage } };
+    });
+    const stream = new ReadableStream<Uint8Array>({ start(controller) {
+      for (const event of events) controller.enqueue(encoder.encode(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`));
+      controller.close();
+    } });
+    return new Response(stream, { status: 200, headers });
+  } catch (error) {
+    const cancelled = request.signal.aborted || error instanceof DOMException && error.name === 'AbortError';
+    if (!settled) await finishGeneration(requestId, { status: cancelled ? 'cancelled' : 'failed',
+      error_code: cancelled ? 'client_cancelled' : error instanceof HttpError ? error.message : 'assistant_tools' }, !started).catch(() => undefined);
+    if (cancelled) throw new HttpError('cancelled', 499);
+    if (error instanceof HttpError || error instanceof ChatProtocolError) throw error;
+    throw new HttpError('upstream', 502);
+  }
+}
+
 function terminalUsage(event: Json): Json | null {
   const type = String(event.type || '');
   if (!['response.completed', 'response.incomplete', 'response.failed', 'error'].includes(type)) return null;
@@ -956,6 +1073,13 @@ async function assistantRuntime(userId: string) {
   return { release, selected };
 }
 
+function assistantCatalogReserve(release: AssistantRelease): number {
+  const catalogTokens = estimateInputTokens(assistantToolPrompt(release, [], ASSISTANT_READ_TOOLS).input as Json[]) -
+    estimateInputTokens(assistantToolPrompt(release, [], []).input as Json[]);
+  return assistantToolBudget(assistantToolReserve(release) + Math.max(0, catalogTokens),
+    encoder.encode(JSON.stringify(ASSISTANT_READ_TOOLS)).byteLength).perTurnInputTokens;
+}
+
 async function assistantAction(request: Request, action: string, payload: Json): Promise<Response> {
   const ctx = await context(request);
   const quota = await quotaSnapshot(ctx.user.id);
@@ -964,14 +1088,12 @@ async function assistantAction(request: Request, action: string, payload: Json):
   if (action === 'assistant_catalog') {
     const response = json(request, { models: await catalogPayload([selected.model], [selected.provider], ctx.user.id),
       assistant: { welcome: release.config.welcome, suggestions: release.config.suggestions,
-        release_id: release.id, reserve_tokens: assistantReserve(release) }, bound: true, member_name: ctx.profile!.member_name, quota });
+        release_id: release.id, reserve_tokens: assistantCatalogReserve(release) }, bound: true, member_name: ctx.profile!.member_name, quota });
     response.headers.set('cache-control', 'no-store');
     return response;
   }
   const safe = assistantInput(payload.input, payload.summary);
-  // Validate untrusted content before admission. Live preparation is deferred below.
   validateInput(safe, selected.model);
-  let preparedSources: Json[] = [];
   if (action === 'assistant_compact') {
     const prepared = assistantPrompt(release, safe, true);
     const response = await callResponses(request, ctx, { input: prepared.input }, false, selected, 'assistant_compact');
@@ -980,33 +1102,7 @@ async function assistantAction(request: Request, action: string, payload: Json):
     response.headers.set('cache-control', 'no-store');
     return response;
   }
-  const plan = planAssistantLive(safe);
-  const liveEnabled = plan.status === 'ready' && plan.items.length > 0;
-  const liveReserveBytes = liveEnabled ? Math.min(LIVE_MAX_RESULT_BYTES, 16000) : 0;
-  const memberToken = authToken(request);
-  if (!memberToken) throw new HttpError('login', 401);
-  const deferred: DeferredAssistant = {
-    // Reserve the complete bounded assistant system/reference envelope before admission.
-    reserveTokens: assistantReserve(release, liveReserveBytes),
-    prepare: async (signal) => {
-      let envelope: LiveEnvelope | undefined;
-      if (liveEnabled) {
-        envelope = await readAssistantLive(plan as LivePlan, {
-          projectUrl: Deno.env.get('SUPABASE_URL') || '',
-          anonKey: Deno.env.get('SUPABASE_ANON_KEY') || '', memberToken, signal
-        });
-      }
-      const prepared = assistantPrompt(release, safe, false, envelope);
-      preparedSources = prepared.sources as Json[];
-      return { input: prepared.input as Json[], sources: prepared.sources as Json[] };
-    }
-  };
-  const response = await callResponses(request, ctx, { input: safe }, false, selected, 'assistant_respond', deferred);
-  if (!response.ok) return response;
-  response.headers.set('x-chat-assistant-sources', encodeURIComponent(JSON.stringify(preparedSources)));
-  response.headers.set('x-chat-assistant-release', release.id);
-  response.headers.set('cache-control', 'no-store');
-  return response;
+  return await callAssistantTools(request, ctx, release, selected, safe as Json[]);
 }
 
 async function assistantAdmin(request: Request, action: string, payload: Json): Promise<Response> {

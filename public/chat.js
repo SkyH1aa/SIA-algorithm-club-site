@@ -279,6 +279,22 @@ function syncSources(node, turn) {
       const scope = document.createElement('small'); scope.className = 'assistant-source-release';
       scope.textContent = t(source.truncated ? 'liveTruncated' : 'liveLimit', {n:source.limit});
       card.append(stamp, scope);
+      if (source.query) {
+        const query = document.createElement('small'); query.className = 'assistant-source-release';
+        const metricKey = `liveMetric_${source.query.order_by}`;
+        const metricLabel = t(metricKey);
+        const metric = metricLabel === `assistant.${metricKey}` || metricLabel === `chat.${metricKey}` ? source.query.order_by : metricLabel;
+        query.textContent = t('liveQuery', {metric,direction:t(`liveDirection_${source.query.direction}`),page:source.query.page,n:source.query.page_size});
+        card.append(query);
+      }
+      if (Number.isInteger(source.returned_count)) {
+        const count = document.createElement('small'); count.className = 'assistant-source-release';
+        count.textContent = t('liveReturned', {n:source.returned_count}); card.append(count);
+      }
+      if (source.has_more === true) {
+        const more = document.createElement('small'); more.className = 'assistant-source-release';
+        more.textContent = t('liveMore'); card.append(more);
+      }
     } else if (release) {
       const version = document.createElement('small'); version.className = 'assistant-source-release';
       version.textContent = `${t('publicationVersion')}: ${release}`;

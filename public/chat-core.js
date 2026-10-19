@@ -26,6 +26,26 @@ export function assistantSources(header) {
         if (typeof item.fetched_at !== 'string' || item.fetched_at.length > 40 || !Number.isFinite(Date.parse(item.fetched_at)) || typeof item.dataset !== 'string' || !/^[a-z][a-z0-9_-]{0,79}$/.test(item.dataset) || !Number.isInteger(item.limit) || item.limit < 0 || item.limit > 100 || typeof item.truncated !== 'boolean') return [];
         const status = ['success','empty','unavailable','paused','ambiguous'].includes(item.status) ? item.status : '';
         Object.assign(source, {type:'live',fetched_at:item.fetched_at,dataset:item.dataset,limit:item.limit,truncated:item.truncated,status});
+        if (item.query !== undefined) {
+          const query = item.query;
+          if (!query || typeof query !== 'object' || Array.isArray(query) || Object.keys(query).length !== 4 ||
+            Object.keys(query).some(key => !['order_by','direction','page','page_size'].includes(key)) ||
+            typeof query.order_by !== 'string' || !/^[a-z][a-z0-9_]{0,39}$/.test(query.order_by) || !['asc','desc'].includes(query.direction) ||
+            !Number.isInteger(query.page) || query.page < 1 || query.page > 100 || !Number.isInteger(query.page_size) || query.page_size < 1 || query.page_size > 50) return [];
+          source.query = {order_by:query.order_by,direction:query.direction,page:query.page,page_size:query.page_size};
+        }
+        if (item.returned_count !== undefined) {
+          if (!Number.isInteger(item.returned_count) || item.returned_count < 0 || item.returned_count > 50) return [];
+          source.returned_count = item.returned_count;
+        }
+        if (item.has_more !== undefined) {
+          if (item.has_more !== null && typeof item.has_more !== 'boolean') return [];
+          source.has_more = item.has_more;
+        }
+        if (item.metric !== undefined) {
+          if (typeof item.metric !== 'string' || item.metric.length > 120) return [];
+          source.metric = item.metric;
+        }
       }
       seen.add(item.id);
       return [source];

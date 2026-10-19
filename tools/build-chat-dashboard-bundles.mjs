@@ -6,7 +6,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const banner = '// DASHBOARD MANUAL DEPLOYMENT BUNDLE. Generated from supabase/functions.\n// This file is standalone because the Supabase web editor does not upload _shared files.\n';
 const entries = [
   ['chat', 'chat-dashboard-index.ts'],
-  ['chat-api-proxy', 'chat-api-proxy-dashboard-index.ts']
+  ['chat-api-proxy', 'chat-api-proxy-dashboard-index.ts'],
+  ['club-drive', 'club-drive-dashboard-index.ts']
 ];
 const check = process.argv.includes('--check');
 for (const [name, output] of entries) {

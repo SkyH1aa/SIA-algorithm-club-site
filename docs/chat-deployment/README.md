@@ -9,8 +9,9 @@
 | `club-chat-schema.sql` | SQL Editor → 新建查询 → 全文粘贴 → Run |
 | `chat-dashboard-index.ts` | Edge Functions → `chat` → Code → `index.ts`，全文替换后 Deploy updates |
 | `chat-api-proxy-dashboard-index.ts` | Edge Functions → `chat-api-proxy` → Code → `index.ts`，全文替换后 Deploy updates |
+| `club-drive-dashboard-index.ts` | Edge Functions → `club-drive` → Code → `index.ts`，模型只读工具更新需要全文替换并部署 |
 
-两份 TypeScript 文件都是独立的单文件版本，已内联共享代码及协议适配器。不要改粘 `supabase/functions/` 中带相对 import 的开发源文件，也不要把两份文件拼进同一个函数。只替换一小段旧函数会漏掉其他依赖，必须全文替换。
+三份 TypeScript 文件都是独立的单文件版本，Chat/代理的共享代码及协议适配器已内联，club-drive 为完整函数源码副本。不要改粘带相对 import 的开发源文件，也不要把不同函数文件拼在一起。只替换一小段旧函数会漏掉其他依赖，必须全文替换。不同升级需要的文件见各节；本轮模型只读工具不改 SQL。
 
 `club-chat-schema.sql` 是完整主脚本 `supabase/club-chat-schema.sql` 的同步副本，不是另一套迁移。只执行其中一份，不需要把两个路径的文件各执行一次。已有安装也需要执行新版完整脚本，以更新供应商协议字段、自定义模型地址约束、90 天 usage 报告/清理 RPC 和定时任务；不要删除重建已有表。配置、额度设置和 quota buckets 保留；超过 90 天且符合安全条件的 usage 将按下节自动物理删除，不能承诺永久保留全部历史记录。
 
@@ -64,6 +65,24 @@ HTTP(S) 是正式运行环境。`file://` 仍受浏览器本地存储、认证�
 只读范围是已发布公告/活动、姓名与积分、五子棋累计积分、俄罗斯方块普通/人机、贪吃蛇普通/人机和行于无垠总分。普通与人机榜独立；未说明类型时澄清。单榜默认前 20 名、最多 50 名，六榜同查每榜最多 10 名；姓名重名不猜账号。整体读取最多 5 秒，失败、维护、空结果、重名及截断均不得当作完整实时事实。实时读取在额度与租约准入后发生，catalog 与压缩不查询业务数据；来源正文不放入响应头。
 
 本轮精确验证范围、权限及平台限制见 [数学与实时查询验收记录](../assistant-validation/markdown-live-query.md)。`file://` 包仍依赖页面旁边的本地 KaTeX 资源，并保留前述认证、Origin 和模块加载限制；没有把本地文件端到端标为已验收。
+
+### 模型自主选择只读工具更新（2026-10-19，取代上节关键词实时路由）
+
+新版由模型根据问题语义选择工具、排序与筛选参数。比如“当前积分榜谁最高”调用积分降序第一页，“五子棋谁分数最低”调用总分升序第一页；最低分在数据库端排序，不是从前20名里选最低。服务端在每轮固定注入完整工具清单和 JSON 参数定义，管理预设同时说明用途和示例。工具仅能访问普通成员可读的数据，模型不能自己拼表名、URL、SQL、RPC 或写操作。
+
+**这轮必须同时更新 `chat` 和 `club-drive`；只更新 Chat 不足以完成积分/公告/活动的新查询。** 本轮没有 SQL 改动，也不需要新的 Secret。
+
+1. 在 Edge Functions → `club-drive` → Code，将 [club-drive-dashboard-index.ts](club-drive-dashboard-index.ts) 全文替换到 `index.ts`，部署更新。它是完整 `club-drive` 源码副本，新增受控成员只读查询动作，不要只粘新 helper 或替换原有其它功能。
+2. 在 Edge Functions → `chat` → Code，将 [chat-dashboard-index.ts](chat-dashboard-index.ts) 全文替换到 `index.ts`，部署更新。新工具协议和调用循环已内联。保留原有 Secrets 与鉴权设置；已有最新版 `chat-api-proxy` 无需为本轮重部署。
+3. 发布新版 `public/chat.js`、`public/chat-core.js`、`public/chat-file-bundle.js`、`public/assistant-i18n.js`、`public/assistant-preset.js`。如果还没发布数学渲染版本，同步发布上节列出的 HTML、CSS、`chat-math.js` 与整个本地 KaTeX 目录。
+4. 管理页点击“填入小Bru预设”，审核、保存；按原流程导入新版 `seed.json` 草稿，审核并发布不可变版本。保留当前模型/启用设置和自建资料；三字段配置 JSON 不是知识库导入文件。新后端即使面对旧发布预设，也固定注入当前工具约束，但新版预设能避免旧能力描述冲突。
+5. 模型必须支持所选协议的原生函数/工具调用（Responses、Claude Messages 或 Chat Completions）。这不是把工具名称写进 Prompt 就自动查询：服务端发送原生工具声明，执行经过校验的调用，将结果交回模型，再返回最终回答。供应商不支持或返回非法协议时明确失败，不假装查询或自动改用其它 Key。
+
+工具范围为 `read_member_points`（姓名/积分查询、排序、筛选和分页）、`read_game_leaderboard`（六榜及允许的公开指标）、`read_published_content`（仅已发布公告/活动与日期等公开字段）。分页每页最多50条、页码最多100，每轮最多8次工具调用、最多3次模型请求。最高与最低可直接查询数据库的两端，不必遍历全榜；不提供无上限下载、后台隐私和修改权限。多次查询会增加实际模型 token 用量；一次用户提问仍使用同一个额度预留、租约和审计记录，汇总所有模型轮次，不把工具轮当免费请求。
+
+为了在返回响应头前收齐来源并完成计量校验，本版先完成有限的工具循环和最终回答收集，再发送标准 Responses SSE；界面在准备期间保持生成状态，首字可能比普通 Chat 更晚。`catalog` 与压缩不执行实时工具。部署后用绑定成员核对你自己的实际数据、来源排序/页码/时间，并审核模型是否正确理解语义；本地模拟测试不证明线上模型工具支持或执行质量。
+
+完整验收与已知限制见 [模型只读工具记录](../assistant-validation/semantic-read-tools.md)。
 
 ## 安全加固更新（Chat 与对外代理）
 

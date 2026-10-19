@@ -66,6 +66,7 @@ console.log('Chat core: fragmented UTF-8/CRLF, multiline data, terminal states, 
 
 // Run the actual UI module in a small DOM/auth/storage harness to control async races.
 const chatSource = (await readFile(new URL('../public/chat.js', import.meta.url), 'utf8')).replace(/^import .*;\r?\n/gm, '').replaceAll('import.meta.url', JSON.stringify(new URL('../public/chat.js', import.meta.url).href));
+const assistantCopy = await readFile(new URL('../public/assistant-i18n.js', import.meta.url), 'utf8');
 const DICT = new Set(['chat.thinking','chat.thinkingRunning','chat.thinkingNote','chat.effort_off','chat.effort_low','chat.effort_medium','chat.effort_high','chat.effort_xhigh','chat.effort_max','chat.effortShort','chat.default','chat.claudeEffort','chat.claude_thinking','chat.claude_thinking_budget','chat.claude_effort']);
 const deferred = () => { let resolve, reject; const promise = new Promise((yes,no) => { resolve=yes; reject=no; }); return {promise,resolve,reject}; };
 const account = (id, token = id) => ({user:{id},access_token:token});
@@ -78,6 +79,15 @@ function uiHarness({assistant = false, embedded = false, protocol = 'https:'} = 
   const origin = protocol === 'file:' ? 'null' : 'https://club.example';
   const frameParent = {postMessage(data,target){messages.push({data,target});}};
   let callback, saveHook, lang = 'zh';
+  const assistantDict = {};
+  const i18n = {
+    mergeDict(dict) { Object.assign(assistantDict, dict); },
+    t(key, vars = {}) {
+      const value = key.startsWith('assistant.') ? assistantDict[lang]?.assistant?.[key.slice(10)] : undefined;
+      return value === undefined ? DICT.has(key) ? `[${lang === 'en' ? 'en:' : ''}${key}]` : key : value.replace(/\{(\w+)\}/g, (match, name) => String(vars[name] ?? match));
+    },
+    getLang:()=>lang
+  };
   function element(tagName = 'div') { return {
     tagName:String(tagName).toUpperCase(),children:[],attributes:{},innerHTML:'',open:false,
     value:'',options:[],files:[],disabled:false,hidden:false,textContent:'',
@@ -102,12 +112,16 @@ function uiHarness({assistant = false, embedded = false, protocol = 'https:'} = 
     document:{getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},createElement:element,querySelectorAll:()=>[],addEventListener(type,handler){documentEvents.set(type,handler);}},
     window:{supabase:{createClient:()=>({auth:{onAuthStateChange(fn){callback=fn;},getSession:()=>initial.promise}})},addEventListener(type,handler){events.set(type,handler);}},
     // 桩 t() 必须像真实 runtime 一样「缺键返回 key」；否则 effortLabel 无法区分已翻译与回退。
-    ClubI18n:{t:key=>DICT.has(key)?`[${lang === 'en' ? 'en:' : ''}${key}]`:key,getLang:()=>lang},marked:{Renderer:class {},parse:()=>''},DOMPurify:{sanitize:()=>({querySelectorAll:()=>[]})},
+    ClubI18n:i18n,marked:{Renderer:class {},parse:()=>''},DOMPurify:{sanitize:()=>({querySelectorAll:()=>[]})},
     navigator:{clipboard:{async writeText(value){copied.push(value);}}},
     Option:class {constructor(text,value){this.textContent=text;this.value=value;}},
     setTimeout(fn){timers.push(fn);},fetch(url,init){const result=deferred(), body=JSON.parse(init.body);requests.push({url,headers:init.headers,body,token:init.headers.Authorization,signal:init.signal,...result});if(body.action==='custom_model_list') result.resolve({ok:true,json:async()=>[]});return result.promise;}
   });
   const source = assistant ? chatSource.replaceAll(JSON.stringify(new URL('../public/chat.js', import.meta.url).href), JSON.stringify(protocol === 'file:' ? 'file:///site/project/public/chat.js' : 'https://club.example/project/public/chat.js')) : chatSource;
+  if (assistant) {
+    context.window.ClubI18n = i18n;
+    vm.runInContext(assistantCopy, context, {filename:'assistant-i18n.js'});
+  }
   vm.runInContext(source,context,{filename:'chat.js'});
   const evaluate = code => vm.runInContext(code,context);
   return {initial,elements,requests,writes,records,evaluate,store,copied,messages,events,documentEvents,databases,
@@ -615,6 +629,19 @@ data: {"type":"response.completed"}
   ui.evaluate('current.turns[0].sources=[{id:"S3",title:"Current board",source_path:"public/member-points.html",type:"live",fetched_at:"2026-10-19T08:00:00.000Z",dataset:"member_points",limit:20,truncated:true}];current.turns[0].text="Board [S3]";renderMessages()');
   assert.equal(ui.evaluate('rendered.nodes[0].sources.children[0].children.length'),5,'live source shows query timestamp and bounded scope');
   assert(!ui.evaluate('rendered.nodes[0].sources.children[0].children.map(x=>x.textContent).join(" ")').includes('22222222-2222-4222-8222-222222222222'),'live source must not imply published snapshot freshness');
+  ui.evaluate('current.turns[0].sources[0]={...current.turns[0].sources[0],status:"success",query:{order_by:"points",direction:"asc",page:2,page_size:5},returned_count:5,has_more:true};renderMessages()');
+  const sourceText = () => ui.evaluate('rendered.nodes[0].sources.children[0].children.map(x=>x.textContent).join(" | ")');
+  assert.match(sourceText(), /Order ascending by points · Page 2 · Up to 5 rows/);
+  assert.match(sourceText(), /More results are available/);
+  assert.match(sourceText(), /Returned 5 rows; page order is not a global rank/);
+  assert.match(sourceText(), /Queried at.*Retrieved/);
+  ui.setLang('zh');
+  assert.match(sourceText(), /按积分升序 · 第 2 页 · 每页最多 5 条/);
+  assert.match(sourceText(), /还有更多结果可查询/);
+  assert.match(sourceText(), /本次返回 5 条；页内顺序不代表全榜名次/);
+  assert.match(sourceText(), /查询时间.*已读取/);
+  ui.evaluate('current.turns[0].sources[0].has_more=null;renderMessages()');
+  assert.doesNotMatch(sourceText(), /还有更多|没有更多/,'unknown pagination must not imply completeness');
   ui.evaluate('current.turns=Array.from({length:6},(_,i)=>({id:String(i),prompt:"question",text:"answer",input:[],output:[],status:"success"}));current.summary=undefined;compactJob=compactNow()');await settle();
   const compact=ui.requests.at(-1);assert.equal(compact.body.action,'assistant_compact');
   ui.message({type:'club-assistant',action:'suspend'});assert.equal(compact.signal.aborted,true,'suspend aborts compaction');
@@ -628,4 +655,67 @@ assert.equal(core.assistantSources('%invalid').length,0);
 const liveSource = {id:'S7',title:'Points',source_path:'/public/member-points.html',type:'live',fetched_at:'2026-10-19T08:00:00Z',dataset:'member_points',limit:20,truncated:true};
 assert.equal(core.assistantSources(encodeURIComponent(JSON.stringify([liveSource])))[0].fetched_at,liveSource.fetched_at);
 for (const invalid of [{fetched_at:'invalid'},{limit:101},{limit:-1},{dataset:'../admin'},{truncated:'yes'}]) assert.equal(core.assistantSources(encodeURIComponent(JSON.stringify([{...liveSource,...invalid}]))).length,0,'malformed live provenance cannot become a source card');
-console.log('Assistant UI: catalog contract, isolated store, ready before auth, trusted frame sync, reserve, one summary, citations, project-root paths and compaction suspend passed.');
+const semanticSource = {...liveSource,query:{order_by:'total_score',direction:'asc',page:1,page_size:1},returned_count:1,has_more:true,metric:'total_score'};
+const parseSource = source => core.assistantSources(encodeURIComponent(JSON.stringify([source])));
+assert.deepEqual(parseSource(semanticSource)[0].query, semanticSource.query);
+assert.equal(parseSource({...semanticSource,has_more:null})[0].has_more,null);
+assert.equal(parseSource({...semanticSource,has_more:false})[0].has_more,false);
+for (const invalidQuery of [null,[],{}, {...semanticSource.query,extra:'no'}, {...semanticSource.query,filters:{name:'private'}},
+  {...semanticSource.query,order_by:'total_score.desc'}, {...semanticSource.query,order_by:'x'.repeat(41)},
+  {...semanticSource.query,direction:'ASC'}, {...semanticSource.query,page:0}, {...semanticSource.query,page:101},
+  {...semanticSource.query,page:1.5}, {...semanticSource.query,page:'1'}, {...semanticSource.query,page_size:0}, {...semanticSource.query,page_size:51}]) {
+  assert.equal(parseSource({...semanticSource,query:invalidQuery}).length,0,'reject malformed query provenance');
+}
+for (const invalid of [{returned_count:-1},{returned_count:51},{returned_count:1.5},{returned_count:'1'},{has_more:'yes'},{has_more:0}]) {
+  assert.equal(parseSource({...semanticSource,...invalid}).length,0,'reject malformed count/pagination provenance');
+}
+for (const [page,page_size] of [[1,1],[100,50]]) assert.equal(parseSource({...semanticSource,query:{...semanticSource.query,page,page_size}}).length,1);
+console.log('Assistant UI: catalog contract, isolated store, trusted frame sync, citations, localized live ordering/page/count/status, strict query validation and compaction suspend passed.');
+
+// Shared server helpers are pure; exercise real metadata through the UI parser.
+const {assistantToolPrompt,assistantToolReserve,assistantToolSource,assistantPrompt} = await import('../supabase/functions/_shared/chat-assistant.ts');
+const {ASSISTANT_READ_TOOLS} = await import('../supabase/functions/_shared/chat-assistant-tools.ts');
+const release = {id:'local-release',config:{system_prompt:'Old published prompt: no live access.',enabled:true},documents:Array.from({length:8},(_,i)=>({slug:`doc-${i}`,title:`Points ${i}`,category:'test',source_path:'/public/member-points.html',language:'en',content:'points '.repeat(200),keywords:['points']}))};
+const toolPrompt = assistantToolPrompt(release,[{role:'user',content:[{type:'input_text',text:'points'}]}],ASSISTANT_READ_TOOLS);
+const policy = toolPrompt.input[0].content[0].text;
+assert(toolPrompt.sources.length>0 && toolPrompt.sources.length<=4);
+assert(encodeURIComponent(JSON.stringify(toolPrompt.sources)).length<4000);
+for(const tool of ASSISTANT_READ_TOOLS) assert(policy.includes(JSON.stringify(tool)),'full known tool definition is injected');
+assert.match(policy,/MUST invoke.*even when previous answers/);
+assert.match(policy,/highest value.*desc.*page 1.*lowest.*asc.*page 1/);
+assert.match(policy,/Same-name member results are ambiguous/);
+assert.match(policy,/Administrators.*same member-level access/);
+assert(policy.includes(release.config.system_prompt));
+const noCatalog = assistantToolPrompt(release,[],[]);
+const catalogEstimate = core.estimateTokens(assistantToolPrompt(release,[],ASSISTANT_READ_TOOLS).input)-core.estimateTokens(noCatalog.input);
+assert(assistantToolReserve(release)+catalogEstimate>=core.estimateTokens(toolPrompt.input));
+assert.throws(()=>assistantToolPrompt(release,[],[{name:'write_points',description:'forbidden',parameters:{type:'object'}}]));
+assert.throws(()=>assistantToolPrompt(release,[],[ASSISTANT_READ_TOOLS[0],ASSISTANT_READ_TOOLS[0]]));
+assert.throws(()=>assistantToolPrompt(release,[],[{...ASSISTANT_READ_TOOLS[0],parameters:{type:'object',padding:'x'.repeat(32000)}}]));
+const card = {dataset:'member_points',title:'社员积分'.repeat(80),source_path:'/public/member-points.html',metric:'积分'.repeat(80),status:'success',limit:50,truncated:true,
+  query:{order_by:'points',direction:'desc',page:1,page_size:50,filters:{member_name:'Explicit user name'}},returned_count:50,has_more:true,id:'spoofed',
+  data:Array.from({length:50},(_,i)=>({member_name:`member-${i}`,points:50-i}))};
+const envelope = {status:'success',fetched_at:'2026-10-19T08:00:00.000Z',results:[card]};
+const snapshot = JSON.stringify(envelope);
+const citation = assistantToolSource(envelope,'S5');
+assert(citation.source);
+assert(encodeURIComponent(JSON.stringify(citation.source)).length<=980);
+assert.equal(citation.result.id,'S5');
+assert.equal(citation.result.fetched_at,envelope.fetched_at);
+assert.deepEqual(citation.result.data,card.data,'complete adapter card remains model evidence');
+assert.deepEqual(citation.result.query,card.query,'filters retained in model evidence');
+assert(!JSON.stringify(citation.source).includes('Explicit user name'),'filter values never enter header');
+assert(!Object.hasOwn(citation.source,'data'));
+assert.equal(parseSource(citation.source)[0].query.page_size,50);
+assert.equal(JSON.stringify(envelope),snapshot,'source helper does not mutate adapter data');
+const combined = [...toolPrompt.sources,...Array.from({length:8},(_,i)=>assistantToolSource(envelope,`S${toolPrompt.sources.length+i+1}`).source)];
+assert.equal(combined.length,toolPrompt.sources.length+8);
+assert(encodeURIComponent(JSON.stringify(combined)).length<12000);
+assert.equal(core.assistantSources(encodeURIComponent(JSON.stringify(combined))).length,combined.length);
+for (const invalid of [{source_path:'//external/a.html'},{status:'unsafe'},{query:{...card.query,page:101}},{returned_count:51},{has_more:'yes'}]) {
+  assert.equal(assistantToolSource({...envelope,results:[{...card,...invalid}]},'S5').source,null);
+}
+assert.throws(()=>assistantToolSource(envelope,'unsafe'));
+assert.equal(assistantToolSource({...envelope,results:[]},'S5').source,null);
+assert(assistantPrompt(release,[{role:'user',content:[{type:'input_text',text:'points'}]}]).sources.length,'legacy helper remains available');
+console.log('Assistant helpers: semantic catalog/policy, static reserve/header bounds, complete tool result, compact sanitized source and legacy helper passed.');

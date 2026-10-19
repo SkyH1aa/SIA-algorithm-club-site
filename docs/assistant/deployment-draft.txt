@@ -4,7 +4,11 @@ Assistant administration deployment draft (instructions only)
    For a first assistant installation, paste the complete club-chat-schema.sql
    into SQL Editor. For the math/live-read update of an existing current assistant,
    no SQL is needed. Replace the complete chat Edge Function index.ts with the
-   generated chat-dashboard-index.ts and deploy updates. Publish the updated
+   generated chat-dashboard-index.ts and the complete club-drive index.ts with
+   club-drive-dashboard-index.ts from docs/chat-deployment/, then deploy both.
+   club-drive is a full source copy preserving other actions, not a helper patch;
+   updating chat alone cannot enable the new member/content query action.
+   Publish the updated
    static assets, including chat-math.js and all local KaTeX fonts/CSS/JS/LICENSE,
    through the site's existing publishing process.
    No PowerShell, Supabase CLI or build commands are required for deployment.
@@ -36,10 +40,18 @@ Assistant administration deployment draft (instructions only)
 7. Verify assistant login/binding, source links, quota, separate local history,
    attachments, language/theme behavior and disable/rollback after deployment.
    For live reads check published announcements/events, name-and-points privacy,
-   all six independent boards and query timestamp/status/limits. Single-board
-   default is 20, maximum 50; all-board reads use 10 per board. Unspecified normal
-   versus AI boards and duplicate member names require clarification. No admin
-   records or business writes are available, even to administrators using the AI.
+   all six independent boards and query timestamp/status/limits. Semantic tools
+   choose filters, database asc/desc and bounded pages: page 1..100, page_size 1..50;
+   no full traversal or unbounded access. Check highest member points with points
+   desc/page 1 and lowest Gomoku points with total_score asc/page 1. Current facts
+   must call tools even if older history/summary already answers the question.
+   Source cards should show localized ordering/page, returned count and a more
+   results hint, without claiming global rank. Query rows/filters stay in bounded
+   model evidence, never source headers. Unspecified normal versus AI boards and
+   duplicate member names require clarification; exact names must be explicit,
+   never query phrases or guessed classes. No admin records or business writes
+   are available, even to administrators using the AI. Tool planning keeps the UI
+   generating; normalized final-answer SSE is sent after the final turn is collected.
    Check formulas in both Chat and the assistant; code/currency stay literal.
    Real generation uses shared quota and provider billing; local mock validation
    does not establish deployed endpoint permissions or live model behavior.

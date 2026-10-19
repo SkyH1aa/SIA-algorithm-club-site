@@ -94,6 +94,13 @@ function auditCorpus(corpus, provenance, snapshots) {
   assert.match(text('chat-history-attachments'), /本地保存不等于/);
   assert.match(text('chat-quota-guidance'), /自定义代理不计入现有 Chat quota\/usage/);
   assert.match(text('assistant-usage'), /与普通 AI Chat 记录分开/);
+  for (const tool of ['read_member_points','read_game_leaderboard','read_published_content']) assert(text('assistant-usage').includes(tool));
+  assert.match(text('assistant-usage'), /page（1–100）.*page_size（1–50）/);
+  assert.match(text('assistant-usage'), /points 降序第1页.*total_score 升序第1页/);
+  assert.match(text('assistant-usage'), /不遍历全部页或承诺无界全量访问/);
+  assert.match(text('assistant-usage'), /当前事实必须在本轮调用工具/);
+  assert.match(text('assistant-usage'), /同名不猜班级或账号/);
+  assert(provenance.user_decisions.some(decision => decision.id === 'semantic-read-tools'), 'Record approved capability contract separately from page evidence');
   assert.match(text('checkin-operation'), /功能页链接不带课程参数.*兑换积分/);
   assert.match(text('checkin-operation'), /\?type=course.*预选课程签到/);
   assert.match(text('checkin-operation'), /课程签到.*无需签到码.*等待管理员审核/);
@@ -143,7 +150,8 @@ for (const [name, mutate] of [
   ['removed topbar recommendation', copy => { copy.documents[9].content += '课程签到从顶栏快捷入口进入。'; }],
   ['missing article', copy => { copy.documents.pop(); }],
   ['unsafe source URL', copy => { copy.documents[0].source_path = '//external.example/a.html'; }],
-  ['unconfirmed timetable', copy => { copy.documents[4].content += '15:45 到 17:10'; }]
+  ['unconfirmed timetable', copy => { copy.documents[4].content += '15:45 到 17:10'; }],
+  ['stale fixed live capability', copy => { copy.documents.find(doc => doc.slug === 'assistant-usage').content = '小Bru是新哲文院算法社助手，与普通 AI Chat 记录分开。只能读取固定前20名。'; }]
 ]) {
   const copy = structuredClone(seed); mutate(copy);
   assert.throws(() => auditCorpus(copy, manifest, files), undefined, `Must reject ${name}`);
@@ -155,7 +163,7 @@ assert.throws(() => auditNavigation(missing), /Functional check-in route changed
 const noReview = structuredClone(manifest);
 noReview.document_reviews = noReview.document_reviews.filter(item => item.slug !== 'checkin-operation');
 assert.throws(() => auditCorpus(seed, noReview, files), /individual review/);
-console.log('PASS 7 negative checks: stale shortcut, missing article/review, external URL, unconfirmed schedule and changed route/evidence');
+console.log('PASS 8 negative checks: stale shortcut/capability, missing article/review, external URL, unconfirmed schedule and changed route/evidence');
 
 for (const conflict of manifest.conflicts) {
   assert(conflict.status && conflict.resolution && conflict.locations.length, `Incomplete conflict ${conflict.id}`);

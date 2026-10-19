@@ -840,7 +840,7 @@ async function approveCourseCheckin(id: unknown) {
 async function rejectCourseCheckin(id: unknown) {
   if (!validUuid(id)) throw new Error('课程签到记录标识不合法。');
   const { url, serviceKey } = supabaseConfig();
-  const response = await fetch(`${url}/rest/v1/club_course_checkin_requests?id=eq.${encodeURIComponent(id)}`, {
+  const response = await fetch(`${url}/rest/v1/club_course_checkin_requests?id=eq.${encodeURIComponent(String(id))}`, {
     method: 'DELETE',
     headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}`, Prefer: 'return=representation' }
   });
@@ -2361,6 +2361,213 @@ async function deleteMallRedemption(id: unknown) {
   return { ok: true };
 }
 
+// Assistant semantic reads: additive, self-contained for full-source Dashboard paste.
+type artcRecord = Record<string, unknown>;
+type artcQuery = artcRecord & { dataset: string; order_by: string; direction: 'asc' | 'desc'; page: number; page_size: number };
+
+
+const artcBoards = ['gomoku', 'tetris', 'tetris_versus', 'snake', 'snake_versus', 'platformer'];
+const artcDecoder = new TextDecoder('utf-8', { fatal: true });
+const artcDates = ['created_at', 'updated_at', 'starts_at', 'ends_at'];
+const artcStatuses = ['草稿', '报名中', '进行中', '已截止', '已结束', '已取消'];
+const artcCategories = ['社团通知', '课程安排', '比赛信息', '活动报名', '其他'];
+const artcFields: Record<string, string[]> = {
+  gomoku: ['nickname', 'total_score', 'wins', 'losses', 'draws', 'total_moves'],
+  tetris: ['nickname', 'games_played', 'high_score'], tetris_versus: ['nickname', 'games_played', 'high_score'],
+  snake: ['nickname', 'games_played', 'high_score'], snake_versus: ['nickname', 'games_played', 'high_score'],
+  platformer: ['username', 'total_score'], member_points: ['member_name', 'points'],
+  announcements: ['id', 'title', 'content', 'category', 'is_pinned', 'is_featured', 'is_published', ...artcDates],
+  events: ['id', 'title', 'summary', 'content', 'category', 'status', 'location', 'signup_deadline', 'allow_signup', 'signup_limit', 'is_featured', 'is_published', ...artcDates]
+};
+
+
+// Independent club validation/projection helpers; no shared-module imports.
+function artcIsRecord(value: unknown): value is artcRecord {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));
+}
+function artcInvalid(): never { throw Object.assign(new Error('Invalid assistant read tool arguments'), { code: 'tool_arguments' }); }
+function artcText(value: unknown, max: number): value is string {
+  return typeof value === 'string' && value.length > 0 && value.length <= max && value.trim() === value && !/[\u0000-\u001f\u007f]/.test(value);
+}
+function artcIso(value: unknown): value is string {
+  if (typeof value !== 'string' || value.length > 35 || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(value)) return false;
+  if (Number(value.slice(11, 13)) > 23 || Number(value.slice(14, 16)) > 59 || Number(value.slice(17, 19)) > 59) return false;
+  const day = value.slice(0, 10), parsed = new Date(`${day}T00:00:00Z`);
+  return Number.isFinite(Date.parse(value)) && Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === day;
+}
+function artcInteger(value: unknown, signed = false): number | string | null {
+  if (typeof value === 'number') return Number.isSafeInteger(value) && !Object.is(value, -0) && (signed || value >= 0) ? value : null;
+  if (typeof value !== 'string' || value.length > 20 || !(signed ? /^(?:0|[1-9][0-9]*|-[1-9][0-9]*)$/ : /^(?:0|[1-9][0-9]*)$/).test(value)) return null;
+  const number = BigInt(value);
+  return number >= (signed ? -9223372036854775808n : 0n) && number <= 9223372036854775807n ? value : null;
+}
+function artcValidateQuery(input: unknown, clubOnly = false): artcQuery {
+  if (!artcIsRecord(input)) artcInvalid();
+  const dataset = input.dataset;
+  if (typeof dataset !== 'string' || !Object.hasOwn(artcFields, dataset) || clubOnly && !['member_points', 'announcements', 'events'].includes(dataset)) artcInvalid();
+  const member = dataset === 'member_points', board = artcBoards.includes(dataset);
+  const extras = member ? ['member_name', 'min_points', 'max_points'] : board ? ['name', 'min_score', 'max_score'] : ['title_contains', 'category', 'status', 'date_field', 'after', 'before', 'id'];
+  const allowed = ['dataset', 'order_by', 'direction', 'page', 'page_size', ...extras];
+  if (Reflect.ownKeys(input).some(key => typeof key !== 'string' || !allowed.includes(key)) || ['dataset', 'order_by', 'direction', 'page', 'page_size'].some(key => !Object.hasOwn(input, key))) artcInvalid();
+  if (typeof input.direction !== 'string' || !['asc', 'desc'].includes(input.direction) || !Number.isInteger(input.page) || Number(input.page) < 1 || Number(input.page) > 100 || !Number.isInteger(input.page_size) || Number(input.page_size) < 1 || Number(input.page_size) > 50) artcInvalid();
+  const order = member || board ? artcFields[dataset] : ['default', ...artcDates];
+  if (typeof input.order_by !== 'string' || !order.includes(input.order_by)) artcInvalid();
+  for (const [key, max] of [['member_name', 40], ['name', 80], ['title_contains', 120], ['category', 40]] as const) if (Object.hasOwn(input, key) && !artcText(input[key], max)) artcInvalid();
+  for (const key of ['min_points', 'max_points']) if (Object.hasOwn(input, key) && (!Number.isInteger(input[key]) || Number(input[key]) < 0 || Number(input[key]) > 1000000)) artcInvalid();
+  for (const key of ['min_score', 'max_score']) if (Object.hasOwn(input, key) && (typeof input[key] !== 'string' || artcInteger(input[key], dataset.endsWith('_versus')) === null)) artcInvalid();
+  for (const [min, max] of [['min_points', 'max_points'], ['min_score', 'max_score']]) if (input[min] !== undefined && input[max] !== undefined && BigInt(String(input[min])) > BigInt(String(input[max]))) artcInvalid();
+  if (Object.hasOwn(input, 'category') && (typeof input.category !== 'string' || !artcCategories.includes(input.category))) artcInvalid();
+  if (Object.hasOwn(input, 'status') && (dataset !== 'events' || typeof input.status !== 'string' || !artcStatuses.includes(input.status))) artcInvalid();
+  if (Object.hasOwn(input, 'date_field') && (typeof input.date_field !== 'string' || !artcDates.includes(input.date_field) || !Object.hasOwn(input, 'after') && !Object.hasOwn(input, 'before'))) artcInvalid();
+  for (const key of ['after', 'before']) if (Object.hasOwn(input, key) && (!artcIso(input[key]) || !Object.hasOwn(input, 'date_field'))) artcInvalid();
+  if (input.after !== undefined && input.before !== undefined && Date.parse(String(input.after)) > Date.parse(String(input.before))) artcInvalid();
+  if (Object.hasOwn(input, 'id') && (typeof input.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.id))) artcInvalid();
+  return { ...input } as artcQuery;
+}
+function artcLiteral(value: string) { return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`; }
+function artcOrder(query: artcQuery) {
+  if (query.order_by === 'default') return query.dataset === 'announcements'
+    ? `is_pinned.${query.direction},updated_at.desc,id.asc`
+    : `is_featured.${query.direction},starts_at.asc.nullslast,updated_at.desc,id.asc`;
+  const ties = query.dataset === 'member_points' ? ['member_name', 'id'] : artcBoards.includes(query.dataset) ? query.dataset === 'platformer' ? ['username'] : ['updated_at', 'nickname'] : ['id'];
+  return [`${query.order_by}.${query.direction}.nullslast`, ...ties.filter(key => key !== query.order_by).map(key => `${key}.asc`)].join(',');
+}
+function artcParams(query: artcQuery, duplicateProbe = false) {
+  const params = new URLSearchParams({ select: artcFields[query.dataset].join(','), order: artcOrder(query), limit: String(duplicateProbe ? 2 : query.page_size + 1), offset: String(duplicateProbe ? 0 : (query.page - 1) * query.page_size) });
+  if (query.dataset === 'member_points') {
+    if (query.member_name !== undefined) params.set('member_name', `eq.${artcLiteral(String(query.member_name))}`);
+    if (!duplicateProbe) {
+      if (query.min_points !== undefined) params.append('points', `gte.${query.min_points}`);
+      if (query.max_points !== undefined) params.append('points', `lte.${query.max_points}`);
+    }
+  } else if (artcBoards.includes(query.dataset)) {
+    if (query.name !== undefined) params.set(query.dataset === 'platformer' ? 'username' : 'nickname', `eq.${artcLiteral(String(query.name))}`);
+    const score = ['gomoku', 'platformer'].includes(query.dataset) ? 'total_score' : 'high_score';
+    if (query.min_score !== undefined) params.append(score, `gte.${query.min_score}`);
+    if (query.max_score !== undefined) params.append(score, `lte.${query.max_score}`);
+  } else {
+    params.set('is_published', 'eq.true');
+    if (query.id !== undefined) params.set('id', `eq.${query.id}`);
+    if (query.category !== undefined) params.set('category', `eq.${artcLiteral(String(query.category))}`);
+    if (query.status !== undefined) params.set('status', `eq.${artcLiteral(String(query.status))}`);
+    // A quoted, escaped POSIX regex is a literal substring. LIKE cannot represent a
+    // literal * reliably because PostgREST aliases it to %, even inside quotes.
+    if (query.title_contains !== undefined) {
+      const literal = String(query.title_contains).replace(/[\\^$.*+?()[\]{}|]/g, char => `\\${char}`);
+      params.set('title', `match.${artcLiteral(literal)}`);
+    }
+    if (query.after !== undefined) params.append(String(query.date_field), `gte.${query.after}`);
+    if (query.before !== undefined) params.append(String(query.date_field), `lte.${query.before}`);
+  }
+  return params;
+}
+function artcPublicRow(dataset: string, raw: unknown): artcRecord {
+  if (!artcIsRecord(raw)) throw new Error('row_schema');
+  const output: artcRecord = {};
+  for (const key of artcFields[dataset]) {
+    const value = raw[key];
+    if (artcBoards.includes(dataset) || dataset === 'member_points') {
+      if (['member_name', 'nickname', 'username'].includes(key)) { if (!artcText(value, key === 'member_name' ? 40 : 80)) throw new Error('row_schema'); output[key] = value; }
+      else { const integer = artcInteger(value, key === 'high_score' && dataset.endsWith('_versus')); if (integer === null || key === 'points' && BigInt(String(integer)) > 1000000n) throw new Error('row_schema'); output[key] = integer; }
+    } else if (['is_published', 'is_pinned', 'is_featured', 'allow_signup'].includes(key)) {
+      if (typeof value !== 'boolean' || key === 'is_published' && value !== true) throw new Error('row_schema'); output[key] = value;
+    } else if (artcDates.includes(key) || key === 'signup_deadline') {
+      if (value !== null && !artcIso(value) || ['created_at', 'updated_at'].includes(key) && value === null) throw new Error('row_schema'); output[key] = value;
+    } else if (key === 'signup_limit') {
+      if (value !== null && (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1)) throw new Error('row_schema'); output[key] = value;
+    } else {
+      const max = key === 'content' ? (dataset === 'events' ? 8000 : 5000) : key === 'summary' ? 500 : key === 'category' ? 40 : key === 'status' ? 20 : key === 'id' ? 36 : 120;
+      if (typeof value !== 'string' || value.length > max || ['title', 'category', 'id', 'status'].includes(key) && !value.trim()) throw new Error('row_schema');
+      if (key === 'id' && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value) || key === 'status' && !artcStatuses.includes(value)) throw new Error('row_schema');
+      output[key] = key === 'content' ? value.slice(0, 5000) : value;
+    }
+  }
+  return output;
+}
+
+
+function artcAbort() { return new DOMException('The operation was aborted', 'AbortError'); }
+function artcRace<T>(pending: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) { void pending.catch(() => undefined); return Promise.reject(artcAbort()); }
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => { signal.removeEventListener('abort', abort); reject(artcAbort()); };
+    signal.addEventListener('abort', abort, { once: true });
+    pending.then(value => { signal.removeEventListener('abort', abort); resolve(value); }, error => { signal.removeEventListener('abort', abort); reject(error); });
+  });
+}
+function artcParse(text: string): unknown {
+  // Preserve bare JSON bigint integers before JSON.parse loses precision. Strings stay untouched.
+  return JSON.parse(text.replace(/"(?:[^"\\]|\\.)*"|(-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)/g, (token, numeric) => {
+    if (!numeric || /[.eE]/.test(token)) return token;
+    const number = BigInt(token); return number > BigInt(Number.MAX_SAFE_INTEGER) || number < BigInt(Number.MIN_SAFE_INTEGER) ? JSON.stringify(token) : token;
+  }));
+}
+async function artcRead(fetcher: typeof fetch, url: string, init: RequestInit, signal: AbortSignal): Promise<unknown> {
+  const response = await artcRace(Promise.resolve().then(() => {
+    if (signal.aborted) throw artcAbort();
+    return fetcher(url, { ...init, redirect: 'error', signal });
+  }).then(response => {
+    if (signal.aborted) { void response.body?.cancel().catch(() => undefined); throw artcAbort(); } return response;
+  }), signal);
+  if (!response.ok) { void response.body?.cancel().catch(() => undefined); throw new Error('http'); }
+  const length = response.headers.get('content-length');
+  if (length && (!/^\d+$/.test(length) || Number(length) > 65536)) { void response.body?.cancel().catch(() => undefined); throw new Error('response_limit'); }
+  if (!response.body) return artcParse('');
+  const reader = response.body.getReader(), chunks: Uint8Array[] = []; let size = 0;
+  try {
+    while (true) {
+      const part = await artcRace(reader.read(), signal); if (part.done) break;
+      size += part.value.byteLength; if (size > 65536) throw new Error('response_limit'); chunks.push(part.value);
+    }
+  } finally { void reader.cancel().catch(() => undefined); }
+  const bytes = new Uint8Array(size); let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return artcParse(artcDecoder.decode(bytes));
+}
+
+
+async function artcAssistantReadQuery(input: unknown, requestSignal: AbortSignal) {
+  const query = artcValidateQuery(input, true);
+  const { url, serviceKey } = supabaseConfig();
+  if (url !== 'https://jgezpvmlnhycxslqbwcx.supabase.co' && url !== 'https://jgezpvmlnhycxslqbwcx.supabase.co/') throw new Error('assistant_read_unavailable');
+  const base = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
+  const headers = { apikey: serviceKey, authorization: `Bearer ${serviceKey}` };
+  const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 5000);
+  const abort = () => controller.abort();
+  requestSignal.addEventListener('abort', abort, { once: true });
+  if (requestSignal.aborted) controller.abort();
+  try {
+    const read = (path: string, init: RequestInit = {}) => artcRead(fetch, `${base}${path}`, { ...init, headers: { ...headers, ...init.headers } }, controller.signal);
+    const checkGate = async () => {
+      const payload = await read('/rest/v1/rpc/club_site_service_status', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+      const gate = Array.isArray(payload) && payload.length === 1 ? payload[0] : payload;
+      if (!artcIsRecord(gate) || typeof gate.enabled !== 'boolean' || !artcIsRecord(gate.feature_settings)) throw new Error('assistant_read_unavailable');
+      const feature = gate.feature_settings[query.dataset === 'member_points' ? 'points' : 'events'];
+      if (feature !== undefined && (!artcIsRecord(feature) || typeof feature.enabled !== 'boolean')) throw new Error('assistant_read_unavailable');
+      if (!gate.enabled || artcIsRecord(feature) && !feature.enabled) throw new Error('assistant_read_paused');
+    };
+    const readRows = async (probe = false) => {
+      await checkGate();
+      const table = query.dataset === 'member_points' ? 'club_member_points' : query.dataset === 'announcements' ? 'club_announcements' : 'club_events';
+      const payload = await read(`/rest/v1/${table}?${artcParams(query, probe)}`);
+      const max = probe ? 2 : query.page_size + 1;
+      if (!Array.isArray(payload) || payload.length > max) throw new Error('assistant_read_unavailable');
+      // Validate the lookahead too, and project again before releasing service-role rows.
+      payload.forEach(row => artcPublicRow(query.dataset, row));
+      return payload;
+    };
+    if (query.dataset === 'member_points' && query.member_name !== undefined) {
+      const matches = await readRows(true);
+      if (matches.length > 1) return { rows: [], has_more: false, query, ambiguous: true };
+    }
+    const raw = await readRows();
+    const rows = raw.slice(0, query.page_size).map(row => artcPublicRow(query.dataset, row));
+    // A shortened content field must not silently claim completeness at the caller.
+    const contentTruncated = raw.slice(0, query.page_size).some(row => artcIsRecord(row) && typeof row.content === 'string' && row.content.length > 5000);
+    return { rows, has_more: raw.length > query.page_size, query, content_truncated: contentTruncated };
+  } finally { clearTimeout(timer); requestSignal.removeEventListener('abort', abort); }
+}
+
 Deno.serve(async request => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (!['GET', 'POST'].includes(request.method)) return json({ error: '只支持 GET、POST 请求。' }, 405);
@@ -2396,6 +2603,18 @@ Deno.serve(async request => {
 
     if (request.method !== 'POST') return json({ error: '请求参数不完整。' }, 400);
     const payload = await request.json().catch(() => ({}));
+
+    if (payload.action === 'assistant_read_query') {
+      if (!user?.id) return json({ error: 'Authentication required.' }, 401);
+      try {
+        if (!artcIsRecord(payload) || Reflect.ownKeys(payload).some(key => key !== 'action' && key !== 'query')) artcInvalid();
+        return json(await artcAssistantReadQuery(payload.query, request.signal));
+      } catch (artcError) {
+        const artcCode = artcError instanceof Error && 'code' in artcError ? artcError.code : '';
+        if (artcCode === 'tool_arguments') return json({ error: 'Invalid assistant read query.', code: 'tool_arguments' }, 400);
+        return json({ error: 'Assistant read unavailable.', code: artcError instanceof Error && artcError.message === 'assistant_read_paused' ? 'paused' : 'unavailable' }, 503);
+      }
+    }
 
     if (payload.action === 'signup') return json(await createMember(payload.username, payload.password, payload.inviteCode));
     if (payload.action === 'join_application_create') {

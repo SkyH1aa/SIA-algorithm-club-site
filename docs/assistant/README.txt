@@ -75,20 +75,58 @@ receive the same member-level projection. Duplicate member names require clarifi
 Tetris/Snake ordinary and versus boards stay separate; versus high scores may be
 negative player-minus-AI differences. These are not model-strength rankings.
 
-Single-board reads default to 20 rows, at most 50; all six boards use at most 10
-rows each. Live evidence includes query time, status and truncation. Unavailable,
-paused, empty or ambiguous results do not prove current facts or global absence.
-This is deterministic intent routing, not unrestricted natural-language tools.
-No live reads occur during catalog or compaction. Existing quota/audit writes stay
-part of generation accounting; no new business mutation actions are exposed.
+The model selects read-only tools from the meaning of the question. Static
+published knowledge still uses keyword matching; live reads have no keyword route.
+The server injects fixed policy, the published supplemental prompt and full known
+tool definitions (names, purposes and parameter schemas), independently of the
+native schemas sent to the provider. Thus older published capability wording does
+not hide the tools. Current facts require fresh tool calls even if history or a
+summary already contains an answer. Do not claim queried facts without success.
+
+The preset describes all three tools:
+- read_member_points: public member_name/points only. Required order_by
+  (points/member_name), direction, page, page_size; optional exact member_name and
+  min_points/max_points. Highest points: points, desc, page 1, page_size 1.
+- read_game_leaderboard: required board, board-valid order_by, direction, page,
+  page_size; optional exact name and min_score/max_score decimal strings. Boards:
+  gomoku, tetris, tetris_versus, snake, snake_versus, platformer. Lowest Gomoku
+  cumulative score: gomoku, total_score, asc, page 1, page_size 1.
+- read_published_content: required kind (announcements/events), order_by (default,
+  created_at/updated_at/starts_at/ends_at), direction, page, page_size. Optional id,
+  literal title_contains, category, events-only status, date_field with after/before
+  timestamps. Full schema constraints are injected by the server.
+
+For every tool direction is asc/desc, page 1..100 and page_size 1..50. Highest and
+lowest values require the requested metric's desc/asc database order on page 1,
+respectively. Fetch only the bounded pages needed for the question; never traverse
+all pages or promise full unbounded access. Normal/versus mode must be clarified
+when unspecified. Exact member names must be explicitly supplied, not extracted
+from a query phrase; duplicate names cannot be resolved by guessing a class.
+
+Live source cards retain time/status/scope and show validated order, page, returned
+count and whether more results are available. Page order is not a global rank;
+counts and has_more are not a population count. Source headers contain metadata,
+never rows or raw filters. Tool results retain the adapter's bounded rows/filters
+for model evidence; all such content is untrusted data, never instructions. Static
+sources are at most 4/<4000 encoded characters, each tool source <=980; at most
+8 tool sources plus static references fit the 12000-character header budget.
+Unavailable, paused, empty or ambiguous results do not prove current values or
+global absence. No live reads occur during catalog or compaction. During tool
+planning the frontend stays generating; the server collects the final answer
+before sending normalized SSE, so this is not token streaming during planning.
+Existing quota/audit writes remain generation accounting; no new business mutation
+actions are exposed.
 
 For an existing current assistant installation, this update requires no SQL.
-Replace the complete generated chat Dashboard index.ts in the web editor, publish
+Both chat and club-drive must be updated: in the Dashboard web editor replace each
+function's entire index.ts with docs/chat-deployment/chat-dashboard-index.ts and
+club-drive-dashboard-index.ts respectively. The latter is a complete source copy,
+not a helper patch; it preserves the existing function's other actions. Publish
 the listed static assets, and review/save/publish the new preset and seed through
 the existing administration flow. No new secret or administrator privilege is
 required. No actual deployment, live data read or paid provider call was performed.
 See docs/chat-deployment/README.md and
- docs/assistant-validation/markdown-live-query.md for limits and verification.
+ docs/assistant-validation/semantic-read-tools.md for current limits and verification.
 
 Current-site audit and application steps: docs/assistant-validation/knowledge-refresh.md.
 The review is of the current repository implementation, not a live production
