@@ -72,9 +72,11 @@ HTTP(S) 是正式运行环境。`file://` 仍受浏览器本地存储、认证�
 
 **这轮必须同时更新 `chat` 和 `club-drive`；只更新 Chat 不足以完成积分/公告/活动的新查询。** 本轮没有 SQL 改动，也不需要新的 Secret。
 
+配额说明：每日准入读取当天 UTC 日桶，不读取管理页的90天 token 汇总。小Bru的首轮输入预留不再重复计算尚不存在的工具历史；请求发出前若 `upstream_started` 标记失败，服务端只在数据库确认仍为 `audited` 且没有上游/usage证据时退款。额度保存只更改上限，不会清理此前已经记入日桶的用量或未结算预留。
+
 1. 在 Edge Functions → `club-drive` → Code，将 [club-drive-dashboard-index.ts](club-drive-dashboard-index.ts) 全文替换到 `index.ts`，部署更新。它是完整 `club-drive` 源码副本，新增受控成员只读查询动作，不要只粘新 helper 或替换原有其它功能。
 2. 在 Edge Functions → `chat` → Code，将 [chat-dashboard-index.ts](chat-dashboard-index.ts) 全文替换到 `index.ts`，部署更新。新工具协议和调用循环已内联。保留原有 Secrets 与鉴权设置；已有最新版 `chat-api-proxy` 无需为本轮重部署。
-3. 发布新版 `public/chat.js`、`public/chat-core.js`、`public/chat-file-bundle.js`、`public/assistant-i18n.js`、`public/assistant-preset.js`。如果还没发布数学渲染版本，同步发布上节列出的 HTML、CSS、`chat-math.js` 与整个本地 KaTeX 目录。
+3. 发布新版 `public/chat.js`、`public/chat-core.js`、重建的 `public/chat-file-bundle.js`、`public/assistant-i18n.js`、`public/assistant-preset.js`。Chat 会在窗口重新聚焦/返回前台时刷新额度快照；助手刷新 catalog 快照。如果还没发布数学渲染版本，同步发布上节列出的 HTML、CSS、`chat-math.js` 与整个本地 KaTeX 目录。
 4. 管理页点击“填入小Bru预设”，审核、保存；按原流程导入新版 `seed.json` 草稿，审核并发布不可变版本。保留当前模型/启用设置和自建资料；三字段配置 JSON 不是知识库导入文件。新后端即使面对旧发布预设，也固定注入当前工具约束，但新版预设能避免旧能力描述冲突。
 5. 模型必须支持所选协议的原生函数/工具调用（Responses、Claude Messages 或 Chat Completions）。这不是把工具名称写进 Prompt 就自动查询：服务端发送原生工具声明，执行经过校验的调用，将结果交回模型，再返回最终回答。供应商不支持或返回非法协议时明确失败，不假装查询或自动改用其它 Key。
 

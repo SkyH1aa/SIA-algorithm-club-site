@@ -686,10 +686,11 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
     throw new HttpError('cancelled', 499);
   }
   try {
-    // Persist the transition before fetch. Any later uncertainty retains reservation.
+    // Persist the transition before fetch. A failed marker may be refunded only
+    // when the database still proves that no upstream request started.
     await updateUsage(requestId, { status: 'upstream_started' });
   } catch (error) {
-    await finishGeneration(requestId, { status: 'failed', error_code: 'database' }).catch(() => undefined);
+    await finishGeneration(requestId, { status: 'failed', error_code: 'database' }, true).catch(() => undefined);
     throw error;
   }
   const upstreamController = new AbortController();
@@ -781,9 +782,10 @@ async function callAssistantTools(request: Request, ctx: RequestContext, release
         await updateUsage(requestId, { input_bytes: inputBytes });
         if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
         if (!started) {
-          // Once this transition is attempted, uncertainty retains the reservation.
-          started = true;
           await updateUsage(requestId, { status: 'upstream_started' });
+          // The flag follows the persisted transition. If that PATCH failed,
+          // the guarded outer settlement can refund a definitely unstarted call.
+          started = true;
         }
         const response = await fetch(endpoint, { method: 'POST', headers: upstreamHeaders(provider, Deno.env.get(provider.secret_name)!),
           body: serialized, redirect: 'error', signal });

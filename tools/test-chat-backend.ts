@@ -31,7 +31,7 @@ const modelBase = { id: MID, provider_id: PID, model_key: 'local-model', display
 const ASSIGNED_MID = '44444444-4444-4444-8444-444444444444';
 const CUSTOM_ID = '55555555-5555-4555-8555-555555555555';
 const OTHER_UID = '66666666-6666-4666-8666-666666666666';
-let provider: Row, model: Row, profile: boolean, admin: boolean, auditFail: boolean, startFail: boolean, finishFail: boolean, finishFailOnce: boolean, busy: boolean;
+let provider: Row, model: Row, profile: boolean, admin: boolean, auditFail: boolean, startFail: boolean, startFailAfterWrite: boolean, finishFail: boolean, finishFailOnce: boolean, busy: boolean;
 let authEmail: string, adminLookupMode: 'normal' | 'empty' | 'failure' | 'missing' | 'malformed' | 'mismatch';
 let assignedVisible = false, customModels: Row[];
 let dnsMode: string, mode: string, upstreamSignal: AbortSignal | undefined;
@@ -107,7 +107,7 @@ function reset() {
   proxyKey = { id: MID, route_id: PID, enabled: true, revoked_at: null, version: 4 };
   authEmail = 'local@example.com'; adminLookupMode = 'normal';
   assignedVisible = false; customModels = [];
-  auditFail = startFail = finishFail = finishFailOnce = busy = false; dnsMode = 'a-only'; mode = 'complete';
+  auditFail = startFail = startFailAfterWrite = finishFail = finishFailOnce = busy = false; dnsMode = 'a-only'; mode = 'complete';
   audits = []; patches = []; upstreamBodies = []; requests = []; liveRequests = []; released = finishAttempts = 0; leased = false; usageResult = undefined; usageFailure = false; upstreamSignal = undefined;
 }
 function json(value: unknown, status = 200, headers: Record<string, string> = {}) {
@@ -341,6 +341,8 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
       const audit = audits.find(item => item.request_id === row.p_request_id);
       assert.ok(audit);
       if (!['audited', 'upstream_started'].includes(String(audit.status))) return json({ settled: true });
+      if (row.p_refund && (audit.status !== 'audited' || audit.upstream_status != null || row.p_patch.upstream_status != null ||
+        ['input_tokens','output_tokens','total_tokens'].some(key => audit[key] != null || row.p_patch[key] != null))) return json({ error: 'Refund requires guaranteed not-started request' }, 400);
       Object.assign(audit, row.p_patch); patches.push(row.p_patch);
       charged = row.p_refund ? 0 : Number.isSafeInteger(row.p_patch.total_tokens) ? row.p_patch.total_tokens : charged;
       released++; leased = false;
@@ -358,9 +360,12 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
       if (patch.finished_at) finishAttempts++;
       assert.equal(url.searchParams.get('status'), 'in.(audited,upstream_started)');
       if (patch.finished_at && terminalGate) { terminalReached?.(); await terminalGate; }
-      if ((startFail && patch.status === 'upstream_started') || (finishFail && patch.finished_at)) return json({}, 503);
       const row = audits.find(row => `eq.${row.request_id}` === url.searchParams.get('request_id'));
       if (!row || !['audited', 'upstream_started'].includes(String(row.status))) return json([]);
+      if ((startFail && patch.status === 'upstream_started') || (finishFail && patch.finished_at)) {
+        if (startFailAfterWrite && patch.status === 'upstream_started') Object.assign(row, patch);
+        return json({}, 503);
+      }
       Object.assign(row, patch); patches.push(patch); return json([row]);
     }
     throw new Error('usage reads must use the aggregate RPC, never PostgREST table pagination');
@@ -721,8 +726,14 @@ try {
   await test('atomic admission audit failure never acquires lease or calls provider', async () => {
     auditFail = true; await expectStatus(payload(), 503); assert.equal(upstreamBodies.length, 0); assert.equal(released, 0); assert.equal(leased, false);
   });
-  await test('pre-fetch start marker failure never calls provider and settles conservatively', async () => {
-    startFail = true; await expectStatus(payload(), 503); assert.equal(upstreamBodies.length, 0); assert.equal(released, 1); assert.equal(settlements[0].p_refund, false);
+  await test('pre-fetch start marker failure never calls provider and refunds a definitely unstarted request', async () => {
+    startFail = true; await expectStatus(payload(), 503); assert.equal(upstreamBodies.length, 0); assert.equal(released, 1); assert.equal(settlements[0].p_refund, true); assert.equal(charged, 0); assert.equal(leased, false);
+  });
+  await test('pre-fetch marker response loss after persisted transition fails closed and retains reservation', async () => {
+    startFail = true; startFailAfterWrite = true; await expectStatus(payload(), 503);
+    assert.equal(upstreamBodies.length, 0); assert.equal(settlements[0].p_refund, true);
+    assert.equal(audits[0].status, 'upstream_started'); assert.equal(charged, 102);
+    assert.equal(released, 0); assert.equal(leased, true);
   });
   await test('terminal audit failure does not deliver completed success', async () => {
     finishFail = true; await assert.rejects(consume()); assert.ok(upstreamSignal!.aborted); assert.equal(released, 0); assert.equal(leased, true); assert.notEqual(audits[0].status, 'completed');
@@ -1376,6 +1387,23 @@ try {
     assert.equal(audits[0].total_tokens,null);
     const admission=rpcCalls.find(call=>call.name==='chat_begin_generation')!.body;
     assert.equal(charged,Number(admission.p_input_tokens)+Number(admission.p_output_tokens));
+  });
+  await test('assistant pre-fetch start marker failure refunds when no provider request started',async()=>{
+    Deno.env.set('SUPABASE_URL','https://jgezpvmlnhycxslqbwcx.supabase.co'); startFail=true;
+    plan({calls:[toolCall('read_member_points',memberArgs)]});
+    await expectStatus({action:'assistant_respond',input:[message('谁贡献最多？')]},503);
+    assert.equal(upstreamBodies.length,0); assert.equal(businessReads.length,0);
+    assert.equal(settlements.length,1); assert.equal(settlements[0].p_refund,true);
+    assert.equal(charged,0); assert.equal(released,1); assert.equal(leased,false);
+  });
+  await test('assistant marker response loss after persistence rejects refund and retains reservation',async()=>{
+    startFail=true; startFailAfterWrite=true; plan({text:'never dispatched'});
+    await expectStatus({action:'assistant_respond',input:[message('谁贡献最多？')]},503);
+    assert.equal(upstreamBodies.length,0); assert.equal(businessReads.length,0);
+    assert.equal(settlements[0].p_refund,true); assert.equal(audits[0].status,'upstream_started');
+    const admission=rpcCalls.find(call=>call.name==='chat_begin_generation')!.body;
+    assert.equal(charged,Number(admission.p_input_tokens)+Number(admission.p_output_tokens));
+    assert.equal(released,0); assert.equal(leased,true);
   });
   for(const stage of ['first','after-tool'] as const) await test(`assistant ${stage} upstream failure retains reservation without duplicate settlement`,async()=>{
     Deno.env.set('SUPABASE_URL','https://jgezpvmlnhycxslqbwcx.supabase.co');

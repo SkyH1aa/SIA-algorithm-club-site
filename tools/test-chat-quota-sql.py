@@ -200,6 +200,17 @@ def main():
             rejected(lambda: finish(request, refund=True))
             rejected(lambda: finish(request, {"status": "completed", "total_tokens": -1}))
             finish(request)
+            # Raising a limit changes only the ceiling; it must not erase the
+            # already accumulated usage in the active quota bucket.
+            current_global_used = quota()["global"]["used"]
+            save(None, current_global_used + 40)
+            charged_request, charged_result = begin(inp=10, out=30)
+            assert charged_result["allowed"] and quota()["global"]["used"] == current_global_used + 40
+            save(None, current_global_used + 100)
+            raised = quota()["global"]
+            assert raised["daily_limit"] == current_global_used + 100 and raised["used"] == current_global_used + 40 and raised["remaining"] == 60
+            finish(charged_request, {"status": "completed", "input_tokens": 10, "output_tokens": 5, "total_tokens": 15})
+            save(None)
             # Lease expiry must neither release quota nor erase allocation, and
             # a late finish must touch old buckets and not a newer request lease.
             old, _ = begin()

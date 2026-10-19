@@ -17,6 +17,7 @@ const t = (key, vars) => {
   return ClubI18n.t(`chat.${key}`, vars);
 };
 let session = null, epoch = 0, models = [], customModels = [], chats = [], current = null, pending = [], active = null;
+let quotaState = null;
 let memberName = '';
 let customStatusKey = '', customStatusVars = {}, customBusy = false;
 /* 自动/手动压缩进行中：与生成同样属于忙碌状态，期间禁止发送与编辑。 */
@@ -201,8 +202,20 @@ function status(key, vars = {}) {
 }
 function quotaReset(quota) {
   const buckets = [{...quota?.global, limit:quota?.global?.daily_limit}, ...(quota?.periods || [])];
-  const dates = buckets.filter(row => row && row.limit != null && row.remaining === 0 && row.resets_at).map(row => row.resets_at);
+  const dates = buckets.filter(row => row && row.limit != null && Number(row.remaining) <= 0 && row.resets_at).map(row => row.resets_at);
   return dates.sort().at(-1) || '';
+}
+function quotaAvailable(quota) {
+  const buckets = [{...quota?.global, limit:quota?.global?.daily_limit}, ...(quota?.periods || [])];
+  const limited = buckets.filter(row => row && row.limit != null);
+  return limited.length === 0 || limited.every(row => Number(row.remaining) > 0);
+}
+function storeQuota(quota) {
+  if (!quota || typeof quota !== 'object') return;
+  quotaState = quota;
+  // A previous denial is tied to its old server snapshot. Do not keep showing
+  // it after a fresh snapshot proves that at least one quota bucket reopened.
+  if (quotaAvailable(quota) && (statusKey === 'quota' || statusKey === 'quotaReset')) status('ready');
 }
 function button(key, handler) {
   const node = document.createElement('button'); node.type = 'button'; node.textContent = t(key);
@@ -1168,7 +1181,7 @@ async function auth(next, reload = false) {
   for (const run of staleRuns) { run.stopped = false; run.controller.abort(); }
   catalogController?.abort();
   active = null; attaching = false; compacting = false; assistantConfig = {reserve_tokens:0};
-  session = next; models = []; customModels = []; customBusy = false; memberName = ''; clearCustomKeys(); customForm(null); customStatus(); chats = []; current = null; pending = []; $('prompt').value = ''; $('workspace').hidden = true;
+  session = next; quotaState = null; models = []; customModels = []; customBusy = false; memberName = ''; clearCustomKeys(); customForm(null); customStatus(); chats = []; current = null; pending = []; $('prompt').value = ''; $('workspace').hidden = true;
   $('model').replaceChildren(); gateKey = next ? 'loading' : 'login'; render();
   if (!next) return;
   try {
@@ -1185,6 +1198,7 @@ async function auth(next, reload = false) {
     }
     const data = await response.json();
     if (guard !== epoch) return;
+    storeQuota(data.quota);
     catalogController = null;
     await Promise.allSettled([...staleRuns.filter(run => run.userId === next.user.id).map(run => run.done), staleCompact].filter(Boolean));
     if (guard !== epoch) return;
@@ -1233,10 +1247,20 @@ async function refreshAssistantCatalog() {
     const response = await request('assistant_catalog', {}, controller.signal, session.access_token);
     const data = await response.json();
     if (guard !== epoch || controller.signal.aborted || !data.assistant) return;
+    storeQuota(data.quota);
     assistantConfig = data.assistant;
     if (current && !current.turns.length) render();
   } catch { /* retain the last valid catalog when a refresh is unavailable */ }
   finally { if (catalogController === controller) catalogController = null; }
+}
+async function refreshQuota() {
+  if (!session?.access_token || active || compacting) return;
+  const guard = epoch, token = session.access_token;
+  try {
+    const response = await request('quota', {}, undefined, token);
+    const data = await response.json();
+    if (guard === epoch && session?.access_token === token) { storeQuota(data); render(); }
+  } catch { /* A failed refresh is not evidence that quota is available. */ }
 }
 function notifyAssistant(action, fields = {}) {
   if (!assistantFrame) return;
@@ -1439,7 +1463,10 @@ document.addEventListener?.('keydown', event => {
 });
 
 window.addEventListener('pagehide', suspendWorkspace);
-window.addEventListener('pageshow', () => { suspended = false; });
+function refreshCurrentQuota() { if (ASSISTANT_MODE) void refreshAssistantCatalog(); else void refreshQuota(); }
+window.addEventListener('pageshow', () => { suspended = false; refreshCurrentQuota(); });
+window.addEventListener('focus', refreshCurrentQuota);
+document.addEventListener?.('visibilitychange', () => { if (!document.hidden) refreshCurrentQuota(); });
 function refreshLocalizedUi() {
   const selected = $('model').value;
   models = mergeModels(models.filter(item => !customModel(item)), customModels);

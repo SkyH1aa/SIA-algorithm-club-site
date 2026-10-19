@@ -48,8 +48,8 @@ function options(dispatch: (serialized: string, signal: AbortSignal) => Promise<
 }
 async function run(name: string, fn: () => Promise<void> | void) { await fn(); console.log(`PASS ${name}`); }
 
-await run('budget reserves three turns and includes schema plus history allowance', () => {
-  assert.deepEqual(assistantToolBudget(100, 10), { perTurnInputTokens: 16_360, reservedInputTokens: 49_080 });
+await run('budget reserves first turn separately from later history-bearing turns', () => {
+  assert.deepEqual(assistantToolBudget(100, 10), { perTurnInputTokens: 16_360, reservedInputTokens: 33_080 });
 });
 
 await run('executes a native tool round then final turn and aggregates usage', async () => {

@@ -218,6 +218,15 @@ for (const [code, httpStatus] of [['quota',429],['blacklisted',403]]) {
   ui.evaluate('render()');
   assert.equal(ui.evaluate('statusVars.reset'),reset,'rerender must retain untranslated reset variables');
 }
+{
+  const ui=uiHarness(); await ui.login('A');
+  ui.evaluate("status('quota');");
+  ui.events.get('focus')(); await settle();
+  assert.equal(ui.requests.at(-1).body.action,'quota');
+  ui.requests.at(-1).resolve({ok:true,json:async()=>({global:{daily_limit:100,remaining:25,resets_at:'2026-11-01T00:00:00Z'},periods:[{period:'day',limit:null,remaining:null},{period:'week',limit:null,remaining:null},{period:'month',limit:null,remaining:null}]})});
+  await settle();
+  assert.equal(ui.evaluate('statusKey'),'ready','a fresh quota snapshot clears a stale quota warning');
+}
 for (const [terminal,key] of [['response.incomplete','quotaTruncated'],['response.completed','quotaLimited']]) {
   const ui=uiHarness();await ui.login('A');
   ui.evaluate("document.getElementById('prompt').value='short'; void generate();");await settle();

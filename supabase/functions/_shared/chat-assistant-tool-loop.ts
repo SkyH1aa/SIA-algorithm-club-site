@@ -45,8 +45,12 @@ export type AssistantToolLoopResult = {
 };
 
 export function assistantToolBudget(inputTokens: number, toolSchemaBytes: number): { perTurnInputTokens: number; reservedInputTokens: number } {
+  const firstTurnInputTokens = inputTokens + Math.ceil(toolSchemaBytes / 3) + 256;
   const perTurnInputTokens = inputTokens + Math.ceil((toolSchemaBytes + ASSISTANT_TOOL_HISTORY_BYTES) / 3) + 256;
-  return { perTurnInputTokens, reservedInputTokens: perTurnInputTokens * ASSISTANT_TOOL_MAX_TURNS };
+  return {
+    perTurnInputTokens,
+    reservedInputTokens: firstTurnInputTokens + perTurnInputTokens * (ASSISTANT_TOOL_MAX_TURNS - 1),
+  };
 }
 
 function atlAbortError(): DOMException {
