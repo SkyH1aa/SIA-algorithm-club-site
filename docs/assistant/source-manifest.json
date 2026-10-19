@@ -2,7 +2,7 @@
   "status": "manual-draft-unpublished",
   "review_date": "2026-10-19",
   "method": "逐篇审查现有 14 篇的全部声明。依据当前工作区首页导航、club-shell 模块配置、公开卡片与认证前门禁；只读公开前端源码以交叉核对链接、表单流程、附件限制、本地存储和主题行为。未启动页面、登录、提交表单、读取真实后端、访问付费模型、部署或验证线上版本。guide/i18n 中的旧操作文案只列入冲突，不用作当前操作证据。",
-  "followup_review": "同日复核页面负责方的同步修订：guide.checkinText/accountText/featuresText、memberCenter.authPoint2Title/authPoint2Body/loginIntro、home.capDocDesc 的 HTML 与中英字典已修正，assistant 页面标题/中英称呼及悬浮窗标题已加入小铭。conflicts 的 anchors 保留初审旧值作为审计记录，status 标记最终状态；旧值不作为当前证据。历史 changelog 不作为当前导航说明。",
+  "followup_review": "同日复核页面负责方的同步修订：guide.checkinText/accountText/featuresText、memberCenter.authPoint2Title/authPoint2Body/loginIntro、home.capDocDesc 的 HTML 与中英字典已修正，assistant 页面标题/中英称呼及悬浮窗标题已加入小Bru。conflicts 的 anchors 保留初审旧值作为审计记录，status 标记最终状态；旧值不作为当前证据。历史 changelog 不作为当前导航说明。",
   "evidence_priority": [
     "本次用户明确指定的身份命名；在 user_decisions 中单独标明，不能伪称来自网页",
     "当前首页实际链接、club-shell 模块配置与功能页实际 href",
@@ -12,10 +12,10 @@
   "user_decisions": [
     {
       "id": "identity",
-      "statement": "新哲文院算法社；助手小铭。",
-      "authority": "本次用户明确要求：新哲文院算法社身份按本次用户明确要求，助手小铭。",
+      "statement": "新哲文院算法社；助手小Bru。",
+      "authority": "本次用户明确要求：新哲文院算法社身份按本次用户明确要求，助手小Bru。",
       "document_slugs": ["club-overview", "public-join", "assistant-usage"],
-      "boundary": "社团身份与首页 home.affiliation 相容；小铭为用户命名。同日页面负责方已将助手页面标题、中英称呼与悬浮标题同步为小铭；fixedModel 的社团知识助手是模型标签，不要求改为人名。本资料审查方不编辑网页或 prompt。"
+      "boundary": "社团身份与首页 home.affiliation 相容；小Bru为用户命名。同日页面负责方已将助手页面标题、中英称呼与悬浮标题同步为小Bru；fixedModel 的社团知识助手是模型标签，不要求改为人名。本资料审查方不编辑网页或 prompt。"
     }
   ],
   "sources": [
@@ -132,7 +132,7 @@
       "selectors": ["#gatePanel", "#assistantModelName", "[data-i18n=\"assistant.title\"]", "[data-i18n=\"assistant.privacy\"]", "[href=\"member-center.html\"]"],
       "copy_repository_file": "public/assistant-i18n.js",
       "translation_keys": ["assistant.emptyBody", "assistant.privacy", "assistant.assistant_unavailable", "assistant.fixedModel"],
-      "fact_scope": "认证前门禁、公开前端用途与隐私说明。小铭命名来自 user_decisions，同日页面标题与中英称呼已同步，但不证明部署/启用状态。"
+      "fact_scope": "认证前门禁、公开前端用途与隐私说明。小Bru命名来自 user_decisions，同日页面标题与中英称呼已同步，但不证明部署/启用状态。"
     },
     {
       "id": "assistant-launcher",
@@ -214,7 +214,7 @@
     {"slug":"member-login-binding","result":"revised","evidence_ids":["member-center","features","password"],"conclusion":"核对登录/邀请码/保存绑定/忘记密码，补充真实两步重置入口；不采信登录即全部可用或积分签到随即生效。"},
     {"slug":"chat-history-attachments","result":"revised","evidence_ids":["features","member-center","chat-page","chat-controller","chat-core","chat-store"],"conclusion":"核对账号隔离、本地与发送的区别、导出/清除及 4 个/5 MiB/12 MiB 实际常量；说明编码与上下文约束，未读取对话。"},
     {"slug":"chat-quota-guidance","result":"revised","evidence_ids":["chat-page","chat-controller"],"conclusion":"保留 UTC 周期及失败提示含义；限定社团配置的普通模型，补充自定义代理不计现有 quota/usage 不等于免费。"},
-    {"slug":"assistant-usage","result":"revised","evidence_ids":["assistant-page","assistant-launcher","chat-controller","chat-core","chat-store"],"user_decision_ids":["identity"],"conclusion":"采用小铭命名；核对悬浮/独立入口、引用、分离存储、模型配置与隐私；补充门禁、重试和实时信息边界。"},
+    {"slug":"assistant-usage","result":"revised","evidence_ids":["assistant-page","assistant-launcher","chat-controller","chat-core","chat-store"],"user_decision_ids":["identity"],"conclusion":"采用小Bru命名；核对悬浮/独立入口、引用、分离存储、模型配置与隐私；补充门禁、重试和实时信息边界。"},
     {"slug":"checkin-operation","result":"revised","evidence_ids":["features","member-center","shell","checkin-gate-and-flow"],"conclusion":"主来源从 guide 改为真实功能页，删除顶栏快捷指导。区分无参数的兑换积分与模块 ?type=course 预选课程，明确先登录、核对类型姓名、课程无签到码及等待审核。"},
     {"slug":"events-operation","result":"revised","evidence_ids":["home","features","member-center","shell","events"],"conclusion":"核对四类入口与卡片内嵌表单，删除需要打开卡片的暗示；字段、登录及 allow_signup 均只作流程说明，不保证截止有效或报名成功。"},
     {"slug":"points-operation","result":"revised","evidence_ids":["member-center","shell","features","points-gate"],"conclusion":"积分榜从个人中心或社员积分模块进入；明确功能页无独立积分榜卡片，不暗示提供个人流水或实时余额。"},
@@ -301,7 +301,7 @@
         {"repository_file":"public/assistant-i18n.js","key":"assistant.title / assistant.assistant / assistant.fixedModel","anchors":["title:'社团助手'","fixedModel:'社团知识助手'"]},
         {"repository_file":"public/assistant-launcher.js","key":"copy.zh.title / open","anchors":["社团 AI 助手"]}
       ],
-      "resolution": "知识按用户要求使用小铭；页面负责方已同步 HTML 标题、assistant.title/assistant.assistant/emptyTitle/emptyBody 的中英文与悬浮窗标题。通用 fixedModel 模型标签继续保留，不视为身份冲突。本资料审查方未编辑页面。",
+      "resolution": "知识按用户要求使用小Bru；页面负责方已同步 HTML 标题、assistant.title/assistant.assistant/emptyTitle/emptyBody 的中英文与悬浮窗标题。通用 fixedModel 模型标签继续保留，不视为身份冲突。本资料审查方未编辑页面。",
       "document_slugs": ["club-overview","assistant-usage"]
     }
   ],

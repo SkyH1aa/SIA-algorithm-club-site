@@ -41,11 +41,11 @@ The enabled switch is a live availability control when saved, even if a release
 already exists; disabling it stops assistant runtime availability. Draft imports
 alone never publish, enable or deploy anything.
 
-Xiaoming preset configuration
+Bru preset configuration
 
 public/assistant-preset.js is the source of the welcome message, suggested
-questions and supplemental system prompt for 小铭, 新哲文院算法社's AI assistant.
-In Chat administration click “填入小铭预设” to fill these three fields only. This
+questions and supplemental system prompt for 小Bru, 新哲文院算法社's AI assistant.
+In Chat administration click “填入小Bru预设” to fill these three fields only. This
 never changes the model or enabled state and never saves/publishes automatically.
 Review the fields, click Save assistant configuration, import/review knowledge,
 and publish a new release. Existing published answers do not change retroactively.
@@ -56,7 +56,7 @@ system-prompt.txt can be copied directly into the supplemental instructions fiel
 The knowledge import accepts seed.json. Rebuild/check the preset copies with
 node tools/build-assistant-preset.mjs [--check].
 
-The server also states the Xiaoming identity and fact/navigation boundaries in
+The server also states the 小Bru identity and fact/navigation boundaries in
 its fixed policy. Updating that policy requires redeploying the generated chat
 Dashboard bundle; changing drafts or static files alone does not update it.
 

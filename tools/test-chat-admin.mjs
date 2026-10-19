@@ -1182,7 +1182,7 @@ const translatedCopy = new Map();
     assert.equal(run('usage.rows.length'),0,'Revoked assistant auth also invalidates concurrent legacy responses');
   }
   assert(!calls.slice(beforeLogin).some(call=>['test','admin_test','assistant_ask'].includes(call.action)),'Automatic lifecycle never calls a paid upstream');
-  console.log('PASS automatic assistant lifecycle: bootstrap/auth race, first login, tab fallback/coalescing, token refresh, drafts, conflict lock, isolated failure/explicit retry, concurrent legacy load, stale account/signout responses and explicit local Xiaoming preset');
+  console.log('PASS automatic assistant lifecycle: bootstrap/auth race, first login, tab fallback/coalescing, token refresh, drafts, conflict lock, isolated failure/explicit retry, concurrent legacy load, stale account/signout responses and explicit local Bru preset');
 }
 assert.equal(queue.length, 0, 'All queued responses must be consumed');
 console.log(`Chat admin VM regression passed (${calls.length} mocked requests; zero network or paid calls).`);

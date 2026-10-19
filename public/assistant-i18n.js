@@ -1,6 +1,6 @@
 (() => {
   const zh = {
-    title:'小铭 · 社团助手', assistant:'小铭', emptyTitle:'你好，我是小铭',
+    title:'小Bru · 社团助手', assistant:'小Bru', emptyTitle:'你好，我是小Bru',
     emptyBody:'我是新哲文院算法社的社团 AI 助手。可以帮你了解网站使用与学习资源，也可以交流编程和算法。社团信息请结合回答中的资料出处核对。',
     placeholder:'询问社团、学习资源或网站使用方法…',
     privacy:'对话与附件仅保存在这台设备的当前账号下，与 AI 对话记录分开。发送时，问题、相关历史、摘要和附件会交给社团配置的模型处理。请勿发送密码或敏感个人信息。',
@@ -9,8 +9,8 @@
     fixedModel:'社团知识助手', sourceLabel:'资料来源', publicationVersion:'发布版本', close:'关闭助手'
   };
   const en = {
-    title:'Xiaoming · Club Assistant', assistant:'Xiaoming', emptyTitle:'Hello, I’m Xiaoming',
-    emptyBody:'I am Xiaoming, the AI assistant of 新哲文院算法社. Ask about site features, learning resources, programming, or algorithms. Check the cited sources for club information.',
+    title:'Bru · Club Assistant', assistant:'Bru', emptyTitle:'Hello, I’m Bru',
+    emptyBody:'I am Bru, the AI assistant of 新哲文院算法社. Ask about site features, learning resources, programming, or algorithms. Check the cited sources for club information.',
     placeholder:'Ask about the club, learning resources, or this website…',
     privacy:'Chats and attachments are stored on this device under your current account, separately from AI Chat. Your question, relevant history, summary, and attachments are sent to the model configured by the club. Do not send passwords or sensitive personal information.',
     estimate:'Space for club knowledge and fixed rules is reserved. Token usage is approximate.',

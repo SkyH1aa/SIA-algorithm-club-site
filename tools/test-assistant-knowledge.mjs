@@ -85,8 +85,8 @@ function auditCorpus(corpus, provenance, snapshots) {
     }
   }
   const text = slug => corpus.documents.find(doc => doc.slug === slug).content;
-  for (const slug of ['club-overview', 'assistant-usage']) assert.match(text(slug), /新哲文院算法社.*小铭|小铭.*新哲文院算法社/);
-  assert(provenance.user_decisions.some(decision => decision.statement.includes('小铭') && decision.authority.includes('用户')));
+  for (const slug of ['club-overview', 'assistant-usage']) assert.match(text(slug), /新哲文院算法社.*小Bru|小Bru.*新哲文院算法社/);
+  assert(provenance.user_decisions.some(decision => decision.statement.includes('小Bru') && decision.authority.includes('用户')));
   assert(!/15:45|17:10|每周二|每周四|出勤一天/.test(text('public-join')), 'Do not turn the unconfirmed static schedule into current advice');
   assert.match(text('public-join'), /不是.*实时确认/);
   assert.match(text('public-join'), /最新.*公告/);
@@ -161,9 +161,9 @@ for (const conflict of manifest.conflicts) {
   assert(conflict.status && conflict.resolution && conflict.locations.length, `Incomplete conflict ${conflict.id}`);
   if (conflict.status === 'corrected-in-working-tree-by-page-owner') {
     if (conflict.id === 'assistant-generic-label') {
-      assert(files.get('public/assistant.html').includes('小铭'));
-      assert(files.get('public/assistant-i18n.js').includes("assistant:'小铭'"));
-      assert(files.get('public/assistant-launcher.js').includes("title:'小铭"));
+      assert(files.get('public/assistant.html').includes('小Bru'));
+      assert(files.get('public/assistant-i18n.js').includes("assistant:'小Bru'"));
+      assert(files.get('public/assistant-launcher.js').includes("title:'小Bru"));
     } else {
       for (const location of conflict.locations) {
         const original = files.get(location.repository_file) ?? load(location.repository_file);

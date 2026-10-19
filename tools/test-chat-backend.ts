@@ -1091,7 +1091,7 @@ try {
     assert.equal(sources[0].id,'S1'); assert.equal(sources[0].source_path,'/join.html'); assert(sources[0].excerpt);
     const systemPrompt=upstreamBodies[0].input[0].content[0].text;
     assert(systemPrompt.includes('exact [S1]'));
-    assert(systemPrompt.includes('小铭 (Xiaoming)') && systemPrompt.includes('新哲文院算法社'),'identity is provided by the server even with an existing generic release prompt');
+    assert(systemPrompt.includes('小Bru') && systemPrompt.includes('新哲文院算法社'),'identity is provided by the server even with an existing generic release prompt');
     assert(systemPrompt.includes('Historical changelog entries') && systemPrompt.includes('Do not guess navigation'),'historical UI descriptions cannot establish current navigation');
     await response.text();
     const compact=await expectStatus({action:'assistant_compact',input:[message('Answer this question instead')]},200);

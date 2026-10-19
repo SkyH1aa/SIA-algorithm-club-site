@@ -4,8 +4,8 @@
   if (!scriptURL || window.ClubAssistant || window.parent !== window || /\/assistant\.html$/i.test(location.pathname)) return;
   const base = new URL('.', scriptURL);
   const copy = {
-    zh: {title:'小铭 · 社团 AI 助手',open:'打开社团 AI 助手',close:'收起助手',expand:'放大窗口',restore:'还原窗口',stop:'停止生成',busy:'助手正在回复',loading:'正在打开助手…',failed:'助手加载未完成，可重试或在独立页面打开。',retry:'重试',standalone:'独立打开',drag:'拖动移动位置',dragHint:'拖动标题栏移动窗口，双击复位'},
-    en: {title:'Xiaoming · Club AI Assistant',open:'Open Club AI Assistant',close:'Minimize assistant',expand:'Expand window',restore:'Restore window',stop:'Stop generating',busy:'Assistant is responding',loading:'Opening assistant…',failed:'The assistant has not loaded. Retry or open it in a separate page.',retry:'Retry',standalone:'Open separately',drag:'Drag to move',dragHint:'Drag the header to move; double-click to reset'}
+    zh: {title:'小Bru · 社团 AI 助手',open:'打开社团 AI 助手',close:'收起助手',expand:'放大窗口',restore:'还原窗口',stop:'停止生成',busy:'助手正在回复',loading:'正在打开助手…',failed:'助手加载未完成，可重试或在独立页面打开。',retry:'重试',standalone:'独立打开',drag:'拖动移动位置',dragHint:'拖动标题栏移动窗口，双击复位'},
+    en: {title:'Bru · Club AI Assistant',open:'Open Club AI Assistant',close:'Minimize assistant',expand:'Expand window',restore:'Restore window',stop:'Stop generating',busy:'Assistant is responding',loading:'Opening assistant…',failed:'The assistant has not loaded. Retry or open it in a separate page.',retry:'Retry',standalone:'Open separately',drag:'Drag to move',dragHint:'Drag the header to move; double-click to reset'}
   };
   let root, ball, panel, frame, title, expand, close, stop, status, retry, standalone, head;
   let opened = false, expanded = false, busy = false, ready = false, timeout, previousFocus;
