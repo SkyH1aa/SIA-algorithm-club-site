@@ -1200,6 +1200,20 @@ function updateScrollButton() {
 
 /* The iframe never receives or posts credentials. Only its same-site parent controls lifecycle. */
 let lastAssistantBusy = null;
+async function refreshAssistantCatalog() {
+  if (!ASSISTANT_MODE || !session?.access_token || catalogController || active || compacting) return;
+  const guard = epoch;
+  const controller = new AbortController();
+  catalogController = controller;
+  try {
+    const response = await request('assistant_catalog', {}, controller.signal, session.access_token);
+    const data = await response.json();
+    if (guard !== epoch || controller.signal.aborted || !data.assistant) return;
+    assistantConfig = data.assistant;
+    if (current && !current.turns.length) render();
+  } catch { /* retain the last valid catalog when a refresh is unavailable */ }
+  finally { if (catalogController === controller) catalogController = null; }
+}
 function notifyAssistant(action, fields = {}) {
   if (!assistantFrame) return;
   if (action === 'state') { if (lastAssistantBusy === fields.busy) return; lastAssistantBusy = fields.busy; }
@@ -1230,7 +1244,8 @@ function receiveAssistantMessage(event) {
   if (!assistantFrame || event.source !== parent || event.origin !== (location.protocol === 'file:' ? 'null' : location.origin)) return;
   const data = event.data;
   if (!data || data.type !== 'club-assistant') return;
-  if (data.action === 'stop') stopWork();
+  if (data.action === 'refreshCatalog') void refreshAssistantCatalog();
+  else if (data.action === 'stop') stopWork();
   else if (data.action === 'suspend') suspendWorkspace();
   else if (data.action === 'focus' && ['first','last'].includes(data.direction)) {
     const targets = assistantTabbable();

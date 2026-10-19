@@ -222,7 +222,7 @@
     previousFocus = document.activeElement;
     opened = true; panel.hidden = false; ball.setAttribute('aria-expanded','true');
     root.classList.add('is-open');
-    load(); modalState(); applyPanel(); sync(); close.focus();
+    load(); modalState(); applyPanel(); sync(); if (ready) send('refreshCatalog'); close.focus();
   }
   function minimize() {
     opened = false; panel.hidden = true; ball.setAttribute('aria-expanded','false');
