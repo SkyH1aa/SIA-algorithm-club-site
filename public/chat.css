@@ -964,6 +964,18 @@ html[data-theme="light"] body.chat-page .chat-markdown { box-shadow: 0 2px 10px 
 .chat-markdown td { padding: 7px 11px; border: 1px solid var(--chat-line); text-align: left; }
 .chat-markdown th { background: var(--chat-surface-2); font-weight: 650; }
 
+/* Only locally generated KaTeX output enters these math containers. Colors
+   inherit the message theme; long display equations scroll within the bubble. */
+.chat-markdown .chat-math { color: inherit; overflow-wrap: normal; }
+.chat-markdown .chat-math-inline { display: inline-block; max-width: 100%; vertical-align: baseline; }
+.chat-markdown .chat-math-display { display: block; max-width: 100%; margin: .85em 0; overflow-x: auto; overflow-y: hidden; }
+.chat-markdown .chat-math-display .katex-display { margin: .25em 0; padding: .25em 0; }
+.chat-markdown .chat-math-display .katex-display > .katex { text-align: left; }
+.chat-markdown .chat-math .katex { font-size: 1.1em; text-indent: 0; }
+/* Chat's generic 18px outline-icon SVG rule otherwise hides radicals/braces. */
+.chat-markdown .chat-math .katex svg { width: 100%; height: inherit; fill: currentColor; stroke: currentColor; stroke-width: 1; stroke-linecap: butt; stroke-linejoin: miter; }
+.chat-markdown .chat-math-fallback { white-space: pre-wrap; overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .92em; }
+
 /* 代码块 */
 .chat-code {
   margin: .95em 0;

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Local chat math renderer fixture</title>
+<link rel="stylesheet" href="../../public/theme.css">
+<link rel="stylesheet" href="../../public/vendor/chat/katex/katex.min.css">
+<link rel="stylesheet" href="../../public/chat.css">
+<script src="../../public/theme.js"></script>
+<script src="../../public/vendor/chat/marked.js"></script>
+<script src="../../public/vendor/chat/purify.js"></script>
+<script src="../../public/vendor/chat/katex/katex.min.js"></script>
+<script src="../../public/chat-math.js"></script>
+</head>
+<body class="chat-page">
+<main style="max-width:720px;margin:24px auto;padding:16px">
+<h1>Local chat math renderer</h1>
+<p>This fixture uses local assets only and never calls chat services.</p>
+<p><button type="button" id="dark">Dark theme</button> <button type="button" id="light">Light theme</button></p>
+<section class="chat-markdown" aria-label="Rendered Markdown"></section>
+</main>
+<script>
+const raw = String.raw`## Markdown and math
+Inline \(x_i^2 + \alpha\), $E=mc^2$, **bold text**, and [a safe link](https://example.com).
+
+\[\frac{-b\pm\sqrt{b^2-4ac}}{2a}\]
+
+$$\begin{aligned}a&=b+c\\d&=e+f\end{aligned}$$
+
+$$\sum_{i=0}^{n}i = \frac{n(n+1)}{2} \qquad \underbrace{x_1+x_2+\cdots+x_{100}}_{\text{long equation scrolls within message}} + \frac{\sqrt{a^2+b^2}}{\sqrt{c^2+d^2}}$$
+
+Currency stays literal: $5 and $10. Unfinished math stays literal: \(x_i +
+
+Invalid math: \(\unknownCommand{x}\). Unsafe TeX: \(\href{javascript:alert(1)}{x}\).
+
+CODE_FENCEjs
+const literal = "\\(x\\) $$y$$ $z$";
+CODE_FENCE
+
+Inline CODE_TICK$x_i$CODE_TICK remains code.`.replaceAll('CODE_FENCE','`'.repeat(3)).replaceAll('CODE_TICK','`');
+const rendered = document.querySelector('section');
+rendered.append(ChatMath.renderMarkdown(raw,{marked,DOMPurify}));
+document.getElementById('dark').onclick = () => ClubTheme.setMode('dark',{persist:false,syncRemote:false});
+document.getElementById('light').onclick = () => ClubTheme.setMode('light',{persist:false,syncRemote:false});
+ClubTheme.setMode('dark',{persist:false,syncRemote:false});
+</script>
+</body>
+</html>

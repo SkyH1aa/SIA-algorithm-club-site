@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Local physics Markdown acceptance</title><link rel="stylesheet" href="../../public/theme.css"><link rel="stylesheet" href="../../public/vendor/chat/katex/katex.min.css"><link rel="stylesheet" href="../../public/chat.css"><link rel="stylesheet" href="../../public/assistant.css"><script src="../../public/theme.js"></script><script src="../../public/vendor/chat/marked.js"></script><script src="../../public/vendor/chat/purify.js"></script><script src="../../public/vendor/chat/katex/katex.min.js"></script><script src="../../public/chat-math.js"></script><style>body{overflow:auto!important;display:block!important}main{max-width:760px;margin:20px auto;padding:20px}.fixture-answer{border:1px solid var(--line);border-radius:18px;padding:24px}.fixture-toolbar{display:flex;gap:12px;margin-bottom:20px}</style></head><body class="chat-page"><main><h1>Physics answer · local rendering</h1><p>No services or model calls. The answer below is the user's supplied Markdown.</p><div class="fixture-toolbar"><button id="dark">Dark</button><button id="light">Light</button></div><article class="chat-markdown fixture-answer" aria-label="Physics answer"></article></main><script>
+const raw = String.raw`The correct answer is **A: \((280 \pm 10)\,\text{cm}^2\)**. Your area calculation of \(282.7\,\text{cm}^2\) is correct; the uncertainty needs to be calculated using **fractional uncertainties**.
+
+Since the cylinder is open at both ends, its surface area is
+\[
+A = 2\pi rL = 2\pi(3.0)(15.0) = 282.7\,\text{cm}^2.
+\]
+
+For multiplication, add the fractional uncertainties:
+\[
+\frac{\Delta A}{A}
+=\frac{\Delta r}{r}+\frac{\Delta L}{L}
+=\frac{0.1}{3.0}+\frac{0.1}{15.0}
+=0.040.
+\]
+So the percentage uncertainty is \(4.0\%\), and the absolute uncertainty is
+\[
+\Delta A=0.040\times282.7=11.3\,\text{cm}^2
+\approx10\,\text{cm}^2.
+\]
+
+Rounding the area to the same place as the uncertainty gives
+\[
+\boxed{A=(280\pm10)\,\text{cm}^2}.
+\]
+
+You cannot add \(0.1+0.1\) directly here: those uncertainties are in **cm**, while the area uncertainty must be in **cm²**.`;
+document.querySelector('article').append(ChatMath.renderMarkdown(raw,{marked,DOMPurify}));
+document.getElementById('dark').onclick=()=>ClubTheme.setMode('dark',{persist:false,syncRemote:false});document.getElementById('light').onclick=()=>ClubTheme.setMode('light',{persist:false,syncRemote:false});ClubTheme.setMode('dark',{persist:false,syncRemote:false});
+</script></body></html>

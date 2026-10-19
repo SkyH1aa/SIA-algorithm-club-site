@@ -26,8 +26,14 @@ function assistantSources(header) {
     return data.slice(0, 100).flatMap(item => {
       const path = assistantSourcePath(item?.source_path);
       if (!path || !/^S[1-9]\d{0,3}$/.test(item?.id) || seen.has(item.id) || typeof item.title !== 'string') return [];
+      const source = {id:item.id,slug:String(item.slug || '').slice(0,160),title:item.title.slice(0,300),category:String(item.category || '').slice(0,100),source_path:path,language:String(item.language || '').slice(0,20),excerpt:String(item.excerpt || '').slice(0,2000)};
+      if (item.type === 'live') {
+        if (typeof item.fetched_at !== 'string' || item.fetched_at.length > 40 || !Number.isFinite(Date.parse(item.fetched_at)) || typeof item.dataset !== 'string' || !/^[a-z][a-z0-9_-]{0,79}$/.test(item.dataset) || !Number.isInteger(item.limit) || item.limit < 0 || item.limit > 100 || typeof item.truncated !== 'boolean') return [];
+        const status = ['success','empty','unavailable','paused','ambiguous'].includes(item.status) ? item.status : '';
+        Object.assign(source, {type:'live',fetched_at:item.fetched_at,dataset:item.dataset,limit:item.limit,truncated:item.truncated,status});
+      }
       seen.add(item.id);
-      return [{id:item.id,slug:String(item.slug || '').slice(0,160),title:item.title.slice(0,300),category:String(item.category || '').slice(0,100),source_path:path,language:String(item.language || '').slice(0,20),excerpt:String(item.excerpt || '').slice(0,2000)}];
+      return [source];
     });
   } catch { return []; }
 }
@@ -618,6 +624,7 @@ async function customRequest(item, body, signal) {
 renderer.html = ({text}) => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 renderer.image = ({text}) => `[${text || t('image')}]`;
 function markdown(text) {
+  if (window.ChatMath?.renderMarkdown) return window.ChatMath.renderMarkdown(text, {marked,DOMPurify,renderer,decorateCode});
   const fragment = DOMPurify.sanitize(marked.parse(text || '', {renderer}), {
     RETURN_DOM_FRAGMENT:true, FORBID_TAGS:['img','style','iframe','form','input','button','svg','math'],
     FORBID_ATTR:['style','id','name'], ALLOW_DATA_ATTR:false
@@ -735,7 +742,14 @@ function syncSources(node, turn) {
     const category = document.createElement('span'); category.textContent = source.category || '';
     const excerpt = document.createElement('p'); excerpt.textContent = source.excerpt || '';
     card.append(title, category, excerpt);
-    if (release) {
+    if (source.type === 'live') {
+      const stamp = document.createElement('small'); stamp.className = 'assistant-source-release';
+      const queriedAt = new Date(source.fetched_at).toLocaleString(ClubI18n.getLang?.() === 'en' ? 'en-GB' : 'zh-CN');
+      stamp.textContent = `${t('liveSource')} · ${t('queriedAt')}: ${queriedAt}${source.status ? ` · ${t(`liveStatus_${source.status}`)}` : ''}`;
+      const scope = document.createElement('small'); scope.className = 'assistant-source-release';
+      scope.textContent = t(source.truncated ? 'liveTruncated' : 'liveLimit', {n:source.limit});
+      card.append(stamp, scope);
+    } else if (release) {
       const version = document.createElement('small'); version.className = 'assistant-source-release';
       version.textContent = `${t('publicationVersion')}: ${release}`;
       card.append(version);

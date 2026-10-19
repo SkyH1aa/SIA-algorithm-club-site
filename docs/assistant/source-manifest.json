@@ -132,7 +132,7 @@
       "selectors": ["#gatePanel", "#assistantModelName", "[data-i18n=\"assistant.title\"]", "[data-i18n=\"assistant.privacy\"]", "[href=\"member-center.html\"]"],
       "copy_repository_file": "public/assistant-i18n.js",
       "translation_keys": ["assistant.emptyBody", "assistant.privacy", "assistant.assistant_unavailable", "assistant.fixedModel"],
-      "fact_scope": "认证前门禁、公开前端用途与隐私说明。小Bru命名来自 user_decisions，同日页面标题与中英称呼已同步，但不证明部署/启用状态。"
+      "fact_scope": "认证前门禁、公开前端用途、成员权限实时只读查询的能力说明及隐私说明；只记载可查询的类型、姓名/积分投影和时间/范围边界，不包含任何真实查询值。小Bru命名来自 user_decisions，不证明部署/启用状态。"
     },
     {
       "id": "assistant-launcher",
@@ -214,7 +214,7 @@
     {"slug":"member-login-binding","result":"revised","evidence_ids":["member-center","features","password"],"conclusion":"核对登录/邀请码/保存绑定/忘记密码，补充真实两步重置入口；不采信登录即全部可用或积分签到随即生效。"},
     {"slug":"chat-history-attachments","result":"revised","evidence_ids":["features","member-center","chat-page","chat-controller","chat-core","chat-store"],"conclusion":"核对账号隔离、本地与发送的区别、导出/清除及 4 个/5 MiB/12 MiB 实际常量；说明编码与上下文约束，未读取对话。"},
     {"slug":"chat-quota-guidance","result":"revised","evidence_ids":["chat-page","chat-controller"],"conclusion":"保留 UTC 周期及失败提示含义；限定社团配置的普通模型，补充自定义代理不计现有 quota/usage 不等于免费。"},
-    {"slug":"assistant-usage","result":"revised","evidence_ids":["assistant-page","assistant-launcher","chat-controller","chat-core","chat-store"],"user_decision_ids":["identity"],"conclusion":"采用小Bru命名；核对悬浮/独立入口、引用、分离存储、模型配置与隐私；补充门禁、重试和实时信息边界。"},
+    {"slug":"assistant-usage","result":"revised","evidence_ids":["assistant-page","assistant-launcher","chat-controller","chat-core","chat-store"],"user_decision_ids":["identity"],"conclusion":"采用小Bru命名；核对悬浮/独立入口、引用、分离存储、模型配置与隐私；新增白名单实时只读查询能力与成员字段投影说明，实际结果须来自当轮查询，不写入静态知识。"},
     {"slug":"checkin-operation","result":"revised","evidence_ids":["features","member-center","shell","checkin-gate-and-flow"],"conclusion":"主来源从 guide 改为真实功能页，删除顶栏快捷指导。区分无参数的兑换积分与模块 ?type=course 预选课程，明确先登录、核对类型姓名、课程无签到码及等待审核。"},
     {"slug":"events-operation","result":"revised","evidence_ids":["home","features","member-center","shell","events"],"conclusion":"核对四类入口与卡片内嵌表单，删除需要打开卡片的暗示；字段、登录及 allow_signup 均只作流程说明，不保证截止有效或报名成功。"},
     {"slug":"points-operation","result":"revised","evidence_ids":["member-center","shell","features","points-gate"],"conclusion":"积分榜从个人中心或社员积分模块进入；明确功能页无独立积分榜卡片，不暗示提供个人流水或实时余额。"},

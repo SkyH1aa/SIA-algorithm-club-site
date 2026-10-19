@@ -551,6 +551,13 @@ const bundledCore=vm.createContext({URL,TextEncoder,TextDecoder,ReadableStream,c
 vm.runInContext(coreSource.replace(/^export /gm,'') + `\nconst URL='app base URL'; globalThis.bundleEndpoint=chatEndpoint('https://provider.example/v1/messages');`,bundledCore);
 assert.equal(bundledCore.bundleEndpoint.protocol,'messages');
 
+for (const assistant of [false,true]) {
+  const ui=uiHarness({assistant});
+  ui.evaluate('globalThis.mathCalled=0;window.ChatMath={renderMarkdown(text,options){mathCalled++;if(text!=="**answer**"||typeof options.decorateCode!=="function")throw Error("math contract");return {mathFragment:true};}}');
+  assert.equal(ui.evaluate('markdown("**answer**").mathFragment'),true,'both workspaces use the shared math renderer');
+  assert.equal(ui.evaluate('mathCalled'),1);
+}
+
 // Dedicated assistant uses the same controller with isolated storage and server-managed requests.
 for (const protocol of ['https:', 'file:']) {
   const ui = uiHarness({assistant:true,embedded:true,protocol});
@@ -605,6 +612,9 @@ data: {"type":"response.completed"}
   assert.match(ui.evaluate('rendered.nodes[0].sources.children[0].children.at(-1).textContent'),/11111111-1111-4111-8111-111111111111$/,'source shows persisted publication version');
   ui.evaluate('current.turns[0].assistantRelease="22222222-2222-4222-8222-222222222222";renderMessages()');
   assert.match(ui.evaluate('rendered.nodes[0].sources.children[0].children.at(-1).textContent'),/22222222-2222-4222-8222-222222222222$/,'version-only updates refresh source metadata');
+  ui.evaluate('current.turns[0].sources=[{id:"S3",title:"Current board",source_path:"public/member-points.html",type:"live",fetched_at:"2026-10-19T08:00:00.000Z",dataset:"member_points",limit:20,truncated:true}];current.turns[0].text="Board [S3]";renderMessages()');
+  assert.equal(ui.evaluate('rendered.nodes[0].sources.children[0].children.length'),5,'live source shows query timestamp and bounded scope');
+  assert(!ui.evaluate('rendered.nodes[0].sources.children[0].children.map(x=>x.textContent).join(" ")').includes('22222222-2222-4222-8222-222222222222'),'live source must not imply published snapshot freshness');
   ui.evaluate('current.turns=Array.from({length:6},(_,i)=>({id:String(i),prompt:"question",text:"answer",input:[],output:[],status:"success"}));current.summary=undefined;compactJob=compactNow()');await settle();
   const compact=ui.requests.at(-1);assert.equal(compact.body.action,'assistant_compact');
   ui.message({type:'club-assistant',action:'suspend'});assert.equal(compact.signal.aborted,true,'suspend aborts compaction');
@@ -615,4 +625,7 @@ data: {"type":"response.completed"}
 assert.throws(()=>buildContext(turns,{context_window:100},10,[],95),/context/);
 for (const path of ['javascript:alert(1)','https://evil.example/a.html','//evil/a.html','../a.html','public/%2e%2e/a.html','public/a.html?x=1','public/a.html\\evil']) assert.equal(core.assistantSourcePath(path),'');
 assert.equal(core.assistantSources('%invalid').length,0);
+const liveSource = {id:'S7',title:'Points',source_path:'/public/member-points.html',type:'live',fetched_at:'2026-10-19T08:00:00Z',dataset:'member_points',limit:20,truncated:true};
+assert.equal(core.assistantSources(encodeURIComponent(JSON.stringify([liveSource])))[0].fetched_at,liveSource.fetched_at);
+for (const invalid of [{fetched_at:'invalid'},{limit:101},{limit:-1},{dataset:'../admin'},{truncated:'yes'}]) assert.equal(core.assistantSources(encodeURIComponent(JSON.stringify([{...liveSource,...invalid}]))).length,0,'malformed live provenance cannot become a source card');
 console.log('Assistant UI: catalog contract, isolated store, ready before auth, trusted frame sync, reserve, one summary, citations, project-root paths and compaction suspend passed.');

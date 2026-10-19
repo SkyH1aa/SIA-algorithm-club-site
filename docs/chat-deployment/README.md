@@ -51,6 +51,20 @@ HTTP(S) 是正式运行环境。`file://` 仍受浏览器本地存储、认证�
 
 逐篇证据、修正文案与复测范围见 [知识校准记录](../assistant-validation/knowledge-refresh.md)。
 
+### 已安装助手的数学排版与实时只读查询更新（2026-10-19）
+
+这一轮不改 SQL，已有当前助手数据库无需重新执行 SQL；只需更新 `chat` 函数、网站静态资源与审核后的助手预设。尚未安装助手的项目仍按上面的首次安装步骤处理。
+
+1. 在 Supabase 网页 Edge Functions → `chat` → Code，将本目录 `chat-dashboard-index.ts` **全文替换**到 `index.ts` 后部署。实时适配器和共享助手规则已内联，不必新建 `_shared` 文件。已有最新版 `chat-api-proxy` 无需为这轮更新重新部署。
+2. 按网站原有方式发布静态文件：`public/chat.html`、`public/assistant.html`、`public/chat.js`、`public/chat-core.js`、`public/chat-file-bundle.js`、`public/chat.css`、新增的 `public/chat-math.js`、`public/assistant-i18n.js` 和 `public/assistant-preset.js`。同时完整发布 `public/vendor/chat/katex/`，包括 JS、CSS、LICENSE 和全部字体，保持相对目录；只发布 KaTeX 的 JS 会造成公式或字体缺失。运行时不从外部数学 CDN 加载。
+3. 在管理页点击“填入小Bru预设”，审核后保存配置；新版 [seed.json](../assistant/seed.json) 可按原有流程导入并审核草稿，然后发布不可变版本，使提示词与能力说明同步。保留自建资料，检查其中是否仍写着“完全不能实时查询”。[config-preset.json](../assistant/config-preset.json) 仍是三字段配置参考，不能当知识 JSON 导入。重新打开助手会刷新 catalog；保存或发布配置不会改写旧对话。
+4. 实时读取复用项目现有 `club-drive` 普通成员只读动作和公开排行榜；使用平台已有 `SUPABASE_URL`、`SUPABASE_ANON_KEY` 及当前已验证成员 JWT，不需要新增管理密钥或扩大权限。适配器固定本仓库项目主机；目标项目不匹配、现有端点未部署或权限不允许时返回不可用，不回退到管理员读取。
+5. 部署后用绑定成员核对公式排版、当前公告/活动、姓名积分和六个榜单的来源时间及范围；管理员使用助手时也不得出现额外后台字段。真实问答会调用已配置供应商并使用共享额度，本次本地验收没有执行这一步。
+
+只读范围是已发布公告/活动、姓名与积分、五子棋累计积分、俄罗斯方块普通/人机、贪吃蛇普通/人机和行于无垠总分。普通与人机榜独立；未说明类型时澄清。单榜默认前 20 名、最多 50 名，六榜同查每榜最多 10 名；姓名重名不猜账号。整体读取最多 5 秒，失败、维护、空结果、重名及截断均不得当作完整实时事实。实时读取在额度与租约准入后发生，catalog 与压缩不查询业务数据；来源正文不放入响应头。
+
+本轮精确验证范围、权限及平台限制见 [数学与实时查询验收记录](../assistant-validation/markdown-live-query.md)。`file://` 包仍依赖页面旁边的本地 KaTeX 资源，并保留前述认证、Origin 和模块加载限制；没有把本地文件端到端标为已验收。
+
 ## 安全加固更新（Chat 与对外代理）
 
 已有当前三协议/usage90day 版本时，本次只需在 Dashboard **分别全文替换并部署两个 Edge 文件**：`chat-dashboard-index.ts` → `chat`，`chat-api-proxy-dashboard-index.ts` → `chat-api-proxy`。本次未修改 SQL，也不需要为这轮加固重新执行 SQL 或发布前端。尚未安装前述功能的项目仍按完整部署步骤执行。两个 bundle 已包含新的共享请求体读取器，不必另建 `_shared` 文件。

@@ -60,6 +60,36 @@ The server also states the 小Bru identity and fact/navigation boundaries in
 its fixed policy. Updating that policy requires redeploying the generated chat
 Dashboard bundle; changing drafts or static files alone does not update it.
 
+Math rendering and member-level live reads (2026-10-19)
+
+Normal Chat and the assistant share pinned local KaTeX 0.19.0 through chat-math.js.
+Publish the entire public/vendor/chat/katex directory with its fonts and LICENSE.
+Raw message history, copying and exports preserve the original Markdown/TeX.
+
+The new assistant prompt distinguishes published static knowledge from current,
+bounded read-only evidence. The seed describes this capability but contains no
+actual member or ranking data. Only published announcements/events, names and
+points, and the six existing public game leaderboards are supported. No admin
+records, bindings, emails, classes or user UUIDs enter model evidence. Admin users
+receive the same member-level projection. Duplicate member names require clarification.
+Tetris/Snake ordinary and versus boards stay separate; versus high scores may be
+negative player-minus-AI differences. These are not model-strength rankings.
+
+Single-board reads default to 20 rows, at most 50; all six boards use at most 10
+rows each. Live evidence includes query time, status and truncation. Unavailable,
+paused, empty or ambiguous results do not prove current facts or global absence.
+This is deterministic intent routing, not unrestricted natural-language tools.
+No live reads occur during catalog or compaction. Existing quota/audit writes stay
+part of generation accounting; no new business mutation actions are exposed.
+
+For an existing current assistant installation, this update requires no SQL.
+Replace the complete generated chat Dashboard index.ts in the web editor, publish
+the listed static assets, and review/save/publish the new preset and seed through
+the existing administration flow. No new secret or administrator privilege is
+required. No actual deployment, live data read or paid provider call was performed.
+See docs/chat-deployment/README.md and
+ docs/assistant-validation/markdown-live-query.md for limits and verification.
+
 Current-site audit and application steps: docs/assistant-validation/knowledge-refresh.md.
 The review is of the current repository implementation, not a live production
 crawl. Historical changelog text is not used as proof of current navigation.

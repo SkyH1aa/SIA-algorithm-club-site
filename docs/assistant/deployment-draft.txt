@@ -1,9 +1,12 @@
 Assistant administration deployment draft (instructions only)
 
-1. Follow docs/chat-deployment/README.md using the Supabase web Dashboard:
-   paste the complete club-chat-schema.sql into SQL Editor, then replace the chat
-   Edge Function index.ts with chat-dashboard-index.ts and deploy updates. Publish
-   the updated static site assets through the site's existing publishing process.
+1. Follow docs/chat-deployment/README.md using the Supabase web Dashboard.
+   For a first assistant installation, paste the complete club-chat-schema.sql
+   into SQL Editor. For the math/live-read update of an existing current assistant,
+   no SQL is needed. Replace the complete chat Edge Function index.ts with the
+   generated chat-dashboard-index.ts and deploy updates. Publish the updated
+   static assets, including chat-math.js and all local KaTeX fonts/CSS/JS/LICENSE,
+   through the site's existing publishing process.
    No PowerShell, Supabase CLI or build commands are required for deployment.
    This file executes no deployment.
 2. Sign in to public/chat-admin.html using the existing dynamic super-admin roster.
@@ -32,6 +35,14 @@ Assistant administration deployment draft (instructions only)
    The historical model still has to be enabled and public for rollback/runtime.
 7. Verify assistant login/binding, source links, quota, separate local history,
    attachments, language/theme behavior and disable/rollback after deployment.
+   For live reads check published announcements/events, name-and-points privacy,
+   all six independent boards and query timestamp/status/limits. Single-board
+   default is 20, maximum 50; all-board reads use 10 per board. Unspecified normal
+   versus AI boards and duplicate member names require clarification. No admin
+   records or business writes are available, even to administrators using the AI.
+   Check formulas in both Chat and the assistant; code/currency stay literal.
+   Real generation uses shared quota and provider billing; local mock validation
+   does not establish deployed endpoint permissions or live model behavior.
    Deployment and live publication remain separate administrator actions.
 
 All management uses assistant_admin_* through the existing authenticated Chat edge

@@ -21,8 +21,14 @@ export function assistantSources(header) {
     return data.slice(0, 100).flatMap(item => {
       const path = assistantSourcePath(item?.source_path);
       if (!path || !/^S[1-9]\d{0,3}$/.test(item?.id) || seen.has(item.id) || typeof item.title !== 'string') return [];
+      const source = {id:item.id,slug:String(item.slug || '').slice(0,160),title:item.title.slice(0,300),category:String(item.category || '').slice(0,100),source_path:path,language:String(item.language || '').slice(0,20),excerpt:String(item.excerpt || '').slice(0,2000)};
+      if (item.type === 'live') {
+        if (typeof item.fetched_at !== 'string' || item.fetched_at.length > 40 || !Number.isFinite(Date.parse(item.fetched_at)) || typeof item.dataset !== 'string' || !/^[a-z][a-z0-9_-]{0,79}$/.test(item.dataset) || !Number.isInteger(item.limit) || item.limit < 0 || item.limit > 100 || typeof item.truncated !== 'boolean') return [];
+        const status = ['success','empty','unavailable','paused','ambiguous'].includes(item.status) ? item.status : '';
+        Object.assign(source, {type:'live',fetched_at:item.fetched_at,dataset:item.dataset,limit:item.limit,truncated:item.truncated,status});
+      }
       seen.add(item.id);
-      return [{id:item.id,slug:String(item.slug || '').slice(0,160),title:item.title.slice(0,300),category:String(item.category || '').slice(0,100),source_path:path,language:String(item.language || '').slice(0,20),excerpt:String(item.excerpt || '').slice(0,2000)}];
+      return [source];
     });
   } catch { return []; }
 }

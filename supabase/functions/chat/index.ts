@@ -1,4 +1,5 @@
 import { AssistantError, assistantConfigData, assistantDocument, assistantInput, assistantPrompt, assistantReserve, type AssistantRelease } from '../_shared/chat-assistant.ts';
+import { LIVE_MAX_RESULT_BYTES, planAssistantLive, readAssistantLive, type LiveEnvelope, type LivePlan } from '../_shared/chat-assistant-live.ts';
 import { hashKey, newKey, proxyBase, proxySecret, ProxyError, ROUTE_FIELDS } from '../_shared/chat-api-proxy.ts';
 import { ChatBodyError, readChatBody } from '../_shared/chat-body.ts';
 import { chatEndpoint, ChatProtocolError, parseProtocolSse, protocolEvents, protocolRequest, normalizeClaudeThinking, validateProtocolCapabilities, type ChatProtocol, type ChatProtocolSetting } from '../_shared/chat-protocol.ts';
@@ -604,10 +605,16 @@ function upstreamHeaders(provider: Provider, key: string): Headers {
   return headers;
 }
 
-async function callResponses(request: Request, ctx: RequestContext, payload: Json, test = false, selected?: { model: Model; provider: Provider }, auditAction?: 'assistant_respond' | 'assistant_compact'): Promise<Response> {
+type DeferredAssistant = {
+  reserveTokens: number;
+  prepare: (signal: AbortSignal) => Promise<{ input: Json[]; sources: Json[] }>;
+};
+
+async function callResponses(request: Request, ctx: RequestContext, payload: Json, test = false, selected?: { model: Model; provider: Provider }, auditAction?: 'assistant_respond' | 'assistant_compact', deferred?: DeferredAssistant): Promise<Response> {
   const { model, provider } = selected || await modelWithProvider(payload.model_id, true, ctx.user.id, test && ctx.isAdmin);
   const rawInput = test ? [{ role: 'user', content: [{ type: 'input_text', text: text(payload.prompt, MAX_INPUT_TEXT, true) }] }] : payload.input;
-  const { input } = validateInput(rawInput, model);
+  const { input: initialInput } = validateInput(rawInput, model);
+  let input = initialInput;
   if (!test && payload.max_output_tokens !== undefined) integer(payload.max_output_tokens, 1, model.max_output_tokens);
   const outputTokens = test
     ? integer(payload.max_output_tokens, 1, model.max_output_tokens, model.default_max_output_tokens)
@@ -618,14 +625,15 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
   const effort = payload.reasoning_effort == null ? effective.default_reasoning_effort : protocol === 'messages' ? payload.reasoning_effort as string : text(payload.reasoning_effort, MAX_REASONING_EFFORT, true);
   if (effort !== null && !effective.reasoning_efforts.includes(effort)) throw new HttpError(protocol === 'messages' ? 'claude_effort' : 'effort', 400);
   const requestId = crypto.randomUUID();
-  const body = { model: model.model_key, input, reasoning: effort ? { effort } : undefined, include: model.preserve_reasoning ? ['reasoning.encrypted_content'] : undefined, max_output_tokens: outputTokens, store: false, stream: true };
+  const body: Json = { model: model.model_key, input, reasoning: effort ? { effort } : undefined, include: model.preserve_reasoning ? ['reasoning.encrypted_content'] : undefined, max_output_tokens: outputTokens, store: false, stream: true };
   let serialized = JSON.stringify(protocolRequest(protocol, body, model.claude_thinking));
-  const inputTokens = estimateInputTokens(input);
-  if (inputTokens + outputTokens > model.context_window) throw new HttpError('context', 413);
+  const baseInputTokens = estimateInputTokens(input);
+  const reservedInputTokens = baseInputTokens + (deferred?.reserveTokens || 0);
+  if (reservedInputTokens + outputTokens > model.context_window) throw new HttpError('context', 413);
   if (encoder.encode(serialized).byteLength > MAX_REQUEST_BYTES) throw new HttpError('request_too_large', 413);
-  // Reservations use estimates, not a hard guarantee about provider billing (especially files).
+  // Reservations use estimates, including the bounded hidden assistant/live budget.
   const admission = await rpc('chat_begin_generation', {
-    p_user_id: ctx.user.id, p_request_id: requestId, p_input_tokens: inputTokens, p_output_tokens: outputTokens,
+    p_user_id: ctx.user.id, p_request_id: requestId, p_input_tokens: reservedInputTokens, p_output_tokens: outputTokens,
     p_audit: { member_name: ctx.profile?.member_name || null, username: ctx.profile?.username || ctx.user.email || ctx.user.id,
       provider_name: provider.label || provider.name, model_name: model.display_name, action: auditAction || (test ? 'admin_test' : 'respond'),
       provider_id: provider.id, model_id: model.id, model_key: model.model_key,
@@ -645,11 +653,31 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
   }
   body.max_output_tokens = admission.max_output_tokens as number;
   try {
+    if (deferred) {
+      if (request.signal.aborted) throw new HttpError('cancelled', 499);
+      const prepared = await deferred.prepare(request.signal);
+      if (!Array.isArray(prepared.input) || !Array.isArray(prepared.sources)) throw new Error('assistant_prepare');
+      input = prepared.input;
+      validateInput(input, model);
+      body.input = input;
+      if (request.signal.aborted) throw new HttpError('cancelled', 499);
+    }
     serialized = JSON.stringify(protocolRequest(protocol, body, model.claude_thinking));
+    const finalInputTokens = estimateInputTokens(input);
+    if (finalInputTokens + Number(body.max_output_tokens) > model.context_window) throw new HttpError('context', 413);
+    if (encoder.encode(serialized).byteLength > MAX_REQUEST_BYTES) throw new HttpError('request_too_large', 413);
+    if (deferred && finalInputTokens > reservedInputTokens) throw new HttpError('context', 413);
+    if (deferred) await updateUsage(requestId, { input_bytes: encoder.encode(serialized).byteLength });
   } catch (error) {
-    // A quota shrink cannot change an exact configured thinking budget. Before
-    // dispatch, invalid reservations are refunded and the lease is released.
-    await finishGeneration(requestId, { status: 'failed', error_code: error instanceof ChatProtocolError ? error.message : 'claude_thinking' }, true);
+    // Deferred live reads and all final validation happen after admission. Before
+    // dispatch, every such failure is refunded and the lease is released.
+    const cancelled = (error instanceof HttpError && error.message === 'cancelled') ||
+      (error instanceof DOMException && error.name === 'AbortError') || request.signal.aborted;
+    await finishGeneration(requestId, {
+      status: cancelled ? 'cancelled' : 'failed',
+      error_code: cancelled ? 'client_cancelled' : error instanceof HttpError ? error.message : error instanceof ChatProtocolError ? error.message : 'assistant_prepare'
+    }, true);
+    if (cancelled) throw new HttpError('cancelled', 499);
     throw error;
   }
   if (request.signal.aborted) {
@@ -692,7 +720,7 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
   }
   request.signal.removeEventListener('abort', cancelUpstream);
   const response = proxyStream(request, upstream.body, upstreamController, requestId, protocol);
-  if (body.max_output_tokens < outputTokens) response.headers.set('x-chat-quota-limited', 'true');
+  if (Number(body.max_output_tokens) < outputTokens) response.headers.set('x-chat-quota-limited', 'true');
   response.headers.set('x-chat-max-output-tokens', String(body.max_output_tokens));
   return response;
 }
@@ -941,11 +969,41 @@ async function assistantAction(request: Request, action: string, payload: Json):
     return response;
   }
   const safe = assistantInput(payload.input, payload.summary);
-  // Validate untrusted content before adding our one privileged system message.
+  // Validate untrusted content before admission. Live preparation is deferred below.
   validateInput(safe, selected.model);
-  const prepared = assistantPrompt(release, safe, action === 'assistant_compact');
-  const response = await callResponses(request, ctx, { input: prepared.input }, false, selected, action as 'assistant_respond' | 'assistant_compact');
-  response.headers.set('x-chat-assistant-sources', encodeURIComponent(JSON.stringify(prepared.sources)));
+  let preparedSources: Json[] = [];
+  if (action === 'assistant_compact') {
+    const prepared = assistantPrompt(release, safe, true);
+    const response = await callResponses(request, ctx, { input: prepared.input }, false, selected, 'assistant_compact');
+    response.headers.set('x-chat-assistant-sources', encodeURIComponent(JSON.stringify(prepared.sources)));
+    response.headers.set('x-chat-assistant-release', release.id);
+    response.headers.set('cache-control', 'no-store');
+    return response;
+  }
+  const plan = planAssistantLive(safe);
+  const liveEnabled = plan.status === 'ready' && plan.items.length > 0;
+  const liveReserveBytes = liveEnabled ? Math.min(LIVE_MAX_RESULT_BYTES, 16000) : 0;
+  const memberToken = authToken(request);
+  if (!memberToken) throw new HttpError('login', 401);
+  const deferred: DeferredAssistant = {
+    // Reserve the complete bounded assistant system/reference envelope before admission.
+    reserveTokens: assistantReserve(release, liveReserveBytes),
+    prepare: async (signal) => {
+      let envelope: LiveEnvelope | undefined;
+      if (liveEnabled) {
+        envelope = await readAssistantLive(plan as LivePlan, {
+          projectUrl: Deno.env.get('SUPABASE_URL') || '',
+          anonKey: Deno.env.get('SUPABASE_ANON_KEY') || '', memberToken, signal
+        });
+      }
+      const prepared = assistantPrompt(release, safe, false, envelope);
+      preparedSources = prepared.sources as Json[];
+      return { input: prepared.input as Json[], sources: prepared.sources as Json[] };
+    }
+  };
+  const response = await callResponses(request, ctx, { input: safe }, false, selected, 'assistant_respond', deferred);
+  if (!response.ok) return response;
+  response.headers.set('x-chat-assistant-sources', encodeURIComponent(JSON.stringify(preparedSources)));
   response.headers.set('x-chat-assistant-release', release.id);
   response.headers.set('cache-control', 'no-store');
   return response;
