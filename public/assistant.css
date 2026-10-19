@@ -1,3 +1,10 @@
+/* ==========================================================================
+   小铭 · 社团助手
+   助手复用 chat.css 的组件，但有两种形态：
+   - assistant-workspace：独立页面（完整两栏）
+   - assistant-embedded：浮窗 iframe（约 420px 宽，必须单栏紧凑）
+   ========================================================================== */
+
 .assistant-workspace .chat-main-header { justify-content: space-between; }
 .assistant-workspace .chat-model-picker,
 .assistant-workspace .chat-main-actions,
@@ -14,18 +21,119 @@
 .assistant-source strong { display: block; font-size: 13px; color: var(--chat-accent); }
 .assistant-source span { font-size: 11px; color: var(--chat-muted); }
 .assistant-source p { margin: 5px 0 0; font-size: 12px; line-height: 1.6; color: var(--chat-muted); white-space: pre-wrap; }
+
+/* ---------- 浮窗（embedded）----------
+   宽度通常只有 400–440px：隐藏重复的品牌行与侧栏，只保留一条紧凑工具条。 */
+.assistant-embedded { --chat-topbar-h: 46px; }
+.assistant-embedded .chat-topbar {
+  gap: 6px;
+  padding: 0 8px;
+  background: var(--chat-surface);
+}
+.assistant-embedded .chat-brand { gap: 7px; min-width: 0; }
+.assistant-embedded .chat-brand-mark { width: 26px; height: 26px; border-radius: 8px; font-size: 13px; }
+.assistant-embedded .chat-brand-copy strong { font-size: 13px; }
 .assistant-embedded .chat-brand-copy small,
 .assistant-embedded .chat-topbar-divider,
 .assistant-embedded .chat-header-chat-title,
-.assistant-embedded .chat-back { display: none; }
-.assistant-embedded .chat-topbar { gap: 7px; }
-.assistant-embedded .chat-main-header { min-height: 35px; padding-top: 5px; padding-bottom: 5px; }
-.assistant-embedded .chat-empty { padding-top: 20px; padding-bottom: 20px; }
-.assistant-embedded .chat-empty-mark { width: 44px; height: 44px; margin-bottom: 12px; }
-.assistant-embedded .chat-empty h2 { font-size: 23px; }
-.assistant-embedded .chat-privacy { margin-top: 5px; }
-@media (max-width:600px) {
-  .assistant-workspace .chat-suggestions { grid-template-columns: minmax(0,1fr); }
+.assistant-embedded .chat-back,
+.assistant-embedded .chat-theme-toggle { display: none; }
+.assistant-embedded .chat-topbar-actions { gap: 4px; }
+.assistant-embedded .chat-lang-button { padding: 2px; }
+.assistant-embedded .chat-lang-option { padding: 3px 6px; font-size: 10.5px; }
+.assistant-embedded .chat-icon-button { width: 30px; height: 30px; }
+.assistant-embedded .chat-icon-button svg { width: 16px; height: 16px; }
+.assistant-embedded .chat-sidebar-toggle { display: inline-grid; }
+
+/* 模型行在浮窗里没有信息量（助手固定模型），只保留一行极简说明。 */
+.assistant-embedded .chat-main-header { display: none; }
+
+/* 单栏：侧栏改为覆盖式抽屉，且不占网格轨道。 */
+.assistant-embedded .chat-layout { grid-template-columns: minmax(0, 1fr); }
+.assistant-embedded .chat-layout > .chat-main { grid-column: 1 / -1; }
+.assistant-embedded .chat-sidebar {
+  position: absolute;
+  z-index: 40;
+  inset: 0 auto 0 0;
+  width: min(84%, 300px);
+  transform: translateX(-104%);
+  transition: transform .22s var(--chat-ease);
+  background: var(--chat-surface);
+  box-shadow: 16px 0 40px rgba(0, 0, 0, .35);
+}
+.assistant-embedded .chat-layout.sidebar-open .chat-sidebar { transform: translateX(0); }
+.assistant-embedded .chat-sidebar-close { display: inline-grid; }
+.assistant-embedded .chat-sidebar-backdrop {
+  position: absolute;
+  z-index: 35;
+  inset: 0;
+  background: rgba(2, 6, 14, .5);
+}
+.assistant-embedded .chat-layout.sidebar-open .chat-sidebar-backdrop { display: block; }
+
+/* 消息区：更紧的间距，去掉重复的头像列，给正文让出宽度。 */
+.assistant-embedded .chat-message-frame { padding: 14px 12px 10px; }
+.assistant-embedded .chat-turn + .chat-turn { margin-top: 18px; padding-top: 18px; }
+.assistant-embedded .chat-message + .chat-message { margin-top: 12px; }
+.assistant-embedded .chat-avatar { display: none; }
+.assistant-embedded .chat-message.user .chat-message-body { max-width: 92%; }
+.assistant-embedded .chat-markdown { padding: 11px 13px; font-size: 14px; line-height: 1.7; border-radius: 12px; }
+.assistant-embedded .chat-bubble { padding: 9px 13px; font-size: 14px; border-radius: 12px; }
+.assistant-embedded .chat-message-head { min-height: 18px; font-size: 11px; }
+.assistant-embedded .chat-status-pill { font-size: 10px; padding: 0 6px; }
+.assistant-embedded .chat-message-head strong { font-size: 11.5px; }
+
+/* 空状态：把标题压小，首屏就能看到输入框。 */
+.assistant-embedded .chat-empty { padding: 14px 2px 6px; gap: 8px; }
+.assistant-embedded .chat-empty-mark { width: 38px; height: 38px; border-radius: 12px; font-size: 17px; }
+.assistant-embedded .chat-empty h2 { font-size: 19px; margin-top: 2px; }
+.assistant-embedded .chat-empty p { font-size: 13px; }
+.assistant-embedded .chat-suggestions { grid-template-columns: minmax(0, 1fr); gap: 6px; margin-top: 6px; }
+.assistant-embedded .chat-suggestion { padding: 9px 11px; }
+.assistant-embedded .chat-suggestion strong { font-size: 12.5px; }
+.assistant-embedded .chat-suggestion span { display: none; }
+.assistant-embedded .chat-empty-hint { display: none; }
+
+/* 输入区：浮窗高度有限，消息区必须拿到更多空间。
+   输入框从 3 行起改为 1 行自增高，工具栏与用量条都压到最小高度。 */
+.assistant-embedded .chat-composer-shell { padding: 2px 9px 6px; background: var(--chat-bg); }
+.assistant-embedded .chat-composer-box { border-radius: 13px; padding: 6px 8px 5px; gap: 0; }
+.assistant-embedded #prompt { font-size: 14px; min-height: 26px; max-height: 22dvh; padding: 2px 3px 0; }
+.assistant-embedded .chat-composer-toolbar { gap: 4px; }
+.assistant-embedded .chat-file { padding: 4px 6px; }
+.assistant-embedded .chat-file svg { width: 15px; height: 15px; }
+.assistant-embedded .chat-send-button,
+.assistant-embedded .chat-stop-button { padding: 6px 11px; font-size: 12.5px; }
+.assistant-embedded .chat-composer-hint { display: none; }
+.assistant-embedded .chat-status-row { min-height: 0; padding: 1px 3px 0; }
+.assistant-embedded .chat-note { display: none; }
+.assistant-embedded .chat-privacy { display: none; }
+.assistant-embedded .chat-context-meter { gap: 3px; padding: 3px 3px 0; }
+.assistant-embedded .chat-context-row { font-size: 10.5px; }
+.assistant-embedded .chat-context-label { display: none; }
+.assistant-embedded .chat-context-compact { padding: 1px 7px; font-size: 10.5px; }
+.assistant-embedded .chat-context-track { height: 3px; }
+
+/* 设置抽屉在浮窗里改为整屏覆盖。 */
+.assistant-embedded .chat-settings-panel {
+  top: 0;
+  left: 0;
+  width: 100%;
+  border-left: 0;
+  transform: translateY(102%);
+}
+.assistant-embedded .chat-settings-panel.is-open { transform: translateY(0); }
+.assistant-embedded .chat-settings-body { padding: 4px 14px 20px; }
+.assistant-embedded .chat-settings-group { padding: 12px 0; }
+
+@media (max-width: 380px) {
+  .assistant-embedded .chat-brand-copy strong { font-size: 12px; }
+  .assistant-embedded .chat-message-frame { padding: 10px 8px; }
+}
+
+/* 独立页面在窄屏下的微调 */
+@media (max-width: 600px) {
+  .assistant-workspace .chat-suggestions { grid-template-columns: minmax(0, 1fr); }
   .assistant-workspace .chat-suggestion { padding: 10px 12px; }
   .assistant-workspace .chat-brand-copy strong { font-size: 14px; }
 }

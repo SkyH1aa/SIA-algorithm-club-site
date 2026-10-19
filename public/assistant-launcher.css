@@ -1,14 +1,15 @@
 #club-assistant {
   --assistant-surface: #17212b;
-  --assistant-head: #202d39;
+  --assistant-head: #1d2935;
   --assistant-text: #edf4f8;
   --assistant-muted: #b8c8d4;
-  --assistant-border: #466075;
+  --assistant-border: #3b5165;
   --assistant-accent: #9cdbeb;
   position: fixed;
-  right: max(20px, env(safe-area-inset-right));
-  bottom: max(76px, calc(64px + env(safe-area-inset-bottom)));
+  inset: 0;
   z-index: 850;
+  /* 容器铺满视口但不拦截点击；只有悬浮球与面板本身可交互。 */
+  pointer-events: none;
   font: 14px/1.5 Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
   color: var(--assistant-text);
   text-align: left;
@@ -17,101 +18,150 @@
 }
 html[data-theme="light"] #club-assistant {
   --assistant-surface: #fffaf5;
-  --assistant-head: #f3e8df;
+  --assistant-head: #f6ece4;
   --assistant-text: #332a28;
   --assistant-muted: #67584e;
-  --assistant-border: #bd9f89;
+  --assistant-border: #d9c3b2;
   --assistant-accent: #96422c;
 }
 #club-assistant *, #club-assistant *::before, #club-assistant *::after { box-sizing: border-box; }
 #club-assistant [hidden] { display: none !important; }
 #club-assistant button { font: inherit; cursor: pointer; margin: 0; letter-spacing: normal; text-transform: none; }
+#club-assistant :is(button,a):focus-visible { outline: 3px solid var(--assistant-accent); outline-offset: 3px; }
+
+/* ---------- 悬浮球：可自由拖动 ---------- */
 #club-assistant .club-assistant-ball {
+  position: fixed;
   display: grid;
   place-items: center;
   width: 54px;
   height: 54px;
   padding: 0;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
   border: 1px solid var(--assistant-border) !important;
   border-radius: 50%;
-  background: var(--assistant-head) !important;
+  background:
+    radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--assistant-accent) 26%, transparent), transparent 62%),
+    var(--assistant-head) !important;
   color: var(--assistant-accent) !important;
-  box-shadow: 0 8px 30px #0004;
-  font-size: 29px;
+  box-shadow: 0 10px 30px #0005, 0 0 0 1px #ffffff0d inset;
+  font-size: 26px;
   line-height: 1;
-  transition: transform .15s;
+  /* 面板与球可能重叠：球始终在上层，保证收起/移动入口可达。 */
+  z-index: 2;
+  transition: transform .16s var(--chat-ease, ease), box-shadow .16s ease;
 }
-#club-assistant .club-assistant-ball:hover { transform: translateY(-2px); }
+#club-assistant .club-assistant-ball:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 14px 38px #0006; }
+#club-assistant .club-assistant-ball:active,
+#club-assistant.is-dragging .club-assistant-ball { cursor: grabbing; transform: none; }
 #club-assistant.is-busy .club-assistant-ball::after {
   content: "";
   position: absolute;
-  right: 0;
-  top: 0;
+  right: 1px;
+  top: 1px;
   width: 12px;
   height: 12px;
   border-radius: 50%;
   border: 2px solid var(--assistant-head);
   background: var(--assistant-accent);
 }
-#club-assistant :is(button,a):focus-visible { outline: 3px solid var(--assistant-accent); outline-offset: 3px; }
+
+/* ---------- 面板 ---------- */
 #club-assistant .club-assistant-panel {
-  position: absolute;
-  right: 0;
-  bottom: 66px;
-  width: min(440px, calc(100vw - 32px));
-  height: min(720px, calc(100dvh - 166px));
-  min-height: 240px;
+  position: fixed;
+  width: min(420px, calc(100vw - 24px));
+  height: min(620px, calc(100dvh - 48px));
+  min-height: 260px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  pointer-events: auto;
+  z-index: 1;
   border: 1px solid var(--assistant-border);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--assistant-surface);
   color: var(--assistant-text);
-  box-shadow: 0 18px 75px #0006;
+  box-shadow: 0 24px 80px #0007, 0 2px 8px #0003;
 }
-#club-assistant.is-expanded .club-assistant-panel { width: min(960px, calc(100vw - 40px)); height: calc(100dvh - 166px); }
+#club-assistant.is-expanded .club-assistant-panel {
+  /* 展开时用 !important 覆盖脚本写入的内联 inset。 */
+  inset: 16px !important;
+  width: auto;
+  height: auto;
+  max-height: none;
+}
 #club-assistant .club-assistant-head {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 52px;
-  padding: 8px 10px 8px 16px;
+  min-height: 48px;
+  padding: 6px 8px 6px 12px;
   border-bottom: 1px solid var(--assistant-border);
   background: var(--assistant-head);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
-#club-assistant .club-assistant-head strong { flex: 1; min-width: 0; font-size: 14px; font-weight: 650; }
-#club-assistant .club-assistant-tool, #club-assistant .club-assistant-stop, #club-assistant .club-assistant-retry {
+#club-assistant.is-dragging .club-assistant-head,
+#club-assistant .club-assistant-head.is-dragging { cursor: grabbing; }
+#club-assistant.is-expanded .club-assistant-head { cursor: default; }
+#club-assistant .club-assistant-handle {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border-radius: 3px;
+  background-image: radial-gradient(currentColor 1.1px, transparent 1.2px);
+  background-size: 4px 4px;
+  color: var(--assistant-border);
+  opacity: .9;
+}
+#club-assistant .club-assistant-head strong { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#club-assistant .club-assistant-tool,
+#club-assistant .club-assistant-stop,
+#club-assistant .club-assistant-retry {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  border: 1px solid var(--assistant-border) !important;
+  border: 1px solid transparent !important;
   border-radius: 8px;
-  background: var(--assistant-surface) !important;
-  color: var(--assistant-text) !important;
-  min-height: 34px;
-  padding: 4px 10px;
+  background: transparent !important;
+  color: var(--assistant-muted) !important;
+  min-height: 30px;
+  padding: 3px 8px;
   box-shadow: none;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
 }
-#club-assistant .club-assistant-tool { width: 34px; padding: 0; font-size: 23px; }
+#club-assistant .club-assistant-tool:hover,
+#club-assistant .club-assistant-stop:hover,
+#club-assistant .club-assistant-retry:hover {
+  color: var(--assistant-text) !important;
+  background: color-mix(in srgb, var(--assistant-text) 8%, transparent) !important;
+  border-color: var(--assistant-border) !important;
+}
+#club-assistant .club-assistant-tool { width: 30px; padding: 0; font-size: 20px; line-height: 1; }
 #club-assistant .club-assistant-stop { font-size: 12px; }
 #club-assistant .club-assistant-frame { display: block; flex: 1 1 0; width: 100%; min-height: 0; border: 0; background: var(--assistant-surface); }
-#club-assistant:not([data-ready="true"]) .club-assistant-frame { position: absolute; left: 0; top: 52px; height: calc(100% - 52px); visibility: hidden; }
-#club-assistant .club-assistant-loading { flex: 1; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-content: center; padding: 24px; color: var(--assistant-muted); }
+#club-assistant:not([data-ready="true"]) .club-assistant-frame { position: absolute; left: 0; top: 48px; height: calc(100% - 48px); visibility: hidden; }
+#club-assistant .club-assistant-loading { flex: 1; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-content: center; padding: 24px; color: var(--assistant-muted); font-size: 13px; }
 #club-assistant .club-assistant-loading p { flex-basis: 100%; margin: 0; text-align: center; }
 #club-assistant .club-assistant-loading a { color: var(--assistant-accent) !important; align-self: center; }
 #club-assistant[data-ready="true"] .club-assistant-loading { display: none; }
 #club-assistant:not([data-failed="true"]) .club-assistant-retry { display: none; }
-#club-assistant.club-assistant-game { bottom: max(158px, calc(140px + env(safe-area-inset-bottom))); }
+
+/* 游戏页底部有操作条，默认位置抬高一些（仍可拖动） */
+#club-assistant.club-assistant-game .club-assistant-ball { /* 位置由脚本按视口计算，这里只保留语义标记 */ }
+
 @media (max-width: 600px) {
-  #club-assistant { right: max(12px, env(safe-area-inset-right)); bottom: max(70px, calc(58px + env(safe-area-inset-bottom))); }
-  #club-assistant .club-assistant-ball { width: 48px; height: 48px; font-size: 26px; }
-  #club-assistant.is-open { inset: 0; }
+  #club-assistant .club-assistant-ball { width: 48px; height: 48px; font-size: 23px; }
+  #club-assistant.is-open { pointer-events: auto; }
   #club-assistant.is-open .club-assistant-ball { display: none; }
-  #club-assistant .club-assistant-panel, #club-assistant.is-expanded .club-assistant-panel {
+  #club-assistant .club-assistant-panel,
+  #club-assistant.is-expanded .club-assistant-panel {
     position: fixed;
-    inset: 0;
+    inset: 0 !important;
     width: 100%;
     height: 100dvh;
     min-height: 0;
@@ -119,13 +169,18 @@ html[data-theme="light"] #club-assistant {
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
   }
-  #club-assistant .club-assistant-head { padding-right: max(10px, env(safe-area-inset-right)); padding-left: max(16px, env(safe-area-inset-left)); }
+  /* 移动端整屏覆盖时不需要拖动 */
+  #club-assistant .club-assistant-head { cursor: default; }
+  #club-assistant .club-assistant-handle { display: none; }
+  #club-assistant .club-assistant-head { padding-right: max(10px, env(safe-area-inset-right)); padding-left: max(14px, env(safe-area-inset-left)); }
   #club-assistant .club-assistant-expand { display: none; }
-  #club-assistant:not([data-ready="true"]) .club-assistant-frame { top: calc(52px + env(safe-area-inset-top)); height: calc(100% - 52px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+  #club-assistant:not([data-ready="true"]) .club-assistant-frame { top: calc(48px + env(safe-area-inset-top)); height: calc(100% - 48px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
   html.club-assistant-mobile-open { overflow: hidden !important; }
 }
 @media (max-height: 520px) and (min-width: 601px) {
-  #club-assistant .club-assistant-panel, #club-assistant.is-expanded .club-assistant-panel { position: fixed; top: 12px; bottom: 12px; right: 84px; height: auto; min-height: 0; width: min(600px, calc(100vw - 108px)); }
-  #club-assistant.club-assistant-game { bottom: 20px; }
+  #club-assistant .club-assistant-panel,
+  #club-assistant.is-expanded .club-assistant-panel { height: calc(100dvh - 24px); }
 }
-@media (prefers-reduced-motion: reduce) { #club-assistant .club-assistant-ball { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  #club-assistant .club-assistant-ball { transition: none; }
+}
