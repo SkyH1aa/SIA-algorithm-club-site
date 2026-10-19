@@ -1,7 +1,7 @@
 (() => {
   const zh = {
     title:'小Bru · 社团助手', assistant:'小Bru', emptyTitle:'你好，我是小Bru',
-    emptyBody:'我是新哲文院算法社的社团 AI 助手。可以帮你了解网站使用与学习资源，也可以交流编程和算法。社团信息请结合回答中的资料出处核对。',
+    emptyBody:'你好，我是新哲文院算法社的社团 AI 助手，我叫小Bru。你可以询问社团功能、账号使用、学习资源、签到和活动，也可以交流编程与算法问题。涉及社团具体规定时，我会尽量提供资料出处；无法确认的信息会明确说明。',
     placeholder:'询问社团、学习资源或网站使用方法…',
     privacy:'对话与附件仅保存在这台设备的当前账号下，与 AI 对话记录分开。发送时，问题、相关历史、摘要和附件会交给社团配置的模型处理。请勿发送密码或敏感个人信息。',
     estimate:'上下文已预留社团资料与固定规则所需空间；token 用量为估算。',
@@ -10,7 +10,7 @@
   };
   const en = {
     title:'Bru · Club Assistant', assistant:'Bru', emptyTitle:'Hello, I’m Bru',
-    emptyBody:'I am Bru, the AI assistant of 新哲文院算法社. Ask about site features, learning resources, programming, or algorithms. Check the cited sources for club information.',
+    emptyBody:'Hello, I am 小Bru, the AI assistant of 新哲文院算法社. Ask about site features, learning resources, programming, or algorithms. Check the cited sources for club information.',
     placeholder:'Ask about the club, learning resources, or this website…',
     privacy:'Chats and attachments are stored on this device under your current account, separately from AI Chat. Your question, relevant history, summary, and attachments are sent to the model configured by the club. Do not send passwords or sensitive personal information.',
     estimate:'Space for club knowledge and fixed rules is reserved. Token usage is approximate.',

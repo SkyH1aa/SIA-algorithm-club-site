@@ -83,7 +83,8 @@ html[data-theme="light"] #club-assistant {
   border-radius: 16px;
   background: var(--assistant-surface);
   color: var(--assistant-text);
-  box-shadow: 0 24px 80px #0007, 0 2px 8px #0003;
+  /* 不加外阴影：浮窗常悬在表格等密集内容上，投影会糊到左侧正文。 */
+  box-shadow: none;
 }
 #club-assistant.is-expanded .club-assistant-panel {
   /* 展开时用 !important 覆盖脚本写入的内联 inset。 */
