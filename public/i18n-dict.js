@@ -29,7 +29,7 @@
       homeAria: '算法社首页'
     },
     guide: {
-      title: '使用指引 · 算法社', h1: '使用指引', lead: '从首页导航进入社团功能、AI 游戏、算法实验室和社员系统。', quickStart: '快速开始', quickStartText: '先用顶栏进入个人中心完成注册与资料绑定，再进入社团功能选择想要使用的模块。', accountTitle: '账号与个人中心', accountText: '使用邀请码注册并登录，可绑定中文姓名与班级；个人中心会集中显示积分、签到和个人资料。', featuresTitle: '社团功能', featuresText: '这里汇总教材下载、算法实验室、五子棋、俄罗斯方块、贪吃蛇、签到兑换、积分、留言和活动入口。', gamesTitle: 'AI 游戏', gamesText: '游戏支持普通游玩、AI 游玩、AI 辅助和人机对战。开启 AI 决策面板后，可查看候选动作、评估分、目标位置或预测路径。', checkinTitle: '签到与课程签到', checkinText: '普通签到使用管理员发布的兑换码；课程签到从顶栏快捷入口进入，默认打开课程签到选项，提交后等待管理员审核。', themeTitle: '语言与主题', themeText: '页面支持中英双语，并可选择自动、日间或暗色主题；自动模式按北京时间 06:00–18:00 使用日间主题。', changelogTitle: '更新日志', changelogText: '查看网站的功能更新和维护记录。', openChangelog: '查看更新日志 →', backHome: '返回首页'
+      title: '使用指引 · 算法社', h1: '使用指引', lead: '从首页导航进入社团功能、AI 游戏、算法实验室和社员系统。', quickStart: '快速开始', quickStartText: '从首页的“个人中心”进入注册、登录与资料绑定，再通过“社团功能”选择想要使用的模块。', accountTitle: '账号与个人中心', accountText: '使用邀请码注册并登录，可在个人中心绑定中文姓名与班级、查看个人资料和积分。签到请从“社团功能”页面进入“签到兑换”。', featuresTitle: '社团功能', featuresText: '这里汇总教材下载、算法实验室、五子棋、俄罗斯方块、贪吃蛇、签到兑换、积分商城、留言和活动入口。积分榜可从个人中心或“跳转模块”中的“社员积分”进入。', gamesTitle: 'AI 游戏', gamesText: '游戏支持普通游玩、AI 游玩、AI 辅助和人机对战。开启 AI 决策面板后，可查看候选动作、评估分、目标位置或预测路径。', checkinTitle: '签到与课程签到', checkinText: '从“社团功能”页面进入“签到兑换”。积分兑换使用管理员发布的兑换码；课程签到需在签到页面选择对应类型并提交，之后等待管理员审核。', themeTitle: '语言与主题', themeText: '页面支持中英双语，并可选择自动、日间或暗色主题；自动模式按北京时间 06:00–18:00 使用日间主题。', changelogTitle: '更新日志', changelogText: '查看网站的功能更新和维护记录。', openChangelog: '查看更新日志 →', backHome: '返回首页'
     },
     theme: {
       title: '外观主题',
@@ -112,7 +112,7 @@
       capWeb: '工程实践',
       capWebDesc: '把算法作品做成可访问网页，沉淀成员、活动、项目与管理闭环。',
       capDoc: '教学资源',
-      capDocDesc: 'Python / C++ 教材与解析集中开放，支持在线学习与完整下载。',
+      capDocDesc: 'Python / C++ 教材与解析集中整理，登录后查看可用的在线学习与下载资源。',
       enterResources: '进入资源中心 →',
       worksTitle: '旗舰作品',
       worksLead: '首页情绪高峰留给真正跑起来的产品：五子棋、俄罗斯方块与贪吃蛇 AI、APPMonitor，以及七大算法实验室。',
@@ -540,8 +540,8 @@
       passwordPlaceholder: '至少 6 位',
       authPoint1Title: '一份账号，全站通用',
       authPoint1Body: '个人中心、社团盘、签到、积分、商城与 AI Chat 共用同一个社团账号。',
-      authPoint2Title: '登录后自动绑定',
-      authPoint2Body: '首次进入会引导填写中文姓名与班级，积分与签到随即生效。',
+      authPoint2Title: '登录后完善资料绑定',
+      authPoint2Body: '首次进入会引导填写中文姓名与班级；相关功能还需满足绑定、审核和服务可用条件。',
       authPoint3Title: '注册需要邀请码',
       authPoint3Body: '邀请码由管理员发放，注册即创建你的社团盘专属目录。',
       title: '个人中心 · 算法社',
@@ -552,7 +552,7 @@
       authHint: '使用邀请码注册，或直接登录现有社团账号。',
       serviceDebugTitle: '超管临时登录', serviceDebugLead: '网站暂停期间仅允许超管登录管理后台。验证通过后将自动进入管理员调试页面。', serviceDebugHint: '请输入超管账号和密码。', serviceDebugDenied: '当前账号不是超管，无法在网站暂停期间登录。',
       loginTitle: '登录账号',
-      loginIntro: '登录后即可使用个人中心、社团盘与全部社员功能。',
+      loginIntro: '登录后可进入个人中心；社团盘及其他社员功能以绑定状态、账号权限和页面提示为准。',
       forgot: '忘记密码？',
       loginBtn: '登录',
       registerTitle: '注册账号',
@@ -2105,11 +2105,11 @@
       entryShortChat: 'AI Chat',
       guide: {
         title: '使用指引 · 算法社', h1: '使用指引', lead: '从首页导航进入社团功能、AI 游戏、算法实验室和社员系统。',
-        quickStart: '快速开始', quickStartText: '先用顶栏进入个人中心完成注册与资料绑定，再进入社团功能选择想要使用的模块。',
-        accountTitle: '账号与个人中心', accountText: '使用邀请码注册并登录，可绑定中文姓名与班级；个人中心会集中显示积分、签到和个人资料。',
-        featuresTitle: '社团功能', featuresText: '这里汇总教材下载、算法实验室、五子棋、俄罗斯方块、贪吃蛇、签到兑换、积分、留言和活动入口。',
+        quickStart: '快速开始', quickStartText: '从首页的“个人中心”进入注册、登录与资料绑定，再通过“社团功能”选择想要使用的模块。',
+        accountTitle: '账号与个人中心', accountText: '使用邀请码注册并登录，可在个人中心绑定中文姓名与班级、查看个人资料和积分。签到请从“社团功能”页面进入“签到兑换”。',
+        featuresTitle: '社团功能', featuresText: '这里汇总教材下载、算法实验室、五子棋、俄罗斯方块、贪吃蛇、签到兑换、积分商城、留言和活动入口。积分榜可从个人中心或“跳转模块”中的“社员积分”进入。',
         gamesTitle: 'AI 游戏', gamesText: '游戏支持普通游玩、AI 游玩、AI 辅助和人机对战。开启 AI 决策面板后，可查看候选动作、评估分、目标位置或预测路径。',
-        checkinTitle: '签到与课程签到', checkinText: '普通签到使用管理员发布的兑换码；课程签到从顶栏快捷入口进入，默认打开课程签到选项，提交后等待管理员审核。',
+        checkinTitle: '签到与课程签到', checkinText: '从“社团功能”页面进入“签到兑换”。积分兑换使用管理员发布的兑换码；课程签到需在签到页面选择对应类型并提交，之后等待管理员审核。',
         themeTitle: '语言与主题', themeText: '页面支持中英双语，并可选择自动、日间或暗色主题；自动模式按北京时间 06:00–18:00 使用日间主题。',
         changelogTitle: '更新日志', changelogText: '查看网站的功能更新和维护记录。', openChangelog: '查看更新日志 →', officialLinkTitle: '官网快捷地址', officialLinkText: '请牢记算法社官网快捷地址：', backHome: '返回首页'
       },
@@ -2119,7 +2119,7 @@
 
   const en = {
     guide: {
-      title: 'Usage Guide · Algorithm Club', h1: 'Usage Guide', lead: 'Use the homepage navigation to enter club features, AI games, algorithm labs, and member tools.', quickStart: 'Quick start', quickStartText: 'Open Member Center from the top bar to register and bind your profile, then choose a module from Club Features.', accountTitle: 'Account and member center', accountText: 'Register with an invite code and bind your Chinese name and class. Your points, check-ins, and profile stay in one place.', featuresTitle: 'Club features', featuresText: 'Find teaching resources, algorithm labs, Gomoku, Tetris, Snake, check-in redemption, points, messages, and activities here.', gamesTitle: 'AI games', gamesText: 'Games offer regular play, AI play, AI assist, and versus modes. Enable the AI decision panel to inspect candidate actions, scores, targets, or predicted paths.', checkinTitle: 'Check-in and course check-in', checkinText: 'Regular check-in uses an administrator code. The top-bar course shortcut opens course check-in by default; submissions wait for administrator review.', themeTitle: 'Language and theme', themeText: 'Switch between Chinese and English, and choose auto, light, or dark themes. Auto uses the light theme from 06:00 to 18:00 Beijing time.', changelogTitle: 'Changelog', changelogText: 'Review feature updates and maintenance records.', openChangelog: 'View changelog →', backHome: 'Back to homepage'
+      title: 'Usage Guide · Algorithm Club', h1: 'Usage Guide', lead: 'Use the homepage navigation to enter club features, AI games, algorithm labs, and member tools.', quickStart: 'Quick start', quickStartText: 'Open Member Center from the homepage to register, sign in, and bind your profile, then choose a module from Club Features.', accountTitle: 'Account and member center', accountText: 'Register with an invite code, then bind your Chinese name and class and view your profile and points in Member Center. For check-in, open Check-in from Club Features.', featuresTitle: 'Club features', featuresText: 'Find teaching resources, algorithm labs, Gomoku, Tetris, Snake, check-in, the points mall, messages, and activities here. Open the points board from Member Center or Points in Jump to module.', gamesTitle: 'AI games', gamesText: 'Games offer regular play, AI play, AI assist, and versus modes. Enable the AI decision panel to inspect candidate actions, scores, targets, or predicted paths.', checkinTitle: 'Check-in and course check-in', checkinText: 'Open Check-in from Club Features. Points redemption uses an administrator-issued code; for course check-in, select the corresponding type on the check-in page and submit it for administrator review.', themeTitle: 'Language and theme', themeText: 'Switch between Chinese and English, and choose auto, light, or dark themes. Auto uses the light theme from 06:00 to 18:00 Beijing time.', changelogTitle: 'Changelog', changelogText: 'Review feature updates and maintenance records.', openChangelog: 'View changelog →', backHome: 'Back to homepage'
     },
     common: {
       brand: 'Algorithm Club',
@@ -2230,7 +2230,7 @@
       capWeb: 'Engineering Practice',
       capWebDesc: 'Ship algorithms as accessible web apps and close the loop on members, events, projects, and operations.',
       capDoc: 'Teaching Resources',
-      capDocDesc: 'Python / C++ textbooks and solutions are open for online learning and full downloads.',
+      capDocDesc: 'Python / C++ textbooks and solutions are collected in one place. Sign in to view the available learning and download resources.',
       enterResources: 'Open Resource Center →',
       worksTitle: 'Flagship Works',
       worksLead: 'The homepage peak belongs to products that actually run: Gomoku, Tetris & Snake AI, APPMonitor, and seven algorithm labs.',
@@ -2658,8 +2658,8 @@
       passwordPlaceholder: 'At least 6 characters',
       authPoint1Title: 'One account for everything',
       authPoint1Body: 'Member Center, Club Drive, check-in, points, the mall, and AI Chat share one club account.',
-      authPoint2Title: 'Automatic binding after sign-in',
-      authPoint2Body: 'On first sign-in you bind your Chinese name and class, then points and check-in start working.',
+      authPoint2Title: 'Complete profile binding after sign-in',
+      authPoint2Body: 'On first sign-in, follow the prompts to bind your Chinese name and class. Related features also depend on binding, required reviews, and service availability.',
       authPoint3Title: 'Registration needs an invite code',
       authPoint3Body: 'An admin issues invite codes; registering creates your personal Club Drive folder.',
       title: 'Member Center · Algorithm Club',
@@ -2670,7 +2670,7 @@
       authHint: 'Register with an invite code, or sign in to an existing account.',
       serviceDebugTitle: 'Super-admin temporary login', serviceDebugLead: 'Only super-admins may sign in to the admin area while the website is paused. Verified accounts open the admin debug page automatically.', serviceDebugHint: 'Enter a super-admin account and password.', serviceDebugDenied: 'This account is not a super-admin and cannot sign in while the website is paused.',
       loginTitle: 'Sign in',
-      loginIntro: 'After sign-in you can use Member Center, Club Drive, and all member tools.',
+      loginIntro: 'Sign in to open Member Center. Club Drive and other member tools depend on profile binding, account permissions, and the current page prompts.',
       forgot: 'Forgot password?',
       loginBtn: 'Sign in',
       registerTitle: 'Register',
@@ -4223,11 +4223,11 @@
       entryShortChat: 'AI Chat',
       guide: {
         title: 'Usage Guide · Algorithm Club', h1: 'Usage Guide', lead: 'Use the homepage navigation to enter club features, AI games, algorithm labs, and member tools.',
-        quickStart: 'Quick start', quickStartText: 'Open Member Center from the top bar to register and bind your profile, then choose a module from Club Features.',
-        accountTitle: 'Account and member center', accountText: 'Register with an invite code and bind your Chinese name and class. Your points, check-ins, and profile stay in one place.',
-        featuresTitle: 'Club features', featuresText: 'Find teaching resources, algorithm labs, Gomoku, Tetris, Snake, check-in redemption, points, messages, and activities here.',
+        quickStart: 'Quick start', quickStartText: 'Open Member Center from the homepage to register, sign in, and bind your profile, then choose a module from Club Features.',
+        accountTitle: 'Account and member center', accountText: 'Register with an invite code, then bind your Chinese name and class and view your profile and points in Member Center. For check-in, open Check-in from Club Features.',
+        featuresTitle: 'Club features', featuresText: 'Find teaching resources, algorithm labs, Gomoku, Tetris, Snake, check-in, the points mall, messages, and activities here. Open the points board from Member Center or Points in Jump to module.',
         gamesTitle: 'AI games', gamesText: 'Games offer regular play, AI play, AI assist, and versus modes. Enable the AI decision panel to inspect candidate actions, scores, targets, or predicted paths.',
-        checkinTitle: 'Check-in and course check-in', checkinText: 'Regular check-in uses an administrator code. The top-bar course shortcut opens course check-in by default; submissions wait for administrator review.',
+        checkinTitle: 'Check-in and course check-in', checkinText: 'Open Check-in from Club Features. Points redemption uses an administrator-issued code; for course check-in, select the corresponding type on the check-in page and submit it for administrator review.',
         themeTitle: 'Language and theme', themeText: 'Switch between Chinese and English, and choose auto, light, or dark themes. Auto uses the light theme from 06:00 to 18:00 Beijing time.',
         changelogTitle: 'Changelog', changelogText: 'Review feature updates and maintenance records.', openChangelog: 'View changelog →', officialLinkTitle: 'Official quick link', officialLinkText: 'Please remember the Algorithm Club quick site link:', backHome: 'Back to homepage'
       },

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {readResponses} from '../public/chat-core.js';
+import {assistantPreset} from '../public/assistant-preset.js';
 
 // No browser, credentials, network, or provider calls: run the real management
 // functions with a minimal DOM and a queued fetch double.
@@ -66,9 +67,10 @@ function proxyActionNodes(selector) {
 let language = 'zh', confirmResult = true;
 const confirmations = [], clipboard = [];
 const queue = [], calls = [];
+let legacyAssistantReply = true;
 const windowListeners = new Map(), scheduledRefreshes = [];
 const sandbox = vm.createContext({
-  console, DOMException, AbortController, URL, Map, Date, Number, String, Boolean, readResponses,
+  console, DOMException, AbortController, URL, Map, Date, Number, String, Boolean, readResponses, assistantPreset,
   setTimeout: callback => { scheduledRefreshes.push(callback); },
   Option: function(text, value) { return {text, value}; },
   document: {getElementById: node, querySelectorAll: proxyActionNodes},
@@ -83,8 +85,11 @@ const sandbox = vm.createContext({
     const body = JSON.parse(options.body);
     calls.push(body);
     assert.equal(options.headers.authorization, 'Bearer mock-token');
-    assert(queue.length, `Unmocked request (network forbidden): ${body.action}`);
-    const reply = queue.shift();
+    // Existing non-assistant suites use an empty read-only assistant fixture.
+    // Lifecycle regressions below disable this fallback and queue every request.
+    const fallback = legacyAssistantReply && body.action === 'assistant_admin_get' && queue[0]?.action !== body.action;
+    assert(fallback || queue.length, `Unmocked request (network forbidden): ${body.action}`);
+    const reply = fallback ? {action: body.action, status: 200, payload: {config:{version:0,enabled:false,model_id:null,welcome:'',suggestions:[],system_prompt:''},documents:[],releases:[]}} : queue.shift();
     assert.equal(body.action, reply.action);
     await reply.beforeReply?.();
     return {ok: reply.status < 400, status: reply.status, json: async () => reply.payload,
@@ -322,11 +327,11 @@ assert(confirmations.at(-1).includes('proxyRevokeConfirm'));
 confirmResult = true;
 reply('admin_proxy_key_state', {key: {...key, enabled: false, version: 2}});
 keyClick({proxyKeyState: key.id});
-while (run('Boolean(active)')) await new Promise(resolve => setTimeout(resolve, 0));
+while (run('Boolean(active || assistantLoad)')) await new Promise(resolve => setTimeout(resolve, 0));
 assert.deepEqual(calls.at(-1), {action: 'admin_proxy_key_state', id: key.id, enabled: false, revoked: false, expected_version: 1});
 reply('admin_proxy_key_state', {key: {...key, enabled: false, revoked_at: route.created_at, version: 3}});
 keyClick({proxyKeyRevoke: key.id});
-while (run('Boolean(active)')) await new Promise(resolve => setTimeout(resolve, 0));
+while (run('Boolean(active || assistantLoad)')) await new Promise(resolve => setTimeout(resolve, 0));
 assert.deepEqual(calls.at(-1), {action: 'admin_proxy_key_state', id: key.id, enabled: false, revoked: true, expected_version: 2});
 const afterRevoke = calls.length;
 keyClick({proxyKeyState: key.id}); assert.equal(calls.length, afterRevoke, 'Revoked key cannot be enabled');
@@ -346,14 +351,14 @@ reply('admin_get', {authorized: false});
 run("updateSession({user:{id:'new'},access_token:'mock-token'})");
 assert.equal(run('proxyPlaintext'), '', 'Account switch immediately clears memory');
 assert.equal(node('proxyOneTimeKey').textContent, '', 'Account switch immediately clears DOM');
-while (run('Boolean(active)')) await new Promise(resolve => setTimeout(resolve, 0));
+while (run('Boolean(active || assistantLoad)')) await new Promise(resolve => setTimeout(resolve, 0));
 assert.equal(queue.length, 0);
 assert(!/localStorage|indexedDB|console\.(?:log|debug|info)/.test(source), 'No key persistence or logging');
 console.log('PASS real signout/account switch clears memory and DOM; late issuance cannot restore plaintext');
 // Permanent deletion uses the real delegated handlers and never contacts a server.
 function routeClick(dataset) { node('proxyRoutesList').listeners.click({target: {closest: () => ({dataset})}}); }
 async function settleProxy() {
-  while (run('Boolean(active)')) await new Promise(resolve => setTimeout(resolve, 0));
+  while (run('Boolean(active || assistantLoad)')) await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(queue.length, 0, 'Every queued response must be consumed');
 }
 const tombstone = {...route, enabled: false, deleted_at: route.created_at, version: 7};
@@ -550,7 +555,7 @@ console.log('PASS bilingual revoke/permanent-removal copy, confirmation variable
   reply('admin_get', {providers: [providerFixture], models: [modelB]});
   reply('admin_proxy_list', {routes: [], keys: []});
   await run('removeModel(modelA)');
-  while (run('Boolean(active)')) await new Promise(resolve => setTimeout(resolve, 0));
+  while (run('Boolean(active || assistantLoad)')) await new Promise(resolve => setTimeout(resolve, 0));
   const deleteCall = calls.find(call => call.action === 'admin_delete_model');
   assert.deepEqual(JSON.parse(JSON.stringify(deleteCall)), {action: 'admin_delete_model', id: modelA.id, expected_version: modelA.version});
   assert.equal(run("messages.get('modelMessage').key"), 'modelDeleted');
@@ -561,7 +566,7 @@ console.log('PASS bilingual revoke/permanent-removal copy, confirmation variable
   reply('admin_proxy_list', {routes: [], keys: []});
   run(`document.getElementById('providerId').value = ${JSON.stringify(providerFixture.id)}`);
   await run('removeProvider(providerFixture)');
-  while (run('Boolean(active)')) await new Promise(resolve => setTimeout(resolve, 0));
+  while (run('Boolean(active || assistantLoad)')) await new Promise(resolve => setTimeout(resolve, 0));
   assert.deepEqual(JSON.parse(JSON.stringify(calls.find(call => call.action === 'admin_delete_provider'))), {action: 'admin_delete_provider', id: providerFixture.id});
   assert.equal(run("messages.get('providerMessage').key"), 'providerDeleted');
   assert.equal(node('providerId').value, '', 'deleting the provider being edited must clear the form');
@@ -1042,6 +1047,142 @@ const translatedCopy = new Map();
   }
   assert.match(seed.documents.find(item=>item.slug==='public-join').content,/不是.*实时确认/);
   console.log('PASS expanded unpublished seed: document bounds, unique slugs, safe root-relative paths, concrete provenance selectors and source-bound schedule');
+}
+// Automatic assistant loading exercises the real bootstrap, auth and tab events.
+{
+  legacyAssistantReply = false;
+  const config = {version:7,enabled:false,model_id:sandbox.protocolModel.id,welcome:'Stored welcome',suggestions:['Stored question'],system_prompt:'Stored instruction'};
+  const data = (welcome = config.welcome) => ({config:{...config,welcome},documents:[],releases:[]});
+  const adminReplies = (assistantData = data(), status = 200, beforeReply) => {
+    reply('admin_get',{providers:[sandbox.protocolProvider],models:[{...sandbox.protocolModel,visibility:'all'}]});
+    reply('assistant_admin_get',assistantData,status,beforeReply);
+    reply('admin_proxy_list',{routes:[],keys:[]});
+    reply('admin_user_directory',{users:[],blacklist:[]});
+    reply('admin_quota_get',snapshot);
+    reply('usage',{rows:[],total:0});
+  };
+  const tab = () => windowListeners.get('club:tabchange')({detail:{target:'assistantSection'}});
+  const assistantReads = () => calls.filter(call => call.action==='assistant_admin_get').length;
+  run('updateSession(null)');
+  const beforeLogin = calls.length;
+  tab(); assert.equal(calls.length,beforeLogin,'No assistant request before auth');
+  let initialResolve, authCallback;
+  const initialSession = new Promise(resolve => {initialResolve=resolve;});
+  sandbox.authMock = {onAuthStateChange: callback => {authCallback=callback;},getSession:()=>initialSession};
+  run('client.auth=authMock');
+  run(source.slice(source.indexOf('// Process account changes immediately')));
+  adminReplies();
+  authCallback('SIGNED_IN',{user:{id:'first-admin'},access_token:'mock-token'});
+  initialResolve({data:{session:{user:{id:'stale-bootstrap'},access_token:'mock-token'}}});
+  await settleProxy();
+  assert.equal(run('session.user.id'),'first-admin','Late getSession cannot replace a newer auth callback');
+  assert.equal(node('assistantWelcome').value,'Stored welcome','First sign-in automatically hydrates stored config');
+  assert.equal(run('assistantLoadStatus'),'loaded');
+  assert.equal(node('assistantPresetButton').disabled,false);
+  assert(!node('assistantDocumentsList').innerHTML.includes(dictionaries[language].chatAdmin.assistantNotLoaded));
+  const loadedReads = assistantReads();
+  node('assistantWelcome').value='My unsaved welcome';
+  node('assistantSupplement').value='My unsaved instruction';
+  node('assistantDocumentContent').value='My unsaved document';
+  for(let i=0;i<4;i++) tab();
+  authCallback('TOKEN_REFRESHED',{user:{id:'first-admin'},access_token:'mock-token'});
+  windowListeners.get('club:langchange')();
+  assert.equal(assistantReads(),loadedReads,'Tabs, token refresh and language change do not reload');
+  assert.equal(node('assistantWelcome').value,'My unsaved welcome');
+  assert.equal(node('assistantDocumentContent').value,'My unsaved document');
+  // Legacy global refresh also preserves the loaded assistant and all its drafts.
+  reply('admin_get',{providers:[sandbox.protocolProvider],models:[{...sandbox.protocolModel,visibility:'all'}]});
+  reply('admin_proxy_list',{routes:[],keys:[]});reply('admin_user_directory',{users:[],blacklist:[]});
+  reply('admin_quota_get',snapshot);reply('usage',{rows:[],total:0});
+  node('refreshButton').onclick(); await settleProxy();
+  assert.equal(assistantReads(),loadedReads);
+  assert.equal(node('assistantSupplement').value,'My unsaved instruction');
+
+  // Explicit preset fill is local, guarded and limited to exactly three fields.
+  const beforePreset=calls.length, enabled=node('assistantEnabled').checked, model=node('assistantModelId').value;
+  confirmResult=false;node('assistantPresetButton').onclick();
+  assert.equal(node('assistantWelcome').value,'My unsaved welcome');
+  confirmResult=true;node('assistantPresetButton').onclick();
+  assert.equal(node('assistantWelcome').value,assistantPreset.welcome);
+  assert.equal(node('assistantSuggestions').value,assistantPreset.suggestions.join('\n'));
+  assert.equal(node('assistantSupplement').value,assistantPreset.system_prompt);
+  assert.equal(node('assistantEnabled').checked,enabled);assert.equal(node('assistantModelId').value,model);
+  assert.equal(node('assistantDocumentContent').value,'My unsaved document');assert.equal(calls.length,beforePreset);
+  for(const lang of ['zh','en']) {
+    language=lang;windowListeners.get('club:langchange')();
+    assert.equal(node('assistantConfigMessage').textContent,dictionaries[lang].chatAdmin.assistantPresetApplied);
+    for(const key of ['assistantPreset','assistantPresetHelp','assistantPresetConfirm']) assert(dictionaries[lang].chatAdmin[key]);
+  }
+
+  // Conflict remains locked across tabs/global loads; only explicit refresh can unlock it.
+  reply('assistant_admin_config_save',{error:'conflict'},409);
+  node('assistantConfigForm').listeners.submit({preventDefault(){}});await settleProxy();
+  const conflictReads=assistantReads();tab();run('ensureAssistantLoaded()');
+  assert.equal(assistantReads(),conflictReads);assert.equal(run('assistantLoadStatus'),'conflict');
+  assert(node('assistantPresetButton').disabled);node('assistantPresetButton').onclick();
+  assert.equal(node('assistantWelcome').value,assistantPreset.welcome);
+  reply('assistant_admin_get',data('Explicit server copy'));node('refreshAssistantButton').onclick();await settleProxy();
+  assert.equal(node('assistantWelcome').value,'Explicit server copy');
+  assert.equal(node('assistantDocumentContent').value,'My unsaved document');
+
+  // Schema/database failure is isolated; tab entry does not spin retries.
+  run('updateSession(null)');adminReplies({error:'database'},503);
+  authCallback('SIGNED_IN',{user:{id:'failure-admin'},access_token:'mock-token'});await settleProxy();
+  assert(run('authorized'));assert(run('usage.loaded'));assert(run('proxyLoaded'));assert(run('directoryLoaded'));
+  assert.equal(run('assistantLoadStatus'),'error');
+  assert.equal(run("messages.get('assistantConfigMessage').key"),'assistantUnavailable');
+  const failedReads=assistantReads();tab();tab();assert.equal(assistantReads(),failedReads);
+  reply('assistant_admin_get',data());node('refreshAssistantButton').onclick();await settleProxy();
+  assert.equal(run('assistantLoadStatus'),'loaded');assert.equal(node('assistantWelcome').value,'Stored welcome');
+
+  // A slow read never blocks legacy bootstrap, and repeated tabs/refreshes coalesce.
+  let releaseRead;
+  const blockedRead=new Promise(resolve=>{releaseRead=resolve;});
+  run('updateSession(null)');adminReplies(data('Late old account'),200,()=>blockedRead);
+  authCallback('SIGNED_IN',{user:{id:'slow-admin'},access_token:'mock-token'});
+  while(run('Boolean(active)')) await new Promise(resolve=>setTimeout(resolve,0));
+  assert(run('Boolean(assistantLoad)'));assert(run('usage.loaded'));
+  assert.equal(node('refreshButton').disabled,false);assert(node('assistantPresetButton').disabled);
+  const pendingReads=assistantReads();tab();tab();node('refreshAssistantButton').onclick();
+  assert.equal(assistantReads(),pendingReads,'Pending read cannot be duplicated');
+  const oldRead=run('assistantLoad.pending');
+  adminReplies(data('New account'));
+  authCallback('SIGNED_IN',{user:{id:'new-admin'},access_token:'mock-token'});
+  await settleProxy();assert.equal(node('assistantWelcome').value,'New account');
+  releaseRead();await oldRead;
+  assert.equal(node('assistantWelcome').value,'New account','Late response cannot overwrite a new auth epoch');
+
+  // Tab event is an idle-load fallback; late JSON cannot overwrite a draft.
+  run('clearSensitive();authorized=true;controls()');
+  node('assistantWelcome').value='Draft before automatic read';
+  let releaseDraftRead;
+  const pendingDraft=new Promise(resolve=>{releaseDraftRead=resolve;});
+  reply('assistant_admin_get',data('Must not replace draft'),200,()=>pendingDraft);
+  tab();const draftRead=run('assistantLoad.pending');
+  node('assistantWelcome').value='Draft edited while loading';
+  releaseDraftRead();await draftRead;
+  assert.equal(node('assistantWelcome').value,'Draft edited while loading');
+  assert.equal(run('assistantState.config.version'),config.version);
+  assert.equal(run('assistantLoadStatus'),'loaded');
+
+  // Signout and 401/403 invalidate both independent and legacy in-flight reads.
+  reply('assistant_admin_get',data('After signout'),200,()=>run('updateSession(null)'));
+  node('refreshAssistantButton').onclick();await settleProxy();
+  assert.equal(node('assistantWelcome').value,'');assert(node('assistantPresetButton').disabled);
+  for(const status of [401,403]) {
+    run("session={user:{id:'revoked'},access_token:'mock-token'};authorized=true;controls()");
+    let releaseUsage;
+    const blockedUsage=new Promise(resolve=>{releaseUsage=resolve;});
+    reply('usage',{rows:[{request_id:'stale-usage'}],total:1},200,()=>blockedUsage);
+    const pendingUsage=run("operation('usageMessage',run=>loadUsage(run))");
+    reply('assistant_admin_get',{error:status===401?'login':'admin'},status);
+    await run('ensureAssistantLoaded()');
+    assert(!run('authorized'));assert.equal(run('assistantState.config'),null);assert(node('adminContent').hidden);
+    releaseUsage();await pendingUsage;
+    assert.equal(run('usage.rows.length'),0,'Revoked assistant auth also invalidates concurrent legacy responses');
+  }
+  assert(!calls.slice(beforeLogin).some(call=>['test','admin_test','assistant_ask'].includes(call.action)),'Automatic lifecycle never calls a paid upstream');
+  console.log('PASS automatic assistant lifecycle: bootstrap/auth race, first login, tab fallback/coalescing, token refresh, drafts, conflict lock, isolated failure/explicit retry, concurrent legacy load, stale account/signout responses and explicit local Xiaoming preset');
 }
 assert.equal(queue.length, 0, 'All queued responses must be consumed');
 console.log(`Chat admin VM regression passed (${calls.length} mocked requests; zero network or paid calls).`);

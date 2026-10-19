@@ -41,6 +41,16 @@ HTTP(S) 是正式运行环境。`file://` 仍受浏览器本地存储、认证�
 
 本地自动化、浏览器实际检查及未覆盖边界见 [助手验证与交付记录](../assistant-validation/README.md)。此轮未自动部署、导入或发布线上资料。
 
+### 已安装助手的资料校准与小铭预设更新（2026-10-19）
+
+这次更新不改 SQL 表或 RPC，已有助手数据库无需重复执行 SQL。网页方式将最新 `chat-dashboard-index.ts` 全文替换到 `chat` 并部署，以更新服务端小铭身份、历史资料和导航边界；代理不受影响。然后发布本轮静态改动，尤其是 `chat-admin.js`、`chat-admin.html`、`chat-admin-i18n.js` 和新增依赖 `assistant-preset.js`，以及助手命名、指引、个人中心、首页及字典文件。
+
+管理页超管鉴权成功后自动读取已有助手数据，切换 tab 不重复加载或覆盖未保存草稿；失败和版本冲突仍需显式刷新。点击“填入小铭预设”，审核欢迎语、建议问题与补充系统指令，再点击“保存助手配置”。按钮保留当前模型和启用状态，不自动保存或发布。预设也提供 [可复制提示词](../assistant/system-prompt.txt) 和 [三字段配置副本](../assistant/config-preset.json)；配置副本不是知识库文档，不要选进“导入 JSON”。
+
+重新导入新版 [seed.json](../assistant/seed.json) 并提交导入，相同 slug 会更新现有 14 篇草稿，其他自建资料不会被删除。检查自建资料是否仍有旧入口，最后“发布不可变版本”才会切换现行知识和已保存配置。仅更新仓库文件、选中文件或保存草稿都不会更新正在使用的发布版本。发布后建议新建对话核对签到入口；旧对话仍保留原回答/来源，但本轮服务端规则要求当前发布资料优先于旧回答和摘要。
+
+逐篇证据、修正文案与复测范围见 [知识校准记录](../assistant-validation/knowledge-refresh.md)。
+
 ## 安全加固更新（Chat 与对外代理）
 
 已有当前三协议/usage90day 版本时，本次只需在 Dashboard **分别全文替换并部署两个 Edge 文件**：`chat-dashboard-index.ts` → `chat`，`chat-api-proxy-dashboard-index.ts` → `chat-api-proxy`。本次未修改 SQL，也不需要为这轮加固重新执行 SQL 或发布前端。尚未安装前述功能的项目仍按完整部署步骤执行。两个 bundle 已包含新的共享请求体读取器，不必另建 `_shared` 文件。

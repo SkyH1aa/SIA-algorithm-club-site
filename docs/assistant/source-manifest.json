@@ -1,91 +1,314 @@
 {
   "status": "manual-draft-unpublished",
   "review_date": "2026-10-19",
-  "method": "Reviewed repository HTML and user-facing translation strings only. Selectors below name literal HTML IDs or data-i18n attributes; translation_keys name rendered copy in the listed script. No member data, authenticated API response, admin-only panel or upstream service was used as knowledge.",
+  "method": "逐篇审查现有 14 篇的全部声明。依据当前工作区首页导航、club-shell 模块配置、公开卡片与认证前门禁；只读公开前端源码以交叉核对链接、表单流程、附件限制、本地存储和主题行为。未启动页面、登录、提交表单、读取真实后端、访问付费模型、部署或验证线上版本。guide/i18n 中的旧操作文案只列入冲突，不用作当前操作证据。",
+  "followup_review": "同日复核页面负责方的同步修订：guide.checkinText/accountText/featuresText、memberCenter.authPoint2Title/authPoint2Body/loginIntro、home.capDocDesc 的 HTML 与中英字典已修正，assistant 页面标题/中英称呼及悬浮窗标题已加入小铭。conflicts 的 anchors 保留初审旧值作为审计记录，status 标记最终状态；旧值不作为当前证据。历史 changelog 不作为当前导航说明。",
+  "evidence_priority": [
+    "本次用户明确指定的身份命名；在 user_decisions 中单独标明，不能伪称来自网页",
+    "当前首页实际链接、club-shell 模块配置与功能页实际 href",
+    "认证前公开页面的表单、门禁和提示，结合公开前端控制流程交叉核对",
+    "翻译字典仅作对应页面文案补充；与实际流程冲突时排除"
+  ],
+  "user_decisions": [
+    {
+      "id": "identity",
+      "statement": "新哲文院算法社；助手小铭。",
+      "authority": "本次用户明确要求：新哲文院算法社身份按本次用户明确要求，助手小铭。",
+      "document_slugs": ["club-overview", "public-join", "assistant-usage"],
+      "boundary": "社团身份与首页 home.affiliation 相容；小铭为用户命名。同日页面负责方已将助手页面标题、中英称呼与悬浮标题同步为小铭；fixedModel 的社团知识助手是模型标签，不要求改为人名。本资料审查方不编辑网页或 prompt。"
+    }
+  ],
   "sources": [
     {
+      "id": "home",
       "repository_file": "index.html",
       "source_path": "/index.html",
-      "document_slugs": ["club-overview", "faq-unknown-contact"],
-      "selectors": ["#home", "#capabilities", "#gomoku", "#join", "[data-i18n=\"home.joinCardDesc\"]"],
-      "fact_scope": "Club directions, public game/lab/resource navigation, beginner welcome and the public contact QR entry. No contact identity or QR contents were extracted."
+      "document_slugs": ["club-overview", "public-guide", "public-visualization-labs", "public-join", "events-operation", "faq-unknown-contact"],
+      "selectors": ["#nav", "#capabilities", "#join", "[data-i18n=\"home.affiliation\"]", "[data-i18n=\"home.joinLead\"]", "[data-i18n=\"home.joinCardDesc\"]", "[href=\"public/member-center.html\"]", "[href=\"public/club-features.html\"]", "[href=\"public/visualization-lab.html\"]", "[href=\"public/events.html\"]", "[href=\"public/join.html\"]"],
+      "fact_scope": "实际首页导航、社团方向、加入入口与公开二维码提示。顶栏 nav 无签到快捷链接；未提取二维码内容、负责人身份、动态成员或公告。"
     },
     {
-      "repository_file": "public/guide.html",
-      "source_path": "/public/guide.html",
-      "document_slugs": ["public-guide", "checkin-operation"],
-      "selectors": ["[data-i18n=\"guide.quickStartText\"]", "[data-i18n=\"guide.accountText\"]", "[data-i18n=\"guide.featuresText\"]", "[data-i18n=\"guide.checkinText\"]", "[data-i18n=\"guide.themeText\"]"],
-      "fact_scope": "Navigation, invitation registration/binding, code check-in versus review-pending course check-in, bilingual and Beijing-time theme behavior. No award amounts or review guarantees."
+      "id": "shell",
+      "repository_file": "public/club-shell.js",
+      "source_path": "/public/club-shell.js",
+      "document_slugs": ["club-overview", "public-guide", "public-resources", "public-visualization-labs", "checkin-operation", "events-operation", "points-operation", "store-operation"],
+      "selectors": [],
+      "code_anchors": ["var ITEMS = [", "href: 'member-checkin.html?type=course'", "href: 'member-points.html'", "zh: '社员积分'", "function mountLauncherButton()", "function bindKeys()", "String(event.key).toLowerCase() === 'k'", "function hrefFor(item)"],
+      "fact_scope": "公开模块路由、跳转模块按钮与 Ctrl/⌘+K；签到模块预选课程，和功能页无参数链接有别。只审查面向访客的路由，不将管理模块当普通成员入口。"
     },
     {
+      "id": "features",
       "repository_file": "public/club-features.html",
       "source_path": "/public/club-features.html",
-      "document_slugs": ["public-resources", "checkin-operation", "store-operation", "faq-unknown-contact", "member-login-binding"],
-      "selectors": ["[data-i18n=\"features.resourcesDesc\"]", "[data-i18n=\"features.checkinDesc\"]", "[data-i18n=\"features.mallDesc\"]", "[data-i18n=\"features.messagesDesc\"]", "[data-i18n=\"features.chatDesc\"]"],
-      "fact_scope": "Public entry descriptions only: Python/C++ materials, code/course check-in, points exchange, feedback and login/binding requirement for Chat. No gated textbook body, shop items, prices or member messages were imported."
+      "document_slugs": ["club-overview", "public-guide", "public-resources", "public-visualization-labs", "member-login-binding", "chat-history-attachments", "checkin-operation", "events-operation", "points-operation", "store-operation", "faq-unknown-contact"],
+      "selectors": ["[href=\"visualization-lab.html\"]", "[href=\"platformer.html\"]", "[href=\"resources.html\"]", "[href=\"member-checkin.html\"]", "[href=\"points-mall.html\"]", "[href=\"member-messages.html\"]", "[href=\"events.html\"]", "[href=\"chat.html\"]", "[href=\"drive.html\"]", "[data-i18n=\"features.resourcesDesc\"]", "[data-i18n=\"features.checkinDesc\"]", "[data-i18n=\"features.mallDesc\"]", "[data-i18n=\"features.messagesDesc\"]", "[data-i18n=\"features.chatDesc\"]"],
+      "fact_scope": "当前十二个功能卡片及实际 href，含行于无垠和社团盘；没有独立积分榜卡片。教材、留言和商城仅引用认证前公开卡片概述，不读取受限内容。"
     },
     {
+      "id": "resources-gate",
       "repository_file": "public/resources.html",
       "source_path": "/public/resources.html",
       "document_slugs": ["public-resources"],
-      "selectors": ["#memberGate", "[data-i18n=\"resources.gateHint\"]"],
-      "fact_scope": "Login gate only. Resource synopsis is sourced from the public club-features entry, not gated content or PDF/download targets."
+      "selectors": ["#memberGate", "[data-i18n=\"resources.gateHint\"]", "[href=\"member-center.html\"]"],
+      "fact_scope": "仅使用认证前门禁与登录链接。教材简介来自 features；未把门禁后的章节、PDF、答案正文或下载目标导入知识。"
     },
     {
+      "id": "labs",
       "repository_file": "public/visualization-lab.html",
       "source_path": "/public/visualization-lab.html",
       "document_slugs": ["public-visualization-labs"],
-      "selectors": ["#pageTitle", "[data-i18n=\"lab.common.chooseLead\"]", "[data-i18n=\"lab.common.sort\"]", "[data-i18n=\"lab.common.search\"]", "[data-i18n=\"lab.common.ds\"]", "[data-i18n=\"lab.common.graph\"]", "[data-i18n=\"lab.common.dp\"]", "[data-i18n=\"lab.common.tree\"]", "[data-i18n=\"lab.common.heap\"]", "[data-i18n=\"lab.common.satoriDesc\"]"],
-      "fact_scope": "Experiment categories and displayed learning purposes, without model-strength claims."
+      "selectors": ["#pageTitle", "[href=\"sorting-lab.html\"]", "[href=\"search-lab.html\"]", "[href=\"ds-lab.html\"]", "[href=\"graph-lab.html\"]", "[href=\"dp-lab.html\"]", "[href=\"tree-lab.html\"]", "[href=\"heap-lab.html\"]", "[href=\"gomoku-satori-lab.html\"]", "[data-i18n=\"lab.common.satoriDesc\"]"],
+      "fact_scope": "七类算法实验加 Satori，共八个当前目录入口与各卡片教学概述；不据入口文案承诺全部决策事件可见或模型强度。"
     },
     {
+      "id": "join",
       "repository_file": "public/join.html",
       "source_path": "/public/join.html",
       "document_slugs": ["public-join", "faq-unknown-contact"],
-      "selectors": ["[data-i18n=\"join.lead\"]", "[data-i18n=\"join.timeBody\"]", "[data-i18n=\"join.teachBody\"]", "[data-i18n=\"join.name\"]", "[data-i18n=\"join.className\"]", "[data-i18n=\"join.contact\"]"],
-      "fact_scope": "Beginner welcome, teaching directions, application field labels and explicitly source-bound static ECA wording.",
-      "freshness_boundary": "The Tuesday/Thursday 15:45–17:10 text is a statement in this source snapshot, not live confirmation of any week, holiday or changed schedule. Recheck current announcements or contact the club. No submitted application was read."
+      "selectors": ["#joinForm", "#chineseName", "#memberClass", "#contactType", "#contactValue", "#selfIntro", "#attraction", "#expectation", "[data-i18n=\"join.lead\"]", "[data-i18n=\"join.teachBody\"]"],
+      "code_anchors": ["async function submitJoin(payload)", "action: 'join_application_create'"],
+      "fact_scope": "公开报名字段、联系方式选择、选填项及提交反馈流程。报名表不同于个人中心注册表；未读取申请或发送任何请求。",
+      "freshness_boundary": "join.timeBody 固定 ECA 文案缺少本周或学期确认；不复制具体日期、时段或每周出勤要求为当前安排。"
     },
     {
+      "id": "member-center",
       "repository_file": "public/member-center.html",
       "source_path": "/public/member-center.html",
-      "document_slugs": ["member-login-binding", "points-operation", "store-operation", "faq-unknown-contact"],
-      "selectors": ["#authView", "[data-i18n=\"memberCenter.authPoint1Body\"]", "[data-i18n=\"memberCenter.authPoint3Body\"]", "#loginForm", "#signupForm", "[data-i18n=\"memberCenter.forgot\"]", "[data-i18n=\"memberCenter.bindNoticeBody\"]", "[data-i18n=\"memberCenter.bindTitle\"]", "[data-i18n=\"memberCenter.qlPointsDesc\"]"],
-      "fact_scope": "Static self-service account, invitation, binding, password-reset and points navigation instructions. No profile, name, class, account ID or points record was read."
+      "document_slugs": ["public-guide", "public-join", "member-login-binding", "chat-history-attachments", "checkin-operation", "events-operation", "points-operation", "store-operation", "faq-unknown-contact"],
+      "selectors": ["#authView", "#loginForm", "#signupForm", "#signupInviteCode", "[data-i18n=\"memberCenter.authPoint1Body\"]", "[data-i18n=\"memberCenter.authPoint3Body\"]", "[data-i18n=\"memberCenter.forgot\"]"],
+      "code_anchors": ["const logged = Boolean(session?.user?.id)", "$('authView').classList.toggle('hidden', logged)", "$('content').classList.toggle('hidden', !logged)", "$('bindForm').addEventListener('submit'", "action, ...body", "href=\"club-features.html\"", "href=\"member-points.html\"", "data-i18n=\"memberCenter.saveBind\"", "data-i18n=\"memberCenter.bindNoticeBody\"", "data-i18n=\"memberCenter.qlChangelog\"", "id=\"memberPoints\""],
+      "fact_scope": "认证前登录/注册/邀请码/共用账号/忘记密码提示；只读公开前端模板和控制逻辑核对登录后导航、保存绑定及积分位置，不获取任何账号、绑定资料或积分响应。绑定用途另与 features 的公开说明交叉核对；不采信自动生效或所有服务可用的笼统保证。"
     },
     {
+      "id": "password",
+      "repository_file": "public/password-reset.html",
+      "source_path": "/public/password-reset.html",
+      "document_slugs": ["member-login-binding"],
+      "selectors": ["#requestForm", "#requestUsername", "#resetForm", "#resetUsername", "#resetSecret", "#resetPassword", "#resetPasswordConfirm", "[data-i18n=\"password.step1Intro\"]", "[data-i18n=\"password.step2Intro\"]"],
+      "fact_scope": "认证前可见的账号申请、管理员提供秘钥、设置新密码两步流程。未提交重置，不承诺秘钥时效或修改结果。"
+    },
+    {
+      "id": "chat-page",
       "repository_file": "public/chat.html",
       "source_path": "/public/chat.html",
       "document_slugs": ["chat-history-attachments", "chat-quota-guidance"],
-      "selectors": ["[data-i18n=\"chat.localOnly\"]", "[data-i18n=\"chat.clear\"]", "[data-i18n=\"chat.privacy\"]", "[data-i18n=\"chat.limits\"]", "[data-i18n=\"chat.export\"]", "[data-i18n=\"chat.estimate\"]"],
+      "selectors": ["#gatePanel", "[href=\"member-center.html\"]", "[data-i18n=\"chat.localOnly\"]", "[data-i18n=\"chat.clear\"]", "[data-i18n=\"chat.privacy\"]", "[data-i18n=\"chat.limits\"]", "[data-i18n=\"chat.export\"]", "[data-i18n=\"chat.estimate\"]"],
       "copy_repository_file": "public/chat-i18n.js",
-      "translation_keys": ["chat.privacy", "chat.limits", "chat.login", "chat.quota", "chat.quotaReset", "chat.quotaTruncated", "chat.estimate", "chat.confirmClear"],
-      "fact_scope": "Local history, export/clear behavior, provider transmission, displayed attachment bounds and UTC quota error guidance. No quota value, paid plan, fixed free allowance, conversation or attachment content."
+      "translation_keys": ["chat.privacy", "chat.limits", "chat.login", "chat.quota", "chat.quotaReset", "chat.quotaTruncated", "chat.quotaLimited", "chat.estimate", "chat.confirmClear", "chat.customPrivacy"],
+      "fact_scope": "公开门禁及前端静态隐私、附件和配额提示；通过 chat-controller/core/store 交叉核对本地和请求行为。配额文案仅描述提示的含义，不证明账号额度或实际重置。自定义代理的页面说明不得解读为免费承诺。"
     },
     {
+      "id": "chat-controller",
+      "repository_file": "public/chat.js",
+      "source_path": "/public/chat.js",
+      "document_slugs": ["chat-history-attachments", "chat-quota-guidance", "assistant-usage"],
+      "selectors": [],
+      "code_anchors": ["createChatStore('club-ai-assistant')", "async function auth(next, reload = false)", "await workspaceStore.list(next.user.id)", "await workspaceStore.clear(userId)", "$('export').onclick = async", "async function customRequest(item, body, signal)", "if (pending.length + selected.length > MAX_ATTACHMENTS)", "new TextEncoder().encode(serialized).length > MAX_REQUEST_BYTES", "async function prepareFile(file", "file.size > MAX_FILE_BYTES", "models = mergeModels(ASSISTANT_MODE ? (data.models || []).slice(0,1)"],
+      "fact_scope": "仅静态核对公开前端：按账号隔离、助手独立数据库、导出/清除、附件校验、自定义请求分流、助手固定社团模型及门禁行为。未运行控制器或调用 catalog/respond。"
+    },
+    {
+      "id": "chat-core",
+      "repository_file": "public/chat-core.js",
+      "source_path": "/public/chat-core.js",
+      "document_slugs": ["chat-history-attachments", "assistant-usage"],
+      "selectors": [],
+      "code_anchors": ["export const MAX_FILE_BYTES = 5 * 1024 * 1024", "export const MAX_REQUEST_BYTES = 12 * 1024 * 1024", "export const MAX_ATTACHMENTS = 4", "export function assistantSourcePath(value)", "export function citedAssistantSources(text, sources)"],
+      "fact_scope": "附件和编码后请求的实际字节常量，以及只展示已引用且路径合法来源的前端校验。"
+    },
+    {
+      "id": "chat-store",
+      "repository_file": "public/chat-store.js",
+      "source_path": "/public/chat-store.js",
+      "document_slugs": ["chat-history-attachments", "assistant-usage"],
+      "selectors": [],
+      "code_anchors": ["export function createChatStore(name = 'club-ai-chat')", "indexedDB.open(name,1)", "keyPath:['userId','id']", "clear(userId)"],
+      "fact_scope": "浏览器 IndexedDB 按账号保存与删除记录的静态实现，不读取真实数据库。"
+    },
+    {
+      "id": "assistant-page",
       "repository_file": "public/assistant.html",
       "source_path": "/public/assistant.html",
       "document_slugs": ["assistant-usage"],
-      "selectors": ["[data-i18n=\"assistant.title\"]", "#assistantModelName", "[data-i18n=\"assistant.privacy\"]"],
+      "selectors": ["#gatePanel", "#assistantModelName", "[data-i18n=\"assistant.title\"]", "[data-i18n=\"assistant.privacy\"]", "[href=\"member-center.html\"]"],
       "copy_repository_file": "public/assistant-i18n.js",
       "translation_keys": ["assistant.emptyBody", "assistant.privacy", "assistant.assistant_unavailable", "assistant.fixedModel"],
-      "fact_scope": "Public assistant purpose, source checking, club-configured model and separate local record/privacy copy. Describes the current implementation draft, not proof of deployment or enabled runtime availability."
+      "fact_scope": "认证前门禁、公开前端用途与隐私说明。小铭命名来自 user_decisions，同日页面标题与中英称呼已同步，但不证明部署/启用状态。"
     },
     {
+      "id": "assistant-launcher",
+      "repository_file": "public/assistant-launcher.js",
+      "source_path": "/public/assistant-launcher.js",
+      "document_slugs": ["assistant-usage"],
+      "selectors": [],
+      "code_anchors": ["frame.src = new URL('assistant.html?embed=1',base).href", "standalone.href = new URL('assistant.html',base).href", "ball.addEventListener('click'", "retry.addEventListener('click'"],
+      "fact_scope": "助手悬浮按钮、独立打开与加载失败重试的公开前端行为。不声称每一页或服务暂停时都可打开。"
+    },
+    {
+      "id": "checkin-gate-and-flow",
+      "repository_file": "public/member-checkin.html",
+      "source_path": "/public/member-checkin.html",
+      "document_slugs": ["checkin-operation"],
+      "selectors": ["#memberGate", "[data-i18n=\"checkin.gateHint\"]", "[href=\"member-center.html\"]"],
+      "code_anchors": ["id=\"checkinType\"", "option value=\"points\"", "option value=\"course\"", "codeField.hidden=course;checkinCode.required=!course", "if(new URLSearchParams(window.location.search).get('type')==='course')checkinType.value='course'", "checkinType.value==='course'", "checkin.courseSubmitted", "function applyCheckinServiceState()"],
+      "fact_scope": "认证前门禁；仅静态核对公开前端表单和控制流程：无参数先积分兑换、课程参数预选、课程无需码、姓名字段和服务开关。没有进入成员/管理员界面，没有读取签到记录、奖励值或调用审核功能。"
+    },
+    {
+      "id": "events",
       "repository_file": "public/events.html",
       "source_path": "/public/events.html",
-      "document_slugs": ["events-operation"],
+      "document_slugs": ["public-join", "events-operation", "faq-unknown-contact"],
       "selectors": ["[data-i18n=\"events.lead\"]", "[data-i18n=\"events.signupIntro\"]", "#announcementList", "#eventList"],
-      "code_anchors": ["function renderEvents(items)"],
-      "fact_scope": "Static event/signup purpose and card labels for status, location, start and deadline. No fetched announcement, event, deadline, participant or signup result was read."
+      "code_anchors": ["function renderEvents(items)", "${item.allow_signup ?", "events.location", "events.starts", "events.deadline", "events.contactOptional", "events.noteOptional", "}, true)"],
+      "fact_scope": "公开静态页面与卡片模板说明的报名字段、可报名标志、登录要求和时间标签。未调用公开公告接口，未读取任何实时活动或报名。"
     },
     {
+      "id": "points-gate",
       "repository_file": "public/member-points.html",
       "source_path": "/public/member-points.html",
       "document_slugs": ["points-operation"],
-      "selectors": ["#memberGate", "[data-i18n=\"points.sessionHint\"]", "[data-i18n=\"points.refreshBoard\"]"],
-      "fact_scope": "Member-only gate and refresh instruction. No ranking rows, balances, identities or admin controls."
+      "selectors": ["#memberGate", "[href=\"member-center.html\"]"],
+      "code_anchors": ["data-i18n=\"points.sessionHint\"", "data-i18n=\"points.refreshBoard\"", "id=\"pointsRefreshButton\""],
+      "fact_scope": "认证前门禁与前端刷新控件的静态定位；没有获取成员列表、排名、余额或管理权限。"
+    },
+    {
+      "id": "mall-gate",
+      "repository_file": "public/points-mall.html",
+      "source_path": "/public/points-mall.html",
+      "document_slugs": ["store-operation"],
+      "selectors": ["#gate", "[data-i18n=\"mall.gateHint\"]", "[href=\"member-center.html\"]"],
+      "fact_scope": "仅认证前商城门禁；商品用途与兑换前资料提示另由 features/member-center 公开说明佐证，不导入商品、价格、库存或个人兑换记录。"
+    },
+    {
+      "id": "messages-gate",
+      "repository_file": "public/member-messages.html",
+      "source_path": "/public/member-messages.html",
+      "document_slugs": ["faq-unknown-contact"],
+      "selectors": ["#memberGate", "[data-i18n=\"messages.gateHint\"]", "[href=\"member-center.html\"]"],
+      "fact_scope": "只使用认证前登录提示，留言用途来自 features 的公开入口，不导入任何成员留言。"
+    },
+    {
+      "id": "theme",
+      "repository_file": "public/theme.js",
+      "source_path": "/public/theme.js",
+      "document_slugs": ["public-guide"],
+      "selectors": [],
+      "code_anchors": ["const MODES = ['auto', 'light', 'dark']", "timeZone: 'Asia/Shanghai'", "return hour >= 6 && hour < 18 ? 'light' : 'dark'", "function setMode(mode"],
+      "fact_scope": "共享主题自动切换的实际时区和边界，不依赖 guide.themeText。"
+    },
+    {
+      "id": "language",
+      "repository_file": "public/i18n.js",
+      "source_path": "/public/i18n.js",
+      "document_slugs": ["public-guide"],
+      "selectors": [],
+      "code_anchors": ["function setLang(", "function mountSwitcher("],
+      "fact_scope": "语言切换的公开前端实现，结合 shell 挂载行为；不把旧翻译键中的功能描述当事实。"
     }
   ],
-  "review_boundary": "Knowledge consists of verified static public feature descriptions and conservative self-service navigation. Member-gated pages contribute gate labels only unless the same general instruction is already exposed by public member-center, guide or club-features copy. Operational outcomes, live schedules, events, points, prices and inventory remain unknown. The FAQ's unknown/contact advice is editorial navigation guidance grounded in the contact, invitation and feedback entries; it is not evidence of an action or resolution. Source paths are root-relative HTML URLs. Import is manual and drafts stay unpublished until explicit publication."
+  "document_reviews": [
+    {"slug":"club-overview","result":"revised","evidence_ids":["home","features","shell"],"user_decision_ids":["identity"],"conclusion":"核对方向、欢迎对象及实际导航；补充学校身份、助手名称、行于无垠、社团盘及门禁边界，不声称实时服务均可用。"},
+    {"slug":"public-guide","result":"revised","evidence_ids":["home","features","member-center","shell","theme","language"],"conclusion":"改以功能页为主来源；实际首页/个人中心/模块导航取代 guide 概述；分别指出签到和积分入口，主题直接核对实现。"},
+    {"slug":"public-resources","result":"revised","evidence_ids":["features","shell","resources-gate"],"conclusion":"明确卡片与登录路径；只保留公开入口所述 Python/C++/答案用途，排除首页集中开放可能造成的免登录误解。"},
+    {"slug":"public-visualization-labs","result":"revised","evidence_ids":["home","features","shell","labs"],"conclusion":"逐个核对八个 href，区分七类算法实验与额外 Satori 入口；仅保留目录级说明。"},
+    {"slug":"public-join","result":"revised","evidence_ids":["home","join","member-center","events"],"user_decision_ids":["identity"],"conclusion":"核对欢迎对象、教学方向与必填/选填字段；删除具体 ECA 时间和出勤要求，区分申请加入与网站账号注册。"},
+    {"slug":"member-login-binding","result":"revised","evidence_ids":["member-center","features","password"],"conclusion":"核对登录/邀请码/保存绑定/忘记密码，补充真实两步重置入口；不采信登录即全部可用或积分签到随即生效。"},
+    {"slug":"chat-history-attachments","result":"revised","evidence_ids":["features","member-center","chat-page","chat-controller","chat-core","chat-store"],"conclusion":"核对账号隔离、本地与发送的区别、导出/清除及 4 个/5 MiB/12 MiB 实际常量；说明编码与上下文约束，未读取对话。"},
+    {"slug":"chat-quota-guidance","result":"revised","evidence_ids":["chat-page","chat-controller"],"conclusion":"保留 UTC 周期及失败提示含义；限定社团配置的普通模型，补充自定义代理不计现有 quota/usage 不等于免费。"},
+    {"slug":"assistant-usage","result":"revised","evidence_ids":["assistant-page","assistant-launcher","chat-controller","chat-core","chat-store"],"user_decision_ids":["identity"],"conclusion":"采用小铭命名；核对悬浮/独立入口、引用、分离存储、模型配置与隐私；补充门禁、重试和实时信息边界。"},
+    {"slug":"checkin-operation","result":"revised","evidence_ids":["features","member-center","shell","checkin-gate-and-flow"],"conclusion":"主来源从 guide 改为真实功能页，删除顶栏快捷指导。区分无参数的兑换积分与模块 ?type=course 预选课程，明确先登录、核对类型姓名、课程无签到码及等待审核。"},
+    {"slug":"events-operation","result":"revised","evidence_ids":["home","features","member-center","shell","events"],"conclusion":"核对四类入口与卡片内嵌表单，删除需要打开卡片的暗示；字段、登录及 allow_signup 均只作流程说明，不保证截止有效或报名成功。"},
+    {"slug":"points-operation","result":"revised","evidence_ids":["member-center","shell","features","points-gate"],"conclusion":"积分榜从个人中心或社员积分模块进入；明确功能页无独立积分榜卡片，不暗示提供个人流水或实时余额。"},
+    {"slug":"store-operation","result":"revised","evidence_ids":["features","member-center","shell","mall-gate"],"conclusion":"核对实际商城 URL、登录与绑定提示；商品价格库存及确认结果仍留给当前页面，不加入私有商品知识。"},
+    {"slug":"faq-unknown-contact","result":"revised","evidence_ids":["home","join","member-center","features","messages-gate","events"],"conclusion":"核对管理员邀请码、首页二维码、加入/留言/密码入口；不猜联系方式、负责人姓名或办理时限，明确不能代操作和确认结果。"}
+  ],
+  "conflicts": [
+    {
+      "id": "removed-topbar-checkin",
+      "status": "corrected-in-working-tree-by-page-owner",
+      "locations": [
+        {"repository_file":"public/guide.html","key":"guide.checkinText","anchors":["课程签到从顶栏快捷入口进入"]},
+        {"repository_file":"public/i18n-dict.js","key":"zh.guide.checkinText (初始字典与后续合并均有)","anchors":["课程签到从顶栏快捷入口进入"]},
+        {"repository_file":"public/i18n-dict.js","key":"en.guide.checkinText (初始字典与后续合并均有)","anchors":["The top-bar course shortcut opens course check-in by default"]}
+      ],
+      "resolution": "排除旧文案；采用首页 nav、features 无参数链接和 shell 带课程参数链接。不编辑网页。",
+      "document_slugs": ["public-guide","checkin-operation"]
+    },
+    {
+      "id": "member-center-checkin-summary",
+      "status": "corrected-in-working-tree-by-page-owner",
+      "locations": [
+        {"repository_file":"public/guide.html","key":"guide.accountText","anchors":["个人中心会集中显示积分、签到和个人资料"]},
+        {"repository_file":"public/i18n-dict.js","key":"zh/en.guide.accountText (含重复合并)","anchors":["个人中心会集中显示积分、签到和个人资料","Your points, check-ins, and profile stay in one place"]}
+      ],
+      "resolution": "个人中心当前无独立签到面板/常用签到链接，须从社团功能转到签到兑换；不再描述个人中心集中显示签到。",
+      "document_slugs": ["public-guide","checkin-operation","points-operation"]
+    },
+    {
+      "id": "feature-list-not-points-board",
+      "status": "corrected-in-working-tree-by-page-owner",
+      "locations": [
+        {"repository_file":"public/guide.html","key":"guide.featuresText","anchors":["签到兑换、积分、留言和活动入口"]},
+        {"repository_file":"public/i18n-dict.js","key":"zh/en.guide.featuresText (含重复合并)","anchors":["签到兑换、积分、留言和活动入口","check-in redemption, points, messages, and activities here"]}
+      ],
+      "resolution": "功能页包含签到和商城，没有独立积分榜卡片；积分榜指向个人中心常用入口或 shell 的社员积分。",
+      "document_slugs": ["public-guide","points-operation"]
+    },
+    {
+      "id": "binding-and-service-overpromise",
+      "status": "corrected-in-working-tree-by-page-owner",
+      "locations": [
+        {"repository_file":"public/member-center.html","key":"memberCenter.authPoint2Body / memberCenter.loginIntro","anchors":["积分与签到随即生效","登录后即可使用个人中心、社团盘与全部社员功能"]},
+        {"repository_file":"public/i18n-dict.js","key":"zh/en.memberCenter.authPoint2Body / loginIntro","anchors":["积分与签到随即生效","then points and check-in start working","After sign-in you can use Member Center, Club Drive, and all member tools"]}
+      ],
+      "resolution": "按公开前端核对登录、保存绑定、服务开关与审核是不同阶段；资料不能保证绑定成功、签到审核通过、积分到账或全部功能可用。此项为文案过度概括，不推断真实后端故障。",
+      "document_slugs": ["member-login-binding","checkin-operation","store-operation"]
+    },
+    {
+      "id": "resource-open-wording",
+      "status": "corrected-in-working-tree-by-page-owner",
+      "locations": [
+        {"repository_file":"index.html","key":"home.capDocDesc","anchors":["Python / C++ 教材与解析集中开放"]},
+        {"repository_file":"public/i18n-dict.js","key":"zh/en.home.capDocDesc","anchors":["Python / C++ 教材与解析集中开放","Python / C++ textbooks and solutions are open"]}
+      ],
+      "resolution": "以资源中心认证前门禁为准；说明存在资源入口，不把开放解读为免登录公开下载。",
+      "document_slugs": ["club-overview","public-resources"]
+    },
+    {
+      "id": "automatic-binding-title",
+      "status": "corrected-in-working-tree-by-page-owner",
+      "locations": [
+        {"repository_file":"public/member-center.html","key":"memberCenter.authPoint2Title","anchors":["登录后自动绑定"]},
+        {"repository_file":"public/i18n-dict.js","key":"zh/en.memberCenter.authPoint2Title","anchors":["authPoint2Title: '登录后自动绑定'","authPoint2Title: 'Automatic binding after sign-in'"]}
+      ],
+      "resolution": "页面负责方已将 HTML 与中文标题改为登录后完善资料绑定，英文改为 Complete profile binding after sign-in；本地复核三处均同步。保留初审旧锚点记录，知识继续按填写后点击保存并绑定、核对返回结果说明。",
+      "document_slugs": ["member-login-binding"]
+    },
+    {
+      "id": "static-course-schedule",
+      "status": "unconfirmed-static-wording-not-used-as-current-schedule",
+      "locations": [
+        {"repository_file":"public/join.html","key":"join.timeBody","anchors":["每周二和周四下午的 ECA 时间（15:45 到 17:10），一周出勤一天即可"]},
+        {"repository_file":"public/i18n-dict.js","key":"zh/en.join.timeBody","anchors":["Tuesday and Thursday afternoon ECA (15:45–17:10). Attend one day per week"]}
+      ],
+      "resolution": "尚无法确认这段静态安排是否过期；知识删除具体时段和出勤频次，仅提示查看最新公告或联系负责人，不作为当前课程操作依据。",
+      "document_slugs": ["public-join"]
+    },
+    {
+      "id": "assistant-generic-label",
+      "status": "corrected-in-working-tree-by-page-owner",
+      "locations": [
+        {"repository_file":"public/assistant.html","key":"assistant.title / #assistantModelName","anchors":["社团助手","社团知识助手"]},
+        {"repository_file":"public/assistant-i18n.js","key":"assistant.title / assistant.assistant / assistant.fixedModel","anchors":["title:'社团助手'","fixedModel:'社团知识助手'"]},
+        {"repository_file":"public/assistant-launcher.js","key":"copy.zh.title / open","anchors":["社团 AI 助手"]}
+      ],
+      "resolution": "知识按用户要求使用小铭；页面负责方已同步 HTML 标题、assistant.title/assistant.assistant/emptyTitle/emptyBody 的中英文与悬浮窗标题。通用 fixedModel 模型标签继续保留，不视为身份冲突。本资料审查方未编辑页面。",
+      "document_slugs": ["club-overview","assistant-usage"]
+    }
+  ],
+  "needs_confirmation": [
+    "本学期/本周 ECA 的实际星期、时间、地点和最低出勤要求；join.timeBody 不能代替当前公告确认。",
+    "线上是否已部署当前工作区版本、助手是否启用及资料是否已导入发布；此次只更新本地未发布资料。",
+    "当前账号权限、真实额度/余额、活动安排/报名结果、签到审核、商品价格库存和领取安排须由对应页面或管理员确认，不应写入静态知识。"
+  ],
+  "review_boundary": "所有 14 个 slug 保留，source_path 可改为能证实当前操作的 HTML 页面；JS 证据只在此源清单中追溯，不作为导入文档引用 URL。未将后端、管理员面板、登录后的数据、成员身份、教材正文、真实对话/附件或付费服务响应作为知识。只读公开前端模板以核对行为，不把模板可见性等同于认证前可访问业务内容。冲突项记录文件和键，网页保持原样。知识为保守导航资料，未知实时信息保留未知；导入和发布仍需由授权操作完成。"
 }

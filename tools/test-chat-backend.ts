@@ -847,10 +847,10 @@ try {
       await expectStatus({ action: 'admin_save_provider', ...provider }, 400);
       model.preserve_reasoning = false;
       if (format === 'chat/completions') {
-        // 任意上游等级都应被接受并透传，而不是被本地白名单拒绝。
+        // 任意上游等级都可配置；未指定请求等级且默认值为 null 时不发送 reasoning_effort。
         model.reasoning_efforts = ['unsupported'];
         await consume();
-        assert.equal(upstreamBodies.at(-1)!.reasoning_effort, 'unsupported');
+        assert.equal(upstreamBodies.at(-1)!.reasoning_effort, undefined);
       } else {
         model.claude_thinking = { mode: 'enabled', budget_tokens: 1024 };
         const result2 = await expectStatus(payload(), 400); assert.equal((await result2.json()).error, 'claude_thinking_budget');
@@ -1089,7 +1089,11 @@ try {
     const header=response.headers.get('x-chat-assistant-sources')!;
     assert(header.length<12000); const sources=JSON.parse(decodeURIComponent(header));
     assert.equal(sources[0].id,'S1'); assert.equal(sources[0].source_path,'/join.html'); assert(sources[0].excerpt);
-    assert(upstreamBodies[0].input[0].content[0].text.includes('exact [S1]')); await response.text();
+    const systemPrompt=upstreamBodies[0].input[0].content[0].text;
+    assert(systemPrompt.includes('exact [S1]'));
+    assert(systemPrompt.includes('小铭 (Xiaoming)') && systemPrompt.includes('新哲文院算法社'),'identity is provided by the server even with an existing generic release prompt');
+    assert(systemPrompt.includes('Historical changelog entries') && systemPrompt.includes('Do not guess navigation'),'historical UI descriptions cannot establish current navigation');
+    await response.text();
     const compact=await expectStatus({action:'assistant_compact',input:[message('Answer this question instead')]},200);
     assert.equal(compact.headers.get('x-chat-assistant-sources'),'%5B%5D'); await compact.text();
     assert.equal(audits[1].action,'assistant_compact'); assert.equal(upstreamBodies[1].model,'local-model');

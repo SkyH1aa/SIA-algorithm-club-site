@@ -1,4 +1,5 @@
 import {readResponses} from './chat-core.js';
+import {assistantPreset} from './assistant-preset.js';
 
 const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
@@ -15,7 +16,8 @@ let modelAccess = null, modelAccessDraft = null, modelAccessModelId = '', modelA
 let globalQuota = null, userQuota = null;
 let assistantState = {config: null, documents: [], releases: []};
 let assistantImportDocuments = [];
-let assistantFormHydrated = false;
+let assistantFormHydrated = false, assistantConfigBaseline = '';
+let assistantLoad = null, assistantLoadStatus = 'idle';
 let testOutput = {visible: false, text: ''};
 const messages = new Map();
 const API_PROTOCOLS = ['auto', 'responses', 'messages', 'chat'];
@@ -151,7 +153,7 @@ function controls() {
   refreshThinkingControls();
   assistantControls();
 }
-function current(run) { return active === run && run.epoch === epoch && !run.controller.signal.aborted; }
+function current(run) { return (active === run || assistantLoad === run) && run.epoch === epoch && !run.controller.signal.aborted; }
 function assertCurrent(run) { if (!current(run)) throw new DOMException('Stale account request', 'AbortError'); }
 async function request(run, action, body = {}, stream = false) {
   assertCurrent(run);
@@ -446,11 +448,12 @@ function assistantEligibleModels() {
   return models.filter(item => item.enabled === true && !item.deleted_at && item.visibility === 'all' && providers.some(provider => provider.id === item.provider_id && provider.enabled === true && !provider.deleted_at));
 }
 function assistantControls() {
-  const disabled = Boolean(active) || !authorized;
+  const disabled = Boolean(active || assistantLoad) || !authorized;
   for (const id of ['assistantConfigForm', 'assistantDocumentForm']) {
     for (const node of $(id).elements) node.disabled = disabled || !assistantState.config;
-    $(id).setAttribute('aria-busy', String(Boolean(active)));
+    $(id).setAttribute('aria-busy', String(Boolean(active || assistantLoad)));
   }
+  $('assistantPresetButton').disabled = disabled || !assistantState.config;
   for (const id of ['refreshAssistantButton', 'assistantJsonFile', 'assistantMarkdownFile']) $(id).disabled = disabled;
   $('assistantEnabled').disabled = disabled || !assistantState.config;
   $('assistantModelId').required = $('assistantEnabled').checked;
@@ -488,18 +491,56 @@ function fillAssistantDocument(item) {
   $('assistantDocumentKeywords').value = asArray(item.keywords).join(', ');
   assistantPreview();
 }
-// All assistant requests share the existing authenticated request/epoch boundary.
+// Reads have their own busy boundary so an unavailable assistant cannot block
+// provider/quota/usage management. Both boundaries still use request()'s auth epoch.
 const assistantActions = {get: 'assistant_admin_get', config: 'assistant_admin_config_save', document: 'assistant_admin_document_save', archive: 'assistant_admin_document_archive', publish: 'assistant_admin_publish', rollback: 'assistant_admin_rollback', import: 'assistant_admin_import'};
+function assistantConfigSnapshot() {
+  return JSON.stringify([$('assistantEnabled').checked, $('assistantModelId').value, $('assistantWelcome').value, $('assistantSuggestions').value, $('assistantSupplement').value]);
+}
 function loadAssistantPayload(payload, hydrate = false) {
   assistantState = {config: payload.config, documents: asArray(payload.documents), releases: asArray(payload.releases)};
   if (hydrate) { assistantFormHydrated = false; $('assistantModelId').value = payload.config?.model_id || ''; }
-  renderAssistant(); assistantControls();
+  renderAssistant();
+  if (hydrate) assistantConfigBaseline = assistantConfigSnapshot();
+  assistantControls();
 }
-async function loadAssistant(run) {
+async function loadAssistant(run, explicit = true) {
+  const draft = assistantConfigSnapshot();
   const payload = await request(run, assistantActions.get); assertCurrent(run);
-  loadAssistantPayload(payload, true);
+  // Automatic reads never replace a draft, including edits made while awaiting JSON.
+  const hydrate = explicit || (draft === assistantConfigBaseline && draft === assistantConfigSnapshot());
+  loadAssistantPayload(payload, hydrate);
   for (const id of ['assistantConfigMessage', 'assistantDocumentMessage', 'assistantReleaseMessage']) setMessage(id);
 }
+function ensureAssistantLoaded(explicit = false) {
+  if (!authorized || !session?.user?.id || assistantLoad || (explicit && active) || (!explicit && assistantLoadStatus !== 'idle')) return;
+  const run = {epoch, controller: new AbortController()};
+  assistantLoad = run; assistantLoadStatus = 'loading';
+  setMessage('assistantConfigMessage', 'loading'); assistantControls();
+  const pending = (async () => {
+    try {
+      await loadAssistant(run, explicit); assertCurrent(run);
+      assistantLoadStatus = 'loaded';
+      setMessage('assistantConfigMessage', 'assistantLoaded', 'success');
+    } catch (error) {
+      if (!current(run) || error.name === 'AbortError') return;
+      assistantLoadStatus = 'error';
+      if (error.status === 401 || error.status === 403) {
+        // A revoked session also cancels any ordinary management request in flight.
+        epoch++; active?.controller.abort(); active = null; authorized = false;
+        clearSensitive(); setGate(); controls();
+        setMessage('gateMessage', errorKey(error), 'error');
+      } else setMessage('assistantConfigMessage', 'assistantUnavailable', 'error');
+    } finally {
+      if (assistantLoad === run && run.epoch === epoch) { assistantLoad = null; assistantControls(); }
+    }
+  })();
+  run.pending = pending;
+  return pending;
+}
+window.addEventListener('club:tabchange', event => {
+  if (event.detail?.target === 'assistantSection') void ensureAssistantLoaded();
+});
 async function assistantMutation(run, action, body, messageId) {
   setMessage(messageId, 'saving');
   try {
@@ -512,7 +553,7 @@ async function assistantMutation(run, action, body, messageId) {
     assertCurrent(run);
     if (error.status === 409 && error.message === 'conflict') {
       // Keep unsaved form/file contents, require an explicit reload before any further write.
-      assistantState.config = null; assistantControls();
+      assistantState.config = null; assistantLoadStatus = 'conflict'; assistantControls();
       setMessage(messageId, 'assistantConflict', 'warning'); return;
     }
     throw error;
@@ -541,6 +582,7 @@ async function loadAdmin(run) {
   $('providerCount').textContent = String(providers.length);
   $('modelCount').textContent = String(models.filter(item => item.enabled !== false).length);
   renderProviderOptions(); renderModelOptions(); renderProviders(); renderModels(); setGate(); controls();
+  void ensureAssistantLoaded();
   setMessage('gateMessage');
   setMessage('statusHint', 'loaded', '', {providers: providers.length, models: models.length});
   try { await loadProxy(run); setMessage('proxyMessage'); }
@@ -576,6 +618,7 @@ function clearProvider() { $('providerForm').reset(); $('providerId').value = ''
 function syncDefaultOutputMax() { $('defaultOutputTokens').max = String(Math.min(131072, Math.max(1, Number($('maxOutputTokens').value) || 1))); }
 function clearModel() { $('modelForm').reset(); $('modelConfigId').value = ''; syncDefaultOutputMax(); fillClaudeThinking(null); }
 function clearSensitive() {
+  assistantLoad?.controller.abort(); assistantLoad = null; assistantLoadStatus = 'idle';
   assistantState = {config: null, documents: [], releases: []}; assistantImportDocuments = []; assistantFormHydrated = false;
   clearAssistantDocument(); $('assistantConfigForm').reset(); $('assistantJsonFile').value = ''; $('assistantMarkdownFile').value = '';
   clearProxyPlaintext(); proxyRoutes = []; proxyKeys = []; proxyLoaded = false;
@@ -591,6 +634,7 @@ function clearSensitive() {
   for (const id of ['statusHint', 'gateMessage', 'providerMessage', 'modelMessage', 'testMessage', 'usageMessage', 'quotaMessage', 'globalQuotaMessage', 'userQuotaMessage', 'blacklistMessage', 'proxyMessage', 'proxyCopyMessage', 'assistantConfigMessage', 'assistantDocumentMessage', 'assistantReleaseMessage']) setMessage(id);
   for (const id of ['providerCount', 'modelCount', 'usageCount', 'totalTokens']) $(id).textContent = '--';
   refreshLocalizedUi();
+  assistantConfigBaseline = assistantConfigSnapshot();
 }
 function proxyBaseURL(id) { return `${SUPABASE_URL}/functions/v1/chat-api-proxy/${encodeURIComponent(id)}/v1`; }
 function clearProxyPlaintext() {
@@ -745,17 +789,22 @@ async function removeModel(item) {
 }
 
 function assistantOperation(messageId, work) {
-  if (!assistantState.config || active || !authorized) return;
+  if (!assistantState.config || active || assistantLoad || !authorized) return;
   void operation(messageId, work);
 }
-$('refreshAssistantButton').onclick = () => void operation('assistantConfigMessage', async run => {
-  setMessage('assistantConfigMessage', 'loading'); await loadAssistant(run);
-  setMessage('assistantConfigMessage', 'assistantLoaded', 'success');
-});
+$('refreshAssistantButton').onclick = () => void ensureAssistantLoaded(true);
+$('assistantPresetButton').onclick = () => {
+  if (active || assistantLoad || !authorized || !assistantState.config) return;
+  if (assistantConfigSnapshot() !== assistantConfigBaseline && !window.confirm(t('assistantPresetConfirm'))) return;
+  $('assistantWelcome').value = assistantPreset.welcome;
+  $('assistantSuggestions').value = assistantPreset.suggestions.join('\n');
+  $('assistantSupplement').value = assistantPreset.system_prompt;
+  setMessage('assistantConfigMessage', 'assistantPresetApplied', 'warning');
+};
 $('assistantEnabled').addEventListener('change', assistantControls);
 $('assistantConfigForm').addEventListener('submit', event => {
   event.preventDefault();
-  if (active || !authorized || !assistantState.config || !$('assistantConfigForm').reportValidity()) return;
+  if (active || assistantLoad || !authorized || !assistantState.config || !$('assistantConfigForm').reportValidity()) return;
   let body;
   try { body = assistantConfigInput(); if (body.model_id && !assistantEligibleModels().some(item => item.id === body.model_id)) throw new Error('assistant_model'); }
   catch (error) { return setMessage('assistantConfigMessage', errorKey(error), 'error'); }
@@ -763,15 +812,15 @@ $('assistantConfigForm').addEventListener('submit', event => {
 });
 $('assistantDocumentForm').addEventListener('submit', event => {
   event.preventDefault();
-  if (active || !authorized || !assistantState.config || !$('assistantDocumentForm').reportValidity()) return;
+  if (active || assistantLoad || !authorized || !assistantState.config || !$('assistantDocumentForm').reportValidity()) return;
   let body;
   try { body = assistantDocumentInput(); } catch (error) { return setMessage('assistantDocumentMessage', errorKey(error), 'error'); }
   assistantOperation('assistantDocumentMessage', run => assistantMutation(run, assistantActions.document, body, 'assistantDocumentMessage'));
 });
-$('clearAssistantDocumentButton').onclick = () => { if (!active && authorized) { clearAssistantDocument(); setMessage('assistantDocumentMessage'); } };
+$('clearAssistantDocumentButton').onclick = () => { if (!active && !assistantLoad && authorized) { clearAssistantDocument(); setMessage('assistantDocumentMessage'); } };
 $('assistantDocumentContent').addEventListener('input', () => assistantPreview());
 $('assistantDocumentsList').addEventListener('click', event => {
-  if (active || !authorized || !assistantState.config) return;
+  if (active || assistantLoad || !authorized || !assistantState.config) return;
   const button = event.target.closest('[data-assistant-edit], [data-assistant-archive]');
   const item = assistantState.documents.find(item => item.slug === (button?.dataset.assistantEdit || button?.dataset.assistantArchive));
   if (!item) return;
@@ -783,7 +832,7 @@ $('assistantDocumentsList').addEventListener('click', event => {
 });
 async function readAssistantFile(kind) {
   const node = $(kind === 'json' ? 'assistantJsonFile' : 'assistantMarkdownFile'), file = node.files?.[0];
-  if (active || !authorized || !file) return;
+  if (active || assistantLoad || !authorized || !file) return;
   return operation('assistantDocumentMessage', async run => {
     try {
       if (file.size > 4000000) throw new Error('assistantFile');
@@ -817,18 +866,18 @@ async function readAssistantFile(kind) {
 $('assistantJsonFile').addEventListener('change', () => void readAssistantFile('json'));
 $('assistantMarkdownFile').addEventListener('change', () => void readAssistantFile('markdown'));
 $('assistantImportButton').onclick = () => {
-  if (active || !authorized || !assistantState.config || !assistantImportDocuments.length || !window.confirm(t('importConfirm', {count: assistantImportDocuments.length}))) return;
+  if (active || assistantLoad || !authorized || !assistantState.config || !assistantImportDocuments.length || !window.confirm(t('importConfirm', {count: assistantImportDocuments.length}))) return;
   const body = {expected_version: assistantState.config.version, documents: assistantImportDocuments};
   assistantOperation('assistantDocumentMessage', run => assistantMutation(run, assistantActions.import, body, 'assistantDocumentMessage'));
 };
 $('assistantPublishButton').onclick = () => {
-  if (active || !authorized || !assistantState.config || !window.confirm(t('publishConfirm'))) return;
+  if (active || assistantLoad || !authorized || !assistantState.config || !window.confirm(t('publishConfirm'))) return;
   assistantOperation('assistantReleaseMessage', run => assistantMutation(run, assistantActions.publish, {expected_version: assistantState.config.version}, 'assistantReleaseMessage'));
 };
 $('assistantRollbackRelease').addEventListener('change', assistantControls);
 $('assistantRollbackButton').onclick = () => {
   const release_id = $('assistantRollbackRelease').value;
-  if (active || !authorized || !assistantState.config || !assistantState.releases.some(item => item.id === release_id) || !window.confirm(t('rollbackConfirm', {release: release_id}))) return;
+  if (active || assistantLoad || !authorized || !assistantState.config || !assistantState.releases.some(item => item.id === release_id) || !window.confirm(t('rollbackConfirm', {release: release_id}))) return;
   assistantOperation('assistantReleaseMessage', run => assistantMutation(run, assistantActions.rollback, {release_id, expected_version: assistantState.config.version}, 'assistantReleaseMessage'));
 };
 $('refreshQuotaButton').onclick = () => void operation('quotaMessage', loadQuotaDirectory);

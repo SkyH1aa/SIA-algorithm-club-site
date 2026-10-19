@@ -7,16 +7,22 @@ Assistant administration deployment draft (instructions only)
    No PowerShell, Supabase CLI or build commands are required for deployment.
    This file executes no deployment.
 2. Sign in to public/chat-admin.html using the existing dynamic super-admin roster.
-   Open Assistant knowledge and press Refresh to load the assistant state/version.
+   Existing assistant data loads automatically after authorization. Open Assistant
+   knowledge to inspect it. Refresh remains available for failures or conflicts.
 3. Select an enabled, nondeleted model visible to all users, backed by an enabled,
    nondeleted provider. The frontend filters admin_get; the backend authorizes it.
    Saving enabled=false immediately disables runtime availability. Other saved
    model/welcome/suggestion/instruction edits enter the next published snapshot.
 4. Review docs/assistant/source-manifest.json and current public pages. Pick seed.json,
    review the safe text preview, then explicitly submit JSON import. This saves drafts
-   without publishing. The join-page ECA statement requires freshness verification;
+   without publishing. The seed excludes exact ECA times/attendance requirements
+   because the static join-page statement is not current-schedule confirmation;
    account, event, points and shop records are never part of this seed.
-5. Save/review configuration and draft changes. On version conflict, writes stop
+5. Click “填入小铭预设” if you want the reviewed Xiaoming identity, welcome and
+   suggestions. It fills only those fields, never the model/enabled state. Review
+   and explicitly save the configuration. system-prompt.txt is the copyable prompt;
+   config-preset.json is for reference, NOT the knowledge JSON import.
+   Save/review configuration and draft changes. On version conflict, writes stop
    without automatic retry. Refresh, compare current values and preserved drafts,
    and intentionally resubmit. Archived drafts can be restored by saving/importing
    the same slug and count toward total corpus limits.
