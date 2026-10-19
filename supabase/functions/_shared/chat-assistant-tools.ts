@@ -165,6 +165,10 @@ function artPublicRow(dataset: string, raw: unknown): artRecord {
 }
 // End pure club helpers.
 
+export function validateAssistantReadPlan(name: string, args: unknown): void {
+  artToolQuery(name, args);
+}
+
 function artToolQuery(name: string, args: unknown): artQuery {
   if (!artIsRecord(args)) artInvalid();
   if (!Object.hasOwn(artToolAllowedKeys, name) || Reflect.ownKeys(args).some(key => typeof key !== 'string' || !artToolAllowedKeys[name].includes(key))) artInvalid();

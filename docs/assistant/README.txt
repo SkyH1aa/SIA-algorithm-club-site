@@ -75,13 +75,28 @@ receive the same member-level projection. Duplicate member names require clarifi
 Tetris/Snake ordinary and versus boards stay separate; versus high scores may be
 negative player-minus-AI differences. These are not model-strength rankings.
 
-The model selects read-only tools from the meaning of the question. Static
-published knowledge still uses keyword matching; live reads have no keyword route.
-The server injects fixed policy, the published supplemental prompt and full known
-tool definitions (names, purposes and parameter schemas), independently of the
-native schemas sent to the provider. Thus older published capability wording does
-not hide the tools. Current facts require fresh tool calls even if history or a
-summary already contains an answer. Do not claim queried facts without success.
+The approved assistant flow uses exactly two model requests for a normally
+completed question. Request 1 uses an ordinary prompt containing fixed policy,
+the published supplemental prompt and the known read definitions (names, purposes
+and JSON parameter schemas). It returns only a JSON plan: query with 1..2 fixed
+reads, clarify, or answer without a live read. The server strictly validates the
+entire plan and all arguments before any read. Request 2 receives the validated,
+bounded evidence or no-read/clarification outcome and produces the final answer.
+The final answer retains the full bounded static passages selected by retrieval,
+not just source cards or a planner summary. The two-stage runtime is connected to
+Chat. It cannot request another read or another planning round. Failed validation,
+insufficient budget, timeout or cancellation can end early; there is no planning
+retry or third model request. Static knowledge retains bounded keyword retrieval;
+live read selection is semantic. Current facts require fresh successful evidence,
+even if history or a summary contains an older answer.
+
+Native function/tool support and provider-specific JSON modes are not required.
+The configured Responses, Claude Messages or Chat Completions endpoint must support
+ordinary SSE, and the planner must return a valid JSON plan. Unknown fields, reads,
+invalid argument types/ranges and more than two reads are rejected server-side;
+prompt instructions alone do not enforce these boundaries. No arbitrary URLs,
+tables, SQL, RPCs, authentication headers or business write actions are exposed.
+Do not fake a successful read or switch keys/providers on an invalid plan.
 
 The preset describes all three tools:
 - read_member_points: public member_name/points only. Required order_by
@@ -106,27 +121,79 @@ from a query phrase; duplicate names cannot be resolved by guessing a class.
 Live source cards retain time/status/scope and show validated order, page, returned
 count and whether more results are available. Page order is not a global rank;
 counts and has_more are not a population count. Source headers contain metadata,
-never rows or raw filters. Tool results retain the adapter's bounded rows/filters
+never rows or raw filters. Read results retain the adapter's bounded rows/filters
 for model evidence; all such content is untrusted data, never instructions. Static
-sources are at most 4/<4000 encoded characters, each tool source <=980; at most
-8 tool sources plus static references fit the 12000-character header budget.
+sources are at most 4/<4000 encoded characters, each live source <=980; at most
+2 live sources plus static references fit the 12000-character header budget.
 Unavailable, paused, empty or ambiguous results do not prove current values or
-global absence. No live reads occur during catalog or compaction. During tool
-planning the frontend stays generating; the server collects the final answer
-before sending normalized SSE, so this is not token streaming during planning.
-Existing quota/audit writes remain generation accounting; no new business mutation
-actions are exposed.
+global absence. No live reads occur during catalog or compaction. The frontend
+stays generating while the server collects the final answer before normalized
+Responses SSE delivery. Planning JSON, text/analysis and internal parameters are
+hidden from the frontend and browser history; only the final answer and sources
+are retained. This does not stream planning tokens to the user.
 
-For an existing current assistant installation, this update requires no SQL.
-Both chat and club-drive must be updated: in the Dashboard web editor replace each
-function's entire index.ts with docs/chat-deployment/chat-dashboard-index.ts and
-club-drive-dashboard-index.ts respectively. The latter is a complete source copy,
-not a helper patch; it preserves the existing function's other actions. Publish
-the listed static assets, and review/save/publish the new preset and seed through
-the existing administration flow. No new secret or administrator privilege is
-required. No actual deployment, live data read or paid provider call was performed.
-See docs/chat-deployment/README.md and
- docs/assistant-validation/semantic-read-tools.md for current limits and verification.
+Planning, reads and answering share one 120-second overall deadline, subject to
+shorter platform/provider limits. Cancellation aborts model and data requests.
+Existing limits remain: each read <=5 seconds, raw response <=64 KiB, result
+envelope <=6000 bytes; page 1..100, page_size 1..50, model request <=12 MiB and
+upstream SSE <=2 MiB per request. At most two reads produce aggregate serialized
+evidence <=16000 bytes; each read still meets its individual 6000-byte limit.
+The JSON plan is <=8192 bytes. No recursive planning or full traversal is allowed.
+
+Both model requests share one request_id, one admission, one lease, one audit
+record and one total output budget. Reserve both inputs and bounded plan/evidence
+context; planner output consumes the shared budget and must leave room for the
+final answer. Combine actual usage for settlement and UI accounting. Missing
+complete usage or failure/cancellation after upstream starts retains conservative
+accounting; a partial first-stage usage is not a basis for refunding the rest.
+Only a database-confirmed not-started request can receive the existing safe refund.
+The planner strips reasoning/include, and Claude Messages planning explicitly
+disables thinking. The answer retains the model's configured thinking/reasoning
+within the remaining shared output budget. Reserve Claude enabled thinking's
+minimum only for the answer, not a second thinking minimum for planning.
+Insufficient budget fails instead of changing saved configuration or adding a request.
+Daily admission uses the current UTC day bucket (08:00 Beijing reset), not the
+90-day usage report. Raising a quota does not clear usage or unsettled reservations.
+Existing quota/audit writes remain generation accounting, not business mutations.
+
+Audit error_code contains only a safe category, never raw plans, arguments/results,
+provider response bodies, authentication headers or keys:
+- assistant_plan_json / assistant_plan_invalid / assistant_plan_arguments /
+  assistant_plan_size: JSON parsing, plan structure, read arguments or plan size.
+- assistant_plan_http / assistant_plan_network / assistant_plan_stream /
+  assistant_plan_usage: planner HTTP/SSE, network, stream or missing output usage.
+- assistant_answer_http / assistant_answer_network / assistant_answer_stream:
+  final-answer HTTP/SSE, network or stream failure.
+- assistant_output_budget / assistant_context / assistant_request_size /
+  assistant_evidence_size: output, context, request or aggregate evidence limits.
+- assistant_plan_failed: safe fallback for otherwise unclassified failures.
+Existing cancellation/database/auth/quota/protocol categories remain in use. A
+category alone does not prove a successful read or entitlement to a refund.
+
+The two-stage switch changes no SQL and performs no SQL execution or deployment.
+For an existing current assistant whose club-drive already has assistant_read_query,
+only replace the complete chat index.ts with chat-dashboard-index.ts after checking
+the deployment artifact. No club-drive/proxy redeployment, frontend/file-bundle
+publication, preset/seed change or knowledge republish is required just for this
+backend switch. The current model configuration can stay. A club-drive without the
+query action needs the separate earlier live-read upgrade; first installation and
+prior math/static updates have their own instructions in docs/chat-deployment/README.md.
+Preserve other club-drive actions and existing authentication.
+
+Offline validation passed: 187 real-handler mock integration cases, 115 plan/SSE
+cases, fixed-read boundaries, retained protocol regressions, Chat core and knowledge
+checks. Type checks and Dashboard bundle/source consistency checks passed. These
+checks do not establish live provider semantics, endpoint permissions or deployment.
+
+Explicitly check Supabase Dashboard > Edge Functions > Secrets for the exact name
+CLUB_SERVICE_ROLE_KEY before a later deployment. club-drive still reads this name;
+no code fallback to SUPABASE_SERVICE_ROLE_KEY or another name was added. A platform
+SUPABASE_SERVICE_ROLE_KEY alone does not satisfy this check. If absent, an admin
+must configure it securely in Secrets. Never put any key value in documentation,
+source, frontend, model configuration or validation records. The flow introduces
+no new key type or model administrator privilege. No live data read or paid
+provider call was performed. See docs/assistant-validation/semantic-read-tools.md
+for the runtime contract, safe error categories and validation record.
 
 Current-site audit and application steps: docs/assistant-validation/knowledge-refresh.md.
 The review is of the current repository implementation, not a live production

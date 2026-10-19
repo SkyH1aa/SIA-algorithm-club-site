@@ -1,6 +1,6 @@
-import { AssistantError, assistantConfigData, assistantDocument, assistantInput, assistantPrompt, assistantToolReserve, assistantToolPrompt, assistantToolSource, type AssistantRelease } from '../_shared/chat-assistant.ts';
+import { AssistantError, assistantConfigData, assistantDocument, assistantInput, assistantPrompt, assistantPlanPrompt, assistantPlanAnswerPrompt, assistantToolSource, type AssistantRelease } from '../_shared/chat-assistant.ts';
 import { ASSISTANT_READ_TOOLS, executeAssistantReadTool } from '../_shared/chat-assistant-tools.ts';
-import { assistantToolBudget, runAssistantToolLoop } from '../_shared/chat-assistant-tool-loop.ts';
+import { assistantPlanBudget, runAssistantPlan, AssistantPlanError } from '../_shared/chat-assistant-plan.ts';
 import { hashKey, newKey, proxyBase, proxySecret, ProxyError, ROUTE_FIELDS } from '../_shared/chat-api-proxy.ts';
 import { ChatBodyError, readChatBody } from '../_shared/chat-body.ts';
 import { chatEndpoint, ChatProtocolError, parseProtocolSse, protocolEvents, protocolRequest, normalizeClaudeThinking, validateProtocolCapabilities, type ChatProtocol, type ChatProtocolSetting } from '../_shared/chat-protocol.ts';
@@ -592,8 +592,8 @@ async function finishGeneration(requestId: string, patch: Json, refund = false) 
   if (result === false || result === null || (result as Json)?.code) throw new HttpError('database', 503);
 }
 
-async function updateUsage(requestId: string, patch: Json) {
-  const response = await rest(`chat_usage?request_id=eq.${encodeURIComponent(requestId)}&status=in.(audited,upstream_started)`, { method: 'PATCH', headers: { 'content-type': 'application/json', prefer: 'return=representation' }, body: JSON.stringify(patch) });
+async function updateUsage(requestId: string, patch: Json, signal?: AbortSignal) {
+  const response = await rest(`chat_usage?request_id=eq.${encodeURIComponent(requestId)}&status=in.(audited,upstream_started)`, { method: 'PATCH', headers: { 'content-type': 'application/json', prefer: 'return=representation' }, body: JSON.stringify(patch), signal });
   if (!response.ok) throw new HttpError('database', 503);
   const rows = await response.json();
   if (!Array.isArray(rows) || rows.length !== 1) throw new HttpError('database', 503);
@@ -730,12 +730,11 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
 async function callAssistantTools(request: Request, ctx: RequestContext, release: AssistantRelease, selected: { model: Model; provider: Provider }, safe: Json[]): Promise<Response> {
   const { model, provider } = selected;
   const { protocol, url: endpoint } = chatEndpoint(provider.base_url, provider.api_protocol);
-  const prepared = assistantToolPrompt(release, safe, ASSISTANT_READ_TOOLS);
+  const prepared = assistantPlanPrompt(release, safe, ASSISTANT_READ_TOOLS);
   const input = prepared.input as Json[];
   validateInput(input, model);
-  const schemaBytes = encoder.encode(JSON.stringify(ASSISTANT_READ_TOOLS)).byteLength;
   const baseTokens = estimateInputTokens(input);
-  const budget = assistantToolBudget(baseTokens, schemaBytes);
+  const budget = assistantPlanBudget(baseTokens);
   const outputTokens = model.default_max_output_tokens;
   if (budget.perTurnInputTokens + outputTokens > model.context_window) throw new HttpError('context', 413);
   const effective = effectiveReasoning(model, protocol);
@@ -743,9 +742,8 @@ async function callAssistantTools(request: Request, ctx: RequestContext, release
   const body: Json = { model: model.model_key, input, reasoning: effort ? { effort } : undefined,
     include: model.preserve_reasoning ? ['reasoning.encrypted_content'] : undefined,
     max_output_tokens: outputTokens, store: false, stream: true };
-  // Capability validation precedes admission; native tool history stays server-owned.
-  protocolRequest(protocol, body, model.claude_thinking);
-  const initialBytes = encoder.encode(JSON.stringify(body)).byteLength + schemaBytes;
+  // Both stages use ordinary model requests inside one admission.
+  const initialBytes = encoder.encode(JSON.stringify(protocolRequest(protocol, body, model.claude_thinking))).byteLength;
   if (initialBytes > MAX_REQUEST_BYTES) throw new HttpError('request_too_large', 413);
   const requestId = crypto.randomUUID();
   const admission = await rpc('chat_begin_generation', {
@@ -771,41 +769,56 @@ async function callAssistantTools(request: Request, ctx: RequestContext, release
     const memberToken = authToken(request);
     if (!memberToken) throw new HttpError('login', 401);
     if (request.signal.aborted) throw new DOMException('Aborted', 'AbortError');
-    const result = await runAssistantToolLoop({
-      protocol, body, claudeThinking: model.claude_thinking, tools: ASSISTANT_READ_TOOLS,
+    const result = await runAssistantPlan({
+      protocol, body, claudeThinking: model.claude_thinking,
       signal: request.signal, maxRequestBytes: MAX_REQUEST_BYTES,
       maxInputTokens: model.context_window - Number(maximum), outputBudget: Number(maximum),
-      estimate: (_wire, historyBytes) => baseTokens + Math.ceil((schemaBytes + historyBytes) / 3) + 256,
+      estimate: stageInput => {
+        validateInput(stageInput, model);
+        const tokens = estimateInputTokens(stageInput);
+        if (tokens > budget.perTurnInputTokens) throw new AssistantPlanError('assistant_context');
+        return tokens;
+      },
       dispatch: async (serialized, signal) => {
         if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
         inputBytes += encoder.encode(serialized).byteLength;
-        await updateUsage(requestId, { input_bytes: inputBytes });
+        await updateUsage(requestId, { input_bytes: inputBytes }, signal);
         if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
         if (!started) {
-          await updateUsage(requestId, { status: 'upstream_started' });
+          await updateUsage(requestId, { status: 'upstream_started' }, signal);
           // The flag follows the persisted transition. If that PATCH failed,
           // the guarded outer settlement can refund a definitely unstarted call.
           started = true;
         }
+        if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
         const response = await fetch(endpoint, { method: 'POST', headers: upstreamHeaders(provider, Deno.env.get(provider.secret_name)!),
           body: serialized, redirect: 'error', signal });
-        try { await updateUsage(requestId, { upstream_status: response.status }); }
+        if (signal.aborted) { void response.body?.cancel().catch(() => undefined); throw new DOMException('Aborted', 'AbortError'); }
+        try { await updateUsage(requestId, { upstream_status: response.status }, signal); }
         catch (error) { void response.body?.cancel().catch(() => undefined); throw error; }
         return response;
       },
-      execute: async (name, args, signal) => {
-        const envelope = await executeAssistantReadTool(name, args, {
-          projectUrl: Deno.env.get('SUPABASE_URL') || '', anonKey: Deno.env.get('SUPABASE_ANON_KEY') || '',
-          memberToken, signal
-        });
-        const citation = assistantToolSource(envelope, `S${sources.length + 1}`);
-        if (!citation.source) return { status: 'unavailable', error: 'source_unavailable', data: [] };
-        if (sources.length >= 12 || encodeURIComponent(JSON.stringify([...sources, citation.source])).length >= 12000) {
-          return { status: 'unavailable', error: 'source_budget', data: [] };
+      execute: async (plan, signal) => {
+        const evidence: Json[] = [];
+        if (plan.action !== 'query') return evidence;
+        for (const query of plan.queries) {
+          const envelope = await executeAssistantReadTool(query.tool, query.arguments, {
+            projectUrl: Deno.env.get('SUPABASE_URL') || '', anonKey: Deno.env.get('SUPABASE_ANON_KEY') || '',
+            memberToken, signal
+          });
+          const citation = assistantToolSource(envelope, `S${sources.length + 1}`);
+          if (!citation.source || sources.length >= 12 || encodeURIComponent(JSON.stringify([...sources, citation.source])).length >= 12000) {
+            evidence.push({ status: 'unavailable', error: 'source_unavailable', data: [] });
+          } else {
+            sources.push(citation.source as Json);
+            evidence.push(citation.result);
+          }
         }
-        sources.push(citation.source as Json);
-        return citation.result;
-      }
+        return evidence;
+      },
+      answerInput: (plan, evidence) => assistantPlanAnswerPrompt(release, safe,
+        { action: plan.action, ...(plan.action === 'clarify' ? { question: plan.question } : {}), evidence,
+          static_references: JSON.parse(prepared.knowledge) }).input as Json[]
     });
     if (request.signal.aborted) throw new DOMException('Aborted', 'AbortError');
     const finalPatch = { status: result.status, ...result.usage,
@@ -837,7 +850,7 @@ async function callAssistantTools(request: Request, ctx: RequestContext, release
   } catch (error) {
     const cancelled = request.signal.aborted || error instanceof DOMException && error.name === 'AbortError';
     if (!settled) await finishGeneration(requestId, { status: cancelled ? 'cancelled' : 'failed',
-      error_code: cancelled ? 'client_cancelled' : error instanceof HttpError ? error.message : 'assistant_tools' }, !started).catch(() => undefined);
+      error_code: cancelled ? 'client_cancelled' : error instanceof HttpError || error instanceof AssistantPlanError || error instanceof ChatProtocolError ? error.message : 'assistant_plan_failed' }, !started).catch(() => undefined);
     if (cancelled) throw new HttpError('cancelled', 499);
     if (error instanceof HttpError || error instanceof ChatProtocolError) throw error;
     throw new HttpError('upstream', 502);
@@ -1076,10 +1089,8 @@ async function assistantRuntime(userId: string) {
 }
 
 function assistantCatalogReserve(release: AssistantRelease): number {
-  const catalogTokens = estimateInputTokens(assistantToolPrompt(release, [], ASSISTANT_READ_TOOLS).input as Json[]) -
-    estimateInputTokens(assistantToolPrompt(release, [], []).input as Json[]);
-  return assistantToolBudget(assistantToolReserve(release) + Math.max(0, catalogTokens),
-    encoder.encode(JSON.stringify(ASSISTANT_READ_TOOLS)).byteLength).perTurnInputTokens;
+  const planningTokens = estimateInputTokens(assistantPlanPrompt(release, [], ASSISTANT_READ_TOOLS).input as Json[]);
+  return assistantPlanBudget(planningTokens + 4000).perTurnInputTokens;
 }
 
 async function assistantAction(request: Request, action: string, payload: Json): Promise<Response> {

@@ -66,25 +66,30 @@ HTTP(S) 是正式运行环境。`file://` 仍受浏览器本地存储、认证�
 
 本轮精确验证范围、权限及平台限制见 [数学与实时查询验收记录](../assistant-validation/markdown-live-query.md)。`file://` 包仍依赖页面旁边的本地 KaTeX 资源，并保留前述认证、Origin 和模块加载限制；没有把本地文件端到端标为已验收。
 
-### 模型自主选择只读工具更新（2026-10-19，取代上节关键词实时路由）
+### 两阶段语义只读流程（2026-10-19，取代原生工具循环要求）
 
-新版由模型根据问题语义选择工具、排序与筛选参数。比如“当前积分榜谁最高”调用积分降序第一页，“五子棋谁分数最低”调用总分升序第一页；最低分在数据库端排序，不是从前20名里选最低。服务端在每轮固定注入完整工具清单和 JSON 参数定义，管理预设同时说明用途和示例。工具仅能访问普通成员可读的数据，模型不能自己拼表名、URL、SQL、RPC 或写操作。
+已批准的流程为：第一次普通模型请求仅生成 JSON 计划 → 服务端严格验证整个计划并执行至多两个固定读取 → 第二次模型请求生成最终回答。服务端在普通 Prompt 中提供固定规则、读取名称、用途和 JSON 参数定义，不要求供应商支持原生函数/工具调用或专用 JSON 模式。供应商必须支持所选协议（Responses、Claude Messages 或 Chat Completions）的普通 SSE，且规划响应必须是有效计划。
 
-**这轮必须同时更新 `chat` 和 `club-drive`；只更新 Chat 不足以完成积分/公告/活动的新查询。** 本轮没有 SQL 改动，也不需要新的 Secret。
+计划只能选择 `query`（一次列出1–2个读取）、`clarify` 或 `answer`。未知字段、非法 JSON、未知读取、非法参数或超额读取明确失败，任何读取都须等完整计划验证通过后执行。最终模型不得追加读取。正常完成的助手问答恰好两次模型请求，包括不需要读取或需要澄清的情况；校验失败、超时、取消或预算不足可提前结束，不重试规划或发起第三次请求，不假装查询或自动改用其它 Key。
 
-配额说明：每日准入读取当天 UTC 日桶，不读取管理页的90天 token 汇总。小Bru的首轮输入预留不再重复计算尚不存在的工具历史；请求发出前若 `upstream_started` 标记失败，服务端只在数据库确认仍为 `audited` 且没有上游/usage证据时退款。额度保存只更改上限，不会清理此前已经记入日桶的用量或未结算预留。
+比如“当前积分榜谁最高”选择积分降序第一页，“五子棋谁分数最低”选择总分升序第一页；最低分在数据库端排序，不是从前20名里选最低。读取范围仍为 `read_member_points`（姓名/积分）、`read_game_leaderboard`（六榜及允许的公开指标）、`read_published_content`（仅已发布公告/活动）。每页最多50条、页码最多100；不遍历全榜，不提供后台隐私或修改权限，不允许模型拼表名、URL、SQL、RPC。管理员使用助手仍只有普通成员级数据范围。
 
-1. 在 Edge Functions → `club-drive` → Code，将 [club-drive-dashboard-index.ts](club-drive-dashboard-index.ts) 全文替换到 `index.ts`，部署更新。它是完整 `club-drive` 源码副本，新增受控成员只读查询动作，不要只粘新 helper 或替换原有其它功能。
-2. 在 Edge Functions → `chat` → Code，将 [chat-dashboard-index.ts](chat-dashboard-index.ts) 全文替换到 `index.ts`，部署更新。新工具协议和调用循环已内联。保留原有 Secrets 与鉴权设置；已有最新版 `chat-api-proxy` 无需为本轮重部署。
-3. 发布新版 `public/chat.js`、`public/chat-core.js`、重建的 `public/chat-file-bundle.js`、`public/assistant-i18n.js`、`public/assistant-preset.js`。Chat 会在窗口重新聚焦/返回前台时刷新额度快照；助手刷新 catalog 快照。如果还没发布数学渲染版本，同步发布上节列出的 HTML、CSS、`chat-math.js` 与整个本地 KaTeX 目录。
-4. 管理页点击“填入小Bru预设”，审核、保存；按原流程导入新版 `seed.json` 草稿，审核并发布不可变版本。保留当前模型/启用设置和自建资料；三字段配置 JSON 不是知识库导入文件。新后端即使面对旧发布预设，也固定注入当前工具约束，但新版预设能避免旧能力描述冲突。
-5. 模型必须支持所选协议的原生函数/工具调用（Responses、Claude Messages 或 Chat Completions）。这不是把工具名称写进 Prompt 就自动查询：服务端发送原生工具声明，执行经过校验的调用，将结果交回模型，再返回最终回答。供应商不支持或返回非法协议时明确失败，不假装查询或自动改用其它 Key。
+一次提问共用一个 request_id、一次额度准入、一个租约和一条审计；预留覆盖两次输入及有界计划/结果上下文，两次请求共享输出总预算，规划也计费，并须为最终回答留出预算。实际 usage 合并结算；缺失完整 usage、已启动后的失败/取消沿用保守计量，不能只结算较小的部分用量。每日准入仍读取当天 UTC 日桶（北京时间08:00重置），不读取管理页的90天 token 汇总。请求发出前若 `upstream_started` 标记失败，服务端只在数据库确认仍为 `audited` 且没有上游/usage证据时退款。额度保存只更改上限，不会清理此前已经记入日桶的用量或未结算预留。
 
-工具范围为 `read_member_points`（姓名/积分查询、排序、筛选和分页）、`read_game_leaderboard`（六榜及允许的公开指标）、`read_published_content`（仅已发布公告/活动与日期等公开字段）。分页每页最多50条、页码最多100，每轮最多8次工具调用、最多3次模型请求。最高与最低可直接查询数据库的两端，不必遍历全榜；不提供无上限下载、后台隐私和修改权限。多次查询会增加实际模型 token 用量；一次用户提问仍使用同一个额度预留、租约和审计记录，汇总所有模型轮次，不把工具轮当免费请求。
+规划、读取和最终回答共用120秒整体期限，保留更短的平台限制与取消传播。一个计划最多两个读取，每个读取最多5秒、原响应64 KiB、返回 envelope 6000字节，汇总 evidence 最多16000字节；计划 JSON 最多8192字节。请求12 MiB、每次上游 SSE 2 MiB等限制保留。规划请求移除 `reasoning` 和 `include`，Claude Messages 规划阶段显式关闭 thinking；最终回答保留模型配置的 thinking/reasoning，并共享剩余输出预算。因此只需为最终回答保留 Claude enabled thinking 的最低输出空间，不要求双份思考最低预算。静态检索的完整有界资料段落保留到最终回答，而非只传来源卡片或规划摘要。
 
-为了在返回响应头前收齐来源并完成计量校验，本版先完成有限的工具循环和最终回答收集，再发送标准 Responses SSE；界面在准备期间保持生成状态，首字可能比普通 Chat 更晚。`catalog` 与压缩不执行实时工具。部署后用绑定成员核对你自己的实际数据、来源排序/页码/时间，并审核模型是否正确理解语义；本地模拟测试不证明线上模型工具支持或执行质量。
+`catalog` 与压缩不查询业务数据。服务端收集来源和最终回答后发送标准 Responses SSE；准备期间界面保持生成状态，首字可能更晚。规划 JSON、文字/分析和内部参数隐藏，不发送给前端或保存到浏览器历史；只保留最终回答及来源，来源响应头不含数据行和原始筛选值。
 
-完整验收与已知限制见 [模型只读工具记录](../assistant-validation/semantic-read-tools.md)。
+两阶段运行时已接入 Chat。**本更新不改 SQL、不执行 SQL，本次不部署。** 以下说明已有当前助手的后端切换范围；首次安装和此前数学/静态资源更新仍按各自章节单独处理。
+
+1. 在 Supabase Dashboard → Edge Functions → Secrets **明确确认 `CLUB_SERVICE_ROLE_KEY` 这一名称存在**。`club-drive` 仍读取该名称，本次没有增加回退到 `SUPABASE_SERVICE_ROLE_KEY` 或其它名称的代码；仅有平台的 `SUPABASE_SERVICE_ROLE_KEY` 不满足此检查。缺失时由管理员在 Secrets 安全配置，值不得写进文档、代码、前端或模型配置。流程不引入新的密钥类型，也不扩大权限。
+2. 已有当前 `club-drive` 且包含 `assistant_read_query` 时，只需在核对部署产物后，将完整 [chat-dashboard-index.ts](chat-dashboard-index.ts) 替换到 `chat` → `index.ts`。保留鉴权设置；无需仅为两阶段切换重部署 `club-drive` 或 `chat-api-proxy`。若缺少该动作，属于此前只读查询功能升级，另按完整 [club-drive-dashboard-index.ts](club-drive-dashboard-index.ts) 处理并保留其它功能。
+3. 仅切换两阶段后端无需发布前端或 `chat-file-bundle.js`，无需更新预设、导入 seed 或重新发布知识版本；当前模型配置可以保持不变。首次安装、此前数学渲染及其它独立静态改动按对应章节处理。
+4. 后续用绑定成员核对普通 SSE、有效计划、两次请求、共享预算/审计、规划隐藏、权限、静态资料正文保留及实际数据来源的排序/页码/时间。真实模型语义与目标环境权限须独立核对，本地模拟不能证明这些行为。
+
+审计 `error_code` 只记录安全类别：计划解析/校验/大小为 `assistant_plan_json`、`assistant_plan_invalid`、`assistant_plan_arguments`、`assistant_plan_size`；规划调用为 `assistant_plan_http`、`assistant_plan_network`、`assistant_plan_stream`、`assistant_plan_usage`；回答调用为 `assistant_answer_http`、`assistant_answer_network`、`assistant_answer_stream`；预算与上限为 `assistant_output_budget`、`assistant_context`、`assistant_request_size`、`assistant_evidence_size`，未分类兜底为 `assistant_plan_failed`。不记录原始计划、参数/结果、供应商正文或密钥，错误类别不证明读取成功或可退款。
+
+契约及错误说明见 [两阶段只读记录](../assistant-validation/semantic-read-tools.md)。本地离线通过187项真实 handler mock 集成用例、115项计划与三协议 SSE 测试、固定只读执行器及保留旧路径回归；类型检查、Dashboard bundle 源码一致性和差异检查通过。没有发送真实模型请求或部署，不以本地结果保证供应商语义质量或线上权限。
 
 ## 安全加固更新（Chat 与对外代理）
 
@@ -145,7 +150,8 @@ SQL 安装阶段不会立即删除。**部署后的首次定时清理执行时**
 
 - `SUPABASE_URL`：项目 URL，若平台已提供则保留。
 - `SUPABASE_ANON_KEY`：项目公开 anon key，若平台已提供则保留。
-- `SUPABASE_SERVICE_ROLE_KEY`：仅服务端使用的项目密钥，若平台已提供则保留，不要复制到前端。
+- `SUPABASE_SERVICE_ROLE_KEY`：Chat 等使用的平台服务端密钥，若平台已提供则保留，不要复制到前端。它不能替代 `club-drive` 所读取的名称。
+- `CLUB_SERVICE_ROLE_KEY`：`club-drive` 现有的服务端密钥变量名。部署前在 Secrets 列表明确核实这一名称存在；当前代码没有回退到 `SUPABASE_SERVICE_ROLE_KEY`。缺失时仅由管理员在 Secrets 中安全配置，不在文档、代码、前端、模型配置或验收记录中填写任何实际密钥。
 - `CHAT_CORS_ORIGINS`：网站精确 origin，例如 `https://你的账号.github.io`，不包含仓库路径或尾斜杠。多个来源用英文逗号分隔。
 - `CHAT_KEY_CLAUDE` 等 `CHAT_KEY_*`：实际供应商 API Key。在管理页的 Secret 名称输入框中只填此变量名。
 - `CHAT_PROXY_CORS_ORIGINS`：可选的对外代理浏览器来源白名单，与 `CHAT_CORS_ORIGINS` 分开。未设置时代理允许任意浏览器 origin，但仍要求有效代理访问密钥。
@@ -213,4 +219,4 @@ JSON 必须是对象，未知键拒绝。只有 enabled 可以有 `budget_tokens
 
 ## 当前验证边界
 
-这些文件已完成本地源文件一致性检查、Deno 类型检查、模拟协议回归及 SQL 语法解析；usage90day 的 PostgreSQL 执行验证使用 PGlite WASM runtime，范围与单连接限制见前文。没有代你登录 Supabase、运行线上 SQL、部署函数或调用真实供应商；本地验证不能证明网页上的旧函数已更新或真实 pg_cron 已成功运行。
+两阶段运行时已接入，187项真实 handler mock 与115项计划/SSE用例通过，类型检查和 Dashboard bundle 一致性通过；完整命令与边界见两阶段只读记录。usage90day 的历史 PostgreSQL 执行验证使用 PGlite WASM runtime，范围与单连接限制见前文。没有代你登录 Supabase、运行线上 SQL、部署函数或调用真实供应商；本地验证不能证明网页上的旧函数已更新、模型真实语义质量或真实 pg_cron 已成功运行。

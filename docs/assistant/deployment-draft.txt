@@ -1,18 +1,28 @@
 Assistant administration deployment draft (instructions only)
 
-1. Follow docs/chat-deployment/README.md using the Supabase web Dashboard.
-   For a first assistant installation, paste the complete club-chat-schema.sql
-   into SQL Editor. For the math/live-read update of an existing current assistant,
-   no SQL is needed. Replace the complete chat Edge Function index.ts with the
-   generated chat-dashboard-index.ts and the complete club-drive index.ts with
-   club-drive-dashboard-index.ts from docs/chat-deployment/, then deploy both.
-   club-drive is a full source copy preserving other actions, not a helper patch;
-   updating chat alone cannot enable the new member/content query action.
-   Publish the updated
-   static assets, including chat-math.js and all local KaTeX fonts/CSS/JS/LICENSE,
-   through the site's existing publishing process.
-   No PowerShell, Supabase CLI or build commands are required for deployment.
-   This file executes no deployment.
+1. The two-stage runtime is connected to Chat. This backend switch changes no SQL
+   and performs no SQL execution or deployment. For an existing current assistant
+   whose club-drive already contains assistant_read_query, only replace the complete
+   chat index.ts with chat-dashboard-index.ts after checking the deployment artifact.
+   No club-drive/proxy redeployment, frontend/file-bundle publication, preset/seed
+   change or knowledge republish is required just for this switch. Current model
+   configuration can stay. A club-drive without that action needs the separate
+   earlier live-read upgrade using its complete source, preserving other actions.
+   First installations and prior math/static updates remain separate procedures in
+   docs/chat-deployment/README.md, not required publication steps for this switch.
+   Explicitly check Dashboard > Edge Functions > Secrets for the exact name
+   CLUB_SERVICE_ROLE_KEY. club-drive still reads that name; no code fallback to
+   SUPABASE_SERVICE_ROLE_KEY or any other name was added. The platform's
+   SUPABASE_SERVICE_ROLE_KEY alone is insufficient. If absent, an admin must
+   configure it securely in Secrets; never write any key value in docs, code,
+   frontend, model configuration or validation records. No new key type or model
+   administrator privilege is introduced.
+   Offline validation passed: 187 real-handler mock cases, 115 plan/SSE cases,
+   fixed-read and protocol regressions, type checks and Dashboard bundle/source
+   consistency checks. This does not establish deployment or live model behavior.
+   No PowerShell, Supabase CLI or build commands are required for web deployment.
+   Steps 2-6 describe optional administration/first setup, not mandatory actions for
+   the backend-only switch. Nothing in this file executes deployment or publication.
 2. Sign in to public/chat-admin.html using the existing dynamic super-admin roster.
    Existing assistant data loads automatically after authorization. Open Assistant
    knowledge to inspect it. Refresh remains available for failures or conflicts.
@@ -37,24 +47,62 @@ Assistant administration deployment draft (instructions only)
    creates an immutable snapshot. Rollback submits the current version and an
    existing release ID; it changes only the active release pointer, keeping drafts.
    The historical model still has to be enabled and public for rollback/runtime.
-7. Verify assistant login/binding, source links, quota, separate local history,
-   attachments, language/theme behavior and disable/rollback after deployment.
+7. Runtime contract: an ordinary prompt requests a JSON plan, the server strictly
+   validates the entire plan and arguments before any read, and a second model
+   request produces the final answer. Full bounded static passages from retrieval
+   are retained for the answer, not replaced by source cards or a planner summary.
+   A query plan lists at most two fixed reads from read_member_points,
+   read_game_leaderboard and read_published_content; clarify and answer plans do
+   no business reads but still use the second request for the user-facing reply.
+   Normally completed assistant questions use exactly two model requests. Invalid
+   plans, insufficient budget, timeout and cancellation may end early; there is no
+   planning retry, recursive read, third request or arbitrary URL/SQL/RPC action.
+   Native tool support is not required. The configured protocol must provide
+   ordinary SSE and a valid JSON plan; malformed plans/protocols explicitly fail.
+   Both requests share one request_id, admission, lease, audit and total output
+   budget, reserving both inputs and bounded evidence. Planner output consumes
+   budget and leaves room for the answer; combine usage for settlement. Keep
+   conservative accounting on missing usage or failure after upstream start, and
+   refund only when existing database checks prove no upstream start. The planner
+   strips reasoning/include and explicitly disables Claude Messages thinking. The
+   answer retains configured thinking/reasoning within the remaining shared budget;
+   only the answer needs the Claude enabled-thinking minimum, not a second thinking
+   minimum for planning. Daily admission uses the UTC day bucket (08:00 Beijing
+   reset), not the 90-day audit report; raising limits does not clear existing usage
+   or unsettled reservations.
+   Planning, reads and final answering share a 120-second overall deadline and
+   cancellation. Each of at most two reads keeps its 5-second/64-KiB raw/6000-byte
+   envelope limits; aggregate serialized evidence is <=16000 bytes and the JSON
+   plan is <=8192 bytes. Keep page 1..100, page_size 1..50, model request <=12 MiB
+   and upstream SSE <=2 MiB per request.
+   Audit error_code records safe categories only, without raw plan/arguments/results,
+   provider bodies, authentication headers or keys:
+   assistant_plan_json, assistant_plan_invalid, assistant_plan_arguments,
+   assistant_plan_size; assistant_plan_http, assistant_plan_network,
+   assistant_plan_stream, assistant_plan_usage; assistant_answer_http,
+   assistant_answer_network, assistant_answer_stream; assistant_output_budget,
+   assistant_context, assistant_request_size, assistant_evidence_size;
+   assistant_plan_failed as the unclassified fallback. Existing auth/quota/database/
+   cancellation/protocol categories remain. See semantic-read-tools.md for meanings;
+   an error category does not establish successful reads or refund eligibility.
+8. After a separately authorized deployment, verify login/binding, source links,
+   quota, separate local history, attachments, language/theme and disable/rollback.
    For live reads check published announcements/events, name-and-points privacy,
-   all six independent boards and query timestamp/status/limits. Semantic tools
-   choose filters, database asc/desc and bounded pages: page 1..100, page_size 1..50;
-   no full traversal or unbounded access. Check highest member points with points
-   desc/page 1 and lowest Gomoku points with total_score asc/page 1. Current facts
-   must call tools even if older history/summary already answers the question.
-   Source cards should show localized ordering/page, returned count and a more
-   results hint, without claiming global rank. Query rows/filters stay in bounded
-   model evidence, never source headers. Unspecified normal versus AI boards and
-   duplicate member names require clarification; exact names must be explicit,
-   never query phrases or guessed classes. No admin records or business writes
-   are available, even to administrators using the AI. Tool planning keeps the UI
-   generating; normalized final-answer SSE is sent after the final turn is collected.
-   Check formulas in both Chat and the assistant; code/currency stay literal.
-   Real generation uses shared quota and provider billing; local mock validation
-   does not establish deployed endpoint permissions or live model behavior.
+   all six independent boards and timestamp/status/limits. Check highest member
+   points with points desc/page 1 and lowest Gomoku points with total_score asc/page 1.
+   Current facts require fresh successful reads even if history/summary has an answer.
+   Source cards show localized ordering/page, returned count and a more-results
+   hint, without claiming global rank or population counts. Rows/raw filters stay
+   in bounded model evidence, never source headers. Unspecified normal versus AI
+   boards and duplicate member names require clarification; exact names must be
+   explicit, never query phrases or guessed classes. No admin records or business
+   writes are available, even to administrators using the AI. The UI stays
+   generating until the collected final answer is sent as normalized Responses SSE.
+   Planner JSON, text/analysis and internal parameters stay hidden from the frontend
+   and browser history. Only the final answer and sources are saved. Catalog and
+   compaction perform no live reads. Check formulas in Chat and the assistant;
+   code/currency stay literal. Real generation uses shared quota and provider
+   billing; mocks do not establish endpoint permissions or live model behavior.
    Deployment and live publication remain separate administrator actions.
 
 All management uses assistant_admin_* through the existing authenticated Chat edge
