@@ -51,8 +51,11 @@ export function validateProtocolCapabilities(protocol: ChatProtocol, model: { pr
   if (protocol === 'responses') return;
   if (model.preserve_reasoning) throw new ChatProtocolError('reasoning_history_unsupported');
   if (protocol === 'messages') return;
-  const supported = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
-  if (!Array.isArray(model.reasoning_efforts) || model.reasoning_efforts.some(x => !supported.includes(String(x)))) throw new ChatProtocolError('reasoning_effort_unsupported');
+  // Chat Completions 的 reasoning_effort 是上游自定义值，本项目不设白名单：
+  // 管理员按供应商实际支持的等级（none/low/medium/high/xhigh/max 或任意自有值）配置即可。
+  // 这里只校验能被安全序列化的字符串，具体取值由上游决定。
+  const efforts = model.reasoning_efforts;
+  if (!Array.isArray(efforts) || efforts.some(x => typeof x !== 'string' || !x.length)) throw new ChatProtocolError('reasoning_effort_unsupported');
 }
 export function protocolRequest(protocol: ChatProtocol, body: ProtocolJson, claudeThinking?: unknown): ProtocolJson {
   if (protocol !== 'messages' && normalizeClaudeThinking(claudeThinking).mode !== 'omit') throw new ChatProtocolError('claude_thinking');

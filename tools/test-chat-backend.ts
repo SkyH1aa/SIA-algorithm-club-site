@@ -789,8 +789,12 @@ try {
         assert.deepEqual(await (await expectStatus(body, 400)).json(), { error: 'reasoning_history_unsupported' });
       }
       model.preserve_reasoning = false; model.reasoning_efforts = ['custom-effort']; model.default_reasoning_effort = 'custom-effort';
-      if (api_protocol === 'chat') assert.deepEqual(await (await expectStatus(payload(), 400)).json(), { error: 'reasoning_effort_unsupported' });
-      else {
+      if (api_protocol === 'chat') {
+        // Chat Completions 不再限制思考等级：自定义值必须原样透传给上游。
+        wire = chatWire; await consume();
+        assert.equal(upstreamBodies[0].reasoning_effort, 'custom-effort');
+        assert.equal(audits[0].reasoning_effort, 'custom-effort');
+      } else {
         wire = messagesWire; await consume();
         assert.equal(upstreamBodies[0].thinking, undefined); assert.equal(audits[0].reasoning_effort, null);
       }
@@ -843,13 +847,15 @@ try {
       await expectStatus({ action: 'admin_save_provider', ...provider }, 400);
       model.preserve_reasoning = false;
       if (format === 'chat/completions') {
+        // 任意上游等级都应被接受并透传，而不是被本地白名单拒绝。
         model.reasoning_efforts = ['unsupported'];
-        const result2 = await expectStatus(payload(), 400); assert.equal((await result2.json()).error, 'reasoning_effort_unsupported');
+        await consume();
+        assert.equal(upstreamBodies.at(-1)!.reasoning_effort, 'unsupported');
       } else {
         model.claude_thinking = { mode: 'enabled', budget_tokens: 1024 };
         const result2 = await expectStatus(payload(), 400); assert.equal((await result2.json()).error, 'claude_thinking_budget');
+        assert.equal(audits.length, 0); assert.equal(upstreamBodies.length, 0);
       }
-      assert.equal(audits.length, 0); assert.equal(upstreamBodies.length, 0);
     });
     await test(`${format} incomplete and interrupted settlement`, async () => {
       setup(); wire = format === 'chat/completions' ? chatWire.replace('"stop"', '"length"') : messagesWire.replace('"end_turn"', '"max_tokens"');

@@ -92,7 +92,13 @@ test('reasoning capability checks retain history guards and ignore legacy Messag
     assert.throws(() => protocolRequest(protocol, { ...body, input: [{ type: 'reasoning', encrypted_content: 'opaque', summary: [] }] }), ChatProtocolError);
     assert.throws(() => protocolRequest(protocol, { ...body, include: ['reasoning.encrypted_content'] }), ChatProtocolError);
   }
-  assert.throws(() => validateProtocolCapabilities('chat', { preserve_reasoning: false, reasoning_efforts: ['invented'] }), /reasoning_effort_unsupported/);
+  // Chat Completions 不再限制思考等级：上游自定义值必须原样接受。
+  for (const efforts of [['invented'], ['none', 'low', 'medium', 'high', 'xhigh', 'max'], ['ultra'], ['a-b_c']]) {
+    validateProtocolCapabilities('chat', { preserve_reasoning: false, reasoning_efforts: efforts });
+  }
+  // 只拒绝无法安全序列化的非字符串/空值。
+  assert.throws(() => validateProtocolCapabilities('chat', { preserve_reasoning: false, reasoning_efforts: [1] }), /reasoning_effort_unsupported/);
+  assert.throws(() => validateProtocolCapabilities('chat', { preserve_reasoning: false, reasoning_efforts: [''] }), /reasoning_effort_unsupported/);
   validateProtocolCapabilities('messages', { preserve_reasoning: false, reasoning_efforts: ['invented', 'high'], default_max_output_tokens: 100 });
 });
 test('Claude normalization supplies fail-safe defaults and strictly rejects malformed configs', () => {

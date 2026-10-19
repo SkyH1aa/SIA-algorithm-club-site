@@ -129,7 +129,7 @@ Edge Function 已经自行校验 Bearer token，并通过 Supabase Auth `/auth/v
 - `context_window`：模型上下文窗口上限，必须覆盖实际要发送的输入。
 - `max_output_tokens`：允许的最大输出 token。
 - `default_max_output_tokens`：普通请求默认输出 token，不能大于最大值。
-- `reasoning_efforts`：Responses / Chat Completions 的通用 effort 字符串数组；不支持时留空。Chat Completions 仅接受适配器识别的值。Messages 保留这些旧字段供以后切回其他协议，但不再用它们生成 thinking 或 effort。
+- `reasoning_efforts`：Responses / Chat Completions 的通用 effort 字符串数组；不支持时留空。Chat Completions **不在本项目内限制取值**：`none`、`minimal`、`low`、`medium`、`high`、`xhigh`、`max` 以及供应商自定义字符串都会原样透传，合法取值范围由上游决定；后端只校验每项是非空字符串。Messages 保留这些旧字段供以后切回其他协议，但不再用它们生成 thinking 或 effort。
 - `default_reasoning_effort`：通用默认 effort，必须包含在通用数组内；Messages 的有效默认值改由下述专用配置决定。
 - `claude_thinking`：专用于 Messages 的 JSON 对象，模式与规则见下一节；与通用 effort 分开保存。
 - `supports_images`：只有模型确实接受 `input_image` 时才打开。
