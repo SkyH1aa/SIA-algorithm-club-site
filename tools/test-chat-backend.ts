@@ -387,6 +387,13 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
       if (terminal && leased) { released++; leased = false; return json(true); }
       return json(false);
     }
+    if (name === 'chat_recover_generations') {
+      assert.equal(row.p_user_id, UID);
+      const releasedNow = leased ? 1 : 0;
+      leased = false;
+      if (releasedNow) released++;
+      return json({ released: releasedNow });
+    }
     if (name === 'chat_touch_generation_lease') {
       assert.match(String(row.p_request_id), /^[0-9a-f-]{36}$/);
       leaseTouches++;
@@ -641,6 +648,24 @@ try {
     assert.equal(audits[0].max_output_tokens, 32000);
     assert.equal(upstreamBodies[0].input[0].content[1].image_url.length, image.image_url.length);
     assert.ok(Number(audits[0].input_bytes) < 12 * 1024 * 1024);
+  });
+  await test('generation recovery clears only the caller lease and rejects extra fields', async () => {
+    Deno.env.set('SUPABASE_URL', 'https://jgezpvmlnhycxslqbwcx.supabase.co');
+    leased = true;
+    const response = await expectStatus({ action: 'generation_recover' }, 200);
+    assert.deepEqual(await response.json(), { released: 1 });
+    const call = rpcCalls.find(item => item.name === 'chat_recover_generations')!;
+    assert.equal(call.body.p_user_id, UID, 'recovery targets the authenticated user only');
+    assert.equal(released, 1); assert.equal(leased, false);
+    // No generation request, audit or provider call happens for a recovery.
+    assert.equal(upstreamBodies.length, 0); assert.equal(audits.length, 0);
+
+    for (const body of [{ action: 'generation_recover', user_id: OTHER_UID }, { action: 'generation_recover', input: [] }]) {
+      const count = rpcCalls.length;
+      await expectStatus(body, 400);
+      assert.equal(rpcCalls.length, count, 'recovery must reject any extra field before touching SQL');
+    }
+    await expectStatus({ action: 'generation_recover' }, 401, null);
   });
   await test('strict request, content, output, effort and context validation', async () => {
     for (const bad of [payload({ extra: true }), payload({ input: [] }), payload({ input: [{ role: 'tool', content: [] }] }), payload({ input: [message('')] }), payload({ input: [{ role: 'user', content: [{ type: 'input_text', text: 'x', filename: 'x.txt' }] }] }), payload({ max_output_tokens: 0 }), payload({ max_output_tokens: 1001 }), payload({ max_output_tokens: '5' }), payload({ reasoning_effort: 'extreme' })]) await expectStatus(bad, 400);

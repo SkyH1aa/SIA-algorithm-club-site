@@ -19,7 +19,7 @@ Assistant administration deployment draft (instructions only)
    configure it securely in Secrets; never write any key value in docs, code,
    frontend, model configuration or validation records. No new key type or model
    administrator privilege is introduced.
-   Offline validation passed: 192 real-handler mock cases, 126 plan/SSE cases,
+   Offline validation passed: 193 real-handler mock cases, 126 plan/SSE cases,
    fixed-read and protocol regressions, type checks and Dashboard bundle/source
    consistency checks. This does not establish deployment or live model behavior.
    No PowerShell, Supabase CLI or build commands are required for web deployment.
@@ -54,6 +54,16 @@ Assistant administration deployment draft (instructions only)
    repair. Local regression covers timeout, idle-stream, renewal and
    failed-settlement paths; real provider behavior and live thresholds remain
    unverified.
+   GENERATION RECOVERY BUTTON: the settings drawer now offers a user-triggered
+   "restart generation" action. It aborts that browser's in-flight generations
+   and compactions, marks them cancelled locally, then calls generation_recover,
+   which runs chat_recover_generations(p_user_id) with the authenticated user
+   id. That RPC deletes only that user's chat_generation_leases rows; it never
+   deletes chats, refunds quota, changes reservations or audits, or touches
+   another account. The button is not disabled by the busy state, so it remains
+   usable while a lease is stuck. Deploy it with the same complete Chat SQL and
+   chat function; republish chat.js, chat-i18n.js, chat.css, chat.html,
+   assistant.html and chat-file-bundle.js.
 2. Sign in to public/chat-admin.html using the existing dynamic super-admin roster.
    Existing assistant data loads automatically after authorization. Open Assistant
    knowledge to inspect it. Refresh remains available for failures or conflicts.

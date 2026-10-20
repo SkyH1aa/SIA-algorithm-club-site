@@ -114,6 +114,7 @@ function uiHarness({assistant = false, embedded = false, protocol = 'https:'} = 
     // 桩 t() 必须像真实 runtime 一样「缺键返回 key」；否则 effortLabel 无法区分已翻译与回退。
     ClubI18n:i18n,marked:{Renderer:class {},parse:()=>''},DOMPurify:{sanitize:()=>({querySelectorAll:()=>[]})},
     navigator:{clipboard:{async writeText(value){copied.push(value);}}},
+    confirm:()=>true,
     Option:class {constructor(text,value){this.textContent=text;this.value=value;}},
     setTimeout(fn){timers.push(fn);},
     fetch(url,init){
@@ -845,3 +846,37 @@ console.log('Assistant helpers: semantic catalog/policy, static reserve/header b
   snapshot.resolve({ok:true}); await settle();
 }
 console.log('Chat archive: attachment/reply triggers, dual-store merge, newest-first ordering, sharding, dedupe and transcript-only parts passed.');
+
+/* ---------- 整流重启：中止本地在途请求并清理本人服务端占用 ---------- */
+{
+  const ui = uiHarness(); await ui.login('A');
+  ui.evaluate("document.getElementById('prompt').value='stuck'; void generate();"); await settle();
+  const generation = ui.requests.at(-1);
+  const before = ui.requests.length;
+  // 确认对话框默认返回 true（测试环境的 confirm 桩）。
+  ui.evaluate("void recoverGenerations();"); await settle();
+  assert.equal(generation.signal.aborted, true, 'recovery aborts the local in-flight generation');
+  // 浏览器在 abort 时会立即让 fetch 拒绝；测试桩需要显式模拟这一点，
+  // 恢复流程会等该生成结算完再清理服务端占用。
+  generation.reject(new Error('aborted'));
+  await settle();
+  // 用户主动整流重启，属于取消而非中断；关键是不得停留在 running。
+  assert.equal(ui.evaluate('current.turns[0].status'), 'cancelled');
+  const recover = ui.requests.slice(before).find(request => request.body.action === 'generation_recover');
+  assert.ok(recover, 'recovery calls the server action');
+  assert.equal(recover.token, 'Bearer A', 'recovery uses the signed-in account');
+  assert.deepEqual(Object.keys(recover.body).sort(), ['action']);
+  recover.resolve({ ok: true, json: async () => ({ released: 1 }) }); await settle();
+  assert.equal(ui.evaluate('statusKey'), 'recoverDone');
+  assert.equal(ui.evaluate('recovering'), false);
+  assert.equal(ui.evaluate('active'), null);
+  // 失败路径必须给出明确提示且解除锁定。
+  const beforeFailure = ui.requests.length;
+  ui.evaluate("void recoverGenerations();"); await settle();
+  const failed = ui.requests.slice(beforeFailure).find(request => request.body.action === 'generation_recover');
+  assert.ok(failed, 'the retry sends a second recovery request');
+  failed.resolve({ ok: false, status: 503, json: async () => ({ error: 'database' }) }); await settle();
+  assert.equal(ui.evaluate('statusKey'), 'recoverFailed');
+  assert.equal(ui.evaluate('recovering'), false);
+}
+console.log('Chat recovery: aborts local generation, calls the caller-only server action, and reports both outcomes.');

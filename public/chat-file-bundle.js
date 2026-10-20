@@ -701,6 +701,7 @@ const t = (key, vars) => {
   return ClubI18n.t(`chat.${key}`, vars);
 };
 let session = null, epoch = 0, models = [], customModels = [], chats = [], current = null, pending = [], active = null;
+let recovering = false;
 let quotaState = null;
 let memberName = '';
 let customStatusKey = '', customStatusVars = {}, customBusy = false;
@@ -906,11 +907,14 @@ function button(key, handler) {
   node.onclick = handler; return node;
 }
 /* 生成、附件解析、自定义模型保存、上下文压缩期间都算忙碌。 */
-function isBusy() { return !!active || attaching || customBusy || compacting; }
+function isBusy() { return !!active || attaching || customBusy || compacting || recovering; }
 function controls() {
   const busy = isBusy();
   for (const id of ['send','retry','new','rename','delete','clear','export','files','model','effort']) $(id).disabled = busy || !session || !models.length;
   for (const id of ['customSave','customDelete','customClearKey','customModelName','customModelKey','customBaseUrl','customApiKey']) $(id).disabled = busy || !session;
+  const recoverButton = $('recover');
+  // 整流重启必须能在“卡住”状态下点击，因此只看登录与是否已在执行。
+  if (recoverButton) recoverButton.disabled = !session || recovering;
   const trigger = $('modelTrigger');
   // 原生 select 已隐藏，忙碌状态必须同样禁用可见的触发按钮。
   if (trigger) trigger.disabled = busy || !session || !models.length;
@@ -2048,6 +2052,46 @@ function stopWork() {
   if (active) { active.stopped = true; active.controller.abort(); }
   compactController?.abort();
 }
+
+/**
+ * 整流重启：仅作用于当前登录账号。
+ * 先在本地中止本页所有在途生成与压缩，把它们标成已中断，再请求服务端清掉
+ * 本账号卡住的生成租约。历史对话与已结算用量都不变，只终止正在进行的请求。
+ */
+async function recoverGenerations() {
+  if (!session || recovering) return;
+  if (!confirm(t('recoverConfirm'))) return;
+  const guard = epoch, userId = session.user.id, token = session.access_token;
+  recovering = true; controls();
+  try {
+    const pendingRuns = [...generations].map(run => run.done);
+    stopWork();
+    for (const run of generations) { run.stopped = true; run.controller.abort(); }
+    compacting = false;
+    // 等被中止的生成走完自己的 finally，否则它会把状态覆盖回“已取消”，
+    // 用户看不到重启结果，活动锁也可能短暂残留。
+    await Promise.allSettled([...pendingRuns, compactJob].filter(Boolean));
+    if (guard !== epoch) return;
+    for (const chat of chats) {
+      let changed = false;
+      for (const turn of chat.turns) if (turn.status === 'running') { turn.status = 'interrupted'; changed = true; }
+      if (changed) { try { await persist(chat, guard); } catch { /* 本地写入失败不影响服务端清理 */ } }
+    }
+    const response = await fetch(`${URL}/functions/v1/chat`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${token}`},
+      body:JSON.stringify({action:'generation_recover'})
+    });
+    if (!response.ok) throw new Error('request');
+    const data = await response.json().catch(() => ({}));
+    if (guard !== epoch) return;
+    status('recoverDone', {released: Number.isSafeInteger(data.released) ? data.released : 0});
+  } catch {
+    if (guard === epoch) status('recoverFailed');
+  } finally {
+    if (guard === epoch) { recovering = false; controls(); render(); }
+  }
+}
 function suspendWorkspace() {
   suspended = true;
   clearCustomKeys(); catalogController?.abort(); compactController?.abort();
@@ -2110,6 +2154,7 @@ $('prompt').oninput = () => resetPromptHeight();
 $('prompt').onkeydown = event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void generate(); } };
 $('stop').onclick = () => stopWork();
 $('retry').onclick = () => { const last = current?.turns.at(-1); if (last) regenerate(last.id); };
+$('recover').onclick = () => void recoverGenerations();
 $('new').onclick = () => { newChat(); closeSidebarOnMobile(); };
 $('scrollBottom').onclick = () => { const box = $('messages'); box.scrollTo?.({top:box.scrollHeight, behavior:'smooth'}); if (!box.scrollTo) box.scrollTop = box.scrollHeight; };
 $('messages').addEventListener?.('scroll', updateScrollButton, {passive:true});

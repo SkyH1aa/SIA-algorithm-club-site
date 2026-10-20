@@ -112,7 +112,7 @@ AIChat 与 AI 助手会在每次选中附件时、以及每轮回复进入终态
 
 审计 `error_code` 只记录安全类别：计划解析/校验/大小为 `assistant_plan_json`、`assistant_plan_invalid`、`assistant_plan_arguments`、`assistant_plan_size`；规划调用为 `assistant_plan_http`、`assistant_plan_network`、`assistant_plan_stream`、`assistant_plan_usage`；回答调用为 `assistant_answer_http`、`assistant_answer_network`、`assistant_answer_stream`；预算与上限为 `assistant_output_budget`、`assistant_context`、`assistant_request_size`、`assistant_evidence_size`，未分类兜底为 `assistant_plan_failed`。不记录原始计划、参数/结果、供应商正文或密钥，错误类别不证明读取成功或可退款。
 
-契约及错误说明见 [两阶段只读记录](../assistant-validation/semantic-read-tools.md)。本地离线通过192项真实 handler mock 集成用例、126项计划与三协议 SSE 测试、固定只读执行器及保留旧路径回归；类型检查、Dashboard bundle 源码一致性和差异检查通过。浮窗放大尺寸已在本地无头 Chrome 的 1440x900、1920x1080、1024x768 视口实测为 50%x50%（面积 25%）并居中。没有发送真实模型请求或部署，不以本地结果保证供应商语义质量或线上权限。
+契约及错误说明见 [两阶段只读记录](../assistant-validation/semantic-read-tools.md)。本地离线通过193项真实 handler mock 集成用例、126项计划与三协议 SSE 测试、固定只读执行器及保留旧路径回归；类型检查、Dashboard bundle 源码一致性和差异检查通过。浮窗放大尺寸已在本地无头 Chrome 的 1440x900、1920x1080、1024x768 视口实测为 50%x50%（面积 25%）并居中。没有发送真实模型请求或部署，不以本地结果保证供应商语义质量或线上权限。
 
 ## 生成租约卡死修复（“请先停止当前生成”）
 
@@ -136,6 +136,17 @@ AIChat 与 AI 助手会在每次选中附件时、以及每轮回复进入终态
 4. 验证：断开 VPN 让 Claude 调用失败，等待错误出现后直接再发一条消息，应能正常发起而不是提示“请先停止当前生成”。若上游 90 秒内不返回响应头，应看到超时提示，且之后仍可继续发送。
 
 已卡住的账号在部署 SQL 后最多等待 3 分钟自动解锁；无需手工清理租约表。
+
+### 整流重启按钮
+
+设置面板的“本对话”分组新增 **整流重启**（仅当前登录账号生效）。用途是当用户遇到“请先停止当前生成”且不想等待时手动恢复：
+
+- 先在浏览器内中止本页所有进行中的生成与上下文压缩，把这些轮次标为已取消并写回本地。
+- 再调用服务端 `generation_recover`（仅允许该动作、无参数），由 `chat_recover_generations` 删除**该登录用户自己的**生成租约。
+- 不删除对话、不修改额度或配额预留、不影响其他账号。尚未结算的请求仍保留原有的保守用量预留。
+- 会同步终止当前账号正在生成的对话；已完成的历史不受影响。按钮不受“忙碌”状态禁用，因此卡住时仍可点击。
+
+部署该项同样需要执行本节前面的完整 Chat SQL 并部署 `chat`，再发布前端 `chat.js`、`chat-i18n.js`、`chat.css`、`chat.html`、`assistant.html` 与重建后的 `chat-file-bundle.js`。
 
 ## 安全加固更新（Chat 与对外代理）
 
@@ -265,4 +276,4 @@ JSON 必须是对象，未知键拒绝。只有 enabled 可以有 `budget_tokens
 
 ## 当前验证边界
 
-两阶段运行时已接入，192项真实 handler mock 与126项计划/SSE用例通过，类型检查和 Dashboard bundle 一致性通过；完整命令与边界见两阶段只读记录。usage90day 的历史 PostgreSQL 执行验证使用 PGlite WASM runtime，范围与单连接限制见前文。没有代你登录 Supabase、运行线上 SQL、部署函数或调用真实供应商；本地验证不能证明网页上的旧函数已更新、模型真实语义质量或真实 pg_cron 已成功运行。
+两阶段运行时已接入，193项真实 handler mock 与126项计划/SSE用例通过，类型检查和 Dashboard bundle 一致性通过；完整命令与边界见两阶段只读记录。usage90day 的历史 PostgreSQL 执行验证使用 PGlite WASM runtime，范围与单连接限制见前文。没有代你登录 Supabase、运行线上 SQL、部署函数或调用真实供应商；本地验证不能证明网页上的旧函数已更新、模型真实语义质量或真实 pg_cron 已成功运行。

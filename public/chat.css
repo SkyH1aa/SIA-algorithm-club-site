@@ -713,6 +713,8 @@ html[data-theme="light"] .chat-theme-toggle .chat-icon-moon { display: block; }
   background: var(--chat-surface-2);
 }
 .chat-tools button:hover:not(:disabled) { border-color: var(--chat-line-strong); }
+.chat-tools button.danger { color: var(--chat-danger); border-color: color-mix(in srgb, var(--chat-danger) 35%, var(--chat-line)); }
+.chat-tools button.danger:hover:not(:disabled) { border-color: var(--chat-danger); }
 
 .chat-custom-model {
   padding: 12px;

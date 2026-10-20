@@ -67,7 +67,7 @@ const ACTIONS = new Set([
   'assistant_catalog', 'assistant_respond', 'assistant_compact',
   'assistant_admin_get', 'assistant_admin_config_save', 'assistant_admin_document_save', 'assistant_admin_document_archive',
   'assistant_admin_publish', 'assistant_admin_rollback', 'assistant_admin_import',
-  'catalog', 'respond', 'admin_get', 'admin_save_provider', 'admin_save_model',
+  'catalog', 'respond', 'generation_recover', 'admin_get', 'admin_save_provider', 'admin_save_model',
   'admin_delete_provider', 'admin_delete_model',
   'admin_usage', 'admin_test', 'quota', 'admin_quota_get', 'admin_quota_save',
   'admin_user_directory', 'admin_blacklist_list', 'admin_set_blacklist',
@@ -1246,6 +1246,7 @@ async function main(request: Request, payload: Json): Promise<Response> {
     admin_quota_save: ['user_id', 'daily_limit', 'weekly_limit', 'monthly_limit', 'expected_version'],
     admin_user_directory: [], admin_blacklist_list: [], admin_set_blacklist: ['user_id', 'blocked', 'reason'],
     admin_get: [], respond: ['model_id', 'input', 'max_output_tokens', 'reasoning_effort'],
+    generation_recover: [],
     admin_test: ['model_id', 'prompt', 'max_output_tokens', 'reasoning_effort'],
     admin_usage: ['page', 'pageSize', 'limit', 'from', 'to'],
     admin_save_provider: ['id', 'name', 'label', 'base_url', 'api_protocol', 'secret_name', 'auth_header', 'enabled'],
@@ -1282,6 +1283,13 @@ async function main(request: Request, payload: Json): Promise<Response> {
     return json(request, { models: await catalogPayload(all, providerRows, ctx.user.id), bound: Boolean(ctx.profile), member_name: ctx.profile?.member_name || null, quota });
   }
   if (action === 'respond') return await callResponses(request, await context(request), payload);
+  if (action === 'generation_recover') {
+    // Clears only the caller's own generation leases after they abort their
+    // local requests. Quota reservations and audit rows stay untouched.
+    const ctx = await context(request);
+    const result = object(await rpc('chat_recover_generations', { p_user_id: ctx.user.id }));
+    return json(request, { released: Number.isSafeInteger(result.released) ? result.released : 0 });
+  }
   if (action === 'admin_test') return await callResponses(request, await context(request, true), payload, true);
   throw new HttpError('action', 400);
 }

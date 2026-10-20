@@ -499,16 +499,42 @@ begin
 end;
 $$;
 
+-- User-triggered recovery: a failed or killed generation can leave the
+-- per-user lease behind, which makes every later request return 409 busy until
+-- the TTL expires. This removes only that user's lease rows. It never touches
+-- quota reservations, buckets, usage audits or another account's lease, so a
+-- possibly-started upstream request keeps its conservative reservation.
+create or replace function public.chat_recover_generations(
+  p_user_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_released integer := 0;
+begin
+  if p_user_id is null then return jsonb_build_object('released', 0); end if;
+  perform public.chat_quota_lock(p_user_id);
+  delete from public.chat_generation_leases where user_id = p_user_id;
+  get diagnostics v_released = row_count;
+  return jsonb_build_object('released', v_released);
+end;
+$$;
+
 revoke all on function public.chat_acquire_generation_lease(uuid, uuid, timestamptz) from public, anon, authenticated;
 revoke all on function public.chat_release_generation_lease(uuid, uuid) from public, anon, authenticated;
 revoke all on function public.chat_release_generation_lease_by_request(uuid) from public, anon, authenticated;
 revoke all on function public.chat_touch_generation_lease(uuid) from public, anon, authenticated;
 revoke all on function public.chat_force_release_terminal_lease(uuid) from public, anon, authenticated;
+revoke all on function public.chat_recover_generations(uuid) from public, anon, authenticated;
 grant execute on function public.chat_acquire_generation_lease(uuid, uuid, timestamptz) to service_role;
 grant execute on function public.chat_release_generation_lease(uuid, uuid) to service_role;
 grant execute on function public.chat_release_generation_lease_by_request(uuid) to service_role;
 grant execute on function public.chat_touch_generation_lease(uuid) to service_role;
 grant execute on function public.chat_force_release_terminal_lease(uuid) to service_role;
+grant execute on function public.chat_recover_generations(uuid) to service_role;
 
 -- Quotas count input + output tokens, including outstanding reservations. Lease
 -- expiry ONLY permits another generation; it never refunds a reservation.
