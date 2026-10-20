@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="zh-CN" data-i18n-title-key="pages.donations.title">
+<head>
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="club-ui.css">
+  <script src="theme.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>社团捐赠名单 · 算法社</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="club-auth-storage.js"></script>
+  <script src="member-identity.js" defer></script>
+  <script src="i18n-dict.js"></script>
+  <script src="i18n.js"></script>
+  <script src="service-prompts.js"></script><script src="service-gate.js"></script>
+</head>
+<body class="club-page">
+  <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Donations</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="club-features.html" data-i18n="common.backFeatures">返回社团功能</a></div></header>
+
+  <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div>
+  <main>
+    <section id="memberGate" class="panel member-gate"><div><strong data-i18n="donations.gateTitle">请先登录</strong><p data-i18n="donations.gateLead">捐赠名单仅对已登录的算法社成员开放。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+
+    <div id="content" class="hidden">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">CLUB DONATIONS</p>
+          <h1 data-i18n="donations.h1">社团捐赠名单</h1>
+          <p class="lead" data-i18n="donations.lead">感谢各位社员与朋友对算法社的支持。名单默认按捐赠金额从大到小排列，仅统计已登记的捐赠记录。</p>
+        </div>
+        <div class="status-panel"><strong id="summaryCount">0</strong><span data-i18n="donations.summaryCount">笔捐赠记录</span></div>
+      </section>
+      <style>
+        /* 只影响本页：不影响全站 .table / .badge 约定。 */
+        #donationList .donation-rank { width: 56px; color: var(--club-muted); font-variant-numeric: tabular-nums; }
+        #donationList .donation-date { white-space: nowrap; font-variant-numeric: tabular-nums; }
+        #donationList .donation-amount { text-align: right; font-weight: 650; font-variant-numeric: tabular-nums; }
+        #donationList .donation-actions { white-space: nowrap; }
+        #donationList .donation-actions .row-button + .row-button { margin-left: 6px; }
+      </style>
+
+      <section class="panel" id="adminPanel" hidden>
+        <div class="section-head">
+          <div>
+            <h2 data-i18n="donations.formTitle">新增 / 编辑捐赠记录</h2>
+            <p class="intro" data-i18n="donations.formIntro">仅超级管理员可维护。金额最多两位小数，日期使用公历日期。</p>
+          </div>
+          <button class="button secondary" type="button" id="refreshButton" data-i18n="donations.refresh">刷新名单</button>
+        </div>
+        <form class="form" id="donationForm">
+          <input type="hidden" id="donationId">
+          <div class="grid-2">
+            <div>
+              <label class="label" for="donorName" data-i18n="donations.donorName">捐赠人姓名</label>
+              <input class="input" id="donorName" maxlength="60" required autocomplete="off" data-i18n-placeholder="donations.phDonorName" placeholder="例如 陈海铭">
+            </div>
+            <div>
+              <label class="label" for="donatedOn" data-i18n="donations.donatedOn">捐赠日期</label>
+              <input class="input" id="donatedOn" type="date" required min="1900-01-01" max="2999-12-31">
+            </div>
+          </div>
+          <div class="grid-2">
+            <div>
+              <label class="label" for="amount" data-i18n="donations.amount">捐赠金额（元）</label>
+              <input class="input" id="amount" type="number" min="0.01" max="9999999999.99" step="0.01" required inputmode="decimal" data-i18n-placeholder="donations.phAmount" placeholder="例如 500.00">
+            </div>
+            <div class="form-actions">
+              <button class="button" type="submit" id="saveButton" data-i18n="donations.add">新增记录</button>
+              <button class="button secondary" type="button" id="resetButton" data-i18n="common.clearForm">清空表单</button>
+            </div>
+          </div>
+        </form>
+        <p class="message" id="formMessage" role="status"></p>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h2 data-i18n="donations.listTitle">捐赠名单</h2>
+            <p class="intro" id="listIntro" data-i18n="donations.listIntro">按金额从大到小排序；同额时较新的捐赠日期在前。</p>
+          </div>
+          <span class="badge" id="roleBadge" hidden></span>
+        </div>
+        <div class="table-wrap" id="donationList"><div class="empty loading" data-i18n="donations.loading">正在读取捐赠名单…</div></div>
+        <p class="message" id="listMessage" role="status"></p>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
+    const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const $ = id => document.getElementById(id);
+    const t = (key, vars) => (window.ClubI18n ? window.ClubI18n.t(key, vars) : key);
+    let donations = [];
+    let isSuperAdmin = false;
+    let editingId = '';
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    }
+    function setMessage(node, text, type = '') {
+      if (!node) return;
+      node.textContent = text || '';
+      node.className = `message ${type}`;
+    }
+    function formatAmount(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return '-';
+      return numeric.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function localToday() {
+      // 用本地日期填充表单默认值，避免 UTC 跨日时显示成明天或昨天。
+      const now = new Date();
+      const pad = part => String(part).padStart(2, '0');
+      return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    }
+    function formatDate(value) {
+      const raw = String(value || '').slice(0, 10);
+      return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : '-';
+    }
+    async function call(action, body = {}) {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) throw new Error(t('donations.loginFirst'));
+      const response = await fetch(FUNCTION_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ action, ...body })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || t('donations.opFailed'));
+      return payload;
+    }
+
+    function resetForm() {
+      editingId = '';
+      $('donationForm').reset();
+      $('donationId').value = '';
+      $('donatedOn').value = localToday();
+      $('saveButton').textContent = t('donations.add');
+      setMessage($('formMessage'), '');
+    }
+
+    function startEdit(id) {
+      if (!isSuperAdmin) return;
+      const item = donations.find(row => row.id === id);
+      if (!item) return;
+      editingId = id;
+      $('donationId').value = id;
+      $('donorName').value = item.donor_name || '';
+      $('donatedOn').value = formatDate(item.donated_on);
+      $('amount').value = Number(item.amount).toFixed(2);
+      $('saveButton').textContent = t('donations.saveEdit');
+      setMessage($('formMessage'), t('donations.editing', { name: item.donor_name }), 'success');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function renderDonations() {
+      const list = $('donationList');
+      $('summaryCount').textContent = String(donations.length);
+      if (!donations.length) {
+        list.innerHTML = `<div class="empty">${escapeHtml(t('donations.empty'))}</div>`;
+        return;
+      }
+      list.innerHTML = `<table class="table"><thead><tr>
+          <th>${escapeHtml(t('donations.colRank'))}</th>
+          <th>${escapeHtml(t('donations.colDonor'))}</th>
+          <th>${escapeHtml(t('donations.colDate'))}</th>
+          <th class="donation-amount">${escapeHtml(t('donations.colAmount'))}</th>
+          ${isSuperAdmin ? `<th>${escapeHtml(t('donations.colActions'))}</th>` : ''}
+        </tr></thead><tbody>${donations.map((item, index) => `
+          <tr>
+            <td class="donation-rank">${index + 1}</td>
+            <td>${escapeHtml(item.donor_name)}</td>
+            <td class="donation-date">${escapeHtml(formatDate(item.donated_on))}</td>
+            <td class="donation-amount">¥${escapeHtml(formatAmount(item.amount))}</td>
+            ${isSuperAdmin ? `<td class="donation-actions">
+              <button class="row-button" type="button" data-edit="${escapeHtml(item.id)}">${escapeHtml(t('common.edit'))}</button>
+              <button class="row-button delete" type="button" data-delete="${escapeHtml(item.id)}">${escapeHtml(t('common.delete'))}</button>
+            </td>` : ''}
+          </tr>`).join('')}</tbody></table>`;
+      if (!isSuperAdmin) return;
+      list.querySelectorAll('[data-edit]').forEach(button => { button.onclick = () => startEdit(button.dataset.edit); });
+      list.querySelectorAll('[data-delete]').forEach(button => {
+        button.onclick = async () => {
+          const item = donations.find(row => row.id === button.dataset.delete);
+          if (!item) return;
+          if (!window.confirm(t('donations.confirmDelete', { name: item.donor_name }))) return;
+          setMessage($('listMessage'), t('donations.removing'));
+          try {
+            await call('admin_donations_delete', { id: item.id });
+            if (editingId === item.id) resetForm();
+            setMessage($('listMessage'), t('donations.removed'), 'success');
+            await refreshDonations();
+          } catch (error) {
+            setMessage($('listMessage'), error.message, 'error');
+          }
+        };
+      });
+    }
+
+    async function refreshDonations() {
+      $('donationList').innerHTML = `<div class="empty loading">${escapeHtml(t('donations.loading'))}</div>`;
+      try {
+        const payload = await call(isSuperAdmin ? 'admin_donations_list' : 'donations_list');
+        donations = Array.isArray(payload.donations) ? payload.donations : [];
+        renderDonations();
+        setMessage($('listMessage'), '');
+      } catch (error) {
+        $('donationList').innerHTML = `<div class="empty">${escapeHtml(t('donations.loadFailed'))}</div>`;
+        setMessage($('listMessage'), error.message, 'error');
+      }
+    }
+
+    async function updateSession(session) {
+      const loggedIn = Boolean(session?.user?.id);
+      $('memberGate').classList.toggle('active', !loggedIn);
+      $('content').classList.toggle('hidden', !loggedIn);
+      if (!loggedIn) { isSuperAdmin = false; donations = []; return; }
+      const access = window.ClubStaffAccess
+        ? await window.ClubStaffAccess.fetchStaffAccess(session)
+        : { isSuperAdmin: false, permissions: {} };
+      isSuperAdmin = Boolean(access.isSuperAdmin);
+      $('adminPanel').hidden = !isSuperAdmin;
+      const badge = $('roleBadge');
+      badge.hidden = false;
+      badge.textContent = isSuperAdmin ? t('donations.roleAdmin') : t('donations.roleMember');
+      if (!isSuperAdmin) resetForm();
+      else if (!$('donatedOn').value) $('donatedOn').value = localToday();
+      await refreshDonations();
+    }
+
+    $('refreshButton').addEventListener('click', refreshDonations);
+    $('resetButton').addEventListener('click', resetForm);
+    $('donationForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!isSuperAdmin) return;
+      const donorName = $('donorName').value.trim();
+      const donatedOn = $('donatedOn').value;
+      const amount = $('amount').value;
+      if (!donorName) { setMessage($('formMessage'), t('donations.nameRequired'), 'error'); return; }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(donatedOn)) { setMessage($('formMessage'), t('donations.dateRequired'), 'error'); return; }
+      const numeric = Number(amount);
+      if (!Number.isFinite(numeric) || numeric <= 0) { setMessage($('formMessage'), t('donations.amountRequired'), 'error'); return; }
+      setMessage($('formMessage'), t('donations.saving'));
+      try {
+        await call('admin_donations_save', {
+          ...(editingId ? { id: editingId } : {}),
+          donorName,
+          donatedOn,
+          amount: numeric
+        });
+        setMessage($('formMessage'), editingId ? t('donations.updated') : t('donations.added'), 'success');
+        resetForm();
+        await refreshDonations();
+      } catch (error) {
+        setMessage($('formMessage'), error.message, 'error');
+      }
+    });
+
+    supabaseClient.auth.onAuthStateChange((_event, session) => { void updateSession(session); });
+    supabaseClient.auth.getSession().then(({ data: { session } }) => updateSession(session));
+
+    window.addEventListener('club:langchange', () => {
+      try {
+        if (window.ClubI18n?.apply) ClubI18n.apply(document);
+        if (!$('content').classList.contains('hidden')) {
+          $('saveButton').textContent = editingId ? t('donations.saveEdit') : t('donations.add');
+          $('roleBadge').textContent = isSuperAdmin ? t('donations.roleAdmin') : t('donations.roleMember');
+          renderDonations();
+        }
+      } catch (_error) {}
+    });
+  </script>
+  <script src="club-shell.js"></script>
+</body>
+</html>

@@ -78,6 +78,7 @@
     { group: 'member', icon: '▦', href: 'points-mall.html', zh: '积分商城', en: 'Points mall', descZh: '用积分兑换实物或权益', descEn: 'Redeem points for rewards', keys: 'mall 商城 兑换' },
     { group: 'member', icon: '✉', href: 'member-messages.html', zh: '社员留言箱', en: 'Inbox', descZh: '提交建议并查看社团留言', descEn: 'Suggestions and club messages', keys: 'messages 留言' },
     { group: 'member', icon: '▤', href: 'drive.html', zh: '社团盘', en: 'Club drive', descZh: '123 云盘专属目录', descEn: 'Your 123 cloud drive folder', keys: 'drive 网盘 社团盘' },
+    { group: 'member', icon: '♥', href: 'donations.html', zh: '捐赠名单', en: 'Donations', descZh: '社团捐赠记录与金额排序', descEn: 'Club donation records by amount', keys: 'donation 捐赠 名单 金额' },
     { group: 'member', icon: '✦', href: 'chat.html', zh: '社团 AI Chat', en: 'Club AI Chat', descZh: '与社团 AI 对话', descEn: 'Chat with the club assistant', keys: 'chat ai 对话' },
     { group: 'member', icon: '⚿', href: 'password-reset.html', zh: '重置密码', en: 'Password reset', descZh: '提交申请或使用秘钥改密', descEn: 'Request or complete a reset', keys: 'password 密码 重置' },
 
@@ -756,6 +757,7 @@
     { href: 'events-admin.html', requires: 'events', zh: '活动公告', en: 'Events' },
     { href: 'mall-admin.html', requires: 'mall', zh: '商城', en: 'Mall' },
     { href: 'join-admin.html', requires: 'join', zh: '报名', en: 'Join' },
+    { href: 'donations.html', requires: 'super', zh: '捐赠', en: 'Donations' },
     { href: 'chat-admin.html', requires: 'super', zh: 'Chat', en: 'Chat' }
   ];
 

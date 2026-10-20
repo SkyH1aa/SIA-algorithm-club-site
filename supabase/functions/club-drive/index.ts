@@ -2293,6 +2293,123 @@ async function deleteMallProduct(id: unknown) {
   return { ok: true };
 }
 
+const DONATION_AMOUNT_LIMIT = 9999999999.99;
+
+// 捐赠名单：金额以“分”为最小单位，避免浮点误差；日期只接受 YYYY-MM-DD。
+function donationFields(payload: Record<string, unknown>, user: { id?: string } | null, isUpdate = false) {
+  const donorName = asNonEmptyText(payload.donorName ?? payload.donor_name, '捐赠人姓名', 60);
+  const donatedOn = asDonationDate(payload.donatedOn ?? payload.donated_on ?? payload.date);
+  const amount = asDonationAmount(payload.amount ?? payload.donationAmount);
+  const now = new Date().toISOString();
+  return {
+    donor_name: donorName,
+    donated_on: donatedOn,
+    amount,
+    updated_by: user?.id || null,
+    updated_at: now,
+    ...(isUpdate ? {} : { created_by: user?.id || null })
+  };
+}
+
+function asDonationDate(value: unknown) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().slice(0, 10);
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) throw new Error('捐赠日期必须是 YYYY-MM-DD 格式。');
+  const parsed = new Date(`${raw}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== raw) throw new Error('捐赠日期不合法。');
+  const year = Number(raw.slice(0, 4));
+  if (year < 1900 || year > 2999) throw new Error('捐赠日期超出允许范围。');
+  return raw;
+}
+
+function asDonationAmount(value: unknown) {
+  const numeric = typeof value === 'number' ? value : Number(String(value ?? '').trim());
+  if (!Number.isFinite(numeric) || numeric <= 0) throw new Error('捐赠金额必须大于 0。');
+  if (numeric > DONATION_AMOUNT_LIMIT) throw new Error('捐赠金额超出允许范围。');
+  // 只保留两位小数；多余精度直接拒绝，避免静默改用户填写的金额。
+  const cents = Math.round(numeric * 100);
+  if (Math.abs(numeric * 100 - cents) > 1e-6) throw new Error('捐赠金额最多保留两位小数。');
+  return (cents / 100).toFixed(2);
+}
+
+async function listDonations() {
+  const { url, serviceKey } = supabaseConfig();
+  // 默认金额从大到小；同额时较新的日期在前，再以创建时间稳定排序。
+  const order = 'amount.desc,donated_on.desc,created_at.desc';
+  const response = await fetch(
+    `${url}/rest/v1/club_donations?select=id,donor_name,donated_on,amount,created_at,updated_at&order=${order}`,
+    { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` } }
+  );
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(detail.includes('Could not find the table') || detail.includes('relation')
+      ? '捐赠名单表尚未创建，请先执行 club-donations-schema.sql。'
+      : '读取捐赠名单失败。');
+  }
+  const rows = await response.json().catch(() => []);
+  return Array.isArray(rows) ? rows.map(donationPublicRow) : [];
+}
+
+function donationPublicRow(row: Record<string, unknown>) {
+  return {
+    id: String(row.id || ''),
+    donor_name: typeof row.donor_name === 'string' ? row.donor_name : '',
+    donated_on: typeof row.donated_on === 'string' ? row.donated_on.slice(0, 10) : '',
+    // numeric 在 PostgREST 中可能以字符串返回，统一格式化成两位小数。
+    amount: typeof row.amount === 'number' ? row.amount.toFixed(2) : String(row.amount ?? '0.00'),
+    created_at: row.created_at ?? null,
+    updated_at: row.updated_at ?? null
+  };
+}
+
+async function saveDonation(user: { id?: string } | null, payload: Record<string, unknown>) {
+  const { url, serviceKey } = supabaseConfig();
+  const id = payload.id;
+  const isUpdate = validUuid(id);
+  const fields = donationFields(payload, user, isUpdate);
+  const response = await fetch(
+    isUpdate
+      ? `${url}/rest/v1/club_donations?id=eq.${encodeURIComponent(String(id))}`
+      : `${url}/rest/v1/club_donations`,
+    {
+      method: isUpdate ? 'PATCH' : 'POST',
+      headers: {
+        apikey: serviceKey,
+        authorization: `Bearer ${serviceKey}`,
+        'content-type': 'application/json',
+        Prefer: 'return=representation'
+      },
+      body: JSON.stringify(fields)
+    }
+  );
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    const detail = typeof result === 'object' && result && 'message' in result
+      ? String((result as { message?: string }).message || '')
+      : '';
+    throw new Error(detail || (isUpdate ? '保存捐赠记录失败。' : '新增捐赠记录失败。'));
+  }
+  if (isUpdate && (!Array.isArray(result) || result.length !== 1)) throw new Error('未找到需要修改的捐赠记录。');
+  return donationPublicRow(Array.isArray(result) ? result[0] : result);
+}
+
+async function deleteDonation(id: unknown) {
+  if (!validUuid(id)) throw new Error('捐赠记录编号不合法。');
+  const { url, serviceKey } = supabaseConfig();
+  const response = await fetch(`${url}/rest/v1/club_donations?id=eq.${encodeURIComponent(String(id))}`, {
+    method: 'DELETE',
+    headers: {
+      apikey: serviceKey,
+      authorization: `Bearer ${serviceKey}`,
+      Prefer: 'return=representation'
+    }
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) throw new Error('删除捐赠记录失败。');
+  if (!Array.isArray(payload) || payload.length !== 1) throw new Error('未找到需要删除的捐赠记录。');
+  return { ok: true };
+}
+
 function showcaseMemberFields(payload: Record<string, unknown>, user: { id?: string } | null, isUpdate = false) {
   const name = asNonEmptyText(payload.name ?? payload.memberName, '姓名', 40);
   const memberClass = asOptionalText(payload.memberClass ?? payload.member_class ?? payload.grade, 80);
@@ -3068,6 +3185,24 @@ Deno.serve(async request => {
     if (payload.action === 'admin_showcase_members_delete') {
       try { await requirePermission(user, 'members'); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
       return json(await deleteShowcaseMember(payload.id));
+    }
+
+    if (payload.action === 'donations_list') {
+      // 已登录社员只读；金额不对外公开给未登录访客。
+      if (!user?.id) return json({ error: '请先登录。' }, 401);
+      return json({ donations: await listDonations() });
+    }
+    if (payload.action === 'admin_donations_list') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      return json({ donations: await listDonations() });
+    }
+    if (payload.action === 'admin_donations_save') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      return json({ donation: await saveDonation(user, payload) });
+    }
+    if (payload.action === 'admin_donations_delete') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      return json(await deleteDonation(payload.id));
     }
 
     if (payload.action === 'admin_join_applications_list') {
