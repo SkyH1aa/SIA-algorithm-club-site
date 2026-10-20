@@ -96,6 +96,12 @@
       return;
     }
     const fallback = defaultPanel();
+    if (expanded) {
+      /* 展开尺寸由 CSS 定义（屏幕四分之一面积）。必须清掉内联 inset/height，
+         否则拖拽留下的坐标和高度会盖住展开规则。 */
+      if (panel.style) { panel.style.inset = ''; panel.style.height = ''; }
+      return;
+    }
     const position = clampPanel(panelPosition || fallback || {x:12, y:12});
     panelPosition = position;
     if (!panel.style) return;

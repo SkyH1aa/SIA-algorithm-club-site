@@ -180,7 +180,7 @@ query action needs the separate earlier live-read upgrade; first installation an
 prior math/static updates have their own instructions in docs/chat-deployment/README.md.
 Preserve other club-drive actions and existing authentication.
 
-Offline validation passed: 187 real-handler mock integration cases, 115 plan/SSE
+Offline validation passed: 187 real-handler mock integration cases, 120 plan/SSE
 cases, fixed-read boundaries, retained protocol regressions, Chat core and knowledge
 checks. Type checks and Dashboard bundle/source consistency checks passed. These
 checks do not establish live provider semantics, endpoint permissions or deployment.

@@ -76,7 +76,7 @@ HTTP(S) 是正式运行环境。`file://` 仍受浏览器本地存储、认证�
 
 一次提问共用一个 request_id、一次额度准入、一个租约和一条审计；预留覆盖两次输入及有界计划/结果上下文，两次请求共享输出总预算，规划也计费，并须为最终回答留出预算。实际 usage 合并结算；缺失完整 usage、已启动后的失败/取消沿用保守计量，不能只结算较小的部分用量。每日准入仍读取当天 UTC 日桶（北京时间08:00重置），不读取管理页的90天 token 汇总。请求发出前若 `upstream_started` 标记失败，服务端只在数据库确认仍为 `audited` 且没有上游/usage证据时退款。额度保存只更改上限，不会清理此前已经记入日桶的用量或未结算预留。
 
-规划、读取和最终回答共用120秒整体期限，保留更短的平台限制与取消传播。一个计划最多两个读取，每个读取最多5秒、原响应64 KiB、返回 envelope 6000字节，汇总 evidence 最多16000字节；计划 JSON 最多8192字节。请求12 MiB、每次上游 SSE 2 MiB等限制保留。规划请求移除 `reasoning` 和 `include`，Claude Messages 规划阶段显式关闭 thinking；最终回答保留模型配置的 thinking/reasoning，并共享剩余输出预算。因此只需为最终回答保留 Claude enabled thinking 的最低输出空间，不要求双份思考最低预算。静态检索的完整有界资料段落保留到最终回答，而非只传来源卡片或规划摘要。
+规划、读取和最终回答共用120秒整体期限，保留更短的平台限制与取消传播。一个计划最多两个读取，每个读取最多5秒、原响应64 KiB、返回 envelope 6000字节，汇总 evidence 最多16000字节；计划 JSON 最多8192字节。请求12 MiB、每次上游 SSE 2 MiB等限制保留。规划请求移除 `reasoning` 和 `include`，Claude Messages 规划阶段显式关闭 thinking；最终回答保留模型配置的 thinking/reasoning，并共享剩余输出预算。因此只需为最终回答保留 Claude enabled thinking 的最低输出空间，不要求双份思考最低预算。静态检索的完整有界资料段落保留到最终回答，而非只传来源卡片或规划摘要。两阶段共用同一份折叠后的多轮历史（旧 assistant 消息作为不可信文本，不再原样重放），避免兼容网关在第二问拒绝历史消息；代码块包裹的单份 JSON 计划可恢复。规划输出非法或超限时不执行任何读取，而是由第二次请求诚实说明本轮无法完成，不再显示成网络故障。
 
 `catalog` 与压缩不查询业务数据。服务端收集来源和最终回答后发送标准 Responses SSE；准备期间界面保持生成状态，首字可能更晚。规划 JSON、文字/分析和内部参数隐藏，不发送给前端或保存到浏览器历史；只保留最终回答及来源，来源响应头不含数据行和原始筛选值。
 
@@ -84,12 +84,12 @@ HTTP(S) 是正式运行环境。`file://` 仍受浏览器本地存储、认证�
 
 1. 在 Supabase Dashboard → Edge Functions → Secrets **明确确认 `CLUB_SERVICE_ROLE_KEY` 这一名称存在**。`club-drive` 仍读取该名称，本次没有增加回退到 `SUPABASE_SERVICE_ROLE_KEY` 或其它名称的代码；仅有平台的 `SUPABASE_SERVICE_ROLE_KEY` 不满足此检查。缺失时由管理员在 Secrets 安全配置，值不得写进文档、代码、前端或模型配置。流程不引入新的密钥类型，也不扩大权限。
 2. 已有当前 `club-drive` 且包含 `assistant_read_query` 时，只需在核对部署产物后，将完整 [chat-dashboard-index.ts](chat-dashboard-index.ts) 替换到 `chat` → `index.ts`。保留鉴权设置；无需仅为两阶段切换重部署 `club-drive` 或 `chat-api-proxy`。若缺少该动作，属于此前只读查询功能升级，另按完整 [club-drive-dashboard-index.ts](club-drive-dashboard-index.ts) 处理并保留其它功能。
-3. 仅切换两阶段后端无需发布前端或 `chat-file-bundle.js`，无需更新预设、导入 seed 或重新发布知识版本；当前模型配置可以保持不变。首次安装、此前数学渲染及其它独立静态改动按对应章节处理。
+3. 仅切换两阶段后端无需发布前端或 `chat-file-bundle.js`，无需更新预设、导入 seed 或重新发布知识版本；当前模型配置可以保持不变。本次另改了浮窗放大尺寸：该修复需要发布 `public/assistant-launcher.js` 与 `public/assistant-launcher.css`，否则你会继续看到旧的半屏布局。首次安装、此前数学渲染及其它独立静态改动按对应章节处理。
 4. 后续用绑定成员核对普通 SSE、有效计划、两次请求、共享预算/审计、规划隐藏、权限、静态资料正文保留及实际数据来源的排序/页码/时间。真实模型语义与目标环境权限须独立核对，本地模拟不能证明这些行为。
 
 审计 `error_code` 只记录安全类别：计划解析/校验/大小为 `assistant_plan_json`、`assistant_plan_invalid`、`assistant_plan_arguments`、`assistant_plan_size`；规划调用为 `assistant_plan_http`、`assistant_plan_network`、`assistant_plan_stream`、`assistant_plan_usage`；回答调用为 `assistant_answer_http`、`assistant_answer_network`、`assistant_answer_stream`；预算与上限为 `assistant_output_budget`、`assistant_context`、`assistant_request_size`、`assistant_evidence_size`，未分类兜底为 `assistant_plan_failed`。不记录原始计划、参数/结果、供应商正文或密钥，错误类别不证明读取成功或可退款。
 
-契约及错误说明见 [两阶段只读记录](../assistant-validation/semantic-read-tools.md)。本地离线通过187项真实 handler mock 集成用例、115项计划与三协议 SSE 测试、固定只读执行器及保留旧路径回归；类型检查、Dashboard bundle 源码一致性和差异检查通过。没有发送真实模型请求或部署，不以本地结果保证供应商语义质量或线上权限。
+契约及错误说明见 [两阶段只读记录](../assistant-validation/semantic-read-tools.md)。本地离线通过187项真实 handler mock 集成用例、120项计划与三协议 SSE 测试、固定只读执行器及保留旧路径回归；类型检查、Dashboard bundle 源码一致性和差异检查通过。浮窗放大尺寸已在本地无头 Chrome 的 1440x900、1920x1080、1024x768 视口实测为 50%x50%（面积 25%）并居中。没有发送真实模型请求或部署，不以本地结果保证供应商语义质量或线上权限。
 
 ## 安全加固更新（Chat 与对外代理）
 
@@ -219,4 +219,4 @@ JSON 必须是对象，未知键拒绝。只有 enabled 可以有 `budget_tokens
 
 ## 当前验证边界
 
-两阶段运行时已接入，187项真实 handler mock 与115项计划/SSE用例通过，类型检查和 Dashboard bundle 一致性通过；完整命令与边界见两阶段只读记录。usage90day 的历史 PostgreSQL 执行验证使用 PGlite WASM runtime，范围与单连接限制见前文。没有代你登录 Supabase、运行线上 SQL、部署函数或调用真实供应商；本地验证不能证明网页上的旧函数已更新、模型真实语义质量或真实 pg_cron 已成功运行。
+两阶段运行时已接入，187项真实 handler mock 与120项计划/SSE用例通过，类型检查和 Dashboard bundle 一致性通过；完整命令与边界见两阶段只读记录。usage90day 的历史 PostgreSQL 执行验证使用 PGlite WASM runtime，范围与单连接限制见前文。没有代你登录 Supabase、运行线上 SQL、部署函数或调用真实供应商；本地验证不能证明网页上的旧函数已更新、模型真实语义质量或真实 pg_cron 已成功运行。

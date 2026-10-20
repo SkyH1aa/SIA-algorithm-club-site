@@ -9,7 +9,7 @@
 1. 规划请求：服务端在普通 Prompt 中提供固定规则、三个只读能力的名称、用途和 JSON 参数定义，模型仅返回一个 JSON 计划。计划为 `query`（一次列出 1–2 个读取）、`clarify`（需要澄清）或 `answer`（无需实时读取）。不依赖原生工具声明、函数调用或供应商专用 JSON 模式。
 2. 最终回答请求：服务端先严格校验完整计划，仅执行其中已验证的固定读取，再将有界结果及来源交给模型。无读取和需要澄清的计划也进入这次最终回答请求；最终模型只能作答或提出澄清，不能追加读取或再次规划。
 
-两次请求是正常成功路径的固定次数；校验失败、预算不足、超时或取消会提前结束，不为凑足次数继续调用，也不重试规划或发起第三次模型请求。供应商无需支持原生工具调用，但必须支持所选协议的普通 SSE 响应，规划阶段必须产生符合契约的有效 JSON 计划。非法计划或异常协议明确失败，不假装查询，不自动改用其它 Key 或供应商。
+两次请求是正常成功路径的固定次数；校验失败、预算不足、超时或取消会提前结束，不为凑足次数继续调用，也不重试规划或发起第三次模型请求。供应商无需支持原生工具调用，但必须支持所选协议的普通 SSE 响应，规划阶段必须产生符合契约的有效 JSON 计划。两阶段都使用折叠后的普通对话文本，不原样重放上一轮 assistant 消息。非法或超限计划零读取，并由第二次请求诚实说明无法完成；异常协议明确失败，不假装查询，不自动改用其它 Key 或供应商。
 
 - “帮我看一下当前积分榜谁的积分最高”：计划选择 `read_member_points`，`order_by=points,direction=desc,page=1,page_size=1`。
 - “帮我看一下五子棋排行榜谁的分数最低”：计划选择 `read_game_leaderboard`，`board=gomoku,order_by=total_score,direction=asc,page=1,page_size=1`。
@@ -72,7 +72,7 @@ Chat 入口仍要求绑定成员，并检查助手启用、发布模型、供应
 
 | error_code | 含义 |
 | --- | --- |
-| `assistant_plan_json` | 规划文本不是合法 JSON |
+| `assistant_plan_json` | 规划文本无法恢复为单个 JSON 对象（代码块包裹的单份对象可恢复，多对象/非对象仍拒绝）；若随后可获得第二次请求，则转为诚实说明而非网络错误 |
 | `assistant_plan_invalid` | 计划结构、action、字段或读取数量不合法 |
 | `assistant_plan_arguments` | 固定读取名称或参数验证失败 |
 | `assistant_plan_size` | 计划超过字节上限 |
@@ -89,18 +89,19 @@ Chat 入口仍要求绑定成员，并检查助手启用、发布模型、供应
 
 以下均为本地离线测试，未开放真实网络权限，不证明线上供应商语义质量、目标端点权限或线上数据可读：
 
-- `deno run --allow-env tools/test-chat-backend.ts`：187 项真实 handler mock 集成用例通过。覆盖两次普通模型请求、无原生工具字段、非法计划零读取、共享准入/租约/审计、合并 usage、额度收缩、取消、失败与退款边界。
-- `deno test --no-config --no-lock tools/test-chat-assistant-plan.ts`：115 项计划、三协议普通 SSE、参数边界、完整静态资料、Claude thinking 预算及取消回归通过。
+- `deno run --allow-env tools/test-chat-backend.ts`：187 项真实 handler mock 集成用例通过。覆盖两次普通模型请求、无原生工具字段、非法计划零读取、共享准入/租约/审计、合并 usage、额度收缩、取消、失败与退款边界。多轮历史统一折叠为不可信文本，避免兼容网关拒绝重放上一轮 assistant 消息；代码块包裹的单份计划可被恢复，多对象/非对象仍拒绝。
+- `deno test --no-config --no-lock tools/test-chat-assistant-plan.ts`：120 项计划、三协议普通 SSE、参数边界、完整静态资料、Claude thinking 预算及取消回归通过。
 - `deno run --no-remote --allow-read tools/test-chat-assistant-tools.ts`：10 组固定执行器及真实 club-drive handler 模拟通过，涵盖权限投影、维护状态、大整数、分页、同名和读取限额。
 - `tools/test-chat-protocol.ts`、`tools/test-chat-assistant-tool-protocol.ts`、`tools/test-chat-assistant-tool-loop.ts`、`tools/test-chat-assistant-live.ts` 的协议与保留旧路径回归通过。旧工具循环的通过不作为新运行时接入证据。
 - `node tools/test-chat-core.mjs`、`node tools/test-assistant-knowledge.mjs` 和 `node tools/build-assistant-preset.mjs --check` 通过。
+- 浮窗放大尺寸已用本地无头 Chrome 在 1440x900、1920x1080、1024x768 实测为视口 50%x50%（面积 25%）并居中；该浏览器检查不访问后端或供应商。
 - Chat、club-drive、共享助手模块、相关测试及三份 Dashboard 单文件均通过 `deno check`。`node tools/build-chat-dashboard-bundles.mjs --check` 确认三个 bundle 与完整 SQL 副本匹配源码；实际内容变更仅涉及 Chat bundle。`git diff --check` 通过。
 
 未运行浏览器或线上部署验收；本更新未改前端、数据库 schema、club-drive 源码或 Gomoku 数据/assets。
 
 ## 网页部署范围（本次不执行）
 
-已有当前助手且 `club-drive` 已包含 `assistant_read_query` 时，两阶段切换只需在部署产物核对后，将完整 `chat-dashboard-index.ts` 替换到 `chat` 的 `index.ts`。无需仅为此重部署 `club-drive` 或 `chat-api-proxy`，无需发布前端、file bundle、预设或 seed，无需重新保存/发布助手配置；当前模型配置可以保持不变。
+已有当前助手且 `club-drive` 已包含 `assistant_read_query` 时，两阶段切换只需在部署产物核对后，将完整 `chat-dashboard-index.ts` 替换到 `chat` 的 `index.ts`。无需仅为此重部署 `club-drive` 或 `chat-api-proxy`，无需发布前端、file bundle、预设或 seed，无需重新保存/发布助手配置；当前模型配置可以保持不变。若同时需要本次浮窗放大尺寸修复（屏幕四分之一面积），另行发布 `public/assistant-launcher.js` 与 `public/assistant-launcher.css`；它与后端两阶段无依赖关系。
 
 部署前仍明确核实 `CLUB_SERVICE_ROLE_KEY` 名称存在，没有代码回退。若 `club-drive` 尚不含上述动作，属于此前只读查询功能的升级，须另行使用完整 `club-drive-dashboard-index.ts`；首次安装和此前数学/静态资源更新也按 [网页部署说明](../chat-deployment/README.md) 对应章节单独处理，不是两阶段后端切换的前置发布清单。
 

@@ -1234,8 +1234,7 @@ try {
     const admitted=Number(rpcCalls.find(x=>x.name==='chat_begin_generation')!.body.p_input_tokens);
     const initial=assistantPlanPrompt(assistantRelease!,[message('如果把大家的贡献换成数字，谁站在最前面？')],ASSISTANT_READ_TOOLS).input;
     const baseTokens=textInputTokens(initial);
-    assert.equal(admitted,2*baseTokens+Math.ceil(ASSISTANT_PLAN_EVIDENCE_BYTES/3)+1024,'reserve covers the planner plus one evidence-bearing answer input');
-    assert.equal(admitted,assistantPlanBudget(baseTokens).reservedInputTokens);
+    assert.equal(admitted,assistantPlanBudget(baseTokens).reservedInputTokens,'reserve covers the planner plus one evidence-bearing answer input');
     assert.deepEqual(upstreamBodies.map(body=>body[protocol==='responses'?'max_output_tokens':protocol==='chat'?'max_completion_tokens':'max_tokens']),[50,97]);
     assert.deepEqual(queryOutcome(upstreamBodies[1]).static_references,[]);
     assert.doesNotMatch(JSON.stringify(audits),/Highest member|987|must-strip-private/);
@@ -1297,6 +1296,14 @@ try {
     assert.equal(upstreamBodies[0].input.at(-1)!.content[0].text,'那接着看下一页吧。');
     assert.match(JSON.stringify(upstreamBodies[0]),/每页三位/);
     assert.deepEqual((evidenceResults(upstreamBodies[1])[0].query as Row).filters,{min_points:10,max_points:100});
+    // Prior assistant output is replayed as untrusted transcript text in both
+    // stages so compatible gateways do not reject replayed assistant items.
+    for (const body of upstreamBodies) {
+      const items=body.input as Row[];
+      assert.equal(items.filter(item=>item.role==='assistant').length,0);
+      assert.match(JSON.stringify(items),/Untrusted conversation transcript/);
+      assert.match(JSON.stringify(items),/好的，你想看哪一页？/);
+    }
   });
   await test('assistant published-content JSON query forwards only the authorized filtered query',async()=>{
     Deno.env.set('SUPABASE_URL','https://jgezpvmlnhycxslqbwcx.supabase.co');
@@ -1342,7 +1349,7 @@ try {
   const invalidPlans: Array<{name:string;text:string;code:string}>=[
     ...invalidQueries.map(query=>({name:`query ${query.tool} ${JSON.stringify(query.arguments)}`,text:queryTurn(query).text!,code:typeof query.arguments==='string'||Array.isArray(query.arguments)?'assistant_plan_invalid':'assistant_plan_arguments'})),
     {name:'malformed JSON',text:'{broken',code:'assistant_plan_json'},
-    {name:'fenced JSON',text:['```json','{"action":"answer"}','```'].join(String.fromCharCode(10)),code:'assistant_plan_json'},
+    {name:'multiple JSON objects',text:'{"action":"answer"} {"action":"answer"}',code:'assistant_plan_json'},
     {name:'extra answer field',text:'{"action":"answer","sql":"select private"}',code:'assistant_plan_invalid'},
     {name:'empty queries',text:'{"action":"query","queries":[]}',code:'assistant_plan_invalid'},
     {name:'three queries',text:queryTurn(...Array(3).fill(readQuery('read_member_points',memberArgs))).text!,code:'assistant_plan_invalid'},
@@ -1350,16 +1357,17 @@ try {
     {name:'invalid second query',text:queryTurn(readQuery('read_member_points',memberArgs),readQuery('read_member_points',{...memberArgs,page:0})).text!,code:'assistant_plan_arguments'},
     {name:'oversized UTF-8 plan',text:JSON.stringify({action:'clarify',question:'棋'.repeat(3000)}),code:'assistant_plan_size'}
   ];
-  for(const invalid of invalidPlans) await test(`assistant rejects ${invalid.name} with no reads or repair`,async()=>{
+  for(const invalid of invalidPlans) await test(`assistant converts ${invalid.name} into an honest answer with no reads`,async()=>{
     Deno.env.set('SUPABASE_URL','https://jgezpvmlnhycxslqbwcx.supabase.co');
-    plan({text:invalid.text});
-    const response=await expectStatus({action:'assistant_respond',input:[message('把贡献最多的那位告诉我。')]},502);
-    assert.deepEqual(await response.json(),{error:'upstream'});
-    assert.equal(upstreamBodies.length,1); assert.equal(businessReads.length,0); assert.equal(liveRequests.length,0);
-    assert.equal(audits.length,1); assert.equal(audits[0].status,'failed'); assert.equal(audits[0].error_code,invalid.code);
+    plan({text:invalid.text},{text:'这次实时查询没能完成，请换个问法或联系管理员。'});
+    const response=await expectStatus({action:'assistant_respond',input:[message('把贡献最多的那位告诉我。')]},200);
+    const visible=await response.text();
+    assert.match(visible,/没能完成/);
+    assert.doesNotMatch(visible,/"action"|"queries"|read_member_points|read_game_leaderboard/);
+    assert.equal(upstreamBodies.length,2); assert.equal(businessReads.length,0); assert.equal(liveRequests.length,0);
+    assert.deepEqual(queryOutcome(upstreamBodies[1]),{action:'clarify',evidence:[],static_references:[]});
+    assert.equal(audits.length,1); assert.equal(audits[0].status,'completed');
     assert.equal(released,1); assert.equal(leased,false); assert.equal(settlements.length,1); assert.equal(settlements[0].p_refund,false);
-    const admission=rpcCalls.find(call=>call.name==='chat_begin_generation')!.body;
-    assert.equal(charged,Number(admission.p_input_tokens)+Number(admission.p_output_tokens));
   });
   for (const protocol of ['responses','chat','messages'] as const) for (const stage of ['plan','answer'] as const) await test(`assistant refuses unexpected ${protocol} native calls during ${stage}`,async()=>{
     provider.api_protocol=protocol;

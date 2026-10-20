@@ -166,8 +166,14 @@ const invalidPlans: Array<[string, unknown, string]> = [
 for (const [name, value, code] of invalidPlans) {
   Deno.test(`parse rejects ${name}`, () => assert.throws(() => parseAssistantReadPlan(JSON.stringify(value)), errorCode(code)));
 }
-for (const text of ['', '{broken', '{"action":"answer",}', '```json\n{"action":"answer"}\n```', 'Here is the plan: {"action":"answer"}', '{"action":"answer"} {"action":"answer"}']) {
+for (const text of ['', '{broken', '{"action":"answer",}', '{"action":"answer"} {"action":"answer"}', 'no object here']) {
   Deno.test(`parse rejects non-JSON plan ${JSON.stringify(text)}`, () => assert.throws(() => parseAssistantReadPlan(text), errorCode('assistant_plan_json')));
+}
+for (const text of ['null', '[]']) {
+  Deno.test(`parse rejects valid non-object JSON plan ${text}`, () => assert.throws(() => parseAssistantReadPlan(text), errorCode('assistant_plan_invalid')));
+}
+for (const text of ['```json\n{"action":"answer"}\n```', 'Here is the plan: {"action":"answer"}', ' {"action":"answer"} ']) {
+  Deno.test(`parse recovers one wrapped plan ${JSON.stringify(text)}`, () => assert.deepEqual(parseAssistantReadPlan(text), answerPlan));
 }
 const invalidArgs: Array<[string, { tool: string; arguments: Row }, Row]> = [
   ['missing required fields', member, {}],
@@ -203,7 +209,7 @@ Deno.test('parse enforces UTF-8 byte limit and budget reserves evidence for the 
   const multibyte = JSON.stringify({ action: 'clarify', question: '棋'.repeat(3000) });
   assert.ok(multibyte.length < ASSISTANT_PLAN_BYTES);
   assert.throws(() => parseAssistantReadPlan(multibyte), errorCode('assistant_plan_size'));
-  assert.deepEqual(assistantPlanBudget(100), { perTurnInputTokens: 6458, reservedInputTokens: 6558 });
+  assert.deepEqual(assistantPlanBudget(100), { perTurnInputTokens: 9530, reservedInputTokens: 10654 });
 });
 
 for (const protocol of protocols) {
@@ -269,16 +275,24 @@ for (const protocol of protocols) {
 
 for (const [name, text, code] of [
   ['malformed JSON', '{broken', 'assistant_plan_json'],
-  ['fenced JSON', '```json\n{"action":"answer"}\n```', 'assistant_plan_json'],
+  ['multiple JSON objects', '{"action":"answer"} {"action":"answer"}', 'assistant_plan_json'],
   ['invalid later query', JSON.stringify({ action: 'query', queries: [member, { ...leaderboard, arguments: { ...leaderboard.arguments, page: 0 } }] }), 'assistant_plan_arguments'],
   ['unknown later tool', JSON.stringify({ action: 'query', queries: [member, { ...leaderboard, tool: 'delete_users' }] }), 'assistant_plan_arguments'],
 ] as const) {
-  Deno.test(`run rejects ${name} before any execute or final dispatch`, async () => {
-    const f = fixture([() => textTurn('responses', text)]);
-    await assert.rejects(f.run(), errorCode(code));
-    assertStopped(f, 1);
+  Deno.test(`run converts ${name} into an honest answer with no reads`, async () => {
+    const f = fixture([() => textTurn('responses', text), () => textTurn('responses', 'could not complete this lookup')]);
+    const result = await f.run();
+    assert.equal(result.status, 'completed');
+    assertStopped(f, 2, 0, 1);
+    assert.deepEqual(f.answerInputs[0].plan, { action: 'error', error: code });
+    assert.equal(f.answerInputs[0].evidence.length, 0);
   });
 }
+Deno.test('run accepts a fenced plan and still executes no more than the validated reads', async () => {
+  const f = fixture([() => textTurn('responses', '```json\n' + JSON.stringify(answerPlan) + '\n```'), () => textTurn('responses', 'answer')]);
+  assert.equal((await f.run()).status, 'completed');
+  assertStopped(f, 2, 0, 1);
+});
 Deno.test('Responses planning falls back to text deltas when terminal output is absent', async () => {
   const f = fixture([
     () => sse([{ type: 'response.output_text.delta', delta: '{"action":' }, { type: 'response.output_text.delta', delta: '"answer"}' }, { type: 'response.completed', response: { usage: { input_tokens: 10, output_tokens: 7, total_tokens: 17 } } }]),
@@ -300,6 +314,7 @@ const upstreamFailures: Array<[string, Reply, string]> = [
 ];
 for (const [name, reply, suffix] of upstreamFailures) {
   for (const stage of ['plan', 'answer'] as const) {
+    if (name === 'incomplete terminal' && stage === 'answer') continue;
     Deno.test(`${stage}: ${name} fails closed`, async () => {
       const f = fixture(stage === 'plan' ? [reply] : [() => textTurn('responses', JSON.stringify(answerPlan)), reply]);
       await assert.rejects(f.run(), errorCode(`assistant_${stage}_${suffix}`));
@@ -307,6 +322,13 @@ for (const [name, reply, suffix] of upstreamFailures) {
     });
   }
 }
+Deno.test('answer: an incomplete terminal is preserved as a visible partial answer', async () => {
+  const f = fixture([() => textTurn('responses', JSON.stringify(answerPlan)), () => sse([{ type: 'response.incomplete', response: { status: 'incomplete', output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'partial answer' }] }], usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } } }])]);
+  const result = await f.run();
+  assert.equal(result.status, 'incomplete');
+  assert.match(JSON.stringify(result.events), /partial answer/);
+  assertStopped(f, 2, 0, 1);
+});
 Deno.test('wholly missing planning usage fails before executing queries', async () => {
   const f = fixture([() => textTurn('responses', JSON.stringify(queryPlan), 10, 7, false)]);
   await assert.rejects(f.run(), errorCode('assistant_plan_usage'));

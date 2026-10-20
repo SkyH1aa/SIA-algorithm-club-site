@@ -87,10 +87,11 @@ html[data-theme="light"] #club-assistant {
   box-shadow: none;
 }
 #club-assistant.is-expanded .club-assistant-panel {
-  /* 展开时用 !important 覆盖脚本写入的内联 inset。 */
-  inset: 16px !important;
-  width: auto;
-  height: auto;
+  /* 展开窗口约占屏幕四分之一面积（宽高各一半），居中且不覆盖整页。
+     用 !important 覆盖脚本写入的内联 inset 和高度。 */
+  inset: 25vh auto auto 25vw !important;
+  width: 50vw;
+  height: 50vh;
   max-height: none;
 }
 #club-assistant .club-assistant-head {
@@ -179,8 +180,12 @@ html[data-theme="light"] #club-assistant {
   html.club-assistant-mobile-open { overflow: hidden !important; }
 }
 @media (max-height: 520px) and (min-width: 601px) {
-  #club-assistant .club-assistant-panel,
-  #club-assistant.is-expanded .club-assistant-panel { height: calc(100dvh - 24px); }
+  #club-assistant .club-assistant-panel { height: calc(100dvh - 24px); }
+  #club-assistant.is-expanded .club-assistant-panel {
+    inset: 8vh auto auto 25vw !important;
+    width: 50vw;
+    height: 84vh;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   #club-assistant .club-assistant-ball { transition: none; }

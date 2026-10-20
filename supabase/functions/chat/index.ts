@@ -1,4 +1,4 @@
-import { AssistantError, assistantConfigData, assistantDocument, assistantInput, assistantPrompt, assistantPlanPrompt, assistantPlanAnswerPrompt, assistantToolSource, type AssistantRelease } from '../_shared/chat-assistant.ts';
+import { AssistantError, assistantConfigData, assistantDocument, assistantInput, assistantPrompt, assistantPlanPrompt, assistantPlanAnswerPrompt, assistantStageInput, assistantToolSource, type AssistantRelease, type AssistantJson } from '../_shared/chat-assistant.ts';
 import { ASSISTANT_READ_TOOLS, executeAssistantReadTool } from '../_shared/chat-assistant-tools.ts';
 import { assistantPlanBudget, runAssistantPlan, AssistantPlanError } from '../_shared/chat-assistant-plan.ts';
 import { hashKey, newKey, proxyBase, proxySecret, ProxyError, ROUTE_FIELDS } from '../_shared/chat-api-proxy.ts';
@@ -733,13 +733,17 @@ async function callAssistantTools(request: Request, ctx: RequestContext, release
   const prepared = assistantPlanPrompt(release, safe, ASSISTANT_READ_TOOLS);
   const input = prepared.input as Json[];
   validateInput(input, model);
-  const baseTokens = estimateInputTokens(input);
+  // Prior assistant turns are replayed as one untrusted transcript for provider
+  // compatibility; the current user turn and its attachments stay intact.
+  const stageInput = assistantStageInput(input as AssistantJson[]) as Json[];
+  validateInput(stageInput, model);
+  const baseTokens = estimateInputTokens(stageInput);
   const budget = assistantPlanBudget(baseTokens);
   const outputTokens = model.default_max_output_tokens;
   if (budget.perTurnInputTokens + outputTokens > model.context_window) throw new HttpError('context', 413);
   const effective = effectiveReasoning(model, protocol);
   const effort = effective.default_reasoning_effort;
-  const body: Json = { model: model.model_key, input, reasoning: effort ? { effort } : undefined,
+  const body: Json = { model: model.model_key, input: stageInput, reasoning: effort ? { effort } : undefined,
     include: model.preserve_reasoning ? ['reasoning.encrypted_content'] : undefined,
     max_output_tokens: outputTokens, store: false, stream: true };
   // Both stages use ordinary model requests inside one admission.
@@ -817,7 +821,8 @@ async function callAssistantTools(request: Request, ctx: RequestContext, release
         return evidence;
       },
       answerInput: (plan, evidence) => assistantPlanAnswerPrompt(release, safe,
-        { action: plan.action, ...(plan.action === 'clarify' ? { question: plan.question } : {}), evidence,
+        { action: plan.action === 'error' ? 'clarify' : plan.action, evidence,
+          ...(plan.action === 'clarify' ? { question: plan.question } : {}),
           static_references: JSON.parse(prepared.knowledge) }).input as Json[]
     });
     if (request.signal.aborted) throw new DOMException('Aborted', 'AbortError');
