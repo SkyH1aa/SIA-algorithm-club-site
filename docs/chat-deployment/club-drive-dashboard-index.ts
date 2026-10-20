@@ -2427,6 +2427,13 @@ function artcValidateQuery(input: unknown, clubOnly = false): artcQuery {
   return { ...input } as artcQuery;
 }
 function artcLiteral(value: string) { return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`; }
+// These values are closed server-side enums. Sending them unquoted avoids treating
+// the quote characters as part of a literal on PostgREST deployments that do not
+// enable quoted scalar parsing, while URLSearchParams still performs URL encoding.
+function artcEnumLiteral(value: string) { return value; }
+// Standalone eq filters receive a scalar value. URLSearchParams performs the
+// required URL encoding; adding PostgREST quote characters would compare them.
+function artcEqLiteral(value: string) { return value; }
 function artcOrder(query: artcQuery) {
   if (query.order_by === 'default') return query.dataset === 'announcements'
     ? `is_pinned.${query.direction},updated_at.desc,id.asc`
@@ -2437,21 +2444,21 @@ function artcOrder(query: artcQuery) {
 function artcParams(query: artcQuery, duplicateProbe = false) {
   const params = new URLSearchParams({ select: artcFields[query.dataset].join(','), order: artcOrder(query), limit: String(duplicateProbe ? 2 : query.page_size + 1), offset: String(duplicateProbe ? 0 : (query.page - 1) * query.page_size) });
   if (query.dataset === 'member_points') {
-    if (query.member_name !== undefined) params.set('member_name', `eq.${artcLiteral(String(query.member_name))}`);
+    if (query.member_name !== undefined) params.set('member_name', `eq.${artcEqLiteral(String(query.member_name))}`);
     if (!duplicateProbe) {
       if (query.min_points !== undefined) params.append('points', `gte.${query.min_points}`);
       if (query.max_points !== undefined) params.append('points', `lte.${query.max_points}`);
     }
   } else if (artcBoards.includes(query.dataset)) {
-    if (query.name !== undefined) params.set(query.dataset === 'platformer' ? 'username' : 'nickname', `eq.${artcLiteral(String(query.name))}`);
+    if (query.name !== undefined) params.set(query.dataset === 'platformer' ? 'username' : 'nickname', `eq.${artcEqLiteral(String(query.name))}`);
     const score = ['gomoku', 'platformer'].includes(query.dataset) ? 'total_score' : 'high_score';
     if (query.min_score !== undefined) params.append(score, `gte.${query.min_score}`);
     if (query.max_score !== undefined) params.append(score, `lte.${query.max_score}`);
   } else {
     params.set('is_published', 'eq.true');
     if (query.id !== undefined) params.set('id', `eq.${query.id}`);
-    if (query.category !== undefined) params.set('category', `eq.${artcLiteral(String(query.category))}`);
-    if (query.status !== undefined) params.set('status', `eq.${artcLiteral(String(query.status))}`);
+    if (query.category !== undefined) params.set('category', `eq.${artcEnumLiteral(String(query.category))}`);
+    if (query.status !== undefined) params.set('status', `eq.${artcEnumLiteral(String(query.status))}`);
     // A quoted, escaped POSIX regex is a literal substring. LIKE cannot represent a
     // literal * reliably because PostgREST aliases it to %, even inside quotes.
     if (query.title_contains !== undefined) {
@@ -2478,7 +2485,7 @@ function artcPublicRow(dataset: string, raw: unknown): artcRecord {
     } else if (key === 'signup_limit') {
       if (value !== null && (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1)) throw new Error('row_schema'); output[key] = value;
     } else {
-      const max = key === 'content' ? (dataset === 'events' ? 8000 : 5000) : key === 'summary' ? 500 : key === 'category' ? 40 : key === 'status' ? 20 : key === 'id' ? 36 : 120;
+      const max = key === 'content' ? (dataset === 'events' ? 16000 : 12000) : key === 'summary' ? 500 : key === 'category' ? 40 : key === 'status' ? 20 : key === 'id' ? 36 : 120;
       if (typeof value !== 'string' || value.length > max || ['title', 'category', 'id', 'status'].includes(key) && !value.trim()) throw new Error('row_schema');
       if (key === 'id' && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value) || key === 'status' && !artcStatuses.includes(value)) throw new Error('row_schema');
       output[key] = key === 'content' ? value.slice(0, 5000) : value;

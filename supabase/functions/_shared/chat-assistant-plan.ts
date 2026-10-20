@@ -75,6 +75,42 @@ export function parseAssistantReadPlan(text: string): AssistantReadPlan {
 
 export const ASSISTANT_PLAN_MAX_REQUESTS = 2;
 
+function apVisibleText(events: apJson[]): string {
+  const deltas = events.filter(event => event.type === 'response.output_text.delta')
+    .map(event => typeof event.delta === 'string' ? event.delta : '').join('');
+  if (deltas.trim()) return deltas;
+  return events.flatMap(event => {
+    if (!['response.completed', 'response.incomplete'].includes(String(event.type)) || !apRecord(event.response) || !Array.isArray(event.response.output)) return [];
+    return event.response.output.flatMap(item => apRecord(item) && Array.isArray(item.content) ? item.content : []);
+  }).filter(apRecord).filter(part => part.type === 'output_text')
+    .map(part => typeof part.text === 'string' ? part.text : '').join('');
+}
+function apAnswerFallback(input: apJson[]): string {
+  const firstUser = input.find(item => item.role === 'user');
+  const texts = (firstUser && Array.isArray(firstUser.content) ? firstUser.content : [])
+    .filter(apRecord).map(part => typeof part.text === 'string' ? part.text : '');
+  const chinese = /[\u3400-\u9fff]/.test(texts.join(' '));
+  return chinese ? '抱歉，我未能生成可见答复。' : 'Sorry, I could not produce a visible answer.';
+}
+function apEnsureVisibleAnswer(events: apJson[], input: apJson[]): apJson[] {
+  if (apVisibleText(events).trim()) return events;
+  const fallback = apAnswerFallback(input);
+  const terminalIndex = events.findIndex(event => event.type === 'response.completed' || event.type === 'response.incomplete');
+  if (terminalIndex < 0) return events;
+  const result = events.filter(event => event.type !== 'response.output_text.delta');
+  const finalTerminalIndex = result.findIndex(event => event.type === 'response.completed' || event.type === 'response.incomplete');
+  const terminal = result[finalTerminalIndex], response = apRecord(terminal.response) ? { ...terminal.response } : {};
+  const output = Array.isArray(response.output) ? response.output.map(item => {
+    if (!apRecord(item) || item.type !== 'message') return item;
+    return { ...item, content: Array.isArray(item.content) ? item.content.map(part =>
+      apRecord(part) && part.type === 'output_text' ? { ...part, text: fallback } : part) : [{ type: 'output_text', text: fallback }] };
+  }) : [];
+  response.output = output;
+  result[finalTerminalIndex] = { ...terminal, response };
+  result.splice(finalTerminalIndex, 0, { type: 'response.output_text.delta', delta: fallback });
+  return result;
+}
+
 export function assistantPlanBudget(inputTokens: number) {
   // One planning call, then the answer call carrying bounded evidence.
   const perTurnInputTokens = inputTokens + Math.ceil(ASSISTANT_PLAN_EVIDENCE_BYTES / 3) + 4096;
@@ -162,8 +198,9 @@ export async function runAssistantPlan(options: {
     const evidence = plan.action === 'query' ? await apRace(options.execute(plan, controller.signal), controller.signal) : [];
     if (controller.signal.aborted) throw apAbort();
     if (apEncoder.encode(JSON.stringify(evidence)).length > ASSISTANT_PLAN_EVIDENCE_BYTES) apFail('assistant_evidence_size');
-    const result = await turn(options.answerInput(plan, evidence), 'answer');
-    return { events: result.events, status: result.status === 'completed' ? 'completed' : 'incomplete' as const,
+    const finalInput = options.answerInput(plan, evidence);
+    const result = await turn(finalInput, 'answer');
+    return { events: apEnsureVisibleAnswer(result.events, finalInput), status: result.status === 'completed' ? 'completed' : 'incomplete' as const,
       usage: usageComplete ? { ...usage, total_tokens: Math.max(usage.total_tokens!, usage.input_tokens! + usage.output_tokens!) } : { input_tokens: null, output_tokens: null, total_tokens: null } };
   } finally { controller.abort(); clearTimeout(timer); options.signal.removeEventListener('abort', abort); }
 }

@@ -1,15 +1,17 @@
 Assistant administration deployment draft (instructions only)
 
-1. The two-stage runtime is connected to Chat. This backend switch changes no SQL
-   and performs no SQL execution or deployment. For an existing current assistant
-   whose club-drive already contains assistant_read_query, only replace the complete
-   chat index.ts with chat-dashboard-index.ts after checking the deployment artifact.
-   No club-drive/proxy redeployment, frontend/file-bundle publication, preset/seed
-   change or knowledge republish is required just for this switch. Current model
-   configuration can stay. A club-drive without that action needs the separate
-   earlier live-read upgrade using its complete source, preserving other actions.
-   First installations and prior math/static updates remain separate procedures in
-   docs/chat-deployment/README.md, not required publication steps for this switch.
+1. The two-stage runtime is connected to Chat. For the current announcement-query
+   and named-leaderboard-filter repair, replace and deploy both complete Dashboard
+   files: chat-dashboard-index.ts to chat/index.ts and club-drive-dashboard-index.ts
+   to club-drive/index.ts. The two functions contain synchronized but independent
+   read-query code; deploying only chat leaves category filters, name equality and
+   long-content validation stale in club-drive.
+   This repair changes no SQL, performs no SQL execution, does not call a paid
+   provider, and does not require a model/preset/seed or knowledge republish.
+   chat-api-proxy does not need redeployment for this repair. If club-drive lacks
+   assistant_read_query entirely, use the earlier full live-read upgrade while
+   preserving its other actions. First installations and prior math/static updates
+   remain separate procedures in docs/chat-deployment/README.md.
    Explicitly check Dashboard > Edge Functions > Secrets for the exact name
    CLUB_SERVICE_ROLE_KEY. club-drive still reads that name; no code fallback to
    SUPABASE_SERVICE_ROLE_KEY or any other name was added. The platform's
@@ -17,7 +19,7 @@ Assistant administration deployment draft (instructions only)
    configure it securely in Secrets; never write any key value in docs, code,
    frontend, model configuration or validation records. No new key type or model
    administrator privilege is introduced.
-   Offline validation passed: 187 real-handler mock cases, 120 plan/SSE cases,
+   Offline validation passed: 188 real-handler mock cases, 126 plan/SSE cases,
    fixed-read and protocol regressions, type checks and Dashboard bundle/source
    consistency checks. This does not establish deployment or live model behavior.
    No PowerShell, Supabase CLI or build commands are required for web deployment.

@@ -273,6 +273,45 @@ for (const protocol of protocols) {
   });
 }
 
+for (const [name, finalText, language, reasoningOnly] of [
+  ['empty', '', 'en', false],
+  ['whitespace-only', ' \t\n', 'zh', false],
+  ['reasoning-only', '', 'en', true],
+] as const) {
+  Deno.test(`blank final ${name} answer gets a localized visible fallback`, async () => {
+    const initial = [{ role: 'user', content: [{ type: 'input_text', text: language === 'zh' ? '请查询结果' : 'Please summarize the result' }] }];
+    const blank: Reply = () => reasoningOnly
+      ? sse([
+        { type: 'response.reasoning_summary_text.delta', delta: 'I considered the answer.' },
+        { type: 'response.completed', response: { status: 'completed', output: [{ type: 'reasoning', summary: [{ type: 'summary_text', text: 'I considered the answer.' }] }, { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: '' }] }], usage: { input_tokens: 20, output_tokens: 11, total_tokens: 31 } } },
+      ])
+      : textTurn('responses', finalText, 20, 11);
+    const f = fixture([() => textTurn('responses', JSON.stringify(answerPlan)), blank], { body: { model: 'mock-only', input: initial, stream: true, store: false }, answerInput: () => initial });
+    const result = await f.run();
+    assert.equal(result.status, 'completed');
+    assert.match(JSON.stringify(result.events), language === 'zh' ? /抱歉，我未能生成可见答复。/ : /Sorry, I could not produce a visible answer\./);
+    assert.equal(result.events.filter(event => event.type === 'response.output_text.delta').length, 1);
+    assert.deepEqual(result.usage, { input_tokens: 30, output_tokens: 18, total_tokens: 48 });
+    assertStopped(f, 2, 0, 1);
+  });
+}
+Deno.test('blank final answer localizes fallback from Chinese user input', async () => {
+  const initial = [{ role: 'user', content: [{ type: 'input_text', text: '请说明结果' }] }];
+  const f = fixture([() => textTurn('responses', JSON.stringify(answerPlan)), () => textTurn('responses', '  ', 20, 11)], { body: { model: 'mock-only', input: initial, stream: true, store: false }, answerInput: () => initial });
+  const result = await f.run();
+  assert.match(JSON.stringify(result.events), /抱歉，我未能生成可见答复。/);
+  assert.doesNotMatch(JSON.stringify(result.events), /Sorry, I could not produce/);
+  assertStopped(f, 2, 0, 1);
+});
+Deno.test('partial final text is preserved and never duplicated by fallback', async () => {
+  const f = fixture([() => textTurn('responses', JSON.stringify(answerPlan)), () => textTurn('responses', 'Partial answer', 20, 11)]);
+  const result = await f.run();
+  const visible = JSON.stringify(result.events);
+  assert.equal((visible.match(/Partial answer/g) || []).length, 2); // delta plus terminal snapshot
+  assert.doesNotMatch(visible, /could not produce a visible answer/);
+  assertStopped(f, 2, 0, 1);
+});
+
 for (const [name, text, code] of [
   ['malformed JSON', '{broken', 'assistant_plan_json'],
   ['multiple JSON objects', '{"action":"answer"} {"action":"answer"}', 'assistant_plan_json'],
@@ -435,6 +474,16 @@ Deno.test('cancellation during query execution prevents final dispatch', async (
   assert.equal(executionSignal?.aborted, true);
 });
 
+Deno.test('announcement and named leaderboard planning preserve explicit filters', () => {
+  const release: AssistantRelease = { id: 'release', config: { enabled: true, model_id: null, system_prompt: '', welcome: '', suggestions: [], version: 1, current_release_id: null }, documents: [] };
+  const broad = JSON.stringify(assistantPlanPrompt(release, [{ role: 'user', content: [{ type: 'input_text', text: '请查询社团公告' }] }], ASSISTANT_READ_TOOLS).input);
+  assert.match(broad, /without an explicit title or category/);
+  assert.match(broad, /use updated_at desc/);
+  const categorized = JSON.stringify(assistantPlanPrompt(release, [{ role: 'user', content: [{ type: 'input_text', text: '查询课程安排类公告' }] }], ASSISTANT_READ_TOOLS).input);
+  assert.match(categorized, /do not turn the category into title_contains/);
+  const namedBoard = JSON.stringify(assistantPlanPrompt(release, [{ role: 'user', content: [{ type: 'input_text', text: '查询昵称为小明的五子棋排行榜' }] }], ASSISTANT_READ_TOOLS).input);
+  assert.match(namedBoard, /pass that explicit nickname as the read_game_leaderboard name filter/);
+});
 Deno.test('static facts beyond citation excerpts reach the answer with stable source IDs', () => {
   const fact = 'Membership fee is 42 tokens.';
   const release: AssistantRelease = { id: 'release', config: { enabled: true, model_id: null, system_prompt: '', welcome: '', suggestions: [], version: 1, current_release_id: null }, documents: [

@@ -80,16 +80,20 @@ HTTP(S) 是正式运行环境。`file://` 仍受浏览器本地存储、认证�
 
 `catalog` 与压缩不查询业务数据。服务端收集来源和最终回答后发送标准 Responses SSE；准备期间界面保持生成状态，首字可能更晚。规划 JSON、文字/分析和内部参数隐藏，不发送给前端或保存到浏览器历史；只保留最终回答及来源，来源响应头不含数据行和原始筛选值。
 
-两阶段运行时已接入 Chat。**本更新不改 SQL、不执行 SQL，本次不部署。** 以下说明已有当前助手的后端切换范围；首次安装和此前数学/静态资源更新仍按各自章节单独处理。
+两阶段运行时已接入 Chat。以下是本轮公告查询和榜单指定姓名过滤修复的增量部署范围：**不改 SQL、不执行 SQL，不更新助手模型/预设配置，也不调用真实供应商。**
 
-1. 在 Supabase Dashboard → Edge Functions → Secrets **明确确认 `CLUB_SERVICE_ROLE_KEY` 这一名称存在**。`club-drive` 仍读取该名称，本次没有增加回退到 `SUPABASE_SERVICE_ROLE_KEY` 或其它名称的代码；仅有平台的 `SUPABASE_SERVICE_ROLE_KEY` 不满足此检查。缺失时由管理员在 Secrets 安全配置，值不得写进文档、代码、前端或模型配置。流程不引入新的密钥类型，也不扩大权限。
-2. 已有当前 `club-drive` 且包含 `assistant_read_query` 时，只需在核对部署产物后，将完整 [chat-dashboard-index.ts](chat-dashboard-index.ts) 替换到 `chat` → `index.ts`。保留鉴权设置；无需仅为两阶段切换重部署 `club-drive` 或 `chat-api-proxy`。若缺少该动作，属于此前只读查询功能升级，另按完整 [club-drive-dashboard-index.ts](club-drive-dashboard-index.ts) 处理并保留其它功能。
-3. 仅切换两阶段后端无需发布前端或 `chat-file-bundle.js`，无需更新预设、导入 seed 或重新发布知识版本；当前模型配置可以保持不变。本次另改了浮窗放大尺寸：该修复需要发布 `public/assistant-launcher.js` 与 `public/assistant-launcher.css`，否则你会继续看到旧的半屏布局。首次安装、此前数学渲染及其它独立静态改动按对应章节处理。
-4. 后续用绑定成员核对普通 SSE、有效计划、两次请求、共享预算/审计、规划隐藏、权限、静态资料正文保留及实际数据来源的排序/页码/时间。真实模型语义与目标环境权限须独立核对，本地模拟不能证明这些行为。
+1. 在 Supabase Dashboard → Edge Functions → Secrets **明确确认 `CLUB_SERVICE_ROLE_KEY` 这一名称存在**。`club-drive` 仍读取该名称，本轮没有增加回退到 `SUPABASE_SERVICE_ROLE_KEY` 或其它名称的代码；仅有平台的 `SUPABASE_SERVICE_ROLE_KEY` 不满足此检查。缺失时由管理员在 Secrets 安全配置，值不得写进文档、代码、前端或模型配置。流程不引入新的密钥类型，也不扩大权限。
+2. 将完整 [chat-dashboard-index.ts](chat-dashboard-index.ts) 替换到 `chat` → `index.ts` 并部署。该 bundle 包含公告规划约束、榜单指定姓名过滤、空答复保底、分类精确过滤和正文校验/截断逻辑。
+3. **同时**将完整 [club-drive-dashboard-index.ts](club-drive-dashboard-index.ts) 替换到 `club-drive` → `index.ts` 并部署。`club-drive` 内含独立的只读查询副本；两边必须使用同一轮生成的 bundle，不能只更新 `chat`。保留原有鉴权设置和其它动作。
+4. 本轮不需要重新部署 `chat-api-proxy`，不需要执行 SQL，不需要更新助手模型、预设、seed 或重新发布知识版本。若此前环境尚未部署 `assistant_read_query`，先按上方首次只读查询升级步骤完整部署 `club-drive`。
+5. 若尚未发布此前的浮窗尺寸修复，还需按网站原有方式发布 `public/assistant-launcher.js` 与 `public/assistant-launcher.css`；本轮公告查询本身不改变这两个文件。
+6. 部署后用绑定成员分别验证：无分类查询“社团公告”、五种分类查询、确实无匹配时的空结果、公告正文过长时的正常截断，以及“查询指定昵称的五子棋排行榜”与不带昵称的前几名查询返回一致。真实模型语义、目标项目权限和线上数据仍须独立核对；本地模拟不能证明线上结果。
+
+此前仅切换两阶段后端的部署说明仍适用于只更新 `chat` 的历史场景，但不适用于本轮公告过滤修复，因为本轮同步修改了 `club-drive` 的独立副本。
 
 审计 `error_code` 只记录安全类别：计划解析/校验/大小为 `assistant_plan_json`、`assistant_plan_invalid`、`assistant_plan_arguments`、`assistant_plan_size`；规划调用为 `assistant_plan_http`、`assistant_plan_network`、`assistant_plan_stream`、`assistant_plan_usage`；回答调用为 `assistant_answer_http`、`assistant_answer_network`、`assistant_answer_stream`；预算与上限为 `assistant_output_budget`、`assistant_context`、`assistant_request_size`、`assistant_evidence_size`，未分类兜底为 `assistant_plan_failed`。不记录原始计划、参数/结果、供应商正文或密钥，错误类别不证明读取成功或可退款。
 
-契约及错误说明见 [两阶段只读记录](../assistant-validation/semantic-read-tools.md)。本地离线通过187项真实 handler mock 集成用例、120项计划与三协议 SSE 测试、固定只读执行器及保留旧路径回归；类型检查、Dashboard bundle 源码一致性和差异检查通过。浮窗放大尺寸已在本地无头 Chrome 的 1440x900、1920x1080、1024x768 视口实测为 50%x50%（面积 25%）并居中。没有发送真实模型请求或部署，不以本地结果保证供应商语义质量或线上权限。
+契约及错误说明见 [两阶段只读记录](../assistant-validation/semantic-read-tools.md)。本地离线通过188项真实 handler mock 集成用例、126项计划与三协议 SSE 测试、固定只读执行器及保留旧路径回归；类型检查、Dashboard bundle 源码一致性和差异检查通过。浮窗放大尺寸已在本地无头 Chrome 的 1440x900、1920x1080、1024x768 视口实测为 50%x50%（面积 25%）并居中。没有发送真实模型请求或部署，不以本地结果保证供应商语义质量或线上权限。
 
 ## 安全加固更新（Chat 与对外代理）
 
@@ -219,4 +223,4 @@ JSON 必须是对象，未知键拒绝。只有 enabled 可以有 `budget_tokens
 
 ## 当前验证边界
 
-两阶段运行时已接入，187项真实 handler mock 与120项计划/SSE用例通过，类型检查和 Dashboard bundle 一致性通过；完整命令与边界见两阶段只读记录。usage90day 的历史 PostgreSQL 执行验证使用 PGlite WASM runtime，范围与单连接限制见前文。没有代你登录 Supabase、运行线上 SQL、部署函数或调用真实供应商；本地验证不能证明网页上的旧函数已更新、模型真实语义质量或真实 pg_cron 已成功运行。
+两阶段运行时已接入，188项真实 handler mock 与126项计划/SSE用例通过，类型检查和 Dashboard bundle 一致性通过；完整命令与边界见两阶段只读记录。usage90day 的历史 PostgreSQL 执行验证使用 PGlite WASM runtime，范围与单连接限制见前文。没有代你登录 Supabase、运行线上 SQL、部署函数或调用真实供应商；本地验证不能证明网页上的旧函数已更新、模型真实语义质量或真实 pg_cron 已成功运行。

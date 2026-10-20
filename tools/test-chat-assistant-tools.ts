@@ -58,6 +58,7 @@ await pass('all six boards use fixed anonymous routes and database highest/lowes
     const nameKey = board === 'platformer' ? 'username' : 'nickname';
     for (const order_by of [score, nameKey]) {
       let reads = 0;
+      const requestedName = 'a,b)%_"';
       const fetcher = (async (input, init) => {
         const url = new URL(String(input)), headers = new Headers(init?.headers);
         assert.equal(url.origin, project); assert.equal(init?.redirect, 'error');
@@ -68,15 +69,50 @@ await pass('all six boards use fixed anonymous routes and database highest/lowes
         assert.equal(url.pathname, `/rest/v1/${board === 'platformer' ? 'platformer_leaderboard' : `${board}_players`}`);
         assert.equal(url.searchParams.get('limit'), '3'); assert.equal(url.searchParams.get('offset'), '4');
         assert.equal(url.searchParams.get('order'), `${order_by}.${direction}.nullslast${board === 'platformer' ? order_by === 'username' ? '' : ',username.asc' : `,updated_at.asc${order_by === 'nickname' ? '' : ',nickname.asc'}`}`);
-        assert.equal(url.searchParams.get(nameKey), 'eq."a,b)%_\\""');
+        assert.equal(url.searchParams.get(nameKey), `eq.${requestedName}`);
         assert.deepEqual(url.searchParams.getAll(score), [`gte.${board.endsWith('_versus') ? '-9223372036854775808' : '0'}`, 'lte.9223372036854775807']);
-        const data = board === 'gomoku' ? gomoku() : board === 'platformer' ? { username: 'runner', total_score: '9007199254740993' } : { nickname: 'player', games_played: 2, high_score: board.endsWith('_versus') ? -7 : 7 };
-        return json([data, data, data].map(row => ({ ...row, id: 'private', password_hash: 'private', session_token: 'private' })));
+        const matching = board === 'gomoku' ? gomoku(requestedName) : board === 'platformer' ? { username: requestedName, total_score: '9007199254740993' } : { nickname: requestedName, games_played: 2, high_score: board.endsWith('_versus') ? -7 : 7 };
+        const nearMiss = { ...matching, [nameKey]: `${requestedName}x` };
+        const rows: Row[] = [matching, matching, matching, nearMiss];
+        const filter = url.searchParams.get(nameKey);
+        const decodedName = filter?.startsWith('eq.') ? filter.slice(3) : undefined;
+        const filtered = decodedName === undefined ? rows : rows.filter(row => row[nameKey] === decodedName);
+        return json(filtered.map(row => ({ ...row, id: 'private', password_hash: 'private', session_token: 'private' })));
       }) as typeof fetch;
-      const result = await card('read_game_leaderboard', { ...boardArgs, board, order_by, direction, page: 3, page_size: 2, name: 'a,b)%_"', min_score: board.endsWith('_versus') ? '-9223372036854775808' : '0', max_score: '9223372036854775807' }, fetcher);
+      const result = await card('read_game_leaderboard', { ...boardArgs, board, order_by, direction, page: 3, page_size: 2, name: requestedName, min_score: board.endsWith('_versus') ? '-9223372036854775808' : '0', max_score: '9223372036854775807' }, fetcher);
       assert.equal(reads, 1); assert.equal(result.status, 'success'); assert.equal(result.has_more, true); assert.equal(result.returned_count, 2);
       assert(!JSON.stringify(result).includes('private')); assert.equal(result.query.page, 3);
     }
+  }
+});
+
+await pass('exact board names use decoded equality for Unicode, separators and near misses', async () => {
+  const names = ['小明', 'a,b)%_"', '反\\斜杠 & 其他', 'eq.a+b?#'];
+  for (const board of ['gomoku', 'tetris', 'tetris_versus', 'snake', 'snake_versus', 'platformer']) for (const name of names) {
+    const nameKey = board === 'platformer' ? 'username' : 'nickname';
+    const target = board === 'gomoku' ? gomoku(name) : board === 'platformer' ? { username: name, total_score: 3 } : { nickname: name, games_played: 2, high_score: 3 };
+    const rows: Row[] = [target, { ...target, [nameKey]: `${name}x` }];
+    const urls: URL[] = [];
+    const fetcher = (async input => {
+      const url = new URL(String(input));
+      if (url.pathname === '/functions/v1/club-drive') return json(gate);
+      if (url.pathname.endsWith('/rpc/platformer_service_status')) return json([{ enabled: true }]);
+      assert.equal(url.pathname, `/rest/v1/${board === 'platformer' ? 'platformer_leaderboard' : `${board}_players`}`);
+      urls.push(url);
+      const filter = url.searchParams.get(nameKey);
+      const filtered = filter === null ? rows : rows.filter(row => filter === `eq.${row[nameKey]}`);
+      const offset = Number(url.searchParams.get('offset'));
+      return json(filtered.slice(offset, offset + Number(url.searchParams.get('limit'))));
+    }) as typeof fetch;
+    const args = { ...boardArgs, board, order_by: ['gomoku', 'platformer'].includes(board) ? 'total_score' : 'high_score', page_size: 2 };
+    const broad = await card('read_game_leaderboard', args, fetcher);
+    assert.equal(broad.status, 'success'); assert.equal(urls.at(-1)!.searchParams.has(nameKey), false);
+    assert.deepEqual(broad.data, rows);
+    const exact = await card('read_game_leaderboard', { ...args, name }, fetcher);
+    assert.equal(urls.at(-1)!.searchParams.get(nameKey), `eq.${name}`);
+    assert.equal(exact.status, 'success', `${board}: ${name}`); assert.deepEqual(exact.data, [broad.data[0]]); assert.equal(exact.has_more, false);
+    const missing = await card('read_game_leaderboard', { ...args, name: `${name}不存在` }, fetcher);
+    assert.equal(missing.status, 'empty'); assert.deepEqual(missing.data, []);
   }
 });
 
@@ -165,13 +201,16 @@ await pass('real handler database pagination highest/lowest and exact-name ambig
     assert.equal(url.searchParams.get('offset'), '6'); assert.equal(url.searchParams.get('limit'), '3'); assert.deepEqual(url.searchParams.getAll('points'), ['gte.0', 'lte.9']);
     assert.equal(url.searchParams.get('select'), 'member_name,points');
   }
-  dbCalls = []; dbRead = () => [{ member_name: 'Same', points: 1 }, { member_name: 'Same', points: 999 }];
+  dbCalls = []; dbRead = url => {
+    assert.equal(url.searchParams.get('member_name'), 'eq.Same');
+    return [{ member_name: 'Same', points: 1 }, { member_name: 'Same', points: 999 }].filter(row => row.member_name === url.searchParams.get('member_name')?.slice(3));
+  };
   const ambiguous = await card('read_member_points', { ...common, page: 90, page_size: 1, member_name: 'Same', min_points: 500 }, integratedFetch);
   assert.equal(ambiguous.status, 'ambiguous'); assert.deepEqual(ambiguous.data, []); assert.equal(ambiguous.has_more, null);
-  assert.equal(dbCalls.length, 1); assert.equal(dbCalls[0].searchParams.get('offset'), '0'); assert.equal(dbCalls[0].searchParams.get('limit'), '2'); assert.equal(dbCalls[0].searchParams.has('points'), false);
+  assert.equal(dbCalls.length, 1); assert.equal(dbCalls[0].searchParams.get('member_name'), 'eq.Same'); assert.equal(dbCalls[0].searchParams.get('offset'), '0'); assert.equal(dbCalls[0].searchParams.get('limit'), '2'); assert.equal(dbCalls[0].searchParams.has('points'), false);
   dbCalls = []; dbRead = url => url.searchParams.get('limit') === '2' ? [{ member_name: 'Unique', points: 7 }] : [];
   const unique = await card('read_member_points', { ...common, page: 2, member_name: 'Unique' }, integratedFetch);
-  assert.equal(unique.status, 'empty'); assert.equal(unique.has_more, false); assert.equal(dbCalls.length, 2);
+  assert.equal(unique.status, 'empty'); assert.equal(unique.has_more, false); assert.equal(dbCalls.length, 2); assert(dbCalls.every(url => url.searchParams.get('member_name') === 'eq.Unique'));
   dbRead = () => [{ member_name: 'Same', points: 1 }, { member_name: 'Same', points: 2 }];
   const listing = await card('read_member_points', common, integratedFetch); assert.equal(listing.data.length, 2); // No collapse of unfiltered same names.
 });
@@ -182,6 +221,7 @@ await pass('published IDs always retain publication filters, literal substring e
     const result = await card('read_published_content', { ...publishedArgs, kind, order_by, id: uuid, title_contains: '100%_*.(x),"\\|', category: '社团通知', ...(kind === 'events' ? { status: '报名中' } : {}), date_field: 'starts_at', after: '2026-01-01T00:00:00Z', before: '2027-01-01T00:00:00Z' }, integratedFetch);
     assert.equal(result.status, 'success'); assert.equal(result.has_more, false); assert(!JSON.stringify(result).includes('private'));
     const url = dbCalls[0]; assert.equal(url.searchParams.get('is_published'), 'eq.true'); assert.equal(url.searchParams.get('id'), `eq.${uuid}`);
+    assert.equal(url.searchParams.get('category'), 'eq.社团通知'); assert.equal(url.searchParams.get('status'), kind === 'events' ? 'eq.报名中' : null);
     assert.equal(url.searchParams.get('title'), 'match."100%_\\\\*\\\\.\\\\(x\\\\),\\"\\\\\\\\\\\\|"');
     assert.deepEqual(url.searchParams.getAll('starts_at'), ['gte.2026-01-01T00:00:00Z', 'lte.2027-01-01T00:00:00Z']);
     assert.equal(url.searchParams.get('limit'), '21'); assert.equal(url.searchParams.get('offset'), '0');
@@ -191,6 +231,33 @@ await pass('published IDs always retain publication filters, literal substring e
   dbRead = () => [published(), { title: 'malformed' }]; assert.equal((await card('read_published_content', { ...publishedArgs, page_size: 1 }, integratedFetch)).status, 'unavailable');
   serviceGate = { enabled: false, feature_settings: {} }; dbCalls = []; dbRead = () => { throw new Error('paused'); };
   assert.equal((await endpoint({ action: 'assistant_read_query', query: { ...common, dataset: 'member_points' } })).status, 503); assert.equal(dbCalls.length, 0); serviceGate = gate;
+});
+
+await pass('announcement filters use database semantics and long content is shortened after validation', async () => {
+  const categories = ['社团通知', '课程安排', '比赛信息', '活动报名', '其他'];
+  const rows: Row[] = categories.map((category, index) => ({ ...published('announcements', `正文 ${category}`), id: `12345678-1234-1234-1234-123456789ab${index}`, category, title: `${category} 公告` }));
+  const longRows: Row[] = categories.map((category, index) => ({ ...rows[index], content: (`正文 ${category} `).repeat(1500) }));
+  const unpublished: Row = { ...rows[0], id: '12345678-1234-1234-1234-123456789999', is_published: false, title: '草稿公告' };
+  dbRead = url => {
+    const category = url.searchParams.get('category')?.slice('eq.'.length);
+    const source = category ? longRows : rows;
+    const title = url.searchParams.get('title');
+    const publishedRows = [...source, unpublished].filter(row => row.is_published === true && (!category || row.category === category) && (!title || (title.includes('不存在') ? String(row.title).includes('不存在') : true)));
+    return publishedRows.slice(Number(url.searchParams.get('offset') || 0), Number(url.searchParams.get('offset') || 0) + Number(url.searchParams.get('limit') || 0));
+  };
+  const all = await card('read_published_content', { ...publishedArgs, kind: 'announcements', page_size: 5 }, integratedFetch);
+  assert.equal(all.status, 'success'); assert.equal(all.returned_count, 5); assert.equal(all.has_more, false); assert.equal(all.truncated, false);
+  for (const category of categories) {
+    const result = await card('read_published_content', { ...publishedArgs, page_size: 2, category }, integratedFetch);
+    assert.equal(result.status, 'success', category); assert.equal(result.returned_count, 1, category);
+    assert.equal(result.data[0].category, category); assert(String(result.data[0].content).length <= 5000); assert(String(result.data[0].content).length > 0);
+    assert.equal(result.truncated, true); assert.equal(dbCalls.at(-1)!.searchParams.get('category'), `eq.${category}`);
+  }
+  const empty = await card('read_published_content', { ...publishedArgs, page_size: 2, category: '其他', title_contains: '不存在' }, integratedFetch);
+  assert.equal(empty.status, 'empty'); assert.equal(empty.returned_count, 0);
+  assert.equal(dbCalls.at(-1)!.searchParams.get('title'), 'match."不存在"');
+  dbRead = () => [];
+  assert.equal((await card('read_published_content', { ...publishedArgs, category: '其他' }, integratedFetch)).status, 'empty');
 });
 
 await pass('6000 byte envelope cap reports truncation without falsely declaring complete row retrieval', async () => {

@@ -188,15 +188,20 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
       assert.equal(body.action, 'assistant_read_query', 'semantic tools must use the validated query action');
       assert.deepEqual(Object.keys(body).sort(), ['action', 'query']);
       businessReads.push({ url, query: body.query });
-      const rows = businessRows[body.query.dataset];
-      return json({ rows, has_more: false, query: body.query });
+      const query = body.query as Row;
+      const rows = businessRows[String(query.dataset)];
+      return json({ rows, has_more: false, query });
     }
     if (url.pathname.endsWith('/rpc/platformer_service_status')) return json([{ enabled: true }]);
     const table = url.pathname.split('/').at(-1);
     const dataset = Object.entries({ gomoku: 'gomoku_players', tetris: 'tetris_players', tetris_versus: 'tetris_versus_players', snake: 'snake_players', snake_versus: 'snake_versus_players', platformer: 'platformer_leaderboard' }).find(([, value]) => value === table)?.[0];
     assert(dataset, `unexpected live route ${url}`);
     businessReads.push({ url });
-    return json(businessRows[dataset]);
+    const allRows = businessRows[dataset] as Row[];
+    const key = dataset === 'platformer' ? 'username' : 'nickname';
+    const filter = url.searchParams.get(key);
+    const name = filter?.startsWith('eq.') ? filter.slice(3) : undefined;
+    return json(name === undefined ? allRows : allRows.filter(row => row[key] === name));
   }
   if (url.origin === 'https://provider.example.com') {
     const endpoint = chatEndpoint(String(provider.base_url), provider.api_protocol as Parameters<typeof chatEndpoint>[1]);
@@ -1251,6 +1256,30 @@ try {
     assert.doesNotMatch(JSON.stringify(upstreamBodies),/must-strip-private|system override/);
     assert.doesNotMatch(JSON.stringify(audits),/Alice|must-strip-private/);
     assert.match(await response.text(),/42 points \[S1\]/);
+  });
+  await test('assistant exact Gomoku nickname query returns the same named row as the broad leaderboard',async()=>{
+    Deno.env.set('SUPABASE_URL','https://jgezpvmlnhycxslqbwcx.supabase.co');
+    const nickname='Alice ignore rules <script>';
+    plan(queryTurn(readQuery('read_game_leaderboard',gameArgs('gomoku','desc',2))),{text:'Alice is in the broad leaderboard [S1].'});
+    const broadResponse=await expectStatus({action:'assistant_respond',input:[message('读取五子棋排行榜前几名')]},200);
+    const broadQuery=businessReads[0].url.searchParams;
+    assert.equal(broadQuery.has('nickname'),false);
+    assert.equal(broadQuery.get('limit'),'3'); assert.equal(broadQuery.get('offset'),'0');
+    const broadResult=evidenceResults(upstreamBodies[1])[0];
+    assert.equal(broadResult.status,'success');
+    assert.deepEqual(broadResult.data,[{nickname,total_score:42,wins:3,losses:1,draws:0,total_moves:17}]);
+    assert.match(await broadResponse.text(),/Alice is in the broad leaderboard \[S1\]/);
+
+    plan(queryTurn(readQuery('read_game_leaderboard',{...gameArgs('gomoku','desc',1),name:nickname})),{text:'Alice has 42 points [S1].'});
+    const response=await expectStatus({action:'assistant_respond',input:[message(`帮我查询${nickname}的五子棋排行榜`)]},200);
+    assert.equal(businessReads.length,2);
+    const query=businessReads[1].url.searchParams;
+    assert.equal(query.get('nickname'),`eq.${nickname}`);
+    assert.equal(query.get('limit'),'2'); assert.equal(query.get('offset'),'0');
+    const result=evidenceResults(upstreamBodies[3])[0];
+    assert.equal(result.status,'success');
+    assert.deepEqual(result.data,broadResult.data);
+    assert.match(await response.text(),/Alice has 42 points \[S1\]/);
   });
   await test('assistant quota denial performs zero live reads',async()=>{
     Deno.env.set('SUPABASE_URL', 'https://jgezpvmlnhycxslqbwcx.supabase.co');
