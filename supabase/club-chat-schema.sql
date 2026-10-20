@@ -436,10 +436,79 @@ as $$
   where user_id = p_user_id and request_id = p_request_id;
 $$;
 
+-- Settlement paths already know the request id but not the user id. Releasing by
+-- request id is equally safe: the request id is a server-generated UUID that was
+-- persisted with the lease, and it only removes the matching row.
+create or replace function public.chat_release_generation_lease_by_request(
+  p_request_id uuid
+)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  delete from public.chat_generation_leases where request_id = p_request_id;
+$$;
+-- Renew the lease only while the original request still owns it. A mismatch (or
+-- an already released/expired lease) is a no-op, so this cannot extend a lease
+-- after settlement or steal a newer generation's slot.
+create or replace function public.chat_touch_generation_lease(
+  p_request_id uuid
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_updated integer;
+begin
+  if p_request_id is null then return false; end if;
+  update public.chat_generation_leases
+    set expires_at = clock_timestamp() + interval '3 minutes'
+    where request_id = p_request_id;
+  get diagnostics v_updated = row_count;
+  return v_updated = 1;
+end;
+$$;
+
+-- A lease whose request reached a terminal usage status but whose settlement
+-- RPC failed would otherwise keep the account busy for the full TTL. Releasing
+-- it here does not refund or rewrite the reservation; quota accounting is
+-- unchanged and remains conservatively reserved. Only the lease row is removed.
+create or replace function public.chat_force_release_terminal_lease(
+  p_request_id uuid
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_status text;
+  v_updated integer;
+begin
+  if p_request_id is null then return false; end if;
+  select status into v_status from public.chat_usage where request_id = p_request_id;
+  if v_status is null or v_status not in ('completed','incomplete','interrupted','failed','cancelled') then
+    return false;
+  end if;
+  delete from public.chat_generation_leases where request_id = p_request_id;
+  get diagnostics v_updated = row_count;
+  return v_updated = 1;
+end;
+$$;
+
 revoke all on function public.chat_acquire_generation_lease(uuid, uuid, timestamptz) from public, anon, authenticated;
 revoke all on function public.chat_release_generation_lease(uuid, uuid) from public, anon, authenticated;
+revoke all on function public.chat_release_generation_lease_by_request(uuid) from public, anon, authenticated;
+revoke all on function public.chat_touch_generation_lease(uuid) from public, anon, authenticated;
+revoke all on function public.chat_force_release_terminal_lease(uuid) from public, anon, authenticated;
 grant execute on function public.chat_acquire_generation_lease(uuid, uuid, timestamptz) to service_role;
 grant execute on function public.chat_release_generation_lease(uuid, uuid) to service_role;
+grant execute on function public.chat_release_generation_lease_by_request(uuid) to service_role;
+grant execute on function public.chat_touch_generation_lease(uuid) to service_role;
+grant execute on function public.chat_force_release_terminal_lease(uuid) to service_role;
 
 -- Quotas count input + output tokens, including outstanding reservations. Lease
 -- expiry ONLY permits another generation; it never refunds a reservation.
@@ -780,7 +849,7 @@ begin
   end loop;
   delete from public.chat_generation_leases where user_id = p_user_id and expires_at <= clock_timestamp();
   insert into public.chat_generation_leases(user_id,request_id,expires_at)
-    values (p_user_id,p_request_id,clock_timestamp() + interval '15 minutes');
+    values (p_user_id,p_request_id,clock_timestamp() + interval '3 minutes');
   return jsonb_build_object('allowed',true,'max_output_tokens',v_output,
     'quota_limited',v_output < p_output_tokens,'quota',public.chat_quota_get(p_user_id));
 end;

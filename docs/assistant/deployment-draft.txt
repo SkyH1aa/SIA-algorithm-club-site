@@ -19,7 +19,7 @@ Assistant administration deployment draft (instructions only)
    configure it securely in Secrets; never write any key value in docs, code,
    frontend, model configuration or validation records. No new key type or model
    administrator privilege is introduced.
-   Offline validation passed: 188 real-handler mock cases, 126 plan/SSE cases,
+   Offline validation passed: 192 real-handler mock cases, 126 plan/SSE cases,
    fixed-read and protocol regressions, type checks and Dashboard bundle/source
    consistency checks. This does not establish deployment or live model behavior.
    No PowerShell, Supabase CLI or build commands are required for web deployment.
@@ -40,6 +40,20 @@ Assistant administration deployment draft (instructions only)
    choose paths, declared attachment hashes are recomputed server-side, and no
    archive content or error appears in the chat UI. This copy is not proof of live
    WebDAV quota, permissions or path layout.
+   STUCK GENERATION LEASE: a failed Claude call used to leave the per-user
+   generation lease in place for 15 minutes, so every later message returned
+   409 busy ("stop the current generation") and a browser refresh could not
+   clear it. Re-run the complete Chat SQL (it adds chat_touch_generation_lease
+   and chat_force_release_terminal_lease, and shortens the lease to 3 minutes),
+   redeploy chat/index.ts from chat-dashboard-index.ts, and otherwise republish
+   chat.js, chat-i18n.js and chat-file-bundle.js. Upstream response headers now
+   time out after 90 seconds, silent streams settle as upstream_idle, and active
+   streams renew the lease every 30 seconds. Settlement failures still keep the
+   conservative reservation and do not refund, so audit and quota semantics are
+   unchanged. chat-api-proxy and club-drive do not need redeployment for this
+   repair. Local regression covers timeout, idle-stream, renewal and
+   failed-settlement paths; real provider behavior and live thresholds remain
+   unverified.
 2. Sign in to public/chat-admin.html using the existing dynamic super-admin roster.
    Existing assistant data loads automatically after authorization. Open Assistant
    knowledge to inspect it. Refresh remains available for failures or conflicts.

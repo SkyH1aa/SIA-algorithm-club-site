@@ -876,7 +876,7 @@ const model = () => models.find(x => x.id === $('model').value);
 function mergeModels(catalog, saved) {
   return [...catalog, ...saved.map(item => ({...CUSTOM_METADATA,...item,profileId:item.id,id:`custom:${item.id}`,source:'custom',profileName:item.display_name,display_name:`${item.display_name} · ${t('customBadge')}`}))];
 }
-const ERROR_STATUS = new Set(['assistant_unavailable','failure','interrupted','cancelled','storage','request','quota','quotaReset','context','request_too_large','file','pdf','blacklisted','busy','customKey','profile','login','claude_thinking','claude_thinking_budget','claude_effort']);
+const ERROR_STATUS = new Set(['assistant_unavailable','failure','interrupted','cancelled','storage','request','upstream_timeout','quota','quotaReset','context','request_too_large','file','pdf','blacklisted','busy','customKey','profile','login','claude_thinking','claude_thinking_budget','claude_effort']);
 function status(key, vars = {}) {
   statusKey = key; statusVars = vars;
   const node = $('status');
@@ -1663,7 +1663,7 @@ async function request(action, body = {}, signal, token = session?.access_token)
   const response = await fetch(`${URL}/functions/v1/chat`, {method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${token}`},body:JSON.stringify({action,...body}),signal});
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw Object.assign(new Error(response.status === 409 ? 'busy' : response.status === 401 ? 'login' : ['assistant_unavailable','context','request_too_large','file','login','profile','quota','blacklisted','claude_thinking','claude_thinking_budget','claude_effort'].includes(data.error) ? data.error : 'request'), {status:response.status, quota:data.quota});
+    throw Object.assign(new Error(response.status === 409 ? 'busy' : response.status === 401 ? 'login' : ['assistant_unavailable','context','request_too_large','file','login','profile','quota','blacklisted','claude_thinking','claude_thinking_budget','claude_effort','upstream_timeout'].includes(data.error) ? data.error : 'request'), {status:response.status, quota:data.quota});
   }
   return response;
 }
@@ -1899,7 +1899,7 @@ async function generate({ retryTurnId = null } = {}) {
     }
   } catch (error) {
     if (turn) turn.status = run.stopped ? 'cancelled' : controller.signal.aborted ? 'interrupted' : 'failure';
-    failureKey = storageError ? 'storage' : ['assistant_unavailable','context','request_too_large','file','pdf','busy','storage','quota','blacklisted','customKey','claude_thinking','claude_thinking_budget','claude_effort'].includes(error.message) ? error.message : run.stopped ? 'cancelled' : 'request';
+    failureKey = storageError ? 'storage' : ['assistant_unavailable','context','request_too_large','file','pdf','busy','storage','quota','blacklisted','customKey','claude_thinking','claude_thinking_budget','claude_effort','upstream_timeout'].includes(error.message) ? error.message : run.stopped ? 'cancelled' : 'request';
     const reset = quotaReset(error.quota);
     if (failureKey === 'quota' && reset) { failureKey = 'quotaReset'; failureVars = {reset}; }
     if (guard === epoch) status(failureKey, failureVars);

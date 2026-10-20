@@ -50,6 +50,17 @@ const MAX_CONTENT_PARTS = 5;
 const MAX_ATTACHMENTS = 4;
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 const MAX_REASONING_EFFORT = 40;
+// A provider that never answers must not hold the per-user lease until the
+// platform kills the invocation. This covers both the wait for response
+// headers and a stream that stops producing bytes. Env overrides exist only
+// for the offline tests; production never sets these names.
+function positiveEnvMs(name: string, fallback: number, max: number) {
+  const raw = Number(Deno.env.get(name));
+  return Number.isFinite(raw) && raw >= 0 && raw <= max ? raw : fallback;
+}
+const upstreamHeaderTimeoutMs = () => positiveEnvMs('CHAT_TEST_UPSTREAM_TIMEOUT_MS', 90_000, 120_000);
+const streamIdleTimeoutMs = () => positiveEnvMs('CHAT_TEST_STREAM_IDLE_MS', 90_000, 120_000);
+const leaseTouchIntervalMs = () => positiveEnvMs('CHAT_TEST_LEASE_TOUCH_MS', 30_000, 30_000);
 const IMAGE_TOKEN_ESTIMATE = { low: 1024, auto: 4096, high: 8192 };
 const PDF_TOKEN_ESTIMATE = 8192;
 const ACTIONS = new Set([
@@ -592,6 +603,22 @@ async function finishGeneration(requestId: string, patch: Json, refund = false) 
   if (result === false || result === null || (result as Json)?.code) throw new HttpError('database', 503);
 }
 
+// Lease renewal keeps a long stream from losing the per-user slot while the
+// client is still visibly generating. Failure is non-fatal: the 3-minute TTL
+// still bounds a crashed invocation.
+async function touchGenerationLease(requestId: string) {
+  try { await rpc('chat_touch_generation_lease', { p_request_id: requestId }); }
+  catch { /* transient database error; the lease will still expire on its own */ }
+}
+
+// Settlement already deletes the lease in the same transaction. If settlement
+// itself failed, the usage row may still be unsettled, so only a terminal audit
+// row authorises removing the lease. Quota accounting is never changed here.
+async function releaseGenerationLease(requestId: string) {
+  try { await rpc('chat_force_release_terminal_lease', { p_request_id: requestId }); }
+  catch { /* non-fatal: the lease expires on its own */ }
+}
+
 async function updateUsage(requestId: string, patch: Json, signal?: AbortSignal) {
   const response = await rest(`chat_usage?request_id=eq.${encodeURIComponent(requestId)}&status=in.(audited,upstream_started)`, { method: 'PATCH', headers: { 'content-type': 'application/json', prefer: 'return=representation' }, body: JSON.stringify(patch), signal });
   if (!response.ok) throw new HttpError('database', 503);
@@ -694,6 +721,9 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
     throw error;
   }
   const upstreamController = new AbortController();
+  // A silently hanging provider must not keep the single per-user slot until
+  // the platform kills this invocation. The timer covers headers only.
+  const headerTimer = setTimeout(() => upstreamController.abort(), upstreamHeaderTimeoutMs());
   const cancelUpstream = () => upstreamController.abort();
   request.signal.addEventListener('abort', cancelUpstream, { once: true });
   if (request.signal.aborted) upstreamController.abort();
@@ -701,14 +731,22 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
   try {
     upstream = await fetch(endpoint, { method: 'POST', headers: upstreamHeaders(provider, Deno.env.get(provider.secret_name)!), body: serialized, redirect: 'error', signal: upstreamController.signal });
   } catch {
+    clearTimeout(headerTimer);
     request.signal.removeEventListener('abort', cancelUpstream);
-    await finishGeneration(requestId, { status: request.signal.aborted ? 'cancelled' : 'failed', error_code: request.signal.aborted ? 'client_cancelled' : 'upstream_network' }).catch(() => undefined);
-    throw new HttpError(request.signal.aborted ? 'cancelled' : 'upstream', request.signal.aborted ? 499 : 502);
+    const timedOut = upstreamController.signal.aborted && !request.signal.aborted;
+    await finishGeneration(requestId, { status: request.signal.aborted ? 'cancelled' : 'failed',
+      error_code: request.signal.aborted ? 'client_cancelled' : timedOut ? 'upstream_timeout' : 'upstream_network' }).catch(() => undefined);
+    // Settle first, then release only if the audit row reached a terminal state.
+    // A failed settlement keeps the conservative reservation, as before.
+    await releaseGenerationLease(requestId);
+    throw new HttpError(request.signal.aborted ? 'cancelled' : timedOut ? 'upstream_timeout' : 'upstream', request.signal.aborted ? 499 : 502);
   }
+  clearTimeout(headerTimer);
   if (!upstream.ok || !upstream.body || !/^text\/event-stream(?:\s*;|$)/i.test(upstream.headers.get('content-type') || '')) {
     request.signal.removeEventListener('abort', cancelUpstream);
     upstreamController.abort();
     await finishGeneration(requestId, { status: 'failed', upstream_status: upstream.status, error_code: 'upstream_http' }).catch(() => undefined);
+    await releaseGenerationLease(requestId);
     throw new HttpError('upstream', 502);
   }
   try {
@@ -718,6 +756,7 @@ async function callResponses(request: Request, ctx: RequestContext, payload: Jso
     upstreamController.abort();
     await upstream.body.cancel().catch(() => undefined);
     await finishGeneration(requestId, { status: 'failed', error_code: 'database' }).catch(() => undefined);
+    await releaseGenerationLease(requestId);
     throw error;
   }
   request.signal.removeEventListener('abort', cancelUpstream);
@@ -877,6 +916,9 @@ function proxyStream(request: Request, body: ReadableStream<Uint8Array>, upstrea
   let terminal: Json | null = null, cancelled = false;
   let finishing: Promise<void> | null = null;
   let converted: string[] = [];
+  // Renew the per-user lease from actual stream progress. A killed invocation
+  // stops renewing, so the short TTL frees the user instead of locking them out.
+  let lastLeaseTouch = Date.now();
   const adapter = protocolEvents(protocol, requestId, event => {
     if (terminal) return;
     terminal = terminalUsage(event);
@@ -908,9 +950,27 @@ function proxyStream(request: Request, body: ReadableStream<Uint8Array>, upstrea
     async pull(controller) {
       try {
         while (true) {
-          const next = await reader.read();
+          // A provider that opens the stream and then goes silent must not keep
+          // the lease or the connection forever. 0 disables the guard in tests.
+          const idle = streamIdleTimeoutMs();
+          let idleTimer: ReturnType<typeof setTimeout> | undefined;
+          const next = idle
+            ? await Promise.race([
+                reader.read(),
+                new Promise<never>((_, reject) => {
+                  idleTimer = setTimeout(() => reject(Object.assign(new Error('upstream_idle'), { idle: true })), idle);
+                })
+              ])
+            : await reader.read();
+          if (idleTimer !== undefined) clearTimeout(idleTimer);
           if (cancelled) return;
           parser(next.done ? decoder.decode() : decoder.decode(next.value, { stream: true }), next.done);
+          // Renew the per-user lease from real stream progress. A killed
+          // invocation stops renewing, so the short TTL frees the user.
+          if (Date.now() - lastLeaseTouch >= leaseTouchIntervalMs()) {
+            lastLeaseTouch = Date.now();
+            void touchGenerationLease(requestId);
+          }
           const data = protocol === 'responses' ? (next.done ? null : next.value) : (converted.length ? encoder.encode(converted.join('')) : null);
           converted = [];
           if (next.done || terminal) {
@@ -924,11 +984,16 @@ function proxyStream(request: Request, body: ReadableStream<Uint8Array>, upstrea
             return;
           } else if (data) { controller.enqueue(data); return; }
         }
-      } catch {
+      } catch (error) {
         upstream.abort();
         await reader.cancel().catch(() => undefined);
-        await finish(terminal || { status: cancelled ? 'cancelled' : 'failed', error_code: cancelled ? 'client_cancelled' : 'stream' }).catch(() => undefined);
-        if (!cancelled) controller.error(new Error('stream'));
+        // An idle stream is a real upstream failure, not a client cancellation;
+        // settlement refunds nothing and releases the lease so the account can
+        // start a new generation instead of waiting for the TTL.
+        const idle = Boolean(error && typeof error === 'object' && 'idle' in error);
+        await finish(terminal || { status: cancelled ? 'cancelled' : 'failed',
+          error_code: cancelled ? 'client_cancelled' : idle ? 'upstream_idle' : 'stream' }).catch(() => undefined);
+        if (!cancelled) controller.error(new Error(idle ? 'upstream_idle' : 'stream'));
       }
     },
     cancel

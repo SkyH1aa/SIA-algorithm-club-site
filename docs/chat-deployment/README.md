@@ -112,7 +112,30 @@ AIChat 与 AI 助手会在每次选中附件时、以及每轮回复进入终态
 
 审计 `error_code` 只记录安全类别：计划解析/校验/大小为 `assistant_plan_json`、`assistant_plan_invalid`、`assistant_plan_arguments`、`assistant_plan_size`；规划调用为 `assistant_plan_http`、`assistant_plan_network`、`assistant_plan_stream`、`assistant_plan_usage`；回答调用为 `assistant_answer_http`、`assistant_answer_network`、`assistant_answer_stream`；预算与上限为 `assistant_output_budget`、`assistant_context`、`assistant_request_size`、`assistant_evidence_size`，未分类兜底为 `assistant_plan_failed`。不记录原始计划、参数/结果、供应商正文或密钥，错误类别不证明读取成功或可退款。
 
-契约及错误说明见 [两阶段只读记录](../assistant-validation/semantic-read-tools.md)。本地离线通过188项真实 handler mock 集成用例、126项计划与三协议 SSE 测试、固定只读执行器及保留旧路径回归；类型检查、Dashboard bundle 源码一致性和差异检查通过。浮窗放大尺寸已在本地无头 Chrome 的 1440x900、1920x1080、1024x768 视口实测为 50%x50%（面积 25%）并居中。没有发送真实模型请求或部署，不以本地结果保证供应商语义质量或线上权限。
+契约及错误说明见 [两阶段只读记录](../assistant-validation/semantic-read-tools.md)。本地离线通过192项真实 handler mock 集成用例、126项计划与三协议 SSE 测试、固定只读执行器及保留旧路径回归；类型检查、Dashboard bundle 源码一致性和差异检查通过。浮窗放大尺寸已在本地无头 Chrome 的 1440x900、1920x1080、1024x768 视口实测为 50%x50%（面积 25%）并居中。没有发送真实模型请求或部署，不以本地结果保证供应商语义质量或线上权限。
+
+## 生成租约卡死修复（“请先停止当前生成”）
+
+现象：Claude 调用失败（例如未连 VPN 无法访问上游）后，之后再发任何消息都提示“请先停止当前生成”，刷新页面也无效。
+
+原因在服务端 `chat_generation_leases`：每个账号同一时间只允许一个生成，租约原本固定 15 分钟且不续期也无超时。上游卡住、请求被平台终止或结算失败时租约不被释放，后续请求一律收到 409 `busy`；浏览器刷新只清理本地状态，清不掉数据库租约。
+
+修复：
+
+- 租约基础时长缩短为 **3 分钟**，流式输出每 30 秒按真实进展续期，正常长回答不会丢锁。
+- 上游响应头等待设 **90 秒**超时，超时按 `upstream_timeout` 结算并释放租约。
+- 流在输出中途静默超过 90 秒时，按 `upstream_idle` 结算并断开，不再无限占用连接与租约。
+- 只有审计行已经到达终态时，才允许强制释放租约；**结算失败仍保持原有的保守预留与 fail-closed 语义，不退款、不改额度**。
+- 前端新增“等待模型响应超时”提示，不再一律显示笼统的请求失败。
+
+部署范围：需要**重新执行完整 Chat SQL** 并重新部署 `chat`，再发布前端：
+
+1. 在 Supabase SQL Editor 执行 `docs/chat-deployment/club-chat-schema.sql`（幂等，新增两个 RPC 并调整租约时长）。这是本轮唯一需要执行 SQL 的部分。
+2. 将 [chat-dashboard-index.ts](chat-dashboard-index.ts) 替换到 `chat` → `index.ts` 并部署。`chat-api-proxy` 与 `club-drive` 本轮不需要重新部署。
+3. 重新发布 `public/chat.js`、`public/chat-i18n.js` 和重建后的 `public/chat-file-bundle.js`。
+4. 验证：断开 VPN 让 Claude 调用失败，等待错误出现后直接再发一条消息，应能正常发起而不是提示“请先停止当前生成”。若上游 90 秒内不返回响应头，应看到超时提示，且之后仍可继续发送。
+
+已卡住的账号在部署 SQL 后最多等待 3 分钟自动解锁；无需手工清理租约表。
 
 ## 安全加固更新（Chat 与对外代理）
 
@@ -242,4 +265,4 @@ JSON 必须是对象，未知键拒绝。只有 enabled 可以有 `budget_tokens
 
 ## 当前验证边界
 
-两阶段运行时已接入，188项真实 handler mock 与126项计划/SSE用例通过，类型检查和 Dashboard bundle 一致性通过；完整命令与边界见两阶段只读记录。usage90day 的历史 PostgreSQL 执行验证使用 PGlite WASM runtime，范围与单连接限制见前文。没有代你登录 Supabase、运行线上 SQL、部署函数或调用真实供应商；本地验证不能证明网页上的旧函数已更新、模型真实语义质量或真实 pg_cron 已成功运行。
+两阶段运行时已接入，192项真实 handler mock 与126项计划/SSE用例通过，类型检查和 Dashboard bundle 一致性通过；完整命令与边界见两阶段只读记录。usage90day 的历史 PostgreSQL 执行验证使用 PGlite WASM runtime，范围与单连接限制见前文。没有代你登录 Supabase、运行线上 SQL、部署函数或调用真实供应商；本地验证不能证明网页上的旧函数已更新、模型真实语义质量或真实 pg_cron 已成功运行。

@@ -40,7 +40,7 @@ let wire: string | null;
 let audits: Row[], patches: Row[], upstreamBodies: Array<Row & { input: Array<{ content: Array<{ text: string; image_url: string }> }> }>, requests: URL[], liveRequests: URL[], released: number, finishAttempts: number, leased: boolean;
 let quota: Row, admissionCode: string | null, shrink: number | null, conflict: boolean;
 let rpcCalls: Array<{ name: string; body: Row }>, settlements: Row[];
-let charged: number;
+let charged: number, leaseTouches: number;
 let proxyRoute: Row | null, proxyKey: Row | null;
 const directory = { users: [{ user_id: UID, username: 'local-account', member_name: '测试会员', bound: true }], blacklist: [{ user_id: PID, reason: 'abuse' }] };
 let usageResult: unknown, usageFailure: boolean;
@@ -119,7 +119,7 @@ function reset() {
   assistantRelease = { id:RID,config:{enabled:true,model_id:MID,system_prompt:'Answer club questions honestly.',welcome:'Welcome',suggestions:['如何报名？'],version:1,current_release_id:null},documents:[{...assistantDoc}] };
   terminalGate = null; terminalReached = null; wire = null;
   quota = { global: { daily_limit: null, version: 0, used: 0, remaining: null, resets_at: '2026-10-17T00:00:00Z' }, user: { daily_limit: null, weekly_limit: null, monthly_limit: null, version: 0 }, periods: [], blacklisted: false, reason: null };
-  admissionCode = null; shrink = null; conflict = false; rpcCalls = []; settlements = []; charged = 0;
+  admissionCode = null; shrink = null; conflict = false; rpcCalls = []; settlements = []; charged = 0; leaseTouches = 0;
   provider = { ...providerBase }; providerWrites = []; modelWrites = []; model = { ...modelBase }; profile = true; admin = true;
   proxyRoute = { id: PID, enabled: true, deleted_at: null, version: 3 };
   proxyKey = { id: MID, route_id: PID, enabled: true, revoked_at: null, version: 4 };
@@ -221,6 +221,7 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
     if (mode === 'http') return new Response('private provider error', { status: 429 });
     if (mode === 'wrong-content') return json({ secret: 'private provider response' });
     if (mode === 'fetch-abort') return await new Promise<Response>((_, reject) => upstreamSignal!.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true }));
+    if (mode === 'hanging-headers') return await new Promise<Response>((_, reject) => upstreamSignal!.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true }));
     if (audits.at(-1)!.action === 'assistant_respond') {
       if (assistantRequestId !== audits.at(-1)!.request_id) { assistantRequestId = audits.at(-1)!.request_id; assistantTurnIndex = 0; }
       const turnIndex = assistantTurnIndex++;
@@ -373,6 +374,23 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
       charged = row.p_refund ? 0 : Number.isSafeInteger(row.p_patch.total_tokens) ? row.p_patch.total_tokens : charged;
       released++; leased = false;
       return json({ settled: true });
+    }
+    if (name === 'chat_release_generation_lease_by_request') {
+      assert.match(String(row.p_request_id), /^[0-9a-f-]{36}$/);
+      if (leased) { released++; leased = false; }
+      return json({ ok: true });
+    }
+    if (name === 'chat_force_release_terminal_lease') {
+      assert.match(String(row.p_request_id), /^[0-9a-f-]{36}$/);
+      const audit = audits.find(item => item.request_id === row.p_request_id);
+      const terminal = audit && ['completed','incomplete','interrupted','failed','cancelled'].includes(String(audit.status));
+      if (terminal && leased) { released++; leased = false; return json(true); }
+      return json(false);
+    }
+    if (name === 'chat_touch_generation_lease') {
+      assert.match(String(row.p_request_id), /^[0-9a-f-]{36}$/);
+      leaseTouches++;
+      return json(leased);
     }
     throw new Error(`unexpected RPC ${name}`);
   }
@@ -854,6 +872,69 @@ try {
     reset(); shrink = 3;
     await consume({ action: 'admin_test', model_id: MID, prompt: 'test', max_output_tokens: 20 });
     assert.equal(upstreamBodies[0].max_output_tokens, 3); assert.equal(audits[0].max_output_tokens, 3);
+  });
+  await test('provider that never answers releases the lease instead of locking the user out', async () => {
+    const saved = Deno.env.get('CHAT_TEST_UPSTREAM_TIMEOUT_MS');
+    Deno.env.set('CHAT_TEST_UPSTREAM_TIMEOUT_MS', '150');
+    Deno.env.set('SUPABASE_URL', 'https://jgezpvmlnhycxslqbwcx.supabase.co');
+    try {
+      mode = 'hanging-headers';
+      const first = await handler(request(payload()));
+      assert.equal(first.status, 502);
+      assert.deepEqual(await first.json(), { error: 'upstream_timeout' });
+      assert.equal(audits[0].status, 'failed'); assert.equal(audits[0].error_code, 'upstream_timeout');
+      assert.equal(released, 1, 'the failed generation releases its lease');
+      assert.equal(leased, false);
+      // The very next request must not be refused as busy.
+      reset(); leased = false; mode = 'complete';
+      await consume();
+      assert.equal(audits[0].status, 'completed');
+    } finally {
+      if (saved === undefined) Deno.env.delete('CHAT_TEST_UPSTREAM_TIMEOUT_MS');
+      else Deno.env.set('CHAT_TEST_UPSTREAM_TIMEOUT_MS', saved);
+    }
+  });
+  await test('a stream that goes silent is settled as upstream_idle and frees the lease', async () => {
+    const saved = Deno.env.get('CHAT_TEST_STREAM_IDLE_MS');
+    Deno.env.set('CHAT_TEST_STREAM_IDLE_MS', '100');
+    Deno.env.set('SUPABASE_URL', 'https://jgezpvmlnhycxslqbwcx.supabase.co');
+    try {
+      mode = 'hanging';
+      const response = await handler(request(payload()));
+      await assert.rejects(response.text());
+      assert.equal(audits[0].status, 'failed'); assert.equal(audits[0].error_code, 'upstream_idle');
+      assert.equal(released, 1); assert.equal(leased, false);
+      reset(); mode = 'complete';
+      await consume();
+      assert.equal(audits[0].status, 'completed');
+    } finally {
+      if (saved === undefined) Deno.env.delete('CHAT_TEST_STREAM_IDLE_MS');
+      else Deno.env.set('CHAT_TEST_STREAM_IDLE_MS', saved);
+    }
+  });  await test('long streams renew the lease and settlement still clears it', async () => {
+    Deno.env.set('SUPABASE_URL', 'https://jgezpvmlnhycxslqbwcx.supabase.co');
+    const saved = Deno.env.get('CHAT_TEST_LEASE_TOUCH_MS');
+    Deno.env.set('CHAT_TEST_LEASE_TOUCH_MS', '0');
+    try {
+      const response = await handler(request(payload()));
+      await response.text();
+      assert(leaseTouches > 0, 'stream progress renews the lease');
+      assert.equal(leased, false, 'settlement still clears the lease');
+    } finally {
+      if (saved === undefined) Deno.env.delete('CHAT_TEST_LEASE_TOUCH_MS');
+      else Deno.env.set('CHAT_TEST_LEASE_TOUCH_MS', saved);
+    }
+  });
+  await test('a failed settlement keeps the lease and never force-releases an unsettled request', async () => {
+    Deno.env.set('SUPABASE_URL', 'https://jgezpvmlnhycxslqbwcx.supabase.co');
+    finishFail = true;
+    const response = await handler(request(payload()));
+    if (response.ok) await response.text().catch(() => undefined);
+    assert.equal(leased, true, 'an unsettled audit row still fails closed');
+    assert.equal(audits[0].status, 'upstream_started', 'settlement did not complete');
+    // The force release only applies when the audit row already reached a
+    // terminal status; an unsettled row keeps the short 3-minute TTL instead.
+    assert.equal(rpcCalls.filter(call => call.name === 'chat_force_release_terminal_lease').length, 0);
   });
   await test('unknown post-fetch failures retain reservation; only pre-fetch abort refunds', async () => {
     for (const failure of ['network', 'http', 'eof', 'failed', 'incomplete', 'malformed', 'hanging']) {
