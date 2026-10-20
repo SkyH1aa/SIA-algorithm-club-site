@@ -75,7 +75,7 @@ const catalog = () => ({ok:true,json:async () => ({models:[catalogModel]})});
 const tick = () => new Promise(resolve => setImmediate(resolve));
 async function settle() { for (let i=0;i<8;i++) await tick(); }
 function uiHarness({assistant = false, embedded = false, protocol = 'https:'} = {}) {
-  const elements = new Map(), timers = [], requests = [], writes = [], records = new Map(), initial = deferred(), copied = [], messages = [], events = new Map(), documentEvents = new Map(), databases = [];
+  const elements = new Map(), timers = [], requests = [], writes = [], records = new Map(), initial = deferred(), copied = [], messages = [], events = new Map(), documentEvents = new Map(), databases = [], archiveRequests = [];
   const origin = protocol === 'file:' ? 'null' : 'https://club.example';
   const frameParent = {postMessage(data,target){messages.push({data,target});}};
   let callback, saveHook, lang = 'zh';
@@ -115,7 +115,12 @@ function uiHarness({assistant = false, embedded = false, protocol = 'https:'} = 
     ClubI18n:i18n,marked:{Renderer:class {},parse:()=>''},DOMPurify:{sanitize:()=>({querySelectorAll:()=>[]})},
     navigator:{clipboard:{async writeText(value){copied.push(value);}}},
     Option:class {constructor(text,value){this.textContent=text;this.value=value;}},
-    setTimeout(fn){timers.push(fn);},fetch(url,init){const result=deferred(), body=JSON.parse(init.body);requests.push({url,headers:init.headers,body,token:init.headers.Authorization,signal:init.signal,...result});if(body.action==='custom_model_list') result.resolve({ok:true,json:async()=>[]});return result.promise;}
+    setTimeout(fn){timers.push(fn);},
+    fetch(url,init){
+      // 归档上传是流式/二进制请求，不解析 JSON；其余调用沿用原有可控 deferred 语义。
+      if(String(url).includes('/functions/v1/club-drive')){const result=deferred();archiveRequests.push({url,headers:init.headers,body:init.body,...result});return result.promise;}
+      const result=deferred(), body=JSON.parse(init.body);requests.push({url,headers:init.headers,body,token:init.headers.Authorization,signal:init.signal,...result});if(body.action==='custom_model_list') result.resolve({ok:true,json:async()=>[]});return result.promise;
+    }
   });
   const source = assistant ? chatSource.replaceAll(JSON.stringify(new URL('../public/chat.js', import.meta.url).href), JSON.stringify(protocol === 'file:' ? 'file:///site/project/public/chat.js' : 'https://club.example/project/public/chat.js')) : chatSource;
   if (assistant) {
@@ -124,7 +129,7 @@ function uiHarness({assistant = false, embedded = false, protocol = 'https:'} = 
   }
   vm.runInContext(source,context,{filename:'chat.js'});
   const evaluate = code => vm.runInContext(code,context);
-  return {initial,elements,requests,writes,records,evaluate,store,copied,messages,events,documentEvents,databases,
+  return {initial,elements,requests,writes,records,evaluate,store,copied,messages,events,documentEvents,databases,archiveRequests,
     message(data,source = frameParent,messageOrigin = origin){events.get('message')?.({data,source,origin:messageOrigin});},
     setLang(value){lang=value;evaluate('refreshLocalizedUi()');},
     auth(next){callback('SIGNED_IN',next);while(timers.length)timers.shift()();},
@@ -728,3 +733,115 @@ assert.throws(()=>assistantToolSource(envelope,'unsafe'));
 assert.equal(assistantToolSource({...envelope,results:[]},'S5').source,null);
 assert(assistantPrompt(release,[{role:'user',content:[{type:'input_text',text:'points'}]}]).sources.length,'legacy helper remains available');
 console.log('Assistant helpers: semantic catalog/policy, static reserve/header bounds, complete tool result, compact sanitized source and legacy helper passed.');
+
+/* ---------- AI 归档：附件触发、回复终态触发、双库合并与附件去重 ---------- */
+{
+  const makeTurn = (id, files = []) => ({
+    id, prompt: `question ${id}`, text: `answer ${id}`, thinking: '', status: 'success', modelId: 'm', modelName: 'M',
+    createdAt: Date.parse('2026-10-20T04:05:06.000Z'),
+    input: [{role: 'user', content: [{type: 'input_text', text: `question ${id}`}, ...files.flatMap(file => file.kind === 'image'
+      ? [{type: 'input_image', image_url: file.data, detail: 'auto'}]
+      : file.kind === 'pdf' ? [{type: 'input_file', filename: file.name, file_data: file.data}]
+      : [{type: 'input_text', text: `\n--- Attachment: ${file.name} ---\n${file.text}\n--- End attachment ---`}])]}],
+    output: [{type: 'message', role: 'assistant', content: [{type: 'output_text', text: `answer ${id}`}]}],
+    attachments: files,
+    usage: {input_tokens: 1, output_tokens: 1}
+  });
+  const textFile = {name: 'notes.txt', size: 9, type: 'text/plain', kind: 'text', text: 'secret text'};
+  const imageFile = {name: 'shot.png', size: 4, type: 'image/png', kind: 'image', data: 'data:image/png;base64,AAECAw=='};
+  const old = {id: 'old', userId: 'u1', title: 'Older', updatedAt: Date.parse('2026-10-20T03:00:00.000Z'), turns: [makeTurn('t1', [textFile])]};
+  const fresh = {id: 'fresh', userId: 'u1', title: 'Newer', updatedAt: Date.parse('2026-10-20T05:00:00.000Z'), turns: [makeTurn('t2', [imageFile])], summary: {text: 'sum', createdAt: Date.parse('2026-10-20T05:00:00.000Z'), turns: 0}};
+  const refs = new Map([[textFile, {sha256: 'a'.repeat(64), extension: 'txt', archived: true}], [imageFile, {sha256: 'b'.repeat(64), extension: 'png', archived: true}]]);
+  const parts = core.buildChatArchive({userId: 'u1', source: 'chat', trigger: 'reply', conversations: [old, fresh], pending: [], refs, now: Date.parse('2026-10-20T04:05:06.789Z')});
+  assert.equal(parts.length, 1);
+  assert.equal(parts[0].schema, 'club-ai-chat-archive/1');
+  assert.equal(parts[0].part.index, 1); assert.equal(parts[0].part.total, 1);
+  assert.equal(parts[0].conversations[0].id, 'fresh', 'archives sort newest first');
+  assert.equal(parts[0].conversations[1].id, 'old');
+  assert.equal(parts[0].uploaded_at, '2026-10-20T04:05:06.789Z');
+  assert.equal(parts[0].uploaded_at_beijing, '2026-10-20T12:05:06+08:00');
+  assert.equal(parts[0].turn_count, 2);
+  assert(!JSON.stringify(parts).includes('secret text'), 'attachment body must not be duplicated into every transcript');
+  assert(!JSON.stringify(parts).includes('base64'), 'binary attachments must be referenced, not embedded');
+  assert(JSON.stringify(parts).includes('attachment_text'), 'text attachment is recorded as an archived reference');
+  assert(JSON.stringify(parts).includes('"sha256":"' + 'a'.repeat(64) + '"'));
+  assert.equal(parts[0].conversations[0].turns[0].input[0].content[1].archived, 'b'.repeat(64), 'image part references the archived attachment hash');
+}
+{
+  // 大对话必须分片，但所有分片合起来不丢会话或轮次。
+  const coreSource = await readFile(new URL('../public/chat-core.js', import.meta.url), 'utf8');
+  const ctx = vm.createContext({URL,TextEncoder,TextDecoder,ReadableStream,atob,crypto,console});
+  vm.runInContext(coreSource.replace(/^export /gm, ''), ctx);
+  const turns = Array.from({length: 20}, (_, i) => ({id: `t${i}`, prompt: 'x'.repeat(6000), text: 'y'.repeat(6000), status: 'success', input: [], output: [], createdAt: Date.parse('2026-10-20T00:00:00Z')}));
+  const chats = Array.from({length: 6}, (_, i) => ({id: `c${i}`, userId: 'u', updatedAt: Date.parse('2026-10-20T00:00:00Z') + i, turns}));
+  const target = 512 * 1024;
+  const parts = vm.runInContext(`buildChatArchive(${JSON.stringify({userId: 'u', source: 'assistant', trigger: 'attachment', conversations: chats, pending: [], now: Date.parse('2026-10-20T01:00:00Z'), target})}, undefined, undefined)`, ctx);
+  assert(parts.length > 1, 'large archives are split into parts');
+  assert(parts.every(part => part.part.total === parts.length && part.part.index >= 1));
+  assert(parts.every(part => new TextEncoder().encode(JSON.stringify(part)).length <= target));
+  assert.equal(parts.reduce((sum, part) => sum + part.conversations.length, 0), chats.length, 'no conversation is dropped across parts');
+}
+{
+  // UI 集成：附件选中即归档；回复结束（含失败/取消）再归档一次完整双库快照。
+  const ui = uiHarness(); await ui.login('A');
+  ui.evaluate(`pending=[{name:'notes.txt',size:5,type:'text/plain',kind:'text',text:'hello'}]; renderAttachments(); scheduleChatArchive('attachment');`);
+  for (let i = 0; i < 40 && ui.archiveRequests.length === 0; i++) await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(ui.archiveRequests.length, 1, 'attachment trigger starts with the attachment binary');
+  const binary = ui.archiveRequests[0];
+  assert.equal(binary.headers['x-drive-action'], 'chat-attachment');
+  assert.equal(binary.headers['x-chat-attachment-ext'], 'txt');
+  assert.equal(Buffer.from(binary.body).toString(), 'hello');
+  binary.resolve({ok: true}); await settle();
+  assert.equal(ui.archiveRequests.length, 2, 'attachment trigger then uploads the transcript snapshot');
+  const attach = ui.archiveRequests[1];
+  assert.equal(attach.headers['x-drive-action'], 'chat-archive');
+  assert.equal(attach.headers['x-chat-archive-source'], 'chat');
+  assert.equal(attach.headers['x-chat-archive-trigger'], 'attachment');
+  assert.equal(attach.headers.authorization, 'Bearer A');
+  const pendingSnapshot = JSON.parse(attach.body).pending_attachments;
+  assert.deepEqual(pendingSnapshot.map(file => file.name), ['notes.txt']);
+  assert.equal(pendingSnapshot[0].sha256.length, 64, 'attachment hash is recorded after upload');
+  assert.equal(pendingSnapshot[0].archived, true);
+  attach.resolve({ok: true}); await settle();
+  ui.evaluate("document.getElementById('prompt').value='question'; void generate();"); await settle();
+  ui.requests.at(-1).resolve(okStream()); await settle();
+  assert.equal(ui.archiveRequests.length, 3, 'reply trigger uploads one merged transcript');
+  const reply = JSON.parse(ui.archiveRequests[2].body);
+  assert.equal(reply.trigger, 'reply');
+  assert.equal(reply.conversations[0].store, 'chat'); assert.equal(reply.conversations[0].turns.length, 1);
+  assert.equal(reply.conversations[0].turns[0].attachments[0].archived, true);
+  assert.equal(ui.archiveRequests[2].headers['x-chat-archive-trigger'], 'reply');
+  ui.archiveRequests[2].resolve({ok: true}); await settle();
+
+  // 同一附件第二次触发不重复上传二进制，但转写快照仍上传。
+  const before = ui.archiveRequests.length;
+  ui.evaluate("scheduleChatArchive('reply');"); await settle();
+  assert.equal(ui.archiveRequests.length, before + 1, 'deduplicated attachment is not re-uploaded');
+  assert.equal(ui.archiveRequests.at(-1).headers['x-drive-action'], 'chat-archive');
+  ui.archiveRequests.at(-1).resolve({ok: true}); await settle();
+}
+{
+  // 失败终态同样归档。
+  const ui = uiHarness(); await ui.login('A');
+  ui.evaluate("document.getElementById('prompt').value='boom'; void generate();"); await settle();
+  ui.requests.at(-1).resolve({ok:false,status:500,json:async()=>({error:'request'})}); await settle();
+  assert(ui.archiveRequests.some(request => request.headers['x-chat-archive-trigger'] === 'reply'), 'failure terminal state still archives');
+  const failed = ui.archiveRequests.find(request => request.headers['x-drive-action'] === 'chat-archive');
+  assert.equal(JSON.parse(failed.body).conversations[0].turns[0].status, 'failure');
+}
+{
+  // AI 助手页面同样归档，并合并另一个本地库。
+  const ui = uiHarness({assistant:true, embedded:true});
+  ui.auth(account('assistant-user'));
+  ui.requests.at(-1).resolve({ok:true,json:async()=>({models:[{...catalogModel,context_window:10000,default_max_output_tokens:50}],assistant:{reserve_tokens:1000,welcome:'Welcome',suggestions:['Question']}})}); await settle();
+  // 另一个库（AIChat）由 createChatStore 返回同一测试 store，这里预置一条对话验证合并与去重。
+  await ui.store.save({userId:'assistant-user',id:'shared-chat',title:'Chat side',updatedAt:Date.now()-1000,turns:[{id:'x',prompt:'p',text:'a',status:'success',input:[],output:[],createdAt:Date.now()}]});
+  ui.evaluate("scheduleChatArchive('reply');"); await settle();
+  const snapshot = ui.archiveRequests.find(request => request.headers['x-drive-action'] === 'chat-archive');
+  assert.equal(snapshot.headers['x-chat-archive-source'], 'assistant');
+  const body = JSON.parse(snapshot.body);
+  assert(body.conversations.some(chat => chat.store === 'chat'), 'assistant archives include the AIChat store');
+  assert(body.conversations.some(chat => chat.store === 'assistant'), 'assistant archives include its own store');
+  snapshot.resolve({ok:true}); await settle();
+}
+console.log('Chat archive: attachment/reply triggers, dual-store merge, newest-first ordering, sharding, dedupe and transcript-only parts passed.');

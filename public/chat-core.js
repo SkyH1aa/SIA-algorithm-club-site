@@ -119,6 +119,200 @@ export function chatEndpoint(value, custom = false) {
   return {url:url.href, protocol};
 }
 
+/* ---------- AI 聊天归档（仅本地与 club-drive 之间的后台传输，不进入界面） ---------- */
+export const CHAT_ARCHIVE_SCHEMA = 'club-ai-chat-archive/1';
+export const CHAT_ARCHIVE_PART_BYTES = 6 * 1024 * 1024;
+const ARCHIVE_EXTENSIONS = new Set(['png','jpg','jpeg','webp','pdf','txt','md','csv','js','ts','jsx','tsx','py','json','html','css','c','cpp','h','java','rs','go','sql','yaml','yml','xml','sh','log']);
+
+function archiveBytes(value) { return new TextEncoder().encode(JSON.stringify(value)).length; }
+function archiveIso(value) {
+  const date = new Date(Number.isFinite(value) ? value : Date.now());
+  return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+}
+function archiveBeijing(value) {
+  const date = new Date(Number.isFinite(value) ? value : Date.now());
+  const shifted = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+  const pad = (part, width = 2) => String(part).padStart(width, '0');
+  return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}T${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}:${pad(shifted.getUTCSeconds())}+08:00`;
+}
+export function archiveTimestamp(value = Date.now()) {
+  return {utc: archiveIso(value), beijing: archiveBeijing(value), epoch_ms: Number.isFinite(value) ? value : Date.now()};
+}
+export function archiveExtension(name, kind, hasBinary = true) {
+  const ext = String(name || '').split('.').pop().toLowerCase();
+  // 原始文件字节优先；只有文本转写没有原文件时才把 .pdf 改存为 .txt。
+  if (kind === 'text' && !hasBinary && ext === 'pdf') return 'txt';
+  if (/^[a-z0-9]{1,12}$/.test(ext) && ARCHIVE_EXTENSIONS.has(ext)) return ext;
+  if (kind === 'image') return 'png';
+  if (kind === 'pdf') return 'pdf';
+  return 'bin';
+}
+export function archiveDataUrlBytes(value) {
+  if (typeof value !== 'string') return null;
+  const comma = value.indexOf(',');
+  if (comma < 0 || !/;base64$/i.test(value.slice(0, comma))) return null;
+  try {
+    const binary = globalThis.atob(value.slice(comma + 1).replace(/\s+/g, ''));
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+    return bytes;
+  } catch { return null; }
+}
+export async function archiveAttachmentBytes(attachment) {
+  if (!attachment || typeof attachment !== 'object') return null;
+  try {
+    if (attachment.blob && typeof attachment.blob.arrayBuffer === 'function') {
+      const buffer = await attachment.blob.arrayBuffer();
+      if (buffer.byteLength) return new Uint8Array(buffer);
+    }
+  } catch { /* 退回已解析的 data/text 副本 */ }
+  const data = archiveDataUrlBytes(attachment.data);
+  if (data?.length) return data;
+  if (typeof attachment.text === 'string' && attachment.text.length) return new TextEncoder().encode(attachment.text);
+  return null;
+}
+export async function archiveSha256(bytes) {
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+function archiveParts(content, attachments = []) {
+  if (!Array.isArray(content)) return [];
+  return content.flatMap(part => {
+    if (!part || typeof part !== 'object') return [];
+    if (part.type === 'input_text' || part.type === 'output_text' || part.type === 'text') {
+      if (typeof part.text !== 'string') return [];
+      // 附件正文已按原文件另存；转写里只留引用，避免每轮重复上传数 MB 文本。
+      const embedded = /^\n?--- Attachment: ([\s\S]*?) ---\n([\s\S]*)\n--- End attachment ---\n?$/.exec(part.text);
+      if (embedded) {
+        const file = attachments.find(item => item.name === embedded[1]);
+        return [{
+          type: 'attachment_text', name: embedded[1],
+          sha256: file?.sha256 || '', archived: Boolean(file?.sha256 && file.archived),
+          characters: embedded[2].length
+        }];
+      }
+      return [{type: part.type, text: part.text}];
+    }
+    if (part.type === 'reasoning' && typeof part.encrypted_content === 'string') return [{type: 'reasoning', encrypted_content: part.encrypted_content}];
+    if (part.type === 'input_image') return [{type: 'input_image', detail: part.detail || 'auto', archived: part.archived || null}];
+    if (part.type === 'input_file') return [{type: 'input_file', filename: part.filename || '', archived: part.archived || null}];
+    return [];
+  });
+}
+function archiveTurn(turn, refs) {
+  const attachments = Array.isArray(turn.attachments) ? turn.attachments.map(file => {
+    const ref = refs?.get(file) || {};
+    const sha256 = String(file.sha256 || ref.sha256 || '');
+    return {
+      name: String(file.name || ''), size: Number(file.size) || 0, type: String(file.type || ''), kind: String(file.kind || ''),
+      sha256, extension: String(file.archiveExt || ref.extension || archiveExtension(file.name, file.kind, Boolean(file.blob))),
+      archived: Boolean(sha256 && (file.archiveUploaded || ref.archived))
+    };
+  }) : [];
+  const imageSha = attachments.find(file => file.kind === 'image')?.sha256 || null;
+  const pdfSha = attachments.find(file => file.kind === 'pdf')?.sha256 || null;
+  return {
+    id: String(turn.id || ''),
+    created_at: archiveIso(turn.createdAt),
+    created_at_beijing: archiveBeijing(turn.createdAt),
+    status: String(turn.status || ''),
+    model_id: String(turn.modelId || ''),
+    model_name: String(turn.modelName || ''),
+    prompt: String(turn.prompt || ''),
+    text: String(turn.text || ''),
+    thinking: String(turn.thinking || ''),
+    attachments,
+    input: Array.isArray(turn.input) ? turn.input.map(item => ({
+      ...item,
+      content: archiveParts(item?.content, attachments).map(part => part.type === 'input_image'
+        ? {...part, archived: part.archived || imageSha}
+        : part.type === 'input_file' ? {...part, archived: part.archived || pdfSha} : part)
+    })) : [],
+    output: Array.isArray(turn.output) ? turn.output.map(item => ({
+      ...item,
+      content: item?.content === undefined ? undefined : archiveParts(item.content)
+    })) : [],
+    usage: turn.usage && typeof turn.usage === 'object' ? turn.usage : null,
+    quota_limited: Boolean(turn.quotaLimited),
+    release_id: String(turn.releaseId || ''),
+    sources: Array.isArray(turn.sources) ? turn.sources : []
+  };
+}
+export function archiveConversation(chat, refs) {
+  const turns = Array.isArray(chat.turns) ? chat.turns.map(turn => archiveTurn(turn, refs)) : [];
+  return {
+    store: chat.store === 'assistant' ? 'assistant' : 'chat',
+    id: String(chat.id || ''),
+    title: String(chat.title || ''),
+    created_at: archiveIso(chat.createdAt || chat.updatedAt),
+    updated_at: archiveIso(chat.updatedAt),
+    updated_at_beijing: archiveBeijing(chat.updatedAt),
+    summary: chat.summary && typeof chat.summary === 'object'
+      ? {text: String(chat.summary.text || ''), created_at: archiveIso(chat.summary.createdAt), turns: Number(chat.summary.turns) || 0}
+      : null,
+    turns,
+    turn_count: turns.length
+  };
+}
+function archiveUnits(conversations, target) {
+  const units = [];
+  for (const conversation of conversations) {
+    if (archiveBytes(conversation) <= target) { units.push(conversation); continue; }
+    const base = {...conversation, turns: []};
+    let turns = [], size = archiveBytes(base), fragment = 1;
+    const flush = () => { if (turns.length) { units.push({...base, turn_count: turns.length, fragment: fragment++, turns}); turns = []; size = archiveBytes(base); } };
+    for (const turn of conversation.turns) {
+      const turnBytes = archiveBytes(turn);
+      if (turns.length && size + turnBytes > target) flush();
+      turns.push(turn); size += turnBytes;
+      if (size > target) flush();
+    }
+    flush();
+  }
+  return units;
+}
+/**
+ * 把一次完整本地状态切成若干可独立上传的 JSON 分片。
+ * 分片只按大小切分，所有分片合起来仍是该用户当时的全部会话；
+ * 会话按更新时间从新到旧排列，轮次保持原始先后顺序。
+ */
+export function buildChatArchive({userId, source, trigger, conversations, pending = [], refs, now = Date.now(), target = CHAT_ARCHIVE_PART_BYTES}) {
+  const ordered = [...conversations].sort((a, b) => (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0)).map(chat => archiveConversation(chat, refs));
+  const pendingFiles = pending.map(file => {
+    const ref = refs?.get(file) || {};
+    const sha256 = String(file.sha256 || ref.sha256 || '');
+    return {name: String(file.name || ''), size: Number(file.size) || 0, type: String(file.type || ''), kind: String(file.kind || ''), sha256, extension: String(file.archiveExt || ref.extension || archiveExtension(file.name, file.kind, Boolean(file.blob))), archived: Boolean(sha256 && (file.archiveUploaded || ref.archived))};
+  });
+  const base = {
+    schema: CHAT_ARCHIVE_SCHEMA,
+    user_id: String(userId || ''),
+    source,
+    trigger,
+    uploaded_at: archiveIso(now),
+    uploaded_at_beijing: archiveBeijing(now),
+    timezone: 'Asia/Shanghai',
+    conversation_count: ordered.length,
+    turn_count: ordered.reduce((sum, chat) => sum + chat.turns.length, 0),
+    pending_attachments: pendingFiles
+  };
+  const limit = Math.max(512 * 1024, Math.min(Number(target) || CHAT_ARCHIVE_PART_BYTES, CHAT_ARCHIVE_PART_BYTES));
+  const units = archiveUnits(ordered, limit);
+  const overhead = archiveBytes({...base, conversations: [], part: {index: 9999, total: 9999}});
+  const parts = [];
+  let current = [], size = 0;
+  for (const unit of units) {
+    const unitBytes = archiveBytes(unit);
+    if (current.length && overhead + size + unitBytes > limit) { parts.push(current); current = []; size = 0; }
+    current.push(unit); size += unitBytes;
+  }
+  if (current.length || !parts.length) parts.push(current);
+  return parts.map((items, index) => ({
+    ...base,
+    part: {index: index + 1, total: parts.length},
+    conversations: items
+  }));
+}
+
 export function nativeRequest(body, protocol) {
   if (protocol === 'responses') return {...body, stream:true};
   if (!['messages','chat_completions'].includes(protocol)) throw new Error('request');

@@ -91,6 +91,25 @@ HTTP(S) 是正式运行环境。`file://` 仍受浏览器本地存储、认证�
 
 此前仅切换两阶段后端的部署说明仍适用于只更新 `chat` 的历史场景，但不适用于本轮公告过滤修复，因为本轮同步修改了 `club-drive` 的独立副本。
 
+## AI 聊天归档（管理留档）
+
+AIChat 与 AI 助手会在每次选中附件时、以及每轮回复进入终态（成功、失败、取消、中断）后，把该用户两个本地库的全部会话合并成一份时间戳快照，写入 123 云盘 WebDAV 的 `Chatdata/` 下。附件二进制按 SHA-256 单独存放，快照只保留引用，避免每轮重复上传历史附件。
+
+- 目录：`Chatdata/<Supabase用户uuid>_<登录用户名>_<绑定中文姓名>/<北京时间YYYY-MM-DD>/`；未绑定社员资料时省略姓名段。WebDAV 根目录就是 `clubdata`，因此实际盘内路径为 `clubdata/Chatdata/...`。
+- 快照文件名：`<北京时间HHmmss>_<毫秒>_<chat|assistant>[_pNofM]_<4位随机>.json`，秒级时间戳，保留该目录下此前全部快照，不覆盖旧文件。
+- 附件：`Chatdata/<目录>/attachments/<哈希前2位>/<sha256>.<扩展名>`，同一用户同一内容只存一份，跨日期共享；服务端会重新计算哈希，不信任客户端声明值。
+- 上传失败静默重试于下一次触发，不影响对话；不在界面显示任何归档提示。快照按 6 MiB 分片，单片上限 24 MiB，附件单片上限 6 MiB。
+- 服务端只按登录用户推导路径，客户端无法指定目录；归档接口仍要求有效 Supabase 会话，且不读取或改写任何现有业务表。
+- 隐私文案已由“仅保存在本机”改为“本机保留，社团存档”，未披露路径与触发细节。
+
+部署范围：**只需更新 `club-drive` 与前端静态文件，不改 SQL、不改 `chat`。**`chat` 函数接收的对话请求与两阶段查询逻辑均未变化，归档由浏览器在本地另发 `club-drive` 请求完成。
+
+1. 将完整 [club-drive-dashboard-index.ts](club-drive-dashboard-index.ts) 替换到 `club-drive` → `index.ts` 并部署；保留既有 `WEBDAV_BASE_URL`、`WEBDAV_USERNAME`、`WEBDAV_PASSWORD`、`CLUB_SERVICE_ROLE_KEY` 配置。
+2. 按网站原有方式重新发布 `public/chat.js`、`public/chat-core.js`、`public/chat-i18n.js`、`public/assistant-i18n.js`、`public/chat.html`、`public/assistant.html` 与重建后的 `public/chat-file-bundle.js`。
+3. 用绑定成员验证：添加附件后盘内出现 `attachments/` 文件；完成一轮回复后出现当天的 JSON 快照；AIChat 与助手各自触发后，快照同时包含 `store: "chat"` 与 `store: "assistant"` 会话。
+4. 首次写入会自动创建 `Chatdata`、用户目录、日期目录和附件子目录；若 123 云盘对 `MKCOL` 返回 405/409 视为已存在，不会中断归档。
+5. 本地已通过归档 API 与 UI 触发回归，但没有连接真实 123 云盘或线上 Supabase；实际盘内路径、配额与权限仍须首次上线后核对。
+
 审计 `error_code` 只记录安全类别：计划解析/校验/大小为 `assistant_plan_json`、`assistant_plan_invalid`、`assistant_plan_arguments`、`assistant_plan_size`；规划调用为 `assistant_plan_http`、`assistant_plan_network`、`assistant_plan_stream`、`assistant_plan_usage`；回答调用为 `assistant_answer_http`、`assistant_answer_network`、`assistant_answer_stream`；预算与上限为 `assistant_output_budget`、`assistant_context`、`assistant_request_size`、`assistant_evidence_size`，未分类兜底为 `assistant_plan_failed`。不记录原始计划、参数/结果、供应商正文或密钥，错误类别不证明读取成功或可退款。
 
 契约及错误说明见 [两阶段只读记录](../assistant-validation/semantic-read-tools.md)。本地离线通过188项真实 handler mock 集成用例、126项计划与三协议 SSE 测试、固定只读执行器及保留旧路径回归；类型检查、Dashboard bundle 源码一致性和差异检查通过。浮窗放大尺寸已在本地无头 Chrome 的 1440x900、1920x1080、1024x768 视口实测为 50%x50%（面积 25%）并居中。没有发送真实模型请求或部署，不以本地结果保证供应商语义质量或线上权限。

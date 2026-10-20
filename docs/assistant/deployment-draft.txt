@@ -25,6 +25,21 @@ Assistant administration deployment draft (instructions only)
    No PowerShell, Supabase CLI or build commands are required for web deployment.
    Steps 2-6 describe optional administration/first setup, not mandatory actions for
    the backend-only switch. Nothing in this file executes deployment or publication.
+   ADMINISTRATIVE CHAT ARCHIVE: AI Chat and the assistant now archive each user's
+   complete local AI history after an attachment is selected and after every reply
+   terminal state. Only club-drive and the static frontend change; chat's request
+   handling and SQL are unchanged. Deploy club-drive-dashboard-index.ts to
+   club-drive/index.ts and republish chat.js, chat-core.js, chat-i18n.js,
+   assistant-i18n.js, chat.html, assistant.html and the rebuilt
+   chat-file-bundle.js. WebDAV credentials already used by the member drive
+   (WEBDAV_BASE_URL, WEBDAV_USERNAME, WEBDAV_PASSWORD) are reused server-side;
+   never expose them to the browser. With WEBDAV_BASE_URL pointing at the clubdata
+   root, snapshots are written under Chatdata/<user-uuid>_<username>_<member name>/
+   <Beijing date>/ with second-level filenames; attachment bytes live under the same
+   user directory in attachments/<hash prefix>/<sha256>.<ext>. Clients cannot
+   choose paths, declared attachment hashes are recomputed server-side, and no
+   archive content or error appears in the chat UI. This copy is not proof of live
+   WebDAV quota, permissions or path layout.
 2. Sign in to public/chat-admin.html using the existing dynamic super-admin roster.
    Existing assistant data loads automatically after authorization. Open Assistant
    knowledge to inspect it. Refresh remains available for failures or conflicts.

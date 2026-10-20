@@ -1,11 +1,16 @@
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-drive-action, x-drive-path, x-drive-content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-drive-action, x-drive-path, x-drive-content-type, x-chat-archive-trigger, x-chat-archive-source, x-chat-attachment-hash, x-chat-attachment-ext, x-chat-attachment-type',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Expose-Headers': 'Content-Length, Content-Type, Content-Disposition, X-Drive-Bytes'
 };
 
 const MAX_FILE_BYTES = 100 * 1024 * 1024;
+// AI 聊天归档是服务端代写，客户端永远不能指定路径。单份快照只含转写文本，
+// 附件二进制按哈希单独存放，避免每轮回复重复上传历史附件。
+const CHAT_ARCHIVE_MAX_BYTES = 24 * 1024 * 1024;
+const CHAT_ATTACHMENT_MAX_BYTES = 6 * 1024 * 1024;
+const CHAT_ARCHIVE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'pdf', 'txt', 'md', 'csv', 'js', 'ts', 'jsx', 'tsx', 'py', 'json', 'html', 'css', 'c', 'cpp', 'h', 'java', 'rs', 'go', 'sql', 'yaml', 'yml', 'xml', 'sh', 'log']);
 // 仅迁移兜底：club_super_admins 表为空时，临时放行初始超管邮箱。
 const BOOTSTRAP_SUPER_ADMIN_EMAILS = new Set([
   'haimingadmin@club.local',
@@ -56,6 +61,170 @@ function filePathFor(root: string, input: unknown) {
   const parts = relativePath(input);
   if (!parts.length) throw new Error('必须指定文件路径。');
   return root + parts.map(encodeURIComponent).join('/');
+}
+
+// AI 聊天归档：路径完全由服务端根据登录用户推导，客户端只能提交内容。
+// WebDAV 根目录即 123 云盘的 clubdata 文件夹，因此这里从 /Chatdata/ 开始。
+const CHAT_ARCHIVE_ROOT = '/Chatdata/';
+const chatArchiveDirectoryCache = new Map<string, number>();
+const chatArchiveEncoder = new TextEncoder();
+
+function chatArchiveSegment(value: string, max: number) {
+  const cleaned = value.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').replace(/\s+/g, ' ').trim();
+  return cleaned.slice(0, max) || 'member';
+}
+
+function chatArchiveStamp(value = Date.now()) {
+  const shifted = new Date(value + 8 * 60 * 60 * 1000);
+  const pad = (part: number, width = 2) => String(part).padStart(width, '0');
+  const date = `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}`;
+  const time = `${pad(shifted.getUTCHours())}${pad(shifted.getUTCMinutes())}${pad(shifted.getUTCSeconds())}`;
+  const millis = pad(shifted.getUTCMilliseconds(), 3);
+  return {
+    date,
+    time,
+    millis,
+    iso: `${date}T${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}:${pad(shifted.getUTCSeconds())}.${millis}+08:00`
+  };
+}
+
+async function ensureChatArchiveDirectory(path: string, force = false) {
+  const expires = chatArchiveDirectoryCache.get(path);
+  if (!force && expires && expires > Date.now()) return;
+  const response = await webdavRequest('MKCOL', path);
+  // 201 新建；405/409/301/200 表示已存在或服务端把已存在视作冲突/重定向。
+  if (![200, 201, 204, 301, 405, 409].includes(response.status)) throw new Error(`创建聊天归档目录失败（${response.status}）。`);
+  chatArchiveDirectoryCache.set(path, Date.now() + 10 * 60 * 1000);
+}
+
+// 目录可能在缓存有效期内被外部删除：PUT 报缺少父目录时强制重建一次再重试。
+async function putChatArchiveFile(path: string, directories: string[], body: BodyInit, headers: Record<string, string>) {
+  let response = await webdavRequest('PUT', path, { headers, body });
+  if (response.status !== 404 && response.status !== 409) return response;
+  for (const directory of directories) await ensureChatArchiveDirectory(directory, true);
+  response = await webdavRequest('PUT', path, { headers, body });
+  return response;
+}
+
+async function chatArchiveIdentity(user: { id: string; email?: string; user_metadata?: unknown }) {
+  const { url, serviceKey } = supabaseConfig();
+  let username = '', memberName = '';
+  try {
+    const response = await fetch(
+      `${url}/rest/v1/club_member_profiles?select=username,member_name&user_id=eq.${encodeURIComponent(user.id)}&limit=1`,
+      { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` } }
+    );
+    if (response.ok) {
+      const rows = await response.json().catch(() => []);
+      const row = Array.isArray(rows) ? rows[0] : null;
+      if (row && typeof row === 'object') {
+        username = typeof row.username === 'string' ? row.username.trim() : '';
+        memberName = typeof row.member_name === 'string' ? row.member_name.trim() : '';
+      }
+    }
+  } catch { /* 资料查询失败时仍按 auth 用户名归档，避免丢失记录。 */ }
+  if (!username) username = usernameFromAuthUser(user as Record<string, unknown>);
+  // 目录名固定为 <uuid>_<用户名>_<中文姓名>；未绑定时省略姓名段。
+  const identifier = user.id.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80);
+  const directory = `${identifier}_${chatArchiveSegment(username, 60)}${memberName ? `_${chatArchiveSegment(memberName, 40)}` : ''}`;
+  return { username, memberName, directory };
+}
+
+async function chatArchiveUserRoot(user: { id: string; email?: string; user_metadata?: unknown }) {
+  const identity = await chatArchiveIdentity(user);
+  const userRoot = `${CHAT_ARCHIVE_ROOT}${encodeURIComponent(identity.directory)}/`;
+  await ensureChatArchiveDirectory(CHAT_ARCHIVE_ROOT);
+  await ensureChatArchiveDirectory(userRoot);
+  return { ...identity, userRoot };
+}
+
+async function readLimitedBody(request: Request, max: number): Promise<Uint8Array<ArrayBuffer>> {
+  const declared = contentLength(request);
+  if (declared !== null && declared > max) throw Object.assign(new Error('too_large'), { status: 413 });
+  if (!request.body) return new Uint8Array();
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel().catch(() => undefined);
+      throw Object.assign(new Error('too_large'), { status: 413 });
+    }
+    chunks.push(value);
+  }
+  const output = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { output.set(chunk, offset); offset += chunk.byteLength; }
+  return output;
+}
+
+async function chatArchiveRequest(request: Request, user: { id: string; email?: string; user_metadata?: unknown }) {
+  const source = request.headers.get('x-chat-archive-source') || '';
+  const trigger = request.headers.get('x-chat-archive-trigger') || '';
+  if (!['chat', 'assistant'].includes(source)) return json({ error: '聊天归档来源不合法。' }, 400);
+  if (!['attachment', 'reply'].includes(trigger)) return json({ error: '聊天归档触发点不合法。' }, 400);
+  let bytes: Uint8Array;
+  try { bytes = await readLimitedBody(request, CHAT_ARCHIVE_MAX_BYTES); }
+  catch (error) { return json({ error: '聊天归档内容过大。' }, (error as { status?: number }).status === 413 ? 413 : 400); }
+  let parsed: unknown;
+  try { parsed = JSON.parse(new TextDecoder().decode(bytes)); }
+  catch { return json({ error: '聊天归档内容不是合法 JSON。' }, 400); }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return json({ error: '聊天归档内容不合法。' }, 400);
+  const snapshot = parsed as Record<string, unknown>;
+  if (snapshot.schema !== 'club-ai-chat-archive/1') return json({ error: '聊天归档版本不受支持。' }, 400);
+  if (snapshot.user_id !== user.id) return json({ error: '聊天归档用户不匹配。' }, 403);
+  if (snapshot.source !== source || snapshot.trigger !== trigger) return json({ error: '聊天归档触发信息不一致。' }, 400);
+  if (!Array.isArray(snapshot.conversations)) return json({ error: '聊天归档缺少会话内容。' }, 400);
+  const part = snapshot.part;
+  const partIndex = part && typeof part === 'object' && Number.isSafeInteger((part as Record<string, unknown>).index) ? Number((part as Record<string, unknown>).index) : 1;
+  const partTotal = part && typeof part === 'object' && Number.isSafeInteger((part as Record<string, unknown>).total) ? Number((part as Record<string, unknown>).total) : 1;
+  if (partIndex < 1 || partTotal < 1 || partIndex > partTotal || partTotal > 1000) return json({ error: '聊天归档分片信息不合法。' }, 400);
+  const identity = await chatArchiveUserRoot(user);
+  const stamp = chatArchiveStamp();
+  const dateRoot = `${identity.userRoot}${stamp.date}/`;
+  await ensureChatArchiveDirectory(dateRoot);
+  const suffix = partTotal > 1 ? `_p${partIndex}of${partTotal}` : '';
+  const filename = `${stamp.time}_${stamp.millis}_${source}${suffix}_${crypto.randomUUID().slice(0, 4)}.json`;
+  snapshot.user_id = user.id;
+  snapshot.account = { username: identity.username, member_name: identity.memberName };
+  snapshot.server = { received_at: new Date().toISOString(), generated_at_beijing: stamp.iso, timezone: 'Asia/Shanghai', source, trigger };
+  const payload = chatArchiveEncoder.encode(JSON.stringify(snapshot));
+  const response = await putChatArchiveFile(`${dateRoot}${filename}`, [CHAT_ARCHIVE_ROOT, identity.userRoot, dateRoot], payload, {
+    'content-type': 'application/json; charset=utf-8',
+    'content-length': String(payload.byteLength)
+  });
+  if (!response.ok) return json({ error: `聊天归档上传失败（${response.status}）。` }, 502);
+  return json({ ok: true, bytes: payload.byteLength });
+}
+
+async function chatAttachmentRequest(request: Request, user: { id: string; email?: string; user_metadata?: unknown }) {
+  const declaredHash = (request.headers.get('x-chat-attachment-hash') || '').toLowerCase();
+  const extension = (request.headers.get('x-chat-attachment-ext') || '').toLowerCase();
+  if (declaredHash && !/^[0-9a-f]{64}$/.test(declaredHash)) return json({ error: '附件指纹不合法。' }, 400);
+  if (!/^[a-z0-9]{1,12}$/.test(extension) || extension !== 'bin' && !CHAT_ARCHIVE_EXTENSIONS.has(extension)) return json({ error: '附件类型不受支持。' }, 400);
+  let bytes: Uint8Array<ArrayBuffer>;
+  try { bytes = await readLimitedBody(request, CHAT_ATTACHMENT_MAX_BYTES); }
+  catch (error) { return json({ error: '附件内容过大。' }, (error as { status?: number }).status === 413 ? 413 : 400); }
+  if (!bytes.byteLength) return json({ error: '附件内容为空。' }, 400);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const actual = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  if (declaredHash && actual !== declaredHash) return json({ error: '附件指纹不匹配。' }, 400);
+  const identity = await chatArchiveUserRoot(user);
+  const attachmentRoot = `${identity.userRoot}attachments/`;
+  const prefixRoot = `${attachmentRoot}${actual.slice(0, 2)}/`;
+  await ensureChatArchiveDirectory(attachmentRoot);
+  await ensureChatArchiveDirectory(prefixRoot);
+  const rawType = (request.headers.get('x-chat-attachment-type') || '').toLowerCase();
+  const contentType = /^[a-z0-9.+-]{1,80}\/[a-z0-9.+-]{1,40}$/.test(rawType) ? rawType : 'application/octet-stream';
+  const response = await putChatArchiveFile(`${prefixRoot}${actual}.${extension}`, [CHAT_ARCHIVE_ROOT, identity.userRoot, attachmentRoot, prefixRoot], bytes, {
+    'content-type': contentType,
+    'content-length': String(bytes.byteLength)
+  });
+  if (!response.ok) return json({ error: `附件归档失败（${response.status}）。` }, 502);
+  return json({ ok: true, bytes: bytes.byteLength, sha256: actual });
 }
 
 function parseXmlFiles(xml: string) {
@@ -2593,6 +2762,14 @@ Deno.serve(async request => {
     }
 
     const user = request.method === 'GET' || request.method === 'POST' ? await getUser(request) : null;
+    if (request.method === 'POST' && streamAction === 'chat-archive') {
+      if (!user?.id) return json({ error: '请先登录。' }, 401);
+      return await chatArchiveRequest(request, user);
+    }
+    if (request.method === 'POST' && streamAction === 'chat-attachment') {
+      if (!user?.id) return json({ error: '请先登录。' }, 401);
+      return await chatAttachmentRequest(request, user);
+    }
     if (request.method === 'GET' && streamAction === 'download') {
       if (!user?.id) return json({ error: '请先登录社团盘。' }, 401);
       const response = await webdavRequest('GET', filePathFor(userRoot(user.id), headerPath(request)));
