@@ -2334,6 +2334,77 @@ function asDonationAmount(value: unknown) {
   return (cents / 100).toFixed(2);
 }
 
+// 收款码：单行配置，只存图床 URL。缺行或空串都表示“暂无收款码”。
+async function donationSettings() {
+  const { url, serviceKey } = supabaseConfig();
+  const response = await fetch(
+    `${url}/rest/v1/club_donation_settings?select=payment_qr_url,updated_at&id=eq.true&limit=1`,
+    { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` } }
+  );
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(detail.includes('Could not find the table') || detail.includes('relation')
+      ? '捐赠收款码设置表尚未创建，请先执行 club-donations-schema.sql。'
+      : '读取收款码设置失败。');
+  }
+  const rows = await response.json().catch(() => []);
+  const row = Array.isArray(rows) ? rows[0] : null;
+  return {
+    payment_qr_url: row && typeof row.payment_qr_url === 'string' ? row.payment_qr_url : '',
+    updated_at: row?.updated_at ?? null
+  };
+}
+
+function asPaymentQrUrl(value: unknown) {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return '';
+  if (raw.length > 800) throw new Error('收款码 URL 过长。');
+  let parsed: URL;
+  try { parsed = new URL(raw); } catch { throw new Error('收款码请填写完整的 http(s) 图片 URL。'); }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') throw new Error('收款码请填写完整的 http(s) 图片 URL。');
+  if (parsed.username || parsed.password) throw new Error('收款码 URL 不能包含账号或密码。');
+  return parsed.href;
+}
+
+async function saveDonationSettings(user: { id?: string } | null, payload: Record<string, unknown>) {
+  const { url, serviceKey } = supabaseConfig();
+  const paymentQrUrl = asPaymentQrUrl(payload.paymentQrUrl ?? payload.payment_qr_url);
+  const response = await fetch(`${url}/rest/v1/club_donation_settings?id=eq.true`, {
+    method: 'PATCH',
+    headers: {
+      apikey: serviceKey,
+      authorization: `Bearer ${serviceKey}`,
+      'content-type': 'application/json',
+      Prefer: 'return=representation'
+    },
+    body: JSON.stringify({ payment_qr_url: paymentQrUrl, updated_by: user?.id || null, updated_at: new Date().toISOString() })
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    const detail = typeof result === 'object' && result && 'message' in result
+      ? String((result as { message?: string }).message || '')
+      : '';
+    throw new Error(detail || '保存收款码失败。');
+  }
+  // 先执行过旧脚本时可能没有这一行；此时按键 upsert 一次。
+  if (Array.isArray(result) && result.length === 0) {
+    const inserted = await fetch(`${url}/rest/v1/club_donation_settings`, {
+      method: 'POST',
+      headers: {
+        apikey: serviceKey,
+        authorization: `Bearer ${serviceKey}`,
+        'content-type': 'application/json',
+        Prefer: 'return=representation,resolution=merge-duplicates'
+      },
+      body: JSON.stringify([{ id: true, payment_qr_url: paymentQrUrl, updated_by: user?.id || null }])
+    });
+    const created = await inserted.json().catch(() => null);
+    if (!inserted.ok) throw new Error('保存收款码失败。');
+    return created && Array.isArray(created) && created[0] ? created[0] : { payment_qr_url: paymentQrUrl };
+  }
+  return Array.isArray(result) ? result[0] : result;
+}
+
 async function listDonations() {
   const { url, serviceKey } = supabaseConfig();
   // 默认金额从大到小；同额时较新的日期在前，再以创建时间稳定排序。
@@ -3190,17 +3261,23 @@ Deno.serve(async request => {
     }
 
     if (payload.action === 'donations_list') {
-      // 已登录社员只读；金额不对外公开给未登录访客。
+      // 已登录社员只读；金额与收款码都不对外公开给未登录访客。
       if (!user?.id) return json({ error: '请先登录。' }, 401);
-      return json({ donations: await listDonations() });
+      const [donations, settings] = await Promise.all([listDonations(), donationSettings()]);
+      return json({ donations, settings });
     }
     if (payload.action === 'admin_donations_list') {
       try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
-      return json({ donations: await listDonations() });
+      const [donations, settings] = await Promise.all([listDonations(), donationSettings()]);
+      return json({ donations, settings });
     }
     if (payload.action === 'admin_donations_save') {
       try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
       return json({ donation: await saveDonation(user, payload) });
+    }
+    if (payload.action === 'admin_donation_settings_save') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      return json({ settings: await saveDonationSettings(user, payload) });
     }
     if (payload.action === 'admin_donations_delete') {
       try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }

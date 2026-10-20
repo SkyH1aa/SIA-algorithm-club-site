@@ -7,7 +7,7 @@ import vm from 'node:vm';
 
 const PAGE = new URL('../public/donations.html', import.meta.url);
 
-function harness({ superAdmin = false, session = { user: { id: 'u1' }, access_token: 'token' } } = {}) {
+function harness({ superAdmin = false, session = { user: { id: 'u1' }, access_token: 'token' }, qrUrl = '' } = {}) {
   const html = pageSource;
   const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
   const elements = new Map();
@@ -27,6 +27,10 @@ function harness({ superAdmin = false, session = { user: { id: 'u1' }, access_to
         add(name) { this.set.add(name); }, remove(name) { this.set.delete(name); }
       },
       listeners: {},
+      children: [],
+      append(...next) { this.children.push(...next); },
+      replaceChildren(...next) { this.children = next; },
+      setAttribute(key, value) { this[key] = String(value); },
       addEventListener(type, fn) { this.listeners[type] = fn; },
       querySelectorAll() { return []; },
       reset() { this.value = ''; },
@@ -43,7 +47,14 @@ function harness({ superAdmin = false, session = { user: { id: 'u1' }, access_to
   const document = {
     getElementById(id) { if (!elements.has(id)) elements.set(id, element(id)); return elements.get(id); },
     // 页面里的 $ 是 getElementById 的简写；测试必须与页面使用同一个元素表。
-    querySelector() { return null; }, querySelectorAll() { return []; }, addEventListener() {}
+    querySelector() { return null; }, querySelectorAll() { return []; }, addEventListener() {},
+    createElement(tag) {
+      const node = { tagName: String(tag).toUpperCase(), children: [], className: '', textContent: '', src: '', alt: '' };
+      node.setAttribute = (key, value) => { node[key] = String(value); };
+      node.replaceChildren = (...next) => { node.children = next; };
+      node.append = (...next) => { node.children.push(...next); };
+      return node;
+    }
   };
   const window = {
     addEventListener(type, fn) { if (type === 'club:langchange') this.langChange = fn; },
@@ -63,10 +74,17 @@ function harness({ superAdmin = false, session = { user: { id: 'u1' }, access_to
       const body = JSON.parse(init.body);
       requests.push({ url, body, headers: init.headers });
       if (body.action === 'donations_list' || body.action === 'admin_donations_list') {
-        return { ok: true, json: async () => ({ donations: [
-          { id: 'a', donor_name: 'Big <script>', donated_on: '2026-09-01', amount: '900.00' },
-          { id: 'b', donor_name: 'Small', donated_on: '2026-08-01', amount: '10.00' }
-        ] }) };
+        return { ok: true, json: async () => ({
+          donations: [
+            { id: 'a', donor_name: 'Big <script>', donated_on: '2026-09-01', amount: '900.00' },
+            { id: 'b', donor_name: 'Small', donated_on: '2026-08-01', amount: '10.00' }
+          ],
+          settings: { payment_qr_url: qrUrl }
+        }) };
+      }
+      if (body.action === 'admin_donation_settings_save') {
+        qrUrl = typeof body.paymentQrUrl === 'string' ? body.paymentQrUrl : '';
+        return { ok: true, json: async () => ({ settings: { payment_qr_url: qrUrl } }) };
       }
       if (body.action === 'admin_donations_save') {
         return { ok: true, json: async () => ({ donation: { id: body.id || 'new', donor_name: body.donorName, donated_on: body.donatedOn, amount: Number(body.amount).toFixed(2) } }) };
@@ -74,7 +92,7 @@ function harness({ superAdmin = false, session = { user: { id: 'u1' }, access_to
       if (body.action === 'admin_donations_delete') return { ok: true, json: async () => ({ ok: true }) };
       return { ok: false, status: 400, json: async () => ({ error: 'unexpected' }) };
     },
-    setTimeout, clearTimeout, Date, Number, String, Math, JSON, RegExp, Promise, Array, Object
+    setTimeout, clearTimeout, Date, Number, String, Math, JSON, RegExp, Promise, Array, Object, URL
   });
   vm.runInContext(script, context, { filename: 'donations-inline.js' });
   initialResolve({ data: { session } });
@@ -149,4 +167,54 @@ const pageSource = await readFile(PAGE, 'utf8');
   assert.equal(ui.get('formMessage').textContent, 'donations.amountRequired');
 }
 
-console.log('Club donations UI: sign-in gate, read-only member view, super-admin editing, escaping and client validation passed.');
+// Payment QR: empty state, configured image, admin-only form, save and clear.
+{
+  const ui = harness({ superAdmin: false });
+  await ui.settle(); await ui.settle(); await ui.settle();
+  const figure = ui.get('qrFigure');
+  assert.equal(figure.children.length, 1, 'empty QR shows one placeholder node');
+  assert.equal(figure.children[0].textContent, 'donations.qrEmpty');
+  assert.equal(ui.get('qrForm').hidden, true, 'members cannot edit the QR code');
+  assert.equal(ui.requests.some(r => r.body.action === 'admin_donation_settings_save'), false);
+}
+{
+  const ui = harness({ superAdmin: true, qrUrl: 'https://img.example.com/qr.png' });
+  await ui.settle(); await ui.settle(); await ui.settle();
+  const figure = ui.get('qrFigure');
+  assert.equal(figure.children.length, 1);
+  const img = figure.children[0];
+  assert.equal(img.tagName, 'IMG');
+  assert.equal(img.src, 'https://img.example.com/qr.png');
+  assert.equal(img.alt, 'donations.qrAlt');
+  assert.equal(ui.get('qrForm').hidden, false, 'super admin sees the QR form');
+  assert.equal(ui.get('qrUrl').value, 'https://img.example.com/qr.png');
+
+  // Invalid URL is rejected locally without a request.
+  const before = ui.requests.length;
+  ui.get('qrUrl').value = 'javascript:alert(1)';
+  await ui.get('qrForm').listeners.submit({ preventDefault() {} });
+  assert.equal(ui.requests.length, before, 'invalid QR URL must not reach the server');
+  assert.equal(ui.get('qrMessage').textContent, 'donations.qrInvalid');
+
+  // Saving a valid URL updates the image immediately.
+  ui.get('qrUrl').value = 'https://img.example.com/qr2.png';
+  await ui.get('qrForm').listeners.submit({ preventDefault() {} });
+  await ui.settle(); await ui.settle(); await ui.settle();
+  const saved = ui.requests.slice(before).find(r => r.body.action === 'admin_donation_settings_save');
+  assert.ok(saved);
+  assert.equal(saved.body.paymentQrUrl, 'https://img.example.com/qr2.png');
+  assert.equal(ui.get('qrFigure').children[0].src, 'https://img.example.com/qr2.png');
+  assert.equal(ui.get('qrMessage').textContent, 'donations.qrSaved');
+
+  // Clearing hides the image and shows the empty placeholder.
+  const beforeClear = ui.requests.length;
+  ui.get('qrClearButton').listeners.click();
+  await ui.settle(); await ui.settle(); await ui.settle();
+  const cleared = ui.requests.slice(beforeClear).find(r => r.body.action === 'admin_donation_settings_save');
+  assert.ok(cleared);
+  assert.equal(cleared.body.paymentQrUrl, '');
+  assert.equal(ui.get('qrFigure').children[0].textContent, 'donations.qrEmpty');
+  assert.equal(ui.get('qrMessage').textContent, 'donations.qrCleared');
+}
+
+console.log('Club donations UI: sign-in gate, read-only member view, super-admin editing, escaping, client validation and payment QR states passed.');

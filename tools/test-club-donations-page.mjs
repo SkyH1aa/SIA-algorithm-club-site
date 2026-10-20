@@ -50,6 +50,16 @@ assert.match(page, /member-identity\.js/);
 assert.match(page, /isSuperAdmin \? 'admin_donations_list' : 'donations_list'/);
 assert.match(page, /\$\(['"]adminPanel['"]\)\.hidden = !isSuperAdmin/);
 assert.match(page, /isSuperAdmin = Boolean\(access\.isSuperAdmin\)/, 'must rely on isSuperAdmin, not a staff permission');
+// QR panel: public read-only display, admin-only form, safe URL handling.
+for (const id of ['qrPanel', 'qrFigure', 'qrForm', 'qrUrl', 'qrSaveButton', 'qrClearButton', 'qrMessage']) {
+  assert.ok(page.includes(`id="${id}"`), `missing QR element #${id}`);
+}
+assert.match(page, /function safeImageUrl/);
+assert.match(page, /\['http:', 'https:'\]\.includes\(url\.protocol\)/, 'QR URL must be restricted to http(s)');
+assert.match(page, /function renderQr/);
+assert.match(page, /t\('donations\.qrEmpty'\)/, 'empty QR falls back to the no-code label');
+assert.match(page, /\$\('qrForm'\)\.hidden = !isSuperAdmin/);
+assert.match(page, /admin_donation_settings_save/);
 assert.doesNotMatch(page, /permissions\?\.can_/, 'donation editing must not accept a staff permission');
 // Default ordering is documented the same way as the server.
 assert.match(page, /按金额从大到小/);
@@ -80,6 +90,13 @@ for (const action of ['admin_donations_list', 'admin_donations_save', 'admin_don
 assert.match(fn, /const order = 'amount\.desc,donated_on\.desc,created_at\.desc'/);
 assert.match(fn, /select=id,donor_name,donated_on,amount,created_at,updated_at&order=\$\{order\}/);
 assert.match(fn, /Math\.round\(numeric \* 100\)/, 'amount must be normalised to cents');
+// QR settings: super-admin only write, strict URL validation, one row per site.
+assert.match(fn, /payload\.action === 'admin_donation_settings_save'[\s\S]{0,200}requireSuperAdmin\(user\)/);
+assert.match(fn, /function asPaymentQrUrl/);
+assert.match(fn, /parsed\.protocol !== 'https:' && parsed\.protocol !== 'http:'/);
+assert.match(fn, /parsed\.username \|\| parsed\.password/);
+assert.match(fn, /club_donation_settings\?select=payment_qr_url,updated_at/);
+assert.match(fn, /donations, settings/);
 assert.doesNotMatch(fn, /can_donations/, 'donations must not become a staff permission');
 
 // --- SQL contract ---
@@ -90,5 +107,9 @@ assert.match(sql, /enable row level security/);
 assert.match(sql, /revoke all on table public\.club_donations from public, anon, authenticated/);
 assert.match(sql, /to service_role/);
 assert.match(sql, /amount desc, donated_on desc, created_at desc/);
+assert.match(sql, /create table if not exists public\.club_donation_settings/);
+assert.match(sql, /payment_qr_url text not null default ''/);
+assert.match(sql, /grant select, update on table public\.club_donation_settings to service_role/);
+assert.match(sql, /insert into public\.club_donation_settings/);
 
 console.log('Club donations page: i18n coverage, read/admin split, super-admin-only entry points, escaping, theme safety and SQL contract passed.');

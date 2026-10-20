@@ -37,7 +37,43 @@
         #donationList .donation-amount { text-align: right; font-weight: 650; font-variant-numeric: tabular-nums; }
         #donationList .donation-actions { white-space: nowrap; }
         #donationList .donation-actions .row-button + .row-button { margin-left: 6px; }
+        /* 收款码：固定最大尺寸，避免超长图把页面撑坏；亮暗色都不写死底色。 */
+        .donation-qr { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+        .donation-qr-figure {
+          flex: 0 0 auto; width: 200px; height: 200px; display: grid; place-items: center;
+          padding: 10px; border: 1px solid var(--club-line); border-radius: var(--club-radius);
+          background: var(--club-surface-2);
+        }
+        .donation-qr-figure img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
+        .donation-qr-empty { color: var(--club-muted); font-size: 13px; text-align: center; line-height: 1.6; }
+        .donation-qr-copy { flex: 1 1 240px; min-width: 0; }
+        .donation-qr-copy h2 { margin: 0 0 6px; }
+        .donation-qr-copy p { margin: 0; color: var(--club-muted); font-size: 13px; line-height: 1.7; }
+        .donation-qr-admin { margin-top: 16px; }
+        .donation-qr-admin .form-actions { justify-content: flex-start; }
       </style>
+
+      <section class="panel" id="qrPanel">
+        <div class="donation-qr">
+          <div class="donation-qr-figure" id="qrFigure">
+            <span class="donation-qr-empty" data-i18n="donations.qrEmpty">暂无收款码</span>
+          </div>
+          <div class="donation-qr-copy">
+            <h2 data-i18n="donations.qrTitle">社团收款码</h2>
+            <p data-i18n="donations.qrLead">如需支持算法社，可扫描上方收款码。捐赠后名单由社团管理员统一登记。</p>
+          </div>
+        </div>
+        <form class="form donation-qr-admin" id="qrForm" hidden>
+          <label class="label" for="qrUrl" data-i18n="donations.qrUrlLabel">收款码图片 URL（图床）</label>
+          <input class="input" id="qrUrl" maxlength="800" autocomplete="off" inputmode="url" placeholder="https://..." data-i18n-placeholder="donations.qrUrlPlaceholder">
+          <p class="intro" data-i18n="donations.qrUrlHint">留空表示不展示收款码。请填写以 http:// 或 https:// 开头的图片直链。</p>
+          <div class="form-actions">
+            <button class="button" type="submit" id="qrSaveButton" data-i18n="donations.qrSave">保存收款码</button>
+            <button class="button secondary" type="button" id="qrClearButton" data-i18n="donations.qrClear">清除收款码</button>
+          </div>
+          <p class="message" id="qrMessage" role="status"></p>
+        </form>
+      </section>
 
       <section class="panel" id="adminPanel" hidden>
         <div class="section-head">
@@ -97,6 +133,7 @@
     let donations = [];
     let isSuperAdmin = false;
     let editingId = '';
+    let settings = { payment_qr_url: '' };
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -120,6 +157,49 @@
     function formatDate(value) {
       const raw = String(value || '').slice(0, 10);
       return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : '-';
+    }
+    // 只接受 http(s) 绝对地址；服务端也会再校验一次。
+    function safeImageUrl(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+      try {
+        const url = new URL(raw);
+        if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return '';
+        return url.href;
+      } catch { return ''; }
+    }
+    function renderQr() {
+      const figure = $('qrFigure');
+      const url = safeImageUrl(settings.payment_qr_url);
+      if (!url) {
+        figure.replaceChildren();
+        const empty = document.createElement('span');
+        empty.className = 'donation-qr-empty';
+        empty.setAttribute('data-i18n', 'donations.qrEmpty');
+        empty.textContent = t('donations.qrEmpty');
+        figure.append(empty);
+        return;
+      }
+      figure.replaceChildren();
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = t('donations.qrAlt');
+      img.loading = 'lazy';
+      img.referrerPolicy = 'no-referrer';
+      // 图床失效时回到“暂无收款码”，而不是留一个破图图标。
+      img.onerror = () => {
+        figure.replaceChildren();
+        const empty = document.createElement('span');
+        empty.className = 'donation-qr-empty';
+        empty.textContent = t('donations.qrUnavailable');
+        figure.append(empty);
+      };
+      figure.append(img);
+    }
+    function syncQrForm() {
+      $('qrForm').hidden = !isSuperAdmin;
+      if (!isSuperAdmin) return;
+      $('qrUrl').value = settings.payment_qr_url || '';
     }
     async function call(action, body = {}) {
       const { data: { session } } = await supabaseClient.auth.getSession();
@@ -206,6 +286,11 @@
       try {
         const payload = await call(isSuperAdmin ? 'admin_donations_list' : 'donations_list');
         donations = Array.isArray(payload.donations) ? payload.donations : [];
+        settings = payload.settings && typeof payload.settings === 'object'
+          ? { payment_qr_url: typeof payload.settings.payment_qr_url === 'string' ? payload.settings.payment_qr_url : '' }
+          : { payment_qr_url: '' };
+        renderQr();
+        syncQrForm();
         renderDonations();
         setMessage($('listMessage'), '');
       } catch (error) {
@@ -224,6 +309,7 @@
         : { isSuperAdmin: false, permissions: {} };
       isSuperAdmin = Boolean(access.isSuperAdmin);
       $('adminPanel').hidden = !isSuperAdmin;
+      $('qrForm').hidden = !isSuperAdmin;
       const badge = $('roleBadge');
       badge.hidden = false;
       badge.textContent = isSuperAdmin ? t('donations.roleAdmin') : t('donations.roleMember');
@@ -234,6 +320,30 @@
 
     $('refreshButton').addEventListener('click', refreshDonations);
     $('resetButton').addEventListener('click', resetForm);
+    async function saveQr(value, successKey) {
+      if (!isSuperAdmin) return;
+      setMessage($('qrMessage'), t('donations.saving'));
+      try {
+        const payload = await call('admin_donation_settings_save', { paymentQrUrl: value });
+        const saved = payload.settings && typeof payload.settings === 'object' ? payload.settings : {};
+        settings = { payment_qr_url: typeof saved.payment_qr_url === 'string' ? saved.payment_qr_url : value };
+        renderQr();
+        $('qrUrl').value = settings.payment_qr_url || '';
+        setMessage($('qrMessage'), t(successKey), 'success');
+      } catch (error) {
+        setMessage($('qrMessage'), error.message, 'error');
+      }
+    }
+    $('qrForm').addEventListener('submit', event => {
+      event.preventDefault();
+      const raw = $('qrUrl').value.trim();
+      if (raw && !safeImageUrl(raw)) { setMessage($('qrMessage'), t('donations.qrInvalid'), 'error'); return; }
+      void saveQr(raw, 'donations.qrSaved');
+    });
+    $('qrClearButton').addEventListener('click', () => {
+      $('qrUrl').value = '';
+      void saveQr('', 'donations.qrCleared');
+    });
     $('donationForm').addEventListener('submit', async event => {
       event.preventDefault();
       if (!isSuperAdmin) return;
@@ -265,10 +375,11 @@
 
     window.addEventListener('club:langchange', () => {
       try {
-        if (window.ClubI18n?.apply) ClubI18n.apply(document);
+        if (window.ClubI18n?.apply) window.ClubI18n.apply(document);
         if (!$('content').classList.contains('hidden')) {
           $('saveButton').textContent = editingId ? t('donations.saveEdit') : t('donations.add');
           $('roleBadge').textContent = isSuperAdmin ? t('donations.roleAdmin') : t('donations.roleMember');
+          renderQr();
           renderDonations();
         }
       } catch (_error) {}

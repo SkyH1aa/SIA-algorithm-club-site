@@ -38,3 +38,26 @@ drop trigger if exists club_donations_updated_at on public.club_donations;
 create trigger club_donations_updated_at
 before update on public.club_donations
 for each row execute function public.set_club_donations_updated_at();
+
+-- 收款码展示设置：全站单行配置，只保存图床 URL。
+-- 页面在名单上方展示收款码；URL 为空时显示“暂无收款码”。
+-- 仅超级管理员可写，登录社员只读。
+create table if not exists public.club_donation_settings (
+  id boolean primary key default true check (id),
+  payment_qr_url text not null default '' check (char_length(payment_qr_url) <= 800),
+  updated_by uuid references auth.users(id) on delete set null,
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+insert into public.club_donation_settings (id) values (true)
+  on conflict (id) do nothing;
+
+alter table public.club_donation_settings enable row level security;
+revoke all on table public.club_donation_settings from public, anon, authenticated;
+-- 单行配置表不允许删除：服务端只做 select / update。
+grant select, update on table public.club_donation_settings to service_role;
+
+drop trigger if exists club_donation_settings_updated_at on public.club_donation_settings;
+create trigger club_donation_settings_updated_at
+before update on public.club_donation_settings
+for each row execute function public.set_club_donations_updated_at();

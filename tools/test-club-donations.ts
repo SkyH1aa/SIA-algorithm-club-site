@@ -24,6 +24,7 @@ const originalFetch = globalThis.fetch;
 let tokenUser: Row | null = { id: memberId, email: 'member@club.local' };
 let superAdmins: Row[] = [{ user_id: memberId, email: 'member@club.local' }];
 let rows: Row[] = [];
+let settingsRow: Row | null = { id: true, payment_qr_url: '', updated_at: '2026-10-19T00:00:00Z' };
 let writes: Array<{ method: string; url: URL; body: unknown }> = [];
 let failWrite = false;
 
@@ -71,6 +72,28 @@ const db = (async (input: string | URL | Request, init: RequestInit = {}) => {
     // Serve rows exactly as PostgREST would, ordered by amount desc then date desc.
     const sorted = [...rows].sort((a, b) => Number(b.amount) - Number(a.amount) || String(b.donated_on).localeCompare(String(a.donated_on)));
     return json(sorted);
+  }
+  if (url.pathname === '/rest/v1/club_donation_settings') {
+    if (!init.method || init.method === 'GET') {
+      assert.equal(url.searchParams.get('select'), 'payment_qr_url,updated_at');
+      assert.equal(url.searchParams.get('id'), 'eq.true');
+      return json(settingsRow ? [settingsRow] : []);
+    }
+    const body = JSON.parse(String(init.body)) as Row;
+    writes.push({ method: init.method, url, body });
+    if (failWrite) return json({ message: 'settings rejected' }, 400);
+    if (init.method === 'PATCH') {
+      if (!settingsRow) return json([], 200);
+      Object.assign(settingsRow, body);
+      return json([settingsRow], 200);
+    }
+    if (init.method === 'POST') {
+      assert.match(String(new Headers(init.headers).get('prefer') || ''), /resolution=merge-duplicates/);
+      const incoming = Array.isArray(body) ? body[0] as Row : body;
+      settingsRow = { id: true, updated_at: '2026-10-20T00:00:00Z', ...incoming };
+      return json([settingsRow], 201);
+    }
+    return json({}, 405);
   }
   throw new Error(`unexpected fetch ${url}`);
 }) as typeof fetch;
@@ -187,6 +210,53 @@ try {
   assert.deepEqual((ordered.body.donations as Row[]).map(row => row.donor_name), ['Large', 'Small']);
   // numeric columns may arrive as strings; the API always returns two decimals.
   assert.equal((ordered.body.donations as Row[])[0].amount, '900.00');
+
+  // --- Payment QR settings ---------------------------------------------
+  // Default: no QR configured, reported as an empty string rather than null.
+  assert.deepEqual(ordered.body.settings, { payment_qr_url: '', updated_at: '2026-10-19T00:00:00Z' });
+
+  superAdmins = [{ user_id: memberId, email: 'member@club.local' }];
+  const beforeQr = writes.length;
+  for (const [payload, label] of [
+    [{ paymentQrUrl: 'javascript:alert(1)' }, 'javascript scheme'],
+    [{ paymentQrUrl: 'data:image/png;base64,AAAA' }, 'data URL'],
+    [{ paymentQrUrl: 'ftp://example.com/a.png' }, 'ftp scheme'],
+    [{ paymentQrUrl: 'https://user:pass@example.com/a.png' }, 'embedded credentials'],
+    [{ paymentQrUrl: 'not a url' }, 'relative text'],
+    [{ paymentQrUrl: 'https://example.com/' + 'a'.repeat(800) }, 'too long']
+  ] as Array<[Row, string]>) {
+    const bad = await call({ action: 'admin_donation_settings_save', ...payload });
+    assert.equal(bad.status, 400, label);
+  }
+  assert.equal(writes.length, beforeQr, 'invalid QR URLs must never reach PostgREST');
+
+  // Non-super-admin members cannot change the QR code.
+  superAdmins = [];
+  const deniedQr = await call({ action: 'admin_donation_settings_save', paymentQrUrl: 'https://img.example.com/qr.png' });
+  assert.equal(deniedQr.status, 403);
+  assert.equal(writes.length, beforeQr);
+
+  // Super admin saves a valid image URL; it is returned by both list actions.
+  superAdmins = [{ user_id: memberId, email: 'member@club.local' }];
+  const savedQr = await call({ action: 'admin_donation_settings_save', paymentQrUrl: 'https://img.example.com/qr.png' });
+  assert.equal(savedQr.status, 200, JSON.stringify(savedQr.body));
+  assert.equal((savedQr.body.settings as Row).payment_qr_url, 'https://img.example.com/qr.png');
+  const afterSave = await call({ action: 'donations_list' });
+  assert.equal((afterSave.body.settings as Row).payment_qr_url, 'https://img.example.com/qr.png');
+  const adminAfterSave = await call({ action: 'admin_donations_list' });
+  assert.equal((adminAfterSave.body.settings as Row).payment_qr_url, 'https://img.example.com/qr.png');
+
+  // Clearing stores an empty string, which the page renders as “no payment code”.
+  const clearedQr = await call({ action: 'admin_donation_settings_save', paymentQrUrl: '   ' });
+  assert.equal(clearedQr.status, 200);
+  assert.equal((clearedQr.body.settings as Row).payment_qr_url, '');
+
+  // Older schema without the seeded row: PATCH returns no row, so the server upserts once.
+  settingsRow = null;
+  const upsert = await call({ action: 'admin_donation_settings_save', paymentQrUrl: 'https://img.example.com/new.png' });
+  assert.equal(upsert.status, 200, JSON.stringify(upsert.body));
+  assert.equal((upsert.body.settings as Row).payment_qr_url, 'https://img.example.com/new.png');
+  assert.ok(writes.some(write => write.method === 'POST' && write.url.pathname === '/rest/v1/club_donation_settings'));
 } finally {
   globalThis.fetch = originalFetch;
 }
