@@ -42,7 +42,8 @@ supabase/club-donations-schema.sql
 
 按网站原有方式发布本轮全部前端变更（这次不只影响捐赠页）：
 
-- 新增 `public/donations.html`、`public/club-common.js`、`public/404.html`、`public/favicon.svg`
+- 新增 `public/donations.html`、`public/club-common.js`、`public/favicon.svg`
+- 新增**仓库根目录**的 `404.html`（GitHub Pages 只识别仓库根的这一份，放在 `public/` 下不会生效）
 - 新增 `public/vendor/supabase/supabase.min.js`（固定版本 UMD，约 108 KB）
 - 新增 `public/asset-versions.json`（资源版本清单）
 - 修改全部 `public/*.html`、根 `index.html` 与根游戏页（脚本引用、i18n defer、favicon、版本号）
@@ -61,6 +62,17 @@ supabase/club-donations-schema.sql
 4. 超级管理员登录：出现收款码配置表单与“新增 / 编辑捐赠记录”表单；保存一个图床直链后收款码立即显示，点“清除收款码”后回到“暂无收款码”。
 5. 非超管账号直接构造 `admin_donations_save` 或 `admin_donation_settings_save` 请求：应返回 403，且不产生数据库写入。
 6. 检查首页跳转模块、社团功能页、管理总览三处入口均可达。
+
+## 自定义 404 页
+
+GitHub Pages 只把**仓库根目录**的 `404.html` 用于未知路径；`public/404.html` 不会被路由。因此：
+
+- 文件必须放在仓库根：`404.html`（与 `index.html` 同级）。
+- 页面用 `<base>` 动态指向站点根（项目页为 `/<repo>/`），所以从任意深路径返回首页都会落到
+  `https://<user>.github.io/<repo>/index.html`，不会跳到账户根 `https://<user>.github.io/index.html`。
+- 根 `404.html` 里的资源写 `public/...` 相对路径，不能用 `/public/...`。
+
+`node tools/test-404-page.mjs` 会校验文件位置、base 推导与资源引用。
 
 ## 资源版本号
 

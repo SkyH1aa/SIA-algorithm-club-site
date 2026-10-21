@@ -16,7 +16,7 @@ const check = process.argv.includes('--check');
 
 // 只版本化这些共享资源；页面私有脚本由页面自身控制。
 const VERSIONED = [
-  'club-ui.css', 'club-shell.js', 'theme.js', 'i18n.js', 'i18n-dict.js',
+  'theme.css', 'club-ui.css', 'club-shell.js', 'theme.js', 'i18n.js', 'i18n-dict.js',
   'club-common.js', 'chat-i18n.js', 'assistant-i18n.js', 'member-identity.js',
   'club-auth-storage.js', 'service-gate.js', 'service-prompts.js',
   'chat-core.js', 'chat.js', 'chat-file-bundle.js', 'chat.css', 'assistant.css',
@@ -40,6 +40,8 @@ for (const [name, digest] of Object.entries(hashes)) byBasename.set(path.basenam
 
 const htmlFiles = [
   path.join(root, 'index.html'),
+  // GitHub Pages 只认仓库根目录的 404.html，而不是 public/404.html。
+  path.join(root, '404.html'),
   ...fs.readdirSync(publicDir).filter(name => name.endsWith('.html')).map(name => path.join(publicDir, name)),
   ...['俄罗斯方块.html', '俄罗斯方块AI.html', '贪吃蛇.html', '贪吃蛇专家系统.html']
     .map(name => path.join(root, name)).filter(file => fs.existsSync(file))

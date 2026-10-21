@@ -87,6 +87,7 @@ for (const name of pages) {
   assert.match(html,/(?:club-shell|assistant-launcher)\.js/,`missing assistant entry: public/${name}`);
 }
 assert.match(fs.readFileSync(path.join(rootPath,'index.html'),'utf8'),/public\/club-shell\.js/);
+assert.match(fs.readFileSync(path.join(rootPath,'404.html'),'utf8'),/public\/club-shell\.js/,'root 404 page mounts the shared shell');
 const rootGames = ['贪吃蛇.html','贪吃蛇专家系统.html','俄罗斯方块.html','俄罗斯方块AI.html'];
 for (const name of rootGames) assert.match(fs.readFileSync(path.join(rootPath,name),'utf8'),/public\/assistant-launcher\.js/,`missing assistant entry: ${name}`);
 console.log(`Assistant launcher: lazy mount, trusted messages, safe navigation, retained instance, pagehide, file origin, mobile focus isolation, nested exclusion and ${pages.length + 1 + rootGames.length} site pages passed.`);

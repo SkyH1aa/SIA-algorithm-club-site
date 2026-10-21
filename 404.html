@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN" data-i18n-title-key="pages.notFound.title">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>页面不存在 · 算法社</title>
+  <!--
+    GitHub Pages 会把仓库根目录的 404.html 返回给任意不存在的路径，但浏览器地址栏
+    仍保留原路径。相对链接必须基于「站点根」而不是当前目录，否则 /a/b/c 会解析错。
+    站点部署在 https://<user>.github.io/<repo>/，因此用仓库名定位站点根；
+    本地 file:// 用当前目录，自定义域名用 /。
+  -->
+  <script>
+    (function () {
+      var REPO = 'SIA-algorithm-club-site';
+      var base;
+      if (location.protocol === 'file:') {
+        base = './';
+      } else if (location.pathname.indexOf('/' + REPO + '/') === 0) {
+        base = '/' + REPO + '/';
+      } else if (/\.github\.io$/i.test(location.hostname)) {
+        // 仓库改名或用户页：退回首段路径。
+        var first = location.pathname.split('/').filter(Boolean)[0] || '';
+        base = /^[A-Za-z0-9._-]+$/.test(first) ? '/' + first + '/' : '/';
+      } else {
+        base = '/';
+      }
+      document.write('<base href="' + base + '">');
+    })();
+  </script>
+  <link rel="icon" href="public/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="public/theme.css?v=39014235">
+  <link rel="stylesheet" href="public/club-ui.css?v=2f4bee9c">
+  <script src="public/theme.js?v=0efca64b"></script>
+  <script src="public/i18n-dict.js?v=21e9f61d" defer></script>
+  <script src="public/i18n.js?v=eda11d20"></script>
+  <script src="public/club-common.js?v=b56b9c0f"></script>
+  <script src="public/service-prompts.js?v=1cfff2ab"></script>
+  <script src="public/service-gate.js?v=b53797fa"></script>
+</head>
+<body class="club-page">
+  <header class="topbar"><div class="topbar-inner"><a class="brand" href="index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Not Found</small></span></a><a class="back" href="index.html" data-i18n="common.backSite">返回官网</a></div></header>
+  <main>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">404</p>
+        <h1 data-i18n="notFound.h1">这个页面不存在</h1>
+        <p class="lead" data-i18n="notFound.lead">链接可能已经失效，或者地址输入有误。可以回到首页，或从社团功能重新进入需要的模块。</p>
+        <div class="actions">
+          <a class="button" href="index.html" data-i18n="common.backHome">返回首页</a>
+          <a class="button secondary" href="public/club-features.html" data-i18n="common.backFeatures">返回社团功能</a>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="public/club-shell.js?v=90975bc7"></script>
+</body>
+</html>

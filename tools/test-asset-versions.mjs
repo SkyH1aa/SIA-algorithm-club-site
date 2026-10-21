@@ -26,6 +26,7 @@ for (const [name, digest] of Object.entries(hashes)) {
 
 const htmlFiles = [
   path.join(root, 'index.html'),
+  path.join(root, '404.html'),
   ...(await readdir(publicDir)).filter(name => name.endsWith('.html')).map(name => path.join(publicDir, name)),
   ...['俄罗斯方块.html', '俄罗斯方块AI.html', '贪吃蛇.html', '贪吃蛇专家系统.html']
     .map(name => path.join(root, name))
