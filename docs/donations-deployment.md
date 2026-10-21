@@ -42,7 +42,7 @@ supabase/club-donations-schema.sql
 
 按网站原有方式发布本轮全部前端变更（这次不只影响捐赠页）：
 
-- 新增 `public/donations.html`、`public/club-common.js`、`public/favicon.svg`
+- 新增 `public/donations.html`、`public/club-common.js`、`public/favicon.svg`（字母 A 图标）
 - 新增**仓库根目录**的 `404.html`（GitHub Pages 只识别仓库根的这一份，放在 `public/` 下不会生效）
 - 新增 `public/vendor/supabase/supabase.min.js`（固定版本 UMD，约 108 KB）
 - 新增 `public/asset-versions.json`（资源版本清单）
