@@ -2,17 +2,18 @@
 <html lang="zh-CN" data-i18n-title-key="pages.joinAdmin.title">
 <head>
   <link rel="stylesheet" href="theme.css">
-  <link rel="stylesheet" href="club-ui.css">
-  <script src="theme.js"></script>
-  <meta charset="utf-8">
+  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
+  <script src="theme.js?v=0efca64b"></script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>报名管理 · 算法社</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="club-auth-storage.js"></script>
-  <script src="member-identity.js" defer></script>
-  <script src="i18n-dict.js"></script>
-  <script src="i18n.js"></script>
-<script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
+  <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
+  <script src="club-auth-storage.js?v=80f52e6f"></script>
+
+  <script src="i18n-dict.js?v=21e9f61d" defer></script><script src="member-identity.js?v=0af7f540" defer></script>
+  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script></head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Join Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a></div></header>
 
@@ -79,7 +80,7 @@
         body: JSON.stringify({ action, ...body })
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || t('admin.opFailed'));
+      if (!response.ok) throw ClubCommon.handleAuthError(response, payload, t('admin.opFailed'));
       return payload;
     }
 
@@ -87,7 +88,7 @@
       applicationsCache = applications;
       $('statTotal').textContent = String(applications.length);
       if (!applications.length) {
-        $('applicationList').innerHTML = '<div class="empty">' + t('admin.emptyJoin') + '</div>';
+        ClubCommon.listState($('applicationList'), { kind: 'empty', title: t('admin.emptyJoin') });
         return;
       }
       $('applicationList').innerHTML = `<table class="table"><thead><tr><th>${t('admin.colName')}</th><th>${t('admin.colClass')}</th><th>${t('admin.colContact')}</th><th>${t('admin.colSelfIntro')}</th><th>${t('admin.colAttraction')}</th><th>${t('admin.colExpectation')}</th><th>${t('admin.colSubmittedAt')}</th><th>${t('admin.colActions')}</th></tr></thead><tbody>${applications.map(item => `
@@ -113,7 +114,7 @@
         button.addEventListener('click', async () => {
           const id = button.getAttribute('data-delete-application');
           const item = applicationsCache.find(row => row.id === id);
-          if (!window.confirm(t('admin.confirmDeleteJoin', { name: item?.chinese_name || id }))) return;
+          if (!(await ClubCommon.confirm({ message: t('admin.confirmDeleteJoin', { name: item?.chinese_name || id }) }))) return;
           setMessage($('joinAdminMessage'), t('admin.deleting'));
           try {
             await call('admin_join_applications_delete', { id });
@@ -127,7 +128,7 @@
     }
 
     async function refreshApplications() {
-      $('applicationList').innerHTML = '<div class="empty loading">' + t('admin.loadingJoin') + '</div>';
+      ClubCommon.listState($('applicationList'), { kind: 'loading', message: t('admin.loadingJoin') });
       try {
         const payload = await call('admin_join_applications_list');
         renderApplications(payload.applications || []);
@@ -167,6 +168,6 @@
       } catch (_e) {}
     });
   </script>
-  <script src="club-shell.js"></script>
+  <script src="club-shell.js?v=90975bc7"></script>
 </body>
 </html>

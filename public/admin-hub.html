@@ -2,17 +2,18 @@
 <html lang="zh-CN" data-i18n-title-key="pages.adminHub.title">
 <head>
   <link rel="stylesheet" href="theme.css">
-  <link rel="stylesheet" href="club-ui.css">
-  <script src="theme.js"></script>
-  <meta charset="utf-8">
+  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
+  <script src="theme.js?v=0efca64b"></script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>管理员总览 · 算法社</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="club-auth-storage.js"></script>
-  <script src="member-identity.js"></script>
-  <script src="i18n-dict.js?v=20261016"></script>
-  <script src="i18n.js"></script>
-<script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
+  <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
+  <script src="club-auth-storage.js?v=80f52e6f"></script>
+  <script src="i18n-dict.js?v=21e9f61d"></script><script src="member-identity.js?v=0af7f540"></script>
+
+  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script></head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Admin Hub</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
   <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div>
@@ -253,7 +254,7 @@
         ['chat','admin.featureChat'],['member-center','admin.featureMemberCenter'],['member-profile','admin.featureMemberProfile'],
         ['checkin','admin.featureCheckin'],['course-checkin','admin.featureCourseCheckin'],['points','admin.featurePoints'],
         ['mall','admin.featureMall'],['messages','admin.featureMessages'],['drive','admin.featureDrive'],
-        ['events','admin.featureEvents'],['join','admin.featureJoin']
+        ['events','admin.featureEvents'],['join','admin.featureJoin'],['donations','admin.featureDonations']
       ]],
       ['games', 'admin.featureGroupGames', [
         ['gomoku','admin.featureGomoku'],['tetris','admin.featureTetris'],['snake','admin.featureSnake'],['platformer','admin.featurePlatformer']
@@ -298,7 +299,7 @@
       appMonitorReleases = Array.isArray(releases) ? releases : [];
       $('appMonitorReleasesList').innerHTML = appMonitorReleases.length ? `<table><thead><tr><th>${escapeHtml(t('admin.appmonitorVersion'))}</th><th>${escapeHtml(t('admin.appmonitorDate'))}</th><th>${escapeHtml(t('admin.appmonitorDownloadUrl'))}</th><th>${escapeHtml(t('admin.actions'))}</th></tr></thead><tbody>${appMonitorReleases.map(item => `<tr><td>${escapeHtml(item.version)}</td><td>${escapeHtml(item.release_date)}</td><td><a href="${escapeHtml(item.download_url)}" target="_blank" rel="noopener">${escapeHtml(t('admin.openLink'))}</a></td><td><button class="button secondary" type="button" data-appmonitor-edit="${escapeHtml(item.id)}">${escapeHtml(t('common.edit'))}</button> <button class="button danger" type="button" data-appmonitor-delete="${escapeHtml(item.id)}">${escapeHtml(t('common.delete'))}</button></td></tr>`).join('')}</tbody></table>` : `<div class="empty">${escapeHtml(t('admin.appmonitorNoReleases'))}</div>`;
       document.querySelectorAll('[data-appmonitor-edit]').forEach(button => button.onclick = () => { const item = appMonitorReleases.find(entry => entry.id === button.dataset.appmonitorEdit); if (!item) return; $('appMonitorReleaseId').value = item.id; $('appMonitorVersion').value = item.version || ''; $('appMonitorReleaseDate').value = item.release_date || ''; $('appMonitorIntroZh').value = item.intro_zh || ''; $('appMonitorIntroEn').value = item.intro_en || ''; $('appMonitorDownloadUrl').value = item.download_url || ''; window.scrollTo({ top: $('appMonitorReleasesSection').offsetTop - 12, behavior: 'smooth' }); });
-      document.querySelectorAll('[data-appmonitor-delete]').forEach(button => button.onclick = async () => { if (!confirm(t('admin.appmonitorDeleteConfirm'))) return; try { await call('admin_appmonitor_releases_delete', { id: button.dataset.appmonitorDelete }); setMessage($('appMonitorReleaseMessage'), t('admin.appmonitorDeleted'), 'success'); await refreshAppMonitorReleases(); } catch (error) { setMessage($('appMonitorReleaseMessage'), error.message, 'error'); } });
+      document.querySelectorAll('[data-appmonitor-delete]').forEach(button => button.onclick = async () => { if (!(await ClubCommon.confirm({ message: t('admin.appmonitorDeleteConfirm') }))) return; try { await call('admin_appmonitor_releases_delete', { id: button.dataset.appmonitorDelete }); setMessage($('appMonitorReleaseMessage'), t('admin.appmonitorDeleted'), 'success'); await refreshAppMonitorReleases(); } catch (error) { setMessage($('appMonitorReleaseMessage'), error.message, 'error'); } });
     }
     async function refreshAppMonitorReleases() { const result = await call('admin_appmonitor_releases_list'); renderAppMonitorReleases(result.releases); }
 
@@ -528,7 +529,7 @@
           if (button.disabled) return;
           const username = button.getAttribute('data-revoke-super');
           if (!username) return;
-          if (!window.confirm(t('admin.confirmRevokeSuper', { username }))) return;
+          if (!(await ClubCommon.confirm({ message: t('admin.confirmRevokeSuper', { username }) }))) return;
           setMessage($('superAdminsMessage'), t('admin.revokingSuper', { username }));
           try {
             const payload = await call('admin_super_admins_revoke', { username });
@@ -603,7 +604,7 @@
       $('permissionsList').querySelectorAll('[data-delete-perm]').forEach(button => {
         button.addEventListener('click', async () => {
           const username = button.getAttribute('data-delete-perm');
-          if (!window.confirm(t('admin.confirmClearPerm', { username }))) return;
+          if (!(await ClubCommon.confirm({ message: t('admin.confirmClearPerm', { username }) }))) return;
           setMessage($('permissionsMessage'), t('admin.clearingPerm'));
           try {
             await call('admin_staff_permissions_delete', { username });
@@ -956,6 +957,6 @@
     supabaseClient.auth.onAuthStateChange((_event, session) => { void updateSession(session); });
     supabaseClient.auth.getSession().then(({ data: { session } }) => updateSession(session));
   </script>
-  <script src="club-shell.js"></script>
+  <script src="club-shell.js?v=90975bc7"></script>
 </body>
 </html>

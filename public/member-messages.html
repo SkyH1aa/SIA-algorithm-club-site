@@ -2,17 +2,18 @@
 <html lang="zh-CN" data-i18n-title-key="pages.messages.title">
 <head>
   <link rel="stylesheet" href="theme.css">
-  <link rel="stylesheet" href="club-ui.css">
-  <script src="theme.js"></script>
-  <meta charset="utf-8">
+  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
+  <script src="theme.js?v=0efca64b"></script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>社员留言箱 · 算法社</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="club-auth-storage.js"></script>
-  <script src="member-identity.js"></script>
-    <script src="i18n-dict.js"></script>
-  <script src="i18n.js"></script>
-<script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
+  <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
+  <script src="club-auth-storage.js?v=80f52e6f"></script>
+  <script src="i18n-dict.js?v=21e9f61d"></script><script src="member-identity.js?v=0af7f540"></script>
+
+  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script></head>
 <body class="club-page">
 <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a><span class="member-identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
 <main>
@@ -26,11 +27,28 @@
 <script>
 const SUPABASE_URL='https://jgezpvmlnhycxslqbwcx.supabase.co',SUPABASE_KEY='sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl',FUNCTION_URL=`${SUPABASE_URL}/functions/v1/club-drive`;
 const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY),memberGate=document.getElementById('memberGate'),memberContent=document.getElementById('memberContent'),messageList=document.getElementById('messageList'),formMessage=document.getElementById('formMessage'),listMessage=document.getElementById('listMessage'),sessionStatus=document.getElementById('sessionStatus'),sessionHint=document.getElementById('sessionHint');let messages=[],isAdminMember=false;
-function escapeHtml(value){return String(value).replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}function setMessage(node,text,type=''){node.textContent=text;node.className=`message ${type}`}function formatDate(value){const date=new Date(value);return Number.isNaN(date.valueOf())?'':date.toLocaleString('zh-CN',{dateStyle:'medium',timeStyle:'short'})}async function callMember(action,body={}){const {data:{session}}=await supabaseClient.auth.getSession();if(!session)throw new Error(ClubI18n.t('messages.notMember'));const response=await fetch(FUNCTION_URL,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${session.access_token}`},body:JSON.stringify({action,...body})}),payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload.error||ClubI18n.t('messages.opFailed'));return payload}
+function escapeHtml(value){return String(value).replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}function setMessage(node,text,type=''){node.textContent=text;node.className=`message ${type}`}function formatDate(value){const date=new Date(value);return Number.isNaN(date.valueOf())?'':date.toLocaleString('zh-CN',{dateStyle:'medium',timeStyle:'short'})}async function callMember(action,body={}){const {data:{session}}=await supabaseClient.auth.getSession();if(!session)throw new Error(ClubI18n.t('messages.notMember'));const response=await fetch(FUNCTION_URL,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${session.access_token}`},body:JSON.stringify({action,...body})}),payload=await response.json().catch(()=>({}));if(!response.ok)throw ClubCommon.handleAuthError(response,payload,ClubI18n.t('messages.opFailed'));return payload}
 function renderMessages(){if(!messages.length){messageList.innerHTML='<div class="empty">'+ClubI18n.t('messages.empty')+'</div>';return}messageList.innerHTML=messages.map(item=>`<article class="message-card"><div class="message-card-head"><div><h3>${escapeHtml(item.member_name)}</h3><span class="class-name">${escapeHtml(item.member_class)}</span><time datetime="${escapeHtml(item.created_at)}"> · ${escapeHtml(formatDate(item.created_at))}</time></div>${isAdminMember?`<div class="message-actions"><button class="row-button message-edit" data-id="${escapeHtml(item.id)}" type="button">${ClubI18n.t('messages.edit')}</button><button class="row-button delete message-delete" data-id="${escapeHtml(item.id)}" type="button">${ClubI18n.t('common.delete')}</button></div>`:''}</div><p>${escapeHtml(item.message_content)}</p></article>`).join('');if(isAdminMember){messageList.querySelectorAll('.message-edit').forEach(button=>button.onclick=()=>editMessage(button.dataset.id));messageList.querySelectorAll('.message-delete').forEach(button=>button.onclick=()=>deleteMessage(button.dataset.id))}}
 async function refreshMessages(){try{const payload=await callMember('member_messages_list');messages=payload.messages||[];renderMessages();setMessage(listMessage,'')}catch(error){messageList.innerHTML='<div class="empty">'+ClubI18n.t('messages.failList')+'</div>';setMessage(listMessage,error.message,'error')}}
 async function editMessage(id){const item=messages.find(message=>message.id===id);if(!item)return;const memberName=prompt(ClubI18n.t('messages.promptName'),item.member_name);if(memberName===null)return;const memberClass=prompt(ClubI18n.t('messages.promptClass'),item.member_class);if(memberClass===null)return;const messageContent=prompt(ClubI18n.t('messages.promptContent'),item.message_content);if(messageContent===null)return;try{await callMember('admin_member_messages_update',{id,memberName,memberClass,messageContent});setMessage(listMessage,ClubI18n.t('messages.updated'),'success');await refreshMessages()}catch(error){setMessage(listMessage,error.message,'error')}}
-async function deleteMessage(id){if(!confirm(ClubI18n.t('messages.confirmDelete')))return;try{await callMember('admin_member_messages_delete',{id});setMessage(listMessage,ClubI18n.t('messages.deleted'),'success');await refreshMessages()}catch(error){setMessage(listMessage,error.message,'error')}}
+async function deleteMessage(id){
+  const item=messages.find(message=>message.id===id);
+  if(!item)return;
+  if(!(await ClubCommon.confirm({ title:ClubI18n.t('messages.deleteTitle'), message:ClubI18n.t('messages.confirmDelete'), confirmText:ClubI18n.t('common.delete'), danger:true })))return;
+  const index=messages.findIndex(message=>message.id===id);
+  messages=messages.filter(message=>message.id!==id);renderMessages();
+  ClubCommon.scheduleUndo({
+    message:ClubI18n.t('messages.pendingDelete'),
+    undoLabel:ClubI18n.t('common.undo'),
+    onUndo:()=>{messages.splice(index,0,item);renderMessages();setMessage(listMessage,ClubI18n.t('messages.deleteUndone'),'success')},
+    commit:async({pagehide})=>{
+      const {data:{session}}=await supabaseClient.auth.getSession();
+      if(!session)return;
+      await fetch(FUNCTION_URL,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${session.access_token}`},body:JSON.stringify({action:'admin_member_messages_delete',id}),keepalive:Boolean(pagehide)});
+      if(!pagehide)setMessage(listMessage,ClubI18n.t('messages.deleted'),'success');
+    }
+  });
+}
 let boundProfile=null;
 function applyBoundProfile(){if(!boundProfile)return;const nameInput=document.getElementById('memberName'),classInput=document.getElementById('memberClass');if(boundProfile.member_name)nameInput.value=boundProfile.member_name;if(boundProfile.member_class)classInput.value=boundProfile.member_class}
 async function loadBoundProfile(){try{const payload=await callMember('member_profile_get');boundProfile=payload?.bound?payload.profile:null;applyBoundProfile()}catch(_error){boundProfile=null}}
@@ -38,6 +56,6 @@ async function updateSession(session){const member=Boolean(session?.user?.id);me
 document.getElementById('refreshButton').onclick=refreshMessages;document.getElementById('messageForm').addEventListener('submit',async event=>{event.preventDefault();const memberName=document.getElementById('memberName').value,memberClass=document.getElementById('memberClass').value,messageContent=document.getElementById('messageContent').value;try{await callMember('member_messages_create',{memberName,memberClass,messageContent});event.target.reset();applyBoundProfile();setMessage(formMessage,ClubI18n.t('messages.submitted'),'success');await refreshMessages()}catch(error){setMessage(formMessage,error.message,'error')}});supabaseClient.auth.onAuthStateChange((_event,session)=>{void updateSession(session);if(session?.user?.id)void refreshMessages()});supabaseClient.auth.getSession().then(async({data:{session}})=>{await updateSession(session);if(session?.user?.id)await refreshMessages()});
 window.addEventListener('club:langchange',()=>{renderMessages();if(window.ClubI18n)ClubI18n.apply(document);});
 </script>
-  <script src="club-shell.js"></script>
+  <script src="club-shell.js?v=90975bc7"></script>
 </body>
 </html>

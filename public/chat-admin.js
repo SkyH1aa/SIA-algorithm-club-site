@@ -762,7 +762,7 @@ function validInteger(value, min, max) { return Number.isInteger(value) && value
 async function removeProvider(item) {
   if (active || !authorized || !item) return;
   const children = models.filter(row => row.provider_id === item.id).length;
-  if (!window.confirm(t('providerDeleteConfirm', {name: item.label || item.name, n: children}))) return;
+  if (!(await ClubCommon.confirm({ message: t('providerDeleteConfirm', {name: item.label || item.name, n: children}) }))) return;
   const messageId = 'providerMessage';
   void operation(messageId, async run => {
     setMessage(messageId, 'deleting');
@@ -777,7 +777,7 @@ async function removeProvider(item) {
 /* 删除模型：只影响这一条，但会让正在编辑/测试它的表单失效。 */
 async function removeModel(item) {
   if (active || !authorized || !item) return;
-  if (!window.confirm(t('modelDeleteConfirm', {name: item.display_name || modelKey(item)}))) return;
+  if (!(await ClubCommon.confirm({ message: t('modelDeleteConfirm', {name: item.display_name || modelKey(item)}) }))) return;
   const messageId = 'modelMessage';
   void operation(messageId, async run => {
     setMessage(messageId, 'deleting');
@@ -793,9 +793,9 @@ function assistantOperation(messageId, work) {
   void operation(messageId, work);
 }
 $('refreshAssistantButton').onclick = () => void ensureAssistantLoaded(true);
-$('assistantPresetButton').onclick = () => {
+$('assistantPresetButton').onclick = async () => {
   if (active || assistantLoad || !authorized || !assistantState.config) return;
-  if (assistantConfigSnapshot() !== assistantConfigBaseline && !window.confirm(t('assistantPresetConfirm'))) return;
+  if (assistantConfigSnapshot() !== assistantConfigBaseline && !(await ClubCommon.confirm({ message: t('assistantPresetConfirm') }))) return;
   $('assistantWelcome').value = assistantPreset.welcome;
   $('assistantSuggestions').value = assistantPreset.suggestions.join('\n');
   $('assistantSupplement').value = assistantPreset.system_prompt;
@@ -819,7 +819,7 @@ $('assistantDocumentForm').addEventListener('submit', event => {
 });
 $('clearAssistantDocumentButton').onclick = () => { if (!active && !assistantLoad && authorized) { clearAssistantDocument(); setMessage('assistantDocumentMessage'); } };
 $('assistantDocumentContent').addEventListener('input', () => assistantPreview());
-$('assistantDocumentsList').addEventListener('click', event => {
+$('assistantDocumentsList').addEventListener('click', async event => {
   if (active || assistantLoad || !authorized || !assistantState.config) return;
   const button = event.target.closest('[data-assistant-edit], [data-assistant-archive]');
   const item = assistantState.documents.find(item => item.slug === (button?.dataset.assistantEdit || button?.dataset.assistantArchive));
@@ -827,7 +827,7 @@ $('assistantDocumentsList').addEventListener('click', event => {
   if (button.dataset.assistantEdit) {
     fillAssistantDocument(item); $('assistantDocumentTitle').focus(); return;
   }
-  if (item.archived || !window.confirm(t('archiveConfirm', {title: item.title}))) return;
+  if (item.archived || !(await ClubCommon.confirm({ message: t('archiveConfirm', {title: item.title}) }))) return;
   assistantOperation('assistantDocumentMessage', run => assistantMutation(run, assistantActions.archive, {slug: item.slug, expected_version: assistantState.config.version}, 'assistantDocumentMessage'));
 });
 async function readAssistantFile(kind) {
@@ -865,19 +865,19 @@ async function readAssistantFile(kind) {
 }
 $('assistantJsonFile').addEventListener('change', () => void readAssistantFile('json'));
 $('assistantMarkdownFile').addEventListener('change', () => void readAssistantFile('markdown'));
-$('assistantImportButton').onclick = () => {
-  if (active || assistantLoad || !authorized || !assistantState.config || !assistantImportDocuments.length || !window.confirm(t('importConfirm', {count: assistantImportDocuments.length}))) return;
+$('assistantImportButton').onclick = async () => {
+  if (active || assistantLoad || !authorized || !assistantState.config || !assistantImportDocuments.length || !(await ClubCommon.confirm({ message: t('importConfirm', {count: assistantImportDocuments.length}) }))) return;
   const body = {expected_version: assistantState.config.version, documents: assistantImportDocuments};
   assistantOperation('assistantDocumentMessage', run => assistantMutation(run, assistantActions.import, body, 'assistantDocumentMessage'));
 };
-$('assistantPublishButton').onclick = () => {
-  if (active || assistantLoad || !authorized || !assistantState.config || !window.confirm(t('publishConfirm'))) return;
+$('assistantPublishButton').onclick = async () => {
+  if (active || assistantLoad || !authorized || !assistantState.config || !(await ClubCommon.confirm({ message: t('publishConfirm') }))) return;
   assistantOperation('assistantReleaseMessage', run => assistantMutation(run, assistantActions.publish, {expected_version: assistantState.config.version}, 'assistantReleaseMessage'));
 };
 $('assistantRollbackRelease').addEventListener('change', assistantControls);
-$('assistantRollbackButton').onclick = () => {
+$('assistantRollbackButton').onclick = async () => {
   const release_id = $('assistantRollbackRelease').value;
-  if (active || assistantLoad || !authorized || !assistantState.config || !assistantState.releases.some(item => item.id === release_id) || !window.confirm(t('rollbackConfirm', {release: release_id}))) return;
+  if (active || assistantLoad || !authorized || !assistantState.config || !assistantState.releases.some(item => item.id === release_id) || !(await ClubCommon.confirm({ message: t('rollbackConfirm', {release: release_id}) }))) return;
   assistantOperation('assistantReleaseMessage', run => assistantMutation(run, assistantActions.rollback, {release_id, expected_version: assistantState.config.version}, 'assistantReleaseMessage'));
 };
 $('refreshQuotaButton').onclick = () => void operation('quotaMessage', loadQuotaDirectory);
@@ -893,17 +893,17 @@ $('proxyRouteForm').addEventListener('submit', event => {
   try { body = proxyRouteInput(); } catch (error) { setMessage('proxyMessage', errorKey(error), 'error'); return; }
   void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_save', body));
 });
-$('proxyKeyForm').addEventListener('submit', event => {
+$('proxyKeyForm').addEventListener('submit', async event => {
   event.preventDefault();
   if (active || !authorized || !$('proxyKeyForm').reportValidity()) return;
   const route_id = $('proxyKeyRoute').value, label = $('proxyKeyLabel').value.trim();
   if (!proxyRoutes.some(item => item.id === route_id) || !label || label.length > 120) return setMessage('proxyMessage', 'invalidInput', 'error');
   // Do not silently replace a key the administrator has not yet saved.
-  if (proxyPlaintext && !window.confirm(t('proxyReplaceConfirm'))) return;
+  if (proxyPlaintext && !(await ClubCommon.confirm({ message: t('proxyReplaceConfirm') }))) return;
   clearProxyPlaintext();
   void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_key_create', {route_id, label}));
 });
-$('proxyRoutesList').addEventListener('click', event => {
+$('proxyRoutesList').addEventListener('click', async event => {
   if (active || !authorized) return;
   const button = event.target.closest('[data-proxy-copy-base], [data-proxy-edit], [data-proxy-route-state], [data-proxy-route-delete], [data-proxy-route-hard-delete]');
   if (!button) return;
@@ -911,32 +911,32 @@ $('proxyRoutesList').addEventListener('click', event => {
   if (!item) return;
   if (button.dataset.proxyCopyBase) { void copyProxyBase(item.id); return; }
   if (button.dataset.proxyRouteHardDelete) {
-    if (!item.deleted_at || !window.confirm(t('proxyHardDeleteRouteConfirm', {name: item.name}))) return;
+    if (!item.deleted_at || !(await ClubCommon.confirm({ message: t('proxyHardDeleteRouteConfirm', {name: item.name}) }))) return;
     void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_route_hard_delete', {id: item.id, expected_version: item.version}));
     return;
   }
   if (item.deleted_at) return;
   if (button.dataset.proxyEdit) { fillProxyRoute(item); $('proxyRouteName').focus(); return; }
   if (button.dataset.proxyRouteDelete) {
-    if (!window.confirm(t('proxyDeleteConfirm', {name: item.name}))) return;
+    if (!(await ClubCommon.confirm({ message: t('proxyDeleteConfirm', {name: item.name}) }))) return;
     void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_route_delete', {id: item.id, expected_version: item.version}));
     return;
   }
   void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_route_state', {id: item.id, enabled: !item.enabled, expected_version: item.version}));
 });
-$('proxyKeysList').addEventListener('click', event => {
+$('proxyKeysList').addEventListener('click', async event => {
   if (active || !authorized) return;
   const button = event.target.closest('[data-proxy-key-state], [data-proxy-key-revoke], [data-proxy-key-hard-delete]');
   const item = proxyKeys.find(item => item.id === (button?.dataset.proxyKeyState || button?.dataset.proxyKeyRevoke || button?.dataset.proxyKeyHardDelete));
   if (!item) return;
   if (button.dataset.proxyKeyHardDelete) {
-    if (!item.revoked_at || !window.confirm(t('proxyHardDeleteKeyConfirm', {label: item.label}))) return;
+    if (!item.revoked_at || !(await ClubCommon.confirm({ message: t('proxyHardDeleteKeyConfirm', {label: item.label}) }))) return;
     void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_key_hard_delete', {id: item.id, expected_version: item.version}));
     return;
   }
   if (item.revoked_at) return;
   const revoked = Boolean(button.dataset.proxyKeyRevoke);
-  if (revoked && !window.confirm(t('proxyRevokeConfirm', {label: item.label}))) return;
+  if (revoked && !(await ClubCommon.confirm({ message: t('proxyRevokeConfirm', {label: item.label}) }))) return;
   void operation('proxyMessage', run => proxyMutation(run, 'admin_proxy_key_state', {id: item.id, enabled: revoked ? false : !item.enabled, revoked, expected_version: item.version}));
 });
 $('quotaUserForm').addEventListener('submit', event => event.preventDefault());
@@ -1078,7 +1078,7 @@ $('modelForm').addEventListener('submit', event => {
     await loadAdmin(run);
   });
 });
-$('testForm').addEventListener('submit', event => {
+$('testForm').addEventListener('submit', async event => {
   event.preventDefault();
   if (active || !authorized || !$('testForm').reportValidity()) return;
   const item = availableModels().find(row => row.id === $('testModel').value);
@@ -1087,7 +1087,7 @@ $('testForm').addEventListener('submit', event => {
   if (!prompt || prompt.length > 12000) return setMessage('testMessage', 'invalidPrompt', 'error');
   if (!validInteger(output, 1, Math.min(131072, item.max_output_tokens))) return setMessage('testMessage', 'invalidOutput', 'error');
   if (modelUsesMessages(item) && item.claude_thinking?.mode === 'enabled' && output <= item.claude_thinking.budget_tokens) return setMessage('testMessage', 'claudeThinkingBudgetInvalid', 'error');
-  if (!window.confirm(t('testConfirm'))) return;
+  if (!(await ClubCommon.confirm({ message: t('testConfirm') }))) return;
   void operation('testMessage', async run => {
     testOutput = {visible: false, text: ''}; renderTestOutput(); setMessage('testMessage', 'testRunning');
     const quotaUserId = selectedUser, quotaRevision = selectionEpoch;

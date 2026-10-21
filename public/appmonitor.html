@@ -3,16 +3,17 @@
 <html lang="zh-CN" data-i18n-title-key="pages.appmonitor.title">
 <head>
   <link rel="stylesheet" href="theme.css">
-  <link rel="stylesheet" href="club-ui.css">
-  <script src="theme.js"></script>
-  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
+  <script src="theme.js?v=0efca64b"></script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>APPMonitor · 软件发布页</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="club-auth-storage.js"></script>
-  <script src="member-identity.js"></script>
-    <script src="i18n-dict.js"></script>
-  <script src="i18n.js"></script>
+  <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
+  <script src="club-auth-storage.js?v=80f52e6f"></script>
+  <script src="i18n-dict.js?v=21e9f61d"></script><script src="member-identity.js?v=0af7f540"></script>
+
+  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
 <style>
     :root {
       font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
@@ -113,7 +114,7 @@
     html[data-theme="light"] .download { background:linear-gradient(135deg,#e07a5f,#d65a31); color:#fff; border-color:#c95336; box-shadow:0 5px 16px rgba(214,90,49,.2); }
     @media (max-width:760px) { .hero { grid-template-columns:1fr; padding-bottom:34px; } main { padding-top:48px; } .release-head { align-items:flex-start; flex-direction:column; gap:5px; } }
   </style>
-<script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script></head>
 <body>
   <div class="ambient-background" aria-hidden="true"><div class="ambient-orb orb-cyan"></div><div class="ambient-orb orb-violet"></div><div class="ambient-grid"></div><canvas id="particleCanvas"></canvas></div><div class="pointer-glow" aria-hidden="true"></div>
   <header class="topbar">
@@ -243,6 +244,6 @@ const motionQuery=window.matchMedia('(prefers-reduced-motion: no-preference)');i
   window.addEventListener('club:langchange', render);
 })();
 </script>
-  <script src="club-shell.js"></script>
+  <script src="club-shell.js?v=90975bc7"></script>
 </body>
 </html>

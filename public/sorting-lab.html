@@ -2,16 +2,17 @@
 <html lang="zh-CN" data-i18n-title-key="lab.sorting.title">
 <head>
   <link rel="stylesheet" href="theme.css">
-  <link rel="stylesheet" href="club-ui.css">
-  <script src="theme.js"></script>
-  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
+  <script src="theme.js?v=0efca64b"></script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>排序可视化实验室 · 算法社</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="club-auth-storage.js"></script>
-  <script src="member-identity.js" defer></script>
-  <script src="i18n-dict.js"></script>
-  <script src="i18n.js"></script>
+  <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
+  <script src="club-auth-storage.js?v=80f52e6f"></script>
+
+  <script src="i18n-dict.js?v=21e9f61d" defer></script><script src="member-identity.js?v=0af7f540" defer></script>
+  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
 <style>
     :root { font-family:"Microsoft YaHei","PingFang SC","Noto Sans CJK SC",system-ui,sans-serif; color:#f6fbff; background:#020409; --bg:#020409; --panel:rgba(8,13,30,.8); --cyan:#00e5ff; --violet:#7c4dff; --pink:#ff5fc8; --gold:#ffd166; --text:#c8d4e2; --muted:#8fa3b8; --line:rgba(115,221,255,.2); --shadow:0 24px 90px rgba(0,229,255,.11); }
     *{box-sizing:border-box} body{margin:0;min-width:320px;min-height:100vh;background:radial-gradient(ellipse 70% 50% at 15% 4%,rgba(0,229,255,.15),transparent 62%),radial-gradient(ellipse 60% 42% at 88% 7%,rgba(124,77,255,.22),transparent 65%),linear-gradient(180deg,#020409,#050917 50%,#020409);color:#f6fbff;overflow-x:hidden} body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(rgba(0,229,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.045) 1px,transparent 1px);background-size:72px 72px;mask-image:radial-gradient(ellipse 110% 100% at 50% 10%,#000,transparent 92%)}
@@ -22,7 +23,7 @@
     @media(max-width:820px){.lab-grid{grid-template-columns:1fr}.controls{order:2}.chart-wrap{height:300px}.hero{align-items:start;flex-direction:column}.algorithm-note{min-width:0;width:100%}}@media(max-width:560px){.topbar{gap:10px;padding:12px 16px}.brand small{display:none}.member-identity{max-width:110px;overflow:hidden;text-overflow:ellipsis}.back-link{padding:8px;font-size:12px}.visual,.controls{padding:15px}.chart-wrap{height:250px;padding:22px 7px 25px}.bars{gap:3px}.bar::before{font-size:9px}.metrics{grid-template-columns:1fr}.visual-header{flex-direction:column}.status{align-self:flex-start}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
   </style>
-<script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script></head>
 <body>
   <header class="topbar">
     <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a>
@@ -107,6 +108,6 @@
     })();
   </script>
 <script>!function(){try{var t=document.querySelector('.topbar');if(t&&!document.getElementById('langSwitcherHost')){var h=document.createElement('div');h.id='langSwitcherHost';t.appendChild(h);}if(window.ClubI18n)window.ClubI18n.mountSwitcher(document.getElementById('langSwitcherHost'));if(window.ClubTheme&&typeof window.ClubTheme.autoMountSwitcher==='function')window.ClubTheme.autoMountSwitcher();}catch(e){}}();</script>
-  <script src="club-shell.js"></script>
+  <script src="club-shell.js?v=90975bc7"></script>
 </body>
 </html>

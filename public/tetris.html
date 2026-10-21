@@ -2,16 +2,17 @@
 <html lang="zh-CN" data-i18n-title-key="tetris.title">
 <head>
   <link rel="stylesheet" href="theme.css">
-  <link rel="stylesheet" href="club-ui.css">
-  <script src="theme.js"></script>
-  <meta charset="UTF-8">
+  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
+  <script src="theme.js?v=0efca64b"></script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>算法社 · 俄罗斯方块多模式</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="club-auth-storage.js"></script>
-  <script src="member-identity.js"></script>
-    <script src="i18n-dict.js"></script>
-  <script src="i18n.js"></script>
+  <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
+  <script src="club-auth-storage.js?v=80f52e6f"></script>
+  <script src="i18n-dict.js?v=21e9f61d"></script><script src="member-identity.js?v=0af7f540"></script>
+
+  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
 <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
@@ -686,7 +687,7 @@
       .ambient-orb, .ambient-grid { animation: none; }
     }
   </style>
-<script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script></head>
 <body>
   <div class="ambient-background" aria-hidden="true">
     <div class="ambient-orb orb-cyan"></div>
@@ -1692,7 +1693,7 @@
     // 对齐五子棋：新昵称直接开局；云端已存在则每次都弹确认（不靠本地缓存跳过）
     if (!info.exists) return true;
 
-    const isOwner = window.confirm(ClubI18n.t('games.nickConfirm', { nick: nickname }));
+    const isOwner = await ClubCommon.confirm({ message: ClubI18n.t('games.nickConfirm', { nick: nickname }) });
     if (!isOwner) {
       setResult(ClubI18n.t('games.nickTaken'));
       els.nickname.focus();
@@ -2205,7 +2206,7 @@
 
   async function restartGame() {
     if (state.inProgress && state.mode === 'versus' && !state.surrendered && !state.resultSubmitted) {
-      const ok = window.confirm(ClubI18n.t('tetris.confirmRestart'));
+      const ok = await ClubCommon.confirm({ message: ClubI18n.t('tetris.confirmRestart') });
       if (!ok) return;
       state.surrendered = true;
       state.inProgress = false;
@@ -2238,9 +2239,9 @@
     }
   }
 
-  function surrender() {
+  async function surrender() {
     if (state.mode !== 'versus' || !state.inProgress) return;
-    const ok = window.confirm(ClubI18n.t('tetris.confirmSurrender'));
+    const ok = await ClubCommon.confirm({ message: ClubI18n.t('tetris.confirmSurrender') });
     if (!ok) return;
     state.surrendered = true;
     state.inProgress = false;
@@ -2451,6 +2452,6 @@
   loadLeaderboard();
 })();
 </script>
-  <script src="club-shell.js"></script>
+  <script src="club-shell.js?v=90975bc7"></script>
 </body>
 </html>

@@ -2336,3 +2336,79 @@ body.club-page .club-feature-field .input { min-height: 34px; font-size: 12.5px;
 html[data-theme="light"] body.club-page .club-feature-group,
 html[data-theme="light"] body.club-page .club-feature-field { background: #FFFFFF !important; border-color: var(--club-line) !important; }
 html[data-theme="light"] body.club-page .club-feature-group > summary:hover { background: var(--club-accent-soft) !important; }
+
+/* ---------- 打印 ----------
+   捐赠名单、积分榜这类页面会被打印或存 PDF：隐藏导航与操作控件，
+   让表格全宽、深色主题下也能看清。 */
+@media print {
+  body.club-page {
+    background: #fff !important;
+    color: #111 !important;
+  }
+  body.club-page .topbar,
+  body.club-page .club-admin-rail,
+  body.club-page .club-launcher,
+  body.club-page .club-assistant,
+  body.club-page .club-assistant-launcher,
+  body.club-page #club-common-undo-host,
+  body.club-page .club-common-session,
+  body.club-page .actions,
+  body.club-page .form-actions,
+  body.club-page .row-actions,
+  body.club-page .message,
+  body.club-page .donation-toolbar,
+  body.club-page .chat-tools,
+  body.club-page .chat-context-meter,
+  body.club-page .chat-composer-shell,
+  body.club-page .chat-status-row,
+  body.club-page .chat-privacy,
+  body.club-page .panel > .section-head .button,
+  body.club-page .panel .button,
+  body.club-page button,
+  body.club-page .back,
+  body.club-page .eyebrow {
+    display: none !important;
+  }
+  body.club-page main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  body.club-page .panel,
+  body.club-page .hero,
+  body.club-page .status-panel {
+    border: 1px solid #bbb !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    color: #111 !important;
+    break-inside: avoid;
+  }
+  body.club-page h1,
+  body.club-page h2,
+  body.club-page h3,
+  body.club-page strong,
+  body.club-page td,
+  body.club-page th,
+  body.club-page p,
+  body.club-page span {
+    color: #111 !important;
+  }
+  body.club-page .table-wrap,
+  body.club-page .report-table-wrap {
+    overflow: visible !important;
+    border: 0 !important;
+  }
+  body.club-page table {
+    width: 100% !important;
+    min-width: 0 !important;
+    border-collapse: collapse !important;
+  }
+  body.club-page th,
+  body.club-page td {
+    border: 1px solid #ccc !important;
+    background: #fff !important;
+    padding: 6px 8px !important;
+  }
+  body.club-page thead { display: table-header-group; }
+  body.club-page tr { break-inside: avoid; }
+  body.club-page a { color: #111 !important; text-decoration: none !important; }
+}

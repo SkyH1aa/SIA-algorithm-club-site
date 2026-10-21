@@ -700,7 +700,9 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
     if (base === PUBLIC && ['.js','.mjs'].includes(ext)) data = Buffer.from(rewriteJS(data.toString('utf8'),origin));
     if (productionHtml && ext === '.html') {
       let html = rewriteJS(data.toString('utf8'),origin);
-      const sdk = /<script\b[^>]*\bsrc=["']https:\/\/[^"']*supabase-js[^"']*["'][^>]*>\s*<\/script>/gi;
+      // Production pages load the SDK from the local vendor bundle; older pages may
+      // still point at the CDN. Accept either form so the mock can swap it out.
+      const sdk = /<script\b[^>]*\bsrc=["'][^"']*(?:supabase-js[^"']*|vendor\/supabase\/supabase\.min\.js(?:\?[^"']*)?)["'][^>]*>\s*<\/script>/gi;
       if (['chat.html','chat-admin.html','assistant.html'].includes(relative)) requireThat(sdk.test(html),'sdk_reference_changed',500);
       sdk.lastIndex = 0;
       html = html.replace(sdk,'<script src="/fixtures/mock-supabase.js"></script>');

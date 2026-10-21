@@ -2,17 +2,18 @@
 <html lang="zh-CN" data-i18n-title-key="pages.donations.title">
 <head>
   <link rel="stylesheet" href="theme.css">
-  <link rel="stylesheet" href="club-ui.css">
-  <script src="theme.js"></script>
-  <meta charset="utf-8">
+  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
+  <script src="theme.js?v=0efca64b"></script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>社团捐赠名单 · 算法社</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="club-auth-storage.js"></script>
-  <script src="member-identity.js" defer></script>
-  <script src="i18n-dict.js"></script>
-  <script src="i18n.js"></script>
-  <script src="service-prompts.js"></script><script src="service-gate.js"></script>
+  <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
+  <script src="club-auth-storage.js?v=80f52e6f"></script>
+
+  <script src="i18n-dict.js?v=21e9f61d" defer></script><script src="member-identity.js?v=0af7f540" defer></script>
+  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
+  <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script>
 </head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Donations</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="club-features.html" data-i18n="common.backFeatures">返回社团功能</a></div></header>
@@ -51,6 +52,30 @@
         .donation-qr-copy p { margin: 0; color: var(--club-muted); font-size: 13px; line-height: 1.7; }
         .donation-qr-admin { margin-top: 16px; }
         .donation-qr-admin .form-actions { justify-content: flex-start; }
+        /* 列表工具栏：搜索、年份、合计、导出 */
+        .donation-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 14px; }
+        .donation-toolbar .label { margin-bottom: 4px; }
+        .donation-search { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; }
+        .donation-year { flex: 0 0 160px; display: flex; flex-direction: column; }
+        .donation-summary { flex: 1 1 100%; order: 3; color: var(--club-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+        .donation-summary strong { color: var(--club-text); }
+        #exportCsv { flex: 0 0 auto; }
+        @media (max-width: 640px) { .donation-year { flex: 1 1 120px; } }
+        /* 窄屏：表格行转卡片，金额不再被横向裁切 */
+        @media (max-width: 640px) {
+          #donationList { overflow: visible; border: 0; background: transparent; }
+          #donationList table { min-width: 0; display: block; }
+          #donationList thead { display: none; }
+          #donationList tbody { display: grid; gap: 10px; }
+          #donationList tr { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; padding: 12px 14px; border: 1px solid var(--club-line); border-radius: 12px; background: var(--club-surface); }
+          #donationList td { display: grid; grid-template-columns: 72px 1fr; gap: 8px; padding: 2px 0; border: 0 !important; text-align: left !important; }
+          #donationList td::before { content: attr(data-label); color: var(--club-muted); font-size: 12.5px; font-weight: 500; }
+          #donationList .donation-rank { grid-column: 1 / -1; width: auto; }
+          #donationList .donation-rank::before { content: attr(data-label); }
+          #donationList .donation-amount { color: var(--club-accent); font-size: 15px; }
+          #donationList .donation-actions { grid-column: 1 / -1; display: flex; gap: 8px; padding-top: 6px; }
+          #donationList .donation-actions::before { display: none; }
+        }
       </style>
 
       <section class="panel" id="qrPanel">
@@ -117,6 +142,18 @@
           </div>
           <span class="badge" id="roleBadge" hidden></span>
         </div>
+        <div class="donation-toolbar">
+          <label class="donation-search">
+            <span class="label" data-i18n="donations.searchLabel">搜索捐赠人</span>
+            <input class="input" id="donationSearch" type="search" maxlength="60" autocomplete="off" data-i18n-placeholder="donations.searchPlaceholder" placeholder="输入姓名…">
+          </label>
+          <label class="donation-year">
+            <span class="label" data-i18n="donations.yearLabel">年份</span>
+            <select class="select" id="donationYear"><option value="" data-i18n="donations.yearAll">全部年份</option></select>
+          </label>
+          <div class="donation-summary" id="donationSummary" role="status"></div>
+          <button class="button secondary" type="button" id="exportCsv" data-i18n="donations.exportCsv">导出 CSV</button>
+        </div>
         <div class="table-wrap" id="donationList"><div class="empty loading" data-i18n="donations.loading">正在读取捐赠名单…</div></div>
         <p class="message" id="listMessage" role="status"></p>
       </section>
@@ -134,10 +171,9 @@
     let isSuperAdmin = false;
     let editingId = '';
     let settings = { payment_qr_url: '' };
+    let qrDirty = false;
 
-    function escapeHtml(value) {
-      return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-    }
+    const escapeHtml = window.ClubCommon ? ClubCommon.escapeHtml : (value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])));
     function setMessage(node, text, type = '') {
       if (!node) return;
       node.textContent = text || '';
@@ -199,7 +235,10 @@
     function syncQrForm() {
       $('qrForm').hidden = !isSuperAdmin;
       if (!isSuperAdmin) return;
+      // 不覆盖超管正在输入但尚未保存的 URL；刷新只同步服务端值。
+      if (qrDirty && document.activeElement === $('qrUrl')) return;
       $('qrUrl').value = settings.payment_qr_url || '';
+      qrDirty = false;
     }
     async function call(action, body = {}) {
       const { data: { session } } = await supabaseClient.auth.getSession();
@@ -210,7 +249,7 @@
         body: JSON.stringify({ action, ...body })
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || t('donations.opFailed'));
+      if (!response.ok) throw ClubCommon.handleAuthError(response, payload, t('donations.opFailed'));
       return payload;
     }
 
@@ -239,9 +278,21 @@
 
     function renderDonations() {
       const list = $('donationList');
+      const visible = filteredDonations();
+      const total = visible.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
       $('summaryCount').textContent = String(donations.length);
-      if (!donations.length) {
-        list.innerHTML = `<div class="empty">${escapeHtml(t('donations.empty'))}</div>`;
+      const summary = $('donationSummary');
+      if (summary) {
+        summary.textContent = filtered()
+          ? t('donations.filteredSummary', { n: visible.length, total: formatAmount(total) })
+          : t('donations.totalSummary', { n: visible.length, total: formatAmount(total) });
+      }
+      if (!visible.length) {
+        ClubCommon.listState(list, {
+          kind: donations.length ? 'empty' : 'empty',
+          title: donations.length ? t('donations.noMatch') : t('donations.empty'),
+          message: donations.length ? t('donations.noMatchHint') : t('donations.emptyHint')
+        });
         return;
       }
       list.innerHTML = `<table class="table"><thead><tr>
@@ -250,12 +301,12 @@
           <th>${escapeHtml(t('donations.colDate'))}</th>
           <th class="donation-amount">${escapeHtml(t('donations.colAmount'))}</th>
           ${isSuperAdmin ? `<th>${escapeHtml(t('donations.colActions'))}</th>` : ''}
-        </tr></thead><tbody>${donations.map((item, index) => `
+        </tr></thead><tbody>${visible.map((item, index) => `
           <tr>
-            <td class="donation-rank">${index + 1}</td>
-            <td>${escapeHtml(item.donor_name)}</td>
-            <td class="donation-date">${escapeHtml(formatDate(item.donated_on))}</td>
-            <td class="donation-amount">¥${escapeHtml(formatAmount(item.amount))}</td>
+            <td class="donation-rank" data-label="${escapeHtml(t('donations.colRank'))}">${index + 1}</td>
+            <td data-label="${escapeHtml(t('donations.colDonor'))}">${escapeHtml(item.donor_name)}</td>
+            <td class="donation-date" data-label="${escapeHtml(t('donations.colDate'))}">${escapeHtml(formatDate(item.donated_on))}</td>
+            <td class="donation-amount" data-label="${escapeHtml(t('donations.colAmount'))}">¥${escapeHtml(formatAmount(item.amount))}</td>
             ${isSuperAdmin ? `<td class="donation-actions">
               <button class="row-button" type="button" data-edit="${escapeHtml(item.id)}">${escapeHtml(t('common.edit'))}</button>
               <button class="row-button delete" type="button" data-delete="${escapeHtml(item.id)}">${escapeHtml(t('common.delete'))}</button>
@@ -267,22 +318,84 @@
         button.onclick = async () => {
           const item = donations.find(row => row.id === button.dataset.delete);
           if (!item) return;
-          if (!window.confirm(t('donations.confirmDelete', { name: item.donor_name }))) return;
-          setMessage($('listMessage'), t('donations.removing'));
-          try {
-            await call('admin_donations_delete', { id: item.id });
-            if (editingId === item.id) resetForm();
-            setMessage($('listMessage'), t('donations.removed'), 'success');
-            await refreshDonations();
-          } catch (error) {
-            setMessage($('listMessage'), error.message, 'error');
-          }
+          if (!(await ClubCommon.confirm({
+            title: t('donations.deleteTitle'),
+            message: t('donations.confirmDelete', { name: item.donor_name }),
+            confirmText: t('common.delete'),
+            danger: true
+          }))) return;
+          // 乐观移除 + 5 秒撤销窗口；真正 DELETE 在倒计时结束或关闭页面时提交。
+          const index = donations.findIndex(row => row.id === item.id);
+          donations = donations.filter(row => row.id !== item.id);
+          if (editingId === item.id) resetForm();
+          renderDonations();
+          ClubCommon.scheduleUndo({
+            message: t('donations.pendingDelete', { name: item.donor_name }),
+            undoLabel: t('common.undo'),
+            onUndo: () => {
+              donations.splice(index, 0, item);
+              renderDonations();
+              setMessage($('listMessage'), t('donations.deleteUndone'), 'success');
+            },
+            commit: async ({ pagehide }) => {
+              const { data: { session } } = await supabaseClient.auth.getSession();
+              if (!session) return;
+              await fetch(FUNCTION_URL, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json', authorization: `Bearer ${session.access_token}` },
+                body: JSON.stringify({ action: 'admin_donations_delete', id: item.id }),
+                keepalive: Boolean(pagehide)
+              });
+              if (!pagehide) setMessage($('listMessage'), t('donations.removed'), 'success');
+            }
+          });
         };
       });
     }
 
+    function filteredDonations() {
+      const query = ($('donationSearch')?.value || '').trim().toLowerCase();
+      const year = $('donationYear')?.value || '';
+      return donations.filter(item => {
+        if (query && !String(item.donor_name || '').toLowerCase().includes(query)) return false;
+        if (year && String(item.donated_on || '').slice(0, 4) !== year) return false;
+        return true;
+      });
+    }
+    function filtered() {
+      return Boolean(($('donationSearch')?.value || '').trim() || ($('donationYear')?.value || ''));
+    }
+    function syncYearOptions() {
+      const select = $('donationYear');
+      if (!select) return;
+      const current = select.value;
+      const years = [...new Set(donations.map(item => String(item.donated_on || '').slice(0, 4)).filter(y => /^\d{4}$/.test(y)))].sort((a, b) => b.localeCompare(a));
+      select.replaceChildren(new Option(t('donations.yearAll'), ''));
+      for (const year of years) select.add(new Option(year, year));
+      select.value = years.includes(current) ? current : '';
+    }
+    function csvCell(value) {
+      const text = String(value == null ? '' : value);
+      return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+    }
+    function exportCsv() {
+      const rows = filteredDonations();
+      if (!rows.length) { setMessage($('listMessage'), t('donations.exportEmpty'), 'error'); return; }
+      const header = [t('donations.colDonor'), t('donations.colDate'), t('donations.colAmount')];
+      const body = rows.map(item => [item.donor_name, formatDate(item.donated_on), Number(item.amount).toFixed(2)]);
+      const csv = '\uFEFF' + [header, ...body].map(line => line.map(csvCell).join(',')).join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `club-donations-${localToday()}.csv`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setMessage($('listMessage'), t('donations.exportOk', { n: rows.length }), 'success');
+    }
+
     async function refreshDonations() {
-      $('donationList').innerHTML = `<div class="empty loading">${escapeHtml(t('donations.loading'))}</div>`;
+      ClubCommon.listState($('donationList'), { kind: 'loading', message: t('donations.loading') });
       try {
         const payload = await call(isSuperAdmin ? 'admin_donations_list' : 'donations_list');
         donations = Array.isArray(payload.donations) ? payload.donations : [];
@@ -290,11 +403,17 @@
           ? { payment_qr_url: typeof payload.settings.payment_qr_url === 'string' ? payload.settings.payment_qr_url : '' }
           : { payment_qr_url: '' };
         renderQr();
+        syncYearOptions();
         syncQrForm();
         renderDonations();
         setMessage($('listMessage'), '');
       } catch (error) {
-        $('donationList').innerHTML = `<div class="empty">${escapeHtml(t('donations.loadFailed'))}</div>`;
+        ClubCommon.listState($('donationList'), {
+          kind: 'error',
+          title: t('donations.loadFailed'),
+          message: error.message,
+          onRetry: refreshDonations
+        });
         setMessage($('listMessage'), error.message, 'error');
       }
     }
@@ -320,6 +439,10 @@
 
     $('refreshButton').addEventListener('click', refreshDonations);
     $('resetButton').addEventListener('click', resetForm);
+    $('donationSearch').addEventListener('input', renderDonations);
+    $('donationYear').addEventListener('change', renderDonations);
+    $('exportCsv').addEventListener('click', exportCsv);
+    $('qrUrl').addEventListener('input', () => { qrDirty = true; });
     async function saveQr(value, successKey) {
       if (!isSuperAdmin) return;
       setMessage($('qrMessage'), t('donations.saving'));
@@ -329,6 +452,7 @@
         settings = { payment_qr_url: typeof saved.payment_qr_url === 'string' ? saved.payment_qr_url : value };
         renderQr();
         $('qrUrl').value = settings.payment_qr_url || '';
+        qrDirty = false;
         setMessage($('qrMessage'), t(successKey), 'success');
       } catch (error) {
         setMessage($('qrMessage'), error.message, 'error');
@@ -385,6 +509,6 @@
       } catch (_error) {}
     });
   </script>
-  <script src="club-shell.js"></script>
+  <script src="club-shell.js?v=90975bc7"></script>
 </body>
 </html>

@@ -43,7 +43,7 @@ assert.match(page, /data-i18n-title-key="pages\.donations\.title"/);
 for (const id of ['memberGate', 'content', 'adminPanel', 'donationForm', 'donorName', 'donatedOn', 'amount', 'donationId', 'saveButton', 'resetButton', 'refreshButton', 'donationList', 'formMessage', 'listMessage', 'summaryCount', 'roleBadge']) {
   assert.ok(page.includes(`id="${id}"`), `missing element #${id}`);
 }
-assert.match(page, /<script src="club-shell\.js"><\/script>/);
+assert.match(page, /<script src="club-shell\.js(?:\?v=[^"]*)?"><\/script>/);
 assert.match(page, /data-club-admin-rail/);
 assert.match(page, /member-identity\.js/);
 // Read path vs admin path, and super-admin-only editing UI.
@@ -64,7 +64,7 @@ assert.doesNotMatch(page, /permissions\?\.can_/, 'donation editing must not acce
 // Default ordering is documented the same way as the server.
 assert.match(page, /按金额从大到小/);
 // The page must never write HTML without escaping user-controlled names.
-assert.match(page, /function escapeHtml/);
+assert.match(page, /ClubCommon\.escapeHtml|const escapeHtml/);
 assert.match(page, /\$\{escapeHtml\(item\.donor_name\)\}/);
 // Theme: no hardcoded white/black text that would break the light theme.
 assert.doesNotMatch(page, /#fff\b|#ffffff\b|color:\s*white/i, 'avoid hardcoded white text');

@@ -112,7 +112,9 @@ function uiHarness({assistant = false, embedded = false, protocol = 'https:'} = 
     document:{getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},createElement:element,querySelectorAll:()=>[],addEventListener(type,handler){documentEvents.set(type,handler);}},
     window:{supabase:{createClient:()=>({auth:{onAuthStateChange(fn){callback=fn;},getSession:()=>initial.promise}})},addEventListener(type,handler){events.set(type,handler);}},
     // 桩 t() 必须像真实 runtime 一样「缺键返回 key」；否则 effortLabel 无法区分已翻译与回退。
-    ClubI18n:i18n,marked:{Renderer:class {},parse:()=>''},DOMPurify:{sanitize:()=>({querySelectorAll:()=>[]})},
+    ClubI18n:i18n,
+    ClubCommon:{escapeHtml:value=>String(value==null?'':value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),confirm:async()=>true,scheduleUndo:()=>({cancel(){},flush(){}}),listState(){},listStateHtml(){return '';},handleAuthError:(r,p,f)=>new Error(p&&p.error||f),showSessionBanner(){},ready(fn){fn();},t:(k)=>k},
+    marked:{Renderer:class {},parse:()=>''},DOMPurify:{sanitize:()=>({querySelectorAll:()=>[]})},
     navigator:{clipboard:{async writeText(value){copied.push(value);}}},
     confirm:()=>true,
     Option:class {constructor(text,value){this.textContent=text;this.value=value;}},
@@ -350,7 +352,7 @@ async function sendTurn(ui, text) {
   const first = await sendTurn(ui, 'keep me');
   await sendTurn(ui, 'drop me');
   // 无 DOM 环境没有全局 confirm，先注入再触发（regenerate 会先询问是否丢弃后续轮次）。
-  ui.evaluate('window.confirm = () => true; globalThis.confirm = () => true;');
+  ui.evaluate('ClubCommon.confirm = async () => true;');
   ui.evaluate(`document.getElementById('prompt').value='unrelated draft'; void regenerate(${JSON.stringify(first)});`);
   await settle();
   assert.equal(ui.evaluate('current.turns.length'), 1);

@@ -71,6 +71,14 @@ let legacyAssistantReply = true;
 const windowListeners = new Map(), scheduledRefreshes = [];
 const sandbox = vm.createContext({
   console, DOMException, AbortController, URL, Map, Date, Number, String, Boolean, readResponses, assistantPreset,
+  ClubCommon: {
+    escapeHtml: value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
+    confirm: async options => { confirmations.push(options && options.message); return confirmResult; },
+    scheduleUndo: () => ({ cancel() {}, flush() {} }),
+    listState() {}, listStateHtml() { return ''; },
+    handleAuthError: (response, payload, fallback) => new Error(payload && payload.error || fallback),
+    showSessionBanner() {}, ready(fn) { fn(); }, t: key => key
+  },
   setTimeout: callback => { scheduledRefreshes.push(callback); },
   Option: function(text, value) { return {text, value}; },
   document: {getElementById: node, querySelectorAll: proxyActionNodes},
@@ -318,23 +326,24 @@ assert(node('proxyExample').textContent.includes('<YOUR_PROXY_API_KEY>'));
 assert(node('proxyExample').textContent.includes('"method": "POST"'));
 // Exercise real event handlers, including confirmation cancellation and irreversible state.
 run('active=null');
-function keyClick(dataset) { node('proxyKeysList').listeners.click({target: {closest: () => ({dataset})}}); }
+function keyClick(dataset) { return node('proxyKeysList').listeners.click({target: {closest: () => ({dataset})}}); }
+const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 confirmResult = false;
 const beforeCancel = calls.length;
-keyClick({proxyKeyRevoke: key.id});
+await keyClick({proxyKeyRevoke: key.id}); await tick();
 assert.equal(calls.length, beforeCancel);
 assert(confirmations.at(-1).includes('proxyRevokeConfirm'));
 confirmResult = true;
 reply('admin_proxy_key_state', {key: {...key, enabled: false, version: 2}});
-keyClick({proxyKeyState: key.id});
+await keyClick({proxyKeyState: key.id}); await tick();
 while (run('Boolean(active || assistantLoad)')) await new Promise(resolve => setTimeout(resolve, 0));
 assert.deepEqual(calls.at(-1), {action: 'admin_proxy_key_state', id: key.id, enabled: false, revoked: false, expected_version: 1});
 reply('admin_proxy_key_state', {key: {...key, enabled: false, revoked_at: route.created_at, version: 3}});
-keyClick({proxyKeyRevoke: key.id});
+await keyClick({proxyKeyRevoke: key.id}); await tick();
 while (run('Boolean(active || assistantLoad)')) await new Promise(resolve => setTimeout(resolve, 0));
 assert.deepEqual(calls.at(-1), {action: 'admin_proxy_key_state', id: key.id, enabled: false, revoked: true, expected_version: 2});
 const afterRevoke = calls.length;
-keyClick({proxyKeyState: key.id}); assert.equal(calls.length, afterRevoke, 'Revoked key cannot be enabled');
+await keyClick({proxyKeyState: key.id}); await tick(); assert.equal(calls.length, afterRevoke, 'Revoked key cannot be enabled');
 assert(node('proxyKeysList').innerHTML.includes('proxyRevoked'));
 console.log('PASS multi-key issuance, one-time copy/clear, placeholder-only examples, state and irreversible revoke confirmation');
 
@@ -356,7 +365,7 @@ assert.equal(queue.length, 0);
 assert(!/localStorage|indexedDB|console\.(?:log|debug|info)/.test(source), 'No key persistence or logging');
 console.log('PASS real signout/account switch clears memory and DOM; late issuance cannot restore plaintext');
 // Permanent deletion uses the real delegated handlers and never contacts a server.
-function routeClick(dataset) { node('proxyRoutesList').listeners.click({target: {closest: () => ({dataset})}}); }
+function routeClick(dataset) { return node('proxyRoutesList').listeners.click({target: {closest: () => ({dataset})}}); }
 async function settleProxy() {
   while (run('Boolean(active || assistantLoad)')) await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(queue.length, 0, 'Every queued response must be consumed');
@@ -411,7 +420,7 @@ reply('admin_proxy_key_hard_delete', {deleted_key_id: key.id}, 200, () => {
   keyClick({proxyKeyHardDelete: key.id}); routeClick({proxyRouteHardDelete: route.id});
   assert.deepEqual([calls.length, confirmations.length], beforeBusy, 'Busy guard blocks duplicate actions');
 });
-keyClick({proxyKeyHardDelete: key.id}); await settleProxy();
+await keyClick({proxyKeyHardDelete: key.id}); await tick(); await settleProxy();
 assert.deepEqual(calls.at(-1), {action: 'admin_proxy_key_hard_delete', id: key.id, expected_version: revokedKey.version});
 assert.equal(run('proxyKeys.length'), 2);
 assert(!node('proxyKeysList').innerHTML.includes(key.id));
@@ -424,7 +433,7 @@ language = previousLanguage;
 run('proxyKeys=[revokedKey,otherKey,disabledKey];fillProxyRoute(tombstone)');
 node('proxyKeyRoute').value = route.id;
 reply('admin_proxy_route_hard_delete', {deleted_route_id: route.id});
-routeClick({proxyRouteHardDelete: route.id}); await settleProxy();
+await routeClick({proxyRouteHardDelete: route.id}); await tick(); await settleProxy();
 assert.deepEqual(calls.at(-1), {action: 'admin_proxy_route_hard_delete', id: route.id, expected_version: tombstone.version});
 assert.equal(run('proxyRoutes.length'), 2);
 assert.equal(run('proxyKeys.length'), 1, 'Route removal must remove all associated keys, including unrevoked ones');
@@ -442,7 +451,7 @@ run('proxyRoutes=[otherRoute];proxyKeys=[otherKey];fillProxyRoute(otherRoute);re
 node('proxyKeyRoute').value = otherRoute.id;
 reply('admin_proxy_route_delete', {route: {...otherRoute, enabled: false, deleted_at: route.created_at, version: 2}});
 reply('admin_proxy_list', {routes: [{...otherRoute, enabled: false, deleted_at: route.created_at, version: 2}], keys: [{...otherKey, enabled: false, revoked_at: route.created_at, version: 2}]});
-routeClick({proxyRouteDelete: otherRoute.id}); await settleProxy();
+await routeClick({proxyRouteDelete: otherRoute.id}); await tick(); await settleProxy();
 assert.deepEqual(calls.at(-2), {action: 'admin_proxy_route_delete', id: otherRoute.id, expected_version: otherRoute.version});
 assert.equal(calls.at(-1).action, 'admin_proxy_list');
 assert.equal(run('proxyRoutes.length'), 1); assert.equal(run('proxyKeys.length'), 1);
@@ -460,7 +469,7 @@ for (const kind of ['route', 'key']) {
     const before = calls.length;
     reply(action, {error: code}, 409);
     reply('admin_proxy_list', {routes: [route, otherRoute], keys: [key, otherKey]});
-    click(); await settleProxy();
+    await click(); await tick(); await settleProxy();
     assert.deepEqual(calls.slice(before).map(item => item.action), [action, 'admin_proxy_list'], '409 reloads exactly once and never retries');
     assert.equal(run("messages.get('proxyMessage').key"), code === 'conflict' ? 'proxyConflict' : 'proxyNotRevoked');
     assert.equal(run("messages.get('proxyMessage').type"), 'warning');
@@ -476,7 +485,7 @@ for (const kind of ['route', 'key']) {
   seedDeletion(); run('fillProxyRoute(tombstone)');
   reply(action, {error: 'conflict'}, 409);
   reply('admin_proxy_list', {routes: kind === 'route' ? [] : [tombstone], keys: []});
-  click(); await settleProxy();
+  await click(); await tick(); await settleProxy();
   assert.equal(node('proxyRouteId').value, ''); assert.equal(run('proxyEditingVersion'), 0);
 
   // Signout while the mutation or its conflict reload is pending must not restore rows/messages.
@@ -489,7 +498,7 @@ for (const kind of ['route', 'key']) {
       reply(action, {error: 'conflict'}, 409);
       reply('admin_proxy_list', {routes: [tombstone], keys: [revokedKey]}, 200, () => run('updateSession(null)'));
     }
-    click(); await settleProxy();
+    await click(); await tick(); await settleProxy();
     assert.equal(calls.length - before, staleAt === 'mutation' ? 1 : 2);
     assert.equal(run('proxyRoutes.length + proxyKeys.length'), 0);
     assert.equal(node('proxyRouteId').value, '');
@@ -887,7 +896,7 @@ const translatedCopy = new Map();
   reply('test', stream); reply('admin_quota_get', snapshot);
   usageReply({summary: {total_records: 1235, total_tokens: '9007199254740994'}});
   const beforeTest = calls.length;
-  node('testForm').listeners.submit({preventDefault() {}}); await settleProxy();
+  await node('testForm').listeners.submit({preventDefault() {}}); await tick(); await settleProxy();
   assert.deepEqual(calls.slice(beforeTest).map(item => item.action), ['test', 'admin_quota_get', 'usage']);
   assert.deepEqual(summaryValues(), ['1235', '9,007,199,254,740,994']);
   assert.equal(run("messages.get('testMessage').key"), 'testComplete');
@@ -971,14 +980,14 @@ const translatedCopy = new Map();
   assert.equal(node('assistantWelcome').value,'unsaved welcome','Document mutation preserves config drafts');
   const archiveVersion=run('assistantState.config.version');
   const archivedPayload=payload();archivedPayload.documents[0].archived=true;
-  reply('assistant_admin_document_archive',archivedPayload);clickDocument({assistantArchive:document.slug});await settleProxy();
+  reply('assistant_admin_document_archive',archivedPayload);await clickDocument({assistantArchive:document.slug});await tick();await settleProxy();
   assert.deepEqual(calls.at(-1),{action:'assistant_admin_document_archive',expected_version:archiveVersion,slug:document.slug});
   clickDocument({assistantEdit:document.slug});assert.equal(node('assistantDocumentContent').value,document.content,'Archived draft can be restored by saving');
   file('json',JSON.stringify({documents:[document]}),'seed.json');const beforeFile=calls.length;
   await run("readAssistantFile('json')");assert.equal(calls.length,beforeFile,'Reading an import does not save or publish');
   assert.equal(run('assistantImportDocuments.length'),1);assert.equal(node('assistantPreviewText').innerHTML,'');
   const importVersion=run('assistantState.config.version');
-  reply('assistant_admin_import',payload());node('assistantImportButton').onclick();await settleProxy();
+  reply('assistant_admin_import',payload());await node('assistantImportButton').onclick();await tick();await settleProxy();
   assert.deepEqual(calls.at(-1),{action:'assistant_admin_import',expected_version:importVersion,documents:[document]});
   assert(node('assistantImportButton').disabled);assert.equal(run('assistantImportDocuments.length'),0);
   for (const content of ['x'.repeat(50000),'<img src=x onerror=unsafe()>']) {
@@ -992,11 +1001,11 @@ const translatedCopy = new Map();
   }
   file('json',JSON.stringify({documents:[document,document]}),'duplicate.json');await run("readAssistantFile('json')");assert.equal(run('assistantImportDocuments.length'),0);
   const publishVersion=run('assistantState.config.version');confirmResult=false;const beforeCancel=calls.length;
-  node('assistantPublishButton').onclick();node('assistantRollbackButton').onclick();assert.equal(calls.length,beforeCancel);confirmResult=true;
-  reply('assistant_admin_publish',payload());node('assistantPublishButton').onclick();await settleProxy();
+  node('assistantPublishButton').onclick();node('assistantRollbackButton').onclick();await tick();assert.equal(calls.length,beforeCancel);confirmResult=true;
+  reply('assistant_admin_publish',payload());await node('assistantPublishButton').onclick();await tick();await settleProxy();
   assert.deepEqual(calls.at(-1),{action:'assistant_admin_publish',expected_version:publishVersion});
   node('assistantRollbackRelease').value=releases[1].id;const rollbackVersion=run('assistantState.config.version');
-  reply('assistant_admin_rollback',payload({current_release_id:releases[1].id}));node('assistantRollbackButton').onclick();await settleProxy();
+  reply('assistant_admin_rollback',payload({current_release_id:releases[1].id}));await node('assistantRollbackButton').onclick();await tick();await settleProxy();
   assert.deepEqual(calls.at(-1),{action:'assistant_admin_rollback',expected_version:rollbackVersion,release_id:releases[1].id});
   assert.equal(node('assistantWelcome').value,'unsaved welcome');
   file('json',JSON.stringify({documents:[document]}),'seed.json');await run("readAssistantFile('json')");
@@ -1005,7 +1014,7 @@ const translatedCopy = new Map();
   submit('assistantConfigForm');await settleProxy();assert.equal(calls.length,beforeConflict+1,'409 neither retries nor reloads');
   assert.equal(run('assistantState.config'),null);assert(node('assistantPublishButton').disabled);assert(node('assistantRollbackButton').disabled);
   assert.equal(node('assistantWelcome').value,'unsaved welcome');assert.equal(node('assistantDocumentContent').value,'unsaved document');assert.equal(run('assistantImportDocuments.length'),1);
-  node('assistantPublishButton').onclick();node('assistantImportButton').onclick();assert.equal(calls.length,beforeConflict+1);
+  node('assistantPublishButton').onclick();node('assistantImportButton').onclick();await tick();assert.equal(calls.length,beforeConflict+1);
   language=language==='zh'?'en':'zh';run('refreshLocalizedUi()');
   assert.equal(node('assistantConfigMessage').textContent,dictionaries[language].chatAdmin.assistantConflict);
   await refresh();assert.equal(node('assistantWelcome').value,'Welcome');assert.equal(node('assistantDocumentContent').value,'unsaved document');assert.equal(run('assistantImportDocuments.length'),1);
@@ -1018,10 +1027,10 @@ const translatedCopy = new Map();
   assert.equal(run('assistantImportDocuments.length'),0);
   for (const status of [401,403]) {
     init();await refresh();reply('assistant_admin_publish',{error:status===401?'login':'admin'},status);
-    node('assistantPublishButton').onclick();await settleProxy();assert(!run('authorized'));assert.equal(run('assistantState.config'),null);
+    await node('assistantPublishButton').onclick();await tick();await settleProxy();assert(!run('authorized'));assert.equal(run('assistantState.config'),null);
   }
   init();await refresh();reply('assistant_admin_publish',payload(),200,()=>run('updateSession(null)'));
-  node('assistantPublishButton').onclick();await settleProxy();assert.equal(run('assistantState.releases.length'),0);
+  await node('assistantPublishButton').onclick();await tick();await settleProxy();assert.equal(run('assistantState.releases.length'),0);
   assert.equal(run('errorKey({message:"assistant_documents"})'),'assistantEmptyCorpus');
   console.log('PASS assistant real handlers: exact actions/version progression, model eligibility, safe imports, file limits, immutable release selection, 409 draft retention, bilingual drafts and stale/auth clearing');
   const seed=JSON.parse(await readFile(new URL('../docs/assistant/seed.json',import.meta.url),'utf8'));
@@ -1100,9 +1109,9 @@ const translatedCopy = new Map();
 
   // Explicit preset fill is local, guarded and limited to exactly three fields.
   const beforePreset=calls.length, enabled=node('assistantEnabled').checked, model=node('assistantModelId').value;
-  confirmResult=false;node('assistantPresetButton').onclick();
+  confirmResult=false;await node('assistantPresetButton').onclick();await tick();
   assert.equal(node('assistantWelcome').value,'My unsaved welcome');
-  confirmResult=true;node('assistantPresetButton').onclick();
+  confirmResult=true;await node('assistantPresetButton').onclick();await tick();
   assert.equal(node('assistantWelcome').value,assistantPreset.welcome);
   assert.equal(node('assistantSuggestions').value,assistantPreset.suggestions.join('\n'));
   assert.equal(node('assistantSupplement').value,assistantPreset.system_prompt);

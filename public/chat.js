@@ -725,11 +725,11 @@ function cancelEdit() {
 }
 
 /* 重试任意一轮：删除该轮及之后的所有轮次，用原提示词重新生成。 */
-function regenerate(id) {
+async function regenerate(id) {
   if (isBusy() || !current) return;
   const index = current.turns.findIndex(turn => turn.id === id);
   if (index < 0) return;
-  if (index < current.turns.length - 1 && !confirm(t('confirmRegenerateEarlier'))) return;
+  if (index < current.turns.length - 1 && !(await ClubCommon.confirm({ message: t('confirmRegenerateEarlier') }))) return;
   if (editingTurnId !== null) cancelEdit();
   void generate({retryTurnId: id});
 }
@@ -951,7 +951,7 @@ async function saveCustomModel(event) {
 async function deleteCustomModel() {
   const id = $('customModelId').value;
   const item = customModels.find(row => row.id === id);
-  if (!item || active || customBusy || !session || !confirm(t('customConfirmDelete'))) return;
+  if (!item || active || customBusy || !session || !(await ClubCommon.confirm({ message: t('customConfirmDelete') }))) return;
   const guard = epoch, token = session.access_token;
   customBusy = true; controls();
   try {
@@ -1376,7 +1376,7 @@ function stopWork() {
  */
 async function recoverGenerations() {
   if (!session || recovering) return;
-  if (!confirm(t('recoverConfirm'))) return;
+  if (!(await ClubCommon.confirm({ message: t('recoverConfirm') }))) return;
   const guard = epoch, userId = session.user.id, token = session.access_token;
   recovering = true; controls();
   try {
@@ -1469,7 +1469,7 @@ $('chatSearch').oninput = () => renderList();
 $('prompt').oninput = () => resetPromptHeight();
 $('prompt').onkeydown = event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void generate(); } };
 $('stop').onclick = () => stopWork();
-$('retry').onclick = () => { const last = current?.turns.at(-1); if (last) regenerate(last.id); };
+$('retry').onclick = () => { const last = current?.turns.at(-1); if (last) void regenerate(last.id); };
 $('recover').onclick = () => void recoverGenerations();
 $('new').onclick = () => { newChat(); closeSidebarOnMobile(); };
 $('scrollBottom').onclick = () => { const box = $('messages'); box.scrollTo?.({top:box.scrollHeight, behavior:'smooth'}); if (!box.scrollTo) box.scrollTop = box.scrollHeight; };
@@ -1517,7 +1517,7 @@ $('rename').onclick = async () => {
   try { await persist(chat,guard); if (guard === epoch) renderList(); } catch {}
 };
 $('delete').onclick = async () => {
-  if (!current || isBusy() || !confirm(t('confirmDelete'))) return;
+  if (!current || isBusy() || !(await ClubCommon.confirm({ message: t('confirmDelete') }))) return;
   const id = current.id, userId = session.user.id, guard = epoch;
   try {
     await workspaceStore.delete(userId,id);
@@ -1530,7 +1530,7 @@ $('delete').onclick = async () => {
   }
 };
 $('clear').onclick = async () => {
-  if (isBusy() || !session || !confirm(t('confirmClear'))) return;
+  if (isBusy() || !session || !(await ClubCommon.confirm({ message: t('confirmClear') }))) return;
   const guard = epoch, userId = session.user.id;
   try {
     await workspaceStore.clear(userId);

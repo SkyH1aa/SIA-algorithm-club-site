@@ -1382,6 +1382,10 @@
       submitting: '正在提交报名…',
       signupOk: '报名成功。'
     },
+    notFound: {
+      h1: '这个页面不存在',
+      lead: '链接可能已经失效，或者地址输入有误。可以回到首页，或从社团功能重新进入需要的模块。'
+    },
     donations: {
       gateTitle: '请先登录',
       gateLead: '捐赠名单仅对已登录的算法社成员开放。',
@@ -1419,7 +1423,7 @@
       updated: '捐赠记录已更新。',
       removing: '正在删除…',
       removed: '捐赠记录已删除。',
-      confirmDelete: '确定删除「{name}」的这条捐赠记录？此操作无法撤销。',
+      confirmDelete: '确定删除「{name}」的这条捐赠记录？删除后 5 秒内可撤销。',
       roleAdmin: '超级管理员',
       roleMember: '只读查看',
       qrTitle: '社团收款码',
@@ -1435,7 +1439,22 @@
       qrSaved: '收款码已更新。',
       qrCleared: '收款码已清除。',
       qrInvalid: '请填写以 http:// 或 https:// 开头的图片直链；如需移除请使用“清除收款码”。',
-      qrLoadFailed: '读取收款码失败。'
+      qrLoadFailed: '读取收款码失败。',
+      searchLabel: '搜索捐赠人',
+      searchPlaceholder: '输入姓名…',
+      yearLabel: '年份',
+      yearAll: '全部年份',
+      exportCsv: '导出 CSV',
+      exportOk: '已导出 {n} 条记录。',
+      exportEmpty: '当前筛选没有可导出的记录。',
+      totalSummary: '合计 ¥{total}（共 {n} 笔）',
+      filteredSummary: '筛选结果 ¥{total}（共 {n} 笔）',
+      noMatch: '没有匹配的捐赠记录',
+      noMatchHint: '试试更换姓名关键字或年份。',
+      emptyHint: '登记第一笔捐赠后，这里会按金额展示。',
+      deleteTitle: '删除捐赠记录',
+      pendingDelete: '已删除「{name}」的记录，5 秒内可撤销。',
+      deleteUndone: '已撤销删除。'
     },
     drive: {
       lead: '为算法社成员提供独立的资料空间。请先在个人中心登录；登录后这里会自动连接 123 云盘 WebDAV，每位成员只能访问自己的目录。',
@@ -1652,6 +1671,9 @@
       refresh: '刷新留言',
       loading: '正在读取留言…',
       notMember: '您还不是算法社社员！',
+      deleteTitle: '删除留言',
+      pendingDelete: '已删除这条留言，5 秒内可撤销。',
+      deleteUndone: '已撤销删除。',
       opFailed: '留言箱操作失败。',
       empty: '暂时还没有留言。',
       edit: '修改',
@@ -1796,13 +1818,14 @@
       joinAdmin: { title: '报名管理 · 算法社', h1: '报名管理' },
       mallAdmin: { title: '积分商城管理 · 算法社', h1: '积分商城管理' },
       membersAdmin: { title: '成员展示管理 · 算法社', h1: '成员展示管理' },
-      donations: { title: '社团捐赠名单 · 算法社', h1: '社团捐赠名单' }
+      donations: { title: '社团捐赠名单 · 算法社', h1: '社团捐赠名单' },
+      notFound: { title: '页面不存在 · 算法社', h1: '这个页面不存在' }
     },
     admin: {
       loginFirst: '请先登录管理账号',
       noPerm: '无管理权限',
       panel: '管理面板入口',
-      siteServiceTitle: '网站服务运行开关', siteServiceIntro: '仅超管可用。暂停后所有网站页面将显示不可用提示。', siteServiceRunning: '网站服务运行中', siteRandomEnabled: '随机展示提示词', siteTitleZh: '中文大标题', siteSubtitleZh: '中文副标题', siteTitleEn: '英文大标题', siteSubtitleEn: '英文副标题', siteReportZh: '中文维护报告（支持 Markdown）', siteReportEn: '英文维护报告（支持 Markdown）', siteServiceSave: '保存网站服务设置', siteServiceSaving: '正在保存…', siteServiceSaved: '网站服务设置已保存。', appmonitorReleasesTitle: 'APPMonitor 版本发布', appmonitorReleasesIntro: '仅超管可编辑。V7.0 及更早版本保留在发布页中；在这里管理 V7.5 及之后的版本。', appmonitorVersion: '版本号', appmonitorDate: '发布日期', appmonitorIntroZh: '中文简介', appmonitorIntroEn: '英文简介', appmonitorDownloadUrl: '下载链接', appmonitorSaveRelease: '保存版本', appmonitorSaving: '正在保存版本…', appmonitorSaved: '版本已保存。', appmonitorDeleted: '版本已删除。', appmonitorNoReleases: '还没有新增版本。', appmonitorDeleteConfirm: '确定删除这个 APPMonitor 版本吗？', actions: '操作', openLink: '打开链接', featureGroupMember: '社员功能', featureGroupGames: 'AI 与游戏', featureGroupLabs: '算法实验室', featureGroupContent: '教学与内容', featureSettingsTitle: '单项功能开关', featureEnabled: '启用', featureRandom: '随机提示', featureTitleZh: '中文标题', featureSubtitleZh: '中文副标题', featureTitleEn: '英文标题', featureSubtitleEn: '英文副标题', featureChat: 'ChatAI / AI 对话', featureMemberCenter: '个人中心 / 登录注册', featureMemberProfile: '社员资料绑定', featureCheckin: '签到兑换', featureCourseCheckin: '课程签到', featurePoints: '积分榜', featureMall: '积分商城', featureMessages: '社员留言箱', featureDrive: '社团盘', featureEvents: '活动与公告', featureJoin: '加入社团申请', featureGomoku: '五子棋', featureTetris: '俄罗斯方块', featureSnake: '贪吃蛇', featurePlatformer: '行于无垠', featureClubFeatures: '社团功能总览', featureVisualizationLab: '算法实验室总入口', featureSortingLab: '排序实验室', featureSearchLab: '搜索实验室', featureDsLab: '数据结构实验室', featureGraphLab: '图论实验室', featureDpLab: '动态规划实验室', featureTreeLab: '二叉树实验室', featureHeapLab: '堆实验室', featureSatoriLab: 'Satori 决策剖析实验室', featureResources: '教学资源', featureGuide: '使用指引', featureChangelog: '更新日志',
+      siteServiceTitle: '网站服务运行开关', siteServiceIntro: '仅超管可用。暂停后所有网站页面将显示不可用提示。', siteServiceRunning: '网站服务运行中', siteRandomEnabled: '随机展示提示词', siteTitleZh: '中文大标题', siteSubtitleZh: '中文副标题', siteTitleEn: '英文大标题', siteSubtitleEn: '英文副标题', siteReportZh: '中文维护报告（支持 Markdown）', siteReportEn: '英文维护报告（支持 Markdown）', siteServiceSave: '保存网站服务设置', siteServiceSaving: '正在保存…', siteServiceSaved: '网站服务设置已保存。', appmonitorReleasesTitle: 'APPMonitor 版本发布', appmonitorReleasesIntro: '仅超管可编辑。V7.0 及更早版本保留在发布页中；在这里管理 V7.5 及之后的版本。', appmonitorVersion: '版本号', appmonitorDate: '发布日期', appmonitorIntroZh: '中文简介', appmonitorIntroEn: '英文简介', appmonitorDownloadUrl: '下载链接', appmonitorSaveRelease: '保存版本', appmonitorSaving: '正在保存版本…', appmonitorSaved: '版本已保存。', appmonitorDeleted: '版本已删除。', appmonitorNoReleases: '还没有新增版本。', appmonitorDeleteConfirm: '确定删除这个 APPMonitor 版本吗？', actions: '操作', openLink: '打开链接', featureGroupMember: '社员功能', featureGroupGames: 'AI 与游戏', featureGroupLabs: '算法实验室', featureGroupContent: '教学与内容', featureSettingsTitle: '单项功能开关', featureEnabled: '启用', featureRandom: '随机提示', featureTitleZh: '中文标题', featureSubtitleZh: '中文副标题', featureTitleEn: '英文标题', featureSubtitleEn: '英文副标题', featureChat: 'ChatAI / AI 对话', featureMemberCenter: '个人中心 / 登录注册', featureMemberProfile: '社员资料绑定', featureCheckin: '签到兑换', featureCourseCheckin: '课程签到', featurePoints: '积分榜', featureMall: '积分商城', featureMessages: '社员留言箱', featureDrive: '社团盘', featureEvents: '活动与公告', featureJoin: '加入社团申请', featureDonations: '捐赠名单', featureGomoku: '五子棋', featureTetris: '俄罗斯方块', featureSnake: '贪吃蛇', featurePlatformer: '行于无垠', featureClubFeatures: '社团功能总览', featureVisualizationLab: '算法实验室总入口', featureSortingLab: '排序实验室', featureSearchLab: '搜索实验室', featureDsLab: '数据结构实验室', featureGraphLab: '图论实验室', featureDpLab: '动态规划实验室', featureTreeLab: '二叉树实验室', featureHeapLab: '堆实验室', featureSatoriLab: 'Satori 决策剖析实验室', featureResources: '教学资源', featureGuide: '使用指引', featureChangelog: '更新日志',
       gateLead: '管理员总览对超管，以及被授予任一管理权限的账号开放。',
       deniedLead: '当前账号没有可管理的模块。请联系现任超管开通对应权限。',
       hubLead: '按权限显示可用管理入口。密码重置、直接改密、姓名班级绑定编辑、权限分配、超管交接仅现任超管可用。',
@@ -2084,6 +2107,9 @@
       unlisted: '已下架',
       editingProduct: '正在编辑「{name}」。',
       confirmDeleteProduct: '确认删除商品「{name}」？',
+      deleteProductTitle: '删除商品',
+      pendingDeleteProduct: '已删除「{name}」，5 秒内可撤销。',
+      deleteUndone: '已撤销删除。',
       productDeleted: '商品已删除。',
       redemptionTitle: '兑换记录',
       redemptionIntro: '展示待线下发放的兑换申请。点「已处理」会删除该条记录。',
@@ -3562,6 +3588,10 @@
       submitting: 'Submitting…',
       signupOk: 'Registration successful.'
     },
+    notFound: {
+      h1: 'Page not found',
+      lead: 'This link may have expired, or the address is incorrect. Return to the homepage or open the module again from Club Features.'
+    },
     donations: {
       gateTitle: 'Please sign in',
       gateLead: 'The donation list is available to signed-in Algorithm Club members.',
@@ -3599,7 +3629,7 @@
       updated: 'Donation record updated.',
       removing: 'Deleting…',
       removed: 'Donation record deleted.',
-      confirmDelete: 'Delete the donation record from “{name}”? This cannot be undone.',
+      confirmDelete: 'Delete the donation record from “{name}”? You can undo within 5 seconds.',
       roleAdmin: 'Super-admin',
       roleMember: 'Read-only',
       qrTitle: 'Club payment code',
@@ -3615,7 +3645,22 @@
       qrSaved: 'Payment code updated.',
       qrCleared: 'Payment code removed.',
       qrInvalid: 'Enter a direct http:// or https:// image link, or use “Remove payment code” to clear it.',
-      qrLoadFailed: 'Could not load the payment code.'
+      qrLoadFailed: 'Could not load the payment code.',
+      searchLabel: 'Search donors',
+      searchPlaceholder: 'Type a name…',
+      yearLabel: 'Year',
+      yearAll: 'All years',
+      exportCsv: 'Export CSV',
+      exportOk: 'Exported {n} records.',
+      exportEmpty: 'No records match the current filter.',
+      totalSummary: 'Total ¥{total} ({n} records)',
+      filteredSummary: 'Filtered total ¥{total} ({n} records)',
+      noMatch: 'No matching donations',
+      noMatchHint: 'Try another name or year.',
+      emptyHint: 'Once the first donation is recorded it appears here by amount.',
+      deleteTitle: 'Delete donation record',
+      pendingDelete: 'Deleted the record from “{name}”. Undo within 5 seconds.',
+      deleteUndone: 'Deletion undone.'
     },
     drive: {
       lead: 'Private storage for Algorithm Club members. Sign in at Member Center first; this page then connects to 123 Cloud WebDAV. Each member can only access their own folder.',
@@ -3832,6 +3877,9 @@
       refresh: 'Refresh',
       loading: 'Loading messages…',
       notMember: 'You are not a club member yet!',
+      deleteTitle: 'Delete message',
+      pendingDelete: 'Message deleted. Undo within 5 seconds.',
+      deleteUndone: 'Deletion undone.',
       opFailed: 'Inbox operation failed.',
       empty: 'No messages yet.',
       edit: 'Edit',
@@ -3976,13 +4024,14 @@
       joinAdmin: { title: 'Join Admin · Algorithm Club', h1: 'Join Admin' },
       mallAdmin: { title: 'Mall Admin · Algorithm Club', h1: 'Mall Admin' },
       membersAdmin: { title: 'Members Admin · Algorithm Club', h1: 'Members Admin' },
-      donations: { title: 'Club Donations · Algorithm Club', h1: 'Club Donations' }
+      donations: { title: 'Club Donations · Algorithm Club', h1: 'Club Donations' },
+      notFound: { title: 'Page not found · Algorithm Club', h1: 'Page not found' }
     },
     admin: {
       loginFirst: 'Please sign in with an admin account',
       noPerm: 'No admin access',
       panel: 'Admin panel entries',
-      siteServiceTitle: 'Website service switch', siteServiceIntro: 'Super-admin only. When paused, every website page shows the unavailable notice.', siteServiceRunning: 'Website service running', siteRandomEnabled: 'Randomize maintenance messages', siteTitleZh: 'Chinese headline', siteSubtitleZh: 'Chinese subtitle', siteTitleEn: 'English headline', siteSubtitleEn: 'English subtitle', siteReportZh: 'Chinese maintenance report (Markdown supported)', siteReportEn: 'English maintenance report (Markdown supported)', siteServiceSave: 'Save website service settings', siteServiceSaving: 'Saving…', siteServiceSaved: 'Website service settings saved.', appmonitorReleasesTitle: 'APPMonitor releases', appmonitorReleasesIntro: 'Super-admin only. V7.0 and earlier stay on the release page; manage V7.5 and later here.', appmonitorVersion: 'Version', appmonitorDate: 'Release date', appmonitorIntroZh: 'Chinese description', appmonitorIntroEn: 'English description', appmonitorDownloadUrl: 'Download URL', appmonitorSaveRelease: 'Save release', appmonitorSaving: 'Saving release…', appmonitorSaved: 'Release saved.', appmonitorDeleted: 'Release deleted.', appmonitorNoReleases: 'No new releases yet.', appmonitorDeleteConfirm: 'Delete this APPMonitor release?', actions: 'Actions', openLink: 'Open link', featureGroupMember: 'Member features', featureGroupGames: 'AI and games', featureGroupLabs: 'Algorithm labs', featureGroupContent: 'Teaching and content', featureSettingsTitle: 'Feature switches', featureEnabled: 'Enabled', featureRandom: 'Random prompt', featureTitleZh: 'Chinese title', featureSubtitleZh: 'Chinese subtitle', featureTitleEn: 'English title', featureSubtitleEn: 'English subtitle', featureChat: 'ChatAI / AI Chat', featureMemberCenter: 'Member Center / Auth', featureMemberProfile: 'Member profile binding', featureCheckin: 'Check-in redemption', featureCourseCheckin: 'Course check-in', featurePoints: 'Points leaderboard', featureMall: 'Points mall', featureMessages: 'Member messages', featureDrive: 'Club Drive', featureEvents: 'Events and announcements', featureJoin: 'Join application', featureGomoku: 'Gomoku', featureTetris: 'Tetris', featureSnake: 'Snake', featurePlatformer: 'Side-scrolling game', featureClubFeatures: 'Club features hub', featureVisualizationLab: 'Algorithm labs hub', featureSortingLab: 'Sorting lab', featureSearchLab: 'Search lab', featureDsLab: 'Data structures lab', featureGraphLab: 'Graph lab', featureDpLab: 'Dynamic programming lab', featureTreeLab: 'Binary tree lab', featureHeapLab: 'Heap lab', featureSatoriLab: 'Satori decision lab', featureResources: 'Teaching resources', featureGuide: 'Usage guide', featureChangelog: 'Changelog',
+      siteServiceTitle: 'Website service switch', siteServiceIntro: 'Super-admin only. When paused, every website page shows the unavailable notice.', siteServiceRunning: 'Website service running', siteRandomEnabled: 'Randomize maintenance messages', siteTitleZh: 'Chinese headline', siteSubtitleZh: 'Chinese subtitle', siteTitleEn: 'English headline', siteSubtitleEn: 'English subtitle', siteReportZh: 'Chinese maintenance report (Markdown supported)', siteReportEn: 'English maintenance report (Markdown supported)', siteServiceSave: 'Save website service settings', siteServiceSaving: 'Saving…', siteServiceSaved: 'Website service settings saved.', appmonitorReleasesTitle: 'APPMonitor releases', appmonitorReleasesIntro: 'Super-admin only. V7.0 and earlier stay on the release page; manage V7.5 and later here.', appmonitorVersion: 'Version', appmonitorDate: 'Release date', appmonitorIntroZh: 'Chinese description', appmonitorIntroEn: 'English description', appmonitorDownloadUrl: 'Download URL', appmonitorSaveRelease: 'Save release', appmonitorSaving: 'Saving release…', appmonitorSaved: 'Release saved.', appmonitorDeleted: 'Release deleted.', appmonitorNoReleases: 'No new releases yet.', appmonitorDeleteConfirm: 'Delete this APPMonitor release?', actions: 'Actions', openLink: 'Open link', featureGroupMember: 'Member features', featureGroupGames: 'AI and games', featureGroupLabs: 'Algorithm labs', featureGroupContent: 'Teaching and content', featureSettingsTitle: 'Feature switches', featureEnabled: 'Enabled', featureRandom: 'Random prompt', featureTitleZh: 'Chinese title', featureSubtitleZh: 'Chinese subtitle', featureTitleEn: 'English title', featureSubtitleEn: 'English subtitle', featureChat: 'ChatAI / AI Chat', featureMemberCenter: 'Member Center / Auth', featureMemberProfile: 'Member profile binding', featureCheckin: 'Check-in redemption', featureCourseCheckin: 'Course check-in', featurePoints: 'Points leaderboard', featureMall: 'Points mall', featureMessages: 'Member messages', featureDrive: 'Club Drive', featureEvents: 'Events and announcements', featureJoin: 'Join application', featureDonations: 'Donations', featureGomoku: 'Gomoku', featureTetris: 'Tetris', featureSnake: 'Snake', featurePlatformer: 'Side-scrolling game', featureClubFeatures: 'Club features hub', featureVisualizationLab: 'Algorithm labs hub', featureSortingLab: 'Sorting lab', featureSearchLab: 'Search lab', featureDsLab: 'Data structures lab', featureGraphLab: 'Graph lab', featureDpLab: 'Dynamic programming lab', featureTreeLab: 'Binary tree lab', featureHeapLab: 'Heap lab', featureSatoriLab: 'Satori decision lab', featureResources: 'Teaching resources', featureGuide: 'Usage guide', featureChangelog: 'Changelog',
       gateLead: 'Admin Hub is open to super-admins and accounts granted any management permission.',
       deniedLead: 'This account has no manageable modules. Ask a current super-admin to grant access.',
       hubLead: 'Entries appear by permission. Password reset, direct password change, name/class binding, permission grants, and super-admin transfer are super-admin only.',
@@ -4264,6 +4313,9 @@
       unlisted: 'Unlisted',
       editingProduct: 'Editing “{name}”.',
       confirmDeleteProduct: 'Delete product “{name}”?',
+      deleteProductTitle: 'Delete product',
+      pendingDeleteProduct: 'Deleted “{name}”. Undo within 5 seconds.',
+      deleteUndone: 'Deletion undone.',
       productDeleted: 'Product deleted.',
       redemptionTitle: 'Redemptions',
       redemptionIntro: 'Pending offline fulfillment. “Done” deletes the record.',

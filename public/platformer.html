@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <script defer src="assistant-launcher.js"></script>
@@ -15,8 +16,8 @@ window.addEventListener('error',event=>{
   }
 },true);
 </script>
-<script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="window.__xingyuExternalScripts.push(this.src)"></script>
-<script src="club-auth-storage.js"></script>
+<script crossorigin="anonymous" src="vendor/supabase/supabase.min.js?v=8596965f" onerror="window.__xingyuExternalScripts.push(this.src)"></script>
+<script src="club-auth-storage.js?v=80f52e6f"></script>
 <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js" onerror="window.__xingyuExternalScripts.push(this.src)"></script>
 <style>
 :root{font-family:"Segoe UI","Microsoft YaHei",sans-serif;color:#f7fbff;background:#080b14}*{box-sizing:border-box}body{margin:0;min-width:320px;min-height:100vh;background:radial-gradient(circle at 50% 0%,#203a56,#080b14 65%)}.shell{width:min(1180px,100%);margin:auto;padding:16px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}h1{margin:0;font-size:clamp(19px,4vw,29px)}a{color:#9fe8ff;text-decoration:none;font-size:14px}.auth-gate,.leaderboard-panel{border:1px solid #2b6980;border-radius:8px;background:#111b32;padding:20px;margin-bottom:12px}.auth-gate h2,.leaderboard-panel h2{margin:0 0 8px;font-size:20px}.auth-form{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.auth-form input{height:38px;width:190px;border:1px solid #476176;border-radius:4px;background:#0b1424;color:#fff;padding:0 10px}.button{height:38px;border:1px solid #3da5c7;border-radius:4px;background:#19334b;color:#fff;padding:0 14px;cursor:pointer}.button.secondary{border-color:#476176;background:#18202e}.auth-message{min-height:20px;margin:10px 0 0;color:#ffd166;font-size:13px}.auth-user{color:#9fe8ff;font-size:13px;margin-right:12px}#game-wrap{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border:1px solid #2b6980;border-radius:8px;background:#111b32;box-shadow:0 20px 80px #0009}#game,#game canvas{width:100%;height:100%}#game canvas{display:block}.game-loading{position:absolute;inset:0;z-index:30;display:grid;place-items:center;background:#111b32;color:#d8f4ff;font-size:16px;letter-spacing:.02em}.game-loading[hidden]{display:none}.help{display:flex;flex-wrap:wrap;gap:8px 18px;margin:10px 2px 0;color:#a6b9ca;font-size:13px}kbd{padding:2px 6px;border:1px solid #476176;border-bottom-width:2px;border-radius:4px;background:#172638;color:#eaf7ff}.notice{margin-top:10px;color:#ffd77a;font-size:12px}.leaderboard-head{display:flex;justify-content:space-between;align-items:center}.leaderboard-list{margin:10px 0 0;padding-left:25px;color:#eaf7ff}.leaderboard-list li{padding:4px 0}.leaderboard-list small{color:#9fb7c9}
@@ -92,7 +93,8 @@ kbd{border-color:#38546a;background:#122438;color:#eafaff}
 }
 </style>
 <style>#pk-arena canvas{aspect-ratio:16/9}</style>
-<script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script><script src="club-common.js?v=b56b9c0f"></script>
+</head>
 <body>
 <main class="shell">
 <header><h1>行于无垠</h1><div><span id="service-status" class="auth-user">游戏服务：正在检查</span><span id="auth-user" class="auth-user"></span><button class="button secondary" id="change-password-button" type="button" hidden>账号设置</button><button class="button secondary" id="pk-open-button" type="button" hidden>联机 PK</button><button class="button secondary" id="service-toggle" type="button" hidden>关闭游戏服务</button><button class="button secondary" id="logout-button" type="button" hidden>退出登录</button><a href="../index.html">返回官网</a></div></header>
@@ -716,7 +718,7 @@ async function saveGameAdminAnnouncement(){
   setGameAdminMessage(gameAdminAnnouncementMessage,'公告已保存。');clearGameAnnouncementEditor();await loadGameAdminAnnouncements();
 }
 async function deleteGameAdminAnnouncement(id){
-  if(!isGameAdmin()||!platformerDb||!id||!confirm('确认删除这条游戏公告吗？'))return;
+  if(!isGameAdmin()||!platformerDb||!id||!(await ClubCommon.confirm({ message: '确认删除这条游戏公告吗？' })))return;
   const {error}=await platformerDb.rpc('platformer_admin_delete_announcement',gameAdminArgs({p_id:id}));
   if(error){setGameAdminMessage(gameAdminAnnouncementMessage,error.message||'删除公告失败。',true);return;}
   clearGameAnnouncementEditor();await loadGameAdminAnnouncements();

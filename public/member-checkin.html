@@ -2,17 +2,18 @@
 <html lang="zh-CN" data-i18n-title-key="pages.checkin.title">
 <head>
   <link rel="stylesheet" href="theme.css">
-  <link rel="stylesheet" href="club-ui.css">
-  <script src="theme.js"></script>
-  <meta charset="utf-8">
+  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
+  <script src="theme.js?v=0efca64b"></script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>签到兑换 · 算法社</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="club-auth-storage.js"></script>
-  <script src="member-identity.js"></script>
-    <script src="i18n-dict.js"></script>
-  <script src="i18n.js"></script>
-<script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
+  <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
+  <script src="club-auth-storage.js?v=80f52e6f"></script>
+  <script src="i18n-dict.js?v=21e9f61d"></script><script src="member-identity.js?v=0af7f540"></script>
+
+  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script></head>
 <body class="club-page">
 <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a><span class="member-identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
 <main>
@@ -49,7 +50,7 @@ function applyCheckinServiceState(){
 function message(node,text,type=''){node.textContent=text;node.className=`message ${type}`}
 function esc(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function formatDate(value){return new Date(value).toLocaleString('zh-CN',{hour12:false})}
-async function call(action,body={}){const {data:{session}}=await supabaseClient.auth.getSession();if(!session)throw new Error(ClubI18n.t('checkin.notMember'));const response=await fetch(FUNCTION_URL,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${session.access_token}`},body:JSON.stringify({action,...body})}),payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload.error||ClubI18n.t('checkin.requestFailed'));return payload}
+async function call(action,body={}){const {data:{session}}=await supabaseClient.auth.getSession();if(!session)throw new Error(ClubI18n.t('checkin.notMember'));const response=await fetch(FUNCTION_URL,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${session.access_token}`},body:JSON.stringify({action,...body})}),payload=await response.json().catch(()=>({}));if(!response.ok)throw ClubCommon.handleAuthError(response,payload,ClubI18n.t('checkin.requestFailed'));return payload}
 function updateCheckinType(){const course=checkinType.value==='course';codeField.hidden=course;checkinCode.required=!course;submitCheckinButton.setAttribute('data-i18n',course?'checkin.submitCourse':'checkin.submitPoints');submitCheckinButton.textContent=course?ClubI18n.t('checkin.submitCourse'):ClubI18n.t('checkin.submitPoints');if(featureEnabled(course?'course-checkin':'checkin'))message(redeemMessage,'');if(featureNotice){const key=course?'course-checkin':'checkin';const active=featureEnabled(key);const copy=window.ClubServiceGate?.getFeatureMessage?.(key)||{};featureNotice.hidden=active;featureNotice.textContent=active?'':`${copy.title||ClubI18n.t('checkin.serviceUnavailable')} ${copy.subtitle||''}`;}}
 function renderCodes(codes,uses){const usesByCode=new Map(codes.map(code=>[code.id,[]]));uses.forEach(item=>usesByCode.get(item.checkin_code_id)?.push(item));document.getElementById('codeList').innerHTML=!codes.length?'<div class="empty">'+ClubI18n.t('checkin.noCodes')+'</div>':`<table class="table"><thead><tr><th>${ClubI18n.t('checkin.colCode')}</th><th>${ClubI18n.t('checkin.colPoints')}</th><th>${ClubI18n.t('checkin.colRule')}</th><th>${ClubI18n.t('checkin.colUsage')}</th><th>${ClubI18n.t('checkin.colExpires')}</th><th>${ClubI18n.t('checkin.colUsers')}</th></tr></thead><tbody>${codes.map(code=>{const items=usesByCode.get(code.id)||[],users=code.usage_mode==='per_member_once'?items.map(item=>`<div class="user-use"><strong>${esc(item.member_name)}</strong><time>${formatDate(item.used_at)}</time></div>`).join('')||ClubI18n.t('checkin.unused'):items[0]?`${esc(items[0].member_name)} · ${formatDate(items[0].used_at)}`:ClubI18n.t('checkin.unused');return `<tr><td><strong>${esc(code.code)}</strong></td><td>${esc(code.points)}</td><td>${code.usage_mode==='global_once'?ClubI18n.t('checkin.ruleGlobal'):ClubI18n.t('checkin.rulePerMember')}</td><td>${ClubI18n.t('checkin.times',{count:esc(code.used_count)})}</td><td>${formatDate(code.expires_at)}</td><td class="all-users">${users}</td></tr>`}).join('')}</tbody></table>`}
 function renderPending(items){document.getElementById('pendingList').innerHTML=!items.length?'<div class="empty">'+ClubI18n.t('checkin.noPending')+'</div>':`<table class="table"><thead><tr><th>${ClubI18n.t('checkin.colName')}</th><th>${ClubI18n.t('checkin.colCode')}</th><th>${ClubI18n.t('checkin.colPoints')}</th><th>${ClubI18n.t('checkin.colAccount')}</th><th>${ClubI18n.t('checkin.colTime')}</th><th>${ClubI18n.t('checkin.colAction')}</th></tr></thead><tbody>${items.map(item=>`<tr><td>${esc(item.member_name)}</td><td>${esc(item.club_checkin_codes?.code)}</td><td>${esc(item.club_checkin_codes?.points)}</td><td>${esc(item.submitted_email)}</td><td>${formatDate(item.created_at)}</td><td><button class="button secondary resolve-pending" type="button" data-pending-id="${esc(item.id)}">${ClubI18n.t('checkin.resolved')}</button></td></tr>`).join('')}</tbody></table>`}
@@ -73,6 +74,6 @@ document.getElementById('attendanceDate').value=new Date().toLocaleDateString('e
 updateCheckinType();window.addEventListener('club:servicestate',event=>{serviceState=event.detail||null;applyCheckinServiceState()});supabaseClient.auth.onAuthStateChange((_event,session)=>void updateSession(session));supabaseClient.auth.getSession().then(({data:{session}})=>void updateSession(session));
 window.addEventListener('club:langchange',()=>{updateCheckinType();if(adminPanel.classList.contains('active'))void refreshAdmin();if(window.ClubI18n)ClubI18n.apply(document);});setTimeout(applyCheckinServiceState,0);
 </script>
-  <script src="club-shell.js"></script>
+  <script src="club-shell.js?v=90975bc7"></script>
 </body>
 </html>

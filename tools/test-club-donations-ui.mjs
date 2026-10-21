@@ -27,6 +27,8 @@ function harness({ superAdmin = false, session = { user: { id: 'u1' }, access_to
         add(name) { this.set.add(name); }, remove(name) { this.set.delete(name); }
       },
       listeners: {},
+      options: [],
+      add(option) { this.options.push(option); if (!this.value) this.value = option.value; },
       children: [],
       append(...next) { this.children.push(...next); },
       replaceChildren(...next) { this.children = next; },
@@ -62,6 +64,21 @@ function harness({ superAdmin = false, session = { user: { id: 'u1' }, access_to
     confirm(message) { confirms.push(message); return true; },
     scrollTo() {},
     ClubI18n: { t: key => key, apply() {} },
+    ClubCommon: (() => {
+      const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+      return {
+        escapeHtml,
+        confirm: async () => true,
+        scheduleUndo: options => { if (options && typeof options.commit === 'function') void options.commit({ pagehide: false }); return { cancel() {}, flush() {} }; },
+        listState(container, options) {
+          const kind = options && options.kind || 'loading';
+          container.innerHTML = '<div class="club-common-state ' + kind + '">' + escapeHtml(options && options.message || options && options.title || '') + '</div>';
+        },
+        listStateHtml(kind, options) { return '<div class="club-common-state ' + kind + '">' + escapeHtml(options && options.message || '') + '</div>'; },
+        handleAuthError(response, payload, fallback) { const e = new Error(payload && payload.error || fallback); e.status = response && response.status; return e; },
+        showSessionBanner() {}, ready(fn) { fn(); }, t: key => key
+      };
+    })(),
     ClubStaffAccess: {
       async fetchStaffAccess() { return { isSuperAdmin: superAdmin, permissions: {} }; }
     }
@@ -69,6 +86,8 @@ function harness({ superAdmin = false, session = { user: { id: 'u1' }, access_to
   const context = vm.createContext({
     window, document, console,
     supabaseClient,
+    ClubCommon: window.ClubCommon,
+    ClubI18n: window.ClubI18n,
     SUPABASE_URL: 'https://example.supabase.co', SUPABASE_KEY: 'key', FUNCTION_URL: 'https://example.supabase.co/functions/v1/club-drive',
     fetch: async (url, init) => {
       const body = JSON.parse(init.body);
@@ -92,6 +111,7 @@ function harness({ superAdmin = false, session = { user: { id: 'u1' }, access_to
       if (body.action === 'admin_donations_delete') return { ok: true, json: async () => ({ ok: true }) };
       return { ok: false, status: 400, json: async () => ({ error: 'unexpected' }) };
     },
+    Option: class { constructor(text, value) { this.textContent = text; this.value = value; } },
     setTimeout, clearTimeout, Date, Number, String, Math, JSON, RegExp, Promise, Array, Object, URL
   });
   vm.runInContext(script, context, { filename: 'donations-inline.js' });
@@ -217,4 +237,46 @@ const pageSource = await readFile(PAGE, 'utf8');
   assert.equal(ui.get('qrMessage').textContent, 'donations.qrCleared');
 }
 
-console.log('Club donations UI: sign-in gate, read-only member view, super-admin editing, escaping, client validation and payment QR states passed.');
+// Toolbar: search, year filter, total, CSV export, undo delete.
+{
+  const ui = harness({ superAdmin: true });
+  await ui.settle(); await ui.settle(); await ui.settle();
+  const rows = () => ui.get('donationList').innerHTML.match(/data-edit=/g)?.length || 0;
+  assert.equal(rows(), 2, 'both records render before filtering');
+
+  ui.get('donationSearch').value = 'big';
+  ui.get('donationSearch').listeners.input();
+  assert.equal(rows(), 1, 'name search narrows the list');
+  assert.equal(ui.get('donationSummary').textContent, 'donations.filteredSummary', 'summary uses the filtered variant');
+  assert.match(ui.get('donationList').innerHTML, /data-label=/, 'cells carry mobile card labels');
+
+  ui.get('donationSearch').value = 'no-such-name';
+  ui.get('donationSearch').listeners.input();
+  assert.equal(rows(), 0);
+  assert.match(ui.get('donationList').innerHTML, /club-common-state/, 'no-match uses the shared empty state');
+
+  ui.get('donationSearch').value = '';
+  ui.get('donationSearch').listeners.input();
+  ui.get('donationYear').value = '2026';
+  ui.get('donationYear').listeners.change();
+  assert.equal(rows(), 2, 'year filter keeps matching records');
+
+  const blobCalls = [];
+  const originalCreate = () => ({ href: '', download: '', click() { blobCalls.push({ href: this.href, download: this.download }); } });
+  ui.context.URL.createObjectURL = () => 'blob:csv';
+  ui.context.URL.revokeObjectURL = () => {};
+  ui.context.Blob = class { constructor(parts, options) { this.parts = parts; this.options = options; } };
+  ui.context.document.createElement = tag => {
+    if (tag === 'a') return originalCreate();
+    const node = { tagName: String(tag).toUpperCase(), children: [], className: '', textContent: '' };
+    node.setAttribute = (key, value) => { node[key] = String(value); };
+    node.replaceChildren = (...next) => { node.children = next; };
+    node.append = (...next) => { node.children.push(...next); };
+    return node;
+  };
+  ui.get('exportCsv').listeners.click();
+  assert.equal(blobCalls.length, 1, 'CSV export creates one download');
+  assert.match(blobCalls[0].download, /^club-donations-\d{4}-\d{2}-\d{2}\.csv$/);
+}
+
+console.log('Club donations UI: sign-in gate, read-only member view, super-admin editing, escaping, client validation, payment QR states, search/year/summary, CSV export and undo delete passed.');

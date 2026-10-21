@@ -2,17 +2,18 @@
 <html lang="zh-CN" data-i18n-title-key="pages.mallAdmin.title">
 <head>
   <link rel="stylesheet" href="theme.css">
-  <link rel="stylesheet" href="club-ui.css">
-  <script src="theme.js"></script>
-  <meta charset="utf-8">
+  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
+  <script src="theme.js?v=0efca64b"></script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>积分商城管理 · 算法社</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="club-auth-storage.js"></script>
-  <script src="member-identity.js" defer></script>
-  <script src="i18n-dict.js"></script>
-  <script src="i18n.js"></script>
-<script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
+  <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
+  <script src="club-auth-storage.js?v=80f52e6f"></script>
+
+  <script src="i18n-dict.js?v=21e9f61d" defer></script><script src="member-identity.js?v=0af7f540" defer></script>
+  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script></head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Mall Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a></div></header>
 
@@ -103,7 +104,7 @@
         body: JSON.stringify({ action, ...body })
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || t('admin.opFailed'));
+      if (!response.ok) throw ClubCommon.handleAuthError(response, payload, t('admin.opFailed'));
       return payload;
     }
 
@@ -135,7 +136,7 @@
     function renderProducts(products) {
       productsCache = products;
       if (!products.length) {
-        $('productList').innerHTML = '<div class="empty">' + t('admin.emptyProducts') + '</div>';
+        ClubCommon.listState($('productList'), { kind: 'empty', title: t('admin.emptyProducts') });
         return;
       }
       $('productList').innerHTML = `<table class="table"><thead><tr><th>${t('admin.colImage')}</th><th>${t('admin.colProduct')}</th><th>${t('admin.colPointsValue')}</th><th>${t('admin.colStock')}</th><th>${t('admin.colStatus')}</th><th>${t('admin.colSort')}</th><th>${t('admin.colUpdated')}</th><th>${t('admin.colActions')}</th></tr></thead><tbody>${products.map(item => `
@@ -162,23 +163,39 @@
         button.addEventListener('click', async () => {
           const id = button.getAttribute('data-delete-product');
           const product = productsCache.find(item => item.id === id);
-          if (!window.confirm(t('admin.confirmDeleteProduct', { name: product?.name || id }))) return;
-          setMessage($('productMessage'), t('admin.deleting'));
-          try {
-            await call('admin_mall_products_delete', { id });
-            setMessage($('productMessage'), t('admin.productDeleted'), 'success');
-            if ($('productId').value === id) resetProductForm();
-            await refreshProducts();
-          } catch (error) {
-            setMessage($('productMessage'), error.message, 'error');
-          }
+          if (!(await ClubCommon.confirm({ title: t('admin.deleteProductTitle'), message: t('admin.confirmDeleteProduct', { name: product?.name || id }), confirmText: t('common.delete'), danger: true }))) return;
+          if (!product) return;
+          const index = productsCache.findIndex(item => item.id === id);
+          productsCache = productsCache.filter(item => item.id !== id);
+          renderProducts(productsCache);
+          if ($('productId').value === id) resetProductForm();
+          ClubCommon.scheduleUndo({
+            message: t('admin.pendingDeleteProduct', { name: product.name || id }),
+            undoLabel: t('common.undo'),
+            onUndo: () => {
+              productsCache.splice(index, 0, product);
+              renderProducts(productsCache);
+              setMessage($('productMessage'), t('admin.deleteUndone'), 'success');
+            },
+            commit: async ({ pagehide }) => {
+              const { data: { session } } = await supabaseClient.auth.getSession();
+              if (!session) return;
+              await fetch(FUNCTION_URL, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json', authorization: `Bearer ${session.access_token}` },
+                body: JSON.stringify({ action: 'admin_mall_products_delete', id }),
+                keepalive: Boolean(pagehide)
+              });
+              if (!pagehide) setMessage($('productMessage'), t('admin.productDeleted'), 'success');
+            }
+          });
         });
       });
     }
 
     function renderRedemptions(rows) {
       if (!rows.length) {
-        $('redemptionList').innerHTML = '<div class="empty">' + t('admin.emptyRedemptions') + '</div>';
+        ClubCommon.listState($('redemptionList'), { kind: 'empty', title: t('admin.emptyRedemptions') });
         return;
       }
       $('redemptionList').innerHTML = `<table class="table"><thead><tr><th>${t('admin.colProduct')}</th><th>${t('admin.colSpent')}</th><th>${t('admin.colAccountName')}</th><th>${t('admin.colName')}</th><th>${t('admin.colClass')}</th><th>${t('admin.colRedeemedAt')}</th><th>${t('admin.colActions')}</th></tr></thead><tbody>${rows.map(item => `
@@ -196,7 +213,7 @@
       $('redemptionList').querySelectorAll('[data-done-redemption]').forEach(button => {
         button.addEventListener('click', async () => {
           const id = button.getAttribute('data-done-redemption');
-          if (!window.confirm(t('admin.confirmDone'))) return;
+          if (!(await ClubCommon.confirm({ message: t('admin.confirmDone') }))) return;
           setMessage($('redemptionMessage'), t('admin.markingDone'));
           try {
             await call('admin_mall_redemption_delete', { id });
@@ -210,25 +227,25 @@
     }
 
     async function refreshProducts() {
-      $('productList').innerHTML = '<div class="empty loading">' + t('admin.loadingProducts') + '</div>';
+      ClubCommon.listState($('productList'), { kind: 'loading', message: t('admin.loadingProducts') });
       try {
         const payload = await call('admin_mall_products_list');
         renderProducts(payload.products || []);
         setMessage($('productMessage'), '');
       } catch (error) {
-        $('productList').innerHTML = '<div class="empty">' + t('admin.emptyProductsFail') + '</div>';
+        ClubCommon.listState($('productList'), { kind: 'error', title: t('admin.emptyProductsFail'), onRetry: refreshProducts });
         setMessage($('productMessage'), error.message, 'error');
       }
     }
 
     async function refreshRedemptions() {
-      $('redemptionList').innerHTML = '<div class="empty loading">' + t('admin.loadingRedemptions') + '</div>';
+      ClubCommon.listState($('redemptionList'), { kind: 'loading', message: t('admin.loadingRedemptions') });
       try {
         const payload = await call('admin_mall_redemptions_list');
         renderRedemptions(payload.redemptions || []);
         setMessage($('redemptionMessage'), '');
       } catch (error) {
-        $('redemptionList').innerHTML = '<div class="empty">' + t('admin.emptyRedemptionsFail') + '</div>';
+        ClubCommon.listState($('redemptionList'), { kind: 'error', title: t('admin.emptyRedemptionsFail'), onRetry: refreshRedemptions });
         setMessage($('redemptionMessage'), error.message, 'error');
       }
     }
@@ -290,6 +307,6 @@
       } catch (_e) {}
     });
   </script>
-  <script src="club-shell.js"></script>
+  <script src="club-shell.js?v=90975bc7"></script>
 </body>
 </html>

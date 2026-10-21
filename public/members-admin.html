@@ -2,17 +2,18 @@
 <html lang="zh-CN" data-i18n-title-key="pages.membersAdmin.title">
 <head>
   <link rel="stylesheet" href="theme.css">
-  <link rel="stylesheet" href="club-ui.css">
-  <script src="theme.js"></script>
-  <meta charset="utf-8">
+  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
+  <script src="theme.js?v=0efca64b"></script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>成员展示管理 · 算法社</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="club-auth-storage.js"></script>
-  <script src="member-identity.js" defer></script>
-  <script src="i18n-dict.js"></script>
-  <script src="i18n.js"></script>
-<script src="service-prompts.js"></script><script src="service-gate.js"></script></head>
+  <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
+  <script src="club-auth-storage.js?v=80f52e6f"></script>
+
+  <script src="i18n-dict.js?v=21e9f61d" defer></script><script src="member-identity.js?v=0af7f540" defer></script>
+  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script></head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">S</span><span><strong data-i18n="common.brand">算法社</strong><small>Members Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a></div></header>
 
@@ -90,7 +91,7 @@
         body: JSON.stringify({ action, ...body })
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || t('admin.opFailed'));
+      if (!response.ok) throw ClubCommon.handleAuthError(response, payload, t('admin.opFailed'));
       return payload;
     }
 
@@ -121,7 +122,7 @@
     function renderMembers(members) {
       membersCache = members;
       if (!members.length) {
-        $('memberList').innerHTML = '<div class="empty">' + t('admin.emptyMembers') + '</div>';
+        ClubCommon.listState($('memberList'), { kind: 'empty', title: t('admin.emptyMembers') });
         return;
       }
       $('memberList').innerHTML = `<table class="table"><thead><tr><th>${t('admin.colPhoto')}</th><th>${t('admin.colName')}</th><th>${t('admin.colRole')}</th><th>${t('admin.memberIntro')}</th><th>${t('admin.colStatus')}</th><th>${t('admin.colSort')}</th><th>${t('admin.colUpdated')}</th><th>${t('admin.colActions')}</th></tr></thead><tbody>${members.map(item => `
@@ -148,7 +149,7 @@
         button.addEventListener('click', async () => {
           const id = button.getAttribute('data-delete-member');
           const member = membersCache.find(item => item.id === id);
-          if (!window.confirm(t('admin.confirmRemoveMember', { name: member?.name || id }))) return;
+          if (!(await ClubCommon.confirm({ message: t('admin.confirmRemoveMember', { name: member?.name || id }) }))) return;
           setMessage($('memberMessage'), t('admin.removing'));
           try {
             await call('admin_showcase_members_delete', { id });
@@ -163,13 +164,13 @@
     }
 
     async function refreshMembers() {
-      $('memberList').innerHTML = '<div class="empty loading">' + t('admin.loadingMembers') + '</div>';
+      ClubCommon.listState($('memberList'), { kind: 'loading', message: t('admin.loadingMembers') });
       try {
         const payload = await call('admin_showcase_members_list');
         renderMembers(payload.members || []);
         setMessage($('memberMessage'), '');
       } catch (error) {
-        $('memberList').innerHTML = '<div class="empty">' + t('admin.emptyMembersFail') + '</div>';
+        ClubCommon.listState($('memberList'), { kind: 'error', title: t('admin.emptyMembersFail'), onRetry: refreshMembers });
         setMessage($('memberMessage'), error.message, 'error');
       }
     }
@@ -226,6 +227,6 @@
       } catch (_e) {}
     });
   </script>
-  <script src="club-shell.js"></script>
+  <script src="club-shell.js?v=90975bc7"></script>
 </body>
 </html>

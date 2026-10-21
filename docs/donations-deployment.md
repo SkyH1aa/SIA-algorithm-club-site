@@ -40,13 +40,18 @@ supabase/club-donations-schema.sql
 
 ## 3. 发布静态文件
 
-按网站原有方式发布：
+按网站原有方式发布本轮全部前端变更（这次不只影响捐赠页）：
 
-- 新增 `public/donations.html`
-- 修改 `public/club-features.html`（卡片入口）
-- 修改 `public/club-shell.js`（跳转模块 + 管理模块横栏）
-- 修改 `public/admin-hub.html`（管理总览超管专属入口）
-- 修改 `public/i18n-dict.js`（中英文案）
+- 新增 `public/donations.html`、`public/club-common.js`、`public/404.html`、`public/favicon.svg`
+- 新增 `public/vendor/supabase/supabase.min.js`（固定版本 UMD，约 108 KB）
+- 新增 `public/asset-versions.json`（资源版本清单）
+- 修改全部 `public/*.html`、根 `index.html` 与根游戏页（脚本引用、i18n defer、favicon、版本号）
+- 修改 `public/club-ui.css`（打印样式）、`public/club-shell.js`、`public/admin-hub.html`、`public/i18n-dict.js`
+- 修改 `public/service-gate.js`（捐赠页与 Satori 实验室的功能开关）
+
+如果站点是整目录发布，直接覆盖 `public/` 即可；若逐文件发布，务必包含新增的 `vendor/supabase/`。
+
+> 本轮把 Supabase JS 从 `cdn.jsdelivr.net` 改为本地 `public/vendor/supabase/supabase.min.js`。这是为了在 CDN 不可达时仍能登录。以后升级 SDK 需要手工替换该文件并重跑 `node tools/version-static-assets.mjs`。
 
 ## 4. 上线后验证
 
@@ -57,11 +62,26 @@ supabase/club-donations-schema.sql
 5. 非超管账号直接构造 `admin_donations_save` 或 `admin_donation_settings_save` 请求：应返回 403，且不产生数据库写入。
 6. 检查首页跳转模块、社团功能页、管理总览三处入口均可达。
 
+## 资源版本号
+
+静态资源改为按内容哈希自动加 `?v=`：
+
+```bash
+node tools/version-static-assets.mjs          # 重写引用并生成 asset-versions.json
+node tools/version-static-assets.mjs --check  # 只校验，CI/提交前使用
+```
+
+只要改过 `club-common.js`、`club-ui.css`、`i18n-dict.js` 等共享文件，就必须重跑一次，否则浏览器会继续使用旧缓存。`tools/test-asset-versions.mjs` 会校验清单与实际文件哈希一致。
+
 ## 本地已验证
 
 - `npm exec --yes deno -- run --allow-read tools/test-club-donations.ts`：权限、校验、排序、错误映射、收款码 URL 校验与旧库 upsert。
 - `node tools/test-club-donations-page.mjs`：页面接线、三处入口、i18n 中英覆盖、转义与主题安全、SQL 契约。
 - `node tools/test-club-donations-ui.mjs`：内联脚本在桩 DOM 中的登录门禁、只读视图、超管编辑、客户端校验与收款码空态/配置/清除。
-- 无头 Chrome 实际渲染：暗色/亮色两种主题、社员与超管两种视图均已截图确认。
+- `node tools/test-club-common.mjs`：共享确认框、撤销、列表三态、401 映射。
+- `node tools/test-asset-versions.mjs` / `test-vendor-supabase.mjs`：资源版本与本地 SDK。
+- 无头 Chrome 实际渲染（1440×1100 与 390×844）：暗色/亮色、社员与超管视图、搜索筛选、合计金额、CSV 按钮、删除确认框、撤销提示、手机卡片布局（无横向滚动）、404 页均截图确认。
+
+> 说明：浏览器验收使用桩会话直接驱动页面渲染函数，未登录真实 Supabase；登录门禁与权限分支由 `test-club-donations-ui.mjs` 在 vm 中覆盖。
 
 本地测试使用 mock，不连接真实 Supabase 或数据库；上线后仍需按第 4 节用真实账号验收。
