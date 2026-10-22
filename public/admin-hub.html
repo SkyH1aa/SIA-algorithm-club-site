@@ -231,7 +231,30 @@
       const hint = $('fileLoginHint');
       if (hint) hint.hidden = false;
     }
-    let currentAccess = { isSuperAdmin: false, permissions: window.ClubStaffAccess.emptyPermissions() };
+    // member-identity.js 是 defer 脚本，解析期可能还没执行完；这里必须有兜底，
+    // 否则 .emptyPermissions() 会抛 TypeError，整个内联脚本中断，页面永远停在登录门禁。
+    const EMPTY_PERMISSIONS = {
+      can_checkin: false, can_points: false, can_messages: false, can_invites: false,
+      can_events: false, can_mall: false, can_members: false, can_join: false
+    };
+    const emptyPermissions = () => (window.ClubStaffAccess && typeof window.ClubStaffAccess.emptyPermissions === 'function')
+      ? window.ClubStaffAccess.emptyPermissions()
+      : { ...EMPTY_PERMISSIONS };
+    let currentAccess = { isSuperAdmin: false, permissions: emptyPermissions() };
+
+    // member-identity.js 用 defer 加载，解析期可能还没执行。这里最多等 3 秒。
+    function whenStaffAccessReady() {
+      if (window.ClubStaffAccess) return Promise.resolve(true);
+      return new Promise(resolve => {
+        const started = Date.now();
+        const tick = () => {
+          if (window.ClubStaffAccess) return resolve(true);
+          if (Date.now() - started > 3000) return resolve(false);
+          setTimeout(tick, 25);
+        };
+        tick();
+      });
+    }
     // 超管工具的标签页只初始化一次；后续异步刷新不再覆写面板显隐。
     let adminTabsReady = false;
 
@@ -795,6 +818,8 @@
         return;
       }
 
+      // 同一原因：defer 脚本可能尚未就绪。等待它就绪，而不是直接抛错。
+      await whenStaffAccessReady();
       currentAccess = await window.ClubStaffAccess.fetchStaffAccess(session);
       let siteEnabled = true;
       try {
