@@ -17,6 +17,66 @@ assert.deepEqual([...png.subarray(0, 8)], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0
 assert.equal(png.readUInt32BE(16), 1200, 'share image is 1200px wide');
 assert.equal(png.readUInt32BE(20), 630, 'share image is 630px tall');
 
+// 微信/QQ 的链接卡片缩略图是**中心正方形裁切**。所有文字与 logo 必须落在
+// 中心 630x630 内，否则分享出去只看到被裁掉一半的画面。
+// 这里用像素抽样验证：安全区外只允许是背景/装饰，不应有高对比度的文字像素。
+{
+  const width = png.readUInt32BE(16);
+  const height = png.readUInt32BE(20);
+  // 解码为像素需要 zlib；用 Node 内置能力读出 IDAT 并展开。
+  const zlib = await import('node:zlib');
+  let offset = 8;
+  const idat = [];
+  while (offset < png.length) {
+    const length = png.readUInt32BE(offset);
+    const type = png.toString('ascii', offset + 4, offset + 8);
+    if (type === 'IDAT') idat.push(png.subarray(offset + 8, offset + 8 + length));
+    offset += 12 + length;
+  }
+  const raw = zlib.inflateSync(Buffer.concat(idat));
+  const bpp = 3; // PNG 由 build-og-cover.py 以 RGB 写出
+  const stride = width * bpp + 1;
+  const pixels = Buffer.alloc(width * height * bpp);
+  let prev = Buffer.alloc(width * bpp);
+  for (let y = 0; y < height; y += 1) {
+    const filter = raw[y * stride];
+    const line = raw.subarray(y * stride + 1, y * stride + 1 + width * bpp);
+    const out = Buffer.alloc(width * bpp);
+    for (let i = 0; i < line.length; i += 1) {
+      const left = i >= bpp ? out[i - bpp] : 0;
+      const up = prev[i];
+      const upLeft = i >= bpp ? prev[i - bpp] : 0;
+      let value = line[i];
+      if (filter === 1) value += left;
+      else if (filter === 2) value += up;
+      else if (filter === 3) value += Math.floor((left + up) / 2);
+      else if (filter === 4) {
+        const p = left + up - upLeft;
+        const pa = Math.abs(p - left), pb = Math.abs(p - up), pc = Math.abs(p - upLeft);
+        value += (pa <= pb && pa <= pc) ? left : (pb <= pc ? up : upLeft);
+      }
+      out[i] = value & 0xff;
+    }
+    out.copy(pixels, y * width * bpp);
+    prev = out;
+  }
+  const safeX0 = Math.floor((width - height) / 2);
+  const safeX1 = safeX0 + height;
+  const bright = (x, y) => {
+    const i = (y * width + x) * bpp;
+    return (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+  };
+  let outsideBright = 0;
+  for (let y = 0; y < height; y += 2) {
+    for (let x = 0; x < width; x += 2) {
+      if (x >= safeX0 && x < safeX1) continue;
+      if (bright(x, y) > 120) outsideBright += 1;
+    }
+  }
+  assert.equal(outsideBright, 0,
+    `share image has ${outsideBright} bright pixels outside the centre square; WeChat crops to that square`);
+}
+
 // --- sitemap / robots ---
 const sitemap = await read('public/sitemap.xml');
 assert.match(sitemap, /<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/);
