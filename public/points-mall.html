@@ -2,8 +2,8 @@
 <html lang="zh-CN" data-i18n-title-key="pages.mall.title">
 <head>
   <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
-  <script src="theme.js?v=0efca64b"></script>
+  <link rel="stylesheet" href="club-ui.css?v=ded5ce5c">
+  <script src="theme.js?v=f92231ba"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,9 +11,9 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=80f52e6f"></script>
 
-  <script src="i18n-dict.js?v=21e9f61d" defer></script><script src="member-identity.js?v=0af7f540" defer></script>
-  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script></head>
+  <script src="i18n-dict.js?v=0c3dd920"></script><script src="member-identity.js?v=0af7f540" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b2193cd0"></script></head>
 <body class="club-page">
   <header class="topbar">
     <div class="topbar-inner">
@@ -114,7 +114,7 @@
         const stock = Number(product.stock || 0);
         const canAfford = bound && points >= price && stock > 0;
         const cover = product.image_url
-          ? `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:ClubI18n.t('mall.noImage')}))">`
+          ? `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:ClubI18n.t('mall.noImage')}))">`
           : '<span>' + ClubI18n.t('mall.noImage') + '</span>';
         const tip = !bound ? ClubI18n.t('mall.bindFirst') : (stock <= 0 ? ClubI18n.t('mall.soldOut') : (points < price ? ClubI18n.t('mall.insufficient') : ClubI18n.t('mall.redeemNow')));
         return `<article class="card">
@@ -199,6 +199,6 @@
     supabaseClient.auth.getSession().then(({ data: { session } }) => { void updateSession(session); });
     window.addEventListener('club:langchange', () => { updateProfileUi(); void loadProducts(); if (window.ClubI18n) ClubI18n.apply(document); });
   </script>
-  <script src="club-shell.js?v=90975bc7"></script>
+  <script src="club-shell.js?v=1885fccd"></script>
 </body>
 </html>

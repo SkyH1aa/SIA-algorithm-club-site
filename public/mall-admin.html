@@ -2,8 +2,8 @@
 <html lang="zh-CN" data-i18n-title-key="pages.mallAdmin.title">
 <head>
   <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
-  <script src="theme.js?v=0efca64b"></script>
+  <link rel="stylesheet" href="club-ui.css?v=ded5ce5c">
+  <script src="theme.js?v=f92231ba"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,9 +11,9 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=80f52e6f"></script>
 
-  <script src="i18n-dict.js?v=21e9f61d" defer></script><script src="member-identity.js?v=0af7f540" defer></script>
-  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script></head>
+  <script src="i18n-dict.js?v=0c3dd920"></script><script src="member-identity.js?v=0af7f540" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b2193cd0"></script></head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Mall Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a></div></header>
 
@@ -32,6 +32,7 @@
             <h2 data-i18n="admin.productTitle">发布 / 编辑商品</h2>
             <p class="intro" data-i18n="admin.productIntro">配图只需填写图床图片 URL；留空表示无配图。已上架商品也可直接编辑。</p>
           </div>
+          <button class="button secondary" type="button" id="exportProducts" data-i18n="admin.exportCsv">导出 CSV</button>
           <button class="button secondary" type="button" id="refreshProducts" data-i18n="admin.refreshProducts">刷新商品</button>
         </div>
         <form class="form" id="productForm">
@@ -141,7 +142,7 @@
       }
       $('productList').innerHTML = `<table class="table"><thead><tr><th>${t('admin.colImage')}</th><th>${t('admin.colProduct')}</th><th>${t('admin.colPointsValue')}</th><th>${t('admin.colStock')}</th><th>${t('admin.colStatus')}</th><th>${t('admin.colSort')}</th><th>${t('admin.colUpdated')}</th><th>${t('admin.colActions')}</th></tr></thead><tbody>${products.map(item => `
         <tr>
-          <td>${item.image_url ? `<img class="thumb" src="${escapeHtml(item.image_url)}" alt="">` : `<span class="badge off">${t('admin.noImage')}</span>`}</td>
+          <td>${item.image_url ? `<img class="thumb" src="${escapeHtml(item.image_url)}" alt="" loading="lazy" decoding="async">` : `<span class="badge off">${t('admin.noImage')}</span>`}</td>
           <td><strong>${escapeHtml(item.name)}</strong><div style="color:var(--muted);font-size:12px;margin-top:4px;line-height:1.5">${escapeHtml(item.description || '-')}</div></td>
           <td>${escapeHtml(item.price)}</td>
           <td>${escapeHtml(item.stock)}</td>
@@ -226,6 +227,18 @@
       });
     }
 
+    document.addEventListener('DOMContentLoaded', () => { $('exportProducts').addEventListener('click', exportProducts); });
+
+    function exportProducts() {
+      if (!productsCache.length) { setMessage($('productMessage'), t('admin.exportEmpty'), 'error'); return; }
+      const count = ClubCommon.exportCsv(`club-products-${new Date().toISOString().slice(0,10)}.csv`, [
+        { label: t('admin.colProduct'), value: row => row.name },
+        { label: t('admin.colPointsValue'), value: row => row.price },
+        { label: t('admin.colStock'), value: row => row.stock }
+      ], productsCache);
+      setMessage($('productMessage'), t('admin.exportOk', { n: count }), 'success');
+    }
+
     async function refreshProducts() {
       ClubCommon.listState($('productList'), { kind: 'loading', message: t('admin.loadingProducts') });
       try {
@@ -307,6 +320,6 @@
       } catch (_e) {}
     });
   </script>
-  <script src="club-shell.js?v=90975bc7"></script>
+  <script src="club-shell.js?v=1885fccd"></script>
 </body>
 </html>

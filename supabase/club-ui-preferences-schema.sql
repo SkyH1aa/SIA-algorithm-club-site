@@ -7,7 +7,7 @@ create table if not exists public.club_ui_preferences (
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   constraint club_ui_preferences_theme_mode_check
-    check (theme_mode in ('auto', 'light', 'dark'))
+    check (theme_mode in ('auto', 'system', 'light', 'dark'))
 );
 
 alter table public.club_ui_preferences enable row level security;
@@ -95,3 +95,10 @@ $$;
 
 revoke all on function public.set_club_ui_theme_mode(uuid, text) from public;
 grant execute on function public.set_club_ui_theme_mode(uuid, text) to service_role;
+
+-- 允许「跟随系统」模式：旧库已存在约束时先删后加，重复执行安全。
+alter table public.club_ui_preferences
+  drop constraint if exists club_ui_preferences_theme_mode_check;
+alter table public.club_ui_preferences
+  add constraint club_ui_preferences_theme_mode_check
+  check (theme_mode in ('auto', 'system', 'light', 'dark'));

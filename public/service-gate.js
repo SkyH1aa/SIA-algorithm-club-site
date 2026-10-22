@@ -3,7 +3,7 @@
   const KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
   const isAdminHub = /(?:^|\/)admin-hub\.html$/i.test(location.pathname);
   const isTemporaryLogin = /(?:^|\/)member-center\.html$/i.test(location.pathname) && new URLSearchParams(location.search).get('serviceDebug') === '1';
-  const FEATURE_BY_PATH = { 'chat.html':'chat', 'member-center.html':'member-center', 'member-points.html':'points', 'points-mall.html':'mall', 'member-messages.html':'messages', 'drive.html':'drive', 'events.html':'events', 'join.html':'join', 'gomoku.html':'gomoku', 'tetris.html':'tetris', 'snake.html':'snake', 'platformer.html':'platformer', 'club-features.html':'club-features', 'visualization-lab.html':'visualization-lab', 'sorting-lab.html':'sorting-lab', 'search-lab.html':'search-lab', 'ds-lab.html':'ds-lab', 'graph-lab.html':'graph-lab', 'dp-lab.html':'dp-lab', 'tree-lab.html':'tree-lab', 'heap-lab.html':'heap-lab', 'resources.html':'resources', 'guide.html':'guide', 'changelog.html':'changelog', 'donations.html':'donations', 'gomoku-satori-lab.html':'gomoku-satori-lab' };
+  const FEATURE_BY_PATH = { 'chat.html':'chat', 'member-center.html':'member-center', 'member-points.html':'points', 'points-mall.html':'mall', 'member-messages.html':'messages', 'drive.html':'drive', 'events.html':'events', 'join.html':'join', 'gomoku.html':'gomoku', 'tetris.html':'tetris', 'snake.html':'snake', 'platformer.html':'platformer', 'club-features.html':'club-features', 'visualization-lab.html':'visualization-lab', 'sorting-lab.html':'sorting-lab', 'search-lab.html':'search-lab', 'ds-lab.html':'ds-lab', 'graph-lab.html':'graph-lab', 'dp-lab.html':'dp-lab', 'tree-lab.html':'tree-lab', 'heap-lab.html':'heap-lab', 'resources.html':'resources', 'guide.html':'guide', 'changelog.html':'changelog', 'donations.html':'donations', 'notifications.html':'notifications', 'member-profile.html':'member-profile', 'search.html':'search', 'gomoku-satori-lab.html':'gomoku-satori-lab' };
   const featureKey = FEATURE_BY_PATH[location.pathname.split('/').pop().toLowerCase()] || null;
   let latestState = null;
   window.ClubServiceGate = {
@@ -69,11 +69,22 @@
   async function check() {
     if (isAdminHub || isTemporaryLogin) return;
     const reveal = () => document.documentElement.classList.remove('club-service-checking');
+    // 先用上一次的缓存立即放行，网络结果回来后再决定是否真的需要拦截。
+    // 这样正常访问不会因为一次 5 秒超时而被白屏挡住。
+    let cached = null;
+    try { cached = JSON.parse(localStorage.getItem('club-site-service-last-state') || 'null'); } catch (_error) { cached = null; }
+    if (cached) {
+      latestState = cached;
+      window.dispatchEvent(new CustomEvent('club:servicestate', { detail: cached }));
+      const cachedFeature = featureKey && cached.feature_settings && cached.feature_settings[featureKey];
+      if (cached.enabled !== false && (!cachedFeature || cachedFeature.enabled !== false)) reveal();
+    }
     try {
       let state;
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        // 2.5 秒足够一次正常请求；超时就按缓存/放行处理，不长时间白屏。
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
         let res;
         try {
           res = await fetch(URL, { method: 'POST', headers: { 'content-type': 'application/json', apikey: KEY }, body: JSON.stringify({ action: 'site_service_status' }), signal: controller.signal });

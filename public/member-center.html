@@ -8,12 +8,12 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=80f52e6f"></script>
   <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
-  <script src="theme.js?v=0efca64b"></script>
-  <script src="i18n-dict.js?v=21e9f61d"></script><script src="member-identity.js?v=0af7f540"></script>
+  <link rel="stylesheet" href="club-ui.css?v=ded5ce5c">
+  <script src="theme.js?v=f92231ba"></script>
+  <script src="i18n-dict.js?v=0c3dd920"></script><script src="member-identity.js?v=0af7f540" defer></script>
 
-  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script></head>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b2193cd0"></script></head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
   <main>
@@ -100,6 +100,7 @@
       <section class="panel panel-block" id="profileBindingSection"><div class="panel-head"><div><h2 data-i18n="memberCenter.bindTitle">设置姓名与班级</h2><p class="intro" data-i18n="memberCenter.bindIntro">姓名必须是 2 到 20 个连续中文字符。若积分榜已有同名唯一记录，会直接绑定；没有则自动创建积分榜记录并绑定。</p></div></div><form id="bindForm" class="bind-grid"><div class="field"><label for="bindName" data-i18n="memberCenter.memberNameLabel">中文姓名</label><input class="input" id="bindName" maxlength="20" required placeholder="例如：张三"></div><div class="field"><label for="bindClass" data-i18n="memberCenter.memberClassLabel">班级</label><input class="input" id="bindClass" maxlength="40" required placeholder="例如：高一（3）班"></div><button class="button" id="bindButton" type="submit" data-i18n="memberCenter.saveBind">保存并绑定</button></form><p id="bindMessage" class="message" role="status"></p></section>
       <section class="panel panel-block" id="themePanel"><div class="panel-head"><div><h2 data-i18n="theme.title">外观主题</h2><p class="intro" data-i18n="theme.intro">未登录时按北京时间自动切换；登录后可自选并同步到云端。亮色：06:00–18:00；暗色：18:00–次日 06:00。</p></div></div><div class="theme-picker" role="group" aria-label="Theme"><button type="button" class="theme-option" data-theme-mode="auto" aria-pressed="false"><strong data-i18n="theme.auto">跟随时间</strong><span data-i18n="theme.autoDesc">按北京时间日夜切换</span></button><button type="button" class="theme-option" data-theme-mode="light" aria-pressed="false"><strong data-i18n="theme.light">亮色</strong><span data-i18n="theme.lightDesc">浅色纸感界面</span></button><button type="button" class="theme-option" data-theme-mode="dark" aria-pressed="false"><strong data-i18n="theme.dark">暗色</strong><span data-i18n="theme.darkDesc">夜间深色界面</span></button></div><p class="theme-hint" data-theme-hint></p><p id="themeMessage" class="message" role="status"></p></section>
       <section class="panel panel-block"><div class="panel-head"><div><h2 data-i18n="memberCenter.commonEntries">常用入口</h2><p class="intro" data-i18n="memberCenter.entriesIntro">登录入口已统一到个人中心；社团盘改从社团功能进入，登录后会自动连接 WebDAV。</p></div></div><div class="quick-grid"><a class="quick-link" href="club-features.html"><strong data-i18n="memberCenter.qlFeatures">社团功能</strong><span data-i18n="memberCenter.qlFeaturesDesc">算法实验室、五子棋、教学资源、签到兑换、积分商城、留言箱、活动公告、社团盘</span></a><a class="quick-link" href="drive.html"><strong data-i18n="memberCenter.qlDrive">社团盘</strong><span data-i18n="memberCenter.qlDriveDesc">已登录时可直接打开 123 云盘专属目录</span></a><a class="quick-link" href="chat.html"><strong data-i18n="memberCenter.qlChat">社团 AI Chat</strong><span data-i18n="memberCenter.qlChatDesc">登录并绑定资料后与 AI 对话；聊天记录保存在当前浏览器</span></a><a class="quick-link" href="points-mall.html"><strong data-i18n="memberCenter.qlMall">积分商城</strong><span data-i18n="memberCenter.qlMallDesc">浏览上架商品并用社团积分兑换</span></a><a class="quick-link" href="events.html"><strong data-i18n="memberCenter.qlEvents">活动与公告</strong><span data-i18n="memberCenter.qlEventsDesc">查看通知、课程安排与活动报名</span></a><a class="quick-link" href="member-points.html"><strong data-i18n="memberCenter.qlPoints">积分榜</strong><span data-i18n="memberCenter.qlPointsDesc">查看完整成员积分公示</span></a><a class="quick-link" href="changelog.html"><strong data-i18n="memberCenter.qlChangelog">更新日志</strong><span data-i18n="memberCenter.qlChangelogDesc">查看官网功能更新与维护记录</span></a><a class="quick-link" href="password-reset.html"><strong data-i18n="memberCenter.qlPassword">重置密码</strong><span data-i18n="memberCenter.qlPasswordDesc">提交申请或使用管理员秘钥设置新密码</span></a><a class="quick-link" href="admin-hub.html" data-admin-only hidden><strong data-i18n="memberCenter.qlAdmin">管理员总览</strong><span data-i18n="memberCenter.qlAdminDesc">仅管理员可进入后台汇总面板</span></a></div></section>
+      <section class="panel panel-block" id="profileSettingsLink"><div class="panel-head"><div><h2 data-i18n="memberProfile.settingsTitle">个人主页展示设置</h2><p class="intro" data-i18n="memberCenter.profileSettingsIntro">决定你的个人主页对外展示哪些内容。</p></div><a class="button secondary" href="member-profile.html" data-i18n="memberCenter.openProfile">打开我的主页</a></div></section>
       <section class="panel panel-block"><div class="panel-head"><div><h2 data-i18n="memberCenter.pointsSummary">积分公示摘要</h2><p class="intro" data-i18n="memberCenter.pointsIntro">展示当前积分榜，个人积分会在账号概览中优先显示。</p></div><button id="refreshButton" class="button secondary" type="button" data-i18n="common.refresh">刷新数据</button></div><div id="pointsList"><div class="empty loading" data-i18n="memberCenter.loadingPoints">正在读取积分公示…</div></div><p id="pointsMessage" class="message" role="status"></p></section>
     </div>
   </main>
@@ -201,7 +202,7 @@
         $('pointsList').innerHTML = '<div class="empty">' + ClubI18n.t('memberCenter.emptyPoints') + '</div>';
         return;
       }
-      $('pointsList').innerHTML = `<table class="points-table"><thead><tr><th>${ClubI18n.t('memberCenter.colName')}</th><th>${ClubI18n.t('memberCenter.colClass')}</th><th>${ClubI18n.t('memberCenter.colPoints')}</th></tr></thead><tbody>${members.map(member => `<tr><td>${escapeHtml(member.member_name)}</td><td>${escapeHtml(member.member_class)}</td><td class="points-value">${escapeHtml(member.points)}</td></tr>`).join('')}</tbody></table>`;
+      $('pointsList').innerHTML = `<table class="points-table"><thead><tr><th>${ClubI18n.t('memberCenter.colName')}</th><th>${ClubI18n.t('memberCenter.colClass')}</th><th>${ClubI18n.t('memberCenter.colPoints')}</th></tr></thead><tbody>${members.map(member => `<tr><td><a class="member-profile-link" href="member-profile.html?id=${escapeHtml(member.id)}">${escapeHtml(member.member_name)}</a></td><td>${escapeHtml(member.member_class)}</td><td class="points-value">${escapeHtml(member.points)}</td></tr>`).join('')}</tbody></table>`;
     }
 
     function updateProfileView() {
@@ -405,6 +406,6 @@
       if (window.ClubTheme?.refreshPickerUI) window.ClubTheme.refreshPickerUI();
     });
   </script>
-  <script src="club-shell.js?v=90975bc7"></script>
+  <script src="club-shell.js?v=1885fccd"></script>
 </body>
 </html>

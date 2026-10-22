@@ -13,13 +13,18 @@ const features = await read('public/club-features.html');
 const shell = await read('public/club-shell.js');
 const hub = await read('public/admin-hub.html');
 const dictSource = await read('public/i18n-dict.js');
+// The dictionary is split per language now; the loader only injects one bundle,
+// so read both parts directly for key coverage assertions.
+const dictZh = await read('public/i18n-dict-zh.js');
+const dictEn = await read('public/i18n-dict-en.js');
 const fn = await read('supabase/functions/club-drive/index.ts');
 const sql = await read('supabase/club-donations-schema.sql');
 
 // --- Dictionary loads and both languages cover every key the page uses ---
 const dictContext = { window: {} };
-vm.runInNewContext(dictSource, dictContext);
-const dict = dictContext.window.ClubI18nDict;
+vm.runInNewContext(dictZh, dictContext);
+vm.runInNewContext(dictEn, dictContext);
+const dict = { zh: dictContext.window.ClubI18nDictZh, en: dictContext.window.ClubI18nDictEn };
 assert.ok(dict?.zh?.donations && dict?.en?.donations, 'donations dictionary missing');
 const used = new Set([...page.matchAll(/data-i18n(?:-title|-placeholder|-aria)?="(donations\.[A-Za-z0-9_.]+)"/g)].map(m => m[1].slice('donations.'.length)));
 for (const match of page.matchAll(/t\('(donations\.[A-Za-z0-9_.]+)'/g)) used.add(match[1].slice('donations.'.length));

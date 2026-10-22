@@ -54,7 +54,7 @@
           "row": 7,
           "col": 7
         },
-        "elapsedMs": 419
+        "elapsedMs": 546
       },
       {
         "color": 2,
@@ -62,7 +62,7 @@
           "row": 6,
           "col": 8
         },
-        "elapsedMs": 1142
+        "elapsedMs": 1282
       },
       {
         "color": 1,
@@ -70,7 +70,43 @@
           "row": 7,
           "col": 7
         },
-        "elapsedMs": 309
+        "elapsedMs": 365
+      }
+    ],
+    "thinkerWorkerMoves": [
+      {
+        "color": 1,
+        "move": {
+          "row": 7,
+          "col": 7
+        },
+        "elapsedMs": 315
+      },
+      {
+        "color": 2,
+        "move": {
+          "row": 7,
+          "col": 8
+        },
+        "elapsedMs": 8498
+      }
+    ],
+    "championWorkerMoves": [
+      {
+        "color": 1,
+        "move": {
+          "row": 7,
+          "col": 7
+        },
+        "elapsedMs": 330
+      },
+      {
+        "color": 2,
+        "move": {
+          "row": 6,
+          "col": 7
+        },
+        "elapsedMs": 1166
       }
     ],
     "newWorkerMoves": [
@@ -152,29 +188,11 @@
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 1.199999999254942,
+            "elapsedMs": 1.8000000044703484,
             "aborted": false
           },
-          "elapsedMs": 120,
+          "elapsedMs": 137,
           "experts": {
-            "v10": {
-              "type": "progress",
-              "id": 10,
-              "move": {
-                "row": 7,
-                "col": 7
-              },
-              "stats": {
-                "candidates": 1,
-                "depth": 5,
-                "score": 8631,
-                "target": "8, 8",
-                "move": {
-                  "row": 7,
-                  "col": 7
-                }
-              }
-            },
             "thinker": {
               "type": "progress",
               "id": 9,
@@ -186,6 +204,24 @@
                 "candidates": 1,
                 "depth": 6,
                 "score": -1325,
+                "target": "8, 8",
+                "move": {
+                  "row": 7,
+                  "col": 7
+                }
+              }
+            },
+            "v10": {
+              "type": "progress",
+              "id": 10,
+              "move": {
+                "row": 7,
+                "col": 7
+              },
+              "stats": {
+                "candidates": 1,
+                "depth": 5,
+                "score": 8631,
                 "target": "8, 8",
                 "move": {
                   "row": 7,
@@ -209,10 +245,10 @@
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 2.400000002235174,
+            "elapsedMs": 2.5,
             "aborted": false
           },
-          "elapsedMs": 11143,
+          "elapsedMs": 13179,
           "experts": {
             "v10": {
               "type": "result",
@@ -227,7 +263,7 @@
                 "candidates": 20,
                 "nodes": 0,
                 "qnodes": 0,
-                "elapsedMs": 2.399999998509884,
+                "elapsedMs": 2.6999999955296516,
                 "aborted": false,
                 "reason": "opening",
                 "score": 0
@@ -246,7 +282,7 @@
                 "candidates": 14,
                 "nodes": 155640,
                 "qnodes": 64140,
-                "elapsedMs": 892.5,
+                "elapsedMs": 972.6999999955297,
                 "aborted": false,
                 "reason": "search",
                 "score": 54
@@ -265,7 +301,7 @@
           "row": 7,
           "col": 7
         },
-        "elapsedMs": 968,
+        "elapsedMs": 1262,
         "search": {
           "depth": 0,
           "selDepth": 0,
@@ -274,7 +310,7 @@
           "engineTimeMs": 0,
           "configuredDepth": 16,
           "reason": "mix9-expert-checked",
-          "elapsedMs": 115,
+          "elapsedMs": 144,
           "threats": {
             "openFour": 0,
             "four": 0,
@@ -290,24 +326,6 @@
             "agreed": true
           },
           "experts": {
-            "thinker": {
-              "type": "progress",
-              "id": 5,
-              "move": {
-                "row": 7,
-                "col": 7
-              },
-              "stats": {
-                "candidates": 1,
-                "depth": 6,
-                "score": -1325,
-                "target": "8, 8",
-                "move": {
-                  "row": 7,
-                  "col": 7
-                }
-              }
-            },
             "v10": {
               "type": "progress",
               "id": 6,
@@ -325,13 +343,31 @@
                   "col": 7
                 }
               }
+            },
+            "thinker": {
+              "type": "progress",
+              "id": 5,
+              "move": {
+                "row": 7,
+                "col": 7
+              },
+              "stats": {
+                "candidates": 1,
+                "depth": 6,
+                "score": -1325,
+                "target": "8, 8",
+                "move": {
+                  "row": 7,
+                  "col": 7
+                }
+              }
             }
           },
           "proof": {
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 1.6000000014901161,
+            "elapsedMs": 1.7999999970197678,
             "aborted": false
           }
         }
@@ -342,16 +378,16 @@
           "row": 7,
           "col": 8
         },
-        "elapsedMs": 8198,
+        "elapsedMs": 9658,
         "search": {
           "depth": 16,
           "selDepth": 0,
           "nodes": 0,
           "score": null,
-          "engineTimeMs": 7183,
+          "engineTimeMs": 8452,
           "configuredDepth": 16,
           "reason": "mix9-expert-checked",
-          "elapsedMs": 7335,
+          "elapsedMs": 8604,
           "threats": {
             "openFour": 0,
             "four": 0,
@@ -380,7 +416,7 @@
                 "candidates": 20,
                 "nodes": 0,
                 "qnodes": 0,
-                "elapsedMs": 2.600000001490116,
+                "elapsedMs": 3.399999998509884,
                 "aborted": false,
                 "reason": "opening",
                 "score": 0
@@ -399,7 +435,7 @@
                 "candidates": 14,
                 "nodes": 155640,
                 "qnodes": 64140,
-                "elapsedMs": 963.2000000029802,
+                "elapsedMs": 1007.6999999955297,
                 "aborted": false,
                 "reason": "search",
                 "score": 54
@@ -410,7 +446,7 @@
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 2.5,
+            "elapsedMs": 2,
             "aborted": false
           }
         }
@@ -494,7 +530,7 @@
           "row": 7,
           "col": 7
         },
-        "elapsedMs": 393
+        "elapsedMs": 457
       },
       {
         "color": 2,
@@ -502,7 +538,7 @@
           "row": 6,
           "col": 8
         },
-        "elapsedMs": 1195
+        "elapsedMs": 1217
       },
       {
         "color": 1,
@@ -510,7 +546,43 @@
           "row": 7,
           "col": 7
         },
-        "elapsedMs": 336
+        "elapsedMs": 349
+      }
+    ],
+    "thinkerWorkerMoves": [
+      {
+        "color": 1,
+        "move": {
+          "row": 7,
+          "col": 7
+        },
+        "elapsedMs": 332
+      },
+      {
+        "color": 2,
+        "move": {
+          "row": 7,
+          "col": 8
+        },
+        "elapsedMs": 8573
+      }
+    ],
+    "championWorkerMoves": [
+      {
+        "color": 1,
+        "move": {
+          "row": 7,
+          "col": 7
+        },
+        "elapsedMs": 373
+      },
+      {
+        "color": 2,
+        "move": {
+          "row": 6,
+          "col": 7
+        },
+        "elapsedMs": 1214
       }
     ],
     "newWorkerMoves": [
@@ -592,10 +664,10 @@
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 1.1000000014901161,
+            "elapsedMs": 2.8000000044703484,
             "aborted": false
           },
-          "elapsedMs": 136,
+          "elapsedMs": 146,
           "experts": {
             "v10": {
               "type": "progress",
@@ -649,10 +721,10 @@
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 1,
+            "elapsedMs": 1.9000000059604645,
             "aborted": false
           },
-          "elapsedMs": 11138,
+          "elapsedMs": 12750,
           "experts": {
             "v10": {
               "type": "result",
@@ -667,7 +739,7 @@
                 "candidates": 20,
                 "nodes": 0,
                 "qnodes": 0,
-                "elapsedMs": 2.5,
+                "elapsedMs": 2.7000000029802322,
                 "aborted": false,
                 "reason": "opening",
                 "score": 0
@@ -686,7 +758,7 @@
                 "candidates": 14,
                 "nodes": 155640,
                 "qnodes": 64140,
-                "elapsedMs": 859.5,
+                "elapsedMs": 1023.2999999970198,
                 "aborted": false,
                 "reason": "search",
                 "score": 54
@@ -705,7 +777,7 @@
           "row": 7,
           "col": 7
         },
-        "elapsedMs": 304,
+        "elapsedMs": 379,
         "search": {
           "depth": 0,
           "selDepth": 0,
@@ -714,7 +786,7 @@
           "engineTimeMs": 0,
           "configuredDepth": 16,
           "reason": "mix9-expert-checked",
-          "elapsedMs": 121,
+          "elapsedMs": 140,
           "threats": {
             "openFour": 0,
             "four": 0,
@@ -730,24 +802,6 @@
             "agreed": true
           },
           "experts": {
-            "v10": {
-              "type": "progress",
-              "id": 6,
-              "move": {
-                "row": 7,
-                "col": 7
-              },
-              "stats": {
-                "candidates": 1,
-                "depth": 5,
-                "score": 8631,
-                "target": "8, 8",
-                "move": {
-                  "row": 7,
-                  "col": 7
-                }
-              }
-            },
             "thinker": {
               "type": "progress",
               "id": 5,
@@ -765,13 +819,31 @@
                   "col": 7
                 }
               }
+            },
+            "v10": {
+              "type": "progress",
+              "id": 6,
+              "move": {
+                "row": 7,
+                "col": 7
+              },
+              "stats": {
+                "candidates": 1,
+                "depth": 5,
+                "score": 8631,
+                "target": "8, 8",
+                "move": {
+                  "row": 7,
+                  "col": 7
+                }
+              }
             }
           },
           "proof": {
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 3.199999999254942,
+            "elapsedMs": 2,
             "aborted": false
           }
         }
@@ -782,16 +854,16 @@
           "row": 7,
           "col": 8
         },
-        "elapsedMs": 8592,
+        "elapsedMs": 8963,
         "search": {
           "depth": 16,
           "selDepth": 0,
           "nodes": 0,
           "score": null,
-          "engineTimeMs": 8229,
+          "engineTimeMs": 8541,
           "configuredDepth": 16,
           "reason": "mix9-expert-checked",
-          "elapsedMs": 8360,
+          "elapsedMs": 8696,
           "threats": {
             "openFour": 0,
             "four": 0,
@@ -820,7 +892,7 @@
                 "candidates": 20,
                 "nodes": 0,
                 "qnodes": 0,
-                "elapsedMs": 1.800000000745058,
+                "elapsedMs": 2,
                 "aborted": false,
                 "reason": "opening",
                 "score": 0
@@ -839,7 +911,7 @@
                 "candidates": 14,
                 "nodes": 155640,
                 "qnodes": 64140,
-                "elapsedMs": 889.8999999985099,
+                "elapsedMs": 1063.2000000029802,
                 "aborted": false,
                 "reason": "search",
                 "score": 54
@@ -850,7 +922,7 @@
             "proved": false,
             "move": null,
             "nodes": 1,
-            "elapsedMs": 2,
+            "elapsedMs": 1.5,
             "aborted": false
           }
         }

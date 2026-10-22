@@ -2,8 +2,8 @@
 <html lang="zh-CN" data-i18n-title-key="pages.events.title">
 <head>
   <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
-  <script src="theme.js?v=0efca64b"></script>
+  <link rel="stylesheet" href="club-ui.css?v=ded5ce5c">
+  <script src="theme.js?v=f92231ba"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,9 +11,9 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=80f52e6f"></script>
 
-  <script src="i18n-dict.js?v=21e9f61d" defer></script><script src="member-identity.js?v=0af7f540" defer></script>
-  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script></head>
+  <script src="i18n-dict.js?v=0c3dd920"></script><script src="member-identity.js?v=0af7f540" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b2193cd0"></script></head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Events & Notices</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
   <main>
@@ -22,7 +22,7 @@
     <p class="lead" data-i18n="events.lead">查看社团通知、课程安排、比赛信息与活动报名。登录后可直接报名；管理员可在活动管理后台发布和修改内容。</p>
     <section class="layout">
       <div class="panel"><h2 data-i18n="events.announcements">最新公告</h2><p class="intro" data-i18n="events.announcementsIntro">置顶公告会优先显示，包含社团通知、课程安排和比赛信息。</p><div class="list" id="announcementList"><div class="empty loading" data-i18n="events.loadingAnnouncements">正在读取公告…</div></div></div>
-      <div class="panel"><h2 data-i18n="events.signup">活动报名</h2><p class="intro" data-i18n="events.signupIntro">查看活动状态、截止时间，并提交报名。</p><div class="list" id="eventList"><div class="empty loading" data-i18n="events.loadingEvents">正在读取活动…</div></div><p class="message" id="pageMessage" role="status"></p></div>
+      <div class="panel"><div class="events-panel-head"><div><h2 data-i18n="events.signup">活动报名</h2><p class="intro" data-i18n="events.signupIntro">查看活动状态、截止时间，并提交报名。</p></div><div class="events-view-toggle" role="tablist"><button type="button" class="chip is-active" data-events-view="list" role="tab" aria-selected="true" data-i18n="events.viewList">列表</button><button type="button" class="chip" data-events-view="calendar" role="tab" aria-selected="false" data-i18n="events.viewCalendar">日历</button></div></div><div class="list" id="eventList"><div class="empty loading" data-i18n="events.loadingEvents">正在读取活动…</div></div><div id="eventCalendar" class="event-calendar" hidden></div><p class="message" id="pageMessage" role="status"></p></div>
     </section>
   </main>
   <script>
@@ -81,11 +81,87 @@
       `).join('');
     }
 
+    let eventsCache = [];
+    let eventsView = 'list';
+    let calendarMonth = null;
+
+    function eventDay(item) {
+      const raw = item.starts_at || item.signup_deadline || item.ends_at;
+      if (!raw) return '';
+      const date = new Date(raw);
+      return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+    }
+
+    function renderCalendar(items) {
+      const host = $('eventCalendar');
+      const days = new Map();
+      for (const item of items) {
+        const day = eventDay(item);
+        if (!day) continue;
+        if (!days.has(day)) days.set(day, []);
+        days.get(day).push(item);
+      }
+      if (!calendarMonth) {
+        const first = [...days.keys()].sort()[0];
+        const base = first ? new Date(first + 'T00:00:00') : new Date();
+        calendarMonth = new Date(base.getFullYear(), base.getMonth(), 1);
+      }
+      const year = calendarMonth.getFullYear();
+      const month = calendarMonth.getMonth();
+      const firstWeekday = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const en = ClubI18n.getLang() === 'en';
+      const monthLabel = en
+        ? calendarMonth.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+        : `${year} 年 ${month + 1} 月`;
+      const weekdays = en ? ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] : ['日','一','二','三','四','五','六'];
+      const cells = [];
+      for (let i = 0; i < firstWeekday; i += 1) cells.push('<span class="event-calendar-day is-empty"></span>');
+      for (let day = 1; day <= daysInMonth; day += 1) {
+        const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const list = days.get(key) || [];
+        cells.push(`<div class="event-calendar-day${list.length ? ' has-events' : ''}">
+          <span class="event-calendar-date">${day}</span>
+          ${list.map(item => `<a class="event-calendar-item" href="#events" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</a>`).join('')}
+        </div>`);
+      }
+      host.innerHTML = `
+        <div class="event-calendar-head">
+          <button type="button" class="button secondary" data-calendar-nav="-1" aria-label="${escapeHtml(en ? 'Previous month' : '上个月')}">‹</button>
+          <strong>${escapeHtml(monthLabel)}</strong>
+          <button type="button" class="button secondary" data-calendar-nav="1" aria-label="${escapeHtml(en ? 'Next month' : '下个月')}">›</button>
+        </div>
+        <div class="event-calendar-grid">
+          ${weekdays.map(day => `<span class="event-calendar-weekday">${day}</span>`).join('')}
+          ${cells.join('')}
+        </div>`;
+      host.querySelectorAll('[data-calendar-nav]').forEach(button => {
+        button.addEventListener('click', () => {
+          calendarMonth = new Date(year, month + Number(button.dataset.calendarNav), 1);
+          renderCalendar(eventsCache);
+        });
+      });
+    }
+
+    function applyEventsView() {
+      $('eventList').hidden = eventsView !== 'list';
+      $('eventCalendar').hidden = eventsView !== 'calendar';
+      document.querySelectorAll('[data-events-view]').forEach(button => {
+        const active = button.dataset.eventsView === eventsView;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      if (eventsView === 'calendar') renderCalendar(eventsCache);
+    }
+
     function renderEvents(items) {
-      if (!items.length) {
+      eventsCache = Array.isArray(items) ? items : [];
+      if (!eventsCache.length) {
         $('eventList').innerHTML = '<div class="empty">' + ClubI18n.t('events.emptyEvents') + '</div>';
+        $('eventCalendar').innerHTML = '<div class="empty">' + ClubI18n.t('events.emptyEvents') + '</div>';
         return;
       }
+      if (eventsView === 'calendar') { applyEventsView(); return; }
       $('eventList').innerHTML = items.map(item => `
         <article class="card" data-event-id="${escapeHtml(item.id)}">
           <strong>${escapeHtml(item.title)}</strong>
@@ -151,6 +227,15 @@
       }
     }
 
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('[data-events-view]').forEach(button => {
+        button.addEventListener('click', () => {
+          eventsView = button.dataset.eventsView === 'calendar' ? 'calendar' : 'list';
+          applyEventsView();
+        });
+      });
+    });
+
     async function refresh() {
       setMessage('');
       try {
@@ -178,6 +263,6 @@
     });
     window.addEventListener('club:langchange', () => { void refresh(); });
   </script>
-  <script src="club-shell.js?v=90975bc7"></script>
+  <script src="club-shell.js?v=1885fccd"></script>
 </body>
 </html>

@@ -97,18 +97,33 @@
     return cells.size ? { cells, best } : null;
   }
 
+  function loadScript(src, globalName, missingMessage) {
+    return new Promise((resolve, reject) => {
+      if (window[globalName]) { resolve(window[globalName]); return; }
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => window[globalName] ? resolve(window[globalName]) : reject(new Error(missingMessage));
+      script.onerror = () => reject(new Error(missingMessage));
+      document.head.appendChild(script);
+    });
+  }
+
   function loadFilePackage() {
     if (filePackagePromise) return filePackagePromise;
-    filePackagePromise = new Promise((resolve, reject) => {
-      if (window.GOMOKU_V10CHAMPION_FILE_PACKAGE) { resolve(window.GOMOKU_V10CHAMPION_FILE_PACKAGE); return; }
-      const script = document.createElement('script');
-      script.src = new URL('v10champion/file-package.js', BASE).toString();
-      script.onload = () => window.GOMOKU_V10CHAMPION_FILE_PACKAGE
-        ? resolve(window.GOMOKU_V10CHAMPION_FILE_PACKAGE)
-        : reject(new Error('V10Champion 离线资源包内容缺失'));
-      script.onerror = () => reject(new Error('V10Champion 离线资源包加载失败，请先运行 node tools/build-gomoku-v10champion-file-package.mjs'));
-      document.head.appendChild(script);
-    }).catch(error => { filePackagePromise = null; throw error; });
+    // Champion's engine and Mix9 weights are byte-identical to V10Ultra's, so the
+    // file:// package only carries this model's worker bridge. The Ultra package
+    // supplies rapfiSource/wasm/data at Blob-Worker assembly time.
+    filePackagePromise = Promise.all([
+      loadScript(new URL('v10ultra/file-package.js', BASE).toString(), 'GOMOKU_V10ULTRA_FILE_PACKAGE',
+        'V10Ultra 离线资源包加载失败，请先运行 node tools/build-gomoku-v10ultra-file-package.mjs'),
+      loadScript(new URL('v10champion/file-package.js', BASE).toString(), 'GOMOKU_V10CHAMPION_FILE_PACKAGE',
+        'V10Champion 离线资源包加载失败，请先运行 node tools/build-gomoku-v10champion-file-package.mjs')
+    ]).then(([engine, own]) => ({
+      rapfiSource: engine.rapfiSource,
+      wasmBase64: engine.wasmBase64,
+      dataBase64: engine.dataBase64,
+      workerSource: own.workerSource
+    })).catch(error => { filePackagePromise = null; throw error; });
     return filePackagePromise;
   }
 

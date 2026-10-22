@@ -15,11 +15,63 @@
   var DIALOG_CLASS = 'club-common-dialog-layer';
   var UNDO_HOST_ID = 'club-common-undo-host';
 
-  function t(key, vars) {
+  // 内置兜底：即使 ClubI18n 尚未 boot（脚本顺序 / 词典延迟），
+  // 共享层的按钮也不能显示 common.confirm 这种原始 key。
+  var FALLBACK_TEXT = {
+    'common.confirm': { zh: '确定', en: 'Confirm' },
+    'common.cancel': { zh: '取消', en: 'Cancel' },
+    'common.delete': { zh: '删除', en: 'Delete' },
+    'common.undo': { zh: '撤销', en: 'Undo' },
+    'common.retry': { zh: '重试', en: 'Retry' },
+    'common.dismiss': { zh: '关闭', en: 'Dismiss' },
+    'common.pendingDelete': { zh: '已删除，5 秒内可撤销。', en: 'Deleted. Undo within 5 seconds.' },
+    'common.undoRegion': { zh: '待撤销操作', en: 'Pending undo' },
+    'common.loadFailed': { zh: '读取失败', en: 'Could not load' },
+    'common.loadRetry': { zh: '请检查网络后重试。', en: 'Check your connection and try again.' },
+    'common.requestFailed': { zh: '请求失败，请稍后重试。', en: 'Request failed. Please try again.' },
+    'common.sessionExpired': { zh: '登录已过期，请重新登录后再试。', en: 'Your session expired. Please sign in again.' },
+    'common.sessionExpiredAction': { zh: '前往个人中心登录', en: 'Go to Member Center' }
+  };
+
+  function currentLang() {
     try {
-      if (global.ClubI18n && typeof global.ClubI18n.t === 'function') return global.ClubI18n.t(key, vars);
+      if (global.ClubI18n && typeof global.ClubI18n.getLang === 'function') return global.ClubI18n.getLang();
     } catch (_error) { /* ignore */ }
-    return key;
+    try { return (localStorage.getItem('algorithm-club-lang') || 'zh').startsWith('en') ? 'en' : 'zh'; }
+    catch (_error) { return 'zh'; }
+  }
+
+  // 直接从词典对象取值：ClubI18n 未 boot 时也能命中。
+  function lookupDict(key, lang) {
+    var dict = global.ClubI18nDict;
+    if (!dict || !dict[lang]) return '';
+    var node = dict[lang];
+    var parts = String(key).split('.');
+    for (var i = 0; i < parts.length; i += 1) {
+      if (!node || typeof node !== 'object') return '';
+      node = node[parts[i]];
+    }
+    return typeof node === 'string' ? node : '';
+  }
+
+  function t(key, vars) {
+    var lang = currentLang();
+    var value = '';
+    try {
+      if (global.ClubI18n && typeof global.ClubI18n.t === 'function') {
+        var resolved = global.ClubI18n.t(key, vars);
+        if (resolved && resolved !== key) value = resolved;
+      }
+    } catch (_error) { /* ignore */ }
+    if (!value) value = lookupDict(key, lang) || lookupDict(key, 'zh');
+    if (!value && FALLBACK_TEXT[key]) value = FALLBACK_TEXT[key][lang] || FALLBACK_TEXT[key].zh;
+    if (!value) return key;
+    if (vars && typeof value === 'string') {
+      value = value.replace(/\{(\w+)\}/g, function (match, name) {
+        return Object.prototype.hasOwnProperty.call(vars, name) ? String(vars[name]) : match;
+      });
+    }
+    return value;
   }
 
   function escapeHtml(value) {
@@ -332,6 +384,50 @@
 
   window.addEventListener('club:session-expired', showSessionBanner);
 
+  // CSV 导出：带 BOM，Excel 打开中文不乱码；单元格按 RFC 4180 转义。
+  function csvCell(value) {
+    var text = String(value == null ? '' : value);
+    return /[",\n\r]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+  }
+
+  function exportCsv(filename, columns, rows) {
+    var header = columns.map(function (column) { return csvCell(column.label); });
+    var body = rows.map(function (row) {
+      return columns.map(function (column) {
+        var value = typeof column.value === 'function' ? column.value(row) : row[column.key];
+        return csvCell(value);
+      });
+    });
+    var csv = '\uFEFF' + [header].concat(body).map(function (line) { return line.join(','); }).join('\r\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    return rows.length;
+  }
+
+  // 客户端分页：返回当前页数据与页码状态，渲染交给调用方。
+  function paginate(items, page, pageSize) {
+    var size = Math.max(1, Number(pageSize) || 20);
+    var list = Array.isArray(items) ? items : [];
+    var totalPages = Math.max(1, Math.ceil(list.length / size));
+    var current = Math.min(Math.max(1, Number(page) || 1), totalPages);
+    var start = (current - 1) * size;
+    return {
+      items: list.slice(start, start + size),
+      page: current,
+      pageSize: size,
+      total: list.length,
+      totalPages: totalPages,
+      hasPrev: current > 1,
+      hasNext: current < totalPages,
+      hidden: totalPages <= 1
+    };
+  }
+
   global.ClubCommon = {
     t: t,
     escapeHtml: escapeHtml,
@@ -341,6 +437,8 @@
     listStateHtml: listStateHtml,
     handleAuthError: handleAuthError,
     showSessionBanner: showSessionBanner,
+    exportCsv: exportCsv,
+    paginate: paginate,
     ready: ready
   };
 

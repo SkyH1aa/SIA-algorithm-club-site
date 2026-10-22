@@ -72,6 +72,8 @@
     { group: 'play', icon: '▶', href: 'platformer.html', zh: '行于无垠', en: 'Boundless Run', descZh: '横屏闯关射击游戏', descEn: 'Side-scrolling action shooter', keys: 'platformer 行于无垠 游戏' },
     { group: 'play', icon: '✦', href: 'gomoku-satori-lab.html', zh: 'Satori 决策剖析', en: 'Satori lab', descZh: '逐步摊开自研 AI 的每一次决策', descEn: 'Every decision of the in-house AI, exposed', keys: 'satori 剖析 五子棋 决策' },
 
+    { group: 'member', icon: '◔', href: 'notifications.html', zh: '通知中心', en: 'Notifications', descZh: '公告、活动、报名与积分提醒', descEn: 'Announcements, events, signups and points', keys: 'notify 通知 消息 提醒' },
+    { group: 'member', icon: '◇', href: 'search.html', zh: '站内搜索', en: 'Site search', descZh: '搜索社员、公告、活动与商品', descEn: 'Search members, announcements, events and products', keys: 'search 搜索 查找' },
     { group: 'member', icon: '◍', href: 'member-center.html', zh: '个人中心', en: 'Member center', descZh: '登录、注册与资料绑定', descEn: 'Sign in, register, bind profile', keys: 'member 个人中心 登录 注册' },
     { group: 'member', icon: '▣', href: 'member-points.html', zh: '社员积分', en: 'Points', descZh: '积分公示与管理员维护', descEn: 'Public points board and admin tools', keys: 'points 积分 排行' },
     { group: 'member', icon: '◷', href: 'member-checkin.html?type=course', zh: '签到兑换', en: 'Check-in', descZh: '签到码兑换积分或提交课程签到', descEn: 'Redeem codes or submit course check-in', keys: 'checkin 签到 兑换' },
@@ -362,6 +364,171 @@
 
   function isLauncherOpen() {
     return Boolean(launcher && launcher.classList.contains('is-open'));
+  }
+
+  /* ------------------------------------------------------------
+     通知铃铛
+     ------------------------------------------------------------ */
+  var NOTIFY_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co/functions/v1/club-drive';
+  var NOTIFY_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
+  var notifyPanel = null;
+  var notifyTimer = null;
+  var notifyState = { items: [], unread: 0, loading: false, error: '' };
+
+  function notifyText(key, fallback) { return t(key, fallback); }
+
+  async function notifyCall(action, body) {
+    var session = null;
+    try {
+      if (global.ClubStaffAccess && typeof global.ClubStaffAccess.getSession === 'function') {
+        session = await global.ClubStaffAccess.getSession();
+      }
+    } catch (_error) { session = null; }
+    if (!session || !session.access_token) return null;
+    var response = await fetch(NOTIFY_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: NOTIFY_KEY, authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify(Object.assign({ action: action }, body || {}))
+    });
+    var payload = await response.json().catch(function () { return {}; });
+    if (!response.ok) throw new Error(payload && payload.error ? payload.error : 'notifications');
+    return payload;
+  }
+
+  function notifyBadge(count) {
+    var badge = document.querySelector('[data-club-notify-badge]');
+    if (!badge) return;
+    var n = Number(count) || 0;
+    badge.textContent = n > 99 ? '99+' : String(n);
+    badge.hidden = n <= 0;
+  }
+
+  function closeNotifyPanel() {
+    if (notifyPanel) notifyPanel.classList.remove('is-open');
+    var button = document.querySelector('[data-club-notify-button]');
+    if (button) button.setAttribute('aria-expanded', 'false');
+  }
+
+  function renderNotifyPanel() {
+    if (!notifyPanel) return;
+    var en = lang() === 'en';
+    var body = notifyPanel.querySelector('[data-club-notify-list]');
+    if (!body) return;
+    if (notifyState.loading && !notifyState.items.length) {
+      body.innerHTML = '<p class="club-notify-empty">' + escapeHtml(en ? 'Loading...' : '正在读取通知...') + '</p>';
+      return;
+    }
+    if (notifyState.error) {
+      body.innerHTML = '<p class="club-notify-empty">' + escapeHtml(notifyState.error) + '</p>';
+      return;
+    }
+    if (!notifyState.items.length) {
+      body.innerHTML = '<p class="club-notify-empty">' + escapeHtml(en ? 'No notifications yet.' : '暂无通知。') + '</p>';
+      return;
+    }
+    body.innerHTML = notifyState.items.map(function (item) {
+      return '<a class="club-notify-item' + (item.read ? '' : ' is-unread') + '" href="' + escapeHtml(item.link || 'notifications.html') + '" data-notify-id="' + escapeHtml(item.id) + '">' +
+        '<strong>' + escapeHtml(item.title) + '</strong>' +
+        (item.body ? '<span>' + escapeHtml(item.body) + '</span>' : '') +
+        '<time>' + escapeHtml(String(item.created_at || '').slice(0, 16).replace('T', ' ')) + '</time>' +
+        '</a>';
+    }).join('');
+  }
+
+  async function refreshNotifications() {
+    if (!notifyPanel) return;
+    var session = null;
+    try {
+      if (global.ClubStaffAccess && typeof global.ClubStaffAccess.getSession === 'function') session = await global.ClubStaffAccess.getSession();
+    } catch (_error) { session = null; }
+    if (!session) { notifyState = { items: [], unread: 0, loading: false, error: '' }; notifyBadge(0); return; }
+    notifyState.loading = true;
+    renderNotifyPanel();
+    try {
+      var payload = await notifyCall('notifications_list', { limit: 20 });
+      if (!payload) { notifyState = { items: [], unread: 0, loading: false, error: '' }; notifyBadge(0); return; }
+      notifyState = {
+        items: Array.isArray(payload.notifications) ? payload.notifications : [],
+        unread: Number(payload.unreadCount) || 0,
+        loading: false,
+        error: ''
+      };
+      notifyBadge(notifyState.unread);
+    } catch (error) {
+      notifyState.loading = false;
+      notifyState.error = notifyText('notify.loadFailed', lang() === 'en' ? 'Could not load notifications.' : '读取通知失败。');
+      notifyBadge(0);
+    }
+    renderNotifyPanel();
+  }
+
+  async function openNotifyPanel() {
+    if (!notifyPanel) return;
+    var isOpen = notifyPanel.classList.contains('is-open');
+    if (isOpen) { closeNotifyPanel(); return; }
+    notifyPanel.classList.add('is-open');
+    var button = document.querySelector('[data-club-notify-button]');
+    if (button) button.setAttribute('aria-expanded', 'true');
+    await refreshNotifications();
+  }
+
+  function ensureNotifyPanel() {
+    if (notifyPanel) return notifyPanel;
+    notifyPanel = document.createElement('div');
+    notifyPanel.className = 'club-notify-panel';
+    notifyPanel.setAttribute('role', 'dialog');
+    notifyPanel.setAttribute('aria-label', lang() === 'en' ? 'Notifications' : '通知');
+    notifyPanel.innerHTML =
+      '<div class="club-notify-head"><strong>' + escapeHtml(lang() === 'en' ? 'Notifications' : '通知') + '</strong>' +
+      '<a href="notifications.html">' + escapeHtml(lang() === 'en' ? 'View all' : '查看全部') + '</a></div>' +
+      '<div class="club-notify-list" data-club-notify-list></div>';
+    document.body.appendChild(notifyPanel);
+    document.addEventListener('click', function (event) {
+      if (!notifyPanel || !notifyPanel.classList.contains('is-open')) return;
+      if (notifyPanel.contains(event.target)) return;
+      if (event.target.closest && event.target.closest('[data-club-notify-button]')) return;
+      closeNotifyPanel();
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') closeNotifyPanel();
+    });
+    return notifyPanel;
+  }
+
+  function mountNotifyButton() {
+    if (document.querySelector('[data-club-notify-button]')) return;
+    var staff = staffAccess();
+    if (!staff || typeof staff.isLoggedIn !== 'function' || !staff.isLoggedIn()) return;
+    var bar = document.querySelector('.topbar-inner') ||
+      document.querySelector('.chat-admin-header-inner') ||
+      document.querySelector('header.topbar') ||
+      document.querySelector('header.page-header');
+    if (!bar) return;
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'club-notify-button';
+    button.setAttribute('data-club-notify-button', '');
+    button.setAttribute('aria-haspopup', 'dialog');
+    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('aria-label', lang() === 'en' ? 'Notifications' : '通知');
+    button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a5 5 0 0 0-5 5v3.2L5.6 15h12.8L17 11.2V8a5 5 0 0 0-5-5z"/><path d="M10 18a2 2 0 0 0 4 0"/></svg>' +
+      '<span class="club-notify-badge" data-club-notify-badge hidden>0</span>';
+    button.addEventListener('click', function (event) {
+      event.stopPropagation();
+      openNotifyPanel();
+    });
+    ensureNotifyPanel();
+    var actions = bar.querySelector('.topbar-actions') || bar.querySelector('.chat-admin-header-actions');
+    if (actions) actions.insertBefore(button, actions.firstChild);
+    else {
+      var menu = bar.querySelector('#menuButton');
+      if (menu) bar.insertBefore(button, menu); else bar.appendChild(button);
+    }
+    refreshNotifications();
+    if (!notifyTimer) notifyTimer = setInterval(refreshNotifications, 120000);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') refreshNotifications();
+    });
   }
 
   /* ------------------------------------------------------------
@@ -805,16 +972,55 @@
     if (top) top.setAttribute('aria-label', lang() === 'en' ? 'Back to top' : '回到顶部');
   }
 
+  // PWA：只在 http(s) 下注册（file:// 无法使用 Service Worker）。
+  // 键盘用户跳过导航直达正文。
+  function mountSkipLink() {
+    if (document.querySelector('.club-skip-link')) return;
+    var main = document.querySelector('main');
+    if (!main) return;
+    if (!main.id) main.id = 'club-main-content';
+    var link = document.createElement('a');
+    link.className = 'club-skip-link';
+    link.href = '#' + main.id;
+    link.textContent = lang() === 'en' ? 'Skip to content' : '跳到主内容';
+    document.body.insertBefore(link, document.body.firstChild);
+  }
+
+  function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
+    if (document.querySelector('link[rel="manifest"]')) return;
+    var link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = new URL('manifest.webmanifest', scriptBase()).toString();
+    document.head.appendChild(link);
+    var theme = document.createElement('meta');
+    theme.name = 'theme-color';
+    theme.content = '#0b1220';
+    document.head.appendChild(theme);
+    navigator.serviceWorker.register(new URL('sw.js', scriptBase()).toString()).catch(function () { /* 注册失败不影响使用 */ });
+  }
+
+  function scriptBase() {
+    var script = document.currentScript;
+    if (script && script.src) return script.src.replace(/[^/]*$/, '');
+    return new URL('./', location.href).toString();
+  }
+
   function boot() {
     // 主页保留自己的 3D / 滚动样式；只有显式标记 body.club-page 的页面才套用共享外观。
     normalizeTopbar();
     mountSiteNav();
     mountLanguageSwitcher();
+    mountSkipLink();
     mountLauncherButton();
+    mountNotifyButton();
+    registerServiceWorker();
     mountAdminRail();
     if (staffAccess() && typeof staffAccess().subscribe === 'function') {
       staffAccess().subscribe(function () {
         mountAdminRail();
+        mountNotifyButton();
         // 启动器已创建时就地刷新列表与文案。
         if (launcher && launcher.classList.contains('is-open')) {
           renderLauncher(launcherInput ? launcherInput.value : '');
@@ -827,8 +1033,8 @@
     mountAssistantLauncher();
     bindKeys();
     // i18n / theme 的切换器注入时机晚于本脚本，补一次兜底归位。
-    setTimeout(function () { mountLanguageSwitcher(); refreshLocalizedChrome(); }, 0);
-    setTimeout(function () { mountLanguageSwitcher(); mountLauncherButton(); }, 220);
+    setTimeout(function () { mountLanguageSwitcher(); refreshLocalizedChrome(); mountNotifyButton(); }, 0);
+    setTimeout(function () { mountLanguageSwitcher(); mountLauncherButton(); mountNotifyButton(); }, 220);
     window.addEventListener('club:langchange', function () {
       refreshLocalizedChrome();
       // 重建管理员栏的本地化文本

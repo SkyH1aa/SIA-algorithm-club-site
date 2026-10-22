@@ -2,8 +2,8 @@
 <html lang="zh-CN" data-i18n-title-key="pages.joinAdmin.title">
 <head>
   <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
-  <script src="theme.js?v=0efca64b"></script>
+  <link rel="stylesheet" href="club-ui.css?v=ded5ce5c">
+  <script src="theme.js?v=f92231ba"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,9 +11,9 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=80f52e6f"></script>
 
-  <script src="i18n-dict.js?v=21e9f61d" defer></script><script src="member-identity.js?v=0af7f540" defer></script>
-  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script></head>
+  <script src="i18n-dict.js?v=0c3dd920"></script><script src="member-identity.js?v=0af7f540" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b2193cd0"></script></head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Join Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a></div></header>
 
@@ -31,6 +31,7 @@
             <h2 data-i18n="admin.joinListTitle">报名列表</h2>
             <p class="intro" data-i18n="admin.joinListIntro">仅超管与拥有报名管理权限的账号可见。删除后不可恢复，请确认后再操作。</p>
           </div>
+          <button class="button secondary" type="button" id="exportApplications" data-i18n="admin.exportCsv">导出 CSV</button>
           <button class="button secondary" type="button" id="refreshApplications" data-i18n="admin.refreshList">刷新列表</button>
         </div>
         <div class="stats">
@@ -127,6 +128,19 @@
       });
     }
 
+    document.addEventListener('DOMContentLoaded', () => { $('exportApplications').addEventListener('click', exportApplications); });
+
+    function exportApplications() {
+      if (!applicationsCache.length) { setMessage($('joinAdminMessage'), t('admin.exportEmpty'), 'error'); return; }
+      const count = ClubCommon.exportCsv(`club-applications-${new Date().toISOString().slice(0,10)}.csv`, [
+        { label: t('admin.colName'), value: row => row.member_name },
+        { label: t('admin.colClass'), value: row => row.member_class },
+        { label: t('admin.colContact'), value: row => row.contact },
+        { label: t('admin.colSubmittedAt'), value: row => String(row.created_at || '').slice(0, 10) }
+      ], applicationsCache);
+      setMessage($('joinAdminMessage'), t('admin.exportOk', { n: count }), 'success');
+    }
+
     async function refreshApplications() {
       ClubCommon.listState($('applicationList'), { kind: 'loading', message: t('admin.loadingJoin') });
       try {
@@ -168,6 +182,6 @@
       } catch (_e) {}
     });
   </script>
-  <script src="club-shell.js?v=90975bc7"></script>
+  <script src="club-shell.js?v=1885fccd"></script>
 </body>
 </html>

@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-CN" data-i18n-title-key="pages.memberProfile.title">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="算法社社员个人主页：积分、捐赠、游戏战绩与签到记录，由本人决定公开范围。">
+  <title>社员主页 · 算法社</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="theme.css?v=39014235">
+  <link rel="stylesheet" href="club-ui.css?v=ded5ce5c">
+  <script src="theme.js?v=f92231ba"></script>
+  <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
+  <script src="club-auth-storage.js?v=80f52e6f"></script>
+  <script src="i18n-dict.js?v=0c3dd920"></script>
+  <script src="member-identity.js?v=0af7f540" defer></script>
+  <script src="i18n.js?v=ba66328e"></script>
+  <script src="club-common.js?v=b3d82c39"></script>
+  <script src="service-prompts.js?v=1cfff2ab"></script>
+  <script src="service-gate.js?v=b2193cd0"></script>
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="算法社 · Algorithm Club">
+  <meta property="og:title" content="社员主页 · 算法社">
+  <meta property="og:description" content="算法社社员个人主页：积分、捐赠、五子棋/俄罗斯方块/贪吃蛇战绩与签到记录，展示范围由本人决定。">
+  <meta property="og:image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:url" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/member-profile.html">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/member-profile.html">
+</head>
+<body class="club-page">
+  <header class="topbar"><div class="topbar-inner">
+    <a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Member Profile</small></span></a>
+    <span class="identity" data-member-identity hidden></span>
+    <a class="back" href="member-points.html" data-i18n="memberProfile.backPoints">返回积分榜</a>
+  </div></header>
+  <main>
+    <section class="panel" id="gate" hidden>
+      <h1 data-i18n="notify.gateTitle">请先登录</h1>
+      <p class="intro" data-i18n="notify.gateLead">通知只对已登录的算法社成员开放。</p>
+      <a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a>
+    </section>
+
+    <section class="panel" id="profilePanel" hidden>
+      <div class="member-profile-head">
+        <div class="member-profile-avatar" id="avatar" aria-hidden="true">A</div>
+        <div class="member-profile-id">
+          <h1 id="memberName">—</h1>
+          <p class="member-profile-meta">
+            <span class="badge" id="memberClass"></span>
+            <span class="badge" id="boundBadge"></span>
+          </p>
+          <p class="member-profile-headline" id="headline" hidden></p>
+        </div>
+        <div class="member-profile-actions">
+          <a class="button secondary" id="editButton" href="member-center.html#profileSettings" data-i18n="memberProfile.settingsTitle" hidden>个人主页展示设置</a>
+        </div>
+      </div>
+
+      <div id="profileLoading" class="empty loading" data-i18n="memberProfile.loading">正在读取社员资料…</div>
+      <div class="member-profile-grid" id="cards" hidden>
+        <article class="member-card-block" id="cardPoints">
+          <h2 data-i18n="memberProfile.points">积分</h2>
+          <p class="member-profile-value" id="pointsValue">—</p>
+          <p class="member-profile-sub"><span data-i18n="memberProfile.memberClass">班级</span>：<span id="classValue">—</span></p>
+        </article>
+
+        <article class="member-card-block" id="cardDonations" hidden>
+          <h2 data-i18n="memberProfile.donations">捐赠总额</h2>
+          <p class="member-profile-value" id="donationValue">—</p>
+          <p class="member-profile-sub" id="donationCount"></p>
+          <p class="member-profile-sub" id="donationLatest"></p>
+          <p class="member-profile-hint" data-i18n="memberProfile.donationsHint">按登记的中文姓名匹配全部捐赠记录后求和。</p>
+        </article>
+
+        <article class="member-card-block" id="cardGames" hidden>
+          <h2 data-i18n="memberProfile.games">游戏战绩</h2>
+          <div id="gamesBody"></div>
+        </article>
+
+        <article class="member-card-block" id="cardCheckin" hidden>
+          <h2 data-i18n="memberProfile.checkin">签到与兑换</h2>
+          <div id="checkinBody"></div>
+        </article>
+      </div>
+
+      <p class="message" id="message" role="status"></p>
+    </section>
+
+    <section class="panel" id="settingsPanel" hidden>
+      <h2 data-i18n="memberProfile.settingsTitle">个人主页展示设置</h2>
+      <p class="intro" data-i18n="memberProfile.settingsIntro">这些开关只影响你的个人主页，随时可以修改。</p>
+      <form id="settingsForm">
+        <label class="member-profile-switch"><input type="checkbox" id="showPoints"> <span data-i18n="memberProfile.showPoints">展示积分与班级</span></label>
+        <label class="member-profile-switch"><input type="checkbox" id="showDonations"> <span data-i18n="memberProfile.showDonations">展示捐赠总额</span></label>
+        <label class="member-profile-switch"><input type="checkbox" id="showGames"> <span data-i18n="memberProfile.showGames">展示游戏战绩</span></label>
+        <label class="member-profile-switch"><input type="checkbox" id="showCheckin"> <span data-i18n="memberProfile.showCheckin">展示签到与兑换</span></label>
+        <label class="label" for="headlineInput" data-i18n="memberProfile.headline">个人简介</label>
+        <input class="input" id="headlineInput" maxlength="80" data-i18n-placeholder="memberProfile.headlinePlaceholder" placeholder="一句话介绍自己（最多 80 字）">
+        <div class="form-actions">
+          <button class="button" type="submit" data-i18n="memberProfile.save">保存设置</button>
+          <a class="button secondary" id="viewOwn" data-i18n="memberProfile.viewOwn">查看我的主页</a>
+        </div>
+      </form>
+      <p class="message" id="settingsMessage" role="status"></p>
+    </section>
+  </main>
+  <script>
+    const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
+    const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const $ = id => document.getElementById(id);
+    const t = (key, vars) => (window.ClubI18n ? ClubI18n.t(key, vars) : key);
+    const escapeHtml = window.ClubCommon
+      ? ClubCommon.escapeHtml
+      : value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    let session = null;
+    let memberId = '';
+    let profile = null;
+
+    async function call(action, body = {}) {
+      if (!session?.access_token) throw new Error(t('notify.gateTitle'));
+      const response = await fetch(FUNCTION_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', apikey: SUPABASE_KEY, authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ action, ...body })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw ClubCommon.handleAuthError(response, payload, t('memberProfile.loadFailed'));
+      return payload;
+    }
+
+    function setMessage(id, text, type) {
+      const node = $(id);
+      node.textContent = text || '';
+      node.className = 'message' + (type ? ' ' + type : '');
+    }
+
+    function formatNumber(value) {
+      return Number(value || 0).toLocaleString('zh-CN');
+    }
+
+    function renderGames(games) {
+      if (!games) { $('gamesBody').innerHTML = `<p class="member-profile-hint">${escapeHtml(t('memberProfile.noGames'))}</p>`; return; }
+      const rows = [];
+      if (games.gomoku) {
+        rows.push(`<div class="member-profile-row"><span>${escapeHtml(t('memberProfile.gomoku'))}</span><b>${games.gomoku.wins}${escapeHtml(t('memberProfile.wins'))} / ${games.gomoku.losses}${escapeHtml(t('memberProfile.losses'))} / ${games.gomoku.draws}${escapeHtml(t('memberProfile.draws'))}</b><em>${formatNumber(games.gomoku.score)} ${escapeHtml(t('memberProfile.points'))}</em></div>`);
+      }
+      for (const [key, label] of [['tetris', 'tetris'], ['snake', 'snake']]) {
+        const record = games[key];
+        if (!record) continue;
+        rows.push(`<div class="member-profile-row"><span>${escapeHtml(t('memberProfile.' + label))}</span><b>${formatNumber(record.games)} ${escapeHtml(t('memberProfile.gamesPlayed'))}</b><em>${escapeHtml(t('memberProfile.highScore'))} ${formatNumber(record.high)}</em></div>`);
+      }
+      for (const [key, label] of [['tetrisVersus', 'tetris'], ['snakeVersus', 'snake']]) {
+        const record = games[key];
+        if (!record) continue;
+        rows.push(`<div class="member-profile-row"><span>${escapeHtml(t('memberProfile.' + label))} · ${escapeHtml(t('memberProfile.versus'))}</span><b>${formatNumber(record.games)} ${escapeHtml(t('memberProfile.gamesPlayed'))}</b><em>${escapeHtml(t('memberProfile.highScore'))} ${formatNumber(record.high)}</em></div>`);
+      }
+      $('gamesBody').innerHTML = rows.length ? rows.join('') : `<p class="member-profile-hint">${escapeHtml(t('memberProfile.noGames'))}</p>`;
+    }
+
+    function renderProfile() {
+      $('memberName').textContent = profile.member_name || '';
+      $('memberClass').textContent = profile.member_class || '';
+      $('classValue').textContent = profile.member_class || '—';
+      $('pointsValue').textContent = formatNumber(profile.points);
+      $('avatar').textContent = (profile.member_name || 'A').trim().charAt(0);
+      $('boundBadge').textContent = profile.bound ? t('memberProfile.bound') : t('memberProfile.unbound');
+      $('headline').hidden = !profile.headline;
+      $('headline').textContent = profile.headline || '';
+
+      $('cardPoints').hidden = !profile.settings.show_points;
+      const donations = profile.donations;
+      $('cardDonations').hidden = !(profile.settings.show_donations && donations);
+      if (donations) {
+        $('donationValue').textContent = `¥ ${formatNumber(donations.total)}`;
+        $('donationCount').textContent = t('memberProfile.donationsCount', { n: donations.count });
+        $('donationLatest').textContent = donations.latest ? t('memberProfile.donationsLatest', { date: donations.latest }) : '';
+      }
+      $('cardGames').hidden = !(profile.settings.show_games && profile.games);
+      if (profile.games) renderGames(profile.games);
+      $('cardCheckin').hidden = !(profile.settings.show_checkin && profile.checkin);
+      if (profile.checkin) {
+        $('checkinBody').innerHTML = `
+          <div class="member-profile-row"><span>${escapeHtml(t('memberProfile.checkins'))}</span><b>${formatNumber(profile.checkin.checkins)}</b></div>
+          <div class="member-profile-row"><span>${escapeHtml(t('memberProfile.redemptions'))}</span><b>${formatNumber(profile.checkin.redemptions)}</b></div>`;
+      }
+      $('editButton').hidden = !profile.is_self;
+    }
+
+    async function loadProfile() {
+      // 不要把骨架屏写进 #cards —— 那会连同四张卡片一起销毁。
+      $('profileLoading').hidden = false;
+      $('cards').hidden = true;
+      try {
+        const payload = await call('member_profile_public_get', { memberId });
+        profile = payload.profile;
+        renderProfile();
+        $('profilePanel').hidden = false;
+        $('profileLoading').hidden = true;
+        $('cards').hidden = false;
+        setMessage('message', '');
+      } catch (error) {
+        $('profilePanel').hidden = true;
+        $('gate').hidden = false;
+        $('gate').querySelector('h1').textContent = t('memberProfile.notFound');
+        $('gate').querySelector('.intro').textContent = error.message || t('memberProfile.loadFailed');
+      }
+    }
+
+    async function loadSettings() {
+      try {
+        const settings = await call('member_profile_settings_get');
+        $('showPoints').checked = settings.show_points !== false;
+        $('showDonations').checked = settings.show_donations === true;
+        $('showGames').checked = settings.show_games !== false;
+        $('showCheckin').checked = settings.show_checkin === true;
+        $('headlineInput').value = settings.headline || '';
+      } catch (error) {
+        setMessage('settingsMessage', error.message, 'error');
+      }
+    }
+
+    async function updateSession(next) {
+      session = next;
+      const loggedIn = Boolean(next?.user?.id);
+      if (!loggedIn) {
+        $('gate').hidden = false;
+        $('profilePanel').hidden = true;
+        $('settingsPanel').hidden = true;
+        return;
+      }
+      $('gate').hidden = true;
+      // 没有 ?id= 时跳到自己的主页。
+      if (!memberId) {
+        try {
+          const own = await call('member_profile_get');
+          if (own?.bound && own.profile?.points_member_id) {
+            memberId = own.profile.points_member_id;
+            history.replaceState(null, '', `member-profile.html?id=${encodeURIComponent(memberId)}`);
+          }
+        } catch (_error) { /* 未绑定则保持空态 */ }
+      }
+      if (memberId) await loadProfile();
+      else {
+        $('profilePanel').hidden = true;
+        $('gate').hidden = false;
+        $('gate').querySelector('h1').textContent = t('memberProfile.notFound');
+        $('gate').querySelector('.intro').textContent = t('memberProfile.unbound');
+      }
+      await loadSettings();
+      $('settingsPanel').hidden = false;
+      $('viewOwn').href = memberId ? `member-profile.html?id=${encodeURIComponent(memberId)}` : 'member-profile.html';
+    }
+
+    $('settingsForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      try {
+        await call('member_profile_settings_set', {
+          show_points: $('showPoints').checked,
+          show_donations: $('showDonations').checked,
+          show_games: $('showGames').checked,
+          show_checkin: $('showCheckin').checked,
+          headline: $('headlineInput').value.trim()
+        });
+        setMessage('settingsMessage', t('memberProfile.saved'), 'success');
+        if (memberId) await loadProfile();
+      } catch (error) {
+        setMessage('settingsMessage', error.message || t('memberProfile.saveFailed'), 'error');
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      memberId = new URLSearchParams(location.search).get('id') || '';
+      const { data } = await supabaseClient.auth.getSession();
+      await updateSession(data?.session || null);
+      supabaseClient.auth.onAuthStateChange((_event, next) => { void updateSession(next); });
+      window.addEventListener('club:langchange', () => { if (profile) renderProfile(); });
+    });
+  </script>
+  <script src="club-shell.js?v=1885fccd"></script>
+</body>
+</html>

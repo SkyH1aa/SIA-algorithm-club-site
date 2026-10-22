@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN" data-i18n-title-key="pages.search.title">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="算法社站内搜索：社员、公告、活动、积分商城商品一站查找。">
+  <title>站内搜索 · 算法社</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="theme.css?v=39014235">
+  <link rel="stylesheet" href="club-ui.css?v=ded5ce5c">
+  <script src="theme.js?v=f92231ba"></script>
+  <script src="i18n-dict.js?v=0c3dd920"></script>
+  <script src="i18n.js?v=ba66328e"></script>
+  <script src="club-common.js?v=b3d82c39"></script>
+  <script src="service-prompts.js?v=1cfff2ab"></script>
+  <script src="service-gate.js?v=b2193cd0"></script>
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="算法社 · Algorithm Club">
+  <meta property="og:title" content="站内搜索 · 算法社">
+  <meta property="og:description" content="算法社站内搜索：查找社员、公告、活动与积分商城商品，未登录也可使用。">
+  <meta property="og:image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:url" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/search.html">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/search.html">
+</head>
+<body class="club-page">
+  <header class="topbar"><div class="topbar-inner">
+    <a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Search</small></span></a>
+    <a class="back" href="club-features.html" data-i18n="common.backFeatures">返回社团功能</a>
+  </div></header>
+  <main>
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <h1 data-i18n="search.title">站内搜索</h1>
+          <p class="intro" data-i18n="search.intro">搜索社员、公告、活动与积分商城商品。未登录也可使用。</p>
+        </div>
+      </div>
+      <form class="site-search-form" id="searchForm" role="search">
+        <input class="input" id="searchInput" type="search" data-club-search autocomplete="off"
+               data-i18n-placeholder="search.placeholder" placeholder="输入姓名、标题或关键词…" aria-label="搜索">
+        <button class="button" type="submit" data-i18n="search.submit">搜索</button>
+      </form>
+      <div class="site-search-groups" id="results" aria-live="polite">
+        <p class="empty" data-i18n="search.hint">输入关键词开始搜索。</p>
+      </div>
+      <p class="message" id="message" role="status"></p>
+    </section>
+  </main>
+  <script>
+    const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
+    const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
+    const $ = id => document.getElementById(id);
+    const t = (key, vars) => (window.ClubI18n ? ClubI18n.t(key, vars) : key);
+    const escapeHtml = window.ClubCommon
+      ? ClubCommon.escapeHtml
+      : value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    const GROUP_LABELS = {
+      member: 'search.groupMember',
+      announcement: 'search.groupAnnouncement',
+      event: 'search.groupEvent',
+      product: 'search.groupProduct',
+      resource: 'search.groupResource'
+    };
+
+    let lastQuery = '';
+
+    async function runSearch(query) {
+      const text = String(query || '').trim();
+      lastQuery = text;
+      const results = $('results');
+      if (!text) {
+        results.innerHTML = `<p class="empty">${escapeHtml(t('search.hint'))}</p>`;
+        return;
+      }
+      ClubCommon.listState(results, { kind: 'loading', message: t('search.loading') });
+      try {
+        const response = await fetch(FUNCTION_URL, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', apikey: SUPABASE_KEY },
+          body: JSON.stringify({ action: 'search_all', query: text })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || t('search.failed'));
+        render(payload.groups || [], text);
+      } catch (error) {
+        ClubCommon.listState(results, { kind: 'error', title: t('search.failed'), message: error.message, onRetry: () => runSearch(lastQuery) });
+      }
+    }
+
+    function render(groups, query) {
+      const results = $('results');
+      const total = groups.reduce((sum, group) => sum + group.items.length, 0);
+      if (!total) {
+        ClubCommon.listState(results, { kind: 'empty', title: t('search.empty', { q: query }), message: t('search.emptyHint') });
+        return;
+      }
+      results.innerHTML = groups.map(group => `
+        <section class="site-search-group">
+          <h2>${escapeHtml(t(GROUP_LABELS[group.type] || 'search.groupOther'))} <span class="badge">${group.items.length}</span></h2>
+          <ul>${group.items.map(item => `
+            <li>
+              <a href="${escapeHtml(item.link)}">${escapeHtml(item.title)}</a>
+              ${item.subtitle ? `<span>${escapeHtml(item.subtitle)}</span>` : ''}
+            </li>`).join('')}
+          </ul>
+        </section>`).join('');
+    }
+
+    $('searchForm').addEventListener('submit', event => {
+      event.preventDefault();
+      const query = $('searchInput').value;
+      const url = new URL(location.href);
+      if (query.trim()) url.searchParams.set('q', query.trim()); else url.searchParams.delete('q');
+      history.replaceState(null, '', url);
+      void runSearch(query);
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const initial = new URLSearchParams(location.search).get('q') || '';
+      $('searchInput').value = initial;
+      if (initial) void runSearch(initial);
+      window.addEventListener('club:langchange', () => { if (lastQuery) void runSearch(lastQuery); });
+    });
+  </script>
+  <script src="club-shell.js?v=1885fccd"></script>
+</body>
+</html>

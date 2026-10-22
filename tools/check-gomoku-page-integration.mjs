@@ -257,10 +257,38 @@ try {
         flashWorkerMoves.push({color,move,elapsedMs:Math.round(performance.now()-started),search:GomokuV10Flash.lastSearch});
       }
       // V10Thinker is pure Rapfi like V10Ultra: no tactical pre-check, so it is
-      // checked for its countdown only (it must not be asserted to find wins).
+      // not asserted to find wins -- but it must still produce a legal move for
+      // both colors, including on file:// where it loads a Blob Worker package.
       startAiCountdown(10.5);
       check(!document.getElementById('aiCountdown').hidden && document.getElementById('aiCountdownLabel').textContent.includes('75.0'),'V10Thinker budget countdown');
       stopAiCountdown();
+      const thinkerWorkerMoves=[];
+      for(const color of [1,2]) {
+        GomokuV10Thinker.clearCache();
+        board=Array.from({length:15},()=>Array(15).fill(0));gameMoves=[];
+        if(color===2){board[7][7]=1;gameMoves=[{row:7,col:7,player:1}];}
+        const started=performance.now();
+        const move=await findModelMove(10.5,color);
+        check(move&&Number.isInteger(move.row)&&Number.isInteger(move.col)&&board[move.row]?.[move.col]===0,'Thinker Worker legal move (color '+color+')');
+        thinkerWorkerMoves.push({color,move,elapsedMs:Math.round(performance.now()-started)});
+      }
+      GomokuV10Thinker.clearCache();
+      // V10Champion reuses V10Ultra's engine but adds its own opening book and
+      // immediate-win/forced-block pre-check; verify a legal move both colors.
+      startAiCountdown(10.6);
+      check(!document.getElementById('aiCountdown').hidden,'V10Champion budget countdown');
+      stopAiCountdown();
+      const championWorkerMoves=[];
+      for(const color of [1,2]) {
+        GomokuV10Champion.clearCache();
+        board=Array.from({length:15},()=>Array(15).fill(0));gameMoves=[];
+        if(color===2){board[7][7]=1;gameMoves=[{row:7,col:7,player:1}];}
+        const started=performance.now();
+        const move=await findModelMove(10.6,color);
+        check(move&&Number.isInteger(move.row)&&Number.isInteger(move.col)&&board[move.row]?.[move.col]===0,'Champion Worker legal move (color '+color+')');
+        championWorkerMoves.push({color,move,elapsedMs:Math.round(performance.now()-started)});
+      }
+      GomokuV10Champion.clearCache();
       // A proven four-chase must be played at once, without calling the engine.
       board=Array.from({length:15},()=>Array(15).fill(0));gameMoves=[];
       [[7,4],[7,5],[7,6]].forEach(([r,c])=>{board[r][c]=1;gameMoves.push({row:r,col:c,player:1});});
@@ -421,7 +449,7 @@ try {
       check(winnerCell({outcome:'surrender',player_color:1,winner_label:null}).includes('投降'),'Surrender is labelled');
       check(winnerCell({outcome:'draw'}).length>0,'Draw is labelled');
       check(winnerCell({outcome:null,started_at:new Date(Date.now()-700000).toISOString()}).length>0,'A stale record reads as invalid');
-      return {url: location.href, humanCases, battleCases, strengthOrder:expectedOrder, points:expectedPoints, uploadVersions:eligible, surrenderCases:eligible.length, workerMoves, newWorkerMoves, expNeuralMoves, expCancellation:true, flashWorkerMoves, flashCancellation:true, flashBook:{best:[bookA.best.row,bookA.best.col],games:bookA.best.games,cells:[...bookA.cells.keys()].sort()}};
+      return {url: location.href, humanCases, battleCases, strengthOrder:expectedOrder, points:expectedPoints, uploadVersions:eligible, surrenderCases:eligible.length, workerMoves, thinkerWorkerMoves, championWorkerMoves, newWorkerMoves, expNeuralMoves, expCancellation:true, flashWorkerMoves, flashCancellation:true, flashBook:{best:[bookA.best.row,bookA.best.col],games:bookA.best.games,cells:[...bookA.cells.keys()].sort()}};
     })()`);
     reports.push(report);
     console.log(`PASS ${url}: ${report.humanCases} human cases, ${report.battleCases} model battle cases, black/white/reset Worker moves.`);

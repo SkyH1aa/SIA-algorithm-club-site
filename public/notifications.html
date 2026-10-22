@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh-CN" data-i18n-title-key="pages.notifications.title">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="算法社站内通知：公告、活动、报名、积分与留言提醒。">
+  <title>通知 · 算法社</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="theme.css?v=39014235">
+  <link rel="stylesheet" href="club-ui.css?v=ded5ce5c">
+  <script src="theme.js?v=f92231ba"></script>
+  <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
+  <script src="club-auth-storage.js?v=80f52e6f"></script>
+  <script src="i18n-dict.js?v=0c3dd920"></script>
+  <script src="member-identity.js?v=0af7f540" defer></script>
+  <script src="i18n.js?v=ba66328e"></script>
+  <script src="club-common.js?v=b3d82c39"></script>
+  <script src="service-prompts.js?v=1cfff2ab"></script>
+  <script src="service-gate.js?v=b2193cd0"></script>
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="算法社 · Algorithm Club">
+  <meta property="og:title" content="通知 · 算法社">
+  <meta property="og:description" content="算法社站内通知：公告、活动、报名、积分与留言提醒集中在一处，登录后可查看并标记已读。">
+  <meta property="og:image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:url" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/notifications.html">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/notifications.html">
+</head>
+<body class="club-page">
+  <header class="topbar"><div class="topbar-inner">
+    <a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Notifications</small></span></a>
+    <span class="identity" data-member-identity hidden></span>
+    <a class="back" href="member-center.html" data-i18n="notify.backCenter">返回个人中心</a>
+  </div></header>
+  <main>
+    <section class="panel" id="gate" hidden>
+      <h1 data-i18n="notify.gateTitle">请先登录</h1>
+      <p class="intro" data-i18n="notify.gateLead">通知只对已登录的算法社成员开放。</p>
+      <a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a>
+    </section>
+
+    <section class="panel" id="panel" hidden>
+      <div class="section-head">
+        <div>
+          <h1 data-i18n="notify.title">通知</h1>
+          <p class="intro" data-i18n="notify.intro">公告、活动、报名、积分与留言提醒集中在这里。</p>
+        </div>
+        <button class="button secondary" type="button" id="markAll" data-i18n="notify.markAll">全部已读</button>
+      </div>
+      <div class="club-notify-filters" id="filters">
+        <button class="chip is-active" type="button" data-kind="" data-i18n="notify.all">全部</button>
+        <button class="chip" type="button" data-kind="announcement" data-i18n="notify.kindAnnouncement">公告</button>
+        <button class="chip" type="button" data-kind="event" data-i18n="notify.kindEvent">活动</button>
+        <button class="chip" type="button" data-kind="signup" data-i18n="notify.kindSignup">报名</button>
+        <button class="chip" type="button" data-kind="points" data-i18n="notify.kindPoints">积分</button>
+        <button class="chip" type="button" data-kind="message" data-i18n="notify.kindMessage">留言</button>
+        <button class="chip" type="button" data-kind="account" data-i18n="notify.kindAccount">账号</button>
+      </div>
+      <div id="list" aria-live="polite"><div class="empty loading" data-i18n="notify.loading">正在读取通知…</div></div>
+      <p class="message" id="message" role="status"></p>
+    </section>
+  </main>
+  <script>
+    const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
+    const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const $ = id => document.getElementById(id);
+    const t = (key, vars) => (window.ClubI18n ? ClubI18n.t(key, vars) : key);
+    const escapeHtml = window.ClubCommon
+      ? ClubCommon.escapeHtml
+      : value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    let session = null;
+    let items = [];
+    let activeKind = '';
+
+    async function call(action, body = {}) {
+      if (!session?.access_token) throw new Error(t('notify.gateTitle'));
+      const response = await fetch(FUNCTION_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', apikey: SUPABASE_KEY, authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ action, ...body })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw ClubCommon.handleAuthError(response, payload, t('notify.loadFailed'));
+      return payload;
+    }
+
+    function visibleItems() {
+      return activeKind ? items.filter(item => item.kind === activeKind) : items;
+    }
+
+    function render() {
+      const list = $('list');
+      const rows = visibleItems();
+      if (!rows.length) {
+        ClubCommon.listState(list, { kind: 'empty', title: t('notify.empty'), message: t('notify.emptyHint') });
+        return;
+      }
+      list.innerHTML = rows.map(item => `
+        <article class="club-notify-row ${item.read ? '' : 'is-unread'}" data-id="${escapeHtml(item.id)}">
+          <div class="club-notify-row-main">
+            <span class="club-notify-kind">${escapeHtml(t('notify.kind' + item.kind.charAt(0).toUpperCase() + item.kind.slice(1), item.kind))}</span>
+            <strong>${escapeHtml(item.title)}</strong>
+            ${item.body ? `<p>${escapeHtml(item.body)}</p>` : ''}
+            <time>${escapeHtml(String(item.created_at || '').slice(0, 16).replace('T', ' '))}</time>
+          </div>
+          ${item.link ? `<a class="button secondary" href="${escapeHtml(item.link)}" data-open="${escapeHtml(item.id)}">${escapeHtml(t('notify.open'))}</a>` : ''}
+        </article>`).join('');
+      list.querySelectorAll('[data-open]').forEach(link => {
+        link.addEventListener('click', () => markRead([link.dataset.open]));
+      });
+    }
+
+    async function refresh() {
+      ClubCommon.listState($('list'), { kind: 'loading', message: t('notify.loading') });
+      try {
+        const payload = await call('notifications_list', { limit: 200 });
+        items = Array.isArray(payload.notifications) ? payload.notifications : [];
+        render();
+        setMessage('');
+      } catch (error) {
+        ClubCommon.listState($('list'), { kind: 'error', title: t('notify.loadFailed'), message: error.message, onRetry: refresh });
+        setMessage(error.message, 'error');
+      }
+    }
+
+    async function markRead(ids) {
+      try {
+        await call('notifications_mark_read', ids ? { ids } : {});
+        if (ids) items = items.map(item => ids.includes(item.id) ? { ...item, read: true } : item);
+        else items = items.map(item => ({ ...item, read: true }));
+        render();
+        setMessage(t('notify.marked'), 'success');
+      } catch (error) {
+        setMessage(error.message, 'error');
+      }
+    }
+
+    function setMessage(text, type) {
+      const node = $('message');
+      node.textContent = text || '';
+      node.className = 'message' + (type ? ' ' + type : '');
+    }
+
+    async function updateSession(next) {
+      session = next;
+      const loggedIn = Boolean(next?.user?.id);
+      $('gate').hidden = loggedIn;
+      $('panel').hidden = !loggedIn;
+      if (loggedIn) await refresh();
+    }
+
+    $('markAll').addEventListener('click', () => markRead(null));
+    $('filters').addEventListener('click', event => {
+      const button = event.target.closest('[data-kind]');
+      if (!button) return;
+      activeKind = button.dataset.kind;
+      $('filters').querySelectorAll('[data-kind]').forEach(node => node.classList.toggle('is-active', node === button));
+      render();
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const { data } = await supabaseClient.auth.getSession();
+      await updateSession(data?.session || null);
+      supabaseClient.auth.onAuthStateChange((_event, next) => { void updateSession(next); });
+      window.addEventListener('club:langchange', () => { if (!$('panel').hidden) render(); });
+    });
+  </script>
+  <script src="club-shell.js?v=1885fccd"></script>
+</body>
+</html>

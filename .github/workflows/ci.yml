@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# 站点是零构建静态站，CI 只做离线校验：语法、资源版本、共享层契约、数据库语法。
+# 不需要 npm install，也没有任何上游调用。
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Syntax check first-party scripts
+        run: |
+          set -e
+          find public -maxdepth 1 -name '*.js' -print0 | while IFS= read -r -d '' file; do
+            node --check "$file"
+          done
+          node --check index.html 2>/dev/null || true
+
+      - name: Rebuild and verify the inline dictionary
+        run: |
+          node tools/build-i18n-dict.mjs
+          git diff --exit-code public/i18n-dict.js
+
+      - name: Static asset versions are current
+        run: |
+          node tools/version-static-assets.mjs --check
+          node tools/test-asset-versions.mjs
+
+      - name: Brand, 404 and vendor contracts
+        run: |
+          node tools/test-i18n-dict.mjs
+          node tools/test-brand-mark.mjs
+          node tools/test-404-page.mjs
+          node tools/test-vendor-supabase.mjs
+
+      - name: Shared UI layer and donations
+        run: |
+          node tools/test-club-common.mjs
+          node tools/test-club-donations-page.mjs
+          node tools/test-club-donations-ui.mjs
+
+      - name: New feature contracts
+        run: |
+          node tools/test-notifications.mjs
+          node tools/test-member-profile.mjs
+          node tools/test-site-search.mjs
+          node tools/test-seo.mjs
+          node tools/test-pwa.mjs
+          node tools/test-theme-system.mjs
+
+      - name: Gomoku package integrity
+        run: |
+          node tools/test-gomoku-file-package-dedup.mjs
+
+      - name: Chat and assistant regressions
+        run: |
+          node tools/test-chat-core.mjs
+          node tools/test-chat-admin.mjs
+          node tools/test-assistant-launcher.mjs
+          node tools/test-assistant-knowledge.mjs
+
+      - name: Whitespace and generated bundle checks
+        run: |
+          git diff --check
+          node tools/build-chat-dashboard-bundles.mjs --check

@@ -51,8 +51,15 @@
 
   function resolve(key, lang = state.lang) {
     if (!key) return undefined;
-    const pack = state.dict[lang] || {};
-    const fallback = state.dict.zh || {};
+    // init() 之前（内联脚本在解析期调用 t）state.dict 还是空的，
+    // 此时直接读已内联的 ClubI18nDict，避免返回原始 key。
+    const globalDict = window.ClubI18nDict || {};
+    const pack = (state.dict[lang] && Object.keys(state.dict[lang]).length)
+      ? state.dict[lang]
+      : (globalDict[lang] || {});
+    const fallback = (state.dict.zh && Object.keys(state.dict.zh).length)
+      ? state.dict.zh
+      : (globalDict.zh || {});
     const hit = deepGet(pack, key);
     if (hit != null) return hit;
     return deepGet(fallback, key);
@@ -119,6 +126,20 @@
     const changed = lang !== state.lang;
     state.lang = lang;
     writeStoredLang(lang);
+    // 词典按语言分包：切到尚未加载的语言时先异步补载，再应用与广播，
+    // 否则界面会短暂显示 key 本身。
+    const loader = window.ClubI18nDictLoader;
+    if (loader && loader.loaded && !loader.loaded[lang]) {
+      return loader.load(lang).then(() => {
+        if (loader.loaded.zh && !state.dict.zh) state.dict.zh = Object.create(null);
+        mergeDict(window.ClubI18nDict);
+        if (options.apply !== false) apply(document);
+        if (changed || options.forceEvent) {
+          window.dispatchEvent(new CustomEvent('club:langchange', { detail: { lang } }));
+        }
+        return lang;
+      });
+    }
     if (options.apply !== false) apply(document);
     if (changed || options.forceEvent) {
       window.dispatchEvent(new CustomEvent('club:langchange', { detail: { lang } }));
@@ -199,6 +220,18 @@
     state.ready = true;
     if (options.apply !== false) apply(document);
     syncSwitcher(document);
+    // 英文词典是增量包：首次 boot 时若当前语言是 en 且尚未加载，补载后重绘。
+    const loader = window.ClubI18nDictLoader;
+    if (state.lang === 'en' && loader && loader.loaded && !loader.loaded.en && typeof loader.load === 'function') {
+      loader.load('en').then(() => {
+        mergeDict(window.ClubI18nDict);
+        apply(document);
+        syncSwitcher(document);
+        try {
+          window.dispatchEvent(new CustomEvent('club:langchange', { detail: { lang: state.lang } }));
+        } catch (_error) { /* ignore */ }
+      });
+    }
     return state.lang;
   }
 

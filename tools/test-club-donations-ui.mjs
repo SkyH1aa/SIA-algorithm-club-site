@@ -7,6 +7,8 @@ import vm from 'node:vm';
 
 const PAGE = new URL('../public/donations.html', import.meta.url);
 
+const csvExports = [];
+
 function harness({ superAdmin = false, session = { user: { id: 'u1' }, access_token: 'token' }, qrUrl = '' } = {}) {
   const html = pageSource;
   const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
@@ -76,6 +78,20 @@ function harness({ superAdmin = false, session = { user: { id: 'u1' }, access_to
         },
         listStateHtml(kind, options) { return '<div class="club-common-state ' + kind + '">' + escapeHtml(options && options.message || '') + '</div>'; },
         handleAuthError(response, payload, fallback) { const e = new Error(payload && payload.error || fallback); e.status = response && response.status; return e; },
+        exportCsv(filename, columns, rows) {
+          const header = columns.map(column => column.label).join(',');
+          const body = rows.map(row => columns.map(column => typeof column.value === 'function' ? column.value(row) : row[column.key]).join(','));
+          csvExports.push({ filename, header, body });
+          return rows.length;
+        },
+        paginate(items, page, pageSize) {
+          const size = Math.max(1, Number(pageSize) || 20);
+          const list = Array.isArray(items) ? items : [];
+          const totalPages = Math.max(1, Math.ceil(list.length / size));
+          const current = Math.min(Math.max(1, Number(page) || 1), totalPages);
+          const start = (current - 1) * size;
+          return { items: list.slice(start, start + size), page: current, pageSize: size, total: list.length, totalPages, hasPrev: current > 1, hasNext: current < totalPages, hidden: totalPages <= 1 };
+        },
         showSessionBanner() {}, ready(fn) { fn(); }, t: key => key
       };
     })(),
@@ -274,9 +290,13 @@ const pageSource = await readFile(PAGE, 'utf8');
     node.append = (...next) => { node.children.push(...next); };
     return node;
   };
+  const before = csvExports.length;
   ui.get('exportCsv').listeners.click();
-  assert.equal(blobCalls.length, 1, 'CSV export creates one download');
-  assert.match(blobCalls[0].download, /^club-donations-\d{4}-\d{2}-\d{2}\.csv$/);
+  assert.equal(csvExports.length, before + 1, 'CSV export runs once');
+  const exported = csvExports.at(-1);
+  assert.match(exported.filename, /^club-donations-\d{4}-\d{2}-\d{2}\.csv$/);
+  assert.ok(exported.header.includes('donations.colDonor'), 'CSV uses localized headers');
+  assert.equal(exported.body.length, 2, 'CSV contains every visible row');
 }
 
 console.log('Club donations UI: sign-in gate, read-only member view, super-admin editing, escaping, client validation, payment QR states, search/year/summary, CSV export and undo delete passed.');

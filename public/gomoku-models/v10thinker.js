@@ -28,21 +28,35 @@
       return new URL('v10thinker/worker.js', MODEL_BASE).toString();
     }
 
+    function loadScript(src, globalName, missingMessage) {
+      return new Promise((resolve, reject) => {
+        if (window[globalName]) { resolve(window[globalName]); return; }
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => window[globalName]
+          ? resolve(window[globalName])
+          : reject(new Error(missingMessage));
+        script.onerror = () => reject(new Error(missingMessage));
+        document.head.appendChild(script);
+      });
+    }
+
     function loadFilePackage() {
       if (filePackagePromise) return filePackagePromise;
-      filePackagePromise = new Promise((resolve, reject) => {
-        if (window.GOMOKU_V10THINKER_FILE_PACKAGE) {
-          resolve(window.GOMOKU_V10THINKER_FILE_PACKAGE);
-          return;
-        }
-        const script = document.createElement('script');
-        script.src = new URL('v10thinker/file-package.js', MODEL_BASE).toString();
-        script.onload = () => window.GOMOKU_V10THINKER_FILE_PACKAGE
-          ? resolve(window.GOMOKU_V10THINKER_FILE_PACKAGE)
-          : reject(new Error('V10Thinker 离线资源包内容缺失'));
-        script.onerror = () => reject(new Error('V10Thinker 离线资源包加载失败，请先运行 node tools/build-gomoku-v10thinker-file-package.mjs'));
-        document.head.appendChild(script);
-      }).catch(error => {
+      // The engine and Mix9 weights are shared with V10Ultra and live only in its
+      // package; this model ships just its own worker bridge. Loading both keeps
+      // the Blob Worker self-contained under file://, exactly like v10exp.js.
+      filePackagePromise = Promise.all([
+        loadScript(new URL('v10ultra/file-package.js', MODEL_BASE).toString(), 'GOMOKU_V10ULTRA_FILE_PACKAGE',
+          'V10Ultra 离线资源包加载失败，请先运行 node tools/build-gomoku-v10ultra-file-package.mjs'),
+        loadScript(new URL('v10thinker/file-package.js', MODEL_BASE).toString(), 'GOMOKU_V10THINKER_FILE_PACKAGE',
+          'V10Thinker 离线资源包加载失败，请先运行 node tools/build-gomoku-v10thinker-file-package.mjs')
+      ]).then(([engine, own]) => ({
+        rapfiSource: engine.rapfiSource,
+        wasmBase64: engine.wasmBase64,
+        dataBase64: engine.dataBase64,
+        workerSource: own.workerSource
+      })).catch(error => {
         filePackagePromise = null;
         throw error;
       });

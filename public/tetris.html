@@ -2,17 +2,17 @@
 <html lang="zh-CN" data-i18n-title-key="tetris.title">
 <head>
   <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
-  <script src="theme.js?v=0efca64b"></script>
+  <link rel="stylesheet" href="club-ui.css?v=ded5ce5c">
+  <script src="theme.js?v=f92231ba"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>算法社 · 俄罗斯方块多模式</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=80f52e6f"></script>
-  <script src="i18n-dict.js?v=21e9f61d"></script><script src="member-identity.js?v=0af7f540"></script>
+  <script src="i18n-dict.js?v=0c3dd920"></script><script src="member-identity.js?v=0af7f540" defer></script>
 
-  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
 <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
@@ -687,7 +687,7 @@
       .ambient-orb, .ambient-grid { animation: none; }
     }
   </style>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script></head>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b2193cd0"></script></head>
 <body>
   <div class="ambient-background" aria-hidden="true">
     <div class="ambient-orb orb-cyan"></div>
@@ -1786,17 +1786,16 @@
   let leaderboardPage = 1;
   const LEADERBOARD_PAGE_SIZE = 20;
   function renderLeaderboard() {
-    const totalPages = Math.max(1, Math.ceil(leaderboardRows.length / LEADERBOARD_PAGE_SIZE));
-    leaderboardPage = Math.min(Math.max(1, leaderboardPage), totalPages);
-    const start = (leaderboardPage - 1) * LEADERBOARD_PAGE_SIZE;
-    els.leaderboardList.innerHTML = leaderboardRows.slice(start, start + LEADERBOARD_PAGE_SIZE).map((item, index) => `
+    const page = ClubCommon.paginate(leaderboardRows, leaderboardPage, LEADERBOARD_PAGE_SIZE);
+    leaderboardPage = page.page;
+    const start = (page.page - 1) * page.pageSize;
+    els.leaderboardList.innerHTML = page.items.map((item, index) => `
       <li><span class="rank">${start + index + 1}</span><span>${escapeHtml(item.nickname)}<small> · ${ClubI18n.t('games.gamesUnit', { n: item.games_played || 0 })}</small></span><span class="score">${ClubI18n.t('games.scoreUnit', { n: item.high_score })}</span></li>
     `).join('');
-    const total = Math.max(1, totalPages);
     const pagination = document.getElementById('leaderboardPagination');
-    pagination.hidden = total <= 1;
-    document.getElementById('leaderboardPageInfo').textContent = ClubI18n.t('games.pageInfo', { page: leaderboardPage, total });
-    document.getElementById('leaderboardPrev').disabled = leaderboardPage <= 1;
+    pagination.hidden = page.hidden;
+    document.getElementById('leaderboardPageInfo').textContent = ClubI18n.t('games.pageInfo', { page: page.page, total: page.totalPages });
+    document.getElementById('leaderboardPrev').disabled = !page.hasPrev;
     document.getElementById('leaderboardNext').disabled = leaderboardPage >= total;
   }
   document.getElementById('leaderboardPrev').addEventListener('click', () => { leaderboardPage -= 1; renderLeaderboard(); });
@@ -2452,6 +2451,6 @@
   loadLeaderboard();
 })();
 </script>
-  <script src="club-shell.js?v=90975bc7"></script>
+  <script src="club-shell.js?v=1885fccd"></script>
 </body>
 </html>

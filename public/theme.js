@@ -1,6 +1,6 @@
 (() => {
   const STORAGE_KEY = 'algorithm-club-theme-mode';
-  const MODES = ['auto', 'light', 'dark'];
+  const MODES = ['auto', 'system', 'light', 'dark'];
   const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
   const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
@@ -51,9 +51,29 @@
     }
   }
 
+  function systemTheme() {
+    try {
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    } catch (_error) {
+      return 'dark';
+    }
+  }
+
   function resolveTheme(mode = currentMode) {
     const normalized = normalizeMode(mode);
-    return normalized === 'auto' ? themeByBeijingTime() : normalized;
+    if (normalized === 'auto') return themeByBeijingTime();
+    if (normalized === 'system') return systemTheme();
+    return normalized;
+  }
+
+  // 跟随系统：系统主题变化时立即重绘（只在 system 模式下生效）。
+  if (window.matchMedia) {
+    try {
+      const query = window.matchMedia('(prefers-color-scheme: dark)');
+      const onChange = () => { if (currentMode === 'system') applyTheme(systemTheme()); };
+      if (typeof query.addEventListener === 'function') query.addEventListener('change', onChange);
+      else if (typeof query.addListener === 'function') query.addListener(onChange);
+    } catch (_error) { /* ignore */ }
   }
 
   function applyTheme(theme, { silent } = {}) {
@@ -235,6 +255,7 @@
   function shortLabel(mode) {
     const map = {
       auto: ['theme.shortAuto', 'Auto'],
+      system: ['theme.shortSystem', '系统'],
       light: ['theme.shortLight', '日'],
       dark: ['theme.shortDark', '夜']
     };

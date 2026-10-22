@@ -204,18 +204,32 @@
   }
 
   // ---- workers: Rapfi engine and the expert system ---------------------------
+  function loadScript(src, globalName, missingMessage) {
+    return new Promise((resolve, reject) => {
+      if (window[globalName]) { resolve(window[globalName]); return; }
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => window[globalName] ? resolve(window[globalName]) : reject(new Error(missingMessage));
+      script.onerror = () => reject(new Error(missingMessage));
+      document.head.appendChild(script);
+    });
+  }
+
   function loadFilePackage() {
     if (packagePromise) return packagePromise;
-    packagePromise = new Promise((resolve, reject) => {
-      if (window.GOMOKU_V10FLASH_FILE_PACKAGE) { resolve(window.GOMOKU_V10FLASH_FILE_PACKAGE); return; }
-      const script = document.createElement('script');
-      script.src = new URL('v10flash/file-package.js', base).toString();
-      script.onload = () => window.GOMOKU_V10FLASH_FILE_PACKAGE
-        ? resolve(window.GOMOKU_V10FLASH_FILE_PACKAGE)
-        : reject(new Error('V10Flash 离线资源包缺失'));
-      script.onerror = () => reject(new Error('V10Flash 离线资源包加载失败'));
-      document.head.appendChild(script);
-    }).catch(error => { packagePromise = null; throw error; });
+    // The Rapfi engine and Mix9 weights are byte-identical to V10Ultra's and live
+    // only in its package; this one carries the Flash bridge plus the frozen
+    // expert/proof/training sources. Both are needed to build the Blob Workers.
+    packagePromise = Promise.all([
+      loadScript(new URL('v10ultra/file-package.js', base).toString(), 'GOMOKU_V10ULTRA_FILE_PACKAGE',
+        'V10Ultra 离线资源包加载失败，请先运行 node tools/build-gomoku-v10ultra-file-package.mjs'),
+      loadScript(new URL('v10flash/file-package.js', base).toString(), 'GOMOKU_V10FLASH_FILE_PACKAGE',
+        'V10Flash 离线资源包加载失败，请先运行 node tools/build-gomoku-v10flash.mjs')
+    ]).then(([engine, own]) => Object.assign({}, own, {
+      rapfiSource: engine.rapfiSource,
+      wasmBase64: engine.wasmBase64,
+      dataBase64: engine.dataBase64
+    })).catch(error => { packagePromise = null; throw error; });
     return packagePromise;
   }
 

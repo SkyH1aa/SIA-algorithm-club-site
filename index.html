@@ -5,15 +5,31 @@
     <link rel="icon" href="public/favicon.svg" type="image/svg+xml" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="public/theme.css?v=39014235">
-  <script src="public/theme.js?v=0efca64b"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+  <script src="public/theme.js?v=f92231ba"></script>
+  <script src="public/vendor/three/three.min.js?v=170c6789"></script>
+  <script>
+    // 本地 three.js 失败时回退到 CDN，避免 CDN 不可达导致首页 3D 场景空白。
+    if (!window.THREE) document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js?v=170c6789"><\/script>');
+  </script>
+  <script type="importmap">{"imports":{"three":"public/vendor/three/three.module.js"}}</script>
   <script src="public/SceneDirector.js?v=20261005-ipad-flow-v7"></script>
     <title>算法社 · Algorithm Club</title>
+    <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统，用真实作品证明训练价值。">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="算法社 · Algorithm Club">
+    <meta property="og:title" content="算法社 · Algorithm Club">
+    <meta property="og:description" content="算法训练、可视化实验室、AI 五子棋与社团管理系统，用真实作品证明训练价值。">
+    <meta property="og:image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:url" content="https://skyh1aa.github.io/SIA-algorithm-club-site/index.html">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="https://skyh1aa.github.io/SIA-algorithm-club-site/index.html">
+
     <script src="public/vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="public/club-auth-storage.js?v=80f52e6f"></script>
-    <script src="public/i18n-dict.js?v=21e9f61d"></script>
-    <script src="public/i18n.js?v=eda11d20"></script>
+    <script src="public/i18n-dict.js?v=0c3dd920"></script>
+    <script src="public/i18n.js?v=ba66328e"></script>
     <script src="public/member-identity.js?v=0af7f540" defer></script>
     <style>
       :root {
@@ -1569,8 +1585,8 @@
         }
       }
     </style>
-  <script src="public/service-prompts.js?v=1cfff2ab"></script><script src="public/service-gate.js?v=b53797fa"></script>
-  <link rel="stylesheet" href="public/club-ui.css?v=2f4bee9c">
+  <script src="public/service-prompts.js?v=1cfff2ab"></script><script src="public/service-gate.js?v=b2193cd0"></script>
+  <link rel="stylesheet" href="public/club-ui.css?v=ded5ce5c">
 </head>
   <body>
     <div class="ambient-background" aria-hidden="true">
@@ -1743,7 +1759,7 @@
             <a class="primary-action" href="public/join.html" data-i18n="home.goForm">前往报名表单</a>
           </div>
           <div class="qr-box">
-            <img src="public/assets/wechat-qrcode.jpg" data-i18n-attr="alt:home.qrAlt" alt="算法社负责人微信二维码" />
+            <img src="public/assets/wechat-qrcode.jpg" data-i18n-attr="alt:home.qrAlt" alt="算法社负责人微信二维码" loading="lazy" decoding="async" />
             <p class="qr-tip" data-i18n="home.qrTip">扫码添加微信，加入算法社</p>
           </div>
         </div>
@@ -1849,7 +1865,7 @@
           const member = normalizeMemberCard(raw);
           const avatarAlt = t('home.avatarAlt', { name: member.name });
           const avatarContent = member.avatarImage
-            ? `<img src="${escapeHtml(member.avatarImage)}" alt="${escapeHtml(avatarAlt)}" />`
+            ? `<img src="${escapeHtml(member.avatarImage)}" alt="${escapeHtml(avatarAlt)}" loading="lazy" decoding="async" />`
             : `<span>${escapeHtml(member.avatar)}</span>`;
           const gradeGroup = [member.grade, member.group].filter(Boolean).join(' · ');
           return `
@@ -3788,6 +3804,6 @@
       init();
 
     </script>
-    <script src="public/club-shell.js?v=90975bc7"></script>
+    <script src="public/club-shell.js?v=1885fccd"></script>
   </body>
 </html>

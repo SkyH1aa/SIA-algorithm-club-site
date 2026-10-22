@@ -2,17 +2,17 @@
 <html lang="zh-CN">
 <head>
   <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=2f4bee9c">
-  <script src="theme.js?v=0efca64b"></script>
+  <link rel="stylesheet" href="club-ui.css?v=ded5ce5c">
+  <script src="theme.js?v=f92231ba"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>实验室 · 算法社 AI 五子棋挑战</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=80f52e6f"></script>
-  <script src="i18n-dict.js?v=21e9f61d"></script><script src="member-identity.js?v=0af7f540"></script>
+  <script src="i18n-dict.js?v=0c3dd920"></script><script src="member-identity.js?v=0af7f540" defer></script>
 
-  <script src="i18n.js?v=eda11d20"></script><script src="club-common.js?v=b56b9c0f"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
 <style>
     :root { color-scheme: dark; --board-highlight: #00e5ff; --board-highlight-shadow: rgba(0, 229, 255, .48); }
     * { box-sizing: border-box; }
@@ -162,7 +162,7 @@
       background-color: #45a049;
     }
   </style>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b53797fa"></script></head>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b2193cd0"></script></head>
 <body>
   <div class="ambient-background" aria-hidden="true"><div class="ambient-orb orb-cyan"></div><div class="ambient-orb orb-violet"></div><div class="ambient-grid"></div><canvas id="particleCanvas"></canvas></div><div class="pointer-glow" aria-hidden="true"></div>
   <div class="page-shell">
@@ -560,14 +560,14 @@
     function renderLeaderboard() {
       const list = document.getElementById('leaderboardList');
       const pagination = document.getElementById('leaderboardPagination');
-      const totalPages = Math.max(1, Math.ceil(leaderboardRows.length / LEADERBOARD_PAGE_SIZE));
-      leaderboardPage = Math.min(Math.max(1, leaderboardPage), totalPages);
-      const start = (leaderboardPage - 1) * LEADERBOARD_PAGE_SIZE;
-      list.innerHTML = leaderboardRows.slice(start, start + LEADERBOARD_PAGE_SIZE).map((item, index) => `<li><span class="rank">${start + index + 1}</span><span>${escapeHtml(item.nickname)}<small> · ${ClubI18n.t('gomoku.lbRow', { wins: item.wins, losses: item.losses, draws: item.draws })}</small></span><span class="score">${ClubI18n.t('games.scoreUnit', { n: item.total_score })}</span></li>`).join('');
-      pagination.hidden = totalPages <= 1;
-      document.getElementById('leaderboardPageInfo').textContent = ClubI18n.t('games.pageInfo', { page: leaderboardPage, total: totalPages });
-      document.getElementById('leaderboardPrev').disabled = leaderboardPage <= 1;
-      document.getElementById('leaderboardNext').disabled = leaderboardPage >= totalPages;
+      const page = ClubCommon.paginate(leaderboardRows, leaderboardPage, LEADERBOARD_PAGE_SIZE);
+      leaderboardPage = page.page;
+      const start = (page.page - 1) * page.pageSize;
+      list.innerHTML = page.items.map((item, index) => `<li><span class="rank">${start + index + 1}</span><span>${escapeHtml(item.nickname)}<small> · ${ClubI18n.t('gomoku.lbRow', { wins: item.wins, losses: item.losses, draws: item.draws })}</small></span><span class="score">${ClubI18n.t('games.scoreUnit', { n: item.total_score })}</span></li>`).join('');
+      pagination.hidden = page.hidden;
+      document.getElementById('leaderboardPageInfo').textContent = ClubI18n.t('games.pageInfo', { page: page.page, total: page.totalPages });
+      document.getElementById('leaderboardPrev').disabled = !page.hasPrev;
+      document.getElementById('leaderboardNext').disabled = !page.hasNext;
     }
     document.getElementById('leaderboardPrev').addEventListener('click', () => { leaderboardPage -= 1; renderLeaderboard(); });
     document.getElementById('leaderboardNext').addEventListener('click', () => { leaderboardPage += 1; renderLeaderboard(); });
@@ -1008,6 +1008,6 @@
       } catch (_e) {}
     });
 </script>
-  <script src="club-shell.js?v=90975bc7"></script>
+  <script src="club-shell.js?v=1885fccd"></script>
 </body>
 </html>

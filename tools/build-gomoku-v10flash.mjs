@@ -30,10 +30,10 @@ core = core.replace('    return { findBestMove, clearCache()', `    function pro
 fs.writeFileSync(path.join(directory, 'proof-core.js'), '// Generated derivative; rebuild with tools/build-gomoku-v10flash.mjs.\n' + core);
 
 const pack = {
-  rapfiSource: read('v10ultra/rapfi-single.js'),
+  // Engine/weights are NOT embedded here: they are byte-identical to V10Ultra's
+  // and are loaded from v10ultra/file-package.js at file:// time. Only the
+  // Flash-specific bridge and frozen expert assets travel in this package.
   workerSource: read('v10flash/worker.js'),
-  wasmBase64: fs.readFileSync(path.join(models, 'v10ultra/rapfi-single.wasm')).toString('base64'),
-  dataBase64: fs.readFileSync(path.join(models, 'v10ultra/rapfi.data')).toString('base64'),
   expert: read('expert-core.js'),
   thinker: read('v9thinker.js'),
   v10core: read('v10-core.js'),
@@ -43,5 +43,5 @@ const pack = {
   expertWorker: read('v10flash/expert-worker.js')
 };
 fs.writeFileSync(path.join(directory, 'file-package.js'),
-  '// Generated; frozen experts and the same Rapfi engine/weights as the HTTP path.\nwindow.GOMOKU_V10FLASH_FILE_PACKAGE=' + JSON.stringify(pack) + ';\n');
-console.log('Built V10Flash proof core and file-origin package (Rapfi bridge, frozen experts, training priors).');
+  '// Generated; frozen experts and Flash bridge. Engine/weights shared from v10ultra/file-package.js.\nwindow.GOMOKU_V10FLASH_FILE_PACKAGE=' + JSON.stringify(pack) + ';\n');
+console.log('Built V10Flash proof core and file-origin package (frozen experts, training priors; engine shared from V10Ultra).');
