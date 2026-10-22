@@ -118,7 +118,7 @@ function uiHarness({assistant = false, embedded = false, protocol = 'https:'} = 
     navigator:{clipboard:{async writeText(value){copied.push(value);}}},
     confirm:()=>true,
     Option:class {constructor(text,value){this.textContent=text;this.value=value;}},
-    setTimeout(fn){timers.push(fn);},
+    setTimeout(fn){timers.push(fn);},clearTimeout(){},
     fetch(url,init){
       // 归档上传是流式/二进制请求，不解析 JSON；其余调用沿用原有可控 deferred 语义。
       if(String(url).includes('/functions/v1/club-drive')){const result=deferred();archiveRequests.push({url,headers:init.headers,body:init.body,...result});return result.promise;}

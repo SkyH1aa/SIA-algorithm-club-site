@@ -3007,6 +3007,31 @@ async function proxyAdmin(request: Request, action: string, payload: Json): Prom
   return response;
 }
 
+/**
+ * Clear the caller's own generation leases.
+ *
+ * The RPC serialises with quota settlement and is the normal path. If the new
+ * SQL has not been applied yet (or PostgREST has not refreshed its schema),
+ * fall back to deleting the row directly with the service role. The filter is
+ * always the authenticated user's UUID, so neither path can touch another
+ * account; quota reservations and audit rows are never modified either way.
+ */
+async function recoverGenerations(userId: string): Promise<number> {
+  try {
+    const result = await rpc('chat_recover_generations', { p_user_id: userId });
+    if (result && typeof result === 'object' && Number.isSafeInteger((result as Json).released)) {
+      return Number((result as Json).released);
+    }
+  } catch { /* fall through to the direct delete */ }
+  const response = await rest(`chat_generation_leases?user_id=eq.${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+    headers: { prefer: 'return=representation' }
+  });
+  if (!response.ok) throw new HttpError('database', 503);
+  const rows = await response.json().catch(() => []);
+  return Array.isArray(rows) ? rows.length : 0;
+}
+
 async function assistantRuntime(userId: string) {
   const runtime = await rpc('chat_assistant_runtime', {}) as { enabled?: boolean; release?: AssistantRelease } | null;
   const release = runtime?.release;
@@ -3149,8 +3174,7 @@ async function main(request: Request, payload: Json): Promise<Response> {
     // Clears only the caller's own generation leases after they abort their
     // local requests. Quota reservations and audit rows stay untouched.
     const ctx = await context(request);
-    const result = object(await rpc('chat_recover_generations', { p_user_id: ctx.user.id }));
-    return json(request, { released: Number.isSafeInteger(result.released) ? result.released : 0 });
+    return json(request, { released: await recoverGenerations(ctx.user.id) });
   }
   if (action === 'admin_test') return await callResponses(request, await context(request, true), payload, true);
   throw new HttpError('action', 400);

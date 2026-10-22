@@ -877,7 +877,7 @@ const model = () => models.find(x => x.id === $('model').value);
 function mergeModels(catalog, saved) {
   return [...catalog, ...saved.map(item => ({...CUSTOM_METADATA,...item,profileId:item.id,id:`custom:${item.id}`,source:'custom',profileName:item.display_name,display_name:`${item.display_name} · ${t('customBadge')}`}))];
 }
-const ERROR_STATUS = new Set(['assistant_unavailable','failure','interrupted','cancelled','storage','request','upstream_timeout','quota','quotaReset','context','request_too_large','file','pdf','blacklisted','busy','customKey','profile','login','claude_thinking','claude_thinking_budget','claude_effort']);
+const ERROR_STATUS = new Set(['assistant_unavailable','failure','interrupted','cancelled','storage','request','upstream_timeout','quota','quotaReset','context','request_too_large','file','pdf','blacklisted','busy','customKey','profile','login','recoverLogin','recoverOutdated','recoverTimeout','recoverFailed','claude_thinking','claude_thinking_budget','claude_effort']);
 function status(key, vars = {}) {
   statusKey = key; statusVars = vars;
   const node = $('status');
@@ -2061,7 +2061,8 @@ function stopWork() {
 async function recoverGenerations() {
   if (!session || recovering) return;
   if (!(await ClubCommon.confirm({ message: t('recoverConfirm') }))) return;
-  const guard = epoch, userId = session.user.id, token = session.access_token;
+  const guard = epoch, userId = session.user.id;
+  let token = session.access_token;
   recovering = true; controls();
   try {
     const pendingRuns = [...generations].map(run => run.done);
@@ -2069,25 +2070,51 @@ async function recoverGenerations() {
     for (const run of generations) { run.stopped = true; run.controller.abort(); }
     compacting = false;
     // 等被中止的生成走完自己的 finally，否则它会把状态覆盖回“已取消”，
-    // 用户看不到重启结果，活动锁也可能短暂残留。
-    await Promise.allSettled([...pendingRuns, compactJob].filter(Boolean));
+    // 用户看不到重启结果；但本地存储异常时不能让按钮永久卡住。
+    await Promise.race([
+      Promise.allSettled([...pendingRuns, compactJob].filter(Boolean)),
+      new Promise(resolve => setTimeout(resolve, 5000))
+    ]);
     if (guard !== epoch) return;
     for (const chat of chats) {
       let changed = false;
       for (const turn of chat.turns) if (turn.status === 'running') { turn.status = 'interrupted'; changed = true; }
       if (changed) { try { await persist(chat, guard); } catch { /* 本地写入失败不影响服务端清理 */ } }
     }
-    const response = await fetch(`${URL}/functions/v1/chat`, {
+    const post = async (signal) => fetch(`${URL}/functions/v1/chat`, {
       method:'POST',
       headers:{'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${token}`},
-      body:JSON.stringify({action:'generation_recover'})
+      body:JSON.stringify({action:'generation_recover'}),
+      signal
     });
-    if (!response.ok) throw new Error('request');
+    // 服务端/网络卡住时不要让按钮无限转圈。
+    const call = async () => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
+      try { return await post(controller.signal); }
+      finally { clearTimeout(timer); }
+    };
+    let response = await call();
+    // 长时间挂起后 access_token 可能已过期；刷新一次会话再重试。
+    if (response.status === 401) {
+      const fresh = await client.auth.getSession().catch(() => null);
+      const next = fresh?.data?.session?.access_token;
+      if (next && next !== token) { token = next; response = await call(); }
+    }
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      if (guard === epoch) {
+        if (response.status === 401) status('recoverLogin');
+        else if (response.status === 400 || response.status === 404) status('recoverOutdated');
+        else status('recoverFailed');
+      }
+      return;
+    }
     const data = await response.json().catch(() => ({}));
     if (guard !== epoch) return;
     status('recoverDone', {released: Number.isSafeInteger(data.released) ? data.released : 0});
-  } catch {
-    if (guard === epoch) status('recoverFailed');
+  } catch (error) {
+    if (guard === epoch) status(error?.name === 'AbortError' ? 'recoverTimeout' : 'recoverFailed');
   } finally {
     if (guard === epoch) { recovering = false; controls(); render(); }
   }

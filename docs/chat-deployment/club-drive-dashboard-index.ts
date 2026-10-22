@@ -738,6 +738,346 @@ async function listMemberPoints() {
   return await response.json();
 }
 
+// ---- 通知中心 -------------------------------------------------------------
+// 通知只按 user_id 投递，读取一律经此函数投影，前端拿不到其他社员的数据。
+
+const NOTIFICATION_KINDS = new Set(['announcement', 'event', 'signup', 'points', 'message', 'mall', 'account', 'system']);
+
+function notificationRow(row: Record<string, unknown>) {
+  return {
+    id: String(row.id || ''),
+    kind: NOTIFICATION_KINDS.has(String(row.kind)) ? String(row.kind) : 'system',
+    title: typeof row.title === 'string' ? row.title : '',
+    body: typeof row.body === 'string' ? row.body : '',
+    link: typeof row.link === 'string' ? row.link : '',
+    read: Boolean(row.read_at),
+    created_at: row.created_at ?? null
+  };
+}
+
+async function listNotifications(userId: string, limit = 50) {
+  const { url, serviceKey } = supabaseConfig();
+  const size = Math.min(Math.max(Number(limit) || 50, 1), 200);
+  const response = await fetch(
+    `${url}/rest/v1/club_notifications?select=id,kind,title,body,link,read_at,created_at&user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc&limit=${size}`,
+    { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` } }
+  );
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(detail.includes('Could not find the table') || detail.includes('relation')
+      ? '通知表尚未创建，请先执行 club-notifications-schema.sql。'
+      : '读取通知失败。');
+  }
+  const rows = await response.json().catch(() => []);
+  const notifications = Array.isArray(rows) ? rows.map(notificationRow) : [];
+  // 未读数单独取一次，避免为了角标把全部历史都拉下来。
+  const unreadResponse = await fetch(
+    `${url}/rest/v1/club_notifications?select=id&user_id=eq.${encodeURIComponent(userId)}&read_at=is.null&limit=1`,
+    { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}`, prefer: 'count=exact' } }
+  );
+  const contentRange = unreadResponse.headers.get('content-range') || '';
+  const total = Number(contentRange.split('/')[1]);
+  return { notifications, unreadCount: Number.isFinite(total) ? total : notifications.filter(item => !item.read).length };
+}
+
+async function markNotificationsRead(userId: string, ids: unknown) {
+  const { url, serviceKey } = supabaseConfig();
+  const now = new Date().toISOString();
+  const list = Array.isArray(ids) ? ids.filter(value => validUuid(value)) : [];
+  const filter = list.length
+    ? `user_id=eq.${encodeURIComponent(userId)}&id=in.(${list.map(value => encodeURIComponent(String(value))).join(',')})`
+    : `user_id=eq.${encodeURIComponent(userId)}`;
+  const response = await fetch(`${url}/rest/v1/club_notifications?${filter}&read_at=is.null`, {
+    method: 'PATCH',
+    headers: {
+      apikey: serviceKey,
+      authorization: `Bearer ${serviceKey}`,
+      'content-type': 'application/json',
+      prefer: 'return=minimal'
+    },
+    body: JSON.stringify({ read_at: now })
+  });
+  if (!response.ok) throw new Error('标记通知已读失败。');
+  return { ok: true, markedAll: list.length === 0 };
+}
+
+// 事件通知的统一入口：dedupe_key 保证同一条公告对同一用户只写一次。
+async function pushNotifications(
+  rows: Array<{ userId: string; kind: string; title: string; body?: string; link?: string; dedupeKey?: string }>
+) {
+  const clean = rows.filter(row => validUuid(row.userId) && row.title.trim());
+  if (!clean.length) return { inserted: 0 };
+  const { url, serviceKey } = supabaseConfig();
+  const response = await fetch(`${url}/rest/v1/club_notifications`, {
+    method: 'POST',
+    headers: {
+      apikey: serviceKey,
+      authorization: `Bearer ${serviceKey}`,
+      'content-type': 'application/json',
+      prefer: 'resolution=ignore-duplicates,return=minimal'
+    },
+    body: JSON.stringify(clean.map(row => ({
+      user_id: row.userId,
+      kind: NOTIFICATION_KINDS.has(row.kind) ? row.kind : 'system',
+      title: row.title.slice(0, 160),
+      body: (row.body || '').slice(0, 2000),
+      link: (row.link || '').slice(0, 500),
+      dedupe_key: (row.dedupeKey || '').slice(0, 200)
+    })))
+  });
+  if (!response.ok) return { inserted: 0 };
+  return { inserted: clean.length };
+}
+
+// 通知所有已绑定社团账号的社员。广播型事件（公告/活动）用它。
+async function allMemberUserIds() {
+  const { url, serviceKey } = supabaseConfig();
+  const response = await fetch(`${url}/rest/v1/club_member_profiles?select=user_id`, {
+    headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` }
+  });
+  if (!response.ok) return [];
+  const rows = await response.json().catch(() => []);
+  return Array.isArray(rows) ? rows.map(row => String(row.user_id || '')).filter(validUuid) : [];
+}
+
+// ---- 社员个人主页 ---------------------------------------------------------
+
+const PROFILE_DEFAULT_SETTINGS = {
+  show_points: true, show_donations: false, show_games: true, show_checkin: false, headline: ''
+};
+
+function profileSettingsRow(row: Record<string, unknown> | null) {
+  if (!row) return { ...PROFILE_DEFAULT_SETTINGS };
+  return {
+    show_points: row.show_points !== false,
+    show_donations: row.show_donations === true,
+    show_games: row.show_games !== false,
+    show_checkin: row.show_checkin === true,
+    headline: typeof row.headline === 'string' ? row.headline : ''
+  };
+}
+
+async function memberProfileSettings(userId: string) {
+  const { url, serviceKey } = supabaseConfig();
+  const response = await fetch(
+    `${url}/rest/v1/club_member_profile_settings?select=show_points,show_donations,show_games,show_checkin,headline&user_id=eq.${encodeURIComponent(userId)}&limit=1`,
+    { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` } }
+  );
+  if (!response.ok) return { exists: false, ...PROFILE_DEFAULT_SETTINGS };
+  const rows = await response.json().catch(() => []);
+  const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
+  return { exists: Boolean(row), ...profileSettingsRow(row) };
+}
+
+async function saveMemberProfileSettings(userId: string, payload: Record<string, unknown>) {
+  const { url, serviceKey } = supabaseConfig();
+  const headline = String(payload.headline ?? '').trim();
+  if (headline.length > 80) throw new Error('个人简介最多 80 个字符。');
+  const body = {
+    user_id: userId,
+    show_points: payload.show_points !== false,
+    show_donations: payload.show_donations === true,
+    show_games: payload.show_games !== false,
+    show_checkin: payload.show_checkin === true,
+    headline,
+    updated_at: new Date().toISOString()
+  };
+  const response = await fetch(`${url}/rest/v1/club_member_profile_settings?on_conflict=user_id`, {
+    method: 'POST',
+    headers: {
+      apikey: serviceKey,
+      authorization: `Bearer ${serviceKey}`,
+      'content-type': 'application/json',
+      prefer: 'resolution=merge-duplicates,return=minimal'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(detail.includes('Could not find the table') || detail.includes('relation')
+      ? '个人主页设置表尚未创建，请先执行 club-notifications-schema.sql。'
+      : '保存个人主页设置失败。');
+  }
+  return { exists: true, ...profileSettingsRow(body) };
+}
+
+// 只按中文姓名精确匹配（捐赠表没有成员外键），同姓名多条求和。
+async function donationTotalFor(name: string) {
+  const { url, serviceKey } = supabaseConfig();
+  const response = await fetch(
+    `${url}/rest/v1/club_donations?select=amount,donated_on&donor_name=eq.${encodeURIComponent(name)}`,
+    { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` } }
+  );
+  if (!response.ok) return { total: 0, count: 0, latest: null };
+  const rows = await response.json().catch(() => []);
+  if (!Array.isArray(rows)) return { total: 0, count: 0, latest: null };
+  let total = 0;
+  let latest: string | null = null;
+  for (const row of rows) {
+    total += Number(row.amount) || 0;
+    const day = typeof row.donated_on === 'string' ? row.donated_on.slice(0, 10) : null;
+    if (day && (!latest || day > latest)) latest = day;
+  }
+  return { total: Number(total.toFixed(2)), count: rows.length, latest };
+}
+
+// 站内三个游戏（五子棋 / 俄罗斯方块 / 贪吃蛇），不含行于无垠。
+// 游戏表只存自由昵称，因此这里按昵称精确匹配，不做模糊猜测。
+async function gameStatsFor(name: string) {
+  const { url, serviceKey } = supabaseConfig();
+  const headers = { apikey: serviceKey, authorization: `Bearer ${serviceKey}` };
+  const query = async (table: string, select: string) => {
+    const response = await fetch(
+      `${url}/rest/v1/${table}?select=${select}&nickname=eq.${encodeURIComponent(name)}&limit=1`,
+      { headers }
+    );
+    if (!response.ok) return null;
+    const rows = await response.json().catch(() => []);
+    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+  };
+  const [gomoku, tetris, tetrisVersus, snake, snakeVersus] = await Promise.all([
+    query('gomoku_players', 'nickname,wins,losses,draws,total_score,total_moves'),
+    query('tetris_players', 'nickname,games_played,high_score'),
+    query('tetris_versus_players', 'nickname,games_played,high_score'),
+    query('snake_players', 'nickname,games_played,high_score'),
+    query('snake_versus_players', 'nickname,games_played,high_score')
+  ]);
+  return {
+    gomoku: gomoku ? {
+      wins: Number(gomoku.wins) || 0,
+      losses: Number(gomoku.losses) || 0,
+      draws: Number(gomoku.draws) || 0,
+      score: Number(gomoku.total_score) || 0,
+      moves: Number(gomoku.total_moves) || 0
+    } : null,
+    tetris: tetris ? { games: Number(tetris.games_played) || 0, high: Number(tetris.high_score) || 0 } : null,
+    tetrisVersus: tetrisVersus ? { games: Number(tetrisVersus.games_played) || 0, high: Number(tetrisVersus.high_score) || 0 } : null,
+    snake: snake ? { games: Number(snake.games_played) || 0, high: Number(snake.high_score) || 0 } : null,
+    snakeVersus: snakeVersus ? { games: Number(snakeVersus.games_played) || 0, high: Number(snakeVersus.high_score) || 0 } : null
+  };
+}
+
+async function checkinStatsFor(pointsMemberId: string, name: string) {
+  const { url, serviceKey } = supabaseConfig();
+  const headers = { apikey: serviceKey, authorization: `Bearer ${serviceKey}` };
+  const count = async (query: string) => {
+    const response = await fetch(`${url}/rest/v1/${query}&limit=1`, { headers: { ...headers, prefer: 'count=exact' } });
+    if (!response.ok) return 0;
+    const range = response.headers.get('content-range') || '';
+    const total = Number(range.split('/')[1]);
+    return Number.isFinite(total) ? total : 0;
+  };
+  const [checkins, redemptions] = await Promise.all([
+    count(`club_checkin_uses?select=id&member_name=eq.${encodeURIComponent(name)}`),
+    count(`club_mall_redemptions?select=id&member_name=eq.${encodeURIComponent(name)}`)
+  ]);
+  return { checkins, redemptions, pointsMemberId };
+}
+
+async function publicMemberProfile(memberId: string, viewerId?: string) {
+  if (!validUuid(memberId)) throw new Error('社员不存在。');
+  const { url, serviceKey } = supabaseConfig();
+  const headers = { apikey: serviceKey, authorization: `Bearer ${serviceKey}` };
+
+  const pointsResponse = await fetch(
+    `${url}/rest/v1/club_member_points?select=id,member_name,member_class,points,updated_at&id=eq.${encodeURIComponent(memberId)}&limit=1`,
+    { headers }
+  );
+  if (!pointsResponse.ok) throw new Error('读取社员资料失败。');
+  const pointsRows = await pointsResponse.json().catch(() => []);
+  const points = Array.isArray(pointsRows) && pointsRows[0] ? pointsRows[0] : null;
+  if (!points) throw new Error('社员不存在。');
+
+  const name = typeof points.member_name === 'string' ? points.member_name : '';
+  const memberClass = typeof points.member_class === 'string' ? points.member_class : '';
+
+  // 只有已绑定账号的社员才有展示开关；未绑定时只公开姓名、班级与积分。
+  const profileResponse = await fetch(
+    `${url}/rest/v1/club_member_profiles?select=user_id&points_member_id=eq.${encodeURIComponent(memberId)}&limit=1`,
+    { headers }
+  );
+  const profileRows = profileResponse.ok ? await profileResponse.json().catch(() => []) : [];
+  const boundUserId = Array.isArray(profileRows) && profileRows[0] ? String(profileRows[0].user_id || '') : '';
+  const settings = boundUserId ? await memberProfileSettings(boundUserId) : { ...PROFILE_DEFAULT_SETTINGS, exists: false };
+
+  const profile: Record<string, unknown> = {
+    id: String(points.id),
+    member_name: name,
+    member_class: memberClass,
+    points: Number(points.points) || 0,
+    bound: Boolean(boundUserId),
+    is_self: Boolean(viewerId && boundUserId && viewerId === boundUserId),
+    headline: settings.headline || '',
+    settings: {
+      show_points: settings.show_points,
+      show_donations: settings.show_donations,
+      show_games: settings.show_games,
+      show_checkin: settings.show_checkin
+    }
+  };
+
+  if (settings.show_donations) profile.donations = await donationTotalFor(name);
+  if (settings.show_games) profile.games = await gameStatsFor(name);
+  if (settings.show_checkin) profile.checkin = await checkinStatsFor(memberId, name);
+  return { profile };
+}
+
+// ---- 站内搜索 -------------------------------------------------------------
+
+const SEARCH_LIMIT = 20;
+
+function searchHit(type: string, id: string, title: string, subtitle: string, link: string) {
+  return { type, id, title, subtitle, link };
+}
+
+async function searchAll(query: string) {
+  const text = query.trim();
+  if (!text) return { query: '', groups: [] };
+  const { url, serviceKey } = supabaseConfig();
+  const headers = { apikey: serviceKey, authorization: `Bearer ${serviceKey}` };
+  const like = `*${text.replace(/[*,()]/g, '')}*`;
+  const get = async (path: string) => {
+    const response = await fetch(`${url}/rest/v1/${path}`, { headers });
+    if (!response.ok) return [];
+    const rows = await response.json().catch(() => []);
+    return Array.isArray(rows) ? rows : [];
+  };
+
+  const [announcements, events, members, products, resources] = await Promise.all([
+    get(`club_announcements?select=id,title,content,category&is_published=eq.true&title=ilike.${encodeURIComponent(like)}&limit=${SEARCH_LIMIT}`),
+    get(`club_events?select=id,title,summary,status,starts_at&is_published=eq.true&title=ilike.${encodeURIComponent(like)}&limit=${SEARCH_LIMIT}`),
+    get(`club_member_points?select=id,member_name,member_class,points&member_name=ilike.${encodeURIComponent(like)}&limit=${SEARCH_LIMIT}`),
+    get(`club_mall_products?select=id,name,description,price&name=ilike.${encodeURIComponent(like)}&limit=${SEARCH_LIMIT}`),
+    Promise.resolve([])
+  ]);
+
+  const groups = [
+    {
+      type: 'member',
+      items: members.map(row => searchHit('member', String(row.id || ''), String(row.member_name || ''),
+        `${row.member_class || ''} · ${Number(row.points) || 0} 分`, `member-profile.html?id=${encodeURIComponent(String(row.id || ''))}`))
+    },
+    {
+      type: 'announcement',
+      items: announcements.map(row => searchHit('announcement', String(row.id || ''), String(row.title || ''),
+        String(row.category || ''), 'events.html#announcements'))
+    },
+    {
+      type: 'event',
+      items: events.map(row => searchHit('event', String(row.id || ''), String(row.title || ''),
+        `${row.status || ''}${row.starts_at ? ' · ' + String(row.starts_at).slice(0, 10) : ''}`, 'events.html#events'))
+    },
+    {
+      type: 'product',
+      items: products.map(row => searchHit('product', String(row.id || ''), String(row.name || ''),
+        `${Number(row.price) || 0} 分`, 'points-mall.html'))
+    },
+    { type: 'resource', items: resources }
+  ].filter(group => group.items.length);
+
+  return { query: text, groups };
+}
+
 async function saveMemberPoints(id: unknown, memberName: unknown, memberClass: unknown, points: unknown) {
   const { url, serviceKey } = supabaseConfig();
   const fields = pointFields(memberName, memberClass, points);
@@ -763,7 +1103,34 @@ async function saveMemberPoints(id: unknown, memberName: unknown, memberClass: u
     throw new Error('保存社员积分失败。');
   }
   if (isUpdate && (!Array.isArray(payload) || payload.length !== 1)) throw new Error('未找到需要修改的社员。');
-  return Array.isArray(payload) ? payload[0] : payload;
+  const saved = Array.isArray(payload) ? payload[0] : payload;
+  // 积分变动通知本人（未绑定账号的记录没有可投递对象，静默跳过）。
+  if (saved && validUuid(saved.id)) await notifyPointsChange(saved, isUpdate ? 'update' : 'create');
+  return saved;
+}
+
+async function notifyPointsChange(row: Record<string, unknown>, mode: 'create' | 'update') {
+  const memberId = String(row.id || '');
+  if (!validUuid(memberId)) return;
+  const { url, serviceKey } = supabaseConfig();
+  const response = await fetch(
+    `${url}/rest/v1/club_member_profiles?select=user_id&points_member_id=eq.${encodeURIComponent(memberId)}&limit=1`,
+    { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` } }
+  );
+  if (!response.ok) return;
+  const rows = await response.json().catch(() => []);
+  const userId = Array.isArray(rows) && rows[0] ? String(rows[0].user_id || '') : '';
+  if (!validUuid(userId)) return;
+  const points = Number(row.points) || 0;
+  await pushNotifications([{
+    userId,
+    kind: 'points',
+    title: mode === 'create' ? '你的积分记录已建立' : '你的积分已更新',
+    body: `当前积分：${points} 分`,
+    link: 'member-points.html',
+    // 同一积分值只提醒一次，避免重复保存造成刷屏。
+    dedupeKey: `points:${memberId}:${points}:${mode}`
+  }]);
 }
 
 async function deleteMemberPoints(id: unknown) {
@@ -817,7 +1184,33 @@ async function createMemberMessage(memberName: unknown, memberClass: unknown, me
   });
   const payload = await response.json().catch(() => null);
   if (!response.ok) throw new Error('提交留言失败。');
-  return Array.isArray(payload) ? payload[0] : payload;
+  const message = Array.isArray(payload) ? payload[0] : payload;
+  // 新留言提醒有留言管理权限的社员（超管 + can_messages）。
+  if (message && validUuid(message.id)) await notifyMessageManagers(message);
+  return message;
+}
+
+async function notifyMessageManagers(row: Record<string, unknown>) {
+  const { url, serviceKey } = supabaseConfig();
+  const headers = { apikey: serviceKey, authorization: `Bearer ${serviceKey}` };
+  const response = await fetch(
+    `${url}/rest/v1/club_staff_permissions?select=user_id&can_messages=eq.true`,
+    { headers }
+  );
+  if (!response.ok) return;
+  const rows = await response.json().catch(() => []);
+  const staff = Array.isArray(rows) ? rows.map(item => String(item.user_id || '')).filter(validUuid) : [];
+  if (!staff.length) return;
+  const name = String(row.member_name || '社员');
+  const preview = String(row.message_content || '').slice(0, 60);
+  await pushNotifications(staff.map(userId => ({
+    userId,
+    kind: 'message',
+    title: `新留言：${name}`,
+    body: preview,
+    link: 'member-messages.html',
+    dedupeKey: `message:${String(row.id || '')}`
+  })));
 }
 
 async function updateMemberMessage(id: unknown, memberName: unknown, memberClass: unknown, messageContent: unknown) {
@@ -1066,7 +1459,7 @@ async function bindMemberProfile(
 
 function normalizeThemeMode(value: unknown) {
   const mode = String(value ?? '').trim().toLowerCase();
-  return mode === 'light' || mode === 'dark' || mode === 'auto' ? mode : 'auto';
+  return mode === 'light' || mode === 'dark' || mode === 'auto' || mode === 'system' ? mode : 'auto';
 }
 
 function isMissingRpcError(payload: unknown, response?: Response) {
@@ -1243,6 +1636,20 @@ async function upsertStaffPermissions(
   if (!response.ok || !Array.isArray(payload) || !payload[0]) {
     throw new Error((payload as { message?: string } | null)?.message || '保存权限失败。');
   }
+  // 权限变更通知本人（只列出被授予的能力，不暴露其他人的权限）。
+  const granted = [
+    ['can_checkin', '签到管理'], ['can_points', '积分管理'], ['can_messages', '留言管理'],
+    ['can_invites', '邀请码管理'], ['can_events', '活动管理'], ['can_mall', '商城管理'],
+    ['can_members', '成员展示管理'], ['can_join', '报名管理']
+  ].filter(([key]) => body[key as keyof typeof body] === true).map(([, label]) => label);
+  await pushNotifications([{
+    userId: user.id,
+    kind: 'account',
+    title: granted.length ? '你的管理权限已更新' : '你的管理权限已被收回',
+    body: granted.length ? granted.join('、') : '如需恢复请联系社长。',
+    link: 'member-center.html',
+    dedupeKey: `permissions:${user.id}:${new Date().toISOString().slice(0, 10)}:${granted.join(',')}`
+  }]);
   return payload[0];
 }
 
@@ -1320,6 +1727,7 @@ async function saveAnnouncement(user: { id?: string }, payload: Record<string, u
     );
     const rows = await response.json().catch(() => null);
     if (!response.ok || !Array.isArray(rows) || !rows[0]) throw new Error('更新公告失败。');
+    if (body.is_published) await broadcastAnnouncement(rows[0]);
     return rows[0];
   }
   if (isFeatured) body.featured_push_at = nowIso;
@@ -1335,7 +1743,26 @@ async function saveAnnouncement(user: { id?: string }, payload: Record<string, u
   });
   const rows = await response.json().catch(() => null);
   if (!response.ok || !Array.isArray(rows) || !rows[0]) throw new Error('发布公告失败。');
+  if (body.is_published) await broadcastAnnouncement(rows[0]);
   return rows[0];
+}
+
+// 新公告通知全体已绑定社员。dedupe_key 用公告 id + 推送时间，
+// 同一公告的后续编辑不会重复打扰。
+async function broadcastAnnouncement(row: Record<string, unknown>) {
+  const id = String(row.id || '');
+  if (!validUuid(id) || row.is_published === false) return;
+  const userIds = await allMemberUserIds();
+  if (!userIds.length) return;
+  const stamp = String(row.featured_push_at || row.updated_at || row.created_at || '');
+  await pushNotifications(userIds.map(userId => ({
+    userId,
+    kind: 'announcement',
+    title: String(row.title || '新公告'),
+    body: String(row.content || '').slice(0, 160),
+    link: 'events.html#announcements',
+    dedupeKey: `announcement:${id}:${stamp}`
+  })));
 }
 
 async function deleteAnnouncement(idInput: unknown) {
@@ -1418,6 +1845,7 @@ async function saveEvent(user: { id?: string }, payload: Record<string, unknown>
     );
     const rows = await response.json().catch(() => null);
     if (!response.ok || !Array.isArray(rows) || !rows[0]) throw new Error('更新活动失败。');
+    if (body.is_published) await broadcastEvent(rows[0]);
     return rows[0];
   }
   if (isFeatured) body.featured_push_at = nowIso;
@@ -1433,7 +1861,27 @@ async function saveEvent(user: { id?: string }, payload: Record<string, unknown>
   });
   const rows = await response.json().catch(() => null);
   if (!response.ok || !Array.isArray(rows) || !rows[0]) throw new Error('创建活动失败。');
+  if (body.is_published) await broadcastEvent(rows[0]);
   return rows[0];
+}
+
+// 新活动通知全体已绑定社员；已取消/草稿状态不打扰。
+async function broadcastEvent(row: Record<string, unknown>) {
+  const id = String(row.id || '');
+  if (!validUuid(id) || row.is_published === false) return;
+  if (row.status === '草稿' || row.status === '已取消') return;
+  const userIds = await allMemberUserIds();
+  if (!userIds.length) return;
+  const stamp = String(row.featured_push_at || row.updated_at || row.created_at || '');
+  const when = typeof row.starts_at === 'string' ? row.starts_at.slice(0, 16).replace('T', ' ') : '';
+  await pushNotifications(userIds.map(userId => ({
+    userId,
+    kind: 'event',
+    title: String(row.title || '新活动'),
+    body: [String(row.summary || ''), when].filter(Boolean).join(' · ').slice(0, 160),
+    link: 'events.html#events',
+    dedupeKey: `event:${id}:${stamp}`
+  })));
 }
 
 async function repushHomeFeatured(kindInput: unknown, idInput: unknown, user: { id?: string } | null) {
@@ -1612,7 +2060,26 @@ async function updateEventSignupStatus(idInput: unknown, statusInput: unknown) {
   );
   const rows = await response.json().catch(() => null);
   if (!response.ok || !Array.isArray(rows) || !rows[0]) throw new Error('更新报名状态失败。');
-  return rows[0];
+  const signup = rows[0];
+  // 报名审核结果通知报名人（只有带 user_id 的报名才可投递）。
+  const userId = String(signup.user_id || '');
+  if (validUuid(userId) && (status === '已拒绝' || status === '已取消')) {
+    const eventResponse = await fetch(
+      `${url}/rest/v1/club_events?select=title&id=eq.${encodeURIComponent(String(signup.event_id || ''))}&limit=1`,
+      { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` } }
+    );
+    const eventRows = eventResponse.ok ? await eventResponse.json().catch(() => []) : [];
+    const title = Array.isArray(eventRows) && eventRows[0] ? String(eventRows[0].title || '') : '';
+    await pushNotifications([{
+      userId,
+      kind: 'signup',
+      title: status === '已拒绝' ? '报名未通过' : '报名已取消',
+      body: title ? `活动：${title}` : '',
+      link: 'events.html#events',
+      dedupeKey: `signup:${String(signup.id || '')}:${status}`
+    }]);
+  }
+  return signup;
 }
 
 async function publicHomeFeed() {
@@ -3011,6 +3478,56 @@ Deno.serve(async request => {
     if (payload.action === 'member_profile_get') {
       if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
       return json(await getMemberProfile(user));
+    }
+
+    if (payload.action === 'member_profile_public_get') {
+      if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
+      try {
+        return json(await publicMemberProfile(String(payload.memberId || payload.member_id || ''), user.id));
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '读取社员资料失败。' }, 404);
+      }
+    }
+
+    if (payload.action === 'member_profile_settings_get') {
+      if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
+      return json(await memberProfileSettings(user.id));
+    }
+
+    if (payload.action === 'member_profile_settings_set') {
+      if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
+      try {
+        return json(await saveMemberProfileSettings(user.id, payload));
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '保存个人主页设置失败。' }, 400);
+      }
+    }
+
+    if (payload.action === 'notifications_list') {
+      if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
+      try {
+        return json(await listNotifications(user.id, payload.limit));
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '读取通知失败。' }, 400);
+      }
+    }
+
+    if (payload.action === 'notifications_mark_read') {
+      if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
+      try {
+        return json(await markNotificationsRead(user.id, payload.ids));
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '标记通知已读失败。' }, 400);
+      }
+    }
+
+    if (payload.action === 'search_all') {
+      // 站内搜索只覆盖已发布内容，未登录也能用。
+      try {
+        return json(await searchAll(String(payload.query || payload.q || '')));
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '搜索失败。' }, 400);
+      }
     }
 
     if (payload.action === 'member_profile_bind') {

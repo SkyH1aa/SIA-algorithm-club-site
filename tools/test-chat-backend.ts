@@ -40,7 +40,7 @@ let wire: string | null;
 let audits: Row[], patches: Row[], upstreamBodies: Array<Row & { input: Array<{ content: Array<{ text: string; image_url: string }> }> }>, requests: URL[], liveRequests: URL[], released: number, finishAttempts: number, leased: boolean;
 let quota: Row, admissionCode: string | null, shrink: number | null, conflict: boolean;
 let rpcCalls: Array<{ name: string; body: Row }>, settlements: Row[];
-let charged: number, leaseTouches: number;
+let charged: number, leaseTouches: number, recoverRpcMissing: boolean;
 let proxyRoute: Row | null, proxyKey: Row | null;
 const directory = { users: [{ user_id: UID, username: 'local-account', member_name: '测试会员', bound: true }], blacklist: [{ user_id: PID, reason: 'abuse' }] };
 let usageResult: unknown, usageFailure: boolean;
@@ -119,7 +119,7 @@ function reset() {
   assistantRelease = { id:RID,config:{enabled:true,model_id:MID,system_prompt:'Answer club questions honestly.',welcome:'Welcome',suggestions:['如何报名？'],version:1,current_release_id:null},documents:[{...assistantDoc}] };
   terminalGate = null; terminalReached = null; wire = null;
   quota = { global: { daily_limit: null, version: 0, used: 0, remaining: null, resets_at: '2026-10-17T00:00:00Z' }, user: { daily_limit: null, weekly_limit: null, monthly_limit: null, version: 0 }, periods: [], blacklisted: false, reason: null };
-  admissionCode = null; shrink = null; conflict = false; rpcCalls = []; settlements = []; charged = 0; leaseTouches = 0;
+  admissionCode = null; shrink = null; conflict = false; rpcCalls = []; settlements = []; charged = 0; leaseTouches = 0; recoverRpcMissing = false;
   provider = { ...providerBase }; providerWrites = []; modelWrites = []; model = { ...modelBase }; profile = true; admin = true;
   proxyRoute = { id: PID, enabled: true, deleted_at: null, version: 3 };
   proxyKey = { id: MID, route_id: PID, enabled: true, revoked_at: null, version: 4 };
@@ -388,6 +388,7 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
       return json(false);
     }
     if (name === 'chat_recover_generations') {
+      if (recoverRpcMissing) return json({ code: 'PGRST202', message: 'function not found' }, 404);
       assert.equal(row.p_user_id, UID);
       const releasedNow = leased ? 1 : 0;
       leased = false;
@@ -420,6 +421,14 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
       Object.assign(row, patch); patches.push(patch); return json([row]);
     }
     throw new Error('usage reads must use the aggregate RPC, never PostgREST table pagination');
+  }
+  if (table === 'chat_generation_leases') {
+    assert.equal(init.method, 'DELETE');
+    assert.equal(url.searchParams.get('user_id'), `eq.${UID}`, 'fallback deletes only the caller lease');
+    const releasedNow = leased ? 1 : 0;
+    leased = false;
+    if (releasedNow) released++;
+    return json(releasedNow ? [{ user_id: UID }] : []);
   }
   throw new Error(`unexpected mock route ${url}`);
 }) as typeof fetch;
@@ -659,6 +668,13 @@ try {
     assert.equal(released, 1); assert.equal(leased, false);
     // No generation request, audit or provider call happens for a recovery.
     assert.equal(upstreamBodies.length, 0); assert.equal(audits.length, 0);
+
+    // SQL not yet applied: the action must still clear only this user's lease.
+    reset(); leased = true; recoverRpcMissing = true;
+    const fallback = await expectStatus({ action: 'generation_recover' }, 200);
+    assert.deepEqual(await fallback.json(), { released: 1 });
+    assert.equal(leased, false, 'fallback clears the caller lease when the RPC is missing');
+    assert(requests.some(url => url.pathname === '/rest/v1/chat_generation_leases'));
 
     for (const body of [{ action: 'generation_recover', user_id: OTHER_UID }, { action: 'generation_recover', input: [] }]) {
       const count = rpcCalls.length;
