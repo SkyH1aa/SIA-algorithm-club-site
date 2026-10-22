@@ -58,14 +58,19 @@ for (const file of files) {
     'property="og:image:height"': '<meta property="og:image:height" content="630">',
     'property="og:url"': `<meta property="og:url" content="${url}">`,
     'name="twitter:card"': '<meta name="twitter:card" content="summary_large_image">',
+    // 微信 / QQ 的抓取器并不总读 og:image。补上这几种写法能明显提高取到图的概率：
+    // twitter:image 被多数国产客户端复用，itemprop 是 Schema.org 的通用写法，
+    // image_src 是旧版微信网页分享实际读取的字段。
+    'name="twitter:image"': `<meta name="twitter:image" content="${SHARE_IMAGE}">`,
+    'itemprop="image"': `<meta itemprop="image" content="${SHARE_IMAGE}">`,
+    'rel="image_src"': `<link rel="image_src" href="${SHARE_IMAGE}">`,
     'rel="canonical"': `<link rel="canonical" href="${url}">`
   };
 
   const missing = [];
   for (const [needle, tag] of Object.entries(required)) {
-    const pattern = needle.startsWith('rel=')
-      ? /rel="canonical"/.test(html)
-      : new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(html);
+    // Every needle is matched literally (escaped), including rel="..." ones.
+    const pattern = new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(html);
     if (!pattern) missing.push(tag);
   }
 

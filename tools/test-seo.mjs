@@ -45,6 +45,10 @@ for (const [file, expected] of [...shareable, ['index.html', '/index.html']]) {
   assert.match(html, /property="og:image" content="[^"]*og-cover\.png"/, `${file} shares the cover image`);
   assert.match(html, /property="og:url" content="[^"]+"/, `${file} has og:url`);
   assert.match(html, /name="twitter:card" content="summary_large_image"/, `${file} has a Twitter card`);
+  // 微信/QQ 抓取器不总读 og:image，这几种写法是提高取图率的实际手段。
+  assert.match(html, /name="twitter:image" content="[^"]*og-cover\.png"/, `${file} has twitter:image`);
+  assert.match(html, /itemprop="image" content="[^"]*og-cover\.png"/, `${file} has itemprop=image`);
+  assert.match(html, /rel="image_src" href="[^"]*og-cover\.png"/, `${file} has link rel=image_src`);
   assert.match(html, new RegExp(`rel="canonical" href="${SITE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}${expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`),
     `${file} canonical points at the project page`);
 }
