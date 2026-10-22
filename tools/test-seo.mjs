@@ -77,6 +77,29 @@ assert.equal(png.readUInt32BE(20), 630, 'share image is 630px tall');
     `share image has ${outsideBright} bright pixels outside the centre square; WeChat crops to that square`);
 }
 
+// --- no document.write before the social meta ---
+// document.write() inside <head> rewrites the whole document stream, so crawlers
+// (WeChat/QQ) never see the og:* tags and the share card renders completely blank.
+{
+  const html = await read('index.html');
+  const head = html.slice(0, html.indexOf('</head>'));
+  assert.doesNotMatch(head, /document\.write\s*\(/,
+    'index.html must not use document.write in <head>: it erases the og:meta block');
+  // The social block must appear before the first external script.
+  const ogIndex = head.indexOf('og:image');
+  const firstScript = head.indexOf('<script');
+  assert.ok(ogIndex > 0, 'index.html declares og:image');
+  assert.ok(ogIndex < firstScript || firstScript < 0,
+    'og:image must be declared before any <script> so crawlers read it first');
+}
+for (const name of await readdir(path.join(root, 'public'))) {
+  if (!name.endsWith('.html')) continue;
+  const html = await read(path.join('public', name));
+  const head = html.slice(0, html.indexOf('</head>'));
+  assert.doesNotMatch(head, /document\.write\s*\(/,
+    `public/${name} must not use document.write in <head>`);
+}
+
 // --- sitemap / robots ---
 const sitemap = await read('public/sitemap.xml');
 assert.match(sitemap, /<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/);

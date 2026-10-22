@@ -4,16 +4,6 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="public/favicon.svg" type="image/svg+xml" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="public/theme.css?v=39014235">
-  <script src="public/theme.js?v=f92231ba"></script>
-  <script src="public/vendor/three/three.min.js?v=170c6789"></script>
-  <script>
-    // 本地 three.js 失败时回退到 CDN，避免 CDN 不可达导致首页 3D 场景空白。
-    if (!window.THREE) document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js?v=170c6789"><\/script>');
-  </script>
-  <script type="importmap">{"imports":{"three":"public/vendor/three/three.module.js"}}</script>
-  <script src="public/SceneDirector.js?v=20261005-ipad-flow-v7"></script>
-    <title>算法社 · Algorithm Club</title>
     <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统，用真实作品证明训练价值。">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="算法社 · Algorithm Club">
@@ -28,6 +18,24 @@
     <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
     <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
     <link rel="canonical" href="https://skyh1aa.github.io/SIA-algorithm-club-site/index.html">
+  <link rel="stylesheet" href="public/theme.css?v=39014235">
+  <script src="public/theme.js?v=f92231ba"></script>
+  <script src="public/vendor/three/three.min.js?v=170c6789"></script>
+  <script>
+    // 本地 three.js 失败时回退到 CDN。
+    // 这里绝不能用 document.write：它在 <head> 里执行，会重写整个文档流，
+    // 让社交抓取器（微信/QQ）读不到后面的 og:* 标签，分享卡片就变成空白。
+    (function () {
+      if (window.THREE) return;
+      var fallback = document.createElement('script');
+      fallback.src = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js';
+      fallback.async = false;
+      document.head.appendChild(fallback);
+    })();
+  </script>
+  <script type="importmap">{"imports":{"three":"public/vendor/three/three.module.js"}}</script>
+  <script src="public/SceneDirector.js?v=20261005-ipad-flow-v7"></script>
+    <title>算法社 · Algorithm Club</title>
 
     <script src="public/vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="public/club-auth-storage.js?v=80f52e6f"></script>
