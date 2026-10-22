@@ -51,6 +51,7 @@ jobs:
 
       - name: New feature contracts
         run: |
+          node tools/test-club-share.mjs
           node tools/test-notifications.mjs
           node tools/test-member-profile.mjs
           node tools/test-site-search.mjs

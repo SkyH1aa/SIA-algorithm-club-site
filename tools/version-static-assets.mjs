@@ -17,7 +17,7 @@ const check = process.argv.includes('--check');
 // 只版本化这些共享资源；页面私有脚本由页面自身控制。
 const VERSIONED = [
   'theme.css', 'club-ui.css', 'club-shell.js', 'theme.js', 'i18n.js', 'i18n-dict.js', 'i18n-dict-zh.js', 'i18n-dict-en.js',
-  'club-common.js', 'chat-i18n.js', 'assistant-i18n.js', 'member-identity.js',
+  'club-common.js', 'club-share.js', 'chat-i18n.js', 'assistant-i18n.js', 'member-identity.js',
   'club-auth-storage.js', 'service-gate.js', 'service-prompts.js',
   'chat-core.js', 'chat.js', 'chat-file-bundle.js', 'chat.css', 'assistant.css',
   'vendor/supabase/supabase.min.js', 'vendor/three/three.min.js', 'vendor/three/three.module.js', 'sw.js'

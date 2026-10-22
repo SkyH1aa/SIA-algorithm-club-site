@@ -2690,3 +2690,117 @@ html[data-theme="light"] body.club-page .club-feature-group > summary:hover { ba
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
+
+/* ---------- 分享按钮与分享面板 ---------- */
+.share-action {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 11px 16px;
+  border: 1px solid var(--club-line, var(--line, rgba(132,170,214,.24)));
+  background: var(--club-surface-2, var(--panel, #101a2a));
+  color: var(--club-text, var(--text, #e8f1fb));
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s ease, color .15s ease, transform .15s ease;
+}
+.share-action:hover,
+.share-action:focus-visible {
+  border-color: var(--club-accent-line, var(--cyan, rgba(58,212,230,.45)));
+  color: var(--club-accent, var(--cyan, #3ad4e6));
+}
+.share-action:active { transform: translateY(1px); }
+.share-action svg {
+  width: 17px; height: 17px;
+  fill: none; stroke: currentColor; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+.club-share-layer {
+  position: fixed; inset: 0;
+  display: none;
+  /* 用 flex 居中而不是 grid place-items：卡片比视口宽时，grid 的 center
+     会把卡片左侧推出屏幕，flex + margin:auto 不会。 */
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(2, 6, 14, .58);
+  backdrop-filter: blur(3px);
+  z-index: 1200;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
+}
+.club-share-layer.is-open { display: flex; }
+.club-share-card {
+  /* 用 100% 会相对网格轨道计算，窄屏下会被裁切；这里直接用视口宽度约束。 */
+  width: 420px;
+  max-width: 100%;
+  margin: auto;
+  flex: 0 0 auto;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  border: 1px solid var(--club-line, var(--line, rgba(132,170,214,.24)));
+  border-radius: var(--club-radius, 14px);
+  background: var(--club-surface, var(--panel, #0c1320));
+  box-shadow: var(--club-shadow, var(--shadow, 0 18px 48px rgba(0,0,0,.4)));
+  color: var(--club-text, var(--text, #e8f1fb));
+  padding: 20px;
+}
+.club-share-card h2 { margin: 0 0 6px; font-size: 17px; }
+.club-share-card p { margin: 0 0 16px; font-size: 13px; line-height: 1.6; color: var(--club-muted, var(--muted, #90a4bb)); }
+.club-share-options { display: grid; gap: 10px; }
+.club-share-option {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--club-line, var(--line, rgba(132,170,214,.24)));
+  border-radius: 11px;
+  background: var(--club-surface-2, var(--panel, #101a2a));
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.club-share-option:hover,
+.club-share-option:focus-visible {
+  border-color: var(--club-accent-line, var(--cyan, rgba(58,212,230,.45)));
+  color: var(--club-accent, var(--cyan, #3ad4e6));
+}
+.club-share-option svg { width: 20px; height: 20px; flex: 0 0 auto; }
+.club-share-option small { display: block; font-size: 12px; color: var(--club-muted, var(--muted, #90a4bb)); margin-top: 2px; }
+.club-share-cancel {
+  margin-top: 14px; width: 100%;
+  padding: 10px;
+  border: 0; border-radius: 10px;
+  background: transparent;
+  color: var(--club-muted, var(--muted, #90a4bb));
+  font: inherit; font-size: 13px; cursor: pointer;
+}
+.club-share-cancel:hover { color: var(--club-text, var(--text, #e8f1fb)); }
+
+.club-share-toast {
+  position: fixed;
+  left: 50%; bottom: 32px;
+  transform: translate(-50%, 16px);
+  max-width: min(420px, calc(100vw - 40px));
+  padding: 11px 18px;
+  border-radius: 10px;
+  background: var(--club-surface-3, var(--panel, #162236));
+  border: 1px solid var(--club-line, var(--line, rgba(132,170,214,.24)));
+  color: var(--club-text, var(--text, #e8f1fb));
+  font-size: 13px; line-height: 1.5;
+  box-shadow: 0 12px 32px rgba(0,0,0,.32);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+  z-index: 1300;
+}
+.club-share-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+@media print { .share-action, .club-share-layer, .club-share-toast { display: none !important; } }
