@@ -2413,9 +2413,12 @@ html[data-theme="light"] body.club-page .club-feature-group > summary:hover { ba
   body.club-page a { color: #111 !important; text-decoration: none !important; }
 }
 
-/* ---------- 通知铃铛与面板 ---------- */
-body.club-page .club-notify-button,
-body:not(.club-page) .club-notify-button {
+/* ---------- 通知铃铛与面板 ----------
+   两种页面都要适配：
+   * body.club-page 用 --club-* 令牌；
+   * 首页 / 实验室 / 游戏页只有全局 --panel/--line/--text（theme.css）。
+   因此每个属性都给出 --club-*、全局、硬兜底三级回退。 */
+.club-notify-button {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -2423,32 +2426,43 @@ body:not(.club-page) .club-notify-button {
   width: 34px;
   height: 34px;
   padding: 0;
-  border: 1px solid var(--club-line, rgba(132,170,214,.16));
+  border: 1px solid var(--club-line, var(--line, rgba(132,170,214,.22)));
   border-radius: var(--club-radius-sm, 9px);
-  background: var(--club-surface-2, #101a2a);
-  color: var(--club-text-soft, #c2d2e4);
+  background: var(--club-surface-2, var(--panel, #101a2a));
+  color: var(--club-text-soft, var(--text, #c2d2e4));
   cursor: pointer;
 }
-.club-notify-button:hover { border-color: var(--club-accent-line, rgba(58,212,230,.4)); color: var(--club-accent, #3ad4e6); }
-.club-notify-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.club-notify-button:hover,
+.club-notify-button:focus-visible {
+  border-color: var(--club-accent-line, var(--cyan, rgba(58,212,230,.4)));
+  color: var(--club-accent, var(--cyan, #3ad4e6));
+}
+.club-notify-button svg {
+  width: 17px; height: 17px;
+  fill: none; stroke: currentColor; stroke-width: 1.7;
+  stroke-linecap: round; stroke-linejoin: round;
+}
 .club-notify-badge {
   position: absolute; top: -5px; right: -5px;
   min-width: 17px; height: 17px; padding: 0 4px;
   display: grid; place-items: center;
   border-radius: 999px;
-  background: var(--club-danger, #ff8095);
+  background: var(--club-danger, var(--danger, #ff8095));
   color: #fff;
   font-size: 10.5px; font-weight: 700; line-height: 1;
 }
+/* display:grid 会覆盖 [hidden]，导致未读为 0 时仍显示红色 "0"。 */
+.club-notify-badge[hidden] { display: none !important; }
+
 .club-notify-panel {
   position: fixed; top: 66px; right: 20px;
   width: min(360px, calc(100vw - 28px));
   max-height: min(70vh, 520px);
   display: none; flex-direction: column;
-  border: 1px solid var(--club-line, rgba(132,170,214,.16));
+  border: 1px solid var(--club-line, var(--line, rgba(132,170,214,.22)));
   border-radius: var(--club-radius, 14px);
-  background: var(--club-surface, #0c1320);
-  box-shadow: var(--club-shadow, 0 18px 48px rgba(0,0,0,.34));
+  background: var(--club-surface, var(--panel, #0c1320));
+  box-shadow: var(--club-shadow, var(--shadow, 0 18px 48px rgba(0,0,0,.34)));
   z-index: 900;
   overflow: hidden;
 }
@@ -2456,30 +2470,52 @@ body:not(.club-page) .club-notify-button {
 .club-notify-head {
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; padding: 12px 14px;
-  border-bottom: 1px solid var(--club-line, rgba(132,170,214,.16));
+  border-bottom: 1px solid var(--club-line, var(--line, rgba(132,170,214,.22)));
+  color: var(--club-text, var(--text, #e8f1fb));
   font-size: 13.5px;
 }
-.club-notify-head a { color: var(--club-accent, #3ad4e6); font-size: 12.5px; text-decoration: none; }
+.club-notify-head a {
+  color: var(--club-accent, var(--cyan, #3ad4e6));
+  font-size: 12.5px; text-decoration: none;
+}
 .club-notify-list { overflow-y: auto; padding: 6px; display: grid; gap: 4px; }
 .club-notify-item {
   display: grid; gap: 3px;
   padding: 9px 10px;
   border-radius: 10px;
   text-decoration: none;
-  color: var(--club-text, #e8f1fb);
+  color: var(--club-text, var(--text, #e8f1fb));
   border: 1px solid transparent;
 }
-.club-notify-item:hover { background: var(--club-surface-2, #101a2a); border-color: var(--club-line, rgba(132,170,214,.16)); }
-.club-notify-item.is-unread { background: var(--club-accent-soft, rgba(58,212,230,.12)); }
+.club-notify-item:hover {
+  background: var(--club-surface-2, var(--panel, #101a2a));
+  border-color: var(--club-line, var(--line, rgba(132,170,214,.22)));
+}
+.club-notify-item.is-unread {
+  background: var(--club-accent-soft, rgba(58,212,230,.12));
+  border-color: var(--club-accent-line, var(--cyan, rgba(58,212,230,.35)));
+}
 .club-notify-item strong { font-size: 13px; font-weight: 650; }
-.club-notify-item span { font-size: 12.5px; color: var(--club-muted, #90a4bb); line-height: 1.5; }
-.club-notify-item time { font-size: 11.5px; color: var(--club-muted, #90a4bb); font-variant-numeric: tabular-nums; }
-.club-notify-empty { margin: 0; padding: 22px 12px; text-align: center; color: var(--club-muted, #90a4bb); font-size: 13px; }
+.club-notify-item span {
+  font-size: 12.5px;
+  color: var(--club-muted, var(--muted, #90a4bb));
+  line-height: 1.5;
+}
+.club-notify-item time {
+  font-size: 11.5px;
+  color: var(--club-muted, var(--muted, #90a4bb));
+  font-variant-numeric: tabular-nums;
+}
+.club-notify-empty {
+  margin: 0; padding: 22px 12px;
+  text-align: center;
+  color: var(--club-muted, var(--muted, #90a4bb));
+  font-size: 13px;
+}
 @media (max-width: 640px) {
   .club-notify-panel { top: 58px; right: 8px; left: 8px; width: auto; }
 }
 @media print { .club-notify-button, .club-notify-panel { display: none !important; } }
-
 /* ---------- 通知列表页 ---------- */
 .club-notify-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .club-notify-filters .chip {

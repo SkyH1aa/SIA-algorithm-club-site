@@ -1,6 +1,6 @@
 // Offline: node tools/test-seo.mjs
 import assert from 'node:assert/strict';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -30,13 +30,14 @@ assert.match(robots, /Disallow: \/predelete\//, 'predelete is not indexable');
 assert.match(robots, /Disallow: \/docs\//, 'docs are not indexable');
 
 // --- per-page meta on the new pages ---
-for (const [file, expected] of [
-  ['public/notifications.html', '/public/notifications.html'],
-  ['public/member-profile.html', '/public/member-profile.html'],
-  ['public/search.html', '/public/search.html'],
-  ['public/donations.html', '/public/donations.html'],
-  ['index.html', '/index.html']
-]) {
+// Every shareable page needs the tags, not just the pages added this round.
+// WeChat/QQ show a blank card when og:image is missing.
+const shareable = (await readdir(path.join(root, 'public')))
+  .filter(name => name.endsWith('.html'))
+  .filter(name => !['admin-hub.html', 'chat-admin.html', 'events-admin.html', 'join-admin.html',
+    'mall-admin.html', 'members-admin.html', 'password-reset.html', 'appmonitor.html'].includes(name))
+  .map(name => [`public/${name}`, `/public/${name}`]);
+for (const [file, expected] of [...shareable, ['index.html', '/index.html']]) {
   const html = await read(file);
   assert.match(html, /<meta name="description" content="[^"]{20,}"/, `${file} has a description`);
   assert.match(html, /property="og:title"/, `${file} has og:title`);

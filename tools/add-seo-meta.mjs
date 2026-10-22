@@ -1,65 +1,93 @@
-// 给自己新增页面补全 SEO / 社交分享 meta。
-//   node tools/add-seo-meta.mjs
+// 给所有公开页面补齐 Open Graph / Twitter / canonical。
+//   node tools/add-seo-meta.mjs           补齐（幂等）
+//   node tools/add-seo-meta.mjs --check   只校验
 //
-// 规则：
-// * 只补缺失项，不改已有 title/description。
-// * canonical 与 og:url 用 GitHub Pages 项目页地址（SkyH1aa/SIA-algorithm-club-site）。
-// * og:image 指向 1200×630 PNG —— 微信/QQ 不支持 SVG 分享图。
+// 为什么需要：微信、QQ、Telegram 等只读取 HTML 里的 og:* 标签。
+// 缺标签时分享出去就是「一条链接 + 空白卡片」。图片必须是位图 PNG
+// （1200×630），SVG 在这些客户端里不会被渲染。
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const publicDir = path.join(root, 'public');
 const SITE = 'https://skyh1aa.github.io/SIA-algorithm-club-site';
+const CHECK = process.argv.includes('--check');
 
-const PAGES = {
-  'public/notifications.html': {
-    title: '通知 · 算法社',
-    description: '算法社站内通知：公告、活动、报名、积分与留言提醒集中在一处，登录后可查看并标记已读。',
-    path: '/public/notifications.html'
-  },
-  'public/member-profile.html': {
-    title: '社员主页 · 算法社',
-    description: '算法社社员个人主页：积分、捐赠、五子棋/俄罗斯方块/贪吃蛇战绩与签到记录，展示范围由本人决定。',
-    path: '/public/member-profile.html'
-  },
-  'public/search.html': {
-    title: '站内搜索 · 算法社',
-    description: '算法社站内搜索：查找社员、公告、活动与积分商城商品，未登录也可使用。',
-    path: '/public/search.html'
-  },
-  'public/donations.html': {
-    title: '社团捐赠名单 · 算法社',
-    description: '算法社社团捐赠名单：按金额排序，登录可查看，超级管理员可维护记录与收款码。',
-    path: '/public/donations.html'
+// 不对外分享的页面：后台、聊天、密码重置等。
+const EXCLUDED = new Set([
+  'admin-hub.html', 'chat-admin.html', 'events-admin.html', 'join-admin.html',
+  'mall-admin.html', 'members-admin.html', 'password-reset.html', 'appmonitor.html'
+]);
+
+const SHARE_IMAGE = `${SITE}/public/assets/og-cover.png`;
+
+function describe(file) {
+  const html = fs.readFileSync(path.join(publicDir, file), 'utf8');
+  const titleMatch = html.match(/<title>([^<]+)<\/title>/);
+  const title = titleMatch ? titleMatch[1].trim() : '算法社 · Algorithm Club';
+  const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/);
+  const description = descMatch
+    ? descMatch[1]
+    : '算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。';
+  return { title, description };
+}
+
+function escapeAttr(value) {
+  return String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+const files = fs.readdirSync(publicDir).filter(name => name.endsWith('.html') && !EXCLUDED.has(name));
+let updated = 0;
+const problems = [];
+
+for (const file of files) {
+  const full = path.join(publicDir, file);
+  let html = fs.readFileSync(full, 'utf8');
+  const { title, description } = describe(file);
+  const url = `${SITE}/public/${file}`;
+
+  const required = {
+    'name="description"': `<meta name="description" content="${escapeAttr(description)}">`,
+    'property="og:type"': '<meta property="og:type" content="website">',
+    'property="og:site_name"': '<meta property="og:site_name" content="算法社 · Algorithm Club">',
+    'property="og:title"': `<meta property="og:title" content="${escapeAttr(title)}">`,
+    'property="og:description"': `<meta property="og:description" content="${escapeAttr(description)}">`,
+    'property="og:image"': `<meta property="og:image" content="${SHARE_IMAGE}">`,
+    'property="og:image:width"': '<meta property="og:image:width" content="1200">',
+    'property="og:image:height"': '<meta property="og:image:height" content="630">',
+    'property="og:url"': `<meta property="og:url" content="${url}">`,
+    'name="twitter:card"': '<meta name="twitter:card" content="summary_large_image">',
+    'rel="canonical"': `<link rel="canonical" href="${url}">`
+  };
+
+  const missing = [];
+  for (const [needle, tag] of Object.entries(required)) {
+    const pattern = needle.startsWith('rel=')
+      ? /rel="canonical"/.test(html)
+      : new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(html);
+    if (!pattern) missing.push(tag);
   }
-};
 
-const OG_IMAGE = `${SITE}/public/assets/og-cover.png`;
-
-for (const [relative, meta] of Object.entries(PAGES)) {
-  const file = path.join(root, relative);
-  if (!fs.existsSync(file)) { console.log('skip missing', relative); continue; }
-  let html = fs.readFileSync(file, 'utf8');
-  const additions = [];
-
-  if (!/<meta\s+name="description"/i.test(html)) {
-    additions.push(`<meta name="description" content="${meta.description}">`);
+  if (CHECK) {
+    if (missing.length) problems.push(`${file}: missing ${missing.length} tag(s)`);
+    continue;
   }
-  if (!/property="og:type"/i.test(html)) additions.push('<meta property="og:type" content="website">');
-  if (!/property="og:site_name"/i.test(html)) additions.push('<meta property="og:site_name" content="算法社 · Algorithm Club">');
-  if (!/property="og:title"/i.test(html)) additions.push(`<meta property="og:title" content="${meta.title}">`);
-  if (!/property="og:description"/i.test(html)) additions.push(`<meta property="og:description" content="${meta.description}">`);
-  if (!/property="og:image"/i.test(html)) additions.push(`<meta property="og:image" content="${OG_IMAGE}">`);
-  if (!/property="og:image:width"/i.test(html)) additions.push('<meta property="og:image:width" content="1200">');
-  if (!/property="og:image:height"/i.test(html)) additions.push('<meta property="og:image:height" content="630">');
-  if (!/property="og:url"/i.test(html)) additions.push(`<meta property="og:url" content="${SITE}${meta.path}">`);
-  if (!/name="twitter:card"/i.test(html)) additions.push('<meta name="twitter:card" content="summary_large_image">');
-  if (!/rel="canonical"/i.test(html)) additions.push(`<link rel="canonical" href="${SITE}${meta.path}">`);
+  if (!missing.length) continue;
 
-  if (!additions.length) { console.log('already complete', relative); continue; }
-  // Insert immediately before </head> so it never disturbs script order.
-  html = html.replace('</head>', additions.map(line => `  ${line}`).join('\n') + '\n</head>');
-  fs.writeFileSync(file, html, 'utf8');
-  console.log(`updated ${relative} (+${additions.length})`);
+  // 插在 </head> 之前，不改变脚本顺序。
+  html = html.replace('</head>', missing.map(tag => `  ${tag}`).join('\n') + '\n</head>');
+  fs.writeFileSync(full, html, 'utf8');
+  updated += 1;
+}
+
+if (CHECK) {
+  if (problems.length) {
+    console.error(`FAIL ${problems.length} page(s) are missing social meta:`);
+    for (const problem of problems) console.error('  -', problem);
+    process.exit(1);
+  }
+  console.log(`PASS all ${files.length} shareable pages carry description + Open Graph + canonical.`);
+} else {
+  console.log(`Updated ${updated} of ${files.length} pages with social meta.`);
 }
