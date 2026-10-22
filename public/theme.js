@@ -76,11 +76,69 @@
     } catch (_error) { /* ignore */ }
   }
 
+  // 站点图标随主题切换：深色用青蓝 A，日间用朱砂橙红 A。
+  // 必须在每次 applyTheme 时同步，否则切换主题后浏览器标签页仍是旧配色。
+  var FAVICON = {
+    dark: 'favicon.svg',
+    light: 'favicon-light.svg'
+  };
+
+  // theme.js 只在加载那一刻能拿到 document.currentScript；之后异步调用
+  // （定时器、系统主题变化）时它是 null，所以这里缓存一次。
+  var SCRIPT_BASE = (function () {
+    try {
+      var script = document.currentScript;
+      if (script && script.src) return script.src.replace(/[^/]*$/, '');
+    } catch (_error) { /* ignore */ }
+    return '';
+  })();
+
+  function faviconBase() { return SCRIPT_BASE; }
+
+  var pendingFavicon = null;
+
+  function syncFavicon(theme) {
+    try {
+      var href = (theme === 'light' ? FAVICON.light : FAVICON.dark);
+      var links = document.querySelectorAll('link[rel="icon"]');
+      // 页面解析早期（theme.js 在 <head> 里同步执行）还看不到后面的 link，
+      // 此时先记下目标主题，等 DOM 就绪后再补一次，避免出现两个 icon link。
+      if (!links.length && document.readyState === 'loading') {
+        pendingFavicon = href;
+        return;
+      }
+      if (!links.length) {
+        var link = document.createElement('link');
+        link.rel = 'icon';
+        link.type = 'image/svg+xml';
+        link.href = faviconBase() + href;
+        document.head.appendChild(link);
+        return;
+      }
+      // 只保留第一个 icon link，避免多个 link 指向不同文件时浏览器挑错。
+      for (var i = links.length - 1; i >= 1; i -= 1) {
+        if (links[i].parentNode) links[i].parentNode.removeChild(links[i]);
+      }
+      for (var i = 0; i < Math.min(links.length, 1); i += 1) {
+        var node = links[i];
+        // 保留原有的相对/绝对路径风格：只替换文件名。
+        var current = node.getAttribute('href') || '';
+        var next = current.replace(/(?:^|\/)(favicon(?:-light)?\.svg)(?:\?.*)?$/, function (match, file) {
+          return match.replace(file, href);
+        });
+        if (next === current) next = faviconBase() + href;
+        node.setAttribute('href', next);
+        node.setAttribute('type', 'image/svg+xml');
+      }
+    } catch (_error) { /* 图标切换失败不影响主题本身 */ }
+  }
+
   function applyTheme(theme, { silent } = {}) {
     const next = theme === 'light' ? 'light' : 'dark';
     const root = document.documentElement;
     root.setAttribute('data-theme', next);
     root.style.colorScheme = next;
+    syncFavicon(next);
     const changed = appliedTheme !== next;
     appliedTheme = next;
     if (!silent && changed) {
@@ -373,6 +431,17 @@
 
   // 尽早应用，减少闪烁
   currentMode = readStoredMode();
+  // DOM 解析完成后补一次图标同步（覆盖 theme.js 早于 <link rel=icon> 的情况）。
+  function flushPendingFavicon() {
+    pendingFavicon = null;
+    syncFavicon(appliedTheme === 'light' ? 'light' : 'dark');
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', flushPendingFavicon, { once: true });
+  } else {
+    setTimeout(flushPendingFavicon, 0);
+  }
+
   applyTheme(resolveTheme(currentMode), { silent: true });
 
   window.ClubTheme = {

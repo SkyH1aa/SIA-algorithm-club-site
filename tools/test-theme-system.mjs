@@ -21,4 +21,28 @@ assert.match(backend, /mode === 'system'/, 'backend normalises system');
 // The auto (Beijing time) behaviour must be untouched.
 assert.match(theme, /hour >= 6 && hour < 18 \? 'light' : 'dark'/, 'Beijing auto rule unchanged');
 
-console.log('Theme: system mode (matchMedia + change listener), SQL constraint migration, backend normalisation, Beijing auto preserved.');
+// --- 站点图标随主题切换 ---
+// 深色用青蓝 A，日间用朱砂橙红 A（与 theme.css 的 day-paper / day-brand 一致）。
+assert.match(theme, /favicon-light\.svg/, 'theme.js knows the light icon');
+assert.match(theme, /function syncFavicon\(theme\)/, 'theme.js syncs the icon');
+assert.match(theme, /syncFavicon\(next\);/, 'applyTheme updates the icon on every theme change');
+assert.match(theme, /pendingFavicon/, 'early parse is deferred until DOM is ready');
+{
+  const dark = await readFile(path.join(root, 'public/favicon.svg'), 'utf8');
+  const light = await readFile(path.join(root, 'public/favicon-light.svg'), 'utf8');
+  // XML comments may not contain "--", which silently breaks SVG parsing.
+  for (const [name, svg] of [['favicon.svg', dark], ['favicon-light.svg', light]]) {
+    assert.ok(svg.startsWith('<svg'), `${name} is an SVG`);
+    for (const comment of svg.match(/<!--[\s\S]*?-->/g) || []) {
+      assert.ok(!comment.slice(4, -3).includes('--'), `${name} comment must not contain "--"`);
+    }
+  }
+  assert.match(light, /#FFFDFC/, 'light icon uses the day paper background');
+  assert.match(light, /#C54A34/, 'light icon uses the day brand colour');
+  assert.match(dark, /#0b1220/, 'dark icon keeps the night background');
+  const manifest = JSON.parse(await readFile(path.join(root, 'public/asset-versions.json'), 'utf8'));
+  assert.ok(manifest.hashes['favicon.svg'], 'dark icon is content-hashed');
+  assert.ok(manifest.hashes['favicon-light.svg'], 'light icon is content-hashed');
+}
+
+console.log('Theme: system mode, SQL constraint migration, backend normalisation, Beijing auto, theme-aware favicon (dark/light) preserved.');
