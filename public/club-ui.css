@@ -2814,3 +2814,9 @@ html[data-theme="light"] body.club-page .club-feature-group > summary:hover { ba
 .drive-usage-bar span { display: block; height: 100%; border-radius: 999px; background: var(--club-accent); transition: width .3s ease; }
 .drive-usage .hint { margin: 0; }
 @media print { .drive-usage { border-color: #bbb; background: #fff; } }
+
+/* ---------- 社团盘管理：行内操作 ---------- */
+.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.button.small { padding: 4px 10px; font-size: 12px; line-height: 1.5; }
+.drive-usage.is-blocked .drive-usage-bar span { background: #C2410C; }
+.drive-usage.is-full .drive-usage-bar span { background: #B45309; }

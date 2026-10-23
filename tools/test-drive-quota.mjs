@@ -19,6 +19,7 @@ const hub = await read('public/admin-hub.html');
 // --- schema ---
 assert.match(sql, /create table if not exists public\.club_drive_quotas/i);
 assert.match(sql, /max_bytes bigint not null default 0/i);
+assert.match(sql, /max_bytes >= -1/, '-1 is the blocked sentinel and must be allowed');
 assert.match(sql, /user_id uuid,/, 'global row uses a null user_id');
 assert.match(sql, /club_drive_quotas_global_uidx/, 'only one global default row');
 assert.match(sql, /enable row level security/i);
@@ -36,6 +37,19 @@ for (const action of ['admin_drive_quota_list', 'admin_drive_quota_set', 'admin_
   const block = fn.slice(start, start + 420);
   assert.match(block, /requireSuperAdmin\(user\)/, `${action} requires a super admin`);
 }
+// A dedicated member picker action, restricted to super admins.
+const memberAction = fn.slice(fn.indexOf("payload.action === 'admin_drive_members'"), fn.indexOf("payload.action === 'admin_drive_members'") + 500);
+assert.match(memberAction, /requireSuperAdmin\(user\)/, 'member list is super-admin only');
+assert.match(memberAction, /club_member_profiles\?select=user_id,username,member_name/, 'returns name + account only');
+
+// -1 blocks every write.
+assert.match(fn, /if \(n === -1\) return -1;/, 'quotaBytes preserves the sentinel');
+assert.match(fn, /if \(usage\.blocked\) throw new Error/, 'blocked members cannot write');
+// The setter must accept -1, otherwise the UI can send a value the API rejects.
+assert.match(fn, /maxBytes < -1/, 'the setter allows the -1 sentinel');
+assert.doesNotMatch(fn, /maxBytes < 0/, 'the setter no longer rejects -1');
+assert.match(fn, /blocked,/, 'usage reports the blocked flag');
+
 // Quota is enforced before writes.
 assert.match(fn, /async function assertDriveQuota/, 'quota guard exists');
 const uploadBlock = fn.slice(fn.indexOf("streamAction === 'upload'"), fn.indexOf("streamAction === 'upload'") + 900);
@@ -55,6 +69,20 @@ assert.match(page, /admin_drive_quota_set/);
 assert.match(page, /admin_drive_quota_clear/);
 assert.match(page, /drive_quota_get/);
 assert.match(page, /id="globalForm"/);
+// 成员选择改为「中文姓名 + 账号」下拉。
+assert.match(page, /id="userPick" list="memberOptions"/, 'per-user form uses a datalist picker');
+assert.match(page, /id="usagePick" list="memberOptions"/, 'usage form uses the same picker');
+assert.match(page, /function memberLabel\(member\)/, 'labels combine name and account');
+assert.match(page, /\$\{name\}（\$\{account\}）/, 'label format is name（account）');
+assert.match(page, /admin_drive_members/, 'page loads the member directory');
+// 已有配额可回填/编辑/删除。
+assert.match(page, /function fillUserForm\(member\)/, 'selecting a member back-fills the quota');
+assert.match(page, /data-quota-edit/, 'rows expose an edit action');
+assert.match(page, /data-quota-delete/, 'rows expose a remove action');
+assert.match(page, /async function removeQuota\(row\)/, 'removal falls back to the global default');
+assert.match(page, /id="userMb" type="number" min="-1"/, 'per-user limit accepts -1');
+assert.match(page, /id="globalMb" type="number" min="-1"/, 'global limit accepts -1');
+assert.match(page, /function mbToBytes\(raw\)/, 'input conversion preserves -1');
 assert.match(page, /id="userForm"/);
 assert.match(page, /id="usageForm"/);
 // Gate: only super admins reach the content.
@@ -79,6 +107,10 @@ for (const key of used) {
   if (key.includes('.source_')) continue; // built dynamically below
   assert.equal(typeof zh[section]?.[leaf], 'string', `zh missing ${key}`);
   assert.equal(typeof en[section]?.[leaf], 'string', `en missing ${key}`);
+}
+for (const extra of ['blocked', 'blockedHint', 'colActions', 'edit', 'remove', 'loadedQuota', 'noPersonalQuota', 'savedUser', 'confirmRemove', 'removed', 'pickMember', 'pickHint', 'limitHint']) {
+  assert.equal(typeof zh.driveAdmin[extra], 'string', `zh missing driveAdmin.${extra}`);
+  assert.equal(typeof en.driveAdmin[extra], 'string', `en missing driveAdmin.${extra}`);
 }
 for (const source of ['none', 'global', 'user']) {
   assert.equal(typeof zh.driveAdmin[`source_${source}`], 'string', `zh source_${source}`);

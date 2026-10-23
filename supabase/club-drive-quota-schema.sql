@@ -11,13 +11,16 @@ create table if not exists public.club_drive_quotas (
   id uuid primary key default gen_random_uuid(),
   -- null 表示全局默认配额；非 null 表示该用户的专属配额。
   user_id uuid,
-  -- 上限字节数。0 表示不限制。
+  -- 上限字节数：
+  --   -1 = 禁止使用社团盘（不可上传、不可归档）
+  --    0 = 不限制
+  --   >0 = 上限
   max_bytes bigint not null default 0,
   note text not null default '',
   updated_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
-  constraint club_drive_quotas_max_bytes_check check (max_bytes >= 0),
+  constraint club_drive_quotas_max_bytes_check check (max_bytes >= -1),
   constraint club_drive_quotas_note_check check (char_length(note) <= 200)
 );
 
@@ -57,16 +60,18 @@ begin
   if p_user_id is not null then
     select * into v_own from public.club_drive_quotas where user_id = p_user_id;
     if found then
-      return jsonb_build_object('max_bytes', v_own.max_bytes, 'source', 'user', 'note', v_own.note);
+      return jsonb_build_object('max_bytes', v_own.max_bytes, 'source', 'user', 'note', v_own.note,
+                                'blocked', v_own.max_bytes = -1);
     end if;
   end if;
 
   select * into v_global from public.club_drive_quotas where user_id is null;
   if found then
-    return jsonb_build_object('max_bytes', v_global.max_bytes, 'source', 'global', 'note', v_global.note);
+    return jsonb_build_object('max_bytes', v_global.max_bytes, 'source', 'global', 'note', v_global.note,
+                              'blocked', v_global.max_bytes = -1);
   end if;
 
-  return jsonb_build_object('max_bytes', 0, 'source', 'none', 'note', '');
+  return jsonb_build_object('max_bytes', 0, 'source', 'none', 'note', '', 'blocked', false);
 end;
 $$;
 
@@ -89,8 +94,8 @@ as $$
 declare
   v_note text := coalesce(trim(p_note), '');
 begin
-  if p_max_bytes is null or p_max_bytes < 0 then
-    raise exception '容量上限必须是非负整数。';
+  if p_max_bytes is null or p_max_bytes < -1 then
+    raise exception '容量上限必须 ≥ -1（-1 表示禁止使用）。';
   end if;
   if char_length(v_note) > 200 then
     raise exception '备注最多 200 个字符。';

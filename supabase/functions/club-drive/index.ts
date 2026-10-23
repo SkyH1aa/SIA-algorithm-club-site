@@ -114,7 +114,10 @@ const DRIVE_QUOTA_MAX_DEPTH = 6;
 
 function quotaBytes(value: unknown): number {
   const n = Number(value);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  if (!Number.isFinite(n)) return 0;
+  // -1 是哨兵值，表示禁止使用；0 表示不限制；其余按正数取整。
+  if (n === -1) return -1;
+  return n > 0 ? Math.floor(n) : 0;
 }
 
 async function driveQuotaFor(userId: string) {
@@ -152,13 +155,15 @@ async function driveUsageFor(userId: string) {
   const root = userRoot(userId);
   const used = await driveUsageBytes(root);
   const quota = await driveQuotaFor(userId);
+  const blocked = quota.maxBytes === -1;
   return {
     usedBytes: used,
     maxBytes: quota.maxBytes,
     source: quota.source,
     note: quota.note,
+    blocked,
     unlimited: quota.maxBytes === 0,
-    remainingBytes: quota.maxBytes === 0 ? null : Math.max(0, quota.maxBytes - used)
+    remainingBytes: quota.maxBytes <= 0 ? null : Math.max(0, quota.maxBytes - used)
   };
 }
 
@@ -167,6 +172,7 @@ async function driveUsageFor(userId: string) {
 // 偏保守但不会放过超限写入。
 async function assertDriveQuota(userId: string, incoming: number) {
   const usage = await driveUsageFor(userId);
+  if (usage.blocked) throw new Error('社团盘已被管理员停用，请联系超级管理员。');
   if (usage.maxBytes === 0) return usage;
   if (usage.usedBytes + Math.max(0, incoming) > usage.maxBytes) {
     throw new Error(`社团盘空间不足：已用 ${(usage.usedBytes / 1048576).toFixed(1)} MiB，上限 ${(usage.maxBytes / 1048576).toFixed(1)} MiB。`);
@@ -3906,6 +3912,24 @@ Deno.serve(async request => {
       }
     }
 
+    if (payload.action === 'admin_drive_members') {
+      // 配额管理页的成员下拉：只返回账号名 + 中文姓名，不含邮箱等隐私字段。
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      const { url, serviceKey } = supabaseConfig();
+      const response = await fetch(
+        `${url}/rest/v1/club_member_profiles?select=user_id,username,member_name&order=username.asc&limit=1000`,
+        { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` } }
+      );
+      if (!response.ok) return json({ error: '读取社员列表失败。' }, 400);
+      const rows = await response.json().catch(() => []);
+      const list = (Array.isArray(rows) ? rows : []).map((row: Record<string, unknown>) => ({
+        userId: typeof row.user_id === 'string' ? row.user_id : '',
+        username: typeof row.username === 'string' ? row.username : '',
+        memberName: typeof row.member_name === 'string' ? row.member_name : ''
+      })).filter(row => row.userId && row.username);
+      return json({ members: list });
+    }
+
     if (payload.action === 'admin_drive_quota_list') {
       try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
       const { url, serviceKey } = supabaseConfig();
@@ -3946,7 +3970,8 @@ Deno.serve(async request => {
       }
       if (targetId && !validUuid(targetId)) return json({ error: '用户标识不合法。' }, 400);
       const maxBytes = Number(payload.maxBytes);
-      if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) return json({ error: '容量上限必须是非负整数。' }, 400);
+      // -1 是「禁止使用」哨兵值；其余必须是非负整数。
+      if (!Number.isSafeInteger(maxBytes) || maxBytes < -1) return json({ error: '容量上限必须 ≥ -1（-1 表示禁止使用）。' }, 400);
       const { url, serviceKey } = supabaseConfig();
       const { response, payload: result } = await rpcRequest(url, serviceKey, 'set_club_drive_quota', {
         p_user_id: targetId,

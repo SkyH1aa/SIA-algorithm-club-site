@@ -7,11 +7,11 @@
   <title>社团盘管理 · 算法社</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=fdafac23">
+  <link rel="stylesheet" href="club-ui.css?v=f12be04a">
   <script src="theme.js?v=1b745a4f"></script>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=daec4b64"></script>
+  <script src="i18n-dict.js?v=b974d4f8"></script>
   <script src="member-identity.js?v=ad75d585" defer></script>
   <script src="i18n.js?v=ba66328e"></script>
   <script src="club-common.js?v=b3d82c39"></script>
@@ -58,7 +58,8 @@
           <div class="grid-2">
             <div>
               <label class="label" for="globalMb" data-i18n="driveAdmin.limitMb">容量上限（MiB）</label>
-              <input class="input" id="globalMb" type="number" min="0" step="1" inputmode="numeric" placeholder="0 表示不限制">
+              <input class="input" id="globalMb" type="number" min="-1" step="1" inputmode="numeric" placeholder="0 = 不限制，-1 = 全员禁止">
+              <p class="hint" data-i18n="driveAdmin.limitHint">填 0 表示不限制；填 -1 表示该成员不可使用社团盘。</p>
             </div>
             <div>
               <label class="label" for="globalNote" data-i18n="driveAdmin.note">备注</label>
@@ -82,13 +83,15 @@
         <form class="form" id="userForm">
           <div class="grid-2">
             <div>
-              <label class="label" for="userName" data-i18n="driveAdmin.userName">社员账号名</label>
-              <input class="input" id="userName" maxlength="64" autocomplete="off" placeholder="例如 haimingadmin">
-              <p class="hint" id="userHint" data-i18n="driveAdmin.userHint">填邮箱 @ 前面的部分。</p>
+              <label class="label" for="userPick" data-i18n="driveAdmin.pickMember">选择社员</label>
+              <input class="input" id="userPick" list="memberOptions" autocomplete="off" placeholder="输入中文姓名或账号搜索，例如 陈海铭 / haimingadmin">
+              <datalist id="memberOptions"></datalist>
+              <p class="hint" data-i18n="driveAdmin.pickHint">下拉按中文姓名与账号匹配，选中后自动带出该社员。</p>
             </div>
             <div>
               <label class="label" for="userMb" data-i18n="driveAdmin.limitMb">容量上限（MiB）</label>
-              <input class="input" id="userMb" type="number" min="0" step="1" inputmode="numeric" placeholder="留空 = 用全局默认">
+              <input class="input" id="userMb" type="number" min="-1" step="1" inputmode="numeric" placeholder="0 = 不限制，-1 = 禁止使用">
+              <p class="hint" data-i18n="driveAdmin.limitHint">填 0 表示不限制；填 -1 表示该成员不可使用社团盘。</p>
             </div>
           </div>
           <div class="form-actions">
@@ -119,8 +122,8 @@
         <form class="form" id="usageForm">
           <div class="grid-2">
             <div>
-              <label class="label" for="usageName" data-i18n="driveAdmin.userName">社员账号名</label>
-              <input class="input" id="usageName" maxlength="64" autocomplete="off" placeholder="例如 haimingadmin">
+              <label class="label" for="usagePick" data-i18n="driveAdmin.pickMember">选择社员</label>
+              <input class="input" id="usagePick" list="memberOptions" autocomplete="off" placeholder="输入中文姓名或账号搜索">
             </div>
             <div class="form-actions">
               <button class="button" type="submit" data-i18n="driveAdmin.queryUsage">查询用量</button>
@@ -145,6 +148,7 @@
     const MB = 1048576;
     let session = null;
     let isSuper = false;
+    let quotaRows = [];
 
     async function call(action, body = {}) {
       if (!session?.access_token) throw new Error(t('common.loginFirst'));
@@ -173,44 +177,120 @@
     }
 
     function toMb(bytes) {
-      const value = Number(bytes) || 0;
-      return value === 0 ? 0 : Math.round(value / MB);
+      const value = Number(bytes);
+      if (!Number.isFinite(value)) return 0;
+      // -1 是「禁止使用」哨兵值，不能被四舍五入成 0。
+      if (value === -1) return -1;
+      return value <= 0 ? 0 : Math.round(value / MB);
     }
 
-    // 账号名统一交给服务端解析成 uuid，前端不做猜测。
-    function requireUser(name) {
-      const value = String(name || '').trim();
-      if (!value) throw new Error(t('driveAdmin.needUser'));
-      return value;
+    // 把输入框里的 MiB 转成字节；-1 原样保留。
+    function mbToBytes(raw) {
+      const mb = Number(raw);
+      if (!Number.isFinite(mb)) return null;
+      if (mb < -1) return null;
+      return mb === -1 ? -1 : Math.round(mb) * MB;
     }
 
-    function quotaRowHtml(row) {
+    // 超管可选的社员名单：中文姓名 + 账号，用于下拉与回填。
+    let members = [];
+
+    function memberLabel(member) {
+      const name = String(member.memberName || '').trim();
+      const account = String(member.username || '').trim();
+      return name && account ? `${name}（${account}）` : (name || account);
+    }
+
+    // 输入框里可能是「姓名（账号）」这种完整标签，也可能只填了其一。
+    function findMember(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return null;
+      return members.find(member => memberLabel(member) === raw)
+        || members.find(member => String(member.username || '') === raw)
+        || members.find(member => String(member.memberName || '') === raw)
+        || null;
+    }
+
+    // 还原成「姓名（账号）」；解析不到就原样交给服务端按账号名处理。
+    function requireUser(value) {
+      const raw = String(value || '').trim();
+      if (!raw) throw new Error(t('driveAdmin.needUser'));
+      const member = findMember(raw);
+      return member ? member.username : raw;
+    }
+
+    function fillMemberOptions() {
+      const list = $('memberOptions');
+      if (!list) return;
+      list.innerHTML = members.map(member =>
+        `<option value="${escapeHtml(memberLabel(member))}">${escapeHtml(member.memberName || member.username)}</option>`
+      ).join('');
+    }
+
+    async function loadMembers() {
+      try {
+        const payload = await call('admin_drive_members');
+        members = Array.isArray(payload.members) ? payload.members : [];
+        fillMemberOptions();
+      } catch {
+        // 名单加载失败不影响配额列表本身，只让输入退化为手填账号名。
+        members = [];
+      }
+    }
+
+    // 选中某个社员后，把已有配额回填到表单；没有专属配额就清空，表示走全局默认。
+    function fillUserForm(member) {
+      if (!member) { $('userMb').value = ''; $('userPick').value = ''; return; }
+      $('userPick').value = memberLabel(member);
+      const quota = quotaRows.find(row => String(row.user_id || '') === String(member.userId || ''));
+      $('userMb').value = quota ? String(toMb(quota.max_bytes)) : '';
+      setMessage(quota
+        ? t('driveAdmin.loadedQuota', { name: memberLabel(member) })
+        : t('driveAdmin.noPersonalQuota', { name: memberLabel(member) }));
+    }
+
+    function limitText(limit) {
+      if (limit === -1) return escapeHtml(t('driveAdmin.blocked'));
+      if (!limit) return escapeHtml(t('driveAdmin.unlimited'));
+      return formatBytes(limit);
+    }
+
+    function quotaRowHtml(row, index) {
       const isGlobal = !row.user_id;
-      const label = isGlobal ? t('driveAdmin.globalRow') : escapeHtml(row.username || row.user_id);
-      const limit = Number(row.max_bytes) || 0;
+      const member = isGlobal ? null : members.find(item => String(item.userId) === String(row.user_id));
+      const label = isGlobal
+        ? escapeHtml(t('driveAdmin.globalRow'))
+        : escapeHtml(member ? memberLabel(member) : (row.username || row.user_id));
+      const limit = Number(row.max_bytes);
+      const actions = isGlobal
+        ? `<button class="button secondary small" type="button" data-quota-edit="${index}">${escapeHtml(t('driveAdmin.edit'))}</button>`
+        : `<button class="button secondary small" type="button" data-quota-edit="${index}">${escapeHtml(t('driveAdmin.edit'))}</button>
+           <button class="button secondary small" type="button" data-quota-delete="${index}">${escapeHtml(t('driveAdmin.remove'))}</button>`;
       return `<tr>
         <td data-label="${escapeHtml(t('driveAdmin.colTarget'))}">${label}</td>
-        <td data-label="${escapeHtml(t('driveAdmin.colLimit'))}">${limit === 0 ? escapeHtml(t('driveAdmin.unlimited')) : formatBytes(limit)}</td>
+        <td data-label="${escapeHtml(t('driveAdmin.colLimit'))}">${limitText(limit)}</td>
         <td data-label="${escapeHtml(t('driveAdmin.note'))}">${escapeHtml(row.note || '')}</td>
         <td data-label="${escapeHtml(t('driveAdmin.colUpdated'))}">${escapeHtml(String(row.updated_at || '').slice(0, 16).replace('T', ' '))}</td>
+        <td data-label="${escapeHtml(t('driveAdmin.colActions'))}"><div class="row-actions">${actions}</div></td>
       </tr>`;
     }
 
     async function refreshQuotas() {
       try {
         const payload = await call('admin_drive_quota_list');
-        const rows = Array.isArray(payload.quotas) ? payload.quotas : [];
-        if (!rows.length) {
+        quotaRows = Array.isArray(payload.quotas) ? payload.quotas : [];
+        if (!quotaRows.length) {
           ClubCommon.listState($('quotaList'), { kind: 'empty', title: t('driveAdmin.emptyQuota'), message: t('driveAdmin.emptyQuotaHint') });
-          return;
+        } else {
+          $('quotaList').innerHTML = `<table class="table"><thead><tr>
+            <th>${escapeHtml(t('driveAdmin.colTarget'))}</th>
+            <th>${escapeHtml(t('driveAdmin.colLimit'))}</th>
+            <th>${escapeHtml(t('driveAdmin.note'))}</th>
+            <th>${escapeHtml(t('driveAdmin.colUpdated'))}</th>
+            <th>${escapeHtml(t('driveAdmin.colActions'))}</th>
+          </tr></thead><tbody>${quotaRows.map(quotaRowHtml).join('')}</tbody></table>`;
         }
-        $('quotaList').innerHTML = `<table class="table"><thead><tr>
-          <th>${escapeHtml(t('driveAdmin.colTarget'))}</th>
-          <th>${escapeHtml(t('driveAdmin.colLimit'))}</th>
-          <th>${escapeHtml(t('driveAdmin.note'))}</th>
-          <th>${escapeHtml(t('driveAdmin.colUpdated'))}</th>
-        </tr></thead><tbody>${rows.map(quotaRowHtml).join('')}</tbody></table>`;
-        const global = rows.find(row => !row.user_id);
+        const global = quotaRows.find(row => !row.user_id);
         if (global) {
           $('globalMb').value = String(toMb(global.max_bytes));
           $('globalNote').value = String(global.note || '');
@@ -220,12 +300,51 @@
       }
     }
 
+    // 列表里的「编辑 / 删除」用事件委托，重新渲染后仍有效。
+    $('quotaList').addEventListener('click', event => {
+      const edit = event.target.closest('[data-quota-edit]');
+      if (edit) {
+        const row = quotaRows[Number(edit.dataset.quotaEdit)];
+        if (!row) return;
+        if (!row.user_id) {
+          $('globalMb').value = String(toMb(row.max_bytes));
+          $('globalNote').value = String(row.note || '');
+          $('globalMb').focus();
+          return;
+        }
+        const member = members.find(item => String(item.userId) === String(row.user_id));
+        fillUserForm(member || { userId: row.user_id, username: row.username || '', memberName: '' });
+        $('userMb').focus();
+        return;
+      }
+      const remove = event.target.closest('[data-quota-delete]');
+      if (remove) {
+        const row = quotaRows[Number(remove.dataset.quotaDelete)];
+        if (row?.user_id) void removeQuota(row);
+      }
+    });
+
+    async function removeQuota(row) {
+      const member = members.find(item => String(item.userId) === String(row.user_id));
+      const label = member ? memberLabel(member) : (row.username || row.user_id);
+      if (!(await ClubCommon.confirm({ message: t('driveAdmin.confirmRemove', { name: label }), danger: true }))) return;
+      try {
+        await call('admin_drive_quota_clear', { userId: row.user_id });
+        setMessage(t('driveAdmin.removed', { name: label }), 'success');
+        await refreshQuotas();
+        const current = findMember($('userPick').value);
+        if (current && String(current.userId) === String(row.user_id)) $('userMb').value = '';
+      } catch (error) {
+        setMessage(error.message, 'error');
+      }
+    }
+
     $('globalForm').addEventListener('submit', async event => {
       event.preventDefault();
-      const mb = Number($('globalMb').value || 0);
-      if (!Number.isFinite(mb) || mb < 0) { setMessage(t('driveAdmin.invalidLimit'), 'error'); return; }
+      const bytes = mbToBytes($('globalMb').value.trim() || 0);
+      if (bytes === null) { setMessage(t('driveAdmin.invalidLimit'), 'error'); return; }
       try {
-        await call('admin_drive_quota_set', { maxBytes: Math.round(mb) * MB, note: $('globalNote').value.trim() });
+        await call('admin_drive_quota_set', { maxBytes: bytes, note: $('globalNote').value.trim() });
         setMessage(t('driveAdmin.saved'), 'success');
         await refreshQuotas();
       } catch (error) {
@@ -236,23 +355,35 @@
     $('userForm').addEventListener('submit', async event => {
       event.preventDefault();
       const raw = $('userMb').value.trim();
+      // 空值代表「不设专属配额」，与删除不同：这里明确要求填数字，避免误操作。
       if (!raw) { setMessage(t('driveAdmin.needLimit'), 'error'); return; }
+      const bytes = mbToBytes(raw);
+      if (bytes === null) { setMessage(t('driveAdmin.invalidLimit'), 'error'); return; }
       try {
-        const username = requireUser($('userName').value);
-        await call('admin_drive_quota_set', { username, maxBytes: Math.round(Number(raw)) * MB, note: '' });
-        setMessage(t('driveAdmin.saved'), 'success');
+        const username = requireUser($('userPick').value);
+        await call('admin_drive_quota_set', { username, maxBytes: bytes, note: '' });
+        setMessage(t('driveAdmin.savedUser', { name: $('userPick').value.trim() }), 'success');
         await refreshQuotas();
       } catch (error) {
         setMessage(error.message, 'error');
       }
     });
 
+    // 选中下拉项后立刻回填该社员已有配额。
+    $('userPick').addEventListener('input', () => {
+      const member = findMember($('userPick').value);
+      if (member) fillUserForm(member);
+      else if (!$('userPick').value.trim()) $('userMb').value = '';
+    });
+
     $('clearUser').addEventListener('click', async () => {
       try {
-        const username = requireUser($('userName').value);
+        const label = $('userPick').value.trim();
+        const username = requireUser(label);
         if (!(await ClubCommon.confirm({ message: t('driveAdmin.confirmClear'), danger: true }))) return;
         await call('admin_drive_quota_clear', { username });
         setMessage(t('driveAdmin.cleared'), 'success');
+        $('userMb').value = '';
         await refreshQuotas();
       } catch (error) {
         setMessage(error.message, 'error');
@@ -264,19 +395,25 @@
       const box = $('usageResult');
       ClubCommon.listState(box, { kind: 'loading', message: t('common.loading') });
       try {
-        const username = requireUser($('usageName').value);
+        const username = requireUser($('usagePick').value);
         const payload = await call('drive_quota_get', { username });
         const q = payload.quota || {};
-        const pct = q.maxBytes ? Math.min(100, Math.round((q.usedBytes / q.maxBytes) * 100)) : 0;
-        box.innerHTML = `<div class="drive-usage">
+        const blocked = Boolean(q.blocked);
+        const pct = q.maxBytes > 0 ? Math.min(100, Math.round((q.usedBytes / q.maxBytes) * 100)) : 0;
+        const limitLabel = blocked
+          ? escapeHtml(t('driveAdmin.blocked'))
+          : q.unlimited
+            ? escapeHtml(t('driveAdmin.unlimited'))
+            : '/ ' + formatBytes(q.maxBytes) + ' (' + pct + '%)';
+        box.innerHTML = `<div class="drive-usage${blocked ? ' is-blocked' : ''}${pct >= 90 && !blocked ? ' is-full' : ''}">
           <div class="drive-usage-figures">
             <strong>${formatBytes(q.usedBytes)}</strong>
-            <span>${q.unlimited ? escapeHtml(t('driveAdmin.unlimited')) : '/ ' + formatBytes(q.maxBytes) + ' (' + pct + '%)'}</span>
+            <span>${limitLabel}</span>
           </div>
-          <div class="drive-usage-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}">
-            <span style="width:${q.unlimited ? 0 : pct}%"></span>
+          <div class="drive-usage-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${blocked ? 100 : pct}">
+            <span style="width:${blocked ? 100 : (q.unlimited ? 0 : pct)}%"></span>
           </div>
-          <p class="hint">${escapeHtml(t('driveAdmin.sourceLabel', { source: t('driveAdmin.source_' + (q.source || 'none')) }))}</p>
+          <p class="hint">${escapeHtml(t('driveAdmin.sourceLabel', { source: t('driveAdmin.source_' + (q.source || 'none')) }))}${blocked ? ' · ' + escapeHtml(t('driveAdmin.blockedHint')) : ''}</p>
         </div>`;
       } catch (error) {
         ClubCommon.listState(box, { kind: 'error', title: t('driveAdmin.loadFailed'), message: error.message });
@@ -294,14 +431,18 @@
       isSuper = Boolean(access?.isSuperAdmin);
       $('denied').classList.toggle('hidden', isSuper);
       $('content').classList.toggle('hidden', !isSuper);
-      if (isSuper) await refreshQuotas();
+      if (isSuper) { await loadMembers(); await refreshQuotas(); }
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
       const { data } = await supabaseClient.auth.getSession();
       await updateSession(data?.session || null);
       supabaseClient.auth.onAuthStateChange((_event, next) => { void updateSession(next); });
-      window.addEventListener('club:langchange', () => { if (isSuper) void refreshQuotas(); });
+      window.addEventListener('club:langchange', () => {
+        if (!isSuper) return;
+        fillMemberOptions();
+        void refreshQuotas();
+      });
     });
   </script>
   <script src="club-shell.js?v=6f76acb2"></script>
