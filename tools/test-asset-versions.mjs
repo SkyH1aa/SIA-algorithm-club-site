@@ -20,7 +20,9 @@ for (const [name, digest] of Object.entries(hashes)) {
   assert.match(digest, /^[0-9a-f]{8}$/, `${name} hash format`);
   const file = path.join(publicDir, name);
   assert.ok((await stat(file)).isFile(), `${name} exists`);
-  const actual = crypto.createHash('sha256').update(await readFile(file)).digest('hex').slice(0, 8);
+  // 与生成器保持一致：先归一化行尾，否则 Windows(CRLF) 与 CI(LF) 结果不同。
+  const raw = await readFile(file, 'utf8');
+  const actual = crypto.createHash('sha256').update(raw.replace(/\r\n/g, '\n'), 'utf8').digest('hex').slice(0, 8);
   assert.equal(actual, digest, `${name} manifest hash matches file`);
 }
 

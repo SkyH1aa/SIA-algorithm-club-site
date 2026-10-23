@@ -40,9 +40,12 @@ assert.match(theme, /pendingFavicon/, 'early parse is deferred until DOM is read
   assert.match(light, /#FFFDFC/, 'light icon uses the day paper background');
   assert.match(light, /#C54A34/, 'light icon uses the day brand colour');
   assert.match(dark, /#0b1220/, 'dark icon keeps the night background');
-  const manifest = JSON.parse(await readFile(path.join(root, 'public/asset-versions.json'), 'utf8'));
-  assert.ok(manifest.hashes['favicon.svg'], 'dark icon is content-hashed');
-  assert.ok(manifest.hashes['favicon-light.svg'], 'light icon is content-hashed');
+  // favicon 故意不加 ?v=：浏览器/系统对 icon 的缓存按 URL 精确匹配，
+  // 加版本号反而可能让标签页图标不刷新。这里只确认两个文件都存在。
+  const { stat } = await import('node:fs/promises');
+  for (const name of ['favicon.svg', 'favicon-light.svg']) {
+    assert.ok((await stat(path.join(root, 'public', name))).isFile(), `${name} exists`);
+  }
 }
 
 console.log('Theme: system mode, SQL constraint migration, backend normalisation, Beijing auto, theme-aware favicon (dark/light) preserved.');
