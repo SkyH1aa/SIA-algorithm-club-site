@@ -7,6 +7,10 @@ import { stripTypeScriptTypes } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// 内嵌源码与磁盘源码比较时忽略行尾：Windows 工作区是 CRLF、CI 的 Linux 检出是 LF，
+// 生成物里保存的是生成那一刻的行尾，直接比较会在 CI 上误报。
+const normalizeEol = text => String(text).replace(/\r\n/g, '\n');
 const source = fs.readFileSync(path.join(root, 'supabase/functions/gomoku-training/index.ts'), 'utf8');
 let serve, stored;
 const context = vm.createContext({
@@ -80,21 +84,21 @@ const flashPack = flashContext.window.GOMOKU_V10FLASH_FILE_PACKAGE;
 assert.equal(flashPack.rapfiSource, undefined, 'V10Flash must not embed the shared Rapfi source');
 assert.equal(flashPack.wasmBase64, undefined, 'V10Flash must not embed the shared WASM');
 assert.equal(flashPack.dataBase64, undefined, 'V10Flash must not embed the shared Mix9 weights');
-assert.equal(flashPack.workerSource, fs.readFileSync(path.join(flashDirectory, 'worker.js'), 'utf8'));
+assert.equal(normalizeEol(flashPack.workerSource), normalizeEol(fs.readFileSync(path.join(flashDirectory, 'worker.js'), 'utf8')));
 const flashWrapper = fs.readFileSync(path.join(root, 'public/gomoku-models/v10flash.js'), 'utf8');
 assert.ok(flashWrapper.includes('GOMOKU_V10ULTRA_FILE_PACKAGE'), 'V10Flash composes the shared engine package under file://');
 assert.ok(flashWrapper.includes("v10ultra/file-package.js"), 'V10Flash references the shared Ultra package');
 assert.equal(fs.readFileSync(path.join(flashDirectory, 'worker.js'), 'utf8'), fs.readFileSync(path.join(root, 'public/gomoku-models/v11candidate/worker.js'), 'utf8'));
 // V10Flash's own expert assets: the proof core is a derivative of the frozen V10
 // core, and the package carries the frozen experts for the opaque-origin build.
-assert.equal(flashPack.proof, fs.readFileSync(path.join(flashDirectory, 'proof-core.js'), 'utf8'));
-assert.equal(flashPack.expertWorker, fs.readFileSync(path.join(flashDirectory, 'expert-worker.js'), 'utf8'));
+assert.equal(normalizeEol(flashPack.proof), normalizeEol(fs.readFileSync(path.join(flashDirectory, 'proof-core.js'), 'utf8')));
+assert.equal(normalizeEol(flashPack.expertWorker), normalizeEol(fs.readFileSync(path.join(flashDirectory, 'expert-worker.js'), 'utf8')));
 assert.ok(flashPack.proof.includes('createGomokuFlashProofExpert'), 'V10Flash proof core factory');
 assert.ok(!flashPack.proof.includes('createGomokuExpProofExpert'), 'V10Flash must not reuse the V10Exp proof core');
 for (const [key, file] of [['expert', 'expert-core.js'], ['thinker', 'v9thinker.js'], ['v10core', 'v10-core.js'], ['v10', 'v10.js']]) {
-  assert.equal(flashPack[key], fs.readFileSync(path.join(root, 'public/gomoku-models', file), 'utf8'), `frozen expert source ${file}`);
+  assert.equal(normalizeEol(flashPack[key]), normalizeEol(fs.readFileSync(path.join(root, 'public/gomoku-models', file), 'utf8')), `frozen expert source ${file}`);
 }
-assert.equal(flashPack.training, fs.readFileSync(path.join(root, 'public/data/gomoku-training-model.js'), 'utf8'));
+assert.equal(normalizeEol(flashPack.training), normalizeEol(fs.readFileSync(path.join(root, 'public/data/gomoku-training-model.js'), 'utf8')));
 // V10Thinker is a copy of the V10Ultra Rapfi setup with a tunable depth cap. It
 // must reuse V10Ultra's engine and weight bytes instead of shipping its own, and
 // its wrapper must resolve paths from its own module URL (the factory is called
@@ -116,7 +120,7 @@ assert.equal(flashPack.training, fs.readFileSync(path.join(root, 'public/data/go
   vm.runInNewContext(fs.readFileSync(path.join(champDir, 'file-package.js'), 'utf8'), champPackContext);
   const champPack = champPackContext.window.GOMOKU_V10CHAMPION_FILE_PACKAGE;
   assert.equal(champPack.rapfiSource, undefined, 'V10Champion must not embed the shared Rapfi source');
-  assert.equal(champPack.workerSource, fs.readFileSync(path.join(champDir, 'worker.js'), 'utf8'), 'V10Champion file:// worker matches its own bridge');
+  assert.equal(normalizeEol(champPack.workerSource), normalizeEol(fs.readFileSync(path.join(champDir, 'worker.js'), 'utf8')), 'V10Champion file:// worker matches its own bridge');
 }
 const thinkerWrapper = fs.readFileSync(path.join(root, 'public/gomoku-models/v10thinker.js'), 'utf8');
 assert.ok(thinkerWrapper.includes('window.GomokuV10ThinkerFactory'), 'V10Thinker factory is exported');
@@ -132,7 +136,7 @@ if (fs.existsSync(thinkerPackage)) {
   assert.equal(thinkerPack.rapfiSource, undefined, 'V10Thinker must not embed the shared Rapfi source');
   assert.equal(thinkerPack.wasmBase64, undefined, 'V10Thinker must not embed the shared WASM');
   assert.equal(thinkerPack.dataBase64, undefined, 'V10Thinker must not embed the shared Mix9 weights');
-  assert.equal(thinkerPack.workerSource, thinkerWorker, 'V10Thinker file:// worker matches its own bridge');
+  assert.equal(normalizeEol(thinkerPack.workerSource), normalizeEol(thinkerWorker), 'V10Thinker file:// worker matches its own bridge');
   assert.ok(thinkerWrapper.includes('GOMOKU_V10ULTRA_FILE_PACKAGE'), 'V10Thinker composes the shared engine package under file://');
 }
 // Gomoku-Satori (11) is a pure-JavaScript exhibition engine: no Rapfi, no WASM,

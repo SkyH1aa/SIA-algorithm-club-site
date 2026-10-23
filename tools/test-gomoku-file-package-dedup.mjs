@@ -17,6 +17,11 @@ const models = path.join(root, 'public', 'gomoku-models');
 const read = name => readFile(path.join(models, name), 'utf8');
 const readBin = name => readFile(path.join(models, name));
 
+// 比较内嵌源码与磁盘源码时忽略行尾差异。
+// Windows 工作区是 CRLF，CI 的 Linux 检出是 LF，而生成物里保存的是生成那一刻的
+// 行尾；直接逐字符比较会在 CI 上误报，但两者内容其实完全等价。
+const normalizeEol = text => String(text).replace(/\r\n/g, '\n');
+
 // Execute a generated package the same way the browser does and return its global.
 async function loadPackage(relative, globalName) {
   const source = await readFile(path.join(models, relative), 'utf8');
@@ -43,29 +48,29 @@ const hashOf = (text, encoding) => crypto.createHash('sha256').update(Buffer.fro
 assert.equal(hashOf(ultra.rapfiSource), truth.rapfiSource, 'Ultra rapfiSource matches rapfi-single.js');
 assert.equal(hashOf(Buffer.from(ultra.wasmBase64, 'base64')), truth.wasm, 'Ultra wasm decodes to rapfi-single.wasm');
 assert.equal(hashOf(Buffer.from(ultra.dataBase64, 'base64')), truth.data, 'Ultra data decodes to rapfi.data');
-assert.equal(ultra.workerSource, await read('v10ultra/worker.js'), 'Ultra workerSource matches worker.js');
+assert.equal(normalizeEol(ultra.workerSource), normalizeEol(await read('v10ultra/worker.js')), 'Ultra workerSource matches worker.js');
 
 // Each slim package: only its own bridge (plus model-specific extras for Flash).
 const thinker = await loadPackage('v10thinker/file-package.js', 'GOMOKU_V10THINKER_FILE_PACKAGE');
 assert.deepEqual(Object.keys(thinker).sort(), ['workerSource'], 'Thinker ships only its worker bridge');
-assert.equal(thinker.workerSource, await read('v10thinker/worker.js'), 'Thinker workerSource matches worker.js');
+assert.equal(normalizeEol(thinker.workerSource), normalizeEol(await read('v10thinker/worker.js')), 'Thinker workerSource matches worker.js');
 
 const champion = await loadPackage('v10champion/file-package.js', 'GOMOKU_V10CHAMPION_FILE_PACKAGE');
 assert.deepEqual(Object.keys(champion).sort(), ['workerSource'], 'Champion ships only its worker bridge');
-assert.equal(champion.workerSource, await read('v10champion/worker.js'), 'Champion workerSource matches worker.js');
+assert.equal(normalizeEol(champion.workerSource), normalizeEol(await read('v10champion/worker.js')), 'Champion workerSource matches worker.js');
 
 const flash = await loadPackage('v10flash/file-package.js', 'GOMOKU_V10FLASH_FILE_PACKAGE');
 assert.deepEqual(Object.keys(flash).sort(),
   ['expert', 'expertWorker', 'proof', 'thinker', 'training', 'v10', 'v10core', 'workerSource'],
   'Flash keeps every frozen expert asset but no engine payload');
-assert.equal(flash.workerSource, await read('v10flash/worker.js'), 'Flash workerSource matches worker.js');
-assert.equal(flash.expert, await read('expert-core.js'), 'Flash expert matches frozen expert-core.js');
-assert.equal(flash.thinker, await read('v9thinker.js'), 'Flash thinker matches frozen v9thinker.js');
-assert.equal(flash.v10core, await read('v10-core.js'), 'Flash v10core matches frozen v10-core.js');
-assert.equal(flash.v10, await read('v10.js'), 'Flash v10 matches frozen v10.js');
-assert.equal(flash.expertWorker, await read('v10flash/expert-worker.js'), 'Flash expertWorker matches disk');
-assert.equal(flash.proof, await read('v10flash/proof-core.js'), 'Flash proof matches generated proof-core.js');
-assert.equal(flash.training, await readFile(path.join(root, 'public', 'data', 'gomoku-training-model.js'), 'utf8'),
+assert.equal(normalizeEol(flash.workerSource), normalizeEol(await read('v10flash/worker.js')), 'Flash workerSource matches worker.js');
+assert.equal(normalizeEol(flash.expert), normalizeEol(await read('expert-core.js')), 'Flash expert matches frozen expert-core.js');
+assert.equal(normalizeEol(flash.thinker), normalizeEol(await read('v9thinker.js')), 'Flash thinker matches frozen v9thinker.js');
+assert.equal(normalizeEol(flash.v10core), normalizeEol(await read('v10-core.js')), 'Flash v10core matches frozen v10-core.js');
+assert.equal(normalizeEol(flash.v10), normalizeEol(await read('v10.js')), 'Flash v10 matches frozen v10.js');
+assert.equal(normalizeEol(flash.expertWorker), normalizeEol(await read('v10flash/expert-worker.js')), 'Flash expertWorker matches disk');
+assert.equal(normalizeEol(flash.proof), normalizeEol(await read('v10flash/proof-core.js')), 'Flash proof matches generated proof-core.js');
+assert.equal(normalizeEol(flash.training), normalizeEol(await readFile(path.join(root, 'public', 'data', 'gomoku-training-model.js'), 'utf8')),
   'Flash training snapshot equals the live training model (priors unchanged)');
 assert.match(flash.proof, /createGomokuFlashProofExpert/, 'Flash proof core is its own derivative');
 assert.doesNotMatch(flash.proof, /createGomokuExpProofExpert/, 'Flash never reuses the V10Exp factory');
