@@ -16,7 +16,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # test-chat-core.mjs 会直接 import supabase/functions/_shared/*.ts，
+          # 需要原生类型剥离。Node 20 会抛 ERR_UNKNOWN_FILE_EXTENSION。
+          # 用 24 与本地开发环境保持一致；22 需要 >= 22.18 才默认开启该能力。
+          node-version: '24'
 
       - name: Syntax check first-party scripts
         run: |
