@@ -10,10 +10,10 @@
   <title>管理员总览 · 算法社</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=9d984229"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=11c5495b"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
   <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=2d235920"></script></head>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=42e483d8"></script></head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Admin Hub</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
   <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div>
@@ -130,6 +130,14 @@
         <form class="form" id="siteServiceForm">
           <label class="label"><input type="checkbox" id="siteServiceEnabled" checked> <span data-i18n="admin.siteServiceRunning">网站服务运行中</span></label>
           <label class="label"><input type="checkbox" id="siteRandomEnabled"> <span data-i18n="admin.siteRandomEnabled">随机展示提示词</span></label>
+          <label class="label"><span data-i18n="admin.siteDisplayMode">关闭时的方式</span>
+            <select class="input" id="siteDisplayMode">
+              <option value="overlay" data-i18n="admin.displayOverlay">全屏遮罩</option>
+              <option value="503" data-i18n="admin.display503">跳转到 503 页</option>
+              <option value="502" data-i18n="admin.display502">跳转到 502 页</option>
+              <option value="404" data-i18n="admin.display404">跳转到 404 页</option>
+            </select>
+          </label>
           <label class="label"><span data-i18n="admin.siteTitleZh">中文大标题</span><input class="input" id="siteTitleZh" maxlength="200"></label>
           <label class="label"><span data-i18n="admin.siteSubtitleZh">中文副标题</span><textarea class="input" id="siteSubtitleZh" maxlength="500" rows="2"></textarea></label>
           <label class="label"><span data-i18n="admin.siteTitleEn">英文大标题</span><input class="input" id="siteTitleEn" maxlength="200"></label>
@@ -140,6 +148,33 @@
           <button class="button" type="submit" data-i18n="admin.siteServiceSave">保存网站服务设置</button>
         </form>
         <p class="message" id="siteServiceMessage" role="status"></p>
+      </section>
+
+      <section class="panel section" id="errorPagesSection">
+        <div class="section-head"><div><h2 data-i18n="admin.errorPagesTitle">故障页内容（502 / 503 / 404）</h2><p class="intro" data-i18n="admin.errorPagesIntro">仅超管可编辑。页面结构固定，这里只能改文案与 Markdown 正文，不能注入脚本。留空则使用页面内置默认值。</p></div></div>
+        <form class="form" id="errorPageForm">
+          <label class="label"><span data-i18n="admin.errorPagePick">选择页面</span>
+            <select class="input" id="errorPageCode">
+              <option value="503">503 · 服务暂停</option>
+              <option value="502">502 · 上游异常</option>
+              <option value="404">404 · 页面不存在</option>
+            </select>
+          </label>
+          <label class="label"><span data-i18n="admin.siteTitleZh">中文大标题</span><input class="input" id="errTitleZh" maxlength="200"></label>
+          <label class="label"><span data-i18n="admin.siteSubtitleZh">中文副标题</span><textarea class="input" id="errSubtitleZh" maxlength="500" rows="2"></textarea></label>
+          <label class="label"><span data-i18n="admin.siteTitleEn">英文大标题</span><input class="input" id="errTitleEn" maxlength="200"></label>
+          <label class="label"><span data-i18n="admin.siteSubtitleEn">英文副标题</span><textarea class="input" id="errSubtitleEn" maxlength="500" rows="2"></textarea></label>
+          <label class="label"><span data-i18n="admin.errorPageBodyZh">中文正文（Markdown）</span><textarea class="input" id="errBodyZh" maxlength="20000" rows="6"></textarea></label>
+          <label class="label"><span data-i18n="admin.errorPageBodyEn">English body (Markdown)</span><textarea class="input" id="errBodyEn" maxlength="20000" rows="6"></textarea></label>
+          <label class="label"><span data-i18n="admin.errorPageActionLabelZh">主按钮文案（中文，留空=默认）</span><input class="input" id="errActionLabelZh" maxlength="80"></label>
+          <label class="label"><span data-i18n="admin.errorPageActionLabelEn">Primary button label (EN, blank = default)</span><input class="input" id="errActionLabelEn" maxlength="80"></label>
+          <label class="label"><span data-i18n="admin.errorPageActionHref">主按钮链接（留空=默认；仅站内或 http(s)）</span><input class="input" id="errActionHref" maxlength="500" placeholder="index.html"></label>
+          <div class="form-actions">
+            <button class="button" type="submit" data-i18n="common.save">保存</button>
+            <button class="button secondary" type="button" id="errorPageReset" data-i18n="admin.errorPageReset">恢复默认</button>
+          </div>
+        </form>
+        <p class="message" id="errorPageMessage" role="status"></p>
       </section>
 
       <section class="panel section" id="appMonitorReleasesSection">
@@ -303,6 +338,14 @@
             <span><input type="checkbox" data-enabled ${item.enabled !== false ? 'checked' : ''}> ${escapeHtml(t('admin.featureEnabled'))}</span>
             <span><input type="checkbox" data-random ${item.random ? 'checked' : ''}> ${escapeHtml(t('admin.featureRandom'))}</span>
           </label>
+          <label class="label"><span>${escapeHtml(t('admin.featureDisplayMode'))}</span>
+            <select class="input" data-display-mode>
+              <option value="overlay"${!item.display_mode || item.display_mode === 'overlay' ? ' selected' : ''}>${escapeHtml(t('admin.displayOverlay'))}</option>
+              <option value="503"${item.display_mode === '503' ? ' selected' : ''}>${escapeHtml(t('admin.display503'))}</option>
+              <option value="502"${item.display_mode === '502' ? ' selected' : ''}>${escapeHtml(t('admin.display502'))}</option>
+              <option value="404"${item.display_mode === '404' ? ' selected' : ''}>${escapeHtml(t('admin.display404'))}</option>
+            </select>
+          </label>
           <input class="input" data-title-zh placeholder="${escapeHtml(t('admin.featureTitleZh'))}" value="${escapeHtml(item.title_zh || '')}">
           <input class="input" data-subtitle-zh placeholder="${escapeHtml(t('admin.featureSubtitleZh'))}" value="${escapeHtml(item.subtitle_zh || '')}">
           <input class="input" data-title-en placeholder="${escapeHtml(t('admin.featureTitleEn'))}" value="${escapeHtml(item.title_en || '')}">
@@ -316,7 +359,7 @@
             <div class="club-feature-group-body">${items.map(([key, itemLabel]) => fieldFor(key, itemLabel)).join('')}</div>
           </details>`).join('');
     }
-    function collectFeatureSettings() { const values = {}; document.querySelectorAll('[data-feature]').forEach(node => { values[node.dataset.feature] = { enabled: node.querySelector('[data-enabled]').checked, random: node.querySelector('[data-random]').checked, title_zh: node.querySelector('[data-title-zh]').value, subtitle_zh: node.querySelector('[data-subtitle-zh]').value, title_en: node.querySelector('[data-title-en]').value, subtitle_en: node.querySelector('[data-subtitle-en]').value }; }); return values; }
+    function collectFeatureSettings() { const values = {}; document.querySelectorAll('[data-feature]').forEach(node => { const display = node.querySelector('[data-display-mode]'); values[node.dataset.feature] = { enabled: node.querySelector('[data-enabled]').checked, random: node.querySelector('[data-random]').checked, display_mode: display ? display.value : 'overlay', title_zh: node.querySelector('[data-title-zh]').value, subtitle_zh: node.querySelector('[data-subtitle-zh]').value, title_en: node.querySelector('[data-title-en]').value, subtitle_en: node.querySelector('[data-subtitle-en]').value }; }); return values; }
     let appMonitorReleases = [];
     function clearAppMonitorReleaseForm() { $('appMonitorReleaseForm').reset(); $('appMonitorReleaseId').value = ''; $('appMonitorReleaseDate').value = new Date().toISOString().slice(0, 10); }
     function renderAppMonitorReleases(releases) {
@@ -326,6 +369,65 @@
       document.querySelectorAll('[data-appmonitor-delete]').forEach(button => button.onclick = async () => { if (!(await ClubCommon.confirm({ message: t('admin.appmonitorDeleteConfirm') }))) return; try { await call('admin_appmonitor_releases_delete', { id: button.dataset.appmonitorDelete }); setMessage($('appMonitorReleaseMessage'), t('admin.appmonitorDeleted'), 'success'); await refreshAppMonitorReleases(); } catch (error) { setMessage($('appMonitorReleaseMessage'), error.message, 'error'); } });
     }
     async function refreshAppMonitorReleases() { const result = await call('admin_appmonitor_releases_list'); renderAppMonitorReleases(result.releases); }
+    // ---- 故障页内容编辑 --------------------------------------------------
+    let errorPages = [];
+    function fillErrorPageForm(code) {
+      const page = errorPages.find(item => Number(item.code) === Number(code)) || {};
+      $('errTitleZh').value = page.title_zh || '';
+      $('errSubtitleZh').value = page.subtitle_zh || '';
+      $('errTitleEn').value = page.title_en || '';
+      $('errSubtitleEn').value = page.subtitle_en || '';
+      $('errBodyZh').value = page.body_zh || '';
+      $('errBodyEn').value = page.body_en || '';
+      $('errActionLabelZh').value = page.action_label_zh || '';
+      $('errActionLabelEn').value = page.action_label_en || '';
+      $('errActionHref').value = page.action_href || '';
+      setMessage($('errorPageMessage'), '');
+    }
+    async function refreshErrorPages() {
+      try {
+        const result = await call('admin_error_pages_get');
+        errorPages = Array.isArray(result.pages) ? result.pages : [];
+        fillErrorPageForm($('errorPageCode').value);
+      } catch (error) {
+        setMessage($('errorPageMessage'), error.message, 'error');
+      }
+    }
+    $('errorPageCode').addEventListener('change', () => fillErrorPageForm($('errorPageCode').value));
+    $('errorPageForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      setMessage($('errorPageMessage'), t('admin.siteServiceSaving'));
+      try {
+        // 链接只允许站内相对路径或 http(s)，与服务端渲染规则保持一致。
+        const href = $('errActionHref').value.trim();
+        if (href && !/^(https?:\/\/|\/|[A-Za-z0-9._~\-/#?=&%]+$)/.test(href)) {
+          setMessage($('errorPageMessage'), t('admin.errorPageBadHref'), 'error');
+          return;
+        }
+        await call('admin_error_pages_set', {
+          code: Number($('errorPageCode').value),
+          titleZh: $('errTitleZh').value, subtitleZh: $('errSubtitleZh').value,
+          titleEn: $('errTitleEn').value, subtitleEn: $('errSubtitleEn').value,
+          bodyZh: $('errBodyZh').value, bodyEn: $('errBodyEn').value,
+          actionLabelZh: $('errActionLabelZh').value, actionLabelEn: $('errActionLabelEn').value,
+          actionHref: href
+        });
+        setMessage($('errorPageMessage'), t('admin.errorPageSaved'), 'success');
+        await refreshErrorPages();
+      } catch (error) {
+        setMessage($('errorPageMessage'), error.message, 'error');
+      }
+    });
+    $('errorPageReset').addEventListener('click', async () => {
+      if (!(await ClubCommon.confirm({ message: t('admin.errorPageResetConfirm'), danger: true }))) return;
+      try {
+        await call('admin_error_pages_reset', { code: Number($('errorPageCode').value) });
+        setMessage($('errorPageMessage'), t('admin.errorPageResetDone'), 'success');
+        await refreshErrorPages();
+      } catch (error) {
+        setMessage($('errorPageMessage'), error.message, 'error');
+      }
+    });
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -716,9 +818,10 @@
           call('admin_staff_permissions_list'),
           call('admin_super_admins_list'),
           call('admin_site_service_get'),
+          call('admin_error_pages_get'),
           call('admin_appmonitor_releases_list')
         );
-        labels.push('profiles', 'resets', 'permissions', 'superAdmins', 'siteService', 'appmonitorReleases');
+        labels.push('profiles', 'resets', 'permissions', 'superAdmins', 'siteService', 'errorPages', 'appmonitorReleases');
       }
       if (permOn('checkin')) {
         tasks.push(call('admin_checkin_list'), call('admin_course_checkin_list'));
@@ -784,6 +887,7 @@
           const s = byLabel.siteService;
           $('siteServiceEnabled').checked = s.enabled !== false;
           $('siteRandomEnabled').checked = s.random_enabled === true;
+          if ($('siteDisplayMode')) $('siteDisplayMode').value = s.display_mode || 'overlay';
           $('siteTitleZh').value = s.title_zh || '网站暂不可用';
           $('siteSubtitleZh').value = s.subtitle_zh || '网站暂不可用';
           $('siteTitleEn').value = s.title_en || 'Website temporarily unavailable';
@@ -854,6 +958,7 @@
         const saved = await call('admin_site_service_set', {
           enabled: $('siteServiceEnabled').checked,
           randomEnabled: $('siteRandomEnabled').checked,
+          displayMode: $('siteDisplayMode') ? $('siteDisplayMode').value : 'overlay',
           titleZh: $('siteTitleZh').value,
           subtitleZh: $('siteSubtitleZh').value,
           titleEn: $('siteTitleEn').value,

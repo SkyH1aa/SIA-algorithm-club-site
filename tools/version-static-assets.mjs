@@ -18,7 +18,7 @@ const check = process.argv.includes('--check');
 const VERSIONED = [
   'theme.css', 'club-ui.css', 'club-shell.js', 'theme.js', 'i18n.js', 'i18n-dict.js', 'i18n-dict-zh.js', 'i18n-dict-en.js',
   'club-common.js', 'club-share.js', 'chat-i18n.js', 'assistant-i18n.js', 'member-identity.js',
-  'club-auth-storage.js', 'service-gate.js', 'service-prompts.js',
+  'club-auth-storage.js', 'service-gate.js', 'service-prompts.js', 'error-page.js',
   'chat-core.js', 'chat.js', 'chat-file-bundle.js', 'chat.css', 'assistant.css',
   'vendor/supabase/supabase.min.js', 'vendor/three/three.min.js', 'vendor/three/three.module.js', 'sw.js'
 ];
@@ -48,6 +48,9 @@ const htmlFiles = [
   path.join(root, 'index.html'),
   // GitHub Pages 只认仓库根目录的 404.html，而不是 public/404.html。
   path.join(root, '404.html'),
+  // 故障页同样放在仓库根目录，与 index.html 同级。
+  path.join(root, '502.html'),
+  path.join(root, '503.html'),
   ...fs.readdirSync(publicDir).filter(name => name.endsWith('.html')).map(name => path.join(publicDir, name)),
   ...['俄罗斯方块.html', '俄罗斯方块AI.html', '贪吃蛇.html', '贪吃蛇专家系统.html']
     .map(name => path.join(root, name)).filter(file => fs.existsSync(file))

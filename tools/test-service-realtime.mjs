@@ -26,8 +26,12 @@ assert.doesNotMatch(bcBlock, /applyState\(event/, 'broadcast event is never appl
 
 // --- 2) 单一状态入口 ---
 assert.match(gate, /function applyState\(state\)/);
-assert.match(gate, /const reason = blockReason\(state\);\s*\n\s*if \(reason\) renderOverlay\(reason, state\); else teardownOverlay\(\);/,
+assert.match(gate, /const reason = blockReason\(state\);\s*\n\s*if \(reason\) \{/,
   'applyState is the only place that blocks or unblocks');
+// 阻断时按 display_mode 二分：遮罩或跳转；解除时一律拆遮罩并复位跳转标记。
+assert.match(gate, /if \(display === 'overlay'\) renderOverlay\(reason, state\);\s*\n\s*else routeToErrorPage\(display\);/,
+  'blocking honors the configured display mode');
+assert.match(gate, /teardownOverlay\(\);\s*\n\s*redirected = false;/, 'unblocking always restores the page');
 
 // --- 3) 阻断判定：总开关优先，其次功能开关 ---
 assert.match(gate, /if \(state\.enabled === false\) return \{ kind: 'site', feature: null \};/);
@@ -71,7 +75,7 @@ const channelBack = /const SITE_SERVICE_CHANNEL = '([^']+)'/.exec(fn)[1];
 assert.equal(channelFront, channelBack, 'frontend and backend use the same channel');
 
 // --- 9) updated_at 必须有，否则无法判断是否变化 ---
-assert.match(sql, /feature_settings jsonb, updated_at timestamptz\)/, 'status RPC exposes updated_at');
+assert.match(sql, /feature_settings jsonb, updated_at timestamptz, display_mode text\)/, 'status RPC exposes updated_at and display_mode');
 assert.match(gate, /String\(row\.updated_at \|\| ''\)/, 'client uses updated_at as the change signature');
 
 // --- 10) 管理页保存后立即本地生效 ---

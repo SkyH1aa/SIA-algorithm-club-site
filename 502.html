@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>上游服务暂时不可用 · 算法社</title>
+  <meta name="robots" content="noindex">
+  <!--
+    与 404.html 相同：GitHub Pages 会把不存在的路径交给根目录 404.html，
+    但这里是被主动跳转到的固定页面。相对链接仍需基于站点根解析，
+    否则从 /public/xxx.html 跳过来时会指错目录。
+  -->
+  <script>
+    (function () {
+      var REPO = 'SIA-algorithm-club-site';
+      var base;
+      if (location.protocol === 'file:') {
+        base = './';
+      } else if (location.pathname.indexOf('/' + REPO + '/') === 0) {
+        base = '/' + REPO + '/';
+      } else if (/\.github\.io$/i.test(location.hostname)) {
+        var first = location.pathname.split('/').filter(Boolean)[0] || '';
+        base = /^[A-Za-z0-9._-]+$/.test(first) ? '/' + first + '/' : '/';
+      } else {
+        base = '/';
+      }
+      document.write('<base href="' + base + '">');
+    })();
+  </script>
+  <link rel="icon" href="public/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="public/theme.css?v=39014235">
+  <link rel="stylesheet" href="public/club-ui.css?v=f12be04a">
+  <script src="public/theme.js?v=1b745a4f"></script>
+  <script src="public/i18n-dict.js?v=11c5495b" defer></script>
+  <script src="public/i18n.js?v=ba66328e"></script>
+  <script src="public/club-common.js?v=b3d82c39"></script>
+  <script src="public/service-prompts.js?v=1cfff2ab"></script>
+</head>
+<body class="club-page">
+  <header class="topbar"><div class="topbar-inner"><a class="brand" href="index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Bad Gateway</small></span></a><a class="back" href="index.html" data-i18n="common.backSite">返回官网</a></div></header>
+  <main>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">502</p>
+        <h1 id="errTitle" data-i18n="errorPage.h502Title">上游服务暂时不可用</h1>
+        <p class="lead" id="errSubtitle" data-i18n="errorPage.h502Lead">网站本身正常，但它依赖的一个服务返回了异常。</p>
+        <div class="error-page-body" id="errBody"></div>
+        <div class="actions">
+          <button class="button" type="button" id="errRetry" data-i18n="errorPage.retry">重试</button>
+          <a class="button secondary" href="index.html" data-i18n="common.backHome">返回首页</a>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="public/club-shell.js?v=6f76acb2"></script>
+  <script src="public/error-page.js?v=340df0eb"></script>
+  <script>window.ClubErrorPage && window.ClubErrorPage.mount(502);</script>
+</body>
+</html>

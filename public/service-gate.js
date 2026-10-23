@@ -3,6 +3,9 @@
   const URL = SUPABASE_URL + '/functions/v1/club-drive';
   const KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
   const isAdminHub = /(?:^|\/)admin-hub\.html$/i.test(location.pathname);
+  // 故障页自身绝不能再执行服务门禁：404.html 也引入了本脚本，
+  // 否则「路由到 404」会在 404 页上再次跳转，形成死循环。
+  const isErrorPage = /(?:^|\/)(?:404|502|503)\.html$/i.test(location.pathname);
   const isTemporaryLogin = /(?:^|\/)member-center\.html$/i.test(location.pathname) && new URLSearchParams(location.search).get('serviceDebug') === '1';
   const FEATURE_BY_PATH = { 'chat.html':'chat', 'member-center.html':'member-center', 'member-points.html':'points', 'points-mall.html':'mall', 'member-messages.html':'messages', 'drive.html':'drive', 'events.html':'events', 'join.html':'join', 'gomoku.html':'gomoku', 'tetris.html':'tetris', 'snake.html':'snake', 'platformer.html':'platformer', 'club-features.html':'club-features', 'visualization-lab.html':'visualization-lab', 'sorting-lab.html':'sorting-lab', 'search-lab.html':'search-lab', 'ds-lab.html':'ds-lab', 'graph-lab.html':'graph-lab', 'dp-lab.html':'dp-lab', 'tree-lab.html':'tree-lab', 'heap-lab.html':'heap-lab', 'resources.html':'resources', 'guide.html':'guide', 'changelog.html':'changelog', 'donations.html':'donations', 'notifications.html':'notifications', 'drive-admin.html':'drive-admin', 'member-profile.html':'member-profile', 'search.html':'search', 'gomoku-satori-lab.html':'gomoku-satori-lab' };
   const featureKey = FEATURE_BY_PATH[location.pathname.split('/').pop().toLowerCase()] || null;
@@ -21,7 +24,7 @@
       };
     }
   };
-  if (!isAdminHub && !isTemporaryLogin) {
+  if (!isAdminHub && !isTemporaryLogin && !isErrorPage) {
     document.documentElement.classList.add('club-service-checking');
     const earlyStyle = document.createElement('style');
     earlyStyle.textContent = 'html.club-service-checking body{visibility:hidden!important}';
@@ -103,6 +106,31 @@
     pill.style.display = '';
   }
 
+  // 站点根路径：GitHub Pages 项目页是 /<repo>/，本地 file:// 是当前目录。
+  function siteRoot() {
+    if (location.protocol === 'file:') return './';
+    const match = location.pathname.match(/^\/([^/]+)\//);
+    if (/\.github\.io$/i.test(location.hostname) && match) return '/' + match[1] + '/';
+    return '/';
+  }
+
+  // 解析展示方式：总开关关闭时由它统一决定；单个功能关闭时用该功能自己的设置。
+  function resolveDisplay(reason, state) {
+    const raw = reason.kind === 'site'
+      ? state.display_mode
+      : (reason.feature && reason.feature.display_mode);
+    const mode = String(raw || 'overlay');
+    return ['502', '503', '404'].includes(mode) ? mode : 'overlay';
+  }
+
+  let redirected = false;
+  function routeToErrorPage(code) {
+    if (redirected) return;
+    redirected = true;
+    // 用 replace：用户按返回键不该回到已被关闭的页面。
+    location.replace(siteRoot() + code + '.html');
+  }
+
   // 阻断原因：总开关优先，其次当前页面对应的功能开关。
   function blockReason(state) {
     if (!state) return null;
@@ -125,11 +153,38 @@
     lockedElements = [];
   }
 
+  // 遮罩生效时把页面主体从 DOM 里摘下来存好，而不是只靠 CSS 盖住。
+  // 原因：浏览器缩放、开发者工具、以及某些辅助技术可以绕过纯 CSS 覆盖看到下层内容。
+  // 摘除后屏幕上只剩遮罩本身；解除时再原样放回，恢复后页面与之前完全一致。
+  let detachedNodes = null;
+
+  function detachPageContent() {
+    if (detachedNodes || !document.body) return;
+    detachedNodes = [];
+    // 只摘 body 的直接子节点，保留 overlay 与状态提示条。
+    for (const node of Array.from(document.body.children)) {
+      if (node.id === 'club-service-overlay' || node.id === 'club-service-live-pill') continue;
+      // script 标签保留，否则重新放回时脚本不会再次执行，但也不会丢失已定义的行为。
+      detachedNodes.push({ node, next: node.nextSibling });
+      try { node.remove(); } catch (_error) { /* ignore */ }
+    }
+  }
+
+  function reattachPageContent() {
+    if (!detachedNodes) return;
+    for (const entry of detachedNodes) {
+      try { document.body.insertBefore(entry.node, entry.next && entry.next.parentNode === document.body ? entry.next : null); }
+      catch (_error) { try { document.body.appendChild(entry.node); } catch (_e) { /* ignore */ } }
+    }
+    detachedNodes = null;
+  }
+
   function teardownOverlay() {
     if (overlay) { overlay.remove(); overlay = null; }
     document.body.classList.remove('club-service-paused');
     document.documentElement.style.overflow = '';
     restoreLocked();
+    reattachPageContent();
   }
 
   function selectedCopy(reason, state) {
@@ -173,6 +228,7 @@
       overlay._reason = reason;
       document.body.classList.add('club-service-paused');
       document.body.appendChild(overlay);
+      detachPageContent();
       document.documentElement.style.overflow = 'hidden';
       for (const el of document.querySelectorAll('button,a,input,select,textarea,[contenteditable="true"]')) {
         if (overlay.contains(el)) continue;
@@ -217,7 +273,15 @@
     try { localStorage.setItem('club-site-service-last-state', JSON.stringify(state)); } catch (_error) { /* 隐私模式忽略 */ }
     try { window.dispatchEvent(new CustomEvent('club:servicestate', { detail: state })); } catch (_error) { /* ignore */ }
     const reason = blockReason(state);
-    if (reason) renderOverlay(reason, state); else teardownOverlay();
+    if (reason) {
+      const display = resolveDisplay(reason, state);
+      if (display === 'overlay') renderOverlay(reason, state);
+      else routeToErrorPage(display);
+    } else {
+      // 重新开启：若之前是遮罩就拆掉；若是跳转过，本页已经不在了。
+      teardownOverlay();
+      redirected = false;
+    }
     reveal();
   }
 
@@ -324,7 +388,7 @@
   }
 
   async function check() {
-    if (isAdminHub || isTemporaryLogin) return;
+    if (isAdminHub || isTemporaryLogin || isErrorPage) return;
     let cached = null;
     try { cached = JSON.parse(localStorage.getItem('club-site-service-last-state') || 'null'); } catch (_error) { cached = null; }
     if (cached) applyState(cached); else reveal();

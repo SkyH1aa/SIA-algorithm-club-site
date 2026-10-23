@@ -19,6 +19,7 @@ alter table public.club_site_service_settings add column if not exists random_en
 alter table public.club_site_service_settings add column if not exists report_zh text not null default '';
 alter table public.club_site_service_settings add column if not exists report_en text not null default '';
 alter table public.club_site_service_settings add column if not exists feature_settings jsonb not null default '{}'::jsonb;
+alter table public.club_site_service_settings add column if not exists display_mode text not null default 'overlay';
 alter table public.club_site_service_settings enable row level security;
 revoke all on table public.club_site_service_settings from anon, authenticated;
 
@@ -26,19 +27,23 @@ revoke all on table public.club_site_service_settings from anon, authenticated;
 -- 没有它，轮询和实时回调都无法区分「真的改了」与「又读了一次同样的值」。
 drop function if exists public.club_site_service_status();
 create or replace function public.club_site_service_status()
-returns table(enabled boolean, random_enabled boolean, title_zh text, subtitle_zh text, title_en text, subtitle_en text, report_zh text, report_en text, feature_settings jsonb, updated_at timestamptz)
+returns table(enabled boolean, random_enabled boolean, title_zh text, subtitle_zh text, title_en text, subtitle_en text, report_zh text, report_en text, feature_settings jsonb, updated_at timestamptz, display_mode text)
 language sql stable security definer set search_path = public
-as $$ select enabled,random_enabled,title_zh,subtitle_zh,title_en,subtitle_en,report_zh,report_en,feature_settings,updated_at
+as $$ select enabled,random_enabled,title_zh,subtitle_zh,title_en,subtitle_en,report_zh,report_en,feature_settings,updated_at,
+              coalesce(nullif(display_mode, ''), 'overlay')
        from public.club_site_service_settings where singleton
-       union all select true,false,'网站暂不可用','网站暂不可用','Website temporarily unavailable','Website temporarily unavailable','','','{}'::jsonb,now()
+       union all select true,false,'网站暂不可用','网站暂不可用','Website temporarily unavailable','Website temporarily unavailable','','','{}'::jsonb,now(),'overlay'
        where not exists (select 1 from public.club_site_service_settings where singleton)
        limit 1 $$;
 
 drop function if exists public.club_site_service_set(boolean,text,text,text,text,uuid);
 drop function if exists public.club_site_service_set(boolean,boolean,text,text,text,text,uuid);
+drop function if exists public.club_site_service_set(boolean,boolean,text,text,text,text,text,text,jsonb,uuid);
+drop function if exists public.club_site_service_set(boolean,boolean,text,text,text,text,text,text,jsonb,text,uuid);
 create or replace function public.club_site_service_set(
   p_enabled boolean, p_random_enabled boolean default false, p_title_zh text default null, p_subtitle_zh text default null,
-  p_title_en text default null, p_subtitle_en text default null, p_report_zh text default null, p_report_en text default null, p_feature_settings jsonb default null, p_updated_by uuid default null
+  p_title_en text default null, p_subtitle_en text default null, p_report_zh text default null, p_report_en text default null, p_feature_settings jsonb default null, p_updated_by uuid default null,
+  p_display_mode text default null
 )
 returns boolean language plpgsql security definer set search_path = public
 as $$
@@ -52,12 +57,13 @@ begin
     report_zh = coalesce(left(coalesce(p_report_zh,''),10000), ''),
     report_en = coalesce(left(coalesce(p_report_en,''),10000), ''),
     feature_settings = coalesce(p_feature_settings, feature_settings),
+    display_mode = coalesce(nullif(trim(p_display_mode), ''), display_mode),
     updated_at = now(), updated_by = p_updated_by where singleton;
   return found;
 end $$;
 revoke execute on function public.club_site_service_status() from public;
 grant execute on function public.club_site_service_status() to anon, authenticated;
-revoke execute on function public.club_site_service_set(boolean,boolean,text,text,text,text,text,text,jsonb,uuid) from public, anon, authenticated;
+revoke execute on function public.club_site_service_set(boolean,boolean,text,text,text,text,text,text,jsonb,uuid,text) from public, anon, authenticated;
 
 -- APPMonitor V7.5+ 发布版本（仅超管可通过 Edge Function 管理）
 create table if not exists public.appmonitor_releases (

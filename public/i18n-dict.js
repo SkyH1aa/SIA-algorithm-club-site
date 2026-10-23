@@ -1576,6 +1576,14 @@
       ownPage: '这是你的个人主页',
       viewOwn: '查看我的主页'
     },
+    errorPage: {
+      h502Title: '上游服务暂时不可用',
+      h502Lead: '网站本身正常，但它依赖的一个服务返回了异常。',
+      h503Title: '网站暂时停止服务',
+      h503Lead: '管理员正在维护或临时关闭了这项服务，请稍后再来。',
+      retry: '重试',
+      checkAgain: '重新检查'
+    },
     notFound: {
       h1: '这个页面不存在',
       lead: '链接可能已经失效，或者地址输入有误。可以回到首页，或从社团功能重新进入需要的模块。'
@@ -2023,7 +2031,14 @@
       loginFirst: '请先登录管理账号',
       noPerm: '无管理权限',
       panel: '管理面板入口',
-      siteServiceTitle: '网站服务运行开关', siteServiceIntro: '仅超管可用。暂停后所有网站页面将显示不可用提示。', siteServiceRunning: '网站服务运行中', siteRandomEnabled: '随机展示提示词', siteTitleZh: '中文大标题', siteSubtitleZh: '中文副标题', siteTitleEn: '英文大标题', siteSubtitleEn: '英文副标题', siteReportZh: '中文维护报告（支持 Markdown）', siteReportEn: '英文维护报告（支持 Markdown）', siteServiceSave: '保存网站服务设置', siteServiceSaving: '正在保存…', siteServiceSaved: '网站服务设置已保存，在线页面会立即生效。', siteServiceSavedNoBroadcast: '设置已保存；实时广播未送达，其它设备最多 30 秒内自动同步。', appmonitorReleasesTitle: 'APPMonitor 版本发布', appmonitorReleasesIntro: '仅超管可编辑。V7.0 及更早版本保留在发布页中；在这里管理 V7.5 及之后的版本。', appmonitorVersion: '版本号', appmonitorDate: '发布日期', appmonitorIntroZh: '中文简介', appmonitorIntroEn: '英文简介', appmonitorDownloadUrl: '下载链接', appmonitorSaveRelease: '保存版本', appmonitorSaving: '正在保存版本…', appmonitorSaved: '版本已保存。', appmonitorDeleted: '版本已删除。', appmonitorNoReleases: '还没有新增版本。', appmonitorDeleteConfirm: '确定删除这个 APPMonitor 版本吗？', exportCsv: '导出 CSV', exportEmpty: '当前没有可导出的记录。', exportOk: '已导出 {n} 条记录。', actions: '操作', openLink: '打开链接', featureGroupMember: '社员功能', featureGroupGames: 'AI 与游戏', featureGroupLabs: '算法实验室', featureGroupContent: '教学与内容', featureSettingsTitle: '单项功能开关', featureEnabled: '启用', featureRandom: '随机提示', featureTitleZh: '中文标题', featureSubtitleZh: '中文副标题', featureTitleEn: '英文标题', featureSubtitleEn: '英文副标题', featureChat: 'ChatAI / AI 对话', featureMemberCenter: '个人中心 / 登录注册', featureMemberProfile: '社员资料绑定', featureCheckin: '签到兑换', featureCourseCheckin: '课程签到', featurePoints: '积分榜', featureMall: '积分商城', featureMessages: '社员留言箱', featureDrive: '社团盘', featureEvents: '活动与公告', featureJoin: '加入社团申请', featureDonations: '捐赠名单', featureGomoku: '五子棋', featureTetris: '俄罗斯方块', featureSnake: '贪吃蛇', featurePlatformer: '行于无垠', featureClubFeatures: '社团功能总览', featureVisualizationLab: '算法实验室总入口', featureSortingLab: '排序实验室', featureSearchLab: '搜索实验室', featureDsLab: '数据结构实验室', featureGraphLab: '图论实验室', featureDpLab: '动态规划实验室', featureTreeLab: '二叉树实验室', featureHeapLab: '堆实验室', featureSatoriLab: 'Satori 决策剖析实验室', featureResources: '教学资源', featureGuide: '使用指引', featureChangelog: '更新日志',
+      siteDisplayMode: '关闭时的方式', displayOverlay: '全屏遮罩', display503: '跳转到 503 页', display502: '跳转到 502 页', display404: '跳转到 404 页', featureDisplayMode: '该功能的处理方式',
+errorPagesTitle: '故障页内容（502 / 503 / 404）', errorPagesIntro: '仅超管可编辑。页面结构固定，这里只能改文案与 Markdown 正文，不能注入脚本。留空则使用页面内置默认值。',
+errorPagePick: '选择页面', errorPageBodyZh: '中文正文（Markdown）', errorPageBodyEn: 'English body (Markdown)',
+errorPageActionLabelZh: '主按钮文案（中文，留空=默认）', errorPageActionLabelEn: 'Primary button label (EN, blank = default)',
+errorPageActionHref: '主按钮链接（留空=默认；仅站内或 http(s)）',
+errorPageReset: '恢复默认', errorPageSaved: '故障页内容已保存。', errorPageResetDone: '已恢复为默认内容。',
+errorPageResetConfirm: '恢复这一页的默认内容？当前自定义文案会被清空。', errorPageBadHref: '按钮链接只允许站内相对路径或 http(s) 地址。',
+siteServiceTitle: '网站服务运行开关', siteServiceIntro: '仅超管可用。暂停后所有网站页面将显示不可用提示。', siteServiceRunning: '网站服务运行中', siteRandomEnabled: '随机展示提示词', siteTitleZh: '中文大标题', siteSubtitleZh: '中文副标题', siteTitleEn: '英文大标题', siteSubtitleEn: '英文副标题', siteReportZh: '中文维护报告（支持 Markdown）', siteReportEn: '英文维护报告（支持 Markdown）', siteServiceSave: '保存网站服务设置', siteServiceSaving: '正在保存…', siteServiceSaved: '网站服务设置已保存，在线页面会立即生效。', siteServiceSavedNoBroadcast: '设置已保存；实时广播未送达，其它设备最多 30 秒内自动同步。', appmonitorReleasesTitle: 'APPMonitor 版本发布', appmonitorReleasesIntro: '仅超管可编辑。V7.0 及更早版本保留在发布页中；在这里管理 V7.5 及之后的版本。', appmonitorVersion: '版本号', appmonitorDate: '发布日期', appmonitorIntroZh: '中文简介', appmonitorIntroEn: '英文简介', appmonitorDownloadUrl: '下载链接', appmonitorSaveRelease: '保存版本', appmonitorSaving: '正在保存版本…', appmonitorSaved: '版本已保存。', appmonitorDeleted: '版本已删除。', appmonitorNoReleases: '还没有新增版本。', appmonitorDeleteConfirm: '确定删除这个 APPMonitor 版本吗？', exportCsv: '导出 CSV', exportEmpty: '当前没有可导出的记录。', exportOk: '已导出 {n} 条记录。', actions: '操作', openLink: '打开链接', featureGroupMember: '社员功能', featureGroupGames: 'AI 与游戏', featureGroupLabs: '算法实验室', featureGroupContent: '教学与内容', featureSettingsTitle: '单项功能开关', featureEnabled: '启用', featureRandom: '随机提示', featureTitleZh: '中文标题', featureSubtitleZh: '中文副标题', featureTitleEn: '英文标题', featureSubtitleEn: '英文副标题', featureChat: 'ChatAI / AI 对话', featureMemberCenter: '个人中心 / 登录注册', featureMemberProfile: '社员资料绑定', featureCheckin: '签到兑换', featureCourseCheckin: '课程签到', featurePoints: '积分榜', featureMall: '积分商城', featureMessages: '社员留言箱', featureDrive: '社团盘', featureEvents: '活动与公告', featureJoin: '加入社团申请', featureDonations: '捐赠名单', featureGomoku: '五子棋', featureTetris: '俄罗斯方块', featureSnake: '贪吃蛇', featurePlatformer: '行于无垠', featureClubFeatures: '社团功能总览', featureVisualizationLab: '算法实验室总入口', featureSortingLab: '排序实验室', featureSearchLab: '搜索实验室', featureDsLab: '数据结构实验室', featureGraphLab: '图论实验室', featureDpLab: '动态规划实验室', featureTreeLab: '二叉树实验室', featureHeapLab: '堆实验室', featureSatoriLab: 'Satori 决策剖析实验室', featureResources: '教学资源', featureGuide: '使用指引', featureChangelog: '更新日志',
       gateLead: '管理员总览对超管，以及被授予任一管理权限的账号开放。',
       deniedLead: '当前账号没有可管理的模块。请联系现任超管开通对应权限。',
       hubLead: '按权限显示可用管理入口。密码重置、直接改密、姓名班级绑定编辑、权限分配、超管交接仅现任超管可用。',

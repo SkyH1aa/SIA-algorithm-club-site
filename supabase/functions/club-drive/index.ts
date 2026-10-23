@@ -3738,13 +3738,52 @@ Deno.serve(async request => {
       }
       const { response, payload: result } = await rpcRequest(url, serviceKey, 'club_site_service_set', {
         p_enabled: Boolean(payload.enabled), p_random_enabled: Boolean(payload.randomEnabled), p_title_zh: payload.titleZh, p_subtitle_zh: payload.subtitleZh,
-        p_title_en: payload.titleEn, p_subtitle_en: payload.subtitleEn, p_report_zh: payload.reportZh, p_report_en: payload.reportEn, p_feature_settings: payload.featureSettings || null, p_updated_by: user?.id || null
+        p_title_en: payload.titleEn, p_subtitle_en: payload.subtitleEn, p_report_zh: payload.reportZh, p_report_en: payload.reportEn, p_feature_settings: payload.featureSettings || null, p_updated_by: user?.id || null,
+        p_display_mode: payload.displayMode || null
       });
       if (!response.ok) throw new Error('保存网站服务状态失败。');
       // 先把结果返回给管理页，再尽力广播给其它在线页面；广播失败不算保存失败。
       const broadcast = await broadcastServiceChange();
       return json({ ok: Array.isArray(result) ? result[0] : result, broadcast });
     }
+    if (payload.action === 'admin_error_pages_get') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      const { url, serviceKey } = supabaseConfig();
+      const response = await fetch(`${url}/rest/v1/rpc/club_error_pages_get`, {
+        method: 'POST',
+        headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}`, 'content-type': 'application/json' },
+        body: '{}'
+      });
+      if (!response.ok) return json({ error: '读取故障页内容失败。' }, 400);
+      return json({ pages: await response.json().catch(() => []) });
+    }
+    if (payload.action === 'admin_error_pages_set') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      const code = Number(payload.code);
+      if (![502, 503, 404].includes(code)) return json({ error: '只支持 502 / 503 / 404。' }, 400);
+      const { url, serviceKey } = supabaseConfig();
+      const { response } = await rpcRequest(url, serviceKey, 'club_error_pages_set', {
+        p_code: code,
+        p_title_zh: payload.titleZh || '', p_title_en: payload.titleEn || '',
+        p_subtitle_zh: payload.subtitleZh || '', p_subtitle_en: payload.subtitleEn || '',
+        p_body_zh: payload.bodyZh || '', p_body_en: payload.bodyEn || '',
+        p_action_label_zh: payload.actionLabelZh || '', p_action_label_en: payload.actionLabelEn || '',
+        p_action_href: payload.actionHref || '',
+        p_updated_by: user?.id || null
+      });
+      if (!response.ok) return json({ error: '保存故障页内容失败。' }, 400);
+      return json({ ok: true });
+    }
+    if (payload.action === 'admin_error_pages_reset') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      const code = Number(payload.code);
+      if (![502, 503, 404].includes(code)) return json({ error: '只支持 502 / 503 / 404。' }, 400);
+      const { url, serviceKey } = supabaseConfig();
+      const { response } = await rpcRequest(url, serviceKey, 'club_error_pages_reset', { p_code: code });
+      if (!response.ok) return json({ error: '恢复默认失败。' }, 400);
+      return json({ ok: true });
+    }
+
     if (payload.action === 'admin_staff_permissions_list') {
       try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
       return json({ permissions: await listStaffPermissions() });
