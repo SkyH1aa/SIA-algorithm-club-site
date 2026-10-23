@@ -1,6 +1,19 @@
 // English dictionary (loaded on demand when the language is English).
 (() => {
   window.ClubI18nDictEn = {
+  labView: {
+    inorder: 'In-order traversal',
+    dijkstraHint: 'Expands the node with the smallest current distance; only valid for non-negative weights.',
+    front: 'FRONT · dequeue end',
+    rear: 'REAR · enqueue end',
+  },
+  gomokuExp: {
+    h1: 'V10 Free-play Lab',
+    lead: 'V10Mesa · V9Mesa · V10Exp expert and free-net fusion comparison',
+    noScore: 'Free-play lab · matches on this page are unscored and never uploaded',
+    exportRecord: 'Export this game',
+    compareTitle: 'Experimental version comparison',
+  },
     guide: {
       title: 'Usage Guide · Algorithm Club', h1: 'Usage Guide', lead: 'Use the homepage navigation to enter club features, AI games, algorithm labs, and member tools.', quickStart: 'Quick start', quickStartText: 'Open Member Center from the homepage to register, sign in, and bind your profile, then choose a module from Club Features.', accountTitle: 'Account and member center', accountText: 'Register with an invite code, then bind your Chinese name and class and view your profile and points in Member Center. For check-in, open Check-in from Club Features.', featuresTitle: 'Club features', featuresText: 'Find teaching resources, algorithm labs, Gomoku, Tetris, Snake, check-in, the points mall, messages, and activities here. Open the points board from Member Center or Points in Jump to module.', gamesTitle: 'AI games', gamesText: 'Games offer regular play, AI play, AI assist, and versus modes. Enable the AI decision panel to inspect candidate actions, scores, targets, or predicted paths.', checkinTitle: 'Check-in and course check-in', checkinText: 'Open Check-in from Club Features. Points redemption uses an administrator-issued code; for course check-in, select the corresponding type on the check-in page and submit it for administrator review.', themeTitle: 'Language and theme', themeText: 'Switch between Chinese and English, and choose auto, light, or dark themes. Auto uses the light theme from 06:00 to 18:00 Beijing time.', changelogTitle: 'Changelog', changelogText: 'Review feature updates and maintenance records.', openChangelog: 'View changelog →', backHome: 'Back to homepage'
     },
@@ -86,6 +99,8 @@
       admin: 'Admin Hub'
     },
     home: {
+      capMath: 'Mathematical Structures',
+      capMathDesc: 'Build explainable intuition from probability, graphs, and complexity.',
       title: 'Algorithm Club',
       affiliation: 'Sendelta · Sci-Tech Future · Sendelta Sci-Tech Club',
       officialLinkReminder: 'Please remember the Algorithm Club quick site link: <a href="https://ada.nz/r/sfs" target="_blank" rel="noopener noreferrer">https://ada.nz/r/sfs</a>',
@@ -449,6 +464,12 @@
       softDropBoost: 'soft drop'
     },
     gomoku: {
+      gameMode: 'Game mode',
+      playerChallenge: 'Player challenge',
+      modelBattle: 'Model vs model',
+      blackModel: 'Black model',
+      whiteModel: 'White model',
+      startModelBattle: 'Start model battle',
       title: 'Algorithm Club Mingxing Gomoku Challenge',
       h1: 'Mingxing Gomoku Challenge',
       modelLabel: 'Challenge model',
@@ -552,6 +573,9 @@
       submitFail: 'Failed to submit application.',
     },
     memberCenter: {
+      readingAccount: 'Reading the current account…',
+      reading: 'Loading…',
+      checking: 'Checking…',
       noAccount: 'No account yet?',
       haveAccount: 'Already have an account?',
       goRegister: 'Register with an invite code',
@@ -673,6 +697,25 @@
       colPoints: 'Points'
     },
   satoriLab: {
+    h1: 'Gomoku-Satori Decision Lab',
+    controls: 'Match controls',
+    replay: 'Record replay',
+    live: 'Live match',
+    startAnalyze: 'Start move-by-move analysis',
+    blackFirst: 'Black (first)',
+    whiteSecond: 'White (second)',
+    startGame: 'Start match',
+    restart: 'Restart',
+    board: 'Board',
+    prevStep: '← Previous',
+    nextStep: 'Next →',
+    decision: 'This move',
+    threatScan: 'Threat scan before search',
+    candidates: 'Candidate move ranking',
+    iterations: 'Iterative deepening per depth',
+    searchTree: 'Search tree',
+    noDecision: 'No decision data yet.',
+    noDecisionFull: 'No decision data yet.<br>Run “Start move-by-move analysis” first.',
     movesPlayed: '{n} stones played',
     black: 'Black',
     white: 'White',
@@ -1762,6 +1805,9 @@
       redeemOk: 'Redeemed: {name}. Please wait for offline delivery.'
     },
     checkin: {
+      tabCodes: 'Check-in codes',
+      tabPending: 'Pending names',
+      tabCourse: 'Course check-in review',
       gateTitle: 'You are not a club member yet!',
       gateHint: 'Check-in & redeem is only for members signed into Club Drive.',
       lead: 'Enter your Chinese name and choose a type. Points redeem needs a code; course check-in needs no code and waits for admin review.',
@@ -2013,6 +2059,11 @@
       notFound: { title: 'Page not found · Algorithm Club', h1: 'Page not found' }
     },
     admin: {
+      tabProduct: 'Products',
+      tabRedemption: 'Redemptions',
+      tabAnnouncement: 'Announcements',
+      tabEvent: 'Events',
+      tabSignup: 'Sign-ups',
       loginFirst: 'Please sign in with an admin account',
       noPerm: 'No admin access',
       panel: 'Admin panel entries',

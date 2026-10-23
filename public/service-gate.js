@@ -5,7 +5,9 @@
   const isAdminHub = /(?:^|\/)admin-hub\.html$/i.test(location.pathname);
   // 故障页自身绝不能再执行服务门禁：404.html 也引入了本脚本，
   // 否则「路由到 404」会在 404 页上再次跳转，形成死循环。
-  const isErrorPage = /(?:^|\/)(?:404|502|503)\.html$/i.test(location.pathname);
+  // 故障页文件名不用 502/503：GitHub Pages 会把 /503.html 当作自身错误页保留路径，
+  // 覆盖掉仓库里的同名文件（502 也一并改名，避免同类问题）。
+  const isErrorPage = /(?:^|\/)(?:404|bad-gateway|service-unavailable)\.html$/i.test(location.pathname);
   const isTemporaryLogin = /(?:^|\/)member-center\.html$/i.test(location.pathname) && new URLSearchParams(location.search).get('serviceDebug') === '1';
   const FEATURE_BY_PATH = { 'chat.html':'chat', 'member-center.html':'member-center', 'member-points.html':'points', 'points-mall.html':'mall', 'member-messages.html':'messages', 'drive.html':'drive', 'events.html':'events', 'join.html':'join', 'gomoku.html':'gomoku', 'tetris.html':'tetris', 'snake.html':'snake', 'platformer.html':'platformer', 'club-features.html':'club-features', 'visualization-lab.html':'visualization-lab', 'sorting-lab.html':'sorting-lab', 'search-lab.html':'search-lab', 'ds-lab.html':'ds-lab', 'graph-lab.html':'graph-lab', 'dp-lab.html':'dp-lab', 'tree-lab.html':'tree-lab', 'heap-lab.html':'heap-lab', 'resources.html':'resources', 'guide.html':'guide', 'changelog.html':'changelog', 'donations.html':'donations', 'notifications.html':'notifications', 'drive-admin.html':'drive-admin', 'member-profile.html':'member-profile', 'search.html':'search', 'gomoku-satori-lab.html':'gomoku-satori-lab' };
   const featureKey = FEATURE_BY_PATH[location.pathname.split('/').pop().toLowerCase()] || null;
@@ -123,12 +125,16 @@
     return ['502', '503', '404'].includes(mode) ? mode : 'overlay';
   }
 
+  // 配置值仍是 502/503/404（数据库约束与管理页下拉都用它），
+  // 这里映射到实际文件名；404 保持原名。
+  const ERROR_PAGE_FILES = { '502': 'bad-gateway.html', '503': 'service-unavailable.html', '404': '404.html' };
+
   let redirected = false;
   function routeToErrorPage(code) {
     if (redirected) return;
     redirected = true;
     // 用 replace：用户按返回键不该回到已被关闭的页面。
-    location.replace(siteRoot() + code + '.html');
+    location.replace(siteRoot() + (ERROR_PAGE_FILES[code] || '404.html'));
   }
 
   // 阻断原因：总开关优先，其次当前页面对应的功能开关。

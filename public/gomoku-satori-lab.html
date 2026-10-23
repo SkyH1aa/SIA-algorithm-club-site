@@ -8,8 +8,8 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gomoku-Satori 决策剖析实验室 · 算法社</title>
-  <script src="i18n-dict.js?v=11c5495b"></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=42e483d8"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n-dict.js?v=c79bfe69"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script><script src="club-common.js?v=b3d82c39"></script>
 <style>
     :root {
       font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
@@ -373,7 +373,7 @@
   <main>
     <section class="intro">
       <p class="eyebrow">GOMOKU-SATORI · DECISION TRACE LAB</p>
-      <h1>Gomoku-Satori 决策剖析实验室</h1>
+      <h1 data-i18n="satoriLab.h1">Gomoku-Satori 决策剖析实验室</h1>
       <p>Gomoku-Satori 是本站从零自研、不使用任何外部引擎与神经网络的五子棋 AI。这个页面把它的每一次思考完全摊开：先看到威胁普查，再看候选着法如何逐项打分与排序，然后逐层加深搜索，最后用搜索树和证明过程交代“为什么是这一步”。</p>
       <p class="notice">诚实说明：Satori 是展示版引擎，实力弱于 V9Thinker、V10Ultra 等正式模型。这里展示的是它的真实决策过程，用于讲解 AI 如何思考，而不是宣称它的棋力。</p>
     </section>
@@ -381,12 +381,12 @@
     <div class="lab-grid">
       <div>
         <section class="panel">
-          <h2>对局控制</h2>
+          <h2 data-i18n="satoriLab.controls">对局控制</h2>
           <div class="controls">
             <div class="control-row">
               <div class="mode-tabs" id="modeTabs">
-                <button type="button" data-mode="replay" class="active">棋谱回放</button>
-                <button type="button" data-mode="live">实时对战</button>
+                <button type="button" data-mode="replay" class="active" data-i18n="satoriLab.replay">棋谱回放</button>
+                <button type="button" data-mode="live" data-i18n="satoriLab.live">实时对战</button>
               </div>
             </div>
             <div class="control-row" id="replayControls">
@@ -400,16 +400,16 @@
                 <option value="8" data-i18n="satoriLab.ply8">8 手</option>
                 <option value="auto" data-i18n="satoriLab.plyAuto">自动（下到分胜负）</option>
               </select>
-              <button type="button" class="btn primary" id="runReplay">开始逐手剖析</button>
+              <button type="button" class="btn primary" id="runReplay" data-i18n="satoriLab.startAnalyze">开始逐手剖析</button>
             </div>
             <div class="control-row" id="liveControls" hidden>
               <label for="liveSide" data-i18n="satoriLab.sideLabel">你执</label>
               <select id="liveSide">
-                <option value="1">黑棋（先手）</option>
-                <option value="2" selected>白棋（后手）</option>
+                <option value="1" data-i18n="satoriLab.blackFirst">黑棋（先手）</option>
+                <option value="2" selected data-i18n="satoriLab.whiteSecond">白棋（后手）</option>
               </select>
-              <button type="button" class="btn primary" id="startLive">开始对局</button>
-              <button type="button" class="btn" id="stopLive" disabled>重新开始</button>
+              <button type="button" class="btn primary" id="startLive" data-i18n="satoriLab.startGame">开始对局</button>
+              <button type="button" class="btn" id="stopLive" disabled data-i18n="satoriLab.restart">重新开始</button>
             </div>
             <p class="hint" id="statusLine">选择开局后点“开始逐手剖析”，Satori 会自己和自己下若干手，再逐手回看它的完整思路。</p>
             <div class="progress" id="progressBar" hidden><i id="progressFill"></i></div>
@@ -417,7 +417,7 @@
         </section>
 
         <section class="panel">
-          <h2>棋盘 <span class="step-tag" id="boardTag"></span></h2>
+          <h2><span data-i18n="satoriLab.board">棋盘</span> <span class="step-tag" id="boardTag"></span></h2>
           <div class="board-wrap">
             <div class="board" id="board"></div>
             <div class="legend">
@@ -427,9 +427,9 @@
               <span><i style="background:rgba(124,77,255,.7)"></i>进入搜索的候选</span>
             </div>
             <div class="step-nav" id="stepNav" hidden>
-              <button type="button" class="btn" id="prevStep">← 上一步</button>
+              <button type="button" class="btn" id="prevStep" data-i18n="satoriLab.prevStep">← 上一步</button>
               <span class="counter" id="stepCounter">—</span>
-              <button type="button" class="btn" id="nextStep">下一步 →</button>
+              <button type="button" class="btn" id="nextStep" data-i18n="satoriLab.nextStep">下一步 →</button>
             </div>
           </div>
         </section>
@@ -437,28 +437,28 @@
 
       <div id="analysisColumn">
         <section class="panel">
-          <h2>本步决策</h2>
-          <div id="decisionBody"><p class="empty-state">还没有决策数据。<br>先运行一次“开始逐手剖析”。</p></div>
+          <h2 data-i18n="satoriLab.decision">本步决策</h2>
+          <div id="decisionBody"><p class="empty-state" data-i18n="satoriLab.noDecisionFull">还没有决策数据。<br>先运行一次“开始逐手剖析”。</p></div>
         </section>
 
         <section class="panel">
-          <h2>搜索前的威胁普查</h2>
-          <div id="threatBody"><p class="empty-state">等待数据。</p></div>
+          <h2 data-i18n="satoriLab.threatScan">搜索前的威胁普查</h2>
+          <div id="threatBody"><p class="empty-state" data-i18n="satoriLab.waiting">等待数据。</p></div>
         </section>
 
         <section class="panel">
-          <h2>候选着法排序</h2>
-          <div id="candidateBody"><p class="empty-state">等待数据。</p></div>
+          <h2 data-i18n="satoriLab.candidates">候选着法排序</h2>
+          <div id="candidateBody"><p class="empty-state" data-i18n="satoriLab.waiting">等待数据。</p></div>
         </section>
 
         <section class="panel">
-          <h2>迭代加深每层结果</h2>
-          <div id="iterationBody"><p class="empty-state">等待数据。</p></div>
+          <h2 data-i18n="satoriLab.iterations">迭代加深每层结果</h2>
+          <div id="iterationBody"><p class="empty-state" data-i18n="satoriLab.waiting">等待数据。</p></div>
         </section>
 
         <section class="panel">
-          <h2>搜索树 <span class="step-tag" id="treeTag"></span></h2>
-          <div id="treeBody"><p class="empty-state">等待数据。</p></div>
+          <h2><span data-i18n="satoriLab.searchTree">搜索树</span> <span class="step-tag" id="treeTag"></span></h2>
+          <div id="treeBody"><p class="empty-state" data-i18n="satoriLab.waiting">等待数据。</p></div>
         </section>
       </div>
     </div>
@@ -893,11 +893,11 @@
           // 发生 beta 剪枝的节点返回的是“下界”而非精确值（fail-high），
           // 树上要标明，否则会把界误读成精确评分。
           node.bounded = true;
-          node.notes.push({ kind: 'prune', text: t('satoriLab.tree.prune', { move: coordText(e.row, e.col), score: fmtScore(e.score) }) });
+          node.notes.push({ kind: 'prune', text: t('satoriLab.searchTree.prune', { move: coordText(e.row, e.col), score: fmtScore(e.score) }) });
         }
-        else if (e.kind === 'node-cutoff') node.notes.push({ kind: 'cutoff', text: t('satoriLab.tree.cutoff.' + e.cutoff, { score: e.score === undefined ? '' : fmtScore(e.score) }) });
-        else if (e.kind === 'node-quiescence') node.notes.push({ kind: 'quiescence', text: t('satoriLab.tree.quiescence') });
-        else if (e.kind === 'node-forced') node.notes.push({ kind: 'forced', text: t('satoriLab.tree.forced', { move: coordText(e.row, e.col) }) });
+        else if (e.kind === 'node-cutoff') node.notes.push({ kind: 'cutoff', text: t('satoriLab.searchTree.cutoff.' + e.cutoff, { score: e.score === undefined ? '' : fmtScore(e.score) }) });
+        else if (e.kind === 'node-quiescence') node.notes.push({ kind: 'quiescence', text: t('satoriLab.searchTree.quiescence') });
+        else if (e.kind === 'node-forced') node.notes.push({ kind: 'forced', text: t('satoriLab.searchTree.forced', { move: coordText(e.row, e.col) }) });
       }
       for (const node of nodes.values()) if (node.parentId >= 0 && nodes.has(node.parentId)) nodes.get(node.parentId).children.push(node);
       return nodes;
@@ -905,7 +905,7 @@
 
     function renderNode(node, depth) {
       const hasChildren = node.children.length > 0;
-      const label = node.root ? t('satoriLab.tree.root') : coordText(node.move.row, node.move.col);
+      const label = node.root ? t('satoriLab.searchTree.root') : coordText(node.move.row, node.move.col);
       const notes = node.notes.map((n) => '<span class="cut">' + escapeHtml(n.text) + '</span>').join('');
       const sep = '<span class="meta">·</span>';
       const head = '<div class="node-line' + (node.root ? ' root-line' : '') + '">' +
@@ -916,9 +916,9 @@
         // 视角标注：negamax 的返回值是“轮到该节点走的一方”的分数，
         // 逐层交替，必须写明，否则会把对手的好棋误读成自己的。
         '<span class="side-tag">' + (node.color === BLACK ? t('satoriLab.black') : t('satoriLab.white')) + '</span>' +
-        sep + '<span class="meta">' + t('satoriLab.tree.depth') + ' ' + node.depth + '</span>' +
-        sep + '<span class="val">' + t('satoriLab.tree.value') + ' ' + (node.value === null ? '—' : (node.bounded ? t('satoriLab.tree.atLeast', { score: fmtScore(node.value) }) : fmtScore(node.value))) + '</span>' +
-        (hasChildren ? sep + '<span class="meta">' + t('satoriLab.tree.children', { n: node.children.length }) + '</span>' : '') +
+        sep + '<span class="meta">' + t('satoriLab.searchTree.depth') + ' ' + node.depth + '</span>' +
+        sep + '<span class="val">' + t('satoriLab.searchTree.value') + ' ' + (node.value === null ? '—' : (node.bounded ? t('satoriLab.searchTree.atLeast', { score: fmtScore(node.value) }) : fmtScore(node.value))) + '</span>' +
+        (hasChildren ? sep + '<span class="meta">' + t('satoriLab.searchTree.children', { n: node.children.length }) + '</span>' : '') +
         (notes ? sep + notes : '') + '</div>';
       const childHtml = hasChildren
         ? '<ul' + (depth < 1 ? '' : ' hidden') + '>' + node.children.map((c) => renderNode(c, depth + 1)).join('') + '</ul>'
@@ -939,12 +939,12 @@
       }
       const meta = s.trace.meta || {};
       const shown = meta.treeEvents || 0;
-      treeTag.textContent = t('satoriLab.treeTag', { n: shown });
+      treeTag.textContent = t('satoriLab.searchTreeTag', { n: shown });
       const truncated = meta.treeTruncated || meta.overflowed;
       document.getElementById('treeBody').innerHTML =
-        '<p class="hint">' + t('satoriLab.treeLead', { depth: roots[0].depth, ply: meta.treePly }) + '</p>' +
+        '<p class="hint">' + t('satoriLab.searchTreeLead', { depth: roots[0].depth, ply: meta.treePly }) + '</p>' +
         '<div class="tree"><ul>' + roots.map((n) => renderNode(n, 0)).join('') + '</ul></div>' +
-        (truncated ? '<p class="hint tree-note warn">' + t('satoriLab.treeTruncated') + '</p>' : '<p class="hint tree-note">' + t('satoriLab.treeNote') + '</p>');
+        (truncated ? '<p class="hint tree-note warn">' + t('satoriLab.searchTreeTruncated') + '</p>' : '<p class="hint tree-note">' + t('satoriLab.searchTreeNote') + '</p>');
     }
 
     document.getElementById('treeBody').addEventListener('click', (event) => {

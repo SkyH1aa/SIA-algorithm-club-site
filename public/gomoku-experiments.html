@@ -10,7 +10,7 @@
   <title>实验室 · 算法社 AI 五子棋挑战</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=11c5495b"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
   <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
 <style>
@@ -162,7 +162,7 @@
       background-color: #45a049;
     }
   </style>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=42e483d8"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="实验室 · 算法社 AI 五子棋挑战">
@@ -183,16 +183,16 @@
     <header class="page-header">
       <a href="../index.html" data-i18n="common.backSiteLong">← 返回算法社官网</a>
       <span class="member-identity" data-member-identity hidden></span>
-      <h1>V10 自由棋实验室</h1>
-      <p>V10Mesa · V9Mesa · V10Exp 专家与自由网融合对比</p>
+      <h1 data-i18n="gomokuExp.h1">V10 自由棋实验室</h1>
+      <p data-i18n="gomokuExp.lead">V10Mesa · V9Mesa · V10Exp 专家与自由网融合对比</p>
     </header>
     <div class="game-layout">
       <main class="game-container panel">
         <div class="setup">
-          <label for="gameMode">对战模式</label>
+          <label for="gameMode" data-i18n="gomoku.gameMode">对战模式</label>
           <select id="gameMode" aria-label="选择对战模式">
-            <option value="human">玩家挑战</option>
-            <option value="model-battle">模型对战</option>
+            <option value="human" data-i18n="gomoku.playerChallenge">玩家挑战</option>
+            <option value="model-battle" data-i18n="gomoku.modelBattle">模型对战</option>
           </select>
           <label for="nickname" data-i18n="games.nickPlaceholder">挑战昵称</label>
           <input id="nickname" maxlength="20" placeholder="请输入昵称" data-i18n-placeholder="games.nickPlaceholder" autocomplete="nickname" />
@@ -203,14 +203,14 @@
           <span class="hint" data-i18n="gomoku.nickSideHint">先填写昵称，再选择执子</span>
         </div>
         <div class="setup battle-setup" id="battleSetup" hidden>
-          <label for="blackModelVersion">黑方模型</label>
+          <label for="blackModelVersion" data-i18n="gomoku.blackModel">黑方模型</label>
           <select id="blackModelVersion" aria-label="选择黑方模型"></select>
-          <label for="whiteModelVersion">白方模型</label>
+          <label for="whiteModelVersion" data-i18n="gomoku.whiteModel">白方模型</label>
           <select id="whiteModelVersion" aria-label="选择白方模型"></select>
-          <button type="button" id="startModelBattleButton">开始模型对战</button>
+          <button type="button" id="startModelBattleButton" data-i18n="gomoku.startModelBattle">开始模型对战</button>
         </div>
         <div class="status" id="status"></div>
-        <p style="text-align:center;color:#ffd166">自由棋实验室 · 本页所有对局不计分、不上传</p>
+        <p style="text-align:center;color:#ffd166" data-i18n="gomokuExp.noScore">自由棋实验室 · 本页所有对局不计分、不上传</p>
         <div class="ai-countdown" id="aiCountdown" hidden aria-live="polite"><span id="aiCountdownLabel"></span><div class="ai-countdown-track"><div class="ai-countdown-fill" id="aiCountdownFill"></div></div></div>
         <div class="explain-panel">
           <label class="explain-toggle"><input type="checkbox" id="explainToggle"><span data-i18n="explain.toggle">显示 AI 决策面板</span></label>
@@ -219,10 +219,10 @@
         <div class="board" id="board"></div>
         <p class="result" id="result" aria-live="polite"></p>
         <button id="gameActionButton" onclick="handleGameAction()" data-i18n="games.restart">重新开始</button>
-        <button type="button" onclick="downloadExperimentRecord()">导出本局棋谱</button>
+        <button type="button" onclick="downloadExperimentRecord()" data-i18n="gomokuExp.exportRecord">导出本局棋谱</button>
       </main>
       <aside class="leaderboard panel">
-        <h2>实验版本比较</h2>
+        <h2 data-i18n="gomokuExp.compareTitle">实验版本比较</h2>
         <p class="hint">V10Exp正式挑战胜局15分并上传胜负平。本实验页仅本地测试，不计分、不上传；正式挑战请返回五子棋页面。</p>
         <ol class="leaderboard-list" id="leaderboardList"><li class="empty" data-i18n="common.loading">正在读取…</li></ol>
         <div class="leaderboard-pagination" id="leaderboardPagination" hidden><button type="button" id="leaderboardPrev" class="button secondary" data-i18n="games.prevPage">上一页</button><span id="leaderboardPageInfo"></span><button type="button" id="leaderboardNext" class="button secondary" data-i18n="games.nextPage">下一页</button></div>

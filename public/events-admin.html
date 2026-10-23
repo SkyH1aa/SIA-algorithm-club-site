@@ -11,9 +11,9 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=11c5495b"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
   <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=42e483d8"></script></head>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script></head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Events Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a></div></header>
 
@@ -25,7 +25,7 @@
       <h1 data-i18n="pages.eventsAdmin.h1">活动与公告管理</h1>
       <p class="lead" data-i18n="admin.eventsLead">发布社团通知、活动报名、课程安排、比赛信息；设置截止时间、活动状态，并查看报名名单。首页最新公告会读取这里发布的内容。</p>
 
-      <div class="club-tabs" data-club-tabs role="tablist" aria-label="活动管理"><button type="button" role="tab" aria-selected="true" aria-controls="annPanel" data-tab-target="annPanel">公告</button><button type="button" role="tab" aria-selected="false" aria-controls="eventPanel" data-tab-target="eventPanel">活动</button><button type="button" role="tab" aria-selected="false" aria-controls="signupPanel" data-tab-target="signupPanel">报名名单</button></div>
+      <div class="club-tabs" data-club-tabs role="tablist" aria-label="活动管理"><button type="button" role="tab" aria-selected="true" aria-controls="annPanel" data-tab-target="annPanel" data-i18n="admin.tabAnnouncement">公告</button><button type="button" role="tab" aria-selected="false" aria-controls="eventPanel" data-tab-target="eventPanel" data-i18n="admin.tabEvent">活动</button><button type="button" role="tab" aria-selected="false" aria-controls="signupPanel" data-tab-target="signupPanel" data-i18n="admin.tabSignup">报名名单</button></div>
       <section class="panel" id="annPanel">
         <h2 data-i18n="admin.annTitle">发布 / 编辑公告</h2>
         <p class="intro" data-i18n="admin.annIntro">公告可用于社团通知、课程安排、比赛信息，并支持置顶及首页推荐弹窗。</p>

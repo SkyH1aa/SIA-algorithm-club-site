@@ -16,6 +16,19 @@
   var zh = window.ClubI18nDictZh || null;
   if (!zh) {
     zh = {
+  labView: {
+    inorder: '中序遍历',
+    dijkstraHint: '优先扩展当前距离最小的节点，仅适用于非负权图。',
+    front: 'FRONT · 出队端',
+    rear: 'REAR · 入队端',
+  },
+  gomokuExp: {
+    h1: 'V10 自由棋实验室',
+    lead: 'V10Mesa · V9Mesa · V10Exp 专家与自由网融合对比',
+    noScore: '自由棋实验室 · 本页所有对局不计分、不上传',
+    exportRecord: '导出本局棋谱',
+    compareTitle: '实验版本比较',
+  },
     common: {
       brand: '算法社',
       brandEn: 'Algorithm Club',
@@ -101,6 +114,8 @@
       admin: '管理员总览'
     },
     home: {
+      capMath: '数学结构',
+      capMathDesc: '从概率、图结构到复杂度，建立可解释的算法直觉。',
       title: '算法社 · Algorithm Club',
       affiliation: '新哲文院·科创未来 · 新哲文院科创部社团',
       officialLinkReminder: '请牢记算法社官网快捷地址：<a href="https://ada.nz/r/sfs" target="_blank" rel="noopener noreferrer">https://ada.nz/r/sfs</a>',
@@ -464,6 +479,12 @@
       softDropBoost: '软降'
     },
     gomoku: {
+      gameMode: '对战模式',
+      playerChallenge: '玩家挑战',
+      modelBattle: '模型对战',
+      blackModel: '黑方模型',
+      whiteModel: '白方模型',
+      startModelBattle: '开始模型对战',
       title: '算法社 铭星五子棋挑战',
       h1: '铭星五子棋挑战',
       modelLabel: '挑战模型',
@@ -567,6 +588,9 @@
       submitFail: '提交报名失败。',
     },
     memberCenter: {
+      readingAccount: '正在读取当前账号信息…',
+      reading: '读取中…',
+      checking: '检查中…',
       noAccount: '还没有账号？',
       haveAccount: '已经有账号？',
       goRegister: '使用邀请码注册',
@@ -688,6 +712,25 @@
       colPoints: '积分'
     },
   satoriLab: {
+    h1: 'Gomoku-Satori 决策剖析实验室',
+    controls: '对局控制',
+    replay: '棋谱回放',
+    live: '实时对战',
+    startAnalyze: '开始逐手剖析',
+    blackFirst: '黑棋（先手）',
+    whiteSecond: '白棋（后手）',
+    startGame: '开始对局',
+    restart: '重新开始',
+    board: '棋盘',
+    prevStep: '← 上一步',
+    nextStep: '下一步 →',
+    decision: '本步决策',
+    threatScan: '搜索前的威胁普查',
+    candidates: '候选着法排序',
+    iterations: '迭代加深每层结果',
+    searchTree: '搜索树',
+    noDecision: '还没有决策数据。',
+    noDecisionFull: '还没有决策数据。<br>先运行一次“开始逐手剖析”。',
     movesPlayed: '已落 {n} 子',
     black: '黑棋',
     white: '白棋',
@@ -1777,6 +1820,9 @@
       redeemOk: '兑换成功：{name}。请等待管理员线下发放。'
     },
     checkin: {
+      tabCodes: '签到码',
+      tabPending: '待处理姓名',
+      tabCourse: '课程签到审核',
       gateTitle: '您还不是算法社社员！',
       gateHint: '签到兑换仅面向已登录社团盘的社员开放。',
       lead: '输入中文姓名后选择签到类型。积分兑换需要签到码；课程签到无需签到码，会提交给管理员审核。',
@@ -2028,6 +2074,11 @@
       notFound: { title: '页面不存在 · 算法社', h1: '这个页面不存在' }
     },
     admin: {
+      tabProduct: '商品',
+      tabRedemption: '兑换记录',
+      tabAnnouncement: '公告',
+      tabEvent: '活动',
+      tabSignup: '报名名单',
       loginFirst: '请先登录管理账号',
       noPerm: '无管理权限',
       panel: '管理面板入口',

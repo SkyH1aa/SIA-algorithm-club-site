@@ -11,7 +11,7 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=11c5495b"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
   <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
 <style>
     :root {
@@ -467,7 +467,7 @@
       }
     }
   </style>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=42e483d8"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="二叉树可视化实验室 · 算法社">
@@ -590,7 +590,7 @@
 
         <div class="dict-box" id="dictBox" hidden>
           <b data-i18n="lab.tree.dictBoxTitle">字典序 / 数值序 BST</b><br />
-          <span data-i18n="lab.tree.dictBoxBody" data-i18n-mode="html">按数值大小维护二叉搜索树：左子树 &lt; 根 &lt; 右子树。对字典序键（字母 / 字符串）同样适用——比较规则换成字典序即可。<br />关键点：对 BST 做<strong>中序遍历</strong>，得到的访问序列天然有序。示例插入顺序 <code>50 → 30 → 70 → 20 → 40 → 60 → 80</code>，中序结果为 <code>20, 30, 40, 50, 60, 70, 80</code>。</span>
+          <span data-i18n="lab.tree.dictBoxBody" data-i18n-mode="html">按数值大小维护二叉搜索树：左子树 &lt; 根 &lt; 右子树。对字典序键（字母 / 字符串）同样适用——比较规则换成字典序即可。<br />关键点：对 BST 做<strong data-i18n="labView.inorder">中序遍历</strong>，得到的访问序列天然有序。示例插入顺序 <code>50 → 30 → 70 → 20 → 40 → 60 → 80</code>，中序结果为 <code>20, 30, 40, 50, 60, 70, 80</code>。</span>
         </div>
 
         <div class="metrics" data-i18n-aria="lab.tree.metricsAria" aria-label="树指标">

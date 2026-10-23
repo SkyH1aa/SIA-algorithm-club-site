@@ -11,14 +11,19 @@ const read = name => readFile(path.join(root, name), 'utf8');
 const exists = async name => { try { await readFile(path.join(root, name)); return true; } catch { return false; } };
 
 // --- 1) 文件必须放在仓库根目录（GitHub Pages 只认根目录） ---
-for (const code of ['502', '503', '404']) {
-  assert.ok(await exists(`${code}.html`), `${code}.html exists at the repository root`);
-  assert.ok(!(await exists(`public/${code}.html`)), `${code}.html is not under public/`);
+// 故障页文件名：404 保持原名；502/503 必须避开 GitHub Pages 的保留路径。
+// GitHub Pages 会把 /503.html 解析成它自己的错误页，覆盖仓库里的同名文件。
+const FILES = { '404': '404.html', '502': 'bad-gateway.html', '503': 'service-unavailable.html' };
+for (const file of Object.values(FILES)) {
+  assert.ok(await exists(file), `${file} exists at the repository root`);
+  assert.ok(!(await exists(`public/${file}`)), `${file} is not under public/`);
 }
+assert.ok(!(await exists('503.html')), '503.html must not exist: GitHub Pages reserves that path');
+assert.ok(!(await exists('502.html')), '502.html must not exist either');
 
-const page502 = await read('502.html');
-const page503 = await read('503.html');
-const page404 = await read('404.html');
+const page502 = await read(FILES['502']);
+const page503 = await read(FILES['503']);
+const page404 = await read(FILES['404']);
 const errorJs = await read('public/error-page.js');
 const gate = await read('public/service-gate.js');
 const sql = await read('supabase/club-error-pages-schema.sql');
@@ -72,12 +77,14 @@ assert.match(hub, /data-display-mode/, 'each feature has its own mode selector')
 assert.match(hub, /display_mode: display \? display\.value : 'overlay'/, 'feature modes are saved');
 
 // --- 6) 路由防循环 ---
-assert.match(gate, /const isErrorPage = \/\(\?:\^\|\\\/\)\(\?:404\|502\|503\)\\\.html\$\/i\.test\(location\.pathname\)/,
-  'error pages are detected');
+assert.match(gate, /const isErrorPage = \/\(\?:\^\|\\\/\)\(\?:404\|bad-gateway\|service-unavailable\)\\\.html\$\/i\.test\(location\.pathname\)/,
+  'error pages are detected by their real filenames');
 assert.match(gate, /if \(isAdminHub \|\| isTemporaryLogin \|\| isErrorPage\) return;/, 'the gate never runs on an error page');
 assert.match(gate, /function routeToErrorPage\(code\)/, 'routing helper exists');
 assert.match(gate, /if \(redirected\) return;/, 'a redirect happens at most once per page load');
-assert.match(gate, /location\.replace\(siteRoot\(\) \+ code \+ '\.html'\)/, 'routing uses replace so Back does not return to a closed page');
+assert.match(gate, /const ERROR_PAGE_FILES = \{ '502': 'bad-gateway\.html', '503': 'service-unavailable\.html', '404': '404\.html' \}/,
+  'display modes map to the real filenames');
+assert.match(gate, /location\.replace\(siteRoot\(\) \+ \(ERROR_PAGE_FILES\[code\] \|\| '404\.html'\)\)/, 'routing uses replace so Back does not return to a closed page');
 
 // --- 7) 遮罩时清空页面 DOM ---
 assert.match(gate, /function detachPageContent\(\)/, 'page content is detached, not merely hidden');
@@ -210,4 +217,4 @@ assert.match(fn, /code in \(502, 503, 404\)|\[502, 503, 404\]\.includes\(code\)/
   assert.equal(classes.has('club-service-paused'), false);
 }
 
-console.log('Error pages: 502/503/404 at repo root with site-root base, editable structured fields with escaped Markdown + safe links, per-site & per-feature display modes, no redirect loop, DOM cleared under the overlay and restored on reopen.');
+console.log('Error pages: 404.html + bad-gateway.html + service-unavailable.html at repo root (503.html is reserved by GitHub Pages), editable structured fields with escaped Markdown + safe links, per-site & per-feature display modes, no redirect loop, DOM cleared under the overlay and restored on reopen.');

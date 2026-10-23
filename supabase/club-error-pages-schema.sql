@@ -2,7 +2,7 @@
 -- 在 Supabase SQL Editor 执行本脚本；可重复执行。
 --
 -- 设计要点：
--- * 页面结构固定在 502.html / 503.html / 404.html 里，超管只能改文案字段与 Markdown 正文，
+-- * 页面结构固定在 404.html / bad-gateway.html / service-unavailable.html 里，超管只能改文案字段与 Markdown 正文，
 --   不能注入任意 HTML/脚本（避免同源脚本注入，也避免把故障页改坏后无法恢复）。
 -- * 每个功能开关可以单独选择「遮罩」或「跳转到 502/503/404」；
 --   站点总开关关闭时，由总开关自己的 display_mode 统一决定，忽略各功能自己的设置。

@@ -49,8 +49,9 @@ const htmlFiles = [
   // GitHub Pages 只认仓库根目录的 404.html，而不是 public/404.html。
   path.join(root, '404.html'),
   // 故障页同样放在仓库根目录，与 index.html 同级。
-  path.join(root, '502.html'),
-  path.join(root, '503.html'),
+  // 不用 502.html / 503.html：GitHub Pages 会把 /503.html 当作自身错误页保留路径。
+  path.join(root, 'bad-gateway.html'),
+  path.join(root, 'service-unavailable.html'),
   ...fs.readdirSync(publicDir).filter(name => name.endsWith('.html')).map(name => path.join(publicDir, name)),
   ...['俄罗斯方块.html', '俄罗斯方块AI.html', '贪吃蛇.html', '贪吃蛇专家系统.html']
     .map(name => path.join(root, name)).filter(file => fs.existsSync(file))

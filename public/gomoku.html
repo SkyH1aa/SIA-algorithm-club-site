@@ -10,7 +10,7 @@
   <title>算法社 AI 五子棋挑战</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=11c5495b"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
   <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
 <style>
@@ -205,7 +205,7 @@
       background-color: #45a049;
     }
   </style>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=42e483d8"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="算法社 AI 五子棋挑战">
@@ -234,10 +234,10 @@
     <div class="game-layout">
       <main class="game-container panel">
         <div class="setup">
-          <label for="gameMode">对战模式</label>
+          <label for="gameMode" data-i18n="gomoku.gameMode">对战模式</label>
           <select id="gameMode" aria-label="选择对战模式">
-            <option value="human">玩家挑战</option>
-            <option value="model-battle">模型对战</option>
+            <option value="human" data-i18n="gomoku.playerChallenge">玩家挑战</option>
+            <option value="model-battle" data-i18n="gomoku.modelBattle">模型对战</option>
           </select>
           <label for="nickname" data-i18n="games.nickPlaceholder">挑战昵称</label>
           <input id="nickname" maxlength="20" placeholder="请输入昵称" data-i18n-placeholder="games.nickPlaceholder" autocomplete="nickname" />
@@ -248,11 +248,11 @@
           <span class="hint" data-i18n="gomoku.nickSideHint">先填写昵称，再选择执子</span>
         </div>
         <div class="setup battle-setup" id="battleSetup" hidden>
-          <label for="blackModelVersion">黑方模型</label>
+          <label for="blackModelVersion" data-i18n="gomoku.blackModel">黑方模型</label>
           <select id="blackModelVersion" aria-label="选择黑方模型"></select>
-          <label for="whiteModelVersion">白方模型</label>
+          <label for="whiteModelVersion" data-i18n="gomoku.whiteModel">白方模型</label>
           <select id="whiteModelVersion" aria-label="选择白方模型"></select>
-          <button type="button" id="startModelBattleButton">开始模型对战</button>
+          <button type="button" id="startModelBattleButton" data-i18n="gomoku.startModelBattle">开始模型对战</button>
         </div>
         <div class="status" id="status"></div>
         <div class="ai-countdown" id="aiCountdown" hidden aria-live="polite"><span id="aiCountdownLabel"></span><div class="ai-countdown-track"><div class="ai-countdown-fill" id="aiCountdownFill"></div></div></div>
@@ -276,7 +276,7 @@
           </div>
         </div>
         <div class="winrate" id="winratePanel" hidden aria-live="polite">
-          <div class="winrate-head"><span id="winrateLeftLabel">你</span><span id="winrateRightLabel">铭星 V9</span></div>
+          <div class="winrate-head"><span id="winrateLeftLabel" data-i18n="gomoku.you">你</span><span id="winrateRightLabel">铭星 V9</span></div>
           <div class="winrate-track"><div class="winrate-fill winrate-fill-left" id="winrateLeftFill"></div><div class="winrate-fill winrate-fill-right" id="winrateRightFill"></div></div>
           <div class="winrate-values"><span id="winrateLeftValue">—</span><span id="winrateRightValue">—</span></div>
         </div>
