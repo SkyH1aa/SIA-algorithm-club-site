@@ -121,10 +121,16 @@ export function chatEndpoint(value, custom = false) {
 
 /* ---------- AI 聊天归档（仅本地与 club-drive 之间的后台传输，不进入界面） ---------- */
 export const CHAT_ARCHIVE_SCHEMA = 'club-ai-chat-archive/1';
-export const CHAT_ARCHIVE_PART_BYTES = 6 * 1024 * 1024;
+// 分片上限按「紧凑 JSON」计量；写出时用 2 空格缩进，实际字节约为 1.4~1.8 倍。
+// 3 MiB 紧凑 → 约 5 MiB 缩进，仍远低于服务端 24 MiB 的接收上限。
+export const CHAT_ARCHIVE_PART_BYTES = 3 * 1024 * 1024;
 const ARCHIVE_EXTENSIONS = new Set(['png','jpg','jpeg','webp','pdf','txt','md','csv','js','ts','jsx','tsx','py','json','html','css','c','cpp','h','java','rs','go','sql','yaml','yml','xml','sh','log']);
 
 function archiveBytes(value) { return new TextEncoder().encode(JSON.stringify(value)).length; }
+
+// 写入云盘时使用缩进格式，方便人直接打开阅读；分片体积仍按紧凑格式计算，
+// 所以这里给缩进预留了余量（见 CHAT_ARCHIVE_PART_BYTES）。
+export function archiveJsonText(value) { return JSON.stringify(value, null, 2); }
 function archiveIso(value) {
   const date = new Date(Number.isFinite(value) ? value : Date.now());
   return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();

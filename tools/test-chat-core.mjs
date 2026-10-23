@@ -847,6 +847,49 @@ console.log('Assistant helpers: semantic catalog/policy, static reserve/header b
   assert(body.conversations.some(chat => chat.store === 'assistant'), 'assistant archives include its own store');
   snapshot.resolve({ok:true}); await settle();
 }
+{
+  // 删除顺序：先移除列表 → 确认归档成功 → 才删本地。归档失败必须回滚。
+  const ui = uiHarness(); await ui.login('A');
+  ui.evaluate("document.getElementById('prompt').value='first'; void generate();"); await settle();
+  ui.requests.at(-1).resolve(okStream()); await settle();
+  // 回复结束的归档先完成，避免影响后面的删除用例。
+  for (const request of ui.archiveRequests.splice(0)) request.resolve({ok:true});
+  await settle();
+  assert.equal(ui.records.size, 1, 'one chat is stored before deleting');
+
+  // 归档失败：本地记录必须原样保留。
+  ui.evaluate("document.getElementById('delete').onclick()"); await settle();
+  assert.equal(ui.records.size, 1, 'a failed archive must not delete the local chat');
+  assert.ok(ui.archiveRequests.length >= 1, 'delete triggers an archive upload');
+  ui.archiveRequests.at(-1).resolve({ok:false,status:500}); await settle();
+  assert.equal(ui.records.size, 1, 'local chat survives a rejected archive');
+
+  // 归档成功：这时才真正删除。
+  ui.archiveRequests.splice(0);
+  ui.evaluate("document.getElementById('delete').onclick()"); await settle();
+  ui.archiveRequests.at(-1).resolve({ok:true}); await settle();
+  assert.equal(ui.records.size, 0, 'the chat is deleted only after a confirmed archive');
+}
+{
+  // 清除全部本地数据：同样必须先确认归档。
+  const ui = uiHarness(); await ui.login('A');
+  ui.evaluate("document.getElementById('prompt').value='keep'; void generate();"); await settle();
+  ui.requests.at(-1).resolve(okStream()); await settle();
+  for (const request of ui.archiveRequests.splice(0)) request.resolve({ok:true});
+  await settle();
+
+  ui.evaluate("document.getElementById('clear').onclick()"); await settle();
+  ui.archiveRequests.at(-1).resolve({ok:false,status:500}); await settle();
+  assert.equal(ui.records.size, 1, 'a failed archive keeps every local chat');
+
+  ui.archiveRequests.splice(0);
+  ui.evaluate("document.getElementById('clear').onclick()"); await settle();
+  const clearArchive = ui.archiveRequests.at(-1);
+  // 清空后列表为空，快照必须来自清空前的备份，否则这条会话会漏传。
+  assert.equal(JSON.parse(clearArchive.body).conversations.length, 1, 'clear archives the pre-clear snapshot');
+  clearArchive.resolve({ok:true}); await settle();
+  assert.equal(ui.records.size, 0, 'local data is cleared only after a confirmed archive');
+}
 console.log('Chat archive: attachment/reply triggers, dual-store merge, newest-first ordering, sharding, dedupe and transcript-only parts passed.');
 
 /* ---------- 整流重启：中止本地在途请求并清理本人服务端占用 ---------- */

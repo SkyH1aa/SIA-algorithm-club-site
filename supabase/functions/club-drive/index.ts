@@ -106,6 +106,74 @@ async function putChatArchiveFile(path: string, directories: string[], body: Bod
   return response;
 }
 
+// ---- 社团盘容量配额 ------------------------------------------------------
+// 配额只存上限；实际用量在每次写入前实时遍历该用户的目录统计，
+// 避免缓存与实际文件不一致。递归深度限制在 6 层，防止异常目录结构拖垮请求。
+
+const DRIVE_QUOTA_MAX_DEPTH = 6;
+
+function quotaBytes(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+async function driveQuotaFor(userId: string) {
+  const { url, serviceKey } = supabaseConfig();
+  const { response, payload } = await rpcRequest(url, serviceKey, 'get_club_drive_quota', { p_user_id: userId });
+  if (!response.ok) return { maxBytes: 0, source: 'none', note: '' };
+  const row = (payload || {}) as Record<string, unknown>;
+  return { maxBytes: quotaBytes(row.max_bytes), source: String(row.source || 'none'), note: String(row.note || '') };
+}
+
+// 递归统计某个目录下的总字节数；读不到的分支按 0 计，不阻塞写入。
+async function driveUsageBytes(path: string, depth = 0): Promise<number> {
+  if (depth > DRIVE_QUOTA_MAX_DEPTH) return 0;
+  const response = await webdavRequest('PROPFIND', path, {
+    headers: { depth: '1', 'content-type': 'application/xml; charset=utf-8' },
+    body: '<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/><d:getcontentlength/></d:prop></d:propfind>'
+  });
+  if (!response.ok && response.status !== 207) return 0;
+  const files = parseXmlFiles(await response.text());
+  let total = 0;
+  const self = path.replace(/\/+$/, '');
+  for (const file of files) {
+    const filePath = file.path || '';
+    const normalized = filePath.replace(/\/+$/, '');
+    // PROPFIND depth:1 会返回自身条目，跳过。
+    if (!normalized || normalized === self) continue;
+    const isDir = /\/$/.test(filePath) || file.type === 'folder';
+    if (isDir) total += await driveUsageBytes(filePath, depth + 1);
+    else total += Number(file.bytes) || 0;
+  }
+  return total;
+}
+
+async function driveUsageFor(userId: string) {
+  const root = userRoot(userId);
+  const used = await driveUsageBytes(root);
+  const quota = await driveQuotaFor(userId);
+  return {
+    usedBytes: used,
+    maxBytes: quota.maxBytes,
+    source: quota.source,
+    note: quota.note,
+    unlimited: quota.maxBytes === 0,
+    remainingBytes: quota.maxBytes === 0 ? null : Math.max(0, quota.maxBytes - used)
+  };
+}
+
+// 写入前检查：新内容是否仍在上限内。incoming 为本次要新增的字节数。
+// 已存在的同名文件按覆盖处理（不重复计入），因此这里用「现状 + incoming」估算，
+// 偏保守但不会放过超限写入。
+async function assertDriveQuota(userId: string, incoming: number) {
+  const usage = await driveUsageFor(userId);
+  if (usage.maxBytes === 0) return usage;
+  if (usage.usedBytes + Math.max(0, incoming) > usage.maxBytes) {
+    throw new Error(`社团盘空间不足：已用 ${(usage.usedBytes / 1048576).toFixed(1)} MiB，上限 ${(usage.maxBytes / 1048576).toFixed(1)} MiB。`);
+  }
+  return usage;
+}
+
 async function chatArchiveIdentity(user: { id: string; email?: string; user_metadata?: unknown }) {
   const { url, serviceKey } = supabaseConfig();
   let username = '', memberName = '';
@@ -191,7 +259,11 @@ async function chatArchiveRequest(request: Request, user: { id: string; email?: 
   snapshot.user_id = user.id;
   snapshot.account = { username: identity.username, member_name: identity.memberName };
   snapshot.server = { received_at: new Date().toISOString(), generated_at_beijing: stamp.iso, timezone: 'Asia/Shanghai', source, trigger };
-  const payload = chatArchiveEncoder.encode(JSON.stringify(snapshot));
+  // 以 2 空格缩进写出，方便在云盘里直接打开阅读；紧凑 JSON 只在传输时用。
+  const payload = chatArchiveEncoder.encode(JSON.stringify(snapshot, null, 2));
+  // 聊天归档也占用社团盘容量，同样受配额限制。
+  try { await assertDriveQuota(user.id, payload.byteLength); }
+  catch (error) { return json({ error: error instanceof Error ? error.message : '社团盘空间不足。' }, 413); }
   const response = await putChatArchiveFile(`${dateRoot}${filename}`, [CHAT_ARCHIVE_ROOT, identity.userRoot, dateRoot], payload, {
     'content-type': 'application/json; charset=utf-8',
     'content-length': String(payload.byteLength)
@@ -609,6 +681,22 @@ async function assertUsernameAvailable(url: string, serviceKey: string, username
   })) {
     throw new Error('用户名已存在。');
   }
+}
+
+// 按 uuid 取 auth 用户（只用于管理页显示账号名）。
+async function findAuthUserById(userId: string) {
+  if (!validUuid(userId)) return null;
+  const { url, serviceKey } = supabaseConfig();
+  const response = await fetch(`${url}/auth/v1/admin/users/${userId}`, {
+    headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` }
+  });
+  if (!response.ok) return null;
+  const payload = await response.json().catch(() => null);
+  if (!payload || typeof payload !== 'object') return null;
+  const record = payload as Record<string, unknown>;
+  // GoTrue 可能直接返回用户，也可能包在 user 字段里。
+  const user = record.user && typeof record.user === 'object' ? record.user as Record<string, unknown> : record;
+  return typeof user.id === 'string' ? { id: user.id, email: typeof user.email === 'string' ? user.email : '' } : null;
 }
 
 async function deleteAuthUser(url: string, serviceKey: string, userId: string) {
@@ -3411,6 +3499,8 @@ Deno.serve(async request => {
       const length = contentLength(request);
       if (length !== null && length > MAX_FILE_BYTES) return json({ error: '单个文件不能超过 100 MiB。' }, 413);
       if (!request.body) return json({ error: '上传内容不完整。' }, 400);
+      try { await assertDriveQuota(user.id, length || 0); }
+      catch (error) { return json({ error: error instanceof Error ? error.message : '社团盘空间不足。' }, 413); }
       const response = await webdavRequest('PUT', filePathFor(userRoot(user.id), headerPath(request)), { headers: { 'content-type': request.headers.get('x-drive-content-type') || 'application/octet-stream', ...(length === null ? {} : { 'content-length': String(length) }) }, body: request.body });
       if (!response.ok) return json({ error: `上传失败（${response.status}）。` }, 502);
       return json({ ok: true, bytes: length });
@@ -3794,6 +3884,97 @@ Deno.serve(async request => {
       try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
       return json({ settings: await saveDonationSettings(user, payload) });
     }
+    if (payload.action === 'drive_quota_get') {
+      // 普通社员只能看自己的用量；超管可传 userId 查别人。
+      if (!user?.id) return json({ error: '请先登录社团盘。' }, 401);
+      let target = user.id;
+      if (payload.username) {
+        try {
+          const found = await findAuthUserByUsername(String(payload.username).trim().toLowerCase());
+          target = found.id;
+        } catch (error) {
+          return json({ error: error instanceof Error ? error.message : '账号不存在。' }, 400);
+        }
+      } else if (payload.userId && String(payload.userId) !== user.id) {
+        try { await requireSuperAdmin(user); } catch { return json({ error: '无权限查看其他用户的社团盘用量。' }, 403); }
+        target = String(payload.userId);
+      }
+      try {
+        return json({ quota: await driveUsageFor(target), userId: target });
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '读取社团盘用量失败。' }, 400);
+      }
+    }
+
+    if (payload.action === 'admin_drive_quota_list') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      const { url, serviceKey } = supabaseConfig();
+      const response = await fetch(
+        `${url}/rest/v1/club_drive_quotas?select=user_id,max_bytes,note,updated_at&order=user_id.nullsfirst`,
+        { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` } }
+      );
+      if (!response.ok) {
+        const detail = await response.text().catch(() => '');
+        return json({ error: detail.includes('Could not find the table') || detail.includes('relation')
+          ? '社团盘配额表尚未创建，请先执行 club-drive-quota-schema.sql。'
+          : '读取配额列表失败。' }, 400);
+      }
+      const rows = await response.json().catch(() => []);
+      const quotas = Array.isArray(rows) ? rows : [];
+      // 补上账号名，便于管理页显示与按名查找；查不到就留空。
+      const resolved = await Promise.all(quotas.map(async row => {
+        const record = row as Record<string, unknown>;
+        let username = '';
+        if (record.user_id) {
+          try {
+            const found = await findAuthUserById(String(record.user_id));
+            username = found?.email ? String(found.email).split('@')[0] : '';
+          } catch { username = ''; }
+        }
+        return { ...record, username };
+      }));
+      return json({ quotas: resolved });
+    }
+
+    if (payload.action === 'admin_drive_quota_set') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      let targetId = payload.userId ? String(payload.userId) : null;
+      // 管理页允许直接填账号名；这里统一解析成 uuid。
+      if (!targetId && payload.username) {
+        try { targetId = (await findAuthUserByUsername(String(payload.username).trim().toLowerCase())).id; }
+        catch (error) { return json({ error: error instanceof Error ? error.message : '账号不存在。' }, 400); }
+      }
+      if (targetId && !validUuid(targetId)) return json({ error: '用户标识不合法。' }, 400);
+      const maxBytes = Number(payload.maxBytes);
+      if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) return json({ error: '容量上限必须是非负整数。' }, 400);
+      const { url, serviceKey } = supabaseConfig();
+      const { response, payload: result } = await rpcRequest(url, serviceKey, 'set_club_drive_quota', {
+        p_user_id: targetId,
+        p_max_bytes: maxBytes,
+        p_note: String(payload.note || ''),
+        p_updated_by: user?.id || null
+      });
+      if (!response.ok) {
+        const row = (result || {}) as Record<string, unknown>;
+        return json({ error: String(row.message || row.error || '保存配额失败。') }, 400);
+      }
+      return json({ quota: result });
+    }
+
+    if (payload.action === 'admin_drive_quota_clear') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      let targetId = payload.userId ? String(payload.userId) : null;
+      if (!targetId && payload.username) {
+        try { targetId = (await findAuthUserByUsername(String(payload.username).trim().toLowerCase())).id; }
+        catch (error) { return json({ error: error instanceof Error ? error.message : '账号不存在。' }, 400); }
+      }
+      if (!validUuid(targetId)) return json({ error: '用户标识不合法。' }, 400);
+      const { url, serviceKey } = supabaseConfig();
+      const { response, payload: result } = await rpcRequest(url, serviceKey, 'clear_club_drive_quota', { p_user_id: targetId });
+      if (!response.ok) return json({ error: '清除配额失败。' }, 400);
+      return json({ quota: result });
+    }
+
     if (payload.action === 'admin_donations_delete') {
       try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
       return json(await deleteDonation(payload.id));

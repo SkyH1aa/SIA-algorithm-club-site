@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-i18n-title-key="pages.points.title">
 <head>
   <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=b12fcc1d">
+  <link rel="stylesheet" href="club-ui.css?v=fdafac23">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -10,10 +10,10 @@
   <title>社员积分 · 算法社</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=f1172b81"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=daec4b64"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
   <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b2193cd0"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=cb9d9d53"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="社员积分 · 算法社">
@@ -47,6 +47,6 @@ function resetForm(){document.getElementById('memberPointsForm').reset();documen
 document.getElementById('pointsRefreshButton').onclick=refreshMemberPoints;document.getElementById('adminRefreshButton').onclick=refreshMemberPoints;document.getElementById('memberPointsCancelButton').onclick=resetForm;document.getElementById('memberPointsForm').addEventListener('submit',async event=>{event.preventDefault();try{const id=document.getElementById('memberPointId').value,memberName=document.getElementById('memberName').value,memberClass=document.getElementById('memberClass').value,points=Number(document.getElementById('memberPoints').value);await callAdmin('admin_member_points_save',{id,memberName,memberClass,points});setMessage(adminMessage,id?ClubI18n.t('points.updated'):ClubI18n.t('points.added'),'success');resetForm();await refreshMemberPoints()}catch(error){setMessage(adminMessage,error.message,'error')}});supabaseClient.auth.onAuthStateChange((_event,session)=>{void updateSession(session);if(session?.user?.id)void refreshMemberPoints()});supabaseClient.auth.getSession().then(async({data:{session}})=>{await updateSession(session);if(session?.user?.id)await refreshMemberPoints()});
 window.addEventListener('club:langchange',()=>{renderPublicPoints(currentMembers);if(adminPanel.classList.contains('active'))renderAdminPoints(currentMembers);if(window.ClubI18n)ClubI18n.apply(document);});
 </script>
-  <script src="club-shell.js?v=1885fccd"></script>
+  <script src="club-shell.js?v=6f76acb2"></script>
 </body>
 </html>

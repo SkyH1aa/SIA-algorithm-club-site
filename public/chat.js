@@ -193,7 +193,7 @@ const model = () => models.find(x => x.id === $('model').value);
 function mergeModels(catalog, saved) {
   return [...catalog, ...saved.map(item => ({...CUSTOM_METADATA,...item,profileId:item.id,id:`custom:${item.id}`,source:'custom',profileName:item.display_name,display_name:`${item.display_name} · ${t('customBadge')}`}))];
 }
-const ERROR_STATUS = new Set(['assistant_unavailable','failure','interrupted','cancelled','storage','request','upstream_timeout','quota','quotaReset','context','request_too_large','file','pdf','blacklisted','busy','customKey','profile','login','recoverLogin','recoverOutdated','recoverTimeout','recoverFailed','claude_thinking','claude_thinking_budget','claude_effort']);
+const ERROR_STATUS = new Set(['assistant_unavailable','failure','interrupted','cancelled','storage','request','upstream_timeout','quota','quotaReset','context','request_too_large','file','pdf','blacklisted','busy','customKey','profile','login','recoverLogin','recoverOutdated','recoverTimeout','recoverFailed','claude_thinking','claude_thinking_budget','claude_effort','archiveFailed']);
 function status(key, vars = {}) {
   statusKey = key; statusVars = vars;
   const node = $('status');
@@ -1066,9 +1066,17 @@ async function archiveSnapshot(trigger, userId, token, pendingFiles = pending, a
       body:JSON.stringify(part),
       signal: archiveSignal()
     });
-    if (!response.ok) break;
+    if (!response.ok) return false;
   }
+  return true;
 }
+
+// 等待归档队列排空，并返回这次快照是否真的传成功。
+// 删除/清除必须在确认归档完成后才能动本地数据。
+function archiveBarrier() {
+  return archiveQueue.catch(() => {}).then(() => archiveQueue);
+}
+
 function scheduleChatArchive(trigger, pendingFiles = pending, activeChats = null) {
   const userId = session?.user?.id, token = session?.access_token;
   if (!userId || !token) return;
@@ -1076,7 +1084,10 @@ function scheduleChatArchive(trigger, pendingFiles = pending, activeChats = null
   const chatsCopy = Array.isArray(activeChats) ? activeChats.slice() : null;
   // 归档只使用触发时的账号与令牌：即使随后切换账号，也仍以原用户身份完成这次快照，
   // 且 archiveSnapshot 只读取该 userId 的本地库，不会混入新账号内容。
-  archiveQueue = archiveQueue.then(() => archiveSnapshot(trigger, userId, token, pendingCopy, chatsCopy)).catch(() => {});
+  archiveQueue = archiveQueue
+    .then(() => archiveSnapshot(trigger, userId, token, pendingCopy, chatsCopy))
+    .catch(() => false);
+  return archiveQueue;
 }
 function fileData(file) { return new Promise((resolve,reject) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = () => reject(new Error('file')); r.readAsDataURL(file); }); }
 async function prepareFile(file, item) {
@@ -1544,27 +1555,60 @@ $('rename').onclick = async () => {
   try { await persist(chat,guard); if (guard === epoch) renderList(); } catch {}
 };
 $('delete').onclick = async () => {
-  if (!current || isBusy() || !(await ClubCommon.confirm({ message: t('confirmDelete') }))) return;
+  if (!current || isBusy() || !(await ClubCommon.confirm({ message: t('confirmDelete'), danger: true }))) return;
   const id = current.id, userId = session.user.id, guard = epoch;
+  const removed = current;
+  const removedIndex = chats.findIndex(x => x.id === id);
+  // 归档必须包含即将删除的这一条，所以在移除前抓一份完整快照。
+  const archiveSnapshotList = chats.slice();
+  // 1) 先从列表移除，界面立即响应。
+  chats = chats.filter(x => x.id !== id);
+  current = chats[0] || null;
+  if (!current) newChat(); else render();
+  render();
   try {
-    await workspaceStore.delete(userId,id);
+    // 2) 确认这次删除前的快照已真正落到云盘；失败就补传一次。
+    status('archiving');
+    const archived = await scheduleChatArchive('reply', pending, archiveSnapshotList);
+    if (!archived) throw new Error('archive');
     if (guard !== epoch) return;
-    chats = chats.filter(x => x.id !== id); current = chats[0] || null;
-    if (!current) newChat();
-    render();
+    // 3) 归档确认成功后才动本地存储。
+    await workspaceStore.delete(userId, id);
+    if (guard !== epoch) return;
+    status('');
   } catch {
-    if (guard === epoch) status('storage');
+    if (guard !== epoch) return;
+    // 归档没成功：把会话放回原位，绝不丢数据。
+    chats.splice(Math.max(0, removedIndex), 0, removed);
+    current = removed;
+    render();
+    status('archiveFailed');
   }
 };
 $('clear').onclick = async () => {
-  if (isBusy() || !session || !(await ClubCommon.confirm({ message: t('confirmClear') }))) return;
+  if (isBusy() || !session || !(await ClubCommon.confirm({ message: t('confirmClear'), danger: true }))) return;
   const guard = epoch, userId = session.user.id;
+  const snapshot = chats.slice();
+  // 1) 列表立即清空。
+  chats = []; current = null; newChat();
   try {
+    // 2) 先把当前全部内容快照到云盘，确认成功。
+    status('archiving');
+    // 必须传入清空前的完整快照，否则 activeChats=[] 会让内存里的会话漏传。
+    const archived = await scheduleChatArchive('reply', [], snapshot);
+    if (!archived) throw new Error('archive');
+    if (guard !== epoch) return;
+    // 3) 确认后才清本地库。
     await workspaceStore.clear(userId);
     if (guard !== epoch) return;
-    chats = []; current = null; newChat();
+    status('');
   } catch {
-    if (guard === epoch) status('storage');
+    if (guard !== epoch) return;
+    // 归档失败：恢复列表，不清本地数据。
+    chats = snapshot;
+    current = chats[0] || null;
+    if (!current) newChat(); else render();
+    status('archiveFailed');
   }
 };
 $('export').onclick = async () => {

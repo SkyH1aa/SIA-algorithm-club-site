@@ -72,6 +72,7 @@
     { group: 'play', icon: '▶', href: 'platformer.html', zh: '行于无垠', en: 'Boundless Run', descZh: '横屏闯关射击游戏', descEn: 'Side-scrolling action shooter', keys: 'platformer 行于无垠 游戏' },
     { group: 'play', icon: '✦', href: 'gomoku-satori-lab.html', zh: 'Satori 决策剖析', en: 'Satori lab', descZh: '逐步摊开自研 AI 的每一次决策', descEn: 'Every decision of the in-house AI, exposed', keys: 'satori 剖析 五子棋 决策' },
 
+    { group: 'admin', icon: '▤', href: 'drive-admin.html', zh: '社团盘管理', en: 'Drive quota', descZh: '设置用户社团盘容量上限', descEn: 'Per-user Club Drive storage limits', keys: 'drive quota 社团盘 容量 配额', requires: 'super' },
     { group: 'member', icon: '◔', href: 'notifications.html', zh: '通知中心', en: 'Notifications', descZh: '公告、活动、报名与积分提醒', descEn: 'Announcements, events, signups and points', keys: 'notify 通知 消息 提醒' },
     { group: 'member', icon: '◇', href: 'search.html', zh: '站内搜索', en: 'Site search', descZh: '搜索社员、公告、活动与商品', descEn: 'Search members, announcements, events and products', keys: 'search 搜索 查找' },
     { group: 'member', icon: '◍', href: 'member-center.html', zh: '个人中心', en: 'Member center', descZh: '登录、注册与资料绑定', descEn: 'Sign in, register, bind profile', keys: 'member 个人中心 登录 注册' },

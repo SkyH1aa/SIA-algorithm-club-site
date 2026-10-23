@@ -2804,3 +2804,13 @@ html[data-theme="light"] body.club-page .club-feature-group > summary:hover { ba
 }
 .club-share-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
 @media print { .share-action, .club-share-layer, .club-share-toast { display: none !important; } }
+
+/* ---------- 社团盘用量条 ---------- */
+.drive-usage { display: grid; gap: 10px; padding: 14px 16px; border: 1px solid var(--club-line); border-radius: 12px; background: var(--club-surface-2); }
+.drive-usage-figures { display: flex; align-items: baseline; gap: 8px; }
+.drive-usage-figures strong { font-size: 22px; font-variant-numeric: tabular-nums; }
+.drive-usage-figures span { color: var(--club-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.drive-usage-bar { height: 8px; border-radius: 999px; background: var(--club-surface-3); overflow: hidden; }
+.drive-usage-bar span { display: block; height: 100%; border-radius: 999px; background: var(--club-accent); transition: width .3s ease; }
+.drive-usage .hint { margin: 0; }
+@media print { .drive-usage { border-color: #bbb; background: #fff; } }

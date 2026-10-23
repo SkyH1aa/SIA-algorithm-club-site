@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-i18n-title-key="pages.adminHub.title">
 <head>
   <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=b12fcc1d">
+  <link rel="stylesheet" href="club-ui.css?v=fdafac23">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -10,10 +10,10 @@
   <title>管理员总览 · 算法社</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=f1172b81"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=daec4b64"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
   <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=b2193cd0"></script></head>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=cb9d9d53"></script></head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Admin Hub</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
   <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div>
@@ -268,7 +268,8 @@
       { key: 'members', href: 'members-admin.html', titleKey: 'admin.entryMembers', descKey: 'admin.entryMembersDesc', shortKey: 'admin.entryShortMembers' },
       { key: 'join', href: 'join-admin.html', titleKey: 'admin.entryJoin', descKey: 'admin.entryJoinDesc', shortKey: 'admin.entryShortJoin' },
       { key: 'donations', href: 'donations.html', titleKey: 'admin.entryDonations', descKey: 'admin.entryDonationsDesc', shortKey: 'admin.entryShortDonations', superOnly: true },
-      { key: 'chat', href: 'chat-admin.html', titleKey: 'admin.entryChat', descKey: 'admin.entryChatDesc', shortKey: 'admin.entryShortChat', superOnly: true }
+      { key: 'chat', href: 'chat-admin.html', titleKey: 'admin.entryChat', descKey: 'admin.entryChatDesc', shortKey: 'admin.entryShortChat', superOnly: true },
+      { key: 'driveQuota', href: 'drive-admin.html', titleKey: 'admin.entryDriveQuota', descKey: 'admin.entryDriveQuotaDesc', shortKey: 'admin.entryShortDriveQuota', superOnly: true }
     ];
     const t = (key, vars) => (window.ClubI18n ? ClubI18n.t(key, vars) : key);
     // 功能开关按用途分组折叠：28 项全部铺开会让「站点服务」标签长达近万像素。
@@ -359,7 +360,11 @@
     }
 
     function permOn(key) {
-      return Boolean(currentAccess?.isSuperAdmin || currentAccess?.permissions?.[`can_${key}`]);
+      if (currentAccess?.isSuperAdmin) return true;
+      // 超管专属入口没有对应的 can_* 权限列，不能落到默认 false。
+      const def = ENTRY_DEFS.find(item => item.key === key);
+      if (def?.superOnly) return false;
+      return Boolean(currentAccess?.permissions?.[`can_${key}`]);
     }
 
     async function call(action, body = {}) {
@@ -982,6 +987,6 @@
     supabaseClient.auth.onAuthStateChange((_event, session) => { void updateSession(session); });
     supabaseClient.auth.getSession().then(({ data: { session } }) => updateSession(session));
   </script>
-  <script src="club-shell.js?v=1885fccd"></script>
+  <script src="club-shell.js?v=6f76acb2"></script>
 </body>
 </html>
