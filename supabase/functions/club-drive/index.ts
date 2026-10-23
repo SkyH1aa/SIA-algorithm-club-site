@@ -180,6 +180,31 @@ async function assertDriveQuota(userId: string, incoming: number) {
   return usage;
 }
 
+// 服务开关变更后，向全体在线页面广播一个「有变化」信号。
+// 广播本身不携带状态：客户端收到后一律回源查询，所以伪造广播无法解锁任何功能。
+// 发送失败不影响保存结果，客户端最长 30 秒的心跳轮询仍会收敛。
+const SITE_SERVICE_CHANNEL = 'club-site-service-live-v1';
+
+async function broadcastServiceChange() {
+  const { url, serviceKey } = supabaseConfig();
+  try {
+    const response = await fetch(`${url}/realtime/v1/api/broadcast`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        apikey: serviceKey,
+        authorization: `Bearer ${serviceKey}`
+      },
+      body: JSON.stringify({
+        messages: [{ topic: SITE_SERVICE_CHANNEL, event: 'service-changed', payload: { at: Date.now() } }]
+      })
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function chatArchiveIdentity(user: { id: string; email?: string; user_metadata?: unknown }) {
   const { url, serviceKey } = supabaseConfig();
   let username = '', memberName = '';
@@ -3716,7 +3741,9 @@ Deno.serve(async request => {
         p_title_en: payload.titleEn, p_subtitle_en: payload.subtitleEn, p_report_zh: payload.reportZh, p_report_en: payload.reportEn, p_feature_settings: payload.featureSettings || null, p_updated_by: user?.id || null
       });
       if (!response.ok) throw new Error('保存网站服务状态失败。');
-      return json({ ok: Array.isArray(result) ? result[0] : result });
+      // 先把结果返回给管理页，再尽力广播给其它在线页面；广播失败不算保存失败。
+      const broadcast = await broadcastServiceChange();
+      return json({ ok: Array.isArray(result) ? result[0] : result, broadcast });
     }
     if (payload.action === 'admin_staff_permissions_list') {
       try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }

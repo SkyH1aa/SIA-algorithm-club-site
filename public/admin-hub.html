@@ -10,10 +10,10 @@
   <title>管理员总览 · 算法社</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=b974d4f8"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=9d984229"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
   <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=cb9d9d53"></script></head>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=2d235920"></script></head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Admin Hub</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
   <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div>
@@ -851,7 +851,7 @@
       event.preventDefault();
       setMessage($('siteServiceMessage'), t('admin.siteServiceSaving'));
       try {
-        await call('admin_site_service_set', {
+        const saved = await call('admin_site_service_set', {
           enabled: $('siteServiceEnabled').checked,
           randomEnabled: $('siteRandomEnabled').checked,
           titleZh: $('siteTitleZh').value,
@@ -862,7 +862,14 @@
           reportEn: $('siteReportEn').value,
           featureSettings: collectFeatureSettings()
         });
-        setMessage($('siteServiceMessage'), t('admin.siteServiceSaved'), 'success');
+        // 立即通知同源其它标签页，并让本页缓存失效；其它设备靠实时广播收敛。
+        window.ClubServiceGate?.notifyChanged?.();
+        try { localStorage.removeItem('club-site-service-last-state'); } catch (_error) { /* ignore */ }
+        setMessage(
+          $('siteServiceMessage'),
+          t(saved && saved.broadcast === false ? 'admin.siteServiceSavedNoBroadcast' : 'admin.siteServiceSaved'),
+          saved && saved.broadcast === false ? 'warn' : 'success'
+        );
       } catch (error) { setMessage($('siteServiceMessage'), error.message, 'error'); }
     });
     $('appMonitorReleaseForm').addEventListener('submit', async (event) => {

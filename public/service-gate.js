@@ -1,5 +1,6 @@
 (function () {
-  const URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co/functions/v1/club-drive';
+  const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
+  const URL = SUPABASE_URL + '/functions/v1/club-drive';
   const KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
   const isAdminHub = /(?:^|\/)admin-hub\.html$/i.test(location.pathname);
   const isTemporaryLogin = /(?:^|\/)member-center\.html$/i.test(location.pathname) && new URLSearchParams(location.search).get('serviceDebug') === '1';
@@ -25,7 +26,9 @@
     const earlyStyle = document.createElement('style');
     earlyStyle.textContent = 'html.club-service-checking body{visibility:hidden!important}';
     (document.head || document.documentElement).appendChild(earlyStyle);
-    setTimeout(() => document.documentElement.classList.remove('club-service-checking'), 30000);
+    // 兜底：即便首屏请求完全卡住，也不让页面一直隐藏。
+    // 有缓存时 applyState 会立刻 reveal；这里只覆盖「无缓存 + 请求挂起」的极端情况。
+    setTimeout(() => document.documentElement.classList.remove('club-service-checking'), 4000);
   }
   const getLang = () => (localStorage.getItem('algorithm-club-lang') || 'zh').startsWith('en') ? 'en' : 'zh';
   const getTheme = () => { const mode = localStorage.getItem('algorithm-club-theme-mode') || 'auto'; if (mode === 'light' || mode === 'dark') return mode; const h = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Shanghai', hour: 'numeric', hour12: false }).format(new Date())); return h >= 6 && h < 18 ? 'light' : 'dark'; };
@@ -66,77 +69,273 @@
     }
     flushCode(); return out.join('');
   };
-  async function check() {
-    if (isAdminHub || isTemporaryLogin) return;
-    const reveal = () => document.documentElement.classList.remove('club-service-checking');
-    // 先用上一次的缓存立即放行，网络结果回来后再决定是否真的需要拦截。
-    // 这样正常访问不会因为一次 5 秒超时而被白屏挡住。
-    let cached = null;
-    try { cached = JSON.parse(localStorage.getItem('club-site-service-last-state') || 'null'); } catch (_error) { cached = null; }
-    if (cached) {
-      latestState = cached;
-      window.dispatchEvent(new CustomEvent('club:servicestate', { detail: cached }));
-      const cachedFeature = featureKey && cached.feature_settings && cached.feature_settings[featureKey];
-      if (cached.enabled !== false && (!cachedFeature || cachedFeature.enabled !== false)) reveal();
+
+  // ---- 状态应用 ---------------------------------------------------------
+  let overlay = null;
+  let overlayCssReady = false;
+  let lockedElements = [];
+  let connState = 'init';
+  let connSince = Date.now();
+  let pill = null;
+  let reconnects = 0;
+
+  const setConn = state => {
+    if (connState === state) return;
+    connState = state; connSince = Date.now();
+    try { window.dispatchEvent(new CustomEvent('club:serviceconn', { detail: { state } })); } catch (_error) { /* ignore */ }
+    syncConnPill();
+  };
+
+  function syncConnPill() {
+    const offline = connState === 'poll' || connState === 'down';
+    if (!offline) { if (pill) pill.style.display = 'none'; return; }
+    if (!document.body) return;
+    if (!pill) {
+      pill = document.createElement('div');
+      pill.id = 'club-service-live-pill';
+      pill.setAttribute('role', 'status');
+      pill.style.cssText = 'position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:2147483646;padding:6px 12px;border-radius:999px;font:12px/1.5 Inter,"Microsoft YaHei",sans-serif;background:#7c2d12;color:#fff;box-shadow:0 4px 16px #0006;pointer-events:none';
+      document.body.appendChild(pill);
     }
-    try {
-      let state;
+    pill.textContent = getLang() === 'en'
+      ? 'Live updates unavailable — checking every 5s.'
+      : '实时连接已断开，正在每 5 秒检查一次。';
+    pill.style.display = '';
+  }
+
+  // 阻断原因：总开关优先，其次当前页面对应的功能开关。
+  function blockReason(state) {
+    if (!state) return null;
+    if (state.enabled === false) return { kind: 'site', feature: null };
+    const feature = featureKey && state.feature_settings && state.feature_settings[featureKey];
+    if (feature && feature.enabled === false) return { kind: 'feature', feature };
+    return null;
+  }
+
+  function reveal() { document.documentElement.classList.remove('club-service-checking'); }
+
+  function restoreLocked() {
+    for (const entry of lockedElements) {
       try {
-        const controller = new AbortController();
-        // 2.5 秒足够一次正常请求；超时就按缓存/放行处理，不长时间白屏。
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
-        let res;
-        try {
-          res = await fetch(URL, { method: 'POST', headers: { 'content-type': 'application/json', apikey: KEY }, body: JSON.stringify({ action: 'site_service_status' }), signal: controller.signal });
-        } finally {
-          clearTimeout(timeoutId);
-        }
-        if (!res.ok) throw new Error('service status request failed');
-        state = await res.json();
-        latestState = state;
-        window.dispatchEvent(new CustomEvent('club:servicestate', { detail: state }));
-        localStorage.setItem('club-site-service-last-state', JSON.stringify(state));
-      } catch (_) {
-        try { state = JSON.parse(localStorage.getItem('club-site-service-last-state') || 'null'); } catch (_error) { state = null; }
-        if (state) {
-          latestState = state;
-          window.dispatchEvent(new CustomEvent('club:servicestate', { detail: state }));
-        }
-        if (!state) { reveal(); return; }
-      }
-      const feature = featureKey && state.feature_settings && state.feature_settings[featureKey];
-      if (state.enabled !== false && (!feature || feature.enabled !== false)) { reveal(); return; }
-      const prompts = Array.isArray(window.ClubServicePrompts) ? window.ClubServicePrompts : [];
-      const pausedByFeature = Boolean(feature && feature.enabled === false);
-      const selected = pausedByFeature
-        ? (feature.random && prompts.length ? prompts[Math.floor(Math.random() * prompts.length)] : feature)
-        : (state.random_enabled && prompts.length ? prompts[Math.floor(Math.random() * prompts.length)] : state);
-      const lang = getLang();
-      const title = lang === 'en' ? (selected.title_en || 'Website temporarily unavailable') : (selected.title_zh || '网站暂不可用');
-      const subtitle = lang === 'en' ? (selected.subtitle_en || 'Website temporarily unavailable') : (selected.subtitle_zh || '网站暂不可用');
-      const style = document.createElement('style');
-      style.textContent = '#club-service-overlay{position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;background:#080b14;color:#f7fbff;text-align:center;font-family:Inter,"Microsoft YaHei",sans-serif}#club-service-overlay[data-theme="light"]{background:#f4eee9;color:#332a28}#club-service-overlay h1{margin:0 20px 14px;font-size:clamp(30px,6vw,64px)}#club-service-overlay p{margin:0 20px;color:#a6b9ca;font-size:clamp(15px,2vw,21px);line-height:1.7;white-space:pre-wrap}#club-service-overlay[data-theme="light"] p{color:#5f514c}.service-tools{display:flex;justify-content:center;gap:8px;margin-top:28px;flex-wrap:wrap}.service-tools button,.service-tools a{font:inherit;padding:9px 13px;border:1px solid #476176;border-radius:7px;background:#172638;color:#eaf7ff;text-decoration:none;cursor:pointer}.service-admin{border-color:#ff8564!important;color:#ffd7c8!important}.service-tools button:focus,.service-tools a:focus{outline:2px solid #ff8564}.service-report{border-color:#7ba8c9!important}.service-modal[hidden]{display:none}.service-modal{position:fixed;inset:0;z-index:1;display:grid;place-items:center;padding:20px;background:#0009}.service-modal-box{width:min(720px,100%);max-height:min(76vh,760px);overflow:auto;padding:24px;border:1px solid #476176;border-radius:10px;background:#101a2e;text-align:left}.service-modal-box h1{margin:0 0 16px;font-size:26px}.service-modal-box h2{font-size:22px}.service-modal-box h3{font-size:18px}.service-modal-box h4,.service-modal-box h5,.service-modal-box h6{font-size:16px}.service-modal-box p{margin:0 0 10px;white-space:normal;font-size:15px}.report-item{margin:7px 0;padding-left:15px;position:relative}.report-item:before{content:"•";position:absolute;left:0}.report-ordered{counter-increment:service-report}.report-ordered:before{content:counter(service-report) "."}.service-modal-box [data-report-content]{counter-reset:service-report}.report-gap{height:7px}.service-modal-box code{padding:2px 5px;border-radius:4px;background:#21304b}.service-modal-box pre{padding:12px;overflow:auto;border-radius:7px;background:#07101f}.service-modal-box pre code{padding:0;background:transparent}.service-modal-box blockquote{margin:10px 0;padding:8px 13px;border-left:3px solid #7ba8c9;background:#142239;color:#c9d9e8}.service-modal-box hr{border:0;border-top:1px solid #476176;margin:16px 0}.service-modal-box img{max-width:100%;height:auto}.service-modal-box a{padding:0;border:0;background:none;color:#7bdfff;text-decoration:underline}.report-table-wrap{overflow:auto;margin:14px 0;border:1px solid #385878;border-radius:7px}.report-table{width:100%;min-width:560px;border-collapse:collapse;font-size:14px}.report-table th,.report-table td{padding:10px 11px;border-bottom:1px solid #2b4561;text-align:left;vertical-align:top;line-height:1.55}.report-table th{background:#162942;color:#d9f4ff;font-weight:700}.report-table tr:last-child td{border-bottom:0}.service-close{margin-top:18px}#club-service-overlay[data-theme="light"] .service-tools button,#club-service-overlay[data-theme="light"] .service-tools a,#club-service-overlay[data-theme="light"] .service-modal-box{background:#fff8f4;border-color:#c9826d;color:#8d3f2e}#club-service-overlay[data-theme="light"] .service-modal-box pre{background:#f1dfd7}#club-service-overlay[data-theme="light"] .service-modal-box blockquote{border-color:#c9826d;background:#f5e4dc;color:#6a463a}#club-service-overlay[data-theme="light"] .service-modal-box a{color:#a63d28}#club-service-overlay[data-theme="light"] .report-table-wrap{border-color:#d69b87}#club-service-overlay[data-theme="light"] .report-table th{background:#f1d5cb;color:#6a291d}#club-service-overlay[data-theme="light"] .report-table th,#club-service-overlay[data-theme="light"] .report-table td{border-color:#e7c7bc}#club-service-overlay[data-theme="light"] .service-admin{background:#f3c8bb!important;border-color:#b83f28!important;color:#762714!important;text-shadow:none!important;font-weight:700}#club-service-overlay[data-theme="light"] .service-admin:hover{background:#e9ad9d!important;color:#5d1b0e!important}';
-      style.textContent += '#club-service-overlay>div:first-child{width:min(92vw,920px);max-width:100%;min-width:0;max-height:100vh;padding:24px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:auto}#club-service-overlay>div:first-child>h1,#club-service-overlay>div:first-child>p{width:100%;max-width:860px;min-width:0;margin-left:0;margin-right:0;overflow-wrap:anywhere;word-break:break-word;text-align:center}#club-service-overlay>div:first-child>.service-tools{width:100%;max-width:860px;align-items:center}body.club-service-paused> :not(#club-service-overlay){display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}body.club-service-paused::before,body.club-service-paused::after{display:none!important;content:none!important}body.club-service-paused{overflow:hidden!important;background:#080b14!important}#club-service-overlay{isolation:isolate;opacity:1!important;visibility:visible!important;pointer-events:auto!important;background:#080b14!important}#club-service-overlay[data-theme="light"]{background:#f4eee9!important}';
-      document.head.appendChild(style);
-      const overlay = document.createElement('div'); overlay.id = 'club-service-overlay'; overlay.innerHTML = '<div><h1></h1><p></p><div class="service-tools"><button type="button" data-report hidden></button><button type="button" data-lang="zh">中文</button><button type="button" data-lang="en">EN</button><button type="button" data-theme>日间</button><a class="service-admin" data-admin></a><a class="service-login" data-login></a></div></div><div class="service-modal" data-modal hidden><article class="service-modal-box"><div data-report-content></div><button class="service-close" type="button" data-close></button></article></div>';
-      overlay.querySelector('h1').textContent = title; overlay.querySelector('p').textContent = subtitle;
-      const themeBtn = overlay.querySelector('[data-theme]'); const admin = overlay.querySelector('[data-admin]'); const login = overlay.querySelector('[data-login]'); const reportBtn = overlay.querySelector('[data-report]'); const modal = overlay.querySelector('[data-modal]'); const reportContent = overlay.querySelector('[data-report-content]'); const closeBtn = overlay.querySelector('[data-close]');
-      const refresh = () => { const en = getLang() === 'en'; const light = getTheme() === 'light'; const report = pausedByFeature ? '' : (en ? state.report_en : state.report_zh); overlay.dataset.theme = light ? 'light' : 'dark'; overlay.querySelector('h1').textContent = en ? (selected.title_en || 'Website temporarily unavailable') : (selected.title_zh || '网站暂不可用'); overlay.querySelector('p').textContent = en ? (selected.subtitle_en || 'Website temporarily unavailable') : (selected.subtitle_zh || '网站暂不可用'); themeBtn.textContent = light ? (en ? 'Dark mode' : '夜间') : (en ? 'Light mode' : '日间'); admin.textContent = en ? 'Administrator debug' : '管理员调试'; login.textContent = en ? 'Super-admin temporary login' : '超管临时登录'; reportBtn.hidden = !String(report || '').trim(); reportBtn.textContent = en ? 'View maintenance details' : '查看维护详情'; closeBtn.textContent = en ? 'Close' : '关闭'; reportContent.innerHTML = renderMarkdown(report); };
-      overlay.querySelectorAll('[data-lang]').forEach(btn => btn.addEventListener('click', () => { localStorage.setItem('algorithm-club-lang', btn.dataset.lang); refresh(); }));
-      themeBtn.addEventListener('click', () => { localStorage.setItem('algorithm-club-theme-mode', getTheme() === 'light' ? 'dark' : 'light'); refresh(); });
-      reportBtn.addEventListener('click', () => { modal.hidden = false; });
-      closeBtn.addEventListener('click', () => { modal.hidden = true; });
+        if (!entry.hadDisabled) entry.el.removeAttribute('disabled');
+        if (!entry.hadTabindex) entry.el.removeAttribute('tabindex');
+        else entry.el.setAttribute('tabindex', entry.tabindex);
+      } catch (_error) { /* ignore */ }
+    }
+    lockedElements = [];
+  }
+
+  function teardownOverlay() {
+    if (overlay) { overlay.remove(); overlay = null; }
+    document.body.classList.remove('club-service-paused');
+    document.documentElement.style.overflow = '';
+    restoreLocked();
+  }
+
+  function selectedCopy(reason, state) {
+    const prompts = Array.isArray(window.ClubServicePrompts) ? window.ClubServicePrompts : [];
+    const feature = reason.feature;
+    const useRandom = feature ? feature.random : state.random_enabled;
+    return useRandom && prompts.length ? prompts[Math.floor(Math.random() * prompts.length)] : (feature || state);
+  }
+
+  function ensureOverlayCss() {
+    if (overlayCssReady) return;
+    const style = document.createElement('style');
+    style.textContent = `#club-service-overlay{position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;background:#080b14;color:#f7fbff;text-align:center;font-family:Inter,"Microsoft YaHei",sans-serif}#club-service-overlay[data-theme="light"]{background:#f4eee9;color:#332a28}#club-service-overlay h1{margin:0 20px 14px;font-size:clamp(30px,6vw,64px)}#club-service-overlay p{margin:0 20px;color:#a6b9ca;font-size:clamp(15px,2vw,21px);line-height:1.7;white-space:pre-wrap}#club-service-overlay[data-theme="light"] p{color:#5f514c}.service-tools{display:flex;justify-content:center;gap:8px;margin-top:28px;flex-wrap:wrap}.service-tools button,.service-tools a{font:inherit;padding:9px 13px;border:1px solid #476176;border-radius:7px;background:#172638;color:#eaf7ff;text-decoration:none;cursor:pointer}.service-admin{border-color:#ff8564!important;color:#ffd7c8!important}.service-tools button:focus,.service-tools a:focus{outline:2px solid #ff8564}.service-report{border-color:#7ba8c9!important}.service-modal[hidden]{display:none}.service-modal{position:fixed;inset:0;z-index:1;display:grid;place-items:center;padding:20px;background:#0009}.service-modal-box{width:min(720px,100%);max-height:min(76vh,760px);overflow:auto;padding:24px;border:1px solid #476176;border-radius:10px;background:#101a2e;text-align:left}.service-modal-box h1{margin:0 0 16px;font-size:26px}.service-modal-box h2{font-size:22px}.service-modal-box h3{font-size:18px}.service-modal-box h4,.service-modal-box h5,.service-modal-box h6{font-size:16px}.service-modal-box p{margin:0 0 10px;white-space:normal;font-size:15px}.report-item{margin:7px 0;padding-left:15px;position:relative}.report-item:before{content:"•";position:absolute;left:0}.report-ordered{counter-increment:service-report}.report-ordered:before{content:counter(service-report) "."}.service-modal-box [data-report-content]{counter-reset:service-report}.report-gap{height:7px}.service-modal-box code{padding:2px 5px;border-radius:4px;background:#21304b}.service-modal-box pre{padding:12px;overflow:auto;border-radius:7px;background:#07101f}.service-modal-box pre code{padding:0;background:transparent}.service-modal-box blockquote{margin:10px 0;padding:8px 13px;border-left:3px solid #7ba8c9;background:#142239;color:#c9d9e8}.service-modal-box hr{border:0;border-top:1px solid #476176;margin:16px 0}.service-modal-box img{max-width:100%;height:auto}.service-modal-box a{padding:0;border:0;background:none;color:#7bdfff;text-decoration:underline}.report-table-wrap{overflow:auto;margin:14px 0;border:1px solid #385878;border-radius:7px}.report-table{width:100%;min-width:560px;border-collapse:collapse;font-size:14px}.report-table th,.report-table td{padding:10px 11px;border-bottom:1px solid #2b4561;text-align:left;vertical-align:top;line-height:1.55}.report-table th{background:#162942;color:#d9f4ff;font-weight:700}.report-table tr:last-child td{border-bottom:0}.service-close{margin-top:18px}#club-service-overlay[data-theme="light"] .service-tools button,#club-service-overlay[data-theme="light"] .service-tools a,#club-service-overlay[data-theme="light"] .service-modal-box{background:#fff8f4;border-color:#c9826d;color:#8d3f2e}#club-service-overlay[data-theme="light"] .service-modal-box pre{background:#f1dfd7}#club-service-overlay[data-theme="light"] .service-modal-box blockquote{border-color:#c9826d;background:#f5e4dc;color:#6a463a}#club-service-overlay[data-theme="light"] .service-modal-box a{color:#a63d28}#club-service-overlay[data-theme="light"] .report-table-wrap{border-color:#d69b87}#club-service-overlay[data-theme="light"] .report-table th{background:#f1d5cb;color:#6a291d}#club-service-overlay[data-theme="light"] .report-table th,#club-service-overlay[data-theme="light"] .report-table td{border-color:#e7c7bc}#club-service-overlay[data-theme="light"] .service-admin{background:#f3c8bb!important;border-color:#b83f28!important;color:#762714!important;text-shadow:none!important;font-weight:700}#club-service-overlay[data-theme="light"] .service-admin:hover{background:#e9ad9d!important;color:#5d1b0e!important}`;
+    style.textContent += `#club-service-overlay>div:first-child{width:min(92vw,920px);max-width:100%;min-width:0;max-height:100vh;padding:24px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:auto}#club-service-overlay>div:first-child>h1,#club-service-overlay>div:first-child>p{width:100%;max-width:860px;min-width:0;margin-left:0;margin-right:0;overflow-wrap:anywhere;word-break:break-word;text-align:center}#club-service-overlay>div:first-child>.service-tools{width:100%;max-width:860px;align-items:center}body.club-service-paused> :not(#club-service-overlay){display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}body.club-service-paused::before,body.club-service-paused::after{display:none!important;content:none!important}body.club-service-paused{overflow:hidden!important;background:#080b14!important}#club-service-overlay{isolation:isolate;opacity:1!important;visibility:visible!important;pointer-events:auto!important;background:#080b14!important}#club-service-overlay[data-theme="light"]{background:#f4eee9!important}`;
+    document.head.appendChild(style);
+    overlayCssReady = true;
+  }
+
+  function renderOverlay(reason, state) {
+    ensureOverlayCss();
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'club-service-overlay';
+      overlay.innerHTML = '<div><h1></h1><p></p><div class="service-tools"><button type="button" data-report hidden></button><button type="button" data-lang="zh">中文</button><button type="button" data-lang="en">EN</button><button type="button" data-theme>日间</button><a class="service-admin" data-admin></a><a class="service-login" data-login></a></div></div><div class="service-modal" data-modal hidden><article class="service-modal-box"><div data-report-content></div><button class="service-close" type="button" data-close></button></article></div>';
+      const themeBtn = overlay.querySelector('[data-theme]');
+      const modal = overlay.querySelector('[data-modal]');
+      overlay.querySelectorAll('[data-lang]').forEach(btn => btn.addEventListener('click', () => {
+        localStorage.setItem('algorithm-club-lang', btn.dataset.lang);
+        if (overlay && overlay._reason) paintOverlay(overlay._reason, latestState);
+      }));
+      themeBtn.addEventListener('click', () => {
+        localStorage.setItem('algorithm-club-theme-mode', getTheme() === 'light' ? 'dark' : 'light');
+        if (overlay && overlay._reason) paintOverlay(overlay._reason, latestState);
+      });
+      overlay.querySelector('[data-report]').addEventListener('click', () => { modal.hidden = false; });
+      overlay.querySelector('[data-close]').addEventListener('click', () => { modal.hidden = true; });
       modal.addEventListener('click', event => { if (event.target === modal) modal.hidden = true; });
-      admin.href = (location.pathname.includes('/public/') ? 'admin-hub.html' : 'public/admin-hub.html') + '?serviceDebug=1'; refresh();
-      login.href = (location.pathname.includes('/public/') ? 'member-center.html' : 'public/member-center.html') + '?serviceDebug=1';
-      setInterval(() => { if ((localStorage.getItem('algorithm-club-theme-mode') || 'auto') === 'auto') refresh(); }, 60000);
+      const base = location.pathname.includes('/public/') ? '' : 'public/';
+      overlay.querySelector('[data-admin]').href = base + 'admin-hub.html?serviceDebug=1';
+      overlay.querySelector('[data-login]').href = base + 'member-center.html?serviceDebug=1';
+      overlay._reason = reason;
       document.body.classList.add('club-service-paused');
       document.body.appendChild(overlay);
       document.documentElement.style.overflow = 'hidden';
-      document.querySelectorAll('button,a,input,select,textarea,[contenteditable="true"]').forEach(el => { el.setAttribute('tabindex', '-1'); el.setAttribute('disabled', 'disabled'); });
-      overlay.querySelectorAll('button,a').forEach(el => { el.removeAttribute('disabled'); el.removeAttribute('tabindex'); });
-      reveal();
-    } catch (_) { reveal(); /* 服务状态接口不可用时保持页面正常，避免网络故障误停站 */ }
+      for (const el of document.querySelectorAll('button,a,input,select,textarea,[contenteditable="true"]')) {
+        if (overlay.contains(el)) continue;
+        lockedElements.push({
+          el,
+          hadDisabled: el.hasAttribute('disabled'),
+          hadTabindex: el.hasAttribute('tabindex'),
+          tabindex: el.getAttribute('tabindex')
+        });
+        el.setAttribute('tabindex', '-1');
+        el.setAttribute('disabled', 'disabled');
+      }
+    }
+    overlay._reason = reason;
+    paintOverlay(reason, state);
   }
+
+  function paintOverlay(reason, state) {
+    if (!overlay) return;
+    const selected = selectedCopy(reason, state);
+    const en = getLang() === 'en';
+    const light = getTheme() === 'light';
+    overlay.dataset.theme = light ? 'light' : 'dark';
+    overlay.querySelector('h1').textContent = en ? (selected.title_en || 'Website temporarily unavailable') : (selected.title_zh || '网站暂不可用');
+    overlay.querySelector('p').textContent = en ? (selected.subtitle_en || 'Website temporarily unavailable') : (selected.subtitle_zh || '网站暂不可用');
+    const themeBtn = overlay.querySelector('[data-theme]');
+    themeBtn.textContent = light ? (en ? 'Dark mode' : '夜间') : (en ? 'Light mode' : '日间');
+    overlay.querySelector('[data-admin]').textContent = en ? 'Administrator debug' : '管理员调试';
+    overlay.querySelector('[data-login]').textContent = en ? 'Super-admin temporary login' : '超管临时登录';
+    const report = reason.kind === 'site' ? (en ? state.report_en : state.report_zh) : '';
+    const reportBtn = overlay.querySelector('[data-report]');
+    reportBtn.hidden = !String(report || '').trim();
+    reportBtn.textContent = en ? 'View maintenance details' : '查看维护详情';
+    overlay.querySelector('[data-close]').textContent = en ? 'Close' : '关闭';
+    overlay.querySelector('[data-report-content]').innerHTML = renderMarkdown(report);
+  }
+
+  // 单一入口：首屏、轮询、广播、跨标签都走这里。
+  function applyState(state) {
+    if (!state || typeof state !== 'object') return;
+    latestState = state;
+    try { localStorage.setItem('club-site-service-last-state', JSON.stringify(state)); } catch (_error) { /* 隐私模式忽略 */ }
+    try { window.dispatchEvent(new CustomEvent('club:servicestate', { detail: state })); } catch (_error) { /* ignore */ }
+    const reason = blockReason(state);
+    if (reason) renderOverlay(reason, state); else teardownOverlay();
+    reveal();
+  }
+
+  // ---- 权威状态读取 ------------------------------------------------------
+  // 直接调 PostgREST 的 RPC，不经过 Edge Function，轮询成本更低。
+  let stateSignature = '';
+  async function fetchState() {
+    const response = await fetch(SUPABASE_URL + '/rest/v1/rpc/club_site_service_status', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: KEY },
+      body: '{}',
+      cache: 'no-store'
+    });
+    if (!response.ok) throw new Error('service status ' + response.status);
+    const payload = await response.json();
+    const row = Array.isArray(payload) ? payload[0] : payload;
+    if (!row || typeof row !== 'object') throw new Error('service status payload');
+    const signature = String(row.updated_at || '') + '|' + String(row.enabled) + '|' + JSON.stringify(row.feature_settings || {});
+    if (signature !== stateSignature) { stateSignature = signature; applyState(row); }
+    setConn('live');
+  }
+
+  // ---- 实时订阅 ----------------------------------------------------------
+  // 广播只是「有变化」的信号，绝不承载状态本身：收到后一律回源查询。
+  // 即使有人伪造广播，也只能触发一次无害的重新读取，无法解锁功能。
+  const REALTIME_CHANNEL = 'club-site-service-live-v1';
+  let channel = null;
+  let reconnectTimer = null;
+
+  function connectRealtime() {
+    const factory = window.supabase && window.supabase.createClient;
+    if (!factory) { setConn('poll'); return; }
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    try {
+      const client = factory(SUPABASE_URL, KEY, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+        realtime: { params: { eventsPerSecond: 2 } }
+      });
+      channel = client.channel(REALTIME_CHANNEL, { config: { broadcast: { self: false } } });
+      channel.on('broadcast', { event: 'service-changed' }, () => { void refresh('broadcast'); });
+      channel.subscribe(status => {
+        if (status === 'SUBSCRIBED') {
+          reconnects = 0;
+          setConn('live');
+          void refresh('subscribed');
+          return;
+        }
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          setConn('poll');
+          if (reconnectTimer) return;
+          reconnects += 1;
+          // 指数退避，最长 60 秒；期间由 5 秒轮询接管，不会漏状态。
+          const delay = Math.min(60000, 2000 * Math.pow(2, Math.min(reconnects, 5)));
+          reconnectTimer = setTimeout(() => {
+            reconnectTimer = null;
+            try { channel && channel.unsubscribe(); } catch (_error) { /* ignore */ }
+            channel = null;
+            connectRealtime();
+          }, delay);
+        }
+      });
+    } catch (_error) { setConn('poll'); }
+  }
+
+  async function refresh() {
+    try { await fetchState(); }
+    catch (_error) { setConn('poll'); }
+  }
+
+  // ---- 跨标签页同步 ------------------------------------------------------
+  window.addEventListener('storage', event => {
+    if (event.key === 'club-site-service-last-state' && event.newValue) {
+      try { applyState(JSON.parse(event.newValue)); } catch (_error) { /* ignore */ }
+    }
+    if (event.key === 'club-site-service-poke') void refresh();
+  });
+  let broadcastChannel = null;
+  try {
+    if (typeof BroadcastChannel === 'function') {
+      broadcastChannel = new BroadcastChannel('club-site-service');
+      broadcastChannel.onmessage = () => { void refresh(); };
+    }
+  } catch (_error) { broadcastChannel = null; }
+
+  // 管理页保存后调用：只发「有变化」信号，不携带状态。
+  window.ClubServiceGate.notifyChanged = () => {
+    try { localStorage.setItem('club-site-service-poke', String(Date.now())); } catch (_error) { /* ignore */ }
+    try { broadcastChannel && broadcastChannel.postMessage('changed'); } catch (_error) { /* ignore */ }
+  };
+
+  // 供测试与调试读取连接状态（只读，不能用来改变开关）。
+  window.ClubServiceGate.getConnection = () => ({ state: connState, since: connSince });
+
+  // ---- 启动 --------------------------------------------------------------
+  let pollTimer = null;
+  function schedulePoll() {
+    if (pollTimer) clearTimeout(pollTimer);
+    // 实时连通时 60 秒一次心跳，断开时 5 秒一次，确保不会长时间漏掉状态变化。
+    const delay = connState === 'live' ? 60000 : 5000;
+    pollTimer = setTimeout(async () => {
+      await refresh();
+      schedulePoll();
+    }, delay);
+  }
+
+  async function check() {
+    if (isAdminHub || isTemporaryLogin) return;
+    let cached = null;
+    try { cached = JSON.parse(localStorage.getItem('club-site-service-last-state') || 'null'); } catch (_error) { cached = null; }
+    if (cached) applyState(cached); else reveal();
+    await refresh();
+    connectRealtime();
+    schedulePoll();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') { void refresh(); schedulePoll(); }
+    });
+    window.addEventListener('club:langchange', () => { if (overlay && overlay._reason) paintOverlay(overlay._reason, latestState); });
+  }
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', check, { once: true }); else check();
 })();

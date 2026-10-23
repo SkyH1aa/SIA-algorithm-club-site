@@ -22,13 +22,15 @@ alter table public.club_site_service_settings add column if not exists feature_s
 alter table public.club_site_service_settings enable row level security;
 revoke all on table public.club_site_service_settings from anon, authenticated;
 
+-- 注意：返回列里必须带 updated_at，前端用它做「状态是否变化」的判据；
+-- 没有它，轮询和实时回调都无法区分「真的改了」与「又读了一次同样的值」。
 drop function if exists public.club_site_service_status();
 create or replace function public.club_site_service_status()
-returns table(enabled boolean, random_enabled boolean, title_zh text, subtitle_zh text, title_en text, subtitle_en text, report_zh text, report_en text, feature_settings jsonb)
+returns table(enabled boolean, random_enabled boolean, title_zh text, subtitle_zh text, title_en text, subtitle_en text, report_zh text, report_en text, feature_settings jsonb, updated_at timestamptz)
 language sql stable security definer set search_path = public
-as $$ select enabled,random_enabled,title_zh,subtitle_zh,title_en,subtitle_en,report_zh,report_en,feature_settings
+as $$ select enabled,random_enabled,title_zh,subtitle_zh,title_en,subtitle_en,report_zh,report_en,feature_settings,updated_at
        from public.club_site_service_settings where singleton
-       union all select true,false,'网站暂不可用','网站暂不可用','Website temporarily unavailable','Website temporarily unavailable','','','{}'::jsonb
+       union all select true,false,'网站暂不可用','网站暂不可用','Website temporarily unavailable','Website temporarily unavailable','','','{}'::jsonb,now()
        where not exists (select 1 from public.club_site_service_settings where singleton)
        limit 1 $$;
 
