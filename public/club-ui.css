@@ -560,17 +560,33 @@ body.club-page .card strong { display: block; font-size: 16px; font-weight: 700;
 body.club-page .card p { margin: 6px 0 0; color: var(--club-muted); font-size: 13px; line-height: 1.6; }
 body.club-page .card span { margin-top: 14px; color: var(--club-accent); font-size: 12.5px; font-weight: 650; }
 body.club-page .card-body { padding: 16px; }
+/* 商品图比例各不相同，不能统一压成固定高度：那会把竖图/方图压扁。
+   这里让图片按自身比例缩放并居中，容器只负责限高和留白，
+   object-fit: contain 保证内容永不拉伸（宁可两侧留白）。 */
 body.club-page .cover {
   display: grid;
   place-items: center;
-  min-height: 132px;
+  height: 200px;
   border-bottom: 1px solid var(--club-line);
   background: var(--club-surface-2);
   color: var(--club-muted);
   font-size: 12px;
   overflow: hidden;
 }
-body.club-page .cover img { width: 100%; height: 132px; object-fit: cover; display: block; }
+body.club-page .cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+}
+/* 无图时的占位文案。 */
+body.club-page .cover > span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
 
 /* ============================================================
    6. 按钮
