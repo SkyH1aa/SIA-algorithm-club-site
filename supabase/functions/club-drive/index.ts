@@ -946,6 +946,115 @@ async function pushNotifications(
   return { inserted: clean.length };
 }
 
+// ---- 模块启动器收藏 / 最近使用 -------------------------------------------
+// 数据归属账号：所有函数都显式接收已鉴权的 user.id，前端无法指定别人的 user_id。
+const LAUNCHER_MAX_FAVORITES = 24;
+const LAUNCHER_MAX_RECENTS = 6;
+
+function launcherKeyList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const out: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== 'string') continue;
+    const key = entry.trim();
+    if (!key || key.length > 200 || out.includes(key)) continue;
+    out.push(key);
+  }
+  return out;
+}
+
+function launcherKey(value: unknown, label: string): string {
+  const key = typeof value === 'string' ? value.trim() : '';
+  if (!key) throw new Error(`${label}不能为空。`);
+  if (key.length > 200) throw new Error(`${label}过长。`);
+  return key;
+}
+
+function launcherResult(payload: unknown): { favorites: string[]; recents: string[] } {
+  const row = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? payload as Record<string, unknown>
+    : {};
+  return {
+    favorites: launcherKeyList(row.favorites).slice(0, LAUNCHER_MAX_FAVORITES),
+    recents: launcherKeyList(row.recents).slice(0, LAUNCHER_MAX_RECENTS)
+  };
+}
+
+async function getLauncherItems(userId: string) {
+  const { url, serviceKey } = supabaseConfig();
+  const { response, payload } = await rpcRequest(url, serviceKey, 'get_club_launcher_items', {
+    p_user_id: userId
+  });
+  if (!response.ok) {
+    const detail = JSON.stringify(payload || {});
+    throw new Error(/Could not find the function|PGRST202|42883|does not exist|schema cache/i.test(detail)
+      ? '收藏数据表尚未创建，请先执行 club-launcher-schema.sql。'
+      : '读取收藏与最近使用失败。');
+  }
+  return launcherResult(payload);
+}
+
+// 写入后立即回读，让前端拿到权威顺序。回读失败时不假装失败：
+// 数据已保存，返回 null 列表由前端保留本地结果。
+async function launcherAfterWrite(userId: string) {
+  try {
+    return { ok: true, ...(await getLauncherItems(userId)) };
+  } catch (_error) {
+    return { ok: true, favorites: null, recents: null };
+  }
+}
+
+async function setLauncherFavorite(userId: string, itemKey: unknown, favorite: unknown) {
+  const key = launcherKey(itemKey, '收藏项');
+  const { url, serviceKey } = supabaseConfig();
+  const { response } = await rpcRequest(url, serviceKey, 'set_club_launcher_favorite', {
+    p_user_id: userId,
+    p_item_key: key,
+    p_favorite: favorite !== false
+  });
+  if (!response.ok) throw new Error('保存收藏失败。');
+  return launcherAfterWrite(userId);
+}
+
+async function pushLauncherRecent(userId: string, itemKey: unknown) {
+  const key = launcherKey(itemKey, '最近使用项');
+  const { url, serviceKey } = supabaseConfig();
+  const { response } = await rpcRequest(url, serviceKey, 'push_club_launcher_recent', {
+    p_user_id: userId,
+    p_item_key: key
+  });
+  if (!response.ok) throw new Error('记录最近使用失败。');
+  return launcherAfterWrite(userId);
+}
+
+async function clearLauncherRecents(userId: string) {
+  const { url, serviceKey } = supabaseConfig();
+  const { response } = await rpcRequest(url, serviceKey, 'clear_club_launcher_recents', {
+    p_user_id: userId
+  });
+  if (!response.ok) throw new Error('清除最近使用失败。');
+  return launcherAfterWrite(userId);
+}
+
+async function mergeLauncherItems(userId: string, favorites: unknown, recents: unknown) {
+  const favoriteList = launcherKeyList(favorites).slice(0, LAUNCHER_MAX_FAVORITES);
+  const recentList = launcherKeyList(recents).slice(0, LAUNCHER_MAX_RECENTS);
+  const { url, serviceKey } = supabaseConfig();
+  const { response, payload } = await rpcRequest(url, serviceKey, 'merge_club_launcher_items', {
+    p_user_id: userId,
+    p_favorites: favoriteList,
+    p_recents: recentList
+  });
+  if (!response.ok) throw new Error('同步本机收藏失败。');
+  const row = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? payload as Record<string, unknown>
+    : {};
+  if (!Array.isArray(row.favorites) || !Array.isArray(row.recents)) {
+    return launcherAfterWrite(userId);
+  }
+  return { ok: true, ...launcherResult(row) };
+}
+
 // 通知所有已绑定社团账号的社员。广播型事件（公告/活动）用它。
 async function allMemberUserIds() {
   const { url, serviceKey } = supabaseConfig();
@@ -3637,6 +3746,52 @@ Deno.serve(async request => {
         return json(await markNotificationsRead(user.id, payload.ids));
       } catch (error) {
         return json({ error: error instanceof Error ? error.message : '标记通知已读失败。' }, 400);
+      }
+    }
+
+    // ---- 模块启动器收藏 / 最近使用：全部要求登录，用户身份只取 token ----
+    if (payload.action === 'launcher_items_get') {
+      if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
+      try {
+        return json(await getLauncherItems(user.id));
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '读取收藏与最近使用失败。' }, 400);
+      }
+    }
+
+    if (payload.action === 'launcher_favorite_set') {
+      if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
+      try {
+        return json(await setLauncherFavorite(user.id, payload.itemKey, payload.favorite));
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '保存收藏失败。' }, 400);
+      }
+    }
+
+    if (payload.action === 'launcher_recent_push') {
+      if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
+      try {
+        return json(await pushLauncherRecent(user.id, payload.itemKey));
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '记录最近使用失败。' }, 400);
+      }
+    }
+
+    if (payload.action === 'launcher_recents_clear') {
+      if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
+      try {
+        return json(await clearLauncherRecents(user.id));
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '清除最近使用失败。' }, 400);
+      }
+    }
+
+    if (payload.action === 'launcher_items_merge') {
+      if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
+      try {
+        return json(await mergeLauncherItems(user.id, payload.favorites, payload.recents));
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '同步本机收藏失败。' }, 400);
       }
     }
 

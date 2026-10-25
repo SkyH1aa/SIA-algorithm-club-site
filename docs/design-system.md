@@ -68,12 +68,24 @@
 
 `club-shell.js` 把 `.club-footer` **追加到 body 末尾**（绝不插入 main 的父节点——游戏页的 main 包在 `.layout` 布局容器里，插进去会挤歪排行榜）。`body.club-page` 是 flex 列 + `.club-footer { margin-top: auto }` 粘性页脚：内容短（登录拦截页）时钉在视口底部，内容长或面板展开时自然跟在最后。游戏页的全屏 shell（100dvh）之下页脚在折叠线外，滚动可见、永不重叠。豁免页与已有自有页脚的页面不注入（`body > footer:not(.club-footer)` 检测）。打印时隐藏。
 
+## 6.1 模块启动器（Ctrl/⌘ + K）
+
+启动器是跨页面共享的个人化入口，**收藏固定置顶、最近使用紧随其后，然后才是学习与资源/AI 与游戏/社员空间/管理后台四个固定分组**（用户明确要求“收藏”置顶一个分类）。
+
+- **数据归属账号**：登录后读写的唯一来源是 `club_launcher_items` 表（经 club-drive 的 `launcher_*` 动作），本机 `localStorage` 只作为缓存与未登录回退。两个键 `algorithm-club-launcher-favorites` / `algorithm-club-launcher-recents`（后者沿用历史键名，旧版仅存 href 的记录会在读取时归一化迁移），另有 `algorithm-club-launcher-owner` 记录缓存属于哪个账号。
+- **同步策略**：登录/切换账号时以服务端返回为准覆盖缓存；本设备首次登录会把登录前攒下的访客收藏合并进账号（只补不删，`launcher_items_merge`）；退出登录清空本账号缓存，避免下一个账号继承。网络失败时保留本地结果不阻断操作。
+- **存稳定条目键而非路径**：`page:<href>` / `root:<href>`。同一模块从首页与 `/public/` 页打开时 href 不同（`../index.html` vs `index.html`），路径无法复用。
+- **收藏**：条目右侧星标点击切换；键盘为 `Ctrl/⌘ + Enter`（焦点始终停在搜索框，星标不进入 Tab 序列，避免打断“输入→回车打开”的主流程）。上限 24 个，数据库侧同样裁剪；收藏项不会在下方分类里重复渲染。
+- **最近使用**：打开启动器条目、直接访问/刷新任一已登记页面都会记录；上限 6 个；首页不占最近位，当前页不在自身的最近列表显示（仍会保存，离开后可用）；可一键清除。
+- **状态**：空收藏显示“点击条目右侧星标”引导；搜索时收藏区只显示命中项。跨标签页通过 `storage` 事件同步。
+- **样式**：`.club-launcher-group` 为 flex 头（右侧可放“清除”），`.club-launcher-star` 默认淡出、悬停/当前项/已收藏时显现，触屏 `@media (hover: none)` 常显；星标用 `--club-warn` 着色，亮暗双套自动生效。守卫工具会检查该区不得引入新的 `club-*` keyframes 或硬编码主题色。
+
 ## 7. 守卫与验收
 
 - `node tools/check-ui-tokens.mjs`：令牌真源唯一、字体栈接入、keyframes 注册表、main 骨架（FAIL）；断点/时长残留（WARN）。改动任何 club-page 页面后必须跑。
 - 资产版本：改 CSS/JS 后跑 `node tools/version-static-assets.mjs`（哈希化引用同步）。
 - 截图验收：亮/暗 × 1280/390（`tools/ui-shot.mjs`，需静态服务器 + Chrome 9222；**必须用全新 Chrome profile**，SW 会缓存旧资产）。
-- 固定套件：`test-club-common / test-i18n-dict / test-theme-system / test-brand-mark / test-seo / test-404-page / test-error-pages / test-pwa / test-asset-versions / test-site-search`。
+- 固定套件：`test-club-common / test-club-launcher-favorites / test-i18n-dict / test-theme-system / test-brand-mark / test-seo / test-404-page / test-error-pages / test-pwa / test-asset-versions / test-site-search`。
 
 ## 8. 已知地雷（改前必读）
 

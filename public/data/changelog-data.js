@@ -4,6 +4,27 @@
 window.CLUB_CHANGELOG_SNAPSHOT = Object.freeze([
   {
     "date": "2026-10-25",
+    "title": "模块启动器新增「收藏」置顶分类、最近使用与账号同步",
+    "enTitle": "Module launcher gains a pinned Favorites group, recent modules, and account sync",
+    "items": [
+      "Ctrl/⌘ + K 启动器现在把「收藏」固定为最上面的一个分类，其次是「最近使用」，之后才是学习与资源、AI 与游戏、社员空间、管理后台四个原有分组。",
+      "每个条目右侧新增星标：点一下即可收藏到置顶分类，再点取消；键盘按 Ctrl/⌘ + Enter 切换，焦点始终留在搜索框，不影响输入后回车打开的主流程。",
+      "收藏与最近使用跟随社团账号：登录后换电脑、换浏览器都能拿回自己的收藏与最近使用；未登录时仍可正常使用，数据暂存在本机，首次登录会自动并入账号。",
+      "最近使用会自动记录通过启动器打开的模块，以及直接访问或刷新的功能页；最多保留 6 项，不占位当前页，可一键清除。退出登录会清除本机缓存，避免下一个账号继承。",
+      "收藏上限 24 项，支持搜索过滤、空收藏引导，以及触屏设备常显星标；亮色与暗色主题均已适配。",
+      "修复历史遗留：旧版仅按链接路径记录最近使用，导致「官网首页」等入口在不同目录下无法复用——现在改用稳定的模块键并在读取时自动迁移旧记录。"
+    ],
+    "enItems": [
+      "The Ctrl/⌘ + K launcher now pins Favorites as its top group, followed by Recent, then the four existing groups: Learn, Play, Member, and Admin.",
+      "Every row gains a star: click to add it to the pinned group, click again to remove it; Ctrl/⌘ + Enter does the same from the keyboard while focus stays in the search field.",
+      "Favorites and recents now follow the club account: sign in on another computer or browser and they come back. Guests can still use both — data stays on that device and is merged into the account on first sign-in.",
+      "Recent automatically records modules opened through the launcher plus pages visited or reloaded directly; up to six entries, the current page is never listed in its own recents, and the list can be cleared in one click. Signing out clears the device cache so the next account cannot inherit it.",
+      "Favorites support up to 24 entries, search filtering, an empty-state hint, and always-visible stars on touch devices; both themes are covered.",
+      "Legacy fix: the old launcher stored recents as link paths, so entries such as “Home” could not be reused from different directories — entries now use stable module keys and old records migrate automatically."
+    ]
+  },
+  {
+    "date": "2026-10-25",
     "title": "前端体验第三轮：模板层收敛、交互四态补全与 chat 岛对齐",
     "enTitle": "Frontend experience round three: template-layer convergence, full interaction states, and chat-island alignment",
     "items": [

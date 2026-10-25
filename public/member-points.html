@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-i18n-title-key="pages.points.title">
 <head>
   <link rel="stylesheet" href="theme.css?v=39c53cdb">
-  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
+  <link rel="stylesheet" href="club-ui.css?v=793635b1">
   <style>
   </style>
   <script src="theme.js?v=1b745a4f"></script>
@@ -53,6 +53,6 @@ function resetForm(){document.getElementById('memberPointsForm').reset();documen
 document.getElementById('pointsRefreshButton').onclick=refreshMemberPoints;document.getElementById('adminRefreshButton').onclick=refreshMemberPoints;document.getElementById('memberPointsCancelButton').onclick=resetForm;document.getElementById('memberPointsForm').addEventListener('submit',async event=>{event.preventDefault();const saveButton=document.getElementById('memberPointsSaveButton');ClubCommon.setBusy(saveButton,true);try{const id=document.getElementById('memberPointId').value,memberName=document.getElementById('memberName').value,memberClass=document.getElementById('memberClass').value,points=Number(document.getElementById('memberPoints').value);await callAdmin('admin_member_points_save',{id,memberName,memberClass,points});setMessage(adminMessage,id?ClubI18n.t('points.updated'):ClubI18n.t('points.added'),'success');resetForm();await refreshMemberPoints()}catch(error){setMessage(adminMessage,error.message,'error')}finally{ClubCommon.setBusy(saveButton,false)}});supabaseClient.auth.onAuthStateChange((_event,session)=>{void updateSession(session);if(session?.user?.id)void refreshMemberPoints()});supabaseClient.auth.getSession().then(async({data:{session}})=>{await updateSession(session);if(session?.user?.id)await refreshMemberPoints()});
 window.addEventListener('club:langchange',()=>{renderPublicPoints(currentMembers);if(adminPanel.classList.contains('active'))renderAdminPoints(currentMembers);if(sessionStatusKey){sessionStatus.textContent=ClubI18n.t(sessionStatusKey);sessionHint.textContent=ClubI18n.t(sessionHintKey)}if(window.ClubI18n)ClubI18n.apply(document);});
 </script>
-  <script src="club-shell.js?v=4ec6cd0d"></script>
+  <script src="club-shell.js?v=158d2108"></script>
 </body>
 </html>

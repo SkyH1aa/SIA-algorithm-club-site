@@ -16,6 +16,9 @@
   'use strict';
 
   var STORAGE_KEY = 'algorithm-club-launcher-recents';
+  var FAVORITES_KEY = 'algorithm-club-launcher-favorites';
+  var MAX_RECENTS = 6;
+  var MAX_FAVORITES = 24;
   var shellScriptURL = document.currentScript && document.currentScript.src;
 
   function mountAssistantLauncher() {
@@ -180,21 +183,304 @@
     return haystack.indexOf(query) >= 0;
   }
 
-  function readRecents() {
+  /* ------------------------------------------------------------
+     收藏 / 最近使用
+     登录后以账号数据为准（club-drive 的 launcher_* 动作），
+     未登录或离线时退回本机 localStorage，保证功能始终可用。
+     存储的是稳定条目键而不是路径：同一模块从首页和 /public/ 页
+     打开时 href 不同（../index.html / index.html），路径无法复用。
+     ------------------------------------------------------------ */
+  var SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
+  var LAUNCHER_FUNCTION_URL = SUPABASE_URL + '/functions/v1/club-drive';
+  var OWNER_KEY = 'algorithm-club-launcher-owner';
+
+  var memoryStore = {};
+  var storageOK = true;
+
+  function storageGet(key) {
+    if (storageOK) {
+      try { return localStorage.getItem(key); } catch (_error) { storageOK = false; }
+    }
+    return Object.prototype.hasOwnProperty.call(memoryStore, key) ? memoryStore[key] : null;
+  }
+
+  function storageSet(key, value) {
+    memoryStore[key] = value;
+    if (!storageOK) return;
+    try { localStorage.setItem(key, value); } catch (_error) { storageOK = false; }
+  }
+
+  function itemKey(item) {
+    return (item.root ? 'root:' : 'page:') + item.href;
+  }
+
+  function itemForKey(key) {
+    for (var i = 0; i < ITEMS.length; i += 1) {
+      if (itemKey(ITEMS[i]) === key) return ITEMS[i];
+    }
+    return null;
+  }
+
+  // 兼容旧版只存 href 的记录（'../index.html'、'public/gomoku.html'、
+  // 'member-checkin.html?type=course' 等），统一归一到条目键。
+  function normalizeStoredEntry(value) {
+    var raw = String(value == null ? '' : value).trim();
+    if (!raw) return '';
+    if (raw.indexOf('root:') === 0 || raw.indexOf('page:') === 0) return raw;
+    var hashIndex = raw.indexOf('#');
+    var hash = hashIndex >= 0 ? raw.slice(hashIndex) : '';
+    var file = raw.split('#')[0].split('?')[0].split('/').pop().toLowerCase();
+    if (!file) return '';
+    for (var i = 0; i < ITEMS.length; i += 1) {
+      var item = ITEMS[i];
+      if (item.root) {
+        if (file !== 'index.html') continue;
+        if (hash) {
+          if (item.href.indexOf(hash) >= 0) return itemKey(item);
+        } else if (item.href.indexOf('#') < 0) {
+          return itemKey(item);
+        }
+        continue;
+      }
+      if (item.href.split('?')[0].toLowerCase() === file) return itemKey(item);
+    }
+    return '';
+  }
+
+  function cleanKeyList(values, limit) {
+    var out = [];
+    (Array.isArray(values) ? values : []).forEach(function (entry) {
+      var normalized = normalizeStoredEntry(entry);
+      if (normalized && out.indexOf(normalized) < 0) out.push(normalized);
+    });
+    return out.slice(0, limit);
+  }
+
+  function readStoredKeys(key, limit) {
+    var values = [];
     try {
-      var raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      return Array.isArray(raw) ? raw.slice(0, 6) : [];
-    } catch (_error) {
-      return [];
+      var parsed = JSON.parse(storageGet(key) || '[]');
+      if (Array.isArray(parsed)) values = parsed;
+    } catch (_error) { values = []; }
+    return cleanKeyList(values, limit);
+  }
+
+  function writeStoredKeys(key, list) {
+    storageSet(key, JSON.stringify(cleanKeyList(list, key === FAVORITES_KEY ? MAX_FAVORITES : MAX_RECENTS)));
+  }
+
+  function readRecents() {
+    return readStoredKeys(STORAGE_KEY, MAX_RECENTS);
+  }
+
+  function readFavorites() {
+    return readStoredKeys(FAVORITES_KEY, MAX_FAVORITES);
+  }
+
+  function readOwner() {
+    try { return String(storageGet(OWNER_KEY) || ''); } catch (_error) { return ''; }
+  }
+
+  function writeOwner(userId) {
+    if (userId) storageSet(OWNER_KEY, userId);
+    else {
+      memoryStore[OWNER_KEY] = '';
+      try { localStorage.removeItem(OWNER_KEY); } catch (_error) { /* ignore */ }
     }
   }
 
-  function pushRecent(href) {
-    try {
-      var list = readRecents().filter(function (entry) { return entry !== href; });
-      list.unshift(href);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, 6)));
-    } catch (_error) { /* storage unavailable */ }
+  /* ---------- 账号同步 ---------- */
+  var launcherSync = { userId: '', token: '', remote: false, initialized: false, generation: 0, lastError: '' };
+
+  function launcherRequest(action, body) {
+    var token = launcherSync.token;
+    if (!token) return Promise.reject(new Error('not signed in'));
+    return fetch(LAUNCHER_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        apikey: SUPABASE_KEY,
+        authorization: 'Bearer ' + token
+      },
+      body: JSON.stringify(Object.assign({ action: action }, body || {}))
+    }).then(function (response) {
+      return response.json().catch(function () { return {}; }).then(function (payload) {
+        if (!response.ok) throw new Error((payload && payload.error) || '收藏同步失败。');
+        return payload || {};
+      });
+    });
+  }
+
+  // 服务端返回的是权威顺序；null/缺失的列表表示“写入成功但回读失败”，保留本地。
+  function applyLauncherPayload(payload) {
+    if (!payload || typeof payload !== 'object') return false;
+    var changed = false;
+    if (Array.isArray(payload.favorites)) {
+      writeStoredKeys(FAVORITES_KEY, payload.favorites);
+      changed = true;
+    }
+    if (Array.isArray(payload.recents)) {
+      writeStoredKeys(STORAGE_KEY, payload.recents);
+      changed = true;
+    }
+    if (changed && launcher && launcher.classList.contains('is-open')) {
+      renderLauncher(launcherInput ? launcherInput.value : '');
+    }
+    return changed;
+  }
+
+  function refreshLauncherFromServer(userId, generation) {
+    var owner = readOwner();
+    var localFavorites = readFavorites();
+    var localRecents = readRecents();
+    var hasLocal = localFavorites.length > 0 || localRecents.length > 0;
+
+    // 第一次在这台设备登录：把登录前攒下的访客收藏并入账号（只补不删）。
+    if (owner !== userId && owner === '' && hasLocal) {
+      return launcherRequest('launcher_items_merge', { favorites: localFavorites, recents: localRecents })
+        .then(function (payload) {
+          if (generation !== launcherSync.generation) return false;
+          writeOwner(userId);
+          applyLauncherPayload(payload);
+          return true;
+        })
+        .catch(function (error) {
+          if (generation !== launcherSync.generation) return false;
+          launcherSync.lastError = error.message;
+          return false;
+        });
+    }
+
+    // 换了账号：上一账号的缓存不能继承给新账号。
+    if (owner !== userId) {
+      writeStoredKeys(FAVORITES_KEY, []);
+      writeStoredKeys(STORAGE_KEY, []);
+    }
+
+    return launcherRequest('launcher_items_get')
+      .then(function (payload) {
+        if (generation !== launcherSync.generation) return false;
+        writeOwner(userId);
+        applyLauncherPayload(payload);
+        return true;
+      })
+      .catch(function (error) {
+        if (generation !== launcherSync.generation) return false;
+        // 表未部署 / 离线：保留本机缓存，功能继续可用。
+        launcherSync.lastError = error.message;
+        return false;
+      });
+  }
+
+  function setLauncherSession(session) {
+    var userId = session && session.user && session.user.id ? String(session.user.id) : '';
+    var token = session && session.access_token ? String(session.access_token) : '';
+    if (launcherSync.initialized && launcherSync.userId === userId && launcherSync.token === token) {
+      return Promise.resolve(false);
+    }
+
+    var wasRemote = launcherSync.remote;
+    launcherSync.initialized = true;
+    launcherSync.userId = userId;
+    launcherSync.token = token;
+    launcherSync.remote = Boolean(userId && token);
+    launcherSync.lastError = '';
+    launcherSync.generation += 1;
+
+    if (!launcherSync.remote) {
+      // 退出登录（含刷新后确认未登录）：清掉该账号留在本机的缓存，
+      // 避免下一个账号/访客继承上一个账号的收藏。
+      if (wasRemote || readOwner()) {
+        writeStoredKeys(FAVORITES_KEY, []);
+        writeStoredKeys(STORAGE_KEY, []);
+        writeOwner('');
+      }
+      if (launcher && launcher.classList.contains('is-open')) renderLauncher('');
+      return Promise.resolve(false);
+    }
+    return refreshLauncherFromServer(userId, launcherSync.generation);
+  }
+
+  function bindLauncherAuth() {
+    var api = staffAccess();
+    if (!api) return;
+    if (typeof api.subscribe === 'function') {
+      api.subscribe(function () {
+        var session = typeof api.getSession === 'function' ? api.getSession() : null;
+        var generation = launcherSync.generation + 1;
+        setLauncherSession(session).then(function (synced) {
+          // 同步完成后再补记当前页，避免「先 push 后被 get 覆盖」的竞态。
+          if (synced && generation === launcherSync.generation) pushRecentToServer(currentItem());
+        });
+      });
+    }
+  }
+
+  function currentItem() {
+    var file = currentFile();
+    if (!file || file === 'index.html') return null;
+    for (var i = 0; i < ITEMS.length; i += 1) {
+      var item = ITEMS[i];
+      if (item.root) continue;
+      if (item.href.split('?')[0].toLowerCase() === file) return item;
+    }
+    return null;
+  }
+
+  function pushRecent(item) {
+    if (!item || item.root) return; // 首页不参与“最近使用”，避免永远占据第一项
+    var key = itemKey(item);
+    var list = readRecents().filter(function (entry) { return entry !== key; });
+    list.unshift(key);
+    writeStoredKeys(STORAGE_KEY, list.slice(0, MAX_RECENTS));
+    if (launcherSync.remote) {
+      launcherRequest('launcher_recent_push', { itemKey: key })
+        .then(applyLauncherPayload)
+        .catch(function (error) { launcherSync.lastError = error.message; });
+    }
+  }
+
+  // 已登录时把当前页补记到账号；未登录时只写本机。
+  function pushRecentToServer(item) {
+    if (!item || !launcherSync.remote) return;
+    launcherRequest('launcher_recent_push', { itemKey: itemKey(item) })
+      .then(applyLauncherPayload)
+      .catch(function (error) { launcherSync.lastError = error.message; });
+  }
+
+  function rememberCurrentView() {
+    var item = currentItem();
+    if (item) pushRecent(item);
+  }
+
+  function toggleFavorite(item) {
+    if (!item) return false;
+    var key = itemKey(item);
+    var list = readFavorites();
+    var index = list.indexOf(key);
+    var added = index < 0;
+    if (added) list.unshift(key);
+    else list.splice(index, 1);
+    writeStoredKeys(FAVORITES_KEY, list.slice(0, MAX_FAVORITES));
+    if (launcherSync.remote) {
+      launcherRequest('launcher_favorite_set', { itemKey: key, favorite: added })
+        .then(applyLauncherPayload)
+        .catch(function (error) {
+          // 同步失败不回滚用户操作：保留本机结果，下次登录会再次合并。
+          launcherSync.lastError = error.message;
+        });
+    }
+    return added;
+  }
+
+  function clearRecents() {
+    writeStoredKeys(STORAGE_KEY, []);
+    if (launcherSync.remote) {
+      launcherRequest('launcher_recents_clear', {})
+        .then(applyLauncherPayload)
+        .catch(function (error) { launcherSync.lastError = error.message; });
+    }
   }
 
   /* ------------------------------------------------------------
@@ -206,6 +492,19 @@
   var activeIndex = -1;
   var visibleItems = [];
   var lastTrigger = null;
+
+  function launcherFootHtml(en) {
+    return '<span>↑ ↓ ' + escapeHtml(en ? 'to move' : '选择') +
+      ' · ↵ ' + escapeHtml(en ? 'to open' : '打开') +
+      ' · Ctrl/⌘ + ↵ ' + escapeHtml(en ? 'favorite' : '收藏') + '</span>' +
+      '<span>Ctrl / ⌘ + K</span>';
+  }
+
+  function launcherStarLabel(en, favorite) {
+    return en
+      ? (favorite ? 'Remove from favorites' : 'Add to favorites')
+      : (favorite ? '取消收藏' : '收藏');
+  }
 
   function buildLauncher() {
     if (launcher) return launcher;
@@ -219,15 +518,14 @@
       '<div class="club-launcher-panel" role="document">' +
         '<div class="club-launcher-search">' +
           '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>' +
-          '<input type="text" autocomplete="off" spellcheck="false" aria-controls="clubLauncherResults" ' +
+          '<input type="text" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="true" ' +
+            'aria-controls="clubLauncherResults" aria-autocomplete="list" aria-describedby="clubLauncherHelp" ' +
             'placeholder="' + escapeHtml(en ? 'Search modules, labs, admin tools…' : '搜索功能、实验室、后台模块…') + '">' +
           '<kbd>ESC</kbd>' +
         '</div>' +
-        '<div class="club-launcher-results" id="clubLauncherResults" role="listbox"></div>' +
-        '<div class="club-launcher-foot">' +
-          '<span>↑ ↓ ' + escapeHtml(en ? 'to move' : '选择') + ' · ↵ ' + escapeHtml(en ? 'to open' : '打开') + '</span>' +
-          '<span>' + escapeHtml(en ? 'Ctrl / ⌘ + K' : 'Ctrl / ⌘ + K') + '</span>' +
-        '</div>' +
+        '<div class="club-launcher-results" id="clubLauncherResults" role="listbox" aria-label="' +
+          escapeHtml(en ? 'Club modules' : '社团模块') + '"></div>' +
+        '<div class="club-launcher-foot" id="clubLauncherHelp">' + launcherFootHtml(en) + '</div>' +
       '</div>';
     document.body.appendChild(launcher);
     launcherInput = launcher.querySelector('input');
@@ -239,6 +537,26 @@
     launcherInput.addEventListener('input', function () { renderLauncher(launcherInput.value); });
     launcherInput.addEventListener('keydown', onLauncherKeydown);
     launcherResults.addEventListener('click', function (event) {
+      var clear = event.target.closest('[data-launcher-clear]');
+      if (clear) {
+        clearRecents();
+        renderLauncher(launcherInput.value);
+        launcherInput.focus();
+        return;
+      }
+      var star = event.target.closest('.club-launcher-star');
+      if (star) {
+        var starItem = visibleItems[Number(star.dataset.index)];
+        if (starItem) toggleFavorite(starItem);
+        // 星标切换后保持键盘位置停在同一条目上，而不是跳回列表顶部。
+        var keepKey = starItem ? itemKey(starItem) : '';
+        renderLauncher(launcherInput.value);
+        var next = -1;
+        visibleItems.forEach(function (entry, index) { if (itemKey(entry) === keepKey) next = index; });
+        if (next >= 0) setActive(next);
+        launcherInput.focus();
+        return;
+      }
       var item = event.target.closest('.club-launcher-item');
       if (item) openLauncherItem(Number(item.dataset.index));
     });
@@ -247,7 +565,46 @@
       if (!item) return;
       setActive(Number(item.dataset.index));
     });
+    // 同一浏览器多标签页时保持收藏/最近使用同步（storage 事件只在其它标签页触发）。
+    window.addEventListener('storage', function (event) {
+      if (!event || (event.key !== FAVORITES_KEY && event.key !== STORAGE_KEY)) return;
+      if (launcher && launcher.classList.contains('is-open')) {
+        renderLauncher(launcherInput ? launcherInput.value : '');
+      }
+    });
     return launcher;
+  }
+
+  function launcherGroupHtml(label, actionHtml) {
+    return '<div class="club-launcher-group"><span>' + escapeHtml(label) + '</span>' +
+      (actionHtml || '') + '</div>';
+  }
+
+  function launcherItemHtml(item, en, favoriteKeys) {
+    var index = visibleItems.length;
+    visibleItems.push(item);
+    var favorite = (favoriteKeys || readFavorites()).indexOf(itemKey(item)) >= 0;
+    var starLabel = launcherStarLabel(en, favorite);
+    var itemName = en ? item.en : item.zh;
+    var itemLabel = itemName + (favorite ? (en ? ' (favorited)' : '（已收藏）') : '');
+    return '<div class="club-launcher-item" role="option" id="clubLauncherOption' + index +
+        '" data-index="' + index + '" aria-selected="false" aria-label="' + escapeHtml(itemLabel) + '">' +
+        '<span class="club-launcher-icon" aria-hidden="true">' + escapeHtml(item.icon) + '</span>' +
+        '<span class="club-launcher-copy">' +
+          '<strong>' + escapeHtml(en ? item.en : item.zh) + '</strong>' +
+          '<small>' + escapeHtml(en ? item.descEn : item.descZh) + '</small>' +
+        '</span>' +
+        '<span class="club-launcher-star' + (favorite ? ' is-favorite' : '') +
+          '" aria-hidden="true" data-index="' + index + '" title="' + escapeHtml(starLabel) + '">' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.2 5.8.9-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.9z"/></svg>' +
+        '</span>' +
+      '</div>';
+  }
+
+  function resolveStoredItems(keys) {
+    return keys.map(itemForKey).filter(function (item) {
+      return Boolean(item) && canSee(item);
+    });
   }
 
   function renderLauncher(query) {
@@ -256,25 +613,56 @@
     visibleItems = [];
     var html = '';
     var groups = ['learn', 'play', 'member', 'admin'];
+    var favoriteKeys = readFavorites();
+
+    var favoriteItems = resolveStoredItems(favoriteKeys);
+    var favoriteHits = favoriteItems.filter(function (item) { return matches(item, needle); });
+    var shownKeys = {};
+
+    // 收藏固定置顶：浏览时始终显示（空时给出收藏方法），搜索时只显示命中的收藏。
+    if (!needle || favoriteHits.length) {
+      html += launcherGroupHtml(en ? 'Favorites' : '收藏', '');
+      if (favoriteHits.length) {
+        favoriteHits.forEach(function (item) {
+          shownKeys[itemKey(item)] = true;
+          html += launcherItemHtml(item, en, favoriteKeys);
+        });
+      } else {
+        html += '<div class="club-launcher-note">' +
+          escapeHtml(en ? 'No favorites yet. Click the star on any item.' : '还没有收藏，点击条目右侧的星标即可收藏。') +
+          '</div>';
+      }
+    }
+
+    // 最近使用只在浏览态出现；不重复收藏区条目，也不把当前所在页当作“最近”。
+    if (!needle) {
+      var here = currentFile();
+      var recentItems = resolveStoredItems(readRecents()).filter(function (item) {
+        if (item.root || shownKeys[itemKey(item)]) return false;
+        return item.href.split('?')[0].toLowerCase() !== here;
+      }).slice(0, MAX_RECENTS);
+      if (recentItems.length) {
+        html += launcherGroupHtml(
+          en ? 'Recent' : '最近使用',
+          '<button type="button" class="club-launcher-clear" data-launcher-clear="recents">' +
+            escapeHtml(en ? 'Clear' : '清除') + '</button>'
+        );
+        recentItems.forEach(function (item) {
+          shownKeys[itemKey(item)] = true;
+          html += launcherItemHtml(item, en, favoriteKeys);
+        });
+      }
+    }
 
     groups.forEach(function (group) {
       var hits = visibleItemsFor(group).filter(function (item) {
+        // 收藏与最近使用已在顶部出现，分类列表不再重复渲染同一条目。
+        if (shownKeys[itemKey(item)]) return false;
         return matches(item, needle);
       });
       if (!hits.length) return;
-      html += '<div class="club-launcher-group">' + escapeHtml(GROUPS[group][en ? 1 : 0]) + '</div>';
-      hits.forEach(function (item) {
-        var index = visibleItems.length;
-        visibleItems.push(item);
-        html +=
-          '<button type="button" class="club-launcher-item" role="option" data-index="' + index + '" aria-selected="false">' +
-            '<span class="club-launcher-icon" aria-hidden="true">' + escapeHtml(item.icon) + '</span>' +
-            '<span class="club-launcher-copy">' +
-              '<strong>' + escapeHtml(en ? item.en : item.zh) + '</strong>' +
-              '<small>' + escapeHtml(en ? item.descEn : item.descZh) + '</small>' +
-            '</span>' +
-          '</button>';
-      });
+      html += launcherGroupHtml(GROUPS[group][en ? 1 : 0], '');
+      hits.forEach(function (item) { html += launcherItemHtml(item, en, favoriteKeys); });
     });
 
     if (!visibleItems.length) {
@@ -294,7 +682,12 @@
     });
     activeIndex = index;
     var active = launcherResults.querySelector('.club-launcher-item.is-active');
-    if (active) active.scrollIntoView({ block: 'nearest' });
+    if (active) {
+      active.scrollIntoView({ block: 'nearest' });
+      if (launcherInput) launcherInput.setAttribute('aria-activedescendant', active.id);
+    } else if (launcherInput) {
+      launcherInput.removeAttribute('aria-activedescendant');
+    }
   }
 
   function onLauncherKeydown(event) {
@@ -313,6 +706,18 @@
     }
     if (event.key === 'Enter') {
       event.preventDefault();
+      if (event.metaKey || event.ctrlKey) {
+        var item = visibleItems[activeIndex];
+        if (item) {
+          toggleFavorite(item);
+          var keepKey = itemKey(item);
+          renderLauncher(launcherInput.value);
+          var next = -1;
+          visibleItems.forEach(function (entry, index) { if (itemKey(entry) === keepKey) next = index; });
+          if (next >= 0) setActive(next);
+        }
+        return;
+      }
       openLauncherItem(activeIndex);
     }
   }
@@ -321,7 +726,7 @@
     var item = visibleItems[index];
     if (!item) return;
     var href = hrefFor(item);
-    pushRecent(href);
+    pushRecent(item);
     closeLauncher();
     location.href = href;
   }
@@ -336,11 +741,9 @@
       var en = lang() === 'en';
       launcherInput.placeholder = en ? 'Search modules, labs, admin tools…' : '搜索功能、实验室、后台模块…';
       launcher.setAttribute('aria-label', en ? 'Jump to a club module' : '跳转到社团模块');
+      launcherResults.setAttribute('aria-label', en ? 'Club modules' : '社团模块');
       var foot = launcher.querySelector('.club-launcher-foot');
-      if (foot) {
-        foot.innerHTML = '<span>↑ ↓ ' + escapeHtml(en ? 'to move' : '选择') + ' · ↵ ' + escapeHtml(en ? 'to open' : '打开') + '</span>' +
-          '<span>Ctrl / ⌘ + K</span>';
-      }
+      if (foot) foot.innerHTML = launcherFootHtml(en);
     }
     launcher.classList.add('is-open');
     launcherInput.value = '';
@@ -1140,11 +1543,26 @@
     mountToTop();
     mountAssistantLauncher();
     bindKeys();
+    // 从启动器之外（页脚、站内导航、搜索、直接输入地址）进入的页面也计入最近使用。
+    rememberCurrentView();
+    // 收藏/最近使用跟随账号：登录态解析完成后以服务端为准。
+    bindLauncherAuth();
     // i18n / theme 的切换器注入时机晚于本脚本，补一次兜底归位。
     setTimeout(function () { mountLanguageSwitcher(); refreshLocalizedChrome(); mountNotifyButton(); }, 0);
     setTimeout(function () { mountLanguageSwitcher(); mountLauncherButton(); mountNotifyButton(); }, 220);
     window.addEventListener('club:langchange', function () {
       refreshLocalizedChrome();
+      // 启动器打开时同步切换分组标题、条目文案与空态提示。
+      if (launcher && launcher.classList.contains('is-open')) {
+        launcher.dataset.lang = lang();
+        var en = lang() === 'en';
+        launcherInput.placeholder = en ? 'Search modules, labs, admin tools…' : '搜索功能、实验室、后台模块…';
+        launcher.setAttribute('aria-label', en ? 'Jump to a club module' : '跳转到社团模块');
+        launcherResults.setAttribute('aria-label', en ? 'Club modules' : '社团模块');
+        var foot = launcher.querySelector('.club-launcher-foot');
+        if (foot) foot.innerHTML = launcherFootHtml(en);
+        renderLauncher(launcherInput.value);
+      }
       // 重建管理员栏的本地化文本
       var host = document.querySelector('[data-club-admin-rail]');
       if (host) { host.innerHTML = ''; mountAdminRail(); }
@@ -1169,6 +1587,13 @@
     closeLauncher: closeLauncher,
     setupTabs: setupTabs,
     setTab: setTab,
-    mountAdminRail: mountAdminRail
+    mountAdminRail: mountAdminRail,
+    // 收藏 / 最近使用：供页面内其它入口复用同一份本地状态。
+    favorites: {
+      list: readFavorites,
+      recents: readRecents,
+      toggle: toggleFavorite,
+      clearRecents: clearRecents
+    }
   };
 })(window);

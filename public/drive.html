@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-i18n-title-key="pages.drive.title">
 <head>
   <link rel="stylesheet" href="theme.css?v=39c53cdb">
-  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
+  <link rel="stylesheet" href="club-ui.css?v=793635b1">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -65,6 +65,6 @@ async function showSession(session){const sequence=++authSequence;if(!session){a
 document.getElementById('refreshButton').onclick=refreshFiles;document.getElementById('upButton').onclick=()=>openFolder(currentPath.includes('/')?currentPath.slice(0,currentPath.lastIndexOf('/')):'');const mkdirRow=document.getElementById('mkdirRow'),mkdirInput=document.getElementById('mkdirInput');function closeMkdirRow(){mkdirRow.hidden=true;mkdirInput.value=''}async function submitMkdir(){const name=mkdirInput.value.trim();if(!name){mkdirInput.focus();return}try{await callDrive('mkdir',{path:currentPath,name});closeMkdirRow();setMessage(driveMessage,ClubI18n.t('drive.mkdirOk'),'success');await refreshFiles()}catch(error){setMessage(driveMessage,error.message,'error')}}document.getElementById('mkdirButton').onclick=()=>{mkdirRow.hidden=false;mkdirInput.focus()};document.getElementById('mkdirConfirmButton').onclick=submitMkdir;document.getElementById('mkdirCancelButton').onclick=closeMkdirRow;mkdirInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();submitMkdir()}else if(event.key==='Escape'){event.preventDefault();closeMkdirRow()}});document.getElementById('uploadInput').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;if(file.size>MAX_FILE_BYTES){setMessage(driveMessage,ClubI18n.t('drive.fileTooLarge'),'error');return}try{setMessage(driveMessage,ClubI18n.t('drive.uploadingMsg'));await uploadFile(file,`${currentPath?currentPath+'/':''}${file.name}`);setMessage(driveMessage,ClubI18n.t('drive.uploadOk'),'success');await refreshFiles()}catch(error){setMessage(driveMessage,error.message,'error')}finally{if(activeTransfer)endTransfer()}};searchInput.oninput=renderFiles;document.getElementById('generateInvitesButton').onclick=async()=>{try{const count=Number(document.getElementById('inviteCount').value),payload=await callDrive('admin_generate_invites',{count});setMessage(adminMessage,ClubI18n.t('drive.invitesGenerated',{count:payload.codes.length}),'success');await refreshInvites()}catch(error){setMessage(adminMessage,error.message,'error')}};document.getElementById('adminRefreshButton').onclick=refreshInvites;document.getElementById('logoutButton').onclick=async()=>{await supabaseClient.auth.signOut();await showSession(null);setMessage(authMessage,ClubI18n.t('drive.loggedOut'),'success')};supabaseClient.auth.onAuthStateChange((_event,session)=>void showSession(session));supabaseClient.auth.getSession().then(({data:{session}})=>void showSession(session));
 window.addEventListener('club:langchange',()=>{mergeDrivePageDict();renderBreadcrumbs();renderFiles();if(window.ClubI18n)ClubI18n.apply(document);setDriveMeta(driveMetaState.key,driveMetaState.vars||undefined);});
 </script>
-  <script src="club-shell.js?v=4ec6cd0d"></script>
+  <script src="club-shell.js?v=158d2108"></script>
 </body>
 </html>

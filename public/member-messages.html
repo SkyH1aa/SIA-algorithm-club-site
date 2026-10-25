@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-i18n-title-key="pages.messages.title">
 <head>
   <link rel="stylesheet" href="theme.css?v=39c53cdb">
-  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
+  <link rel="stylesheet" href="club-ui.css?v=793635b1">
   <style>
     /* 管理员内联编辑表单（替代 prompt 弹窗）：展开在留言卡片内部 */
     .message-edit-form{display:grid;gap:12px;margin-top:14px;padding-top:14px;border-top:1px dashed var(--club-line)}
@@ -108,6 +108,6 @@ async function updateSession(session){const member=Boolean(session?.user?.id);me
 document.getElementById('refreshButton').onclick=refreshMessages;document.getElementById('messageForm').addEventListener('submit',async event=>{event.preventDefault();const memberName=document.getElementById('memberName').value,memberClass=document.getElementById('memberClass').value,messageContent=document.getElementById('messageContent').value;try{await callMember('member_messages_create',{memberName,memberClass,messageContent});event.target.reset();applyBoundProfile();setMessage(formMessage,ClubI18n.t('messages.submitted'),'success');await refreshMessages()}catch(error){setMessage(formMessage,error.message,'error')}});supabaseClient.auth.onAuthStateChange((_event,session)=>{void updateSession(session);if(session?.user?.id)void refreshMessages()});supabaseClient.auth.getSession().then(async({data:{session}})=>{await updateSession(session);if(session?.user?.id)await refreshMessages()});
 window.addEventListener('club:langchange',()=>{renderMessages();if(window.ClubI18n)ClubI18n.apply(document);});
 </script>
-  <script src="club-shell.js?v=4ec6cd0d"></script>
+  <script src="club-shell.js?v=158d2108"></script>
 </body>
 </html>

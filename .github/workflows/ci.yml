@@ -49,6 +49,7 @@ jobs:
       - name: Shared UI layer and donations
         run: |
           node tools/test-club-common.mjs
+          node tools/test-club-launcher-favorites.mjs
           node tools/test-club-donations-page.mjs
           node tools/test-club-donations-ui.mjs
 

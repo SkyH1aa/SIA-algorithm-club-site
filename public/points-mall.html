@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-i18n-title-key="pages.mall.title">
 <head>
   <link rel="stylesheet" href="theme.css?v=39c53cdb">
-  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
+  <link rel="stylesheet" href="club-ui.css?v=793635b1">
   <style>
     /* 页内微调：原内联样式收敛为类，颜色一律使用 --club-* 令牌 */
     .mall-gate-intro{margin:10px 0 18px}
@@ -241,6 +241,6 @@
     supabaseClient.auth.getSession().then(({ data: { session } }) => { void updateSession(session); });
     window.addEventListener('club:langchange', () => { updateProfileUi(); void loadProducts(); if (window.ClubI18n) ClubI18n.apply(document); });
   </script>
-  <script src="club-shell.js?v=4ec6cd0d"></script>
+  <script src="club-shell.js?v=158d2108"></script>
 </body>
 </html>

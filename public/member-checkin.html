@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-i18n-title-key="pages.checkin.title">
 <head>
   <link rel="stylesheet" href="theme.css?v=39c53cdb">
-  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
+  <link rel="stylesheet" href="club-ui.css?v=793635b1">
   <style>
     /* 「加入积分榜」班级内联输入行（替代 prompt 弹窗）：输入框占满剩余宽度，确认/取消同行排列 */
     .course-class-editor{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
@@ -143,6 +143,6 @@ window.addEventListener('club:langchange',mergeCheckinPageDict);
 updateCheckinType();window.addEventListener('club:servicestate',event=>{serviceState=event.detail||null;applyCheckinServiceState()});supabaseClient.auth.onAuthStateChange((_event,session)=>void updateSession(session));supabaseClient.auth.getSession().then(({data:{session}})=>void updateSession(session));
 window.addEventListener('club:langchange',()=>{updateCheckinType();if(adminPanel.classList.contains('active'))void refreshAdmin();if(window.ClubI18n)ClubI18n.apply(document);});setTimeout(applyCheckinServiceState,0);
 </script>
-  <script src="club-shell.js?v=4ec6cd0d"></script>
+  <script src="club-shell.js?v=158d2108"></script>
 </body>
 </html>
