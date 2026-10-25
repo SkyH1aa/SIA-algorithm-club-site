@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.events.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -11,8 +11,8 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
@@ -27,6 +27,12 @@
   <meta name="twitter:image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
+  <style>
+    /* 只影响本页：活动卡脚注与报名就近提示（不改全站约定） */
+    body.club-page .meta.card-foot { margin-top: 10px; }
+    body.club-page .signup-message { min-height: 0; margin-top: 8px; }
+    body.club-page .card.is-event-flash { outline: 2px solid var(--club-accent); outline-offset: 2px; transition: outline-color .6s ease; }
+  </style>
 </head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Events & Notices</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
@@ -35,8 +41,8 @@
     <h1 data-i18n="pages.events.h1">活动与公告</h1>
     <p class="lead" data-i18n="events.lead">查看社团通知、课程安排、比赛信息与活动报名。登录后可直接报名；管理员可在活动管理后台发布和修改内容。</p>
     <section class="layout">
-      <div class="panel"><h2 data-i18n="events.announcements">最新公告</h2><p class="intro" data-i18n="events.announcementsIntro">置顶公告会优先显示，包含社团通知、课程安排和比赛信息。</p><div class="list" id="announcementList"><div class="empty loading" data-i18n="events.loadingAnnouncements">正在读取公告…</div></div></div>
-      <div class="panel"><div class="events-panel-head"><div><h2 data-i18n="events.signup">活动报名</h2><p class="intro" data-i18n="events.signupIntro">查看活动状态、截止时间，并提交报名。</p></div><div class="events-view-toggle" role="tablist"><button type="button" class="chip is-active" data-events-view="list" role="tab" aria-selected="true" data-i18n="events.viewList">列表</button><button type="button" class="chip" data-events-view="calendar" role="tab" aria-selected="false" data-i18n="events.viewCalendar">日历</button></div></div><div class="list" id="eventList"><div class="empty loading" data-i18n="events.loadingEvents">正在读取活动…</div></div><div id="eventCalendar" class="event-calendar" hidden></div><p class="message" id="pageMessage" role="status"></p></div>
+      <div class="panel"><h2 data-i18n="events.announcements">最新公告</h2><p class="intro" data-i18n="events.announcementsIntro">置顶公告会优先显示，包含社团通知、课程安排和比赛信息。</p><div class="list" id="announcementList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="events.loadingAnnouncements">正在读取公告…</span></div></div>
+      <div class="panel"><div class="events-panel-head"><div><h2 data-i18n="events.signup">活动报名</h2><p class="intro" data-i18n="events.signupIntro">查看活动状态、截止时间，并提交报名。</p></div><div class="events-view-toggle" role="tablist"><button type="button" class="chip is-active" data-events-view="list" role="tab" aria-selected="true" data-i18n="events.viewList">列表</button><button type="button" class="chip" data-events-view="calendar" role="tab" aria-selected="false" data-i18n="events.viewCalendar">日历</button></div></div><div class="list" id="eventList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="events.loadingEvents">正在读取活动…</span></div><div id="eventCalendar" class="event-calendar" hidden></div><p class="message" id="pageMessage" role="status"></p></div>
     </section>
   </main>
   <script>
@@ -55,7 +61,9 @@
       if (!value) return '-';
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return '-';
-      return date.toLocaleString('zh-CN', { hour12: false });
+      // 跟随界面语言：英文用 en-US，其余保持 zh-CN。
+      const locale = ClubI18n.getLang() === 'en' ? 'en-US' : 'zh-CN';
+      return date.toLocaleString(locale, { hour12: false });
     }
     function setMessage(text, type = '') {
       $('pageMessage').textContent = text;
@@ -136,7 +144,7 @@
         const list = days.get(key) || [];
         cells.push(`<div class="event-calendar-day${list.length ? ' has-events' : ''}">
           <span class="event-calendar-date">${day}</span>
-          ${list.map(item => `<a class="event-calendar-item" href="#events" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</a>`).join('')}
+          ${list.map(item => `<a class="event-calendar-item" href="#eventList" data-event-target="${escapeHtml(item.id)}" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</a>`).join('')}
         </div>`);
       }
       host.innerHTML = `
@@ -153,6 +161,23 @@
         button.addEventListener('click', () => {
           calendarMonth = new Date(year, month + Number(button.dataset.calendarNav), 1);
           renderCalendar(eventsCache);
+        });
+      });
+      // 点击日历项：切回列表视图并滚动到对应活动卡片（href="#eventList" 仅作无 JS 兜底锚点）。
+      host.querySelectorAll('[data-event-target]').forEach(link => {
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          if (eventsView !== 'list') {
+            eventsView = 'list';
+            applyEventsView();
+          }
+          // 数据在日历视图期间才到达时，列表可能还没渲染过，这里补一次。
+          if (!$('eventList').querySelector('[data-event-id]')) renderEvents(eventsCache);
+          const card = $('eventList').querySelector(`[data-event-id="${CSS.escape(link.getAttribute('data-event-target'))}"]`);
+          if (!card) return;
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.classList.add('is-event-flash');
+          setTimeout(() => card.classList.remove('is-event-flash'), 1600);
         });
       });
     }
@@ -185,7 +210,7 @@
             ${item.is_featured ? '<span class="badge">' + ClubI18n.t('events.featured') + '</span>' : ''}
           </div>
           <p>${escapeHtml(item.summary || item.content || ClubI18n.t('events.noSummary'))}</p>
-          <div class="meta" style="margin-top:10px">
+          <div class="meta card-foot">
             <span class="badge">${ClubI18n.t('events.location', { value: escapeHtml(item.location || '-') })}</span>
             <span class="badge">${ClubI18n.t('events.starts', { time: escapeHtml(formatTime(item.starts_at)) })}</span>
             <span class="badge">${ClubI18n.t('events.deadline', { time: escapeHtml(formatTime(item.signup_deadline)) })}</span>
@@ -195,12 +220,13 @@
               <label class="label">${ClubI18n.t('events.name')}</label>
               <input class="input" name="memberName" required value="${escapeHtml(boundProfile?.member_name || '')}">
               <label class="label">${ClubI18n.t('events.className')}</label>
-              <input class="input" name="memberClass" value="${escapeHtml(boundProfile?.member_class || '')}">
+              <input class="input" name="memberClass" required value="${escapeHtml(boundProfile?.member_class || '')}">
               <label class="label">${ClubI18n.t('events.contactOptional')}</label>
               <input class="input" name="contact" placeholder="${ClubI18n.t('events.contactPlaceholder')}">
               <label class="label">${ClubI18n.t('events.noteOptional')}</label>
               <textarea class="textarea" name="note" placeholder="${ClubI18n.t('events.notePlaceholder')}"></textarea>
               <div class="actions"><button class="button" type="submit">${ClubI18n.t('events.submitSignup')}</button></div>
+              <p class="message signup-message" role="alert"></p>
             </form>
           ` : '<p class="message">' + ClubI18n.t('events.signupClosed') + '</p>'}
         </article>
@@ -210,8 +236,10 @@
         form.addEventListener('submit', async (event) => {
           event.preventDefault();
           const card = form.closest('[data-event-id]');
+          const cardMessage = form.querySelector('.signup-message');
           const data = new FormData(form);
           setMessage(ClubI18n.t('events.submitting'));
+          if (cardMessage) { cardMessage.textContent = ''; cardMessage.className = 'message signup-message'; }
           try {
             await call('event_signup', {
               eventId: card.getAttribute('data-event-id'),
@@ -222,7 +250,12 @@
             }, true);
             setMessage(ClubI18n.t('events.signupOk'), 'success');
           } catch (error) {
+            // 底部 #pageMessage 照常透出；同时在报名按钮旁就近显示，多卡片时不用来回找。
             setMessage(error.message, 'error');
+            if (cardMessage) {
+              cardMessage.textContent = error.message;
+              cardMessage.className = 'message signup-message error';
+            }
           }
         });
       });
@@ -261,8 +294,10 @@
         renderAnnouncements(Array.isArray(announcementsPayload.announcements) ? announcementsPayload.announcements : []);
         renderEvents(Array.isArray(eventsPayload.events) ? eventsPayload.events : []);
       } catch (error) {
-        $('announcementList').innerHTML = '<div class="empty">' + ClubI18n.t('events.failAnnouncements') + '</div>';
-        $('eventList').innerHTML = '<div class="empty">' + ClubI18n.t('events.failEvents') + '</div>';
+        // 列表失败态给出重试按钮；错误详情仍进 #pageMessage。
+        ClubCommon.listState($('announcementList'), { kind: 'error', title: ClubI18n.t('events.failAnnouncements'), onRetry: refresh });
+        ClubCommon.listState($('eventList'), { kind: 'error', title: ClubI18n.t('events.failEvents'), onRetry: refresh });
+        $('eventCalendar').innerHTML = '<div class="empty">' + ClubI18n.t('events.failEvents') + '</div>';
         setMessage(error.message, 'error');
       }
     }
@@ -277,6 +312,6 @@
     });
     window.addEventListener('club:langchange', () => { void refresh(); });
   </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

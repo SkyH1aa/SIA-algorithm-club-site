@@ -18,35 +18,20 @@
     <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
     <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
     <link rel="canonical" href="https://skyh1aa.github.io/SIA-algorithm-club-site/index.html">
-  <link rel="stylesheet" href="public/theme.css?v=39014235">
+  <link rel="stylesheet" href="public/theme.css?v=39c53cdb">
   <script src="public/theme.js?v=1b745a4f"></script>
-  <script src="public/vendor/three/three.min.js?v=170c6789"></script>
-  <script>
-    // 本地 three.js 失败时回退到 CDN。
-    // 这里绝不能用 document.write：它在 <head> 里执行，会重写整个文档流，
-    // 让社交抓取器（微信/QQ）读不到后面的 og:* 标签，分享卡片就变成空白。
-    (function () {
-      if (window.THREE) return;
-      var fallback = document.createElement('script');
-      fallback.src = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js';
-      fallback.async = false;
-      document.head.appendChild(fallback);
-    })();
-  </script>
-  <script type="importmap">{"imports":{"three":"public/vendor/three/three.module.js"}}</script>
-  <script src="public/SceneDirector.js?v=20261005-ipad-flow-v7"></script>
     <title>算法社 · Algorithm Club</title>
 
     <script src="public/vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="public/club-auth-storage.js?v=5469c150"></script>
-    <script src="public/i18n-dict.js?v=c79bfe69"></script>
-    <script src="public/i18n.js?v=ba66328e"></script>
+    <script src="public/i18n-dict.js?v=f75071ae"></script>
+    <script src="public/i18n.js?v=ba66328e"></script><script src="public/club-common.js?v=333db1c4"></script>
     <script src="public/member-identity.js?v=ad75d585" defer></script>
     <style>
       :root {
         --nav-height: 78px;
         --viewport-height: 100svh;
-        font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+        font-family: "Inter Variable", "MiSans VF", "MiSans", "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", system-ui, sans-serif;
         color: #f6fbff;
         background: #020409;
         --bg: #020409;
@@ -63,10 +48,15 @@
         --ok: #3dd68c;
         --radius: 14px;
         --shadow: 0 24px 80px rgba(0, 229, 255, 0.08);
-        --mono: ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace;
-        --sans: "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+        --sans: "Inter Variable", "MiSans VF", "MiSans", "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+        --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace;
         --max: 1200px;
         --pad-x: clamp(18px, 5vw, 72px);
+        /* 动效节奏令牌：值与全站 club-ui.css 的 --club-dur* / --club-ease 逐值同步 */
+        --dur-fast: 140ms;
+        --dur: 200ms;
+        --dur-slow: 320ms;
+        --ease: cubic-bezier(0.22, 1, 0.36, 1);
       }
 
       * { box-sizing: border-box; }
@@ -116,8 +106,8 @@
       .zone-readout { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; color: var(--muted); font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
       .zone-readout strong { color: var(--cyan); font-weight: 700; }
       .section-index { position: fixed; top: 50%; right: clamp(12px, 2.4vw, 34px); z-index: 25; display: grid; gap: 8px; transform: translateY(-50%); }
-      .section-index button { display: grid; grid-template-columns: 22px 0fr; align-items: center; width: 26px; min-height: 24px; overflow: hidden; padding: 0 2px; border: 0; border-left: 1px solid rgba(115,221,255,.28); background: transparent; color: var(--muted); font: 11px var(--mono); text-align: left; cursor: pointer; transition: width .24s ease, color .24s ease, border-color .24s ease; }
-      .section-index button span { opacity: 0; white-space: nowrap; transition: opacity .2s ease; }
+      .section-index button { display: grid; grid-template-columns: 22px 0fr; align-items: center; width: 26px; min-height: 24px; overflow: hidden; padding: 0 2px; border: 0; border-left: 1px solid rgba(115,221,255,.28); background: transparent; color: var(--muted); font: 11px var(--mono); text-align: left; cursor: pointer; transition: width var(--dur) ease, color var(--dur) ease, border-color var(--dur) ease; }
+      .section-index button span { opacity: 0; white-space: nowrap; transition: opacity var(--dur) ease; }
       .section-index button:hover, .section-index button.is-active { width: 112px; color: var(--cyan); border-color: var(--cyan); }
       .section-index button:hover span, .section-index button.is-active span { opacity: 1; }
       .ambient-orb {
@@ -146,8 +136,14 @@
         mix-blend-mode: screen;
       }
       #particleCanvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.45; }
-      #algorithmScene { position: fixed; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; opacity: .82; mix-blend-mode: normal; }
-      #shaderField { position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; opacity: .52; }
+      #algorithmScene { position: fixed; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; opacity: .82; mix-blend-mode: normal; transition: opacity 480ms var(--ease, ease); }
+      #shaderField { position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; opacity: .52; transition: opacity 480ms var(--ease, ease); }
+      /* 3D 启动门：boot 前画布保持完全透明，首帧渲染完成两帧后 JS 加 .is-live
+         渐显到各自的基值透明度。把「出现」从瞬间变成淡入——驱动侧着色器
+         编译/独显唤醒若仍造成短暂停顿，也被挡在画布全透明的阶段，不可见。
+         JS 未运行或启动失败时保持透明，观感等于「无 3D」，不会更差。 */
+      #algorithmScene:not(.is-live), #shaderField:not(.is-live) { opacity: 0; }
+      @media (prefers-reduced-motion: reduce) { #algorithmScene, #shaderField { transition: none; } }
       #chapterParticleCanvas { position: fixed; inset: 0; z-index: 5; display: none; width: 100%; height: 100%; pointer-events: none; opacity: .84; mix-blend-mode: screen; }
       body.chapter-flight:not(.touch-device) #chapterParticleCanvas { display: block; }
       body.phone-device #chapterParticleCanvas { display: none !important; }
@@ -175,7 +171,7 @@
         transform-origin: left center;
         background: linear-gradient(90deg, var(--cyan), var(--violet));
         box-shadow: 0 0 14px rgba(0, 229, 255, 0.55);
-        transition: opacity 0.2s ease;
+        transition: opacity var(--dur) ease;
       }
       .pointer-glow {
         position: fixed;
@@ -188,7 +184,7 @@
         border-radius: 50%;
         background: radial-gradient(circle, rgba(0, 229, 255, 0.07), transparent 68%);
         pointer-events: none;
-        transition: left 0.22s ease-out, top 0.22s ease-out;
+        transition: left var(--dur) ease-out, top var(--dur) ease-out;
       }
       /* Touch chapter navigation has one gesture owner. Phones are switched
          to native document flow by the script; iPad keeps the chapter stage. */
@@ -334,7 +330,7 @@
         color: var(--muted);
         font-size: 13px;
         line-height: 18px;
-        transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+        transition: border-color var(--dur) ease, background var(--dur) ease, color var(--dur) ease;
       }
       .nav a:hover,
       .nav a.is-active {
@@ -470,7 +466,7 @@
         font-size: clamp(40px, 6.4vw, 56px);
         font-weight: 800;
         line-height: 1.08;
-        letter-spacing: -0.02em;
+        letter-spacing: 0;
       }
       .title-glow {
         display: block;
@@ -499,7 +495,7 @@
         font-size: clamp(28px, 3.4vw, 34px);
         font-weight: 700;
         line-height: 1.2;
-        letter-spacing: -0.01em;
+        letter-spacing: 0;
       }
       h3 { margin: 0 0 8px; font-size: 18px; font-weight: 700; line-height: 1.35; }
       .hero-text { max-width: 36em; margin-bottom: 22px; font-size: 16px; color: var(--text); }
@@ -532,14 +528,14 @@
         background: linear-gradient(135deg, rgba(0, 229, 255, 0.95), rgba(0, 196, 220, 0.92));
         color: #020409;
         box-shadow: 0 0 24px rgba(0, 229, 255, 0.18);
-        transition: filter 0.2s ease, border-color 0.2s ease;
+        transition: filter var(--dur) ease, border-color var(--dur) ease;
       }
       .primary-action:hover { filter: brightness(1.06); }
       .secondary-action {
         border: 1px solid rgba(0, 229, 255, 0.28);
         background: transparent;
         color: var(--white);
-        transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+        transition: border-color var(--dur) ease, background var(--dur) ease, color var(--dur) ease;
       }
       .secondary-action:hover {
         border-color: rgba(0, 229, 255, 0.5);
@@ -552,7 +548,7 @@
         color: var(--muted);
         font-size: 13px;
         border-bottom: 1px solid transparent;
-        transition: color 0.2s ease, border-color 0.2s ease;
+        transition: color var(--dur) ease, border-color var(--dur) ease;
       }
       .hero-side-link:hover { color: var(--cyan); border-color: rgba(0, 229, 255, 0.4); }
       .hero-metrics {
@@ -679,7 +675,7 @@
         font-size: clamp(26px, 3vw, 34px);
         font-weight: 800;
         line-height: 1.1;
-        letter-spacing: -0.02em;
+        letter-spacing: 0;
       }
       .proof-item span {
         display: block;
@@ -718,7 +714,7 @@
       }
       .orbit-matrix { display: grid; grid-template-columns: minmax(190px, .5fr) minmax(300px, 1fr) minmax(220px, .58fr); gap: 24px; align-items: center; min-height: 420px; }
       .axis-list { display: grid; gap: 3px; border-left: 1px solid rgba(115,221,255,.22); }
-      .axis-item { position: relative; display: grid; gap: 3px; padding: 15px 16px 15px 22px; border: 0; border-left: 2px solid transparent; background: transparent; color: var(--muted); font: inherit; text-align: left; cursor: pointer; transition: color .2s ease, border-color .2s ease, transform .2s ease; }
+      .axis-item { position: relative; display: grid; gap: 3px; padding: 15px 16px 15px 22px; border: 0; border-left: 2px solid transparent; background: transparent; color: var(--muted); font: inherit; text-align: left; cursor: pointer; transition: color var(--dur) ease, border-color var(--dur) ease, transform var(--dur) ease; }
       .axis-item::before { content: ''; position: absolute; left: -4px; top: 21px; width: 6px; height: 6px; border: 1px solid currentColor; border-radius: 50%; background: var(--bg); }
       .axis-item strong { color: inherit; font: 700 13px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
       .axis-item small { font-size: 12px; line-height: 1.45; }
@@ -739,7 +735,7 @@
       .planet-system::before { content: ''; position: absolute; left: 3%; right: 3%; top: 50%; border-top: 1px dashed rgba(115,221,255,.32); pointer-events: none; }
       .planet-row { position: relative; z-index: 1; display: grid; grid-template-columns: 110px minmax(0, 1fr) 120px; gap: 22px; align-items: center; padding: 22px 0; border-bottom: 1px solid rgba(115,221,255,.12); overflow: visible; }
       .planet-row > div:first-child { position: relative; z-index: 5; overflow: visible; }
-      .planet-orb { width: 84px; aspect-ratio: 1; border: 1px solid rgba(0,229,255,.5); border-radius: 50%; background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.85), rgba(0,229,255,.22) 18%, transparent 65%); box-shadow: 0 0 28px rgba(0,229,255,.15); transition: transform .35s ease, box-shadow .35s ease; }
+      .planet-orb { width: 84px; aspect-ratio: 1; border: 1px solid rgba(0,229,255,.5); border-radius: 50%; background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.85), rgba(0,229,255,.22) 18%, transparent 65%); box-shadow: 0 0 28px rgba(0,229,255,.15); transition: transform var(--dur-slow) ease, box-shadow var(--dur-slow) ease; }
       .planet-row:hover .planet-orb { transform: scale(1.18); box-shadow: 0 0 42px rgba(0,229,255,.42); }
       .planet-index { color: var(--cyan); font: 12px var(--mono); letter-spacing: .1em; }
       .planet-copy h3 { margin-bottom: 6px; font-size: 23px; }
@@ -779,7 +775,7 @@
         border: 1px solid rgba(0, 229, 255, 0.16);
         border-radius: 14px;
         background: linear-gradient(180deg, rgba(8, 13, 30, 0.82), rgba(4, 8, 20, 0.66));
-        transition: border-color 0.25s ease, background 0.25s ease;
+        transition: border-color var(--dur) ease, background var(--dur) ease;
       }
       .info-card:hover, .project-card:hover, .member-card:hover, .join-card:hover, .timeline-item:hover, .flagship-card:hover {
         border-color: rgba(0, 229, 255, 0.38);
@@ -1079,6 +1075,39 @@
         scroll-snap-stop: always;
       }
       .footer strong { color: var(--white); font-weight: 600; }
+      .footer-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        flex-wrap: wrap;
+        width: 100%;
+        max-width: var(--max);
+        margin: 0 auto;
+      }
+      .footer-brand { display: flex; align-items: center; gap: 12px; }
+      .footer-brand .brand-mark { width: 30px; height: 30px; font-size: 13px; border-radius: 8px; }
+      .footer-brand strong { display: block; font-size: 13.5px; }
+      .footer-note { display: block; color: var(--muted); font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; }
+      .footer-nav { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+      .footer-nav a {
+        padding: 6px 10px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        color: var(--muted);
+        font-size: 12.5px;
+        transition: color var(--dur) ease, border-color var(--dur) ease, background var(--dur) ease;
+      }
+      .footer-nav a:hover {
+        border-color: rgba(0, 229, 255, 0.24);
+        background: rgba(0, 229, 255, 0.06);
+        color: var(--cyan);
+      }
+      html[data-theme="light"] .footer-nav a:hover {
+        border-color: rgba(197, 74, 52, 0.28);
+        background: rgba(224, 122, 95, 0.08);
+        color: #A73A29;
+      }
 
       .feed-modal {
         position: fixed;
@@ -1132,48 +1161,62 @@
       .feed-modal-never:hover { background: rgba(0, 229, 255, 0.12); }
       body.feed-modal-open { overflow: hidden; }
 
+      /* 手机访问提示：改为底部细横幅，不再全屏阻断浏览 */
       .pc-tip-modal {
         position: fixed;
-        inset: 0;
+        left: 50%;
+        bottom: 18px;
         z-index: 60;
         display: none;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-        background: rgba(0, 0, 0, 0.72);
-        backdrop-filter: blur(8px);
+        width: min(560px, calc(100vw - 28px));
+        padding: 12px 14px;
+        border: 1px solid rgba(0, 229, 255, 0.26);
+        border-radius: 14px;
+        background: linear-gradient(145deg, rgba(10, 21, 43, 0.96), rgba(4, 8, 20, 0.96));
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+        transform: translate(-50%, 12px);
+        opacity: 0;
+        transition: opacity var(--dur) ease, transform var(--dur) ease;
       }
-      .pc-tip-modal.is-open { display: flex; }
+      .pc-tip-modal.is-open { display: flex; align-items: center; gap: 14px; transform: translate(-50%, 0); opacity: 1; }
       .pc-tip-card {
-        position: relative;
-        width: min(100%, 420px);
-        padding: 28px 24px 22px;
-        border: 1px solid rgba(0, 229, 255, 0.32);
-        border-radius: 16px;
-        background: linear-gradient(145deg, rgba(10, 21, 43, 0.98), rgba(4, 8, 20, 0.98));
-        box-shadow: 0 24px 90px rgba(0, 0, 0, 0.5), 0 0 28px rgba(0, 229, 255, 0.08);
-        text-align: center;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex: 1 1 auto;
+        min-width: 0;
       }
       .pc-tip-eyebrow {
-        margin: 0 0 10px;
+        flex: 0 0 auto;
+        margin: 0;
+        padding: 5px 9px;
+        border: 1px solid rgba(0, 229, 255, 0.3);
+        border-radius: 999px;
         color: var(--cyan);
-        font: 12px var(--mono);
+        font: 700 10px/1 var(--mono);
         letter-spacing: 0.12em;
       }
       .pc-tip-card h2 {
-        margin: 0 0 12px;
-        font-size: clamp(22px, 5vw, 28px);
+        display: none;
       }
+      .pc-tip-text { margin: 0; }
       .pc-tip-card p {
-        margin: 0 0 22px;
+        margin: 0;
         color: var(--muted);
-        line-height: 1.7;
+        font-size: 12.5px;
+        line-height: 1.55;
       }
       .pc-tip-actions {
         display: flex;
+        flex: 0 0 auto;
         flex-wrap: wrap;
-        gap: 10px;
-        justify-content: center;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+      .pc-tip-actions .primary-action {
+        min-height: 34px;
+        padding: 7px 12px;
+        font-size: 12.5px;
       }
       .pc-tip-actions button { font: inherit; }
       .pc-tip-dismiss {
@@ -1181,11 +1224,29 @@
         color: var(--cyan);
         background: rgba(0, 229, 255, 0.06);
         border-radius: 999px;
-        padding: 10px 18px;
+        padding: 7px 12px;
+        font-size: 12.5px;
         cursor: pointer;
       }
       .pc-tip-dismiss:hover { background: rgba(0, 229, 255, 0.12); }
-      body.pc-tip-open { overflow: hidden; }
+      html[data-theme="light"] .pc-tip-modal {
+        border-color: rgba(197, 74, 52, 0.3);
+        background: rgba(255, 252, 250, 0.97);
+        box-shadow: 0 16px 40px rgba(120, 62, 40, 0.18);
+      }
+      html[data-theme="light"] .pc-tip-card p { color: #6b5a53; }
+      html[data-theme="light"] .pc-tip-dismiss {
+        border-color: rgba(197, 74, 52, 0.36);
+        color: #A73A29;
+        background: #F7E8E2;
+      }
+      html[data-theme="light"] .pc-tip-dismiss:hover { background: #F2D9D1; }
+      @media (max-width: 560px) {
+        .pc-tip-modal { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+        .pc-tip-card { flex-wrap: wrap; gap: 8px; }
+        .pc-tip-eyebrow { display: none; }
+        .pc-tip-actions { flex: 1 1 100%; }
+      }
 
       /* The document is the scroll track; the two adjacent chapters share a
          fixed stage and are composed from one reversible scroll value. */
@@ -1298,7 +1359,6 @@
         background: linear-gradient(to bottom, rgba(0, 229, 255, 0.8), rgba(0, 229, 255, 0.06) 64%, transparent);
       }
       .title-glow {
-        letter-spacing: -0.055em;
         text-shadow: 0 0 28px rgba(0, 229, 255, 0.22), 0 2px 0 rgba(255, 255, 255, 0.08);
       }
       .title-sub {
@@ -1315,10 +1375,10 @@
         position: relative;
         overflow: hidden;
         box-shadow: 0 10px 30px rgba(0, 229, 255, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.35);
-        transition: transform 0.22s ease, filter 0.22s ease, box-shadow 0.22s ease;
+        transition: transform var(--dur) ease, filter var(--dur) ease, box-shadow var(--dur) ease;
       }
       .primary-action:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(0, 229, 255, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.42); }
-      .secondary-action { transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, color 0.22s ease; }
+      .secondary-action { transition: transform var(--dur) ease, border-color var(--dur) ease, background var(--dur) ease, color var(--dur) ease; }
       .secondary-action:hover { transform: translateY(-2px); }
       .hero-panel {
         border-color: rgba(115, 221, 255, 0.26);
@@ -1351,7 +1411,6 @@
       }
       .proof-item strong { text-shadow: 0 0 20px rgba(0, 229, 255, 0.20); }
       .section-heading { position: relative; }
-      .section-heading h2 { letter-spacing: -0.035em; }
       .section-heading h2::after {
         content: "";
         display: block;
@@ -1367,7 +1426,7 @@
         --card-glow-y: 18%;
         overflow: hidden;
         box-shadow: inset 0 1px 0 rgba(208, 246, 255, 0.035);
-        transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+        transition: transform var(--dur) ease, border-color var(--dur) ease, background var(--dur) ease, box-shadow var(--dur) ease;
       }
       .info-card::before, .project-card::before, .member-card::before, .join-card::before, .timeline-item::before, .flagship-card::before {
         content: "";
@@ -1376,7 +1435,7 @@
         pointer-events: none;
         background: radial-gradient(circle at var(--card-glow-x) var(--card-glow-y), rgba(0, 229, 255, 0.12), transparent 42%);
         opacity: 0;
-        transition: opacity 0.25s ease;
+        transition: opacity var(--dur) ease;
       }
       .info-card:hover, .project-card:hover, .member-card:hover, .join-card:hover, .timeline-item:hover, .flagship-card:hover {
         transform: translateY(-4px) perspective(700px) rotateX(var(--card-rx)) rotateY(var(--card-ry));
@@ -1569,6 +1628,119 @@
         .info-card::before, .project-card::before, .member-card::before, .join-card::before, .timeline-item::before, .flagship-card::before { display: none; }
         .info-card:hover, .project-card:hover, .member-card:hover, .join-card:hover, .timeline-item:hover, .flagship-card:hover { transform: none; }
       }
+
+      /* ==========================================================
+         2026-10 企业级细节层（不触碰 3D 场景与翻页动画）
+         ========================================================== */
+      /* 数字等宽：证明带、指标、读数纵向对齐 */
+      .proof-item strong,
+      .hero-metrics,
+      .zone-readout,
+      .route-strip span,
+      .member-card small,
+      .timeline-item time { font-variant-numeric: tabular-nums; }
+
+      /* 键盘焦点环：全站一致的可见焦点 */
+      a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
+        outline: 2px solid var(--cyan);
+        outline-offset: 2px;
+        border-radius: 6px;
+      }
+      ::selection { background: rgba(0, 229, 255, 0.24); color: var(--white); }
+      html[data-theme="light"] ::selection { background: rgba(224, 122, 95, 0.22); color: #1C1C1E; }
+
+      /* 精修滚动条 */
+      * { scrollbar-width: thin; scrollbar-color: rgba(143, 163, 184, 0.4) transparent; }
+      *::-webkit-scrollbar { width: 9px; height: 9px; }
+      *::-webkit-scrollbar-track { background: transparent; }
+      *::-webkit-scrollbar-thumb { border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; background-color: rgba(143, 163, 184, 0.35); }
+      *::-webkit-scrollbar-thumb:hover { background-color: rgba(143, 163, 184, 0.55); }
+
+      /* 主按钮与全站 club-ui 同一质感：纵向渐变 + 顶缘内高光 + 品牌色光晕 */
+      .primary-action {
+        background-image: linear-gradient(180deg, color-mix(in srgb, var(--cyan) 84%, #ffffff) 0%, var(--cyan) 62%, color-mix(in srgb, var(--cyan) 90%, #000000) 100%);
+        border-color: color-mix(in srgb, var(--cyan) 62%, #000000 10%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 1px 2px rgba(0, 0, 0, 0.2), 0 6px 18px rgba(0, 229, 255, 0.24);
+      }
+      .primary-action:hover {
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 2px 4px rgba(0, 0, 0, 0.2), 0 10px 26px rgba(0, 229, 255, 0.3);
+      }
+      .primary-action:active {
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 2px 6px rgba(0, 0, 0, 0.22), 0 1px 3px rgba(0, 229, 255, 0.16);
+      }
+      html[data-theme="light"] .primary-action {
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 6px 16px rgba(194, 65, 12, 0.22);
+      }
+      .secondary-action {
+        background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 60%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      }
+      /* 按钮微交互：悬停抬升、按压回弹 */
+      .primary-action, .secondary-action, .share-action { transition: transform 0var(--dur-fast) ease, filter 0var(--dur-fast) ease, border-color 0var(--dur-fast) ease, background 0var(--dur-fast) ease, box-shadow 0var(--dur-fast) ease; }
+      .primary-action:hover { transform: translateY(-1px); box-shadow: 0 8px 26px rgba(0, 229, 255, 0.26); }
+      .primary-action:active { transform: translateY(1px) scale(0.99); box-shadow: none; }
+      .secondary-action:hover { transform: translateY(-1px); }
+      .secondary-action:active { transform: translateY(1px) scale(0.99); }
+
+      /* 亮色顶栏：底色与描边跟随纸感 */
+      html[data-theme="light"] .topbar {
+        border-bottom-color: rgba(197, 74, 52, 0.14);
+        background: rgba(250, 249, 247, 0.86);
+      }
+      html[data-theme="light"] .lang-switcher,
+      html[data-theme="light"] .theme-switcher {
+        border-color: rgba(120, 100, 90, 0.25);
+        background: rgba(255, 255, 255, 0.7);
+      }
+      html[data-theme="light"] .lang-switcher button,
+      html[data-theme="light"] .theme-switcher button { color: rgba(60, 50, 46, 0.8); }
+      html[data-theme="light"] .lang-switcher button.is-active,
+      html[data-theme="light"] .theme-switcher button.is-active { color: #fff; background: #C54A34; border-color: #C54A34; }
+      html[data-theme="light"] .nav a { color: #6b5a53; }
+      html[data-theme="light"] .nav a:hover,
+      html[data-theme="light"] .nav a.is-active {
+        border-color: rgba(197, 74, 52, 0.32);
+        background: rgba(224, 122, 95, 0.1);
+        color: #A73A29;
+      }
+      html[data-theme="light"] .nav a.is-active { box-shadow: inset 0 -2px 0 #C54A34; }
+      html[data-theme="light"] .nav a.nav-emphasis { border-color: rgba(197, 74, 52, 0.24); color: #1C1C1E; }
+
+      /* 分层光：卡片顶缘受光线（与全站 club-ui 质感语言一致） */
+      .info-card, .project-card, .member-card, .timeline-item, .join-card, .flagship-card,
+      .hero-panel, .hero-copy, .proof-band, .panel-row, .matrix-output, .axis-item, .section-heading {
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 14px 38px rgba(0, 0, 0, 0.3);
+      }
+      html[data-theme="light"] .info-card, html[data-theme="light"] .project-card,
+      html[data-theme="light"] .member-card, html[data-theme="light"] .timeline-item,
+      html[data-theme="light"] .join-card, html[data-theme="light"] .flagship-card,
+      html[data-theme="light"] .hero-panel, html[data-theme="light"] .hero-copy,
+      html[data-theme="light"] .proof-band, html[data-theme="light"] .panel-row,
+      html[data-theme="light"] .matrix-output, html[data-theme="light"] .axis-item,
+      html[data-theme="light"] .section-heading {
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 8px 24px rgba(120, 62, 40, 0.08);
+      }
+      /* 卡片细节：成员 / 项目 / 时间线 */
+      .member-card, .project-card, .timeline-item, .info-card, .flagship-card {
+        transition: transform var(--dur) cubic-bezier(0.22, 1, 0.36, 1), border-color var(--dur) ease, box-shadow var(--dur) ease;
+      }
+      .member-card:hover, .project-card:hover, .info-card:hover, .flagship-card:hover {
+        border-color: rgba(0, 229, 255, 0.3);
+        box-shadow: 0 18px 44px rgba(0, 0, 0, 0.36);
+      }
+      html[data-theme="light"] .member-card:hover,
+      html[data-theme="light"] .project-card:hover,
+      html[data-theme="light"] .info-card:hover,
+      html[data-theme="light"] .flagship-card:hover { box-shadow: 0 14px 34px rgba(120, 62, 40, 0.12); }
+      .home-feed-item:hover .timeline-item, .home-feed-item:focus-visible .timeline-item { border-color: rgba(0, 229, 255, 0.3); }
+      html[data-theme="light"] .home-feed-item:hover .timeline-item,
+      html[data-theme="light"] .home-feed-item:focus-visible .timeline-item { border-color: rgba(197, 74, 52, 0.3); }
+      .avatar { box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.07); }
+      html[data-theme="light"] .avatar { box-shadow: 0 0 0 3px rgba(224, 122, 95, 0.1); }
+      .project-topline { font-family: var(--mono); letter-spacing: 0.05em; }
+      .timeline-date { letter-spacing: 0.03em; font-variant-numeric: tabular-nums; }
+      .timeline-item p { color: var(--text); }
+      .join-list span { padding-left: 2px; }
       /* Re-assert the fixed chapter geometry after the small-screen rules so
          iPad portrait widths keep the same full-frame composition as desktop. */
       @media (min-height: 650px) {
@@ -1598,7 +1770,13 @@
     </style>
   <script src="public/club-share.js?v=33b11b13"></script>
   <script src="public/service-prompts.js?v=1cfff2ab"></script><script src="public/service-gate.js?v=6acc9c5f"></script>
-  <link rel="stylesheet" href="public/club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="public/club-ui.css?v=2a950b7f">
+  <style>
+    /* 首页退出跨文档 View Transition：首页是全站最重的页面，转场会冻结旧页
+       快照等待新文档首绘（离站时截图 WebGL 画布也有开销），体感为「卡一下」。
+       次级页之间的转场不受影响（由各自新文档的 club-ui.css 决定）。 */
+    @view-transition { navigation: none; }
+  </style>
 </head>
   <body>
     <div class="ambient-background" aria-hidden="true">
@@ -1775,9 +1953,6 @@
           <span class="icon">GO</span>
           <h3 data-i18n="home.joinCardTitle">立即加入</h3>
           <p data-i18n="home.joinCardDesc">填写报名信息即可提交申请；也可扫描二维码添加负责人微信，备注“算法社”。</p>
-          <div class="hero-actions" style="margin:14px 0 16px">
-            <a class="primary-action" href="public/join.html" data-i18n="home.goForm">前往报名表单</a>
-          </div>
           <div class="qr-box">
             <img src="public/assets/wechat-qrcode.jpg" data-i18n-attr="alt:home.qrAlt" alt="算法社负责人微信二维码" loading="lazy" decoding="async" />
             <p class="qr-tip" data-i18n="home.qrTip">扫码添加微信，加入算法社</p>
@@ -1787,8 +1962,22 @@
     </main>
 
     <footer class="footer">
-      <span data-i18n="home.footerLeft">算法社 · 新哲文院·科创未来</span>
-      <span>Deep Neon · JSON 驱动 · Supabase Auth</span>
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <span class="brand-mark" aria-hidden="true">A</span>
+          <div>
+            <strong data-i18n="home.footerLeft">算法社 · 新哲文院·科创未来</strong>
+            <span class="footer-note">Deep Neon · JSON 驱动 · Supabase Auth</span>
+          </div>
+        </div>
+        <nav class="footer-nav" aria-label="页脚导航">
+          <a href="public/club-features.html" data-i18n="nav.features">社团功能</a>
+          <a href="public/events.html" data-i18n="features.events">活动与公告</a>
+          <a href="public/resources.html" data-i18n="features.resources">教学资源</a>
+          <a href="public/guide.html" data-i18n="nav.guide">使用指引</a>
+          <a href="public/changelog.html" data-i18n="guide.changelogTitle">更新日志</a>
+        </nav>
+      </div>
     </footer>
 
     <div class="feed-modal" id="feedModal" role="dialog" aria-modal="true" aria-labelledby="feedModalTitle" aria-hidden="true">
@@ -1805,18 +1994,33 @@
       </div>
     </div>
 
-    <div class="pc-tip-modal" id="pcTipModal" role="dialog" aria-modal="true" aria-labelledby="pcTipTitle" aria-hidden="true">
+    <div class="pc-tip-modal" id="pcTipModal" role="status" aria-hidden="true">
       <div class="pc-tip-card" role="document">
         <p class="pc-tip-eyebrow">BEST VIEW</p>
         <h2 id="pcTipTitle" data-i18n="home.pcTitle">使用 PC 端浏览获得最佳效果</h2>
-        <p data-i18n="home.pcText">当前为非电脑端访问。为获得完整视觉与交互体验，建议使用 PC 端浏览本站。</p>
+        <p class="pc-tip-text" data-i18n="home.pcText">当前为非电脑端访问，建议使用 PC 端浏览获得完整体验。</p>
         <div class="pc-tip-actions">
-          <button class="primary-action" id="pcTipClose" type="button" data-i18n="home.pcOk">我知道了</button>
           <button class="pc-tip-dismiss" id="pcTipNever" type="button" data-i18n="home.pcNever">本次不再提示</button>
+          <button class="primary-action" id="pcTipClose" type="button" data-i18n="home.pcOk">我知道了</button>
         </div>
       </div>
     </div>
 
+  <script src="public/vendor/three/three.min.js?v=170c6789"></script>
+  <script>
+    // 本地 three.js 失败时回退到 CDN。
+    // 这里绝不能用 document.write：它在 <head> 里执行，会重写整个文档流，
+    // 让社交抓取器（微信/QQ）读不到后面的 og:* 标签，分享卡片就变成空白。
+    (function () {
+      if (window.THREE) return;
+      var fallback = document.createElement('script');
+      fallback.src = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js';
+      fallback.async = false;
+      document.head.appendChild(fallback);
+    })();
+  </script>
+  <script type="importmap">{"imports":{"three":"public/vendor/three/three.module.js"}}</script>
+  <script src="public/SceneDirector.js?v=20261025-perf-v9"></script>
     <script>
       const t = (key, vars) => (window.ClubI18n && typeof window.ClubI18n.t === 'function')
         ? window.ClubI18n.t(key, vars)
@@ -2409,18 +2613,13 @@
         function closeTip(persist) {
           modal.classList.remove('is-open');
           modal.setAttribute('aria-hidden', 'true');
-          document.body.classList.remove('pc-tip-open');
           if (persist) sessionStorage.setItem(storageKey, '1');
         }
 
         modal.classList.add('is-open');
         modal.setAttribute('aria-hidden', 'false');
-        document.body.classList.add('pc-tip-open');
         closeBtn.addEventListener('click', () => closeTip(false));
         neverBtn.addEventListener('click', () => closeTip(true));
-        modal.addEventListener('click', event => {
-          if (event.target === modal) closeTip(false);
-        });
       }
       setupPcTipModal();
 
@@ -2490,7 +2689,10 @@
         resizeCanvas();
         drawParticles();
         window.addEventListener('resize', resizeCanvas, { passive: true });
-        window.addEventListener('pagehide', () => window.cancelAnimationFrame(animationFrame), { once: true });
+        window.addEventListener('pagehide', () => { window.cancelAnimationFrame(animationFrame); animationFrame = 0; }, { once: true });
+        // bfcache 返回（浏览器前进/后退）时 pagehide 已停掉画笔：这里重启，
+        // 否则细粒星尘层在返回本页后永久消失。
+        window.addEventListener('pageshow', event => { if (event.persisted && !animationFrame && !document.hidden) drawParticles(); });
       }
 
       window.useQualityTier = window.useQualityTier || function useQualityTier() {
@@ -2504,7 +2706,7 @@
         return { tier: 'high', particleCount: 1536, pixelRatio: 1.15, postprocessing: false };
       };
 
-      (() => {
+      const bootShaderField = () => {
         const ua = String(navigator.userAgent || '').toLowerCase();
         const isIPadOS = /ipad/.test(ua) || (navigator.maxTouchPoints > 1 && /macintosh/.test(ua));
         const touchSurface = isIPadOS;
@@ -2517,7 +2719,9 @@
         if (touchSurface || !canvas || !window.THREE || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
         const THREE = window.THREE;
         let renderer;
-        try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false, powerPreference: 'high-performance' }); } catch (error) { return; }
+        // 不请求 high-performance：双显卡笔记本上该偏好会在创建上下文时唤醒
+        // 独显，造成 ~200ms 的可感冻结（页面整体静止）；默认 GPU 足够本层。
+        try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false }); } catch (error) { return; }
         const quality = window.useQualityTier(); const low = quality.tier === 'low';
         renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5)); renderer.setSize(innerWidth, innerHeight, false);
         const scene = new THREE.Scene(); const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -2569,11 +2773,24 @@
           frame = requestAnimationFrame(draw);
         };
         draw(); addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight, false); uniforms.uResolution.value.set(innerWidth, innerHeight); updateScroll(); }, { passive: true }); document.addEventListener('visibilitychange', () => { cancelAnimationFrame(frame); if (!document.hidden) draw(); });
-      })();
+      };
+      // 全屏 shader 层（WebGL 上下文 + raymarching 着色器）的搭建整体推迟到
+      // 空闲期：返回首页时不再与首屏布局/首次滚动争抢主线程。画布透明、
+      // CSS 深空底色先行的设计不变，晚起在视觉上不可感知。
+      // 固定延迟而非空闲回调：加载期的“空闲”来得太早（实测 ~250ms 即触发），
+      // 会让 WebGL 上下文创建撞上用户刚到达首页的时隙。700ms 起步、与主场景错峰。
+      setTimeout(bootShaderField, 700);
 
       // Scroll-driven algorithm scene with optional GPU-computed particle simulation.
-      (() => {
+      const bootAlgorithmScene = async () => {
         const canvas = document.getElementById('algorithmScene');
+        // 启动分帧：在组装与首帧编译之间各让出一帧，把「3D 出现瞬间」的长任务
+        // 拆成多个小片，避免那 0.x 秒的卡顿。rAF 与 120ms 超时竞速——页面
+        // 隐藏时 rAF 不触发，超时兜底保证 boot 仍能逐片走完。
+        const nextFrame = () => Promise.race([
+          new Promise(resolve => requestAnimationFrame(resolve)),
+          new Promise(resolve => setTimeout(resolve, 120)),
+        ]);
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const ua = String(navigator.userAgent || '').toLowerCase();
         const touchSurface = /ipad|iphone|ipod/.test(ua) || (navigator.maxTouchPoints > 1 && /macintosh/.test(ua));
@@ -2608,7 +2825,8 @@
           scenePalette.ringAlt = cssSceneColor('--scene-ring-alt', night ? '#818cf8' : '#9a3412');
         };
         let renderer;
-        try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false, powerPreference: 'high-performance' }); }
+        // 同上：不请求 high-performance，避免独显唤醒冻结（双显卡笔记本）。
+        try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false }); }
         catch (error) { console.warn('3D background unavailable; keeping CSS background active', error); return; }
         // iPad WebKit can retain transparent tiles from a fixed canvas when
         // other fixed layers are scrolling. An opaque, theme-matched clear
@@ -2620,7 +2838,16 @@
         };
         touchClearColor();
         renderer.shadowMap.enabled = false;
-        renderer.setPixelRatio(Math.min(devicePixelRatio || 1, quality.pixelRatio || 1.5, isMobile ? 1.5 : 1.75));
+        // 动态分辨率上限：初始值与原行为完全一致；仅当运行期持续掉帧时才逐级
+        // 下调内部渲染分辨率保流畅（draw 循环内），长期稳定后逐级回升。
+        const ratioCap = Math.min(devicePixelRatio || 1, quality.pixelRatio || 1.5, isMobile ? 1.5 : 1.75);
+        let sceneRatio = ratioCap, sceneFastFrames = 0;
+        const applySceneRatio = value => {
+          sceneRatio = value;
+          renderer.setPixelRatio(value);
+          renderer.setSize(innerWidth, innerHeight, false);
+        };
+        renderer.setPixelRatio(ratioCap);
         renderer.setSize(innerWidth, innerHeight, false);
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(34, innerWidth / innerHeight, .1, 100);
@@ -2684,6 +2911,9 @@
         paintGalaxy();
         const galaxyPoints = new THREE.Points(galaxyGeometry, new THREE.PointsMaterial({ size: isMobile ? .035 : .05, vertexColors: true, transparent: true, opacity: .68, depthWrite: false, blending: night ? THREE.AdditiveBlending : THREE.NormalBlending, sizeAttenuation: true }));
         galaxyGroup.add(galaxyPoints);
+        // 分帧点 1：渲染器/相机/主星系组装完成后先让出一帧，
+        // 深景层与信号层的构建放到下一帧，避免与上面的工作叠成一帧。
+        await nextFrame();
         // Low-cost depth layers: two static point clouds add parallax and
         // spatial separation without a post-processing pass or per-particle
         // animation. They are deliberately capped for touch/mobile devices.
@@ -2944,7 +3174,15 @@
           // is unreliable on several WebGL drivers and competes for frame time.
           if (!enableGpuParticles || touchSurface || !quality || !THREE.WebGLRenderTarget) return;
           try {
-            const mod = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/misc/GPUComputationRenderer.js');
+            // 优先用本地模块：避免返回首页时等 CDN 往返（粒子层晚到，且网络
+            // 落地时叠加一次 FBO 构建尖峰）。模块内的裸导入 'three' 由页首
+            // importmap 映射到本地 three.module.js，不会二次走网络。
+            let mod;
+            try { mod = await import('public/vendor/three/GPUComputationRenderer.js'); }
+            catch (error) { mod = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/misc/GPUComputationRenderer.js'); }
+            // 分帧点：模块取回后先让出一帧，3 组 FBO 与计算着色器的构建独占
+            // 下一帧，不与主场景首帧编译叠在同一帧。
+            await new Promise(resolve => requestAnimationFrame(() => resolve()));
             const GPUComputationRenderer = mod.GPUComputationRenderer;
             const side = Math.max(32, Math.ceil(Math.sqrt(quality.particleCount)));
             const count = side * side;
@@ -3191,7 +3429,13 @@
             // frame, leaving headroom for scrolling and DOM interaction.
             if (gpuFrameSkip++ % 2 === 0) { system.gpu.compute(); system.particleMaterial.uniforms.texturePosition.value = system.gpu.getCurrentRenderTarget(system.positionVariable).texture; }
           }
-          if (delta > .026) slowFrames++; else slowFrames = Math.max(0, slowFrames - 2);
+          if (delta > .026) slowFrames++;
+          else { slowFrames = Math.max(0, slowFrames - 2); if (slowFrames === 0 && sceneRatio < ratioCap) sceneFastFrames++; }
+          // 动态分辨率（与 SceneDirector 同一套阶梯）：掉帧累积先降分辨率，
+          // 降档即清零计数——相当于用分辨率换回被旧降级逻辑隐藏的景深层；
+          // 连续流畅约 10 秒才回升一档，避免反复横跳。
+          if (slowFrames > 14 && sceneRatio > 0.5) { applySceneRatio(Math.max(0.5, sceneRatio - 0.15)); slowFrames = 0; sceneFastFrames = 0; }
+          else if (sceneFastFrames > 600 && sceneRatio < ratioCap) { applySceneRatio(Math.min(ratioCap, sceneRatio + 0.15)); sceneFastFrames = 0; }
           if (slowFrames > 14) { depthGroup.visible = false; signal.visible = false; }
           else if (slowFrames < 3) { depthGroup.visible = true; signal.visible = true; }
           if (slowFrames > 18 && bloomPass) bloomPass.enabled = false;
@@ -3218,9 +3462,47 @@
           }
           frame = requestAnimationFrame(draw);
         }
-        addEventListener('scroll', scroll, { passive: true }); addEventListener('resize', scroll, { passive: true }); scroll();
-        draw(); document.addEventListener('visibilitychange', () => { cancelAnimationFrame(frame); if (!document.hidden) draw(); }); addEventListener('pagehide', () => cancelAnimationFrame(frame), { once: true });
-      })();
+        addEventListener('scroll', scroll, { passive: true });
+        // 窗口尺寸变化防抖：滚动目标实时更新；画布后备存储与相机宽高比在停顿后
+        // 一次重建。旧代码从不更新它们——缩放窗口后画布会一直按初始分辨率拉伸。
+        let sceneResizeTimer = 0;
+        addEventListener('resize', () => {
+          scroll();
+          clearTimeout(sceneResizeTimer);
+          sceneResizeTimer = setTimeout(() => {
+            renderer.setSize(innerWidth, innerHeight, false);
+            camera.aspect = innerWidth / innerHeight;
+            camera.updateProjectionMatrix();
+          }, 160);
+        }, { passive: true });
+        scroll();
+        // 首帧推迟到首屏绘制之后：首次渲染会同步编译全部材质的着色器，弱 GPU
+        // 上可达数百毫秒并阻塞内容出现（即“加载不出来”的主因之一）。
+        const startSceneDraw = () => {
+          if (!frame && !document.hidden) {
+            draw();
+            // 首帧渲染完成后隔两帧再渐显画布：出现即淡入，
+            // 剩余的驱动侧停顿全部发生在画布全透明阶段。
+            requestAnimationFrame(() => requestAnimationFrame(() => canvas.classList.add('is-live')));
+          }
+        };
+        // 分帧点 2：事件接线完成后先让出一帧；随后用驱动的并行着色器编译
+        // （KHR_parallel_shader_compile，Chrome 85+ 支持）在后台线程完成全部
+        // 材质链接，完成后再开始渲染循环——首帧渲染不再触发同步编译冻结。
+        // 不支持并行编译的驱动退化为原同步路径，行为不劣于现状。
+        await nextFrame();
+        try { if (typeof renderer.compileAsync === 'function') await renderer.compileAsync(scene, camera); } catch (error) { /* 同步路径兜底 */ }
+        startSceneDraw();
+        // WebGL 上下文被系统回收（显卡重置/内存压力/切应用）时：preventDefault
+        // 交给 three.js 自动重建资源，这里只负责重启渲染循环，弱设备不再黑屏到底。
+        canvas.addEventListener('webglcontextlost', event => { event.preventDefault(); cancelAnimationFrame(frame); frame = 0; }, false);
+        canvas.addEventListener('webglcontextrestored', () => { touchClearColor(); if (!frame && !document.hidden) draw(); }, false);
+        document.addEventListener('visibilitychange', () => { cancelAnimationFrame(frame); if (!document.hidden) draw(); }); addEventListener('pagehide', () => cancelAnimationFrame(frame), { once: true });
+      };
+      // 主场景（渲染器 + GPGPU 粒子搭建 + 多材质着色器编译）同样推迟到空闲期，
+      // 并比 shader 层晚半拍启动，两层不会在同一帧里扎堆编译。
+      // 主场景比 shader 层再晚半拍起步，两层上下文创建与编译互不同帧。
+      setTimeout(bootAlgorithmScene, 1500);
 
       (() => {
         const zones = [
@@ -3824,6 +4106,6 @@
       init();
 
     </script>
-    <script src="public/club-shell.js?v=6f76acb2"></script>
+    <script src="public/club-shell.js?v=4ec6cd0d"></script>
   </body>
 </html>

@@ -1,16 +1,18 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.changelog.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>更新维护日志 · 算法社</title>
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
+  <!-- 内置快照：file:// 与离线时兜底渲染，网络可用时仍以 fetch 到的 changelog.json 为准 -->
+  <script src="data/changelog-data.js"></script>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
@@ -32,39 +34,89 @@
     <p class="eyebrow">SITE CHANGELOG</p>
     <h1 data-i18n="pages.changelog.h1">更新维护日志</h1>
     <p class="lead" data-i18n="changelog.lead">记录算法社官网的功能更新与维护内容，对所有访客开放。</p>
-    <section id="logList" class="timeline"><div class="panel empty loading" data-i18n="changelog.loading">正在读取更新日志…</div></section>
+    <section id="logList" class="timeline"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="changelog.loading">正在读取更新日志…</span></section>
   </main>
+  <style>
+    /* 只影响本页：年份分组小标题（sticky 胶囊），不改全站 .timeline 约定 */
+    body.club-page .log-year {
+      position: sticky; top: 8px; z-index: 5;
+      margin: 10px 0 2px; padding: 5px 14px;
+      display: inline-block; align-self: flex-start;
+      border: 1px solid var(--club-line); border-radius: 999px;
+      background: var(--club-surface); color: var(--club-muted);
+      font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
+      font-family: var(--club-mono); font-variant-numeric: tabular-nums;
+    }
+    /* 更新日志是长文阅读场景：时间轴收成阅读列宽；
+       club-prose 的 h2 节奏是按正文设计的，条目标题保持紧凑节奏 */
+    body.club-page #logList { max-width: var(--club-read, 760px); margin-left: auto; margin-right: auto; }
+    body.club-page #logList .entry h2 { margin: 0 0 10px; }
+  </style>
   <script>
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    }
+
+    function renderEntries(entries, opts) {
+      const list = document.getElementById('logList');
+      const hint = opts && opts.snapshot ? '<p class="hint" style="margin:-6px 0 14px" data-i18n="changelog.snapshot">' + escapeHtml(ClubI18n.t('changelog.snapshot')) + '</p>' : '';
+      // 按年份分组渲染；日期缺年份的记录归入 “—” 组，数据本身不变。
+      const groups = new Map();
+      for (const entry of entries) {
+        const year = /^\d{4}/.test(String(entry.date || '')) ? String(entry.date).slice(0, 4) : '—';
+        if (!groups.has(year)) groups.set(year, []);
+        groups.get(year).push(entry);
+      }
+      list.innerHTML = hint + [...groups.entries()].map(([year, yearEntries]) => `
+        <h2 class="log-year">${escapeHtml(year)}</h2>
+        ${yearEntries.map((entry, index) => {
+          const english = ClubI18n.getLang?.() === 'en';
+          const title = english && entry.enTitle ? entry.enTitle : (entry.titleKey ? ClubI18n.t(entry.titleKey) : entry.title);
+          const keys = Array.isArray(entry.itemKeys) ? entry.itemKeys : [];
+          const fallback = Array.isArray(entry.items) ? entry.items : [];
+          const items = english && Array.isArray(entry.enItems) ? entry.enItems : (keys.length ? keys.map(key => ClubI18n.t(key)) : fallback);
+          return `<article class="panel entry club-prose" data-reveal style="--reveal-delay:${Math.min(index * 45, 270)}ms"><div class="entry-head"><strong class="date timeline-date">${escapeHtml(entry.date || '')}</strong></div><h2>${escapeHtml(title || ClubI18n.t('changelog.unnamed'))}</h2><ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></article>`;
+        }).join('')}
+      `).join('');
+    }
+
+    // 内置快照先行渲染：file://、离线或弱网时页面都有内容，不再出现“读取失败”白屏。
+    function renderSnapshotIfPresent() {
+      const snapshot = window.CLUB_CHANGELOG_SNAPSHOT;
+      if (Array.isArray(snapshot) && snapshot.length) renderEntries(snapshot, { snapshot: true });
     }
 
     async function loadChangelog() {
       const list = document.getElementById('logList');
       try {
         const response = await fetch('data/changelog.json', { cache: 'no-store' });
-        if (!response.ok) throw new Error(ClubI18n.t('changelog.loadFail'));
+        if (!response.ok) throw new Error('changelog-http-' + response.status);
         const entries = await response.json();
         if (!Array.isArray(entries) || !entries.length) {
-          list.innerHTML = '<div class="panel empty">' + ClubI18n.t('changelog.empty') + '</div>';
+          renderSnapshotIfPresent();
           return;
         }
-        list.innerHTML = entries.map(entry => {
-          const english = ClubI18n.getLang?.() === 'en';
-          const title = english && entry.enTitle ? entry.enTitle : (entry.titleKey ? ClubI18n.t(entry.titleKey) : entry.title);
-          const keys = Array.isArray(entry.itemKeys) ? entry.itemKeys : [];
-          const fallback = Array.isArray(entry.items) ? entry.items : [];
-          const items = english && Array.isArray(entry.enItems) ? entry.enItems : (keys.length ? keys.map(key => ClubI18n.t(key)) : fallback);
-          return `<article class="panel entry"><div class="entry-head"><strong class="date">${escapeHtml(entry.date || '')}</strong></div><h2>${escapeHtml(title || ClubI18n.t('changelog.unnamed'))}</h2><ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></article>`;
-        }).join('');
+        renderEntries(entries);
       } catch (error) {
-        list.innerHTML = `<div class="panel empty">${escapeHtml(error.message || ClubI18n.t('changelog.loadFail'))}</div>`;
+        // 网络失败时回退到内置快照；快照也没有（理论上不会）才显示可重试错误。
+        if (Array.isArray(window.CLUB_CHANGELOG_SNAPSHOT) && window.CLUB_CHANGELOG_SNAPSHOT.length) {
+          renderSnapshotIfPresent();
+          return;
+        }
+        // 失败透出通用提示（不再显示英文原始 error.message），并提供重试。
+        ClubCommon.listState(list, {
+          kind: 'error',
+          title: ClubI18n.t('changelog.loadFail'),
+          message: ClubI18n.t('common.loadRetry'),
+          onRetry: loadChangelog
+        });
       }
     }
 
+    renderSnapshotIfPresent();
     loadChangelog();
     window.addEventListener('club:langchange', () => { void loadChangelog(); });
   </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

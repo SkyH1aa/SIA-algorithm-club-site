@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8">
@@ -10,74 +10,136 @@
   <title>实验室 · 算法社 AI 五子棋挑战</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
 <style>
     :root { color-scheme: dark; --board-highlight: #00e5ff; --board-highlight-shadow: rgba(0, 229, 255, .48); }
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
-    html { scroll-behavior: smooth; scroll-snap-type: y proximity; scroll-padding-top: 72px; }
+    html { scroll-behavior: smooth; scroll-padding-top: 72px; }
     body {
       position: relative;
       min-height: 100vh;
       margin: 0;
-      padding: 28px 18px;
-      background: #07111f;
-      color: #e7f7ff;
-      font-family: Arial, sans-serif;
+      padding: 28px 18px 64px;
+      font-size: 15px;
     }
+    body.club-page main.game-container { max-width: none; margin: 0; padding: 20px; z-index: auto; position: relative; }
     .page-shell { width: min(1120px, 100%); margin: 0 auto; }
-    .member-identity{display:none;margin:10px auto 0;padding:5px 9px;border:1px solid rgba(0,229,255,.34);border-radius:999px;color:#00e5ff;font-size:12px;width:max-content}.member-identity:not([hidden]){display:block}
+    .member-identity { display: none; margin: 10px auto 0; width: max-content; }
+    .member-identity:not([hidden]) { display: block; }
     .page-header { margin-bottom: 22px; }
-    .page-header a { color: #49e7ff; text-decoration: none; }
-    .page-header h1 { margin: 8px 0; }
-    .page-header p { color: #91a9b8; }
+    .page-header a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      margin-right: 6px;
+      border: 1px solid var(--club-line);
+      border-radius: var(--club-radius-pill);
+      background: color-mix(in srgb, var(--club-surface) 72%, transparent);
+      color: var(--club-muted);
+      font-size: 12.5px;
+      /* 紧凑行高：继承的 1.65 行盒被 CJK 字体的上下伸展撑歪，
+         flex 居中的是行盒而非字形，表现为文字贴着胶囊下缘；1.1 行盒
+         让字形在胶囊内真正垂直居中。 */
+      line-height: 1.1;
+      text-decoration: none;
+      transition: color var(--club-dur) var(--club-ease), border-color var(--club-dur) var(--club-ease), background var(--club-dur) var(--club-ease);
+    }
+    .page-header a:hover { border-color: var(--club-accent-line); background: var(--club-accent-soft); color: var(--club-accent); }
+    .page-header h1 { margin: 14px 0 8px; }
+    .page-header p { color: var(--club-muted); }
     .game-layout { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 24px; align-items: start; min-width: 0; }
-    .panel { padding: 20px; border: 1px solid rgba(73, 231, 255, .24); border-radius: 12px; background: rgba(13, 28, 47, .84); box-shadow: 0 16px 42px rgba(0,0,0,.22); }
+    .panel { padding: 20px; border: 1px solid var(--club-line); border-radius: var(--club-radius); background: color-mix(in srgb, var(--club-surface) 88%, transparent); box-shadow: inset 0 1px 0 var(--club-highlight), var(--club-shadow-sm); }
     .setup { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
-    .setup select { min-width: 150px; padding: 10px 12px; border: 1px solid #31536a; border-radius: 6px; background: #081522; color: #fff; font-size: 15px; }
+    .setup label { color: var(--club-muted); font-size: 12.5px; font-weight: 600; }
+    .setup select { min-width: 150px; }
     .model-engine-frame { position: fixed; width: 1px; height: 1px; left: -10px; top: -10px; opacity: 0; pointer-events: none; }
-    input { min-width: 210px; padding: 10px 12px; border: 1px solid #31536a; border-radius: 6px; background: #081522; color: #fff; font-size: 15px; }
-    .hint { color: #91a9b8; font-size: 13px; }
+    .hint { color: var(--club-muted); font-size: 13px; }
     .leaderboard h2 { margin-top: 0; }
-    .leaderboard-list { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
-    .leaderboard-list li { display: grid; grid-template-columns: 30px 1fr auto; gap: 8px; padding: 10px; border-bottom: 1px solid rgba(73,231,255,.12); }
-    .rank { color: #49e7ff; font-weight: bold; }
-    .score { color: #ffd166; font-weight: bold; }
-    .empty { color: #91a9b8; font-size: 14px; }
-    .explain-panel { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(73,231,255,.16); }
-    .explain-toggle { display: flex; gap: 8px; align-items: center; color: #e7f7ff; font-size: 13px; }
-    .explain-toggle input { min-width: 16px; width: 16px; height: 16px; margin: 0; accent-color: #C54A34; }
+    /* 与 gomoku.html 排行榜一致：hint 12px、行密度 8px/3px */
+    .leaderboard .hint { font-size: 12px; line-height: 1.55; }
+    .leaderboard-list { display: grid; gap: 3px; padding: 0; margin: 0; list-style: none; }
+    .leaderboard-list li { display: grid; grid-template-columns: 30px 1fr auto; gap: 8px; align-items: center; padding: 8px 9px; border-radius: var(--club-radius-xs); border-bottom: 1px solid var(--club-line); transition: background var(--club-dur-fast) ease; }
+    .leaderboard-list li:hover { background: var(--club-surface-2); }
+    .leaderboard-list li:last-child { border-bottom: 0; }
+    .leaderboard-list li small { display: block; color: var(--club-muted); font-size: 11px; font-weight: 400; }
+    .rank {
+      display: inline-grid; place-items: center;
+      width: 24px; height: 24px; border-radius: 7px;
+      background: var(--club-surface-3); color: var(--club-muted);
+      font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+    }
+    .leaderboard-list li:nth-child(1) .rank { background: color-mix(in srgb, var(--club-gold, #ffd166) 22%, transparent); color: var(--club-gold, #ffd166); }
+    .leaderboard-list li:nth-child(2) .rank { background: color-mix(in srgb, #c8d2e0 20%, transparent); color: #c8d2e0; }
+    .leaderboard-list li:nth-child(3) .rank { background: color-mix(in srgb, #d59b6a 22%, transparent); color: #d59b6a; }
+    .score { color: var(--club-warn); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .empty { color: var(--club-muted); font-size: 14px; }
+    .leaderboard-pagination { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 12.5px; color: var(--club-muted); }
+    .explain-panel { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--club-line); }
+    .explain-toggle { display: flex; gap: 8px; align-items: center; color: var(--club-text); font-size: 13px; cursor: pointer; }
+    .explain-toggle input { min-width: 16px; width: 16px; height: 16px; margin: 0; accent-color: var(--club-accent); }
     .explain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
-    .explain-stat { padding: 8px; border: 1px solid rgba(73,231,255,.16); border-radius: 8px; background: rgba(8,17,38,.45); }
-    .explain-stat span { display: block; color: #91a9b8; font-size: 11px; }
-    .explain-stat strong { color: #49e7ff; font-size: 14px; }
-    .explain-note { color: #91a9b8; font-size: 11px; line-height: 1.5; }
-    html[data-theme="light"] .explain-panel { border-color: #E7DDD5 !important; }
-    html[data-theme="light"] .explain-stat { background: #F2EDE7 !important; border-color: #E7DDD5 !important; }
-    html[data-theme="light"] .explain-stat strong { color: #A73A29 !important; }
-    html[data-theme="light"] .explain-toggle { color: #2A2421 !important; }
-    html[data-theme="light"] .explain-toggle input { accent-color: #C54A34; outline: 1px solid rgba(167, 58, 41, 0.42); outline-offset: 1px; }
-    html[data-theme="light"] .cell.black { background-color: #111111 !important; border-color: #000000 !important; }
-    html[data-theme="light"] .cell.white { background-color: #FFFFFF !important; border-color: #252525 !important; }
-    .result { min-height: 20px; margin: 14px 0 0; color: #49e7ff; font-weight: bold; }
-    .ai-countdown { min-height: 22px; margin: 8px auto 0; max-width: 520px; color: #ffd166; font-size: 13px; }
+    .explain-stat { padding: 8px; border: 1px solid var(--club-line); border-radius: var(--club-radius-sm); background: color-mix(in srgb, var(--club-surface-2) 72%, transparent); }
+    .explain-stat span { display: block; color: var(--club-muted); font-size: 11px; }
+    .explain-stat strong { color: var(--club-accent); font-size: 14px; font-family: var(--club-mono); font-variant-numeric: tabular-nums; }
+    .explain-note { color: var(--club-muted); font-size: 11px; line-height: 1.5; }
+    /* theme.css 的全站亮色规则会把 .board 刷成白底；本页保持木纹棋盘。
+       日间用与夜间同一套木色（浅米木色在白页上看起来像白板）。 */
+    html[data-theme="light"] .board#board {
+      background:
+        radial-gradient(ellipse 120% 90% at 28% 18%, rgba(255, 236, 200, .30), transparent 55%),
+        linear-gradient(150deg, #dcb37e 0%, #d2a671 52%, #c69a65 100%) !important;
+      border-color: #8a6a42 !important;
+      box-shadow: inset 0 0 0 1px rgba(120, 84, 40, .35), 0 16px 36px rgba(120, 84, 40, .28) !important;
+    }
+    html[data-theme="light"] .cell { border-color: rgba(74, 50, 24, .55) !important; }
+    /* 同 gomoku.html：夺回被 theme.css 亮色 `.cell{background:#FFF!important}` 刷白的空格子，
+       否则 225 个白格子会把木纹棋盘盖成白板。 */
+    html[data-theme="light"] .board#board .cell {
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    html[data-theme="light"] .board#board .cell.last-ai-move {
+      box-shadow: 0 0 0 4px var(--board-highlight-shadow), 0 0 16px var(--board-highlight-shadow) !important;
+    }
+    /* 同 gomoku.html：theme.css 的亮色 `.cell`（实验室数据格）会命中棋子，
+       夺回黑白棋渐变。 */
+    html[data-theme="light"] .board#board .cell.black {
+      background: radial-gradient(circle at 34% 30%, #555 0%, #161616 58%, #000 100%) !important;
+      box-shadow: inset 0 -2px 4px rgba(255, 255, 255, .08), 0 2px 5px rgba(0, 0, 0, .35) !important;
+    }
+    html[data-theme="light"] .board#board .cell.white {
+      background: radial-gradient(circle at 34% 30%, #ffffff 0%, #f2f2f2 58%, #d9d9d9 100%) !important;
+      border-color: rgba(60, 40, 20, .55) !important;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, .25) !important;
+    }
+    html[data-theme="light"] .cell:hover { background-color: rgba(255, 232, 180, .5) !important; }
+    .result { min-height: 20px; margin: 14px 0 0; color: var(--club-accent); font-weight: bold; font-size: 15px; }
+    .ai-countdown { min-height: 22px; margin: 8px auto 0; max-width: 520px; color: var(--club-warn); font-size: 13px; font-variant-numeric: tabular-nums; }
     .ai-countdown[hidden] { display: none; }
-    .ai-countdown-track { height: 6px; margin-top: 5px; overflow: hidden; border: 1px solid rgba(255,209,102,.35); border-radius: 999px; background: rgba(8,17,38,.65); }
-    .ai-countdown-fill { height: 100%; width: 100%; transform-origin: left center; background: linear-gradient(90deg, #49e7ff, #ffd166, #ff6b6b); transition: width .2s linear; }
-    @media (max-width: 860px) {
+    .ai-countdown-track { height: 6px; margin-top: 5px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--club-warn) 35%, transparent); border-radius: 999px; background: var(--club-surface-2); }
+    .ai-countdown-fill { height: 100%; width: 100%; transform-origin: left center; background: linear-gradient(90deg, var(--club-accent), var(--club-warn), #ff6b6b); transition: width .2s linear; }
+    @media (max-width: 900px) {
       .game-layout { grid-template-columns: minmax(0, 1fr); }
       .game-layout > * { min-width: 0; }
       input, .setup select { min-width: 0; width: 100%; }
     }
-    @media (max-width: 520px) { .board { margin: 0 auto; } }
+    @media (max-width: 640px) { .board { margin: 0 auto; } }
 
     .game-container {
       text-align: center;
     }
+    /* 与 gomoku.html 对齐：主按钮最小宽度 */
+    #gameActionButton { min-width: 180px; }
+    /* 实验版本比较列表：与排行榜行观感一致（同为 leaderboard-list，标题/明细/耗时字号对齐） */
+    .leaderboard-list li strong { color: var(--club-text); font-size: 13px; font-weight: 700; }
+    .leaderboard-list li p { margin: 5px 0 0; color: var(--club-muted); font-size: 12px; line-height: 1.6; }
+    .leaderboard-list li p + small { display: block; margin-top: 3px; }
 
-    .ambient-background{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}.ambient-orb{position:absolute;width:min(48vw,620px);aspect-ratio:1;border-radius:50%;filter:blur(72px);opacity:.18;mix-blend-mode:screen;animation:drift-orb 18s ease-in-out infinite alternate}.orb-cyan{top:-18%;left:-12%;background:#00e5ff}.orb-violet{top:20%;right:-16%;background:#7c4dff;animation-delay:-7s}.ambient-grid{position:absolute;inset:-80px;background-image:linear-gradient(rgba(0,229,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.055) 1px,transparent 1px);background-size:72px 72px;opacity:.45;animation:grid-shift 26s linear infinite}#particleCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:.75}.pointer-glow{position:fixed;z-index:0;width:420px;height:420px;left:var(--pointer-x,50%);top:var(--pointer-y,14%);transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(73,231,255,.1),transparent 68%);pointer-events:none}.page-shell{position:relative;z-index:1}.page-header,.game-layout,.leaderboard,.panel{scroll-snap-align:start}.panel,.page-header{transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease}.panel:hover{border-color:rgba(73,231,255,.45);box-shadow:0 22px 60px rgba(0,0,0,.3),0 0 30px rgba(73,231,255,.08)}@keyframes drift-orb{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(7%,5%,0) scale(1.1)}}@keyframes grid-shift{to{transform:translate3d(72px,72px,0)}}.reveal-ready{opacity:0;transform:translateY(24px);transition:opacity .75s ease,transform .75s ease}.reveal-ready.is-visible{opacity:1;transform:none}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.ambient-orb,.ambient-grid{animation:none}.pointer-glow{display:none}.reveal-ready{opacity:1;transform:none;transition:none}.panel,.page-header{transition:none}}
+    .ambient-background{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}.ambient-orb{position:absolute;width:min(48vw,620px);aspect-ratio:1;border-radius:50%;filter:blur(72px);opacity:.18;mix-blend-mode:screen;animation:drift-orb 18s ease-in-out infinite alternate}.orb-cyan{top:-18%;left:-12%;background:#00e5ff}.orb-violet{top:20%;right:-16%;background:#7c4dff;animation-delay:-7s}.ambient-grid{position:absolute;inset:-80px;background-image:linear-gradient(rgba(0,229,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.055) 1px,transparent 1px);background-size:72px 72px;opacity:.45;animation:grid-shift 26s linear infinite}#particleCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:.75}.pointer-glow{position:fixed;z-index:0;width:420px;height:420px;left:var(--pointer-x,50%);top:var(--pointer-y,14%);transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(73,231,255,.1),transparent 68%);pointer-events:none}.page-shell{position:relative;z-index:1}.panel,.page-header{transition:transform var(--club-dur-slow, 320ms) var(--club-ease, ease),border-color var(--club-dur-slow, 320ms) var(--club-ease, ease),box-shadow var(--club-dur-slow, 320ms) var(--club-ease, ease)}.panel:hover{border-color:var(--club-accent-line);box-shadow:0 22px 60px rgba(0,0,0,.3),0 0 30px rgba(73,231,255,.08)}@keyframes drift-orb{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(7%,5%,0) scale(1.1)}}@keyframes grid-shift{to{transform:translate3d(72px,72px,0)}}.reveal-ready{opacity:0;transform:translateY(24px);transition:opacity .75s ease,transform .75s ease}.reveal-ready.is-visible{opacity:1;transform:none}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.ambient-orb,.ambient-grid{animation:none}.pointer-glow{display:none}.reveal-ready{opacity:1;transform:none;transition:none}.panel,.page-header{transition:none}}
     .board {
       --cell-size: 30px;
       display: grid;
@@ -86,23 +148,33 @@
       grid-template-rows: repeat(15, var(--cell-size));
       height: calc(var(--cell-size) * 15);
       gap: 0;
-      border: 2px solid #333;
-      background-color: #deb887;
+      border: 1px solid #8a6a42;
+      border-radius: 10px;
+      background:
+        radial-gradient(ellipse 120% 90% at 28% 18%, rgba(255, 236, 200, .30), transparent 55%),
+        linear-gradient(150deg, #dcb37e 0%, #d2a671 52%, #c69a65 100%);
+      box-shadow:
+        inset 0 0 0 1px rgba(120, 84, 40, .35),
+        0 18px 44px rgba(0, 0, 0, .38),
+        0 2px 8px rgba(0, 0, 0, .28);
       position: relative;
       margin: 0 auto;
       justify-self: center;
       max-width: 100%;
+      overflow: hidden;
     }
 
     .cell {
       width: var(--cell-size);
       height: var(--cell-size);
-      border: 1px solid #333;
+      border: 1px solid rgba(74, 50, 24, .55);
       box-sizing: border-box;
       cursor: pointer;
       position: relative;
+      transition: background-color var(--club-dur-fast, 140ms) var(--club-ease, ease);
     }
-    @media (max-width: 860px) {
+    .cell:hover { background-color: rgba(255, 224, 160, .34); }
+    @media (max-width: 900px) {
       .board { --cell-size: min(30px, calc((100vw - 52px) / 15)); }
       .game-layout { gap: 14px; }
     }
@@ -115,19 +187,21 @@
       transform: translate(-50%, -50%);
       width: 6px;
       height: 6px;
-      background-color: #333;
+      background-color: rgba(74, 50, 24, .75);
       border-radius: 50%;
     }
 
     .black {
-      background-color: #000;
       border-radius: 50%;
+      background: radial-gradient(circle at 34% 30%, #555 0%, #161616 58%, #000 100%);
+      box-shadow: inset 0 -2px 4px rgba(255,255,255,.08), 0 2px 5px rgba(0,0,0,.45);
     }
 
     .white {
-      background-color: #fff;
+      background: radial-gradient(circle at 34% 30%, #ffffff 0%, #f2f2f2 58%, #d9d9d9 100%);
       border-radius: 50%;
       border: 1px solid #000;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, .35);
     }
 
     .cell.last-ai-move {
@@ -144,23 +218,67 @@
 
     .status {
       margin: 20px 0;
-      font-size: 18px;
+      font-size: 17px;
       font-weight: bold;
+      min-height: 26px;
     }
-
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
+    /* 状态行里动态注入的按钮走全站主按钮观感（无 side-pick 类时退回胶囊观感） */
+    .status button {
+      min-height: 36px;
+      padding: 7px 16px;
+      margin: 0 4px;
+      border: 1px solid var(--club-accent-line);
+      border-radius: var(--club-radius-pill);
+      background: var(--club-accent-soft);
+      color: var(--club-accent);
+      font: inherit;
+      font-size: 13.5px;
+      font-weight: 700;
       cursor: pointer;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 4px;
+      transition: background var(--club-dur) var(--club-ease), border-color var(--club-dur) var(--club-ease), transform var(--club-dur) var(--club-ease);
     }
-
-    button:hover {
-      background-color: #45a049;
+    .status button:hover { background: color-mix(in srgb, var(--club-accent) 26%, transparent); border-color: var(--club-accent); }
+    .status button:active { transform: translateY(1px); }
+    /* 执子选择大卡：与 gomoku.html 完全一致 */
+    .status button.side-pick {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 9px;
+      min-width: 128px;
+      min-height: 0;
+      margin: 8px 7px 0;
+      padding: 14px 18px 12px;
+      border: 1px solid var(--club-line-strong);
+      border-radius: var(--club-radius);
+      background: color-mix(in srgb, var(--club-surface-2) 88%, transparent);
+      color: var(--club-text);
+      font-size: 13.5px;
+      letter-spacing: .05em;
+      transition: transform var(--club-dur) var(--club-ease), border-color var(--club-dur) var(--club-ease), background var(--club-dur) var(--club-ease), box-shadow var(--club-dur) var(--club-ease);
     }
+    .status button.side-pick::before {
+      content: '';
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 34% 30%, #555 0%, #161616 58%, #000 100%);
+      box-shadow: inset 0 -2px 4px rgba(255, 255, 255, .08), 0 0 0 1px rgba(232, 241, 251, .25), 0 2px 5px rgba(0, 0, 0, .45);
+    }
+    .status button.side-pick[onclick*="setPlayerColor(2)"]::before {
+      background: radial-gradient(circle at 34% 30%, #ffffff 0%, #f2f2f2 58%, #d9d9d9 100%);
+      border: 1px solid #000;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, .35);
+    }
+    .status button.side-pick:hover {
+      transform: translateY(-2px);
+      border-color: var(--club-accent);
+      background: color-mix(in srgb, var(--club-accent) 9%, var(--club-surface-2));
+      box-shadow: 0 12px 26px rgba(0, 0, 0, .3), 0 0 0 3px var(--club-accent-soft);
+    }
+    .status button.side-pick:hover::before { box-shadow: inset 0 -2px 4px rgba(255, 255, 255, .08), 0 0 0 1px rgba(232, 241, 251, .4), 0 3px 8px rgba(0, 0, 0, .5); }
+    .status button.side-pick:active { transform: translateY(1px); box-shadow: 0 3px 10px rgba(0, 0, 0, .25); }
+    .status button.side-pick:focus-visible { outline: 2px solid var(--club-accent); outline-offset: 2px; }
   </style>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
@@ -177,7 +295,7 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body>
+<body class="club-page">
   <div class="ambient-background" aria-hidden="true"><div class="ambient-orb orb-cyan"></div><div class="ambient-orb orb-violet"></div><div class="ambient-grid"></div><canvas id="particleCanvas"></canvas></div><div class="pointer-glow" aria-hidden="true"></div>
   <div class="page-shell">
     <header class="page-header">
@@ -207,10 +325,10 @@
           <select id="blackModelVersion" aria-label="选择黑方模型"></select>
           <label for="whiteModelVersion" data-i18n="gomoku.whiteModel">白方模型</label>
           <select id="whiteModelVersion" aria-label="选择白方模型"></select>
-          <button type="button" id="startModelBattleButton" data-i18n="gomoku.startModelBattle">开始模型对战</button>
+          <button type="button" id="startModelBattleButton" class="button" data-i18n="gomoku.startModelBattle">开始模型对战</button>
         </div>
         <div class="status" id="status"></div>
-        <p style="text-align:center;color:#ffd166" data-i18n="gomokuExp.noScore">自由棋实验室 · 本页所有对局不计分、不上传</p>
+        <p style="text-align:center;color:var(--club-warn)" data-i18n="gomokuExp.noScore">自由棋实验室 · 本页所有对局不计分、不上传</p>
         <div class="ai-countdown" id="aiCountdown" hidden aria-live="polite"><span id="aiCountdownLabel"></span><div class="ai-countdown-track"><div class="ai-countdown-fill" id="aiCountdownFill"></div></div></div>
         <div class="explain-panel">
           <label class="explain-toggle"><input type="checkbox" id="explainToggle"><span data-i18n="explain.toggle">显示 AI 决策面板</span></label>
@@ -218,12 +336,12 @@
         </div>
         <div class="board" id="board"></div>
         <p class="result" id="result" aria-live="polite"></p>
-        <button id="gameActionButton" onclick="handleGameAction()" data-i18n="games.restart">重新开始</button>
-        <button type="button" onclick="downloadExperimentRecord()" data-i18n="gomokuExp.exportRecord">导出本局棋谱</button>
+        <button id="gameActionButton" class="button" onclick="handleGameAction()" data-i18n="games.startGame">开始对局</button>
+        <button type="button" class="button secondary" onclick="downloadExperimentRecord()" data-i18n="gomokuExp.exportRecord">导出本局棋谱</button>
       </main>
       <aside class="leaderboard panel">
         <h2 data-i18n="gomokuExp.compareTitle">实验版本比较</h2>
-        <p class="hint">V10Exp正式挑战胜局15分并上传胜负平。本实验页仅本地测试，不计分、不上传；正式挑战请返回五子棋页面。</p>
+        <p class="hint" data-i18n="gomokuExp.localOnlyHint">V10Exp正式挑战胜局15分并上传胜负平。本实验页仅本地测试，不计分、不上传；正式挑战请返回五子棋页面。</p>
         <ol class="leaderboard-list" id="leaderboardList"><li class="empty" data-i18n="common.loading">正在读取…</li></ol>
         <div class="leaderboard-pagination" id="leaderboardPagination" hidden><button type="button" id="leaderboardPrev" class="button secondary" data-i18n="games.prevPage">上一页</button><span id="leaderboardPageInfo"></span><button type="button" id="leaderboardNext" class="button secondary" data-i18n="games.nextPage">下一页</button></div>
       </aside>
@@ -267,6 +385,8 @@
     let whiteModelVersion = 9.1;
     let lastTrainingUploadError = '';
     let gameSessionToken = 0;
+    // 本页是否开过局：仅用于按钮文案（开始对局 / 重新开始）。
+    let hasPlayed = false;
     let aiCountdownTimer = null;
     let aiCountdownDeadline = 0;
     let legacyEngineReady = Promise.resolve();
@@ -338,7 +458,7 @@
         document.getElementById('nickname').disabled = battle;
         document.getElementById('status').innerHTML = battle
           ? '请选择黑白模型，然后开始模型对战'
-          : ClubI18n.t('gomoku.chooseSide') + ': <button onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';
+          : ClubI18n.t('gomoku.chooseSide') + ': <button class="side-pick" onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button class="side-pick" onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';
       }
     }
     function populateBattleModels() {
@@ -452,13 +572,19 @@
       return false; // 实验棋谱仅由用户导出，不上传训练数据。
     }
 
+    // 三态：尚未开局＝开始对局；对局中＝投降；已结束＝重新开始。
+    // hasPlayed 只用于文案——startGameSession 会把 gameover 重置为 false，
+    // 只靠 gameInProgress/gameover 判断会在“结束后重开”的瞬间闪回“开始对局”。
     function updateGameActionButton() {
       const button = document.getElementById('gameActionButton');
-      button.textContent = gameInProgress && !gameover ? ClubI18n.t('games.surrender') : ClubI18n.t('games.restart');
+      button.textContent = gameInProgress && !gameover
+        ? ClubI18n.t('games.surrender')
+        : (hasPlayed ? ClubI18n.t('games.restart') : ClubI18n.t('games.startGame'));
       button.disabled = gameActionBusy;
     }
 
     function startGameSession({ modelBattle = false } = {}) {
+      hasPlayed = true;
       experimentOutcome = null;
       experimentSearchHistory = [];
       gameSessionToken += 1;
@@ -962,14 +1088,14 @@
       Object.values(window.GomokuExperiments).forEach(engine => engine.clearCache());
       stopAiCountdown();
       initBoard();
-      document.getElementById('status').innerHTML = ClubI18n.t('gomoku.chooseSide') + ': <button onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';
+      document.getElementById('status').innerHTML = ClubI18n.t('gomoku.chooseSide') + ': <button class="side-pick" onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button class="side-pick" onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';
       updateGameActionButton();
       updateModeControls();
     }
 
     // 初始化游戏
     initBoard();
-    document.getElementById('status').innerHTML = ClubI18n.t('gomoku.chooseSide') + ': <button onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';
+    document.getElementById('status').innerHTML = ClubI18n.t('gomoku.chooseSide') + ': <button class="side-pick" onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button class="side-pick" onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';
     loadLeaderboard();
   </script>
   <script>
@@ -1015,13 +1141,13 @@
         if (!gameInProgress && !gameover && typeof resetGame !== 'undefined') {
           const status = document.getElementById('status');
           if (status && status.querySelector('button')) {
-            status.innerHTML = ClubI18n.t('gomoku.chooseSide') + ': <button onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';
+            status.innerHTML = ClubI18n.t('gomoku.chooseSide') + ': <button class="side-pick" onclick="setPlayerColor(1)">' + ClubI18n.t('gomoku.black') + '</button> <button class="side-pick" onclick="setPlayerColor(2)">' + ClubI18n.t('gomoku.white') + '</button>';
           }
         }
         if (typeof loadLeaderboard === 'function') void loadLeaderboard();
       } catch (_e) {}
     });
 </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

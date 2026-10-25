@@ -959,6 +959,111 @@
   }
 
   /* ------------------------------------------------------------
+     滚动 reveal（[data-reveal]）
+     用法：给需要在滚入视口时上浮淡入的元素加 data-reveal；
+     可选 style="--reveal-delay:80ms" 做阶梯延迟。
+     仅在 JS 成功启动后（html.club-reveal-ready）才隐藏元素，
+     无 JS / 减少动效 / 不支持 IO 时内容始终可见。
+     ------------------------------------------------------------ */
+  var revealWatcher = null;
+  function setupReveal() {
+    var items = document.querySelectorAll('[data-reveal]');
+    if (!items.length && !revealWatcher) return;
+    var reduced = false;
+    try { reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_error) { reduced = false; }
+    if (reduced || !('IntersectionObserver' in global)) {
+      items.forEach(function (node) { node.classList.add('is-revealed'); });
+      return;
+    }
+    document.documentElement.classList.add('club-reveal-ready');
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-revealed');
+        observer.unobserve(entry.target);
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+    function watch(node) {
+      if (node.dataset && node.dataset.revealReady) return;
+      if (node.dataset) { node.dataset.revealReady = '1'; observer.observe(node); }
+      if (node.querySelectorAll) {
+        node.querySelectorAll('[data-reveal]').forEach(function (child) {
+          if (child.dataset.revealReady) return;
+          child.dataset.revealReady = '1';
+          observer.observe(child);
+        });
+      }
+    }
+    items.forEach(watch);
+    // JS 渲染的列表（更新日志、动态面板）会在启动后才插入 [data-reveal]：
+    // 用 MutationObserver 接管后加入的节点，否则它们永远停在透明态。
+    if (!revealWatcher && 'MutationObserver' in global) {
+      revealWatcher = new MutationObserver(function (mutations) {
+        mutations.forEach(function (mutation) {
+          mutation.addedNodes.forEach(function (node) {
+            if (node.nodeType !== 1) return;
+            if (node.hasAttribute && node.hasAttribute('data-reveal')) watch(node);
+            else if (node.querySelectorAll) node.querySelectorAll('[data-reveal]').forEach(function (child) {
+              if (child.dataset.revealReady) return;
+              child.dataset.revealReady = '1';
+              observer.observe(child);
+            });
+          });
+        });
+      });
+      revealWatcher.observe(document.body, { childList: true, subtree: true });
+    }
+  }
+
+  /* ------------------------------------------------------------
+     共享页脚：品牌 + 快速链接 + 版权。
+     只注入 body.club-page 页面（index / chat / platformer 保留自有页脚或不注入）。
+     ------------------------------------------------------------ */
+  var FOOTER_LINKS = [
+    { href: '../index.html', root: true, zh: '官网首页', en: 'Home' },
+    { href: 'club-features.html', zh: '社团功能', en: 'Features' },
+    { href: 'visualization-lab.html', zh: '算法实验室', en: 'Labs' },
+    { href: 'guide.html', zh: '使用指引', en: 'Guide' },
+    { href: 'changelog.html', zh: '更新日志', en: 'Changelog' }
+  ];
+
+  function buildFooter() {
+    var existing = document.querySelector('.club-footer');
+    if (existing) existing.remove();
+    var en = lang() === 'en';
+    var footer = document.createElement('footer');
+    footer.className = 'club-footer';
+    var linksHtml = FOOTER_LINKS.map(function (item) {
+      var href = item.root
+        ? (inPublicDir() ? '../index.html' : './index.html')
+        : (inPublicDir() ? '' : 'public/') + item.href;
+      return '<a href="' + href + '">' + escapeHtml(en ? item.en : item.zh) + '</a>';
+    }).join('');
+    footer.innerHTML =
+      '<div class="club-footer-inner">' +
+        '<span class="club-footer-brand">' +
+          '<span class="brand-mark" aria-hidden="true">A</span>' +
+          '<span>' + escapeHtml(en ? 'SIA Algorithm Club' : '新哲文院算法社') + '</span>' +
+        '</span>' +
+        '<nav class="club-footer-nav" aria-label="' + escapeHtml(en ? 'Footer' : '页脚导航') + '">' + linksHtml + '</nav>' +
+        '<span class="club-footer-meta">© ' + new Date().getFullYear() + ' ' +
+          escapeHtml(en ? 'SIA Algorithm Club · 新哲文院' : '新哲文院算法社 · SIA Algorithm Club') + '</span>' +
+      '</div>';
+    // 页脚必须挂在 body 末尾：游戏页（贪吃蛇/俄罗斯方块/五子棋×2）的 main
+    // 包在 .layout/.page-shell 布局容器里，若插到 main 之后会落进游戏布局，
+    // 把排行榜挤到一边。挂到 body 末尾 + club-ui 的粘性页脚规则，
+    // 内容短时钉在视口底部，内容长/展开时自然跟在最后，永不与卡片重叠。
+    document.body.appendChild(footer);
+  }
+
+  function mountFooter() {
+    if (!document.body.classList.contains('club-page')) return;
+    // 页面已有自己的页脚时不重复注入
+    if (document.querySelector('body > footer:not(.club-footer)')) return;
+    buildFooter();
+  }
+
+  /* ------------------------------------------------------------
      启动
      ------------------------------------------------------------ */
   function refreshLocalizedChrome() {
@@ -1014,10 +1119,12 @@
     mountSiteNav();
     mountLanguageSwitcher();
     mountSkipLink();
+    mountFooter();
     mountLauncherButton();
     mountNotifyButton();
     registerServiceWorker();
     mountAdminRail();
+    setupReveal();
     if (staffAccess() && typeof staffAccess().subscribe === 'function') {
       staffAccess().subscribe(function () {
         mountAdminRail();
@@ -1045,6 +1152,8 @@
       if (siteNav) siteNav.remove();
       mountSiteNav();
       mountLanguageSwitcher();
+      // 页脚文案随语言重建
+      if (document.querySelector('.club-footer')) buildFooter();
     });
   }
 

@@ -6,12 +6,12 @@
   <meta name="description" content="算法社站内搜索：社员、公告、活动、积分商城商品一站查找。">
   <title>站内搜索 · 算法社</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
-  <script src="i18n-dict.js?v=c79bfe69"></script>
+  <script src="i18n-dict.js?v=f75071ae"></script>
   <script src="i18n.js?v=ba66328e"></script>
-  <script src="club-common.js?v=b3d82c39"></script>
+  <script src="club-common.js?v=333db1c4"></script>
   <script src="service-prompts.js?v=1cfff2ab"></script>
   <script src="service-gate.js?v=6acc9c5f"></script>
   <meta property="og:type" content="website">
@@ -27,6 +27,14 @@
   <meta name="twitter:image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
+  <style>
+    /* 只影响本页：结果关键词高亮与分组标题层级（h2 → h3，样式沿用 club-ui 的分组标题约定） */
+    body.club-page .site-search-group h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 14px; }
+    body.club-page .site-search-group mark {
+      background: var(--club-accent-soft); color: inherit;
+      padding: 0 2px; border-radius: 3px;
+    }
+  </style>
 </head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner">
@@ -34,13 +42,10 @@
     <a class="back" href="club-features.html" data-i18n="common.backFeatures">返回社团功能</a>
   </div></header>
   <main>
+    <p class="eyebrow">SITE SEARCH</p>
+    <h1 data-i18n="search.title">站内搜索</h1>
+    <p class="lead" data-i18n="search.intro">搜索社员、公告、活动与积分商城商品。未登录也可使用。</p>
     <section class="panel">
-      <div class="section-head">
-        <div>
-          <h1 data-i18n="search.title">站内搜索</h1>
-          <p class="intro" data-i18n="search.intro">搜索社员、公告、活动与积分商城商品。未登录也可使用。</p>
-        </div>
-      </div>
       <form class="site-search-form" id="searchForm" role="search">
         <input class="input" id="searchInput" type="search" data-club-search autocomplete="off"
                data-i18n-placeholder="search.placeholder" placeholder="输入姓名、标题或关键词…" aria-label="搜索">
@@ -71,6 +76,21 @@
     };
 
     let lastQuery = '';
+    let debounceTimer = null;
+
+    // 结果关键词高亮：先 escapeHtml 再对“已转义文本”做大小写不敏感替换，
+    // 这样 < > & 等字符不会绕过转义（查询词本身也先转义再拼正则）。
+    function highlight(text, query) {
+      const safe = escapeHtml(text);
+      const raw = String(query || '').trim();
+      if (!raw || raw.length > 100) return safe;
+      const pattern = escapeHtml(raw).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      try {
+        return safe.replace(new RegExp(pattern, 'gi'), match => `<mark>${match}</mark>`);
+      } catch (_error) {
+        return safe;
+      }
+    }
 
     async function runSearch(query) {
       const text = String(query || '').trim();
@@ -104,11 +124,11 @@
       }
       results.innerHTML = groups.map(group => `
         <section class="site-search-group">
-          <h2>${escapeHtml(t(GROUP_LABELS[group.type] || 'search.groupOther'))} <span class="badge">${group.items.length}</span></h2>
+          <h3>${escapeHtml(t(GROUP_LABELS[group.type] || 'search.groupOther'))} <span class="badge">${group.items.length}</span></h3>
           <ul>${group.items.map(item => `
             <li>
-              <a href="${escapeHtml(item.link)}">${escapeHtml(item.title)}</a>
-              ${item.subtitle ? `<span>${escapeHtml(item.subtitle)}</span>` : ''}
+              <a href="${escapeHtml(item.link)}">${highlight(item.title, query)}</a>
+              ${item.subtitle ? `<span>${highlight(item.subtitle, query)}</span>` : ''}
             </li>`).join('')}
           </ul>
         </section>`).join('');
@@ -116,11 +136,19 @@
 
     $('searchForm').addEventListener('submit', event => {
       event.preventDefault();
+      clearTimeout(debounceTimer);
       const query = $('searchInput').value;
       const url = new URL(location.href);
       if (query.trim()) url.searchParams.set('q', query.trim()); else url.searchParams.delete('q');
       history.replaceState(null, '', url);
       void runSearch(query);
+    });
+
+    // 输入防抖即时搜索：停顿 300ms 后自动搜索；回车/点击“搜索”仍立即执行并同步 URL。
+    $('searchInput').addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      const query = $('searchInput').value;
+      debounceTimer = setTimeout(() => { void runSearch(query); }, 300);
     });
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -130,6 +158,6 @@
       window.addEventListener('club:langchange', () => { if (lastQuery) void runSearch(lastQuery); });
     });
   </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

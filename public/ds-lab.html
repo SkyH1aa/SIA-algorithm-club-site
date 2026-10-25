@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="lab.ds.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8" />
@@ -11,38 +11,18 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
 <style>
+    /* 收编说明：主题 token 一律走 --club-*（club-ui.css 的 body.club-page 作用域提供
+       --bg/--panel/--cyan/--text/--muted/--line 同名映射与亮色覆盖），
+       本块只保留 club 映射没有的实验室显示色（金/绿/粉）与可视化专有样式（栈/队列/链表格子、图例、日志等）。 */
     :root {
-      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
-      color: #f6fbff;
-      background: #020409;
-      --bg: #020409;
-      --panel: rgba(8, 13, 30, .8);
-      --cyan: #00e5ff;
-      --violet: #7c4dff;
-      --pink: #ff5fc8;
       --gold: #ffd166;
+      --pink: #ff5fc8;
       --green: #71f3bf;
-      --text: #c8d4e2;
-      --muted: #8fa3b8;
-      --line: rgba(115, 221, 255, .2);
-      --shadow: 0 24px 90px rgba(0, 229, 255, .11);
-      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-width: 320px;
-      min-height: 100vh;
-      background:
-        radial-gradient(ellipse 70% 50% at 15% 4%, rgba(0, 229, 255, .15), transparent 62%),
-        radial-gradient(ellipse 60% 42% at 88% 7%, rgba(124, 77, 255, .22), transparent 65%),
-        linear-gradient(180deg, #020409, #050917 50%, #020409);
-      color: #f6fbff;
-      overflow-x: hidden;
-    }
+    body { overflow-x: hidden; }
     body::before {
       content: "";
       position: fixed;
@@ -60,92 +40,14 @@
     button { cursor: pointer; }
     button:disabled { cursor: not-allowed; opacity: .48; }
 
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      padding: 14px clamp(18px, 5vw, 72px);
-      border-bottom: 1px solid var(--line);
-      background: rgba(2, 4, 12, .78);
-      backdrop-filter: blur(18px);
-    }
-    .brand { display: inline-flex; align-items: center; gap: 12px; margin-right: auto; }
-    .brand-mark {
-      display: grid;
-      place-items: center;
-      width: 42px;
-      height: 42px;
-      border: 1px solid rgba(0, 229, 255, .55);
-      border-radius: 8px;
-      background: linear-gradient(135deg, rgba(0, 229, 255, .18), rgba(124, 77, 255, .22));
-      color: var(--cyan);
-      font-weight: 900;
-      box-shadow: 0 0 28px rgba(0, 229, 255, .22), inset 0 0 24px rgba(124, 77, 255, .18);
-    }
-    .brand strong, .brand small { display: block; }
-    .brand strong { font-size: 16px; }
-    .brand small { color: var(--muted); font-size: 12px; text-transform: uppercase; }
-    .member-identity {
-      display: none;
-      padding: 5px 9px;
-      border: 1px solid rgba(0, 229, 255, .34);
-      border-radius: 999px;
-      color: var(--cyan);
-      font-size: 12px;
-      white-space: nowrap;
-    }
-    .member-identity:not([hidden]) { display: inline-flex; }
-    .back-link {
-      padding: 8px 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      color: var(--muted);
-      font-size: 14px;
-      transition: .2s;
-    }
-    .back-link:hover {
-      border-color: rgba(0, 229, 255, .55);
-      background: rgba(0, 229, 255, .08);
-      color: var(--cyan);
-    }
-
-    main { max-width: 1240px; margin: 0 auto; padding: 54px clamp(18px, 5vw, 72px) 64px; }
-    .hero {
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 24px;
-      margin-bottom: 30px;
-    }
-    .eyebrow {
-      margin: 0 0 10px;
-      color: var(--cyan);
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 2px;
-    }
-    .hero h1 {
-      margin: 0;
-      font-size: clamp(30px, 5vw, 50px);
-      letter-spacing: .5px;
-      text-shadow: 0 0 28px rgba(0, 229, 255, .25);
-    }
-    .hero p:not(.eyebrow) {
-      max-width: 680px;
-      margin: 14px 0 0;
-      color: var(--text);
-      line-height: 1.75;
-    }
+    .hero p.lead { margin-bottom: 0; }
     .algorithm-note {
       min-width: 250px;
       padding: 14px 17px;
-      border: 1px solid var(--line);
+      border: 1px solid var(--club-line);
       border-radius: 12px;
-      background: rgba(8, 13, 30, .62);
-      color: var(--muted);
+      background: var(--club-surface-2);
+      color: var(--club-muted);
       font-size: 13px;
       line-height: 1.65;
     }
@@ -156,100 +58,88 @@
       grid-template-columns: 310px minmax(0, 1fr);
       gap: 22px;
     }
-    .panel {
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: var(--panel);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(12px);
-    }
     .controls { padding: 20px; }
     .controls h2, .visual-header h2 { margin: 0; font-size: 18px; }
     .control-group { margin-top: 18px; }
     .control-group label, .control-group legend {
       display: block;
       margin-bottom: 8px;
-      color: var(--muted);
+      color: var(--club-muted);
       font-size: 13px;
     }
     .control-group fieldset { margin: 0; padding: 0; border: 0; }
-    .field, select {
-      width: 100%;
-      height: 42px;
-      padding: 0 11px;
-      border: 1px solid rgba(115, 221, 255, .24);
-      border-radius: 9px;
-      background: rgba(2, 7, 18, .85);
-      color: #f6fbff;
-      outline: none;
-    }
-    .field:focus, select:focus {
-      border-color: var(--cyan);
-      box-shadow: 0 0 0 3px rgba(0, 229, 255, .11);
-    }
     .radio-row { display: flex; gap: 8px; }
     .radio-row label { flex: 1; margin: 0; }
     .radio-row input { position: absolute; opacity: 0; }
     .radio-row span {
       display: block;
       padding: 10px 8px;
-      border: 1px solid rgba(115, 221, 255, .22);
+      border: 1px solid var(--club-line);
       border-radius: 8px;
-      color: var(--muted);
+      color: var(--club-muted);
       font-size: 13px;
       text-align: center;
-      transition: .2s;
+      transition: all var(--club-dur, 200ms) var(--club-ease, ease);
     }
     .radio-row input:checked + span {
-      border-color: var(--cyan);
-      background: rgba(0, 229, 255, .1);
-      color: var(--cyan);
+      border-color: var(--club-accent);
+      background: var(--club-accent-soft);
+      color: var(--club-accent);
     }
-    .hint {
+    body.club-page .hint {
       margin: 7px 0 0;
-      color: var(--muted);
+      color: var(--club-muted);
       font-size: 12px;
       line-height: 1.55;
     }
-    .error {
+    /* .error 需带 body.club-page 前缀：club 的 body.club-page p 规则特异性更高，否则错误提示颜色会被覆盖 */
+    body.club-page .error {
       min-height: 18px;
       margin: 7px 0 0;
-      color: #ff8fcf;
+      color: var(--club-danger);
       font-size: 12px;
       line-height: 1.4;
     }
     .button-stack { display: grid; gap: 10px; margin-top: 18px; }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 42px;
-      padding: 9px 14px;
-      border: 1px solid var(--line);
-      border-radius: 9px;
-      background: rgba(9, 20, 42, .82);
-      color: #f6fbff;
-      font-size: 14px;
-      font-weight: 700;
-      transition: transform .18s, border-color .18s, background .18s, color .18s;
+    /* 操作锁定期（动画进行中）的按钮视觉：透明度 + 禁用态，结束后由 JS 移除 */
+    .button-stack.is-busy .btn { opacity: .55; cursor: progress; }
+    .button-stack.is-busy .btn:hover:not(:disabled) { transform: none; border-color: var(--line); color: inherit; }
+    /* renderActions 动态渲染的按钮不带 secondary 类（JS 不动）：主操作沿用 club 主按钮（裸 .btn），
+       普通操作（peek/front/search 等裸 .btn）与危险操作在这里补齐次级/危险外观；
+       hover 规则用 :not(.is-busy) 让位给上方的操作锁定抑制规则 */
+    body.club-page .button-stack .btn:not(.btn-primary):not(.btn-danger):not(.btn-warn):not(.secondary) {
+      border-color: var(--club-line-strong);
+      background-color: var(--club-surface-2);
+      background-image: var(--club-grad-surface);
+      color: var(--club-text-soft);
+      box-shadow: inset 0 1px 0 var(--club-highlight), 0 1px 2px rgba(0, 0, 0, 0.1);
     }
-    .btn:hover:not(:disabled) {
-      transform: translateY(-1px);
-      border-color: rgba(0, 229, 255, .62);
-      color: var(--cyan);
+    body.club-page .button-stack:not(.is-busy) .btn:not(.btn-primary):not(.btn-danger):not(.btn-warn):not(.secondary):hover:not(:disabled) {
+      border-color: var(--club-accent-line);
+      background-color: var(--club-accent-soft);
+      background-image: none;
+      color: var(--club-accent);
+      filter: none;
     }
-    .btn-primary {
-      border-color: rgba(0, 229, 255, .7);
-      background: linear-gradient(135deg, rgba(0, 229, 255, .22), rgba(124, 77, 255, .3));
-      color: #eaffff;
+    body.club-page .btn.btn-warn {
+      border-color: color-mix(in srgb, var(--club-warn) 45%, transparent);
+      background: var(--club-warn-soft);
+      color: var(--club-warn);
     }
-    .btn-warn {
-      border-color: rgba(255, 209, 102, .45);
-      color: var(--gold);
+    body.club-page .btn.btn-warn:hover {
+      border-color: color-mix(in srgb, var(--club-warn) 65%, transparent);
+      background: color-mix(in srgb, var(--club-warn) 16%, transparent);
+      color: var(--club-warn);
     }
-    .btn-danger {
-      border-color: rgba(255, 95, 200, .45);
-      color: var(--pink);
+    body.club-page .btn.btn-danger {
+      border-color: color-mix(in srgb, var(--club-danger) 45%, transparent);
+      background: var(--club-danger-soft);
+      color: var(--club-danger);
+    }
+    body.club-page .btn.btn-danger:hover {
+      border-color: color-mix(in srgb, var(--club-danger) 65%, transparent);
+      background: color-mix(in srgb, var(--club-danger) 16%, transparent);
+      color: var(--club-danger);
     }
 
     .visual { padding: 20px; min-width: 0; }
@@ -259,11 +149,11 @@
       justify-content: space-between;
       gap: 16px;
     }
-    .status {
+    body.club-page .status {
       padding: 6px 10px;
-      border: 1px solid rgba(0, 229, 255, .3);
+      border: 1px solid var(--club-accent-line);
       border-radius: 999px;
-      color: var(--cyan);
+      color: var(--club-accent);
       font-size: 12px;
       white-space: nowrap;
     }
@@ -326,7 +216,7 @@
       background: rgba(2, 7, 18, .35);
     }
     .stack-body:empty::after {
-      content: "空栈";
+      content: attr(data-empty);
       display: grid;
       place-items: center;
       flex: 1;
@@ -360,7 +250,7 @@
       overflow-x: auto;
     }
     .queue-body:empty::after {
-      content: "空队列";
+      content: attr(data-empty);
       display: block;
       width: 100%;
       color: var(--muted);
@@ -383,7 +273,7 @@
       box-sizing: border-box;
     }
     .list-frame:empty::after {
-      content: "空链表 · head → null";
+      content: attr(data-empty);
       display: block;
       width: 100%;
       color: var(--muted);
@@ -436,14 +326,14 @@
       color: #eaffff;
       font: 700 18px/1 ui-monospace, Consolas, monospace;
       box-shadow: 0 0 14px rgba(0, 229, 255, .2);
-      transition: transform .22s var(--ease-out), border-color .18s ease, background .18s ease, box-shadow .18s ease, opacity .18s ease;
+      transition: transform var(--club-dur, 200ms) var(--club-ease, ease), border-color var(--club-dur, 200ms) var(--club-ease, ease), background var(--club-dur, 200ms) var(--club-ease, ease), box-shadow var(--club-dur, 200ms) var(--club-ease, ease), opacity var(--club-dur, 200ms) var(--club-ease, ease);
     }
     .cell.list {
       min-width: 72px;
       border-radius: 10px;
     }
     .cell.enter {
-      animation: cell-enter .32s var(--ease-out);
+      animation: cell-enter var(--club-dur-slow, 320ms) var(--club-ease, ease);
     }
     .cell.exit {
       animation: cell-exit .28s ease-in forwards;
@@ -498,8 +388,9 @@
     .metric strong {
       display: block;
       margin-top: 4px;
-      color: #f6fbff;
-      font: 700 23px/1.15 ui-monospace, Consolas, monospace;
+      color: var(--club-text, #e8f1fb);
+      font: 700 23px/1.15 var(--club-mono, ui-monospace, Consolas, monospace);
+      font-variant-numeric: tabular-nums;
     }
     .legend {
       display: flex;
@@ -542,30 +433,35 @@
       border: 0;
     }
 
-    @media (max-width: 820px) {
+    /* —— 亮色补丁：theme.css 未覆盖的 lab 专属容器，避免暗色半透明底压在白底上 —— */
+    html[data-theme="light"] .stack-body,
+    html[data-theme="light"] .queue-body,
+    html[data-theme="light"] .list-frame {
+      background: #FFFFFF !important;
+      border-color: #E2E5EB !important;
+    }
+    html[data-theme="light"] .stack-cap {
+      border-color: rgba(194, 65, 12, .45) !important;
+      background: #FDF0EA !important;
+    }
+    html[data-theme="light"] .queue-ends { color: #C2410C !important; }
+    html[data-theme="light"] .list-null { border-color: #CDD2DB !important; }
+    html[data-theme="light"] .list-head-tag { border-color: rgba(138, 86, 0, .5) !important; }
+    html[data-theme="light"] .error { color: #B4233B !important; }
+
+    @media (max-width: 900px) {
       .lab-grid { grid-template-columns: 1fr; }
       .controls { order: 2; }
-      .hero { align-items: start; flex-direction: column; }
       .algorithm-note { min-width: 0; width: 100%; }
       .stage-wrap { min-height: 300px; }
     }
-    @media (max-width: 560px) {
-      .topbar { gap: 10px; padding: 12px 16px; }
-      .brand small { display: none; }
+    @media (max-width: 640px) {
       .member-identity { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
-      .back-link { padding: 8px; font-size: 12px; }
       .visual, .controls { padding: 15px; }
       .metrics { grid-template-columns: 1fr; }
       .visual-header { flex-direction: column; }
       .status { align-self: flex-start; }
       .cell { min-width: 52px; min-height: 48px; font-size: 16px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        scroll-behavior: auto !important;
-        animation-duration: .01ms !important;
-        transition-duration: .01ms !important;
-      }
     }
   </style>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
@@ -583,14 +479,16 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body>
+<body class="club-page">
   <header class="topbar">
-    <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页">
-      <span class="brand-mark">A</span>
-      <span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span>
-    </a>
-    <span class="member-identity" data-member-identity hidden></span>
-    <a class="back-link" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
+    <div class="topbar-inner">
+      <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页">
+        <span class="brand-mark">A</span>
+        <span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span>
+      </a>
+      <span class="member-identity" data-member-identity hidden></span>
+      <a class="back" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
+    </div>
   </header>
 
   <main>
@@ -598,7 +496,7 @@
       <div>
         <p class="eyebrow">DATA STRUCTURE LAB · V1</p>
         <h1 id="pageTitle" data-i18n="lab.ds.h1">数据结构可视化实验室</h1>
-        <p data-i18n="lab.ds.lead">亲手操作栈、队列与链表：观察 push/pop、enqueue/dequeue，以及头插、尾插与按值删除时节点与指针如何变化。</p>
+        <p class="lead" data-i18n="lab.ds.lead">亲手操作栈、队列与链表：观察 push/pop、enqueue/dequeue，以及头插、尾插与按值删除时节点与指针如何变化。</p>
       </div>
       <aside class="algorithm-note" id="structureNote">
         <b data-i18n="lab.ds.stack">栈 Stack</b>
@@ -621,7 +519,7 @@
 
         <div class="control-group" id="valueGroup">
           <label for="valueInput" data-i18n="lab.ds.valueLabel">操作数值</label>
-          <input class="field" id="valueInput" type="text" inputmode="numeric" placeholder="例如：7" maxlength="6" data-i18n-placeholder="lab.ds.valuePh" />
+          <input id="valueInput" type="text" inputmode="numeric" placeholder="例如：7" maxlength="6" data-i18n-placeholder="lab.ds.valuePh" />
           <p class="hint" data-i18n="lab.ds.valueHint">支持 -999 至 999 的整数。栈/队列用 push 与 enqueue；链表可头插或尾插。</p>
           <p class="error" id="inputError" role="alert" aria-live="polite"></p>
         </div>
@@ -636,13 +534,23 @@
           </fieldset>
         </div>
 
+        <div class="control-group">
+          <label for="speedSelect" data-i18n="lab.speed">速度</label>
+          <select id="speedSelect" class="speed-select" aria-label="动画速度">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+          </select>
+        </div>
+
         <div class="button-stack" id="actionButtons">
           <!-- filled by JS -->
         </div>
 
         <div class="button-stack" style="margin-top:12px">
-          <button class="btn btn-warn" type="button" id="seedButton" data-i18n="lab.ds.seed">填充示例数据</button>
-          <button class="btn" type="button" id="clearButton" data-i18n="lab.ds.clear">清空结构</button>
+          <button class="btn btn-warn secondary" type="button" id="seedButton" data-i18n="lab.ds.seed">填充示例数据</button>
+          <button class="btn secondary" type="button" id="clearButton" data-i18n="lab.ds.clear">清空结构</button>
         </div>
       </form>
 
@@ -673,7 +581,8 @@
           <span><i class="l-pointer"></i><span data-i18n="lab.ds.legPointer">头 / 尾指针</span></span>
         </div>
 
-        <div class="op-log" id="opLog" aria-live="polite" data-i18n="lab.ds.hintLog">提示：选择结构后，输入数值并执行插入或删除操作。</div>
+        <!-- 日志为动态渲染（i18n key + 变量），不能挂 data-i18n，否则 ClubI18n.apply 会覆盖 setLog 的内容 -->
+        <div class="op-log" id="opLog" aria-live="polite">提示：选择结构后，输入数值并执行插入或删除操作。</div>
       </section>
     </section>
   </main>
@@ -720,6 +629,12 @@
       let animating = false;
       let lastFocusIndex = -1;
       let lastMode = 'active';
+      // 状态/日志按「i18n key + 变量」保存，切语言时用 refreshTexts() 重放渲染
+      let lastStatus = { key: 'lab.common.ready', vars: null };
+      let lastLog = { key: 'lab.ds.hintLog', vars: null };
+      // 演示速度（0.5/1/2/4），四页共享 localStorage('lab-speed')
+      const SPEED_KEY = 'lab-speed';
+      let speed = 1;
 
       function parseValue() {
         const raw = ui.valueInput.value.trim();
@@ -734,13 +649,23 @@
         ui.inputError.textContent = '';
       }
 
-      function setStatus(text) {
+      function setStatus(key, vars) {
+        lastStatus = { key, vars: vars || null };
+        const text = ClubI18n.t(key, vars);
         ui.status.textContent = text;
         ui.announcement.textContent = text;
       }
 
-      function setLog(text) {
-        ui.opLog.textContent = text;
+      function setLog(key, vars) {
+        lastLog = { key, vars: vars || null };
+        ui.opLog.textContent = ClubI18n.t(key, vars);
+      }
+
+      function refreshTexts() {
+        const text = ClubI18n.t(lastStatus.key, lastStatus.vars);
+        ui.status.textContent = text;
+        ui.announcement.textContent = text;
+        ui.opLog.textContent = ClubI18n.t(lastLog.key, lastLog.vars);
       }
 
       function bumpOps() {
@@ -759,7 +684,22 @@
 
       function wait(ms) {
         const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        return new Promise((resolve) => setTimeout(resolve, reduce ? 0 : ms));
+        const scaled = speed > 0 ? ms / speed : ms;
+        return new Promise((resolve) => setTimeout(resolve, reduce ? 0 : scaled));
+      }
+
+      function initSpeed() {
+        let saved = 1;
+        try { saved = parseFloat(localStorage.getItem(SPEED_KEY)); } catch (_error) { /* 忽略存储不可用 */ }
+        if (saved !== 0.5 && saved !== 1 && saved !== 2 && saved !== 4) saved = 1;
+        speed = saved;
+        const sel = el('speedSelect');
+        if (!sel) return;
+        sel.value = String(saved);
+        sel.addEventListener('change', () => {
+          speed = parseFloat(sel.value) || 1;
+          try { localStorage.setItem(SPEED_KEY, sel.value); } catch (_error) { /* 私密模式等场景忽略 */ }
+        });
       }
 
       function renderActions() {
@@ -849,10 +789,11 @@
         if (type === 'stack') {
           ui.stage.innerHTML = `
             <div class="stack-frame">
-              <div class="stack-cap">TOP · 开放端</div>
+              <div class="stack-cap">${ClubI18n.t('lab.ds.labelTop')}</div>
               <div class="stack-body" id="stackBody"></div>
             </div>`;
           const body = el('stackBody');
+          body.dataset.empty = ClubI18n.t('lab.ds.emptyStack');
           if (items.length) {
             body.innerHTML = items.map((value, index) => {
               const cls = [
@@ -867,10 +808,11 @@
         } else if (type === 'queue') {
           ui.stage.innerHTML = `
             <div class="queue-frame">
-              <div class="queue-ends"><span data-i18n="labView.front">FRONT · 出队端</span><span data-i18n="labView.rear">REAR · 入队端</span></div>
+              <div class="queue-ends"><span>${ClubI18n.t('lab.ds.labelFront')}</span><span>${ClubI18n.t('lab.ds.labelRear')}</span></div>
               <div class="queue-body" id="queueBody"></div>
             </div>`;
           const body = el('queueBody');
+          body.dataset.empty = ClubI18n.t('lab.ds.emptyQueue');
           if (items.length) {
             body.innerHTML = items.map((value, index) => {
               const cls = [
@@ -885,7 +827,7 @@
           }
         } else {
           if (!items.length) {
-            ui.stage.innerHTML = `<div class="list-frame"></div>`;
+            ui.stage.innerHTML = `<div class="list-frame" data-empty="${ClubI18n.t('lab.ds.emptyList')}"></div>`;
           } else {
             const parts = [`<div class="list-frame"><span class="list-head-tag">head</span>`];
             items.forEach((value, index) => {
@@ -915,10 +857,14 @@
       async function withLock(task) {
         if (animating) return;
         animating = true;
+        ui.actionButtons.classList.add('is-busy');
+        ui.actionButtons.setAttribute('aria-busy', 'true');
         try {
           await task();
         } finally {
           animating = false;
+          ui.actionButtons.classList.remove('is-busy');
+          ui.actionButtons.removeAttribute('aria-busy');
         }
       }
 
@@ -927,17 +873,17 @@
           clearError();
           let value;
           try { value = parseValue(); }
-          catch (err) { ui.inputError.textContent = err.message; setStatus(ClubI18n.t('lab.common.inputError')); return; }
+          catch (err) { ui.inputError.textContent = err.message; setStatus('lab.common.inputError'); return; }
           if (items.length >= 12) {
             ui.inputError.textContent = ClubI18n.t('lab.ds.errStackCap');
-            setStatus(ClubI18n.t('lab.ds.atCapacity'));
+            setStatus('lab.ds.atCapacity');
             return;
           }
           items.push(value);
           bumpOps();
           render({ focusIndex: items.length - 1, mode: 'active', enterIndex: items.length - 1 });
-          setStatus(`Push ${value} · 栈顶更新`);
-          setLog(`push(${value}) → 栈顶变为 ${value}；当前栈（底→顶）：[${items.join(', ')}]`);
+          setStatus('lab.ds.pushOk', { v: value });
+          setLog('lab.ds.logPush', { v: value, items: items.join(', ') });
           await wait(280);
           render({ focusIndex: items.length - 1, mode: 'pointer' });
         });
@@ -947,22 +893,22 @@
         await withLock(async () => {
           clearError();
           if (!items.length) {
-            setStatus(ClubI18n.t('lab.ds.emptyStackPop'));
-            setLog(ClubI18n.t('lab.ds.popFail'));
+            setStatus('lab.ds.emptyStackPop');
+            setLog('lab.ds.popFail');
             return;
           }
           const topIndex = items.length - 1;
           const value = items[topIndex];
           render({ focusIndex: topIndex, mode: 'highlight' });
-          setStatus(`即将 Pop ${value}`);
+          setStatus('lab.ds.aboutPop', { v: value });
           await wait(260);
           render({ focusIndex: topIndex, mode: 'highlight', exitIndex: topIndex });
           await wait(220);
           items.pop();
           bumpOps();
           render({ focusIndex: items.length ? items.length - 1 : -1, mode: 'pointer' });
-          setStatus(items.length ? `Pop ${value} · 新栈顶 ${items[items.length - 1]}` : `Pop ${value} · 栈已空`);
-          setLog(`pop() → 返回 ${value}；当前栈（底→顶）：[${items.join(', ') || ClubI18n.t('lab.ds.empty')}]`);
+          setStatus(items.length ? 'lab.ds.popOk' : 'lab.ds.popEmpty', items.length ? { v: value, top: items[items.length - 1] } : { v: value });
+          setLog('lab.ds.logPop', { v: value, items: items.join(', ') || ClubI18n.t('lab.ds.empty') });
         });
       }
 
@@ -970,16 +916,16 @@
         await withLock(async () => {
           clearError();
           if (!items.length) {
-            setStatus(ClubI18n.t('lab.ds.emptyStackTop'));
-            setLog(ClubI18n.t('lab.ds.peekFail'));
+            setStatus('lab.ds.emptyStackTop');
+            setLog('lab.ds.peekFail');
             return;
           }
           const topIndex = items.length - 1;
           const value = items[topIndex];
           bumpOps();
           render({ focusIndex: topIndex, mode: 'active' });
-          setStatus(`Peek · 栈顶为 ${value}`);
-          setLog(`peek() → ${value}（不删除）；当前栈（底→顶）：[${items.join(', ')}]`);
+          setStatus('lab.ds.peekOk', { v: value });
+          setLog('lab.ds.logPeek', { v: value, items: items.join(', ') });
           await wait(420);
           render({ focusIndex: topIndex, mode: 'pointer' });
         });
@@ -990,17 +936,17 @@
           clearError();
           let value;
           try { value = parseValue(); }
-          catch (err) { ui.inputError.textContent = err.message; setStatus(ClubI18n.t('lab.common.inputError')); return; }
+          catch (err) { ui.inputError.textContent = err.message; setStatus('lab.common.inputError'); return; }
           if (items.length >= 12) {
             ui.inputError.textContent = ClubI18n.t('lab.ds.errQueueCap');
-            setStatus(ClubI18n.t('lab.ds.atCapacity'));
+            setStatus('lab.ds.atCapacity');
             return;
           }
           items.push(value);
           bumpOps();
           render({ focusIndex: items.length - 1, mode: 'active', enterIndex: items.length - 1 });
-          setStatus(`Enqueue ${value} · 进入队尾`);
-          setLog(`enqueue(${value}) → 队尾更新；当前队列（前→后）：[${items.join(', ')}]`);
+          setStatus('lab.ds.enqOk', { v: value });
+          setLog('lab.ds.logEnqueue', { v: value, items: items.join(', ') });
           await wait(280);
           render({ focusIndex: items.length - 1, mode: 'pointer' });
         });
@@ -1010,21 +956,21 @@
         await withLock(async () => {
           clearError();
           if (!items.length) {
-            setStatus(ClubI18n.t('lab.ds.emptyQueueDeq'));
-            setLog(ClubI18n.t('lab.ds.deqFail'));
+            setStatus('lab.ds.emptyQueueDeq');
+            setLog('lab.ds.deqFail');
             return;
           }
           const value = items[0];
           render({ focusIndex: 0, mode: 'highlight' });
-          setStatus(`即将 Dequeue ${value}`);
+          setStatus('lab.ds.aboutDeq', { v: value });
           await wait(260);
           render({ focusIndex: 0, mode: 'highlight', exitIndex: 0 });
           await wait(220);
           items.shift();
           bumpOps();
           render({ focusIndex: items.length ? 0 : -1, mode: 'pointer' });
-          setStatus(items.length ? `Dequeue ${value} · 新队首 ${items[0]}` : `Dequeue ${value} · 队列已空`);
-          setLog(`dequeue() → 返回 ${value}；当前队列（前→后）：[${items.join(', ') || ClubI18n.t('lab.ds.empty')}]`);
+          setStatus(items.length ? 'lab.ds.deqOk' : 'lab.ds.deqEmpty', items.length ? { v: value, front: items[0] } : { v: value });
+          setLog('lab.ds.logDequeue', { v: value, items: items.join(', ') || ClubI18n.t('lab.ds.empty') });
         });
       }
 
@@ -1032,15 +978,15 @@
         await withLock(async () => {
           clearError();
           if (!items.length) {
-            setStatus(ClubI18n.t('lab.ds.emptyQueueFront'));
-            setLog(ClubI18n.t('lab.ds.frontFail'));
+            setStatus('lab.ds.emptyQueueFront');
+            setLog('lab.ds.frontFail');
             return;
           }
           const value = items[0];
           bumpOps();
           render({ focusIndex: 0, mode: 'active' });
-          setStatus(`Front · 队首为 ${value}`);
-          setLog(`front() → ${value}（不删除）；当前队列（前→后）：[${items.join(', ')}]`);
+          setStatus('lab.ds.frontOk', { v: value });
+          setLog('lab.ds.logFront', { v: value, items: items.join(', ') });
           await wait(420);
           render({ focusIndex: 0, mode: 'pointer' });
         });
@@ -1051,10 +997,10 @@
           clearError();
           let value;
           try { value = parseValue(); }
-          catch (err) { ui.inputError.textContent = err.message; setStatus(ClubI18n.t('lab.common.inputError')); return; }
+          catch (err) { ui.inputError.textContent = err.message; setStatus('lab.common.inputError'); return; }
           if (items.length >= 10) {
             ui.inputError.textContent = ClubI18n.t('lab.ds.errListCap');
-            setStatus(ClubI18n.t('lab.ds.atCapacity'));
+            setStatus('lab.ds.atCapacity');
             return;
           }
           const mode = listInsertMode();
@@ -1063,8 +1009,8 @@
           const focus = mode === 'head' ? 0 : items.length - 1;
           bumpOps();
           render({ focusIndex: focus, mode: 'active', enterIndex: focus });
-          setStatus(mode === 'head' ? `头插 ${value}` : `尾插 ${value}`);
-          setLog(`${mode === 'head' ? 'insertHead' : 'insertTail'}(${value}) → 链表：[${items.join(' → ')}] → null`);
+          setStatus(mode === 'head' ? 'lab.ds.headIns' : 'lab.ds.tailIns', { v: value });
+          setLog('lab.ds.logInsert', { op: mode === 'head' ? 'insertHead' : 'insertTail', v: value, list: items.join(' → ') });
           await wait(300);
           render({ focusIndex: focus, mode: 'pointer' });
         });
@@ -1075,38 +1021,38 @@
           clearError();
           let value;
           try { value = parseValue(); }
-          catch (err) { ui.inputError.textContent = err.message; setStatus(ClubI18n.t('lab.common.inputError')); return; }
+          catch (err) { ui.inputError.textContent = err.message; setStatus('lab.common.inputError'); return; }
           if (!items.length) {
-            setStatus(ClubI18n.t('lab.ds.emptyListDel'));
-            setLog(ClubI18n.t('lab.ds.delEmpty'));
+            setStatus('lab.ds.emptyListDel');
+            setLog('lab.ds.delEmpty');
             return;
           }
 
           // walk nodes one by one
           for (let i = 0; i < items.length; i += 1) {
             render({ focusIndex: i, mode: 'active' });
-            setStatus(`查找中 · 检查节点 ${items[i]}`);
-            setLog(`search → 比较 n${i}.value (${items[i]}) 与目标 ${value}`);
+            setStatus('lab.ds.searching', { v: items[i] });
+            setLog('lab.ds.searchCmp', { i, cur: items[i], v: value });
             await wait(320);
             if (items[i] === value) {
               render({ focusIndex: i, mode: 'highlight' });
-              setStatus(`命中 · 准备删除 ${value}`);
+              setStatus('lab.ds.delHitPrep', { v: value });
               await wait(240);
               render({ focusIndex: i, mode: 'highlight', exitIndex: i });
               await wait(220);
               items.splice(i, 1);
               bumpOps();
               render({ focusIndex: items.length ? Math.min(i, items.length - 1) : -1, mode: 'pointer' });
-              setStatus(`已删除 ${value}`);
-              setLog(`delete(${value}) 成功 · 新链表：[${items.join(' → ') || ClubI18n.t('lab.ds.empty')}] → null`);
+              setStatus('lab.ds.delOk', { v: value });
+              setLog('lab.ds.logDeleteOk', { v: value, list: items.join(' → ') || ClubI18n.t('lab.ds.empty') });
               return;
             }
           }
 
           bumpOps();
           render({ focusIndex: -1, mode: 'active' });
-          setStatus(`未找到 ${value}`);
-          setLog(`delete(${value}) 失败：链表中不存在该值。`);
+          setStatus('lab.ds.delMiss', { v: value });
+          setLog('lab.ds.delNoValue', { v: value });
         });
       }
 
@@ -1115,31 +1061,31 @@
           clearError();
           let value;
           try { value = parseValue(); }
-          catch (err) { ui.inputError.textContent = err.message; setStatus(ClubI18n.t('lab.common.inputError')); return; }
+          catch (err) { ui.inputError.textContent = err.message; setStatus('lab.common.inputError'); return; }
           if (!items.length) {
-            setStatus(ClubI18n.t('lab.ds.emptyListSearch'));
-            setLog(ClubI18n.t('lab.ds.searchEmpty'));
+            setStatus('lab.ds.emptyListSearch');
+            setLog('lab.ds.searchEmpty');
             return;
           }
 
           for (let i = 0; i < items.length; i += 1) {
             render({ focusIndex: i, mode: 'active' });
-            setStatus(`查找中 · 检查节点 ${items[i]}`);
-            setLog(`search(${value}) → 比较 n${i}.value = ${items[i]}`);
+            setStatus('lab.ds.searching', { v: items[i] });
+            setLog('lab.ds.searchCmp2', { v: value, i, cur: items[i] });
             await wait(320);
             if (items[i] === value) {
               bumpOps();
               render({ focusIndex: i, mode: 'pointer' });
-              setStatus(`找到 ${value} · 下标 ${i}`);
-              setLog(`search(${value}) 命中：节点 n${i}`);
+              setStatus('lab.ds.foundAt', { v: value, i });
+              setLog('lab.ds.searchHit', { v: value, i });
               return;
             }
           }
 
           bumpOps();
           render({ focusIndex: -1, mode: 'active' });
-          setStatus(`未找到 ${value}`);
-          setLog(`search(${value}) 未命中。`);
+          setStatus('lab.ds.delMiss', { v: value });
+          setLog('lab.ds.searchMiss', { v: value });
         });
       }
 
@@ -1152,12 +1098,12 @@
         opCount = 0;
         ui.opCount.textContent = '0';
         render({ focusIndex: type === 'stack' ? items.length - 1 : 0, mode: 'pointer' });
-        setStatus(ClubI18n.t('lab.ds.seeded'));
+        setStatus('lab.ds.seeded');
         setLog(type === 'stack'
-          ? `示例栈（底→顶）：[${items.join(', ')}]`
+          ? 'lab.ds.logSeedStack'
           : type === 'queue'
-            ? `示例队列（前→后）：[${items.join(', ')}]`
-            : `示例链表：[${items.join(' → ')}] → null`);
+            ? 'lab.ds.logSeedQueue'
+            : 'lab.ds.logSeedList', { items: type === 'list' ? items.join(' → ') : items.join(', ') });
       }
 
       function clearStructure() {
@@ -1166,8 +1112,8 @@
         opCount = 0;
         ui.opCount.textContent = '0';
         render({ focusIndex: -1, mode: 'active' });
-        setStatus(ClubI18n.t('lab.ds.cleared'));
-        setLog(ClubI18n.t('lab.ds.clearedLong'));
+        setStatus('lab.ds.cleared');
+        setLog('lab.ds.clearedLong');
       }
 
       function syncStructureUI() {
@@ -1180,10 +1126,20 @@
         ui.opCount.textContent = '0';
         clearError();
         render({ focusIndex: -1, mode: 'active' });
-        setStatus(ClubI18n.t('lab.ds.readyWait'));
-        setLog(`已切换到${name}。输入数值后执行对应操作。`);
+        setStatus('lab.ds.readyWait');
+        // 修复：此前引用未定义变量 name，实际输出“已切换到。…”；现取当前结构名并走 i18n
+        const [name] = getDescriptions()[type];
+        setLog('lab.ds.switched', { name });
       }
 
+      function refreshStaticTexts() {
+        refreshNote();
+        renderActions();
+        render();
+        refreshTexts();
+      }
+
+      initSpeed();
       ui.structure.addEventListener('change', syncStructureUI);
       ui.seed.addEventListener('click', seedData);
       ui.clear.addEventListener('click', clearStructure);
@@ -1200,22 +1156,14 @@
       syncStructureUI();
       seedData();
       window.addEventListener('club:langchange', () => {
-        refreshNote();
-        renderActions();
-        // re-render stage labels/metrics via switchStructure-like refresh
-        const type = structure();
-        ui.stageLabel.textContent = stageTipsOf(type);
-        ui.visualTitle.textContent = titleOf(type);
-        if (type === 'stack') { ui.metricALabel.textContent = ClubI18n.t('lab.ds.countStack'); ui.metricBLabel.textContent = ClubI18n.t('lab.ds.topStack'); }
-        else if (type === 'queue') { ui.metricALabel.textContent = ClubI18n.t('lab.ds.countQueue'); ui.metricBLabel.textContent = ClubI18n.t('lab.ds.frontQueue'); }
-        else { ui.metricALabel.textContent = ClubI18n.t('lab.ds.countList'); ui.metricBLabel.textContent = ClubI18n.t('lab.ds.headList'); }
-        if (typeof render === 'function') render();
+        refreshStaticTexts();
         if (typeof ClubI18n?.apply === 'function') ClubI18n.apply(document);
       });
+      // i18n boot 晚于内联脚本，初始化后再兜底刷一次（AGENTS 约定）
+      setTimeout(refreshStaticTexts, 0);
 
     })();
   </script>
-<script>!function(){try{var t=document.querySelector('.topbar');if(t&&!document.getElementById('langSwitcherHost')){var h=document.createElement('div');h.id='langSwitcherHost';t.appendChild(h);}if(window.ClubI18n)window.ClubI18n.mountSwitcher(document.getElementById('langSwitcherHost'));if(window.ClubTheme&&typeof window.ClubTheme.autoMountSwitcher==='function')window.ClubTheme.autoMountSwitcher();}catch(e){}}();</script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

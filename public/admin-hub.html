@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.adminHub.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -10,16 +10,29 @@
   <title>管理员总览 · 算法社</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script></head>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>
+  <style>
+    /* 本页专用：内联样式收敛后的版式类，全部使用 club 令牌，亮暗主题自适应 */
+    body.club-page .list-gap { margin-top: 16px; }
+    body.club-page .tools-head { margin: 26px 0 12px; }
+    body.club-page .label-spaced { display: block; margin-top: 12px; }
+    body.club-page .label-group { margin-bottom: 8px; }
+    body.club-page .btn-block { margin-top: 12px; width: 100%; }
+    body.club-page .btn-block-gap { margin-top: 8px; width: 100%; }
+    body.club-page .panel-divider { margin: 22px 0 18px; border: 0; border-top: 1px solid var(--club-line); }
+    /* 管理入口卡片：描述行数不一，统一两行截断保持卡片等高节奏 */
+    body.club-page #entryGrid .card p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  </style>
+</head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Admin Hub</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
   <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div>
   <main>
-    <section id="gate" class="panel gate"><div><strong data-i18n="admin.loginFirst">请先登录管理账号</strong><p data-i18n="admin.gateLead">管理员总览对超管，以及被授予任一管理权限的账号开放。</p><p id="fileLoginHint" class="hint" hidden data-i18n="admin.fileLoginHint">当前用本地文件（file://）打开。浏览器会按来源隔离登录态，请在本页打开的个人中心里登录一次，之后各模块即可复用。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
-    <section id="denied" class="panel denied hidden"><div><strong data-i18n="admin.noPerm">无管理权限</strong><p data-i18n="admin.deniedLead">当前账号没有可管理的模块。请联系现任超管开通对应权限。</p><a class="button" href="member-center.html" data-i18n="common.backMember">返回个人中心</a></div></section>
+    <section id="gate" class="panel gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.loginFirst">请先登录管理账号</strong><p data-i18n="admin.gateLead">管理员总览对超管，以及被授予任一管理权限的账号开放。</p><p id="fileLoginHint" class="hint" hidden data-i18n="admin.fileLoginHint">当前用本地文件（file://）打开。浏览器会按来源隔离登录态，请在本页打开的个人中心里登录一次，之后各模块即可复用。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+    <section id="denied" class="panel denied hidden"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.noPerm">无管理权限</strong><p data-i18n="admin.deniedLead">当前账号没有可管理的模块。请联系现任超管开通对应权限。</p><a class="button" href="member-center.html" data-i18n="common.backMember">返回个人中心</a></div></section>
     <div id="content" class="hidden">
       <section class="club-page-head">
         <div>
@@ -54,7 +67,7 @@
       </section>
 
       <section id="superToolsSection">
-        <div class="section-head" style="margin:26px 0 12px">
+        <div class="section-head tools-head">
           <div>
             <h2 data-i18n="admin.superToolsTitle">超管工具</h2>
             <p class="intro" data-i18n="admin.superToolsIntro">账号、权限与站点配置集中在这里，按需切换即可，不再一次铺满整页。</p>
@@ -89,7 +102,7 @@
           <button class="button" type="submit" data-i18n="admin.promoteSuper">升级为超管</button>
         </form>
         <p class="message" id="superAdminsMessage" role="status"></p>
-        <div class="table-wrap" id="superAdminsList" style="margin-top:16px"><div class="empty loading" data-i18n="admin.loadingSuper">正在读取超管名单…</div></div>
+        <div class="table-wrap list-gap" id="superAdminsList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="admin.loadingSuper">正在读取超管名单…</span></div>
       </section>
 
       <section class="panel section" id="permissionsSection">
@@ -103,11 +116,11 @@
           <div>
             <label class="label" for="permUsername" data-i18n="admin.username">账号名</label>
             <input class="input" id="permUsername" maxlength="40" required placeholder="例如 aabbcc" data-i18n-placeholder="admin.phUsername">
-            <label class="label" for="permNote" style="display:block;margin-top:12px" data-i18n="admin.noteOptional">备注（可选）</label>
+            <label class="label label-spaced" for="permNote" data-i18n="admin.noteOptional">备注（可选）</label>
             <input class="input" id="permNote" maxlength="200" placeholder="例如：负责签到和活动" data-i18n-placeholder="admin.phPermNote">
           </div>
           <div>
-            <div class="label" style="margin-bottom:8px" data-i18n="admin.permChecksTitle">可下放权限</div>
+            <div class="label label-group" data-i18n="admin.permChecksTitle">可下放权限</div>
             <div class="checks">
               <label><input type="checkbox" id="permCheckin"> <span data-i18n="admin.permCheckin">签到管理</span></label>
               <label><input type="checkbox" id="permPoints"> <span data-i18n="admin.permPoints">积分管理</span></label>
@@ -118,11 +131,11 @@
               <label><input type="checkbox" id="permMembers"> <span data-i18n="admin.permMembers">成员展示</span></label>
               <label><input type="checkbox" id="permJoin"> <span data-i18n="admin.permJoin">报名管理</span></label>
             </div>
-            <button class="button" type="submit" style="margin-top:12px;width:100%" data-i18n="admin.savePerm">保存权限</button>
+            <button class="button btn-block" type="submit" data-i18n="admin.savePerm">保存权限</button>
           </div>
         </form>
         <p class="message" id="permissionsMessage" role="status"></p>
-        <div class="table-wrap" id="permissionsList" style="margin-top:16px"><div class="empty loading" data-i18n="admin.loadingPerm">正在读取权限列表…</div></div>
+        <div class="table-wrap list-gap" id="permissionsList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="admin.loadingPerm">正在读取权限列表…</span></div>
       </section>
 
       <section class="panel section" id="siteServiceSection">
@@ -189,7 +202,7 @@
           <div class="actions"><button class="button" type="submit" data-i18n="admin.appmonitorSaveRelease">保存版本</button><button class="button secondary" type="button" id="appMonitorReleaseClear" data-i18n="common.clearForm">清空表单</button></div>
         </form>
         <p class="message" id="appMonitorReleaseMessage" role="status"></p>
-        <div class="table-wrap" id="appMonitorReleasesList" style="margin-top:16px"></div>
+        <div class="table-wrap list-gap" id="appMonitorReleasesList"></div>
       </section>
 
       <section class="panel section" id="resetsSection">
@@ -199,11 +212,11 @@
             <p class="intro" data-i18n="admin.resetsIntro">社员提交申请后，超管生成与账号唯一对应的秘钥。秘钥自生成起 24 小时内有效，仅显示一次，请线下告知申请者。</p>
           </div>
         </div>
-        <div class="table-wrap" id="resetsList"><div class="empty loading" data-i18n="admin.loadingResets">正在读取重置申请…</div></div>
+        <div class="table-wrap" id="resetsList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="admin.loadingResets">正在读取重置申请…</span></div>
         <div class="secret-box" id="secretBox"></div>
         <p class="message" id="resetsMessage" role="status"></p>
 
-        <hr style="margin:22px 0 18px;border:0;border-top:1px solid var(--club-line)">
+        <hr class="panel-divider">
         <div class="section-head">
           <div>
             <h2 data-i18n="admin.directTitle">直接修改账号密码</h2>
@@ -236,20 +249,20 @@
           <div>
             <label class="label" for="bindingUsername" data-i18n="admin.loginAccount">登录账号</label>
             <input class="input" id="bindingUsername" maxlength="40" required placeholder="例如 aabbcc" readonly data-i18n-placeholder="admin.phUsername">
-            <label class="label" for="bindingMemberName" style="display:block;margin-top:12px" data-i18n="admin.chineseName">中文姓名</label>
+            <label class="label label-spaced" for="bindingMemberName" data-i18n="admin.chineseName">中文姓名</label>
             <input class="input" id="bindingMemberName" maxlength="20" required placeholder="例如 张三" pattern="[\u4e00-\u9fa5]{2,20}" data-i18n-placeholder="admin.phName">
-            <label class="label" for="bindingMemberClass" style="display:block;margin-top:12px" data-i18n="admin.className">班级</label>
+            <label class="label label-spaced" for="bindingMemberClass" data-i18n="admin.className">班级</label>
             <input class="input" id="bindingMemberClass" maxlength="40" required placeholder="例如 计科 2401" data-i18n-placeholder="admin.phClass">
           </div>
           <div>
-            <div class="label" style="margin-bottom:8px" data-i18n="admin.editHintTitle">编辑说明</div>
+            <div class="label label-group" data-i18n="admin.editHintTitle">编辑说明</div>
             <p class="intro" id="bindingFormHint" data-i18n="admin.bindingHint">点击下方列表中的「编辑」载入账号后，可修改姓名与班级并保存。姓名需为 2–20 个连续中文字符。</p>
-            <button class="button" type="submit" style="margin-top:12px;width:100%" data-i18n="admin.saveBinding">保存绑定</button>
-            <button class="button secondary" type="button" id="bindingFormClear" style="margin-top:8px;width:100%" data-i18n="common.clearForm">清空表单</button>
+            <button class="button btn-block" type="submit" data-i18n="admin.saveBinding">保存绑定</button>
+            <button class="button secondary btn-block-gap" type="button" id="bindingFormClear" data-i18n="common.clearForm">清空表单</button>
           </div>
         </form>
         <p class="message" id="bindingsMessage" role="status"></p>
-        <div class="table-wrap" id="bindingsList" style="margin-top:16px"><div class="empty loading" data-i18n="admin.loadingBindings">正在读取绑定资料…</div></div>
+        <div class="table-wrap list-gap" id="bindingsList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="admin.loadingBindings">正在读取绑定资料…</span></div>
       </section>
     </div>
   </main>
@@ -259,6 +272,29 @@
     const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const $ = id => document.getElementById(id);
+    // 页内新增文案（空态提示）：在 i18n boot 之后并入词典（幂等），与 member-checkin 相同约定。
+    const ADMIN_HUB_PAGE_DICT = {
+      zh: { admin: {
+        emptyBindingsHint: '有新账号注册后会自动出现在这里；未绑定姓名的账号显示「未绑定」。',
+        emptyResetsHint: '社员在「重置密码」页提交申请后会出现在这里。',
+        emptySuperHint: '第一位超管由数据库初始化；后续可在上方把其它账号升级为超管。',
+        emptyPermHint: '用上方「权限下放」表单为账号开启第一个权限。',
+        appmonitorNoReleasesHint: '在上方表单保存第一个版本后会显示在这里。',
+        noEntriesHint: '获得任一管理权限后，对应入口会显示在这里。'
+      } },
+      en: { admin: {
+        emptyBindingsHint: 'Newly registered accounts appear here automatically; unbound ones show "Unbound".',
+        emptyResetsHint: 'Requests submitted from the Password Reset page appear here.',
+        emptySuperHint: 'The first super admin is seeded in the database; promote more accounts above.',
+        emptyPermHint: 'Use the Permissions form above to grant the first permission.',
+        appmonitorNoReleasesHint: 'Save the first release with the form above.',
+        noEntriesHint: 'Entries appear here once your account has any admin permission.'
+      } }
+    };
+    function mergeAdminHubPageDict() {
+      if (window.ClubI18n && typeof ClubI18n.mergeDict === 'function') ClubI18n.mergeDict(ADMIN_HUB_PAGE_DICT);
+    }
+    document.addEventListener('DOMContentLoaded', mergeAdminHubPageDict);
     let currentSession = null;
     // file:// 下浏览器按 origin 隔离登录态：提示用户在本页登录一次，
     // 而不是让管理请求静默失败后显示一堆「请求失败」。
@@ -364,7 +400,7 @@
     function clearAppMonitorReleaseForm() { $('appMonitorReleaseForm').reset(); $('appMonitorReleaseId').value = ''; $('appMonitorReleaseDate').value = new Date().toISOString().slice(0, 10); }
     function renderAppMonitorReleases(releases) {
       appMonitorReleases = Array.isArray(releases) ? releases : [];
-      $('appMonitorReleasesList').innerHTML = appMonitorReleases.length ? `<table><thead><tr><th>${escapeHtml(t('admin.appmonitorVersion'))}</th><th>${escapeHtml(t('admin.appmonitorDate'))}</th><th>${escapeHtml(t('admin.appmonitorDownloadUrl'))}</th><th>${escapeHtml(t('admin.actions'))}</th></tr></thead><tbody>${appMonitorReleases.map(item => `<tr><td>${escapeHtml(item.version)}</td><td>${escapeHtml(item.release_date)}</td><td><a href="${escapeHtml(item.download_url)}" target="_blank" rel="noopener">${escapeHtml(t('admin.openLink'))}</a></td><td><button class="button secondary" type="button" data-appmonitor-edit="${escapeHtml(item.id)}">${escapeHtml(t('common.edit'))}</button> <button class="button danger" type="button" data-appmonitor-delete="${escapeHtml(item.id)}">${escapeHtml(t('common.delete'))}</button></td></tr>`).join('')}</tbody></table>` : `<div class="empty">${escapeHtml(t('admin.appmonitorNoReleases'))}</div>`;
+      $('appMonitorReleasesList').innerHTML = appMonitorReleases.length ? `<table class="table"><thead><tr><th>${escapeHtml(t('admin.appmonitorVersion'))}</th><th>${escapeHtml(t('admin.appmonitorDate'))}</th><th>${escapeHtml(t('admin.appmonitorDownloadUrl'))}</th><th>${escapeHtml(t('admin.actions'))}</th></tr></thead><tbody>${appMonitorReleases.map(item => `<tr><td>${escapeHtml(item.version)}</td><td>${escapeHtml(item.release_date)}</td><td><a href="${escapeHtml(item.download_url)}" target="_blank" rel="noopener">${escapeHtml(t('admin.openLink'))}</a></td><td><button class="button secondary" type="button" data-appmonitor-edit="${escapeHtml(item.id)}">${escapeHtml(t('common.edit'))}</button> <button class="button danger" type="button" data-appmonitor-delete="${escapeHtml(item.id)}">${escapeHtml(t('common.delete'))}</button></td></tr>`).join('')}</tbody></table>` : `<div class="club-empty"><strong>${escapeHtml(t('admin.appmonitorNoReleases'))}</strong><span>${escapeHtml(t('admin.appmonitorNoReleasesHint'))}</span></div>`;
       document.querySelectorAll('[data-appmonitor-edit]').forEach(button => button.onclick = () => { const item = appMonitorReleases.find(entry => entry.id === button.dataset.appmonitorEdit); if (!item) return; $('appMonitorReleaseId').value = item.id; $('appMonitorVersion').value = item.version || ''; $('appMonitorReleaseDate').value = item.release_date || ''; $('appMonitorIntroZh').value = item.intro_zh || ''; $('appMonitorIntroEn').value = item.intro_en || ''; $('appMonitorDownloadUrl').value = item.download_url || ''; window.scrollTo({ top: $('appMonitorReleasesSection').offsetTop - 12, behavior: 'smooth' }); });
       document.querySelectorAll('[data-appmonitor-delete]').forEach(button => button.onclick = async () => { if (!(await ClubCommon.confirm({ message: t('admin.appmonitorDeleteConfirm') }))) return; try { await call('admin_appmonitor_releases_delete', { id: button.dataset.appmonitorDelete }); setMessage($('appMonitorReleaseMessage'), t('admin.appmonitorDeleted'), 'success'); await refreshAppMonitorReleases(); } catch (error) { setMessage($('appMonitorReleaseMessage'), error.message, 'error'); } });
     }
@@ -396,6 +432,8 @@
     $('errorPageCode').addEventListener('change', () => fillErrorPageForm($('errorPageCode').value));
     $('errorPageForm').addEventListener('submit', async event => {
       event.preventDefault();
+      const submitButton = event.currentTarget.querySelector('button[type="submit"]');
+      ClubCommon.setBusy(submitButton, true);
       setMessage($('errorPageMessage'), t('admin.siteServiceSaving'));
       try {
         // 链接只允许站内相对路径或 http(s)，与服务端渲染规则保持一致。
@@ -416,6 +454,8 @@
         await refreshErrorPages();
       } catch (error) {
         setMessage($('errorPageMessage'), error.message, 'error');
+      } finally {
+        ClubCommon.setBusy(submitButton, false);
       }
     });
     $('errorPageReset').addEventListener('click', async () => {
@@ -437,7 +477,8 @@
       if (!value) return '-';
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return '-';
-      return date.toLocaleString('zh-CN', { hour12: false });
+      const lang = window.ClubI18n ? ClubI18n.getLang() : 'zh';
+      return date.toLocaleString(lang === 'en' ? 'en-US' : 'zh-CN', { hour12: false });
     }
 
     function usernameFromSession(session) {
@@ -505,7 +546,7 @@
           <span>${escapeHtml(t('admin.enter'))}</span>
         </a>
       `).join('');
-      $('entryGrid').innerHTML = cards || `<div class="empty">${escapeHtml(t('admin.noEntries'))}</div>`;
+      $('entryGrid').innerHTML = cards || `<div class="club-empty"><strong>${escapeHtml(t('admin.noEntries'))}</strong><span>${escapeHtml(t('admin.noEntriesHint'))}</span></div>`;
     }
 
     function clearBindingForm() {
@@ -547,7 +588,7 @@
 
     function renderBindings(profiles) {
       if (!profiles.length) {
-        $('bindingsList').innerHTML = `<div class="empty">${escapeHtml(t('admin.emptyBindings'))}</div>`;
+        $('bindingsList').innerHTML = `<div class="club-empty"><strong>${escapeHtml(t('admin.emptyBindings'))}</strong><span>${escapeHtml(t('admin.emptyBindingsHint'))}</span></div>`;
         return;
       }
       $('bindingsList').innerHTML = `<table class="table"><thead><tr><th>${escapeHtml(t('admin.loginAccount'))}</th><th>${escapeHtml(t('admin.chineseName'))}</th><th>${escapeHtml(t('admin.className'))}</th><th>${escapeHtml(t('admin.colBound'))}</th><th>${escapeHtml(t('admin.colEmail'))}</th><th>${escapeHtml(t('admin.colUpdatedAt'))}</th><th>${escapeHtml(t('admin.colActions'))}</th></tr></thead><tbody>${profiles.map(item => {
@@ -580,7 +621,7 @@
 
     function renderResets(resets) {
       if (!resets.length) {
-        $('resetsList').innerHTML = `<div class="empty">${escapeHtml(t('admin.emptyResets'))}</div>`;
+        $('resetsList').innerHTML = `<div class="club-empty"><strong>${escapeHtml(t('admin.emptyResets'))}</strong><span>${escapeHtml(t('admin.emptyResetsHint'))}</span></div>`;
         return;
       }
       $('resetsList').innerHTML = `<table class="table"><thead><tr><th>${escapeHtml(t('admin.colAccount'))}</th><th>${escapeHtml(t('admin.colStatus'))}</th><th>${escapeHtml(t('admin.colRequestedAt'))}</th><th>${escapeHtml(t('admin.colSecretHint'))}</th><th>${escapeHtml(t('admin.colExpiresAt'))}</th><th>${escapeHtml(t('admin.colActions'))}</th></tr></thead><tbody>${resets.map(item => {
@@ -634,7 +675,7 @@
 
     function renderSuperAdmins(rows) {
       if (!rows.length) {
-        $('superAdminsList').innerHTML = `<div class="empty">${escapeHtml(t('admin.emptySuper'))}</div>`;
+        $('superAdminsList').innerHTML = `<div class="club-empty"><strong>${escapeHtml(t('admin.emptySuper'))}</strong><span>${escapeHtml(t('admin.emptySuperHint'))}</span></div>`;
         return;
       }
       const selfId = currentSession?.user?.id || '';
@@ -689,7 +730,7 @@
 
     function renderPermissions(rows) {
       if (!rows.length) {
-        $('permissionsList').innerHTML = `<div class="empty">${escapeHtml(t('admin.emptyPerm'))}</div>`;
+        $('permissionsList').innerHTML = `<div class="club-empty"><strong>${escapeHtml(t('admin.emptyPerm'))}</strong><span>${escapeHtml(t('admin.emptyPermHint'))}</span></div>`;
         return;
       }
       $('permissionsList').innerHTML = `<table class="table"><thead><tr><th>${escapeHtml(t('admin.colAccount'))}</th><th>${escapeHtml(t('admin.colCheckin'))}</th><th>${escapeHtml(t('admin.colPoints'))}</th><th>${escapeHtml(t('admin.colMessages'))}</th><th>${escapeHtml(t('admin.colInvites'))}</th><th>${escapeHtml(t('admin.colEvents'))}</th><th>${escapeHtml(t('admin.colMall'))}</th><th>${escapeHtml(t('admin.colMembers'))}</th><th>${escapeHtml(t('admin.colJoin'))}</th><th>${escapeHtml(t('admin.colNote'))}</th><th>${escapeHtml(t('admin.colUpdatedAt'))}</th><th>${escapeHtml(t('admin.colActions'))}</th></tr></thead><tbody>${rows.map(item => `
@@ -953,6 +994,8 @@
 
     $('siteServiceForm').addEventListener('submit', async (event) => {
       event.preventDefault();
+      const submitButton = event.currentTarget.querySelector('button[type="submit"]');
+      ClubCommon.setBusy(submitButton, true);
       setMessage($('siteServiceMessage'), t('admin.siteServiceSaving'));
       try {
         const saved = await call('admin_site_service_set', {
@@ -975,17 +1018,19 @@
           t(saved && saved.broadcast === false ? 'admin.siteServiceSavedNoBroadcast' : 'admin.siteServiceSaved'),
           saved && saved.broadcast === false ? 'warn' : 'success'
         );
-      } catch (error) { setMessage($('siteServiceMessage'), error.message, 'error'); }
+      } catch (error) { setMessage($('siteServiceMessage'), error.message, 'error'); } finally { ClubCommon.setBusy(submitButton, false); }
     });
     $('appMonitorReleaseForm').addEventListener('submit', async (event) => {
       event.preventDefault();
+      const submitButton = event.currentTarget.querySelector('button[type="submit"]');
+      ClubCommon.setBusy(submitButton, true);
       setMessage($('appMonitorReleaseMessage'), t('admin.appmonitorSaving'));
       try {
         await call('admin_appmonitor_releases_save', { id: $('appMonitorReleaseId').value, version: $('appMonitorVersion').value, releaseDate: $('appMonitorReleaseDate').value, introZh: $('appMonitorIntroZh').value, introEn: $('appMonitorIntroEn').value, downloadUrl: $('appMonitorDownloadUrl').value });
         clearAppMonitorReleaseForm();
         setMessage($('appMonitorReleaseMessage'), t('admin.appmonitorSaved'), 'success');
         await refreshAppMonitorReleases();
-      } catch (error) { setMessage($('appMonitorReleaseMessage'), error.message, 'error'); }
+      } catch (error) { setMessage($('appMonitorReleaseMessage'), error.message, 'error'); } finally { ClubCommon.setBusy(submitButton, false); }
     });
     $('appMonitorReleaseClear').onclick = clearAppMonitorReleaseForm;
     clearAppMonitorReleaseForm();
@@ -994,6 +1039,8 @@
 
     $('directResetForm').addEventListener('submit', async (event) => {
       event.preventDefault();
+      const submitButton = event.currentTarget.querySelector('button[type="submit"]');
+      ClubCommon.setBusy(submitButton, true);
       setMessage($('directResetMessage'), t('admin.settingPassword'));
       try {
         const payload = await call('admin_password_set', {
@@ -1005,11 +1052,15 @@
         await refreshOverview();
       } catch (error) {
         setMessage($('directResetMessage'), error.message, 'error');
+      } finally {
+        ClubCommon.setBusy(submitButton, false);
       }
     });
 
     $('permissionForm').addEventListener('submit', async (event) => {
       event.preventDefault();
+      const submitButton = event.currentTarget.querySelector('button[type="submit"]');
+      ClubCommon.setBusy(submitButton, true);
       setMessage($('permissionsMessage'), t('admin.savingPerm'));
       try {
         const payload = await call('admin_staff_permissions_save', {
@@ -1028,11 +1079,15 @@
         await refreshOverview();
       } catch (error) {
         setMessage($('permissionsMessage'), error.message, 'error');
+      } finally {
+        ClubCommon.setBusy(submitButton, false);
       }
     });
 
     $('superAdminForm').addEventListener('submit', async (event) => {
       event.preventDefault();
+      const submitButton = event.currentTarget.querySelector('button[type="submit"]');
+      ClubCommon.setBusy(submitButton, true);
       setMessage($('superAdminsMessage'), t('admin.promotingSuper'));
       try {
         const payload = await call('admin_super_admins_promote', {
@@ -1045,16 +1100,20 @@
         await refreshOverview();
       } catch (error) {
         setMessage($('superAdminsMessage'), error.message, 'error');
+      } finally {
+        ClubCommon.setBusy(submitButton, false);
       }
     });
 
     $('bindingForm').addEventListener('submit', async (event) => {
       event.preventDefault();
+      const submitButton = event.currentTarget.querySelector('button[type="submit"]');
       const username = $('bindingUsername').value.trim();
       if (!username) {
         setMessage($('bindingsMessage'), t('admin.pickBindingFirst'), 'error');
         return;
       }
+      ClubCommon.setBusy(submitButton, true);
       setMessage($('bindingsMessage'), t('admin.savingBinding', { username }));
       try {
         const payload = await call('admin_member_profile_bind', {
@@ -1075,6 +1134,8 @@
         }
       } catch (error) {
         setMessage($('bindingsMessage'), error.message, 'error');
+      } finally {
+        ClubCommon.setBusy(submitButton, false);
       }
     });
 
@@ -1099,6 +1160,6 @@
     supabaseClient.auth.onAuthStateChange((_event, session) => { void updateSession(session); });
     supabaseClient.auth.getSession().then(({ data: { session } }) => updateSession(session));
   </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

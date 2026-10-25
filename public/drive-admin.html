@@ -6,17 +6,55 @@
   <meta name="description" content="社团盘容量管理：超级管理员可设置单个用户或全局的文件夹容量上限，并查看实时用量。">
   <title>社团盘管理 · 算法社</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=c79bfe69"></script>
+  <script src="i18n-dict.js?v=f75071ae"></script>
   <script src="member-identity.js?v=ad75d585" defer></script>
   <script src="i18n.js?v=ba66328e"></script>
-  <script src="club-common.js?v=b3d82c39"></script>
+  <script src="club-common.js?v=333db1c4"></script>
   <script src="service-prompts.js?v=1cfff2ab"></script>
   <script src="service-gate.js?v=6acc9c5f"></script>
+  <style>
+    /* 本页专用：720px 以下配额表格转卡片，用 data-label 充当列头（club-ui 无此响应式规则，本页 mini 实现） */
+    @media (max-width: 720px) {
+      body.club-page #quotaList { overflow: visible; }
+      body.club-page #quotaList table,
+      body.club-page #quotaList tbody { display: block; width: 100%; min-width: 0; }
+      body.club-page #quotaList thead { display: none; }
+      body.club-page #quotaList tr {
+        display: grid;
+        gap: 6px;
+        margin: 0 0 10px;
+        padding: 12px 14px;
+        border: 1px solid var(--club-line);
+        border-radius: 12px;
+        background: var(--club-surface-2);
+      }
+      body.club-page #quotaList tr:last-child { margin-bottom: 0; }
+      body.club-page #quotaList td {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+        padding: 2px 0;
+        border: 0;
+        background: transparent;
+        text-align: right;
+      }
+      body.club-page #quotaList td::before {
+        content: attr(data-label);
+        flex: 0 0 auto;
+        color: var(--club-muted);
+        font-size: 12px;
+        text-align: left;
+      }
+    }
+    /* 表头字号收紧：与全站管理表格保持一致的密度 */
+
+  </style>
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="社团盘管理 · 算法社">
@@ -39,8 +77,8 @@
   </div></header>
   <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div>
   <main>
-    <section id="gate" class="panel gate"><div><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="driveAdmin.gateLead">社团盘容量管理仅对超级管理员开放。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
-    <section id="denied" class="panel denied hidden"><div><strong data-i18n="driveAdmin.denied">仅超级管理员可用</strong><p class="intro" data-i18n="driveAdmin.deniedLead">请联系现任超管开通权限。</p></div></section>
+    <section id="gate" class="panel gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="driveAdmin.gateLead">社团盘容量管理仅对超级管理员开放。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+    <section id="denied" class="panel denied hidden"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="driveAdmin.denied">仅超级管理员可用</strong><p class="intro" data-i18n="driveAdmin.deniedLead">请联系现任超管开通权限。</p></div></section>
 
     <div id="content" class="hidden">
       <p class="eyebrow">CLUB DRIVE QUOTA</p>
@@ -58,7 +96,7 @@
           <div class="grid-2">
             <div>
               <label class="label" for="globalMb" data-i18n="driveAdmin.limitMb">容量上限（MiB）</label>
-              <input class="input" id="globalMb" type="number" min="-1" step="1" inputmode="numeric" placeholder="0 = 不限制，-1 = 全员禁止">
+              <input class="input" id="globalMb" type="number" min="-1" step="1" inputmode="numeric" placeholder="0 = 不限制，-1 = 全员禁止" data-i18n-placeholder="driveAdmin.limitPlaceholder">
               <p class="hint" data-i18n="driveAdmin.limitHint">填 0 表示不限制；填 -1 表示该成员不可使用社团盘。</p>
             </div>
             <div>
@@ -90,7 +128,7 @@
             </div>
             <div>
               <label class="label" for="userMb" data-i18n="driveAdmin.limitMb">容量上限（MiB）</label>
-              <input class="input" id="userMb" type="number" min="-1" step="1" inputmode="numeric" placeholder="0 = 不限制，-1 = 禁止使用">
+              <input class="input" id="userMb" type="number" min="-1" step="1" inputmode="numeric" placeholder="0 = 不限制，-1 = 禁止使用" data-i18n-placeholder="driveAdmin.limitPlaceholder">
               <p class="hint" data-i18n="driveAdmin.limitHint">填 0 表示不限制；填 -1 表示该成员不可使用社团盘。</p>
             </div>
           </div>
@@ -109,7 +147,7 @@
             <p class="intro" data-i18n="driveAdmin.listIntro">「全局默认」一行对所有未单独设置的用户生效。</p>
           </div>
         </div>
-        <div class="table-wrap" id="quotaList"><div class="empty loading" data-i18n="common.loading">正在读取…</div></div>
+        <div class="table-wrap" id="quotaList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="common.loading">正在读取…</span></div>
       </section>
 
       <section class="panel">
@@ -141,6 +179,26 @@
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const $ = id => document.getElementById(id);
     const t = (key, vars) => (window.ClubI18n ? ClubI18n.t(key, vars) : key);
+    // 本页新增 i18n 键的页内补充包：先合并进 ClubI18n，全站词典后续并入时自动接管。
+    const PAGE_I18N = {
+      zh: {
+        driveAdmin: {
+          limitPlaceholder: '0 = 不限制，-1 = 禁止使用',
+          pendingRemoveQuota: '已删除 {name} 的专属配额，5 秒内可撤销。',
+          quotaUndone: '已撤销删除，配额已恢复。',
+          undoCommitFailed: '配额删除提交失败，已恢复列表，请稍后重试。'
+        }
+      },
+      en: {
+        driveAdmin: {
+          limitPlaceholder: '0 = unlimited, -1 = blocked',
+          pendingRemoveQuota: 'Removed the personal quota of {name}. Undo within 5 seconds.',
+          quotaUndone: 'Undo succeeded. The quota is restored.',
+          undoCommitFailed: 'Quota removal failed to save. The list was restored, please retry.'
+        }
+      }
+    };
+    if (window.ClubI18n?.mergeDict) ClubI18n.mergeDict(PAGE_I18N);
     const escapeHtml = window.ClubCommon
       ? ClubCommon.escapeHtml
       : value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -275,21 +333,26 @@
       </tr>`;
     }
 
+    // 纯渲染：由 quotaRows 画出配额表；空态用 listState。
+    function renderQuotas() {
+      if (!quotaRows.length) {
+        ClubCommon.listState($('quotaList'), { kind: 'empty', title: t('driveAdmin.emptyQuota'), message: t('driveAdmin.emptyQuotaHint') });
+        return;
+      }
+      $('quotaList').innerHTML = `<table class="table"><thead><tr>
+        <th>${escapeHtml(t('driveAdmin.colTarget'))}</th>
+        <th>${escapeHtml(t('driveAdmin.colLimit'))}</th>
+        <th>${escapeHtml(t('driveAdmin.note'))}</th>
+        <th>${escapeHtml(t('driveAdmin.colUpdated'))}</th>
+        <th>${escapeHtml(t('driveAdmin.colActions'))}</th>
+      </tr></thead><tbody>${quotaRows.map(quotaRowHtml).join('')}</tbody></table>`;
+    }
+
     async function refreshQuotas() {
       try {
         const payload = await call('admin_drive_quota_list');
         quotaRows = Array.isArray(payload.quotas) ? payload.quotas : [];
-        if (!quotaRows.length) {
-          ClubCommon.listState($('quotaList'), { kind: 'empty', title: t('driveAdmin.emptyQuota'), message: t('driveAdmin.emptyQuotaHint') });
-        } else {
-          $('quotaList').innerHTML = `<table class="table"><thead><tr>
-            <th>${escapeHtml(t('driveAdmin.colTarget'))}</th>
-            <th>${escapeHtml(t('driveAdmin.colLimit'))}</th>
-            <th>${escapeHtml(t('driveAdmin.note'))}</th>
-            <th>${escapeHtml(t('driveAdmin.colUpdated'))}</th>
-            <th>${escapeHtml(t('driveAdmin.colActions'))}</th>
-          </tr></thead><tbody>${quotaRows.map(quotaRowHtml).join('')}</tbody></table>`;
-        }
+        renderQuotas();
         const global = quotaRows.find(row => !row.user_id);
         if (global) {
           $('globalMb').value = String(toMb(global.max_bytes));
@@ -324,41 +387,80 @@
       }
     });
 
-    async function removeQuota(row) {
+    function quotaLabel(row) {
       const member = members.find(item => String(item.userId) === String(row.user_id));
-      const label = member ? memberLabel(member) : (row.username || row.user_id);
-      if (!(await ClubCommon.confirm({ message: t('driveAdmin.confirmRemove', { name: label }), danger: true }))) return;
-      try {
-        await call('admin_drive_quota_clear', { userId: row.user_id });
-        setMessage(t('driveAdmin.removed', { name: label }), 'success');
-        await refreshQuotas();
-        const current = findMember($('userPick').value);
-        if (current && String(current.userId) === String(row.user_id)) $('userMb').value = '';
-      } catch (error) {
-        setMessage(error.message, 'error');
-      }
+      return member ? memberLabel(member) : (row.username || row.user_id || '');
+    }
+
+    // 乐观删除一个配额行 + 5 秒撤销；提交失败时回滚本地列表并 toast 报错。
+    function removeQuotaOptimistic(row, commitBody) {
+      const index = quotaRows.findIndex(item => item === row);
+      if (index < 0) return null;
+      quotaRows.splice(index, 1);
+      renderQuotas();
+      return ClubCommon.scheduleUndo({
+        message: t('driveAdmin.pendingRemoveQuota', { name: quotaLabel(row) }),
+        undoLabel: t('common.undo'),
+        onUndo: () => {
+          quotaRows.splice(Math.min(index, quotaRows.length), 0, row);
+          renderQuotas();
+          setMessage(t('driveAdmin.quotaUndone'), 'success');
+        },
+        commit: async ({ pagehide }) => {
+          try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) throw new Error(t('common.loginFirst'));
+            const response = await fetch(FUNCTION_URL, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json', apikey: SUPABASE_KEY, authorization: `Bearer ${session.access_token}` },
+              body: JSON.stringify(commitBody),
+              keepalive: Boolean(pagehide)
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.error || t('driveAdmin.opFailed'));
+            if (!pagehide) setMessage(t('driveAdmin.removed', { name: quotaLabel(row) }), 'success');
+            const current = findMember($('userPick').value);
+            if (current && String(current.userId) === String(row.user_id)) $('userMb').value = '';
+          } catch (error) {
+            quotaRows.splice(Math.min(index, quotaRows.length), 0, row);
+            renderQuotas();
+            ClubCommon.toast({ message: error.message || t('driveAdmin.undoCommitFailed'), kind: 'error' });
+          }
+        }
+      });
+    }
+
+    async function removeQuota(row) {
+      if (!(await ClubCommon.confirm({ message: t('driveAdmin.confirmRemove', { name: quotaLabel(row) }), danger: true }))) return;
+      removeQuotaOptimistic(row, { userId: row.user_id });
     }
 
     $('globalForm').addEventListener('submit', async event => {
       event.preventDefault();
+      const submitButton = event.currentTarget.querySelector('button[type="submit"]');
       const bytes = mbToBytes($('globalMb').value.trim() || 0);
       if (bytes === null) { setMessage(t('driveAdmin.invalidLimit'), 'error'); return; }
+      ClubCommon.setBusy(submitButton, true);
       try {
         await call('admin_drive_quota_set', { maxBytes: bytes, note: $('globalNote').value.trim() });
         setMessage(t('driveAdmin.saved'), 'success');
         await refreshQuotas();
       } catch (error) {
         setMessage(error.message, 'error');
+      } finally {
+        ClubCommon.setBusy(submitButton, false);
       }
     });
 
     $('userForm').addEventListener('submit', async event => {
       event.preventDefault();
+      const submitButton = event.currentTarget.querySelector('button[type="submit"]');
       const raw = $('userMb').value.trim();
       // 空值代表「不设专属配额」，与删除不同：这里明确要求填数字，避免误操作。
       if (!raw) { setMessage(t('driveAdmin.needLimit'), 'error'); return; }
       const bytes = mbToBytes(raw);
       if (bytes === null) { setMessage(t('driveAdmin.invalidLimit'), 'error'); return; }
+      ClubCommon.setBusy(submitButton, true);
       try {
         const username = requireUser($('userPick').value);
         await call('admin_drive_quota_set', { username, maxBytes: bytes, note: '' });
@@ -366,6 +468,8 @@
         await refreshQuotas();
       } catch (error) {
         setMessage(error.message, 'error');
+      } finally {
+        ClubCommon.setBusy(submitButton, false);
       }
     });
 
@@ -381,10 +485,17 @@
         const label = $('userPick').value.trim();
         const username = requireUser(label);
         if (!(await ClubCommon.confirm({ message: t('driveAdmin.confirmClear'), danger: true }))) return;
-        await call('admin_drive_quota_clear', { username });
-        setMessage(t('driveAdmin.cleared'), 'success');
+        const member = findMember(label);
+        const row = quotaRows.find(item =>
+          (member && String(item.user_id || '') === String(member.userId || '')) || item.username === username);
+        if (row) {
+          removeQuotaOptimistic(row, { username });
+        } else {
+          // 列表里没有该用户的专属配额行，直接按原逻辑提交。
+          await call('admin_drive_quota_clear', { username });
+          setMessage(t('driveAdmin.cleared'), 'success');
+        }
         $('userMb').value = '';
-        await refreshQuotas();
       } catch (error) {
         setMessage(error.message, 'error');
       }
@@ -393,7 +504,9 @@
     $('usageForm').addEventListener('submit', async event => {
       event.preventDefault();
       const box = $('usageResult');
+      const submitButton = event.currentTarget.querySelector('button[type="submit"]');
       ClubCommon.listState(box, { kind: 'loading', message: t('common.loading') });
+      ClubCommon.setBusy(submitButton, true);
       try {
         const username = requireUser($('usagePick').value);
         const payload = await call('drive_quota_get', { username });
@@ -417,6 +530,8 @@
         </div>`;
       } catch (error) {
         ClubCommon.listState(box, { kind: 'error', title: t('driveAdmin.loadFailed'), message: error.message });
+      } finally {
+        ClubCommon.setBusy(submitButton, false);
       }
     });
 
@@ -445,6 +560,6 @@
       });
     });
   </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

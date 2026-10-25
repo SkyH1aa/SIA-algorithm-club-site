@@ -5,6 +5,33 @@
   const SUPABASE_URL = 'https://jgezpvmlnhycxslqbwcx.supabase.co';
   const KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
 
+  // 错误页正文排版：超管 Markdown 渲染结果的统一质感（404/502/503 三页共用）。
+  try {
+    if (!document.getElementById('club-error-page-style')) {
+      const style = document.createElement('style');
+      style.id = 'club-error-page-style';
+      style.textContent = [
+        '.error-page-body { max-width: 620px; }',
+        '.error-page-body h2 { margin: 20px 0 8px; font-size: 15px; color: var(--club-text, #e8f1fb); }',
+        '.error-page-body h3, .error-page-body h4 { margin: 14px 0 6px; font-size: 13.5px; color: var(--club-text, #e8f1fb); }',
+        '.error-page-body p { margin: 6px 0; color: var(--club-text-soft, #c2d2e4); font-size: 13.5px; line-height: 1.75; }',
+        '.error-page-body { counter-reset: club-rpt; }',
+        '.error-page-body .report-item { position: relative; margin: 7px 0; padding-left: 20px; color: var(--club-text-soft, #c2d2e4); font-size: 13.5px; line-height: 1.75; }',
+        '.error-page-body .report-item::before { content: ""; position: absolute; left: 3px; top: .68em; width: 6px; height: 6px; border-radius: 50%; background: var(--club-accent, #3ad4e6); opacity: .85; }',
+        '.error-page-body .report-item.report-ordered { counter-increment: club-rpt; padding-left: 24px; }',
+        '.error-page-body .report-item.report-ordered::before { content: counter(club-rpt) "."; width: auto; height: auto; background: none; opacity: 1; left: 2px; color: var(--club-accent, #3ad4e6); font: 700 13px/1.75 var(--club-mono, monospace); }',
+        '.error-page-body blockquote { margin: 10px 0; padding: 10px 14px; border-left: 3px solid var(--club-accent-line, rgba(58,212,230,.4)); border-radius: 8px; background: var(--club-accent-soft, rgba(58,212,230,.12)); color: var(--club-text-soft, #c2d2e4); font-size: 13px; line-height: 1.7; }',
+        '.error-page-body pre { margin: 10px 0; padding: 12px 14px; border: 1px solid var(--club-line, rgba(132,170,214,.16)); border-radius: 10px; background: var(--club-surface-2, #101a2a); overflow: auto; }',
+        '.error-page-body pre code { color: var(--club-text-soft, #c2d2e4); font-size: 12.5px; line-height: 1.6; }',
+        '.error-page-body a { color: var(--club-accent, #3ad4e6); text-decoration: underline; text-underline-offset: 2px; }',
+        '.error-page-body .report-gap { height: 10px; }',
+        'html[data-theme="light"] .error-page-body pre { background: #f8f9fb; }'
+      ].join('\n');
+      (document.head || document.documentElement).appendChild(style);
+    }
+  } catch (_error) { /* ignore */ }
+
+
   const lang = () => (localStorage.getItem('algorithm-club-lang') || 'zh').startsWith('en') ? 'en' : 'zh';
   const esc = text => String(text == null ? '' : text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 

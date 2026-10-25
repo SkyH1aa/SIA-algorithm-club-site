@@ -1,28 +1,32 @@
+/* 视觉令牌与 club-ui.css / chat.css 同步（2026-10 第三轮对齐）：
+   暗色本就同源；亮色由暖奶油系改为全站冷白系（accent 仍为亮色橙红）。
+   该组件注入到所有页面（含非 club-page 页），因此自带令牌而非引用 --club-*。 */
 #club-assistant {
-  --assistant-surface: #17212b;
-  --assistant-head: #1d2935;
-  --assistant-text: #edf4f8;
-  --assistant-muted: #b8c8d4;
-  --assistant-border: #3b5165;
-  --assistant-accent: #9cdbeb;
+  --assistant-surface: #0c1320;
+  --assistant-head: #101a2a;
+  --assistant-text: #e8f1fb;
+  --assistant-muted: #90a4bb;
+  --assistant-border: rgba(132, 170, 214, .3);
+  --assistant-accent: #3ad4e6;
+  --assistant-ease: cubic-bezier(0.22, 1, 0.36, 1);
   position: fixed;
   inset: 0;
   z-index: 850;
   /* 容器铺满视口但不拦截点击；只有悬浮球与面板本身可交互。 */
   pointer-events: none;
-  font: 14px/1.5 Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+  font: 14px/1.5 "Inter Variable", "MiSans VF", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   color: var(--assistant-text);
   text-align: left;
   letter-spacing: normal;
   isolation: isolate;
 }
 html[data-theme="light"] #club-assistant {
-  --assistant-surface: #fffaf5;
-  --assistant-head: #f6ece4;
-  --assistant-text: #332a28;
-  --assistant-muted: #67584e;
-  --assistant-border: #d9c3b2;
-  --assistant-accent: #96422c;
+  --assistant-surface: #ffffff;
+  --assistant-head: #f8f9fb;
+  --assistant-text: #17181c;
+  --assistant-muted: #5b6069;
+  --assistant-border: #cdd2db;
+  --assistant-accent: #c2410c;
 }
 #club-assistant *, #club-assistant *::before, #club-assistant *::after { box-sizing: border-box; }
 #club-assistant [hidden] { display: none !important; }
@@ -46,14 +50,16 @@ html[data-theme="light"] #club-assistant {
     radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--assistant-accent) 26%, transparent), transparent 62%),
     var(--assistant-head) !important;
   color: var(--assistant-accent) !important;
-  box-shadow: 0 10px 30px #0005, 0 0 0 1px #ffffff0d inset;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .28), 0 0 0 1px rgba(255, 255, 255, .05) inset;
   font-size: 26px;
   line-height: 1;
   /* 面板与球可能重叠：球始终在上层，保证收起/移动入口可达。 */
   z-index: 2;
-  transition: transform .16s var(--chat-ease, ease), box-shadow .16s ease;
+  transition: transform .16s var(--assistant-ease, ease), box-shadow .16s var(--assistant-ease, ease);
 }
-#club-assistant .club-assistant-ball:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 14px 38px #0006; }
+/* 内联 SVG 四角星（assistant-launcher.js 注入），跨平台字体渲染一致。 */
+#club-assistant .club-assistant-ball svg { width: 14px; height: 14px; display: block; fill: currentColor; }
+#club-assistant .club-assistant-ball:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 12px 28px rgba(0, 0, 0, .32); }
 #club-assistant .club-assistant-ball:active,
 #club-assistant.is-dragging .club-assistant-ball { cursor: grabbing; transform: none; }
 #club-assistant.is-busy .club-assistant-ball::after {
@@ -83,9 +89,12 @@ html[data-theme="light"] #club-assistant {
   border-radius: 16px;
   background: var(--assistant-surface);
   color: var(--assistant-text);
-  /* 不加外阴影：浮窗常悬在表格等密集内容上，投影会糊到左侧正文。 */
-  box-shadow: none;
+  /* 轻阴影与悬浮球同级：浮窗悬在密集内容上时投影不糊正文。 */
+  box-shadow: 0 16px 44px rgba(0, 0, 0, .35);
 }
+html[data-theme="light"] #club-assistant .club-assistant-panel { box-shadow: 0 16px 44px rgba(23, 24, 28, .14); }
+html[data-theme="light"] #club-assistant .club-assistant-ball { box-shadow: 0 8px 22px rgba(23, 24, 28, .12), 0 0 0 1px rgba(255, 255, 255, .5) inset; }
+html[data-theme="light"] #club-assistant .club-assistant-ball:hover { box-shadow: 0 12px 28px rgba(23, 24, 28, .16); }
 #club-assistant.is-expanded .club-assistant-panel {
   /* 展开窗口约占屏幕四分之一面积（宽高各一半），居中且不覆盖整页。
      用 !important 覆盖脚本写入的内联 inset 和高度。 */
@@ -134,7 +143,7 @@ html[data-theme="light"] #club-assistant {
   min-height: 30px;
   padding: 3px 8px;
   box-shadow: none;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
+  transition: background .15s var(--assistant-ease, ease), color .15s var(--assistant-ease, ease), border-color .15s var(--assistant-ease, ease);
 }
 #club-assistant .club-assistant-tool:hover,
 #club-assistant .club-assistant-stop:hover,
@@ -152,9 +161,6 @@ html[data-theme="light"] #club-assistant {
 #club-assistant .club-assistant-loading a { color: var(--assistant-accent) !important; align-self: center; }
 #club-assistant[data-ready="true"] .club-assistant-loading { display: none; }
 #club-assistant:not([data-failed="true"]) .club-assistant-retry { display: none; }
-
-/* 游戏页底部有操作条，默认位置抬高一些（仍可拖动） */
-#club-assistant.club-assistant-game .club-assistant-ball { /* 位置由脚本按视口计算，这里只保留语义标记 */ }
 
 @media (max-width: 600px) {
   #club-assistant .club-assistant-ball { width: 48px; height: 48px; font-size: 23px; }

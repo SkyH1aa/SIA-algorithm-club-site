@@ -13,6 +13,8 @@
     noScore: '自由棋实验室 · 本页所有对局不计分、不上传',
     exportRecord: '导出本局棋谱',
     compareTitle: '实验版本比较',
+    compareTitle: '实验版本比较',
+    localOnlyHint: 'V10Exp 正式挑战胜局 15 分并上传胜负平。本实验页仅本地测试，不计分、不上传；正式挑战请返回五子棋页面。',
   },
     common: {
       brand: '算法社',
@@ -325,6 +327,7 @@
       start: '开始',
       stop: '停止',
       surrender: '投降',
+      startGame: '开始对局',
       restart: '重新开始',
       modeNormal: '正常游玩',
       modeAi: 'AI 游玩',
@@ -697,6 +700,8 @@
       colPoints: '积分'
     },
   satoriLab: {
+    intro: 'Gomoku-Satori 是本站从零自研、不使用任何外部引擎与神经网络的五子棋 AI。这个页面把它的每一次思考完全摊开：先看到威胁普查，再看候选着法如何逐项打分与排序，然后逐层加深搜索，最后用搜索树和证明过程交代“为什么是这一步”。',
+    notice: '诚实说明：Satori 是展示版引擎，实力弱于 V9Thinker、V10Ultra 等正式模型。这里展示的是它的真实决策过程，用于讲解 AI 如何思考，而不是宣称它的棋力。',
     h1: 'Gomoku-Satori 决策剖析实验室',
     controls: '对局控制',
     replay: '棋谱回放',
@@ -802,6 +807,7 @@
     }
   },
     lab: {
+      speed: '速度',
       common: {
         labChoose: '实验室选择',
         settings: '实验设置',
@@ -859,6 +865,7 @@
         emptyDash: '—'
       },
       sorting: {
+        legNeg: '负值',
         title: '排序可视化实验室 · 算法社',
         h1: '排序可视化实验室',
         lead: '观察每一次比较、交换与移动。选择算法和数据集后，可连续演示或手动单步执行，理解排序过程如何逐步收敛。',
@@ -947,6 +954,17 @@
         doneMiss: '完成 · 未找到可行路径'
       },
       ds: {
+        logPush: 'push({v}) → 栈顶变为 {v}；当前栈（底→顶）：[{items}]',
+        logPop: 'pop() → 返回 {v}；当前栈（底→顶）：[{items}]',
+        logPeek: 'peek() → {v}（不删除）；当前栈（底→顶）：[{items}]',
+        logEnqueue: 'enqueue({v}) → 队尾更新；当前队列（前→后）：[{items}]',
+        logDequeue: 'dequeue() → 返回 {v}；当前队列（前→后）：[{items}]',
+        logFront: 'front() → {v}（不删除）；当前队列（前→后）：[{items}]',
+        logInsert: '{op}({v}) → 链表：[{list}] → null',
+        logDeleteOk: 'delete({v}) 成功 · 新链表：[{list}] → null',
+        logSeedStack: '示例栈（底→顶）：[{items}]',
+        logSeedQueue: '示例队列（前→后）：[{items}]',
+        logSeedList: '示例链表：[{items}] → null',
         title: '数据结构可视化实验室 · 算法社',
         h1: '数据结构可视化实验室',
         lead: '亲手操作栈、队列与链表：观察 push/pop、enqueue/dequeue，以及头插、尾插与按值删除时节点与指针如何变化。',
@@ -1054,6 +1072,7 @@
         empty: '空'
       },
       graph: {
+        sameSTFloyd: '提示：起点与终点相同 · Floyd 演示到自身的最短路（距离为 0）',
         title: '图论最短路可视化实验室 · 算法社',
         h1: '图论最短路可视化实验室',
         lead: '在加权图上观察松弛、确定距离与回溯路径。支持 Dijkstra、Bellman–Ford、SPFA 与 Floyd–Warshall；可切换预设图，连续演示或单步执行。',
@@ -1190,6 +1209,10 @@
         fibTargetBody: '计算 F({n})'
       },
       tree: {
+        zoomIn: '放大',
+        zoomOut: '缩小',
+        zoomReset: '重置缩放',
+        zoomAria: '画布缩放',
         title: '二叉树可视化实验室 · 算法社',
         h1: '二叉树可视化实验室',
         lead: '用 SVG 自动布局观察二叉树结构，演示前序 / 中序 / 后序 / 深搜 / 广搜层序遍历，并按二叉搜索树（BST）规则完成插入与删除。字典序模式展示「中序遍历即有序序列」。',
@@ -1310,6 +1333,8 @@
         succ: '后继'
       },
       heap: {
+        srcHeap: '当前数据：堆视图',
+        srcSorted: '当前数据：已排序数组',
         title: '堆可视化实验室 · 算法社',
         h1: '堆可视化实验室',
         lead: '同时观察堆的数组存储与二叉树结构。可逐步演示建堆、上浮插入、下沉删除堆顶，以及完整堆排序过程，理解父子索引关系与堆序维护。',
@@ -1448,6 +1473,10 @@
       signupOk: '报名成功。'
     },
     driveAdmin: {
+      limitPlaceholder: '0 = 不限制，-1 = 禁止使用',
+      pendingRemoveQuota: '已删除 {name} 的专属配额，5 秒内可撤销。',
+      quotaUndone: '已撤销删除，配额已恢复。',
+      undoCommitFailed: '配额删除提交失败，已恢复列表，请稍后重试。',
       title: '社团盘管理',
       lead: '为单个用户设置文件夹容量上限，或设置一个对所有人生效的全局默认值。留空表示不限制。用量在每次写入时实时统计。',
       gateLead: '社团盘容量管理仅对超级管理员开放。',
@@ -1986,6 +2015,7 @@
       resetOk: '密码已重置。'
     },
     changelog: {
+    snapshot: '正在显示本地快照，联网后将自动更新。',
       lead: '记录算法社官网的功能更新与维护内容，对所有访客开放。',
       loading: '正在读取更新日志…',
       loadFail: '读取更新日志失败。',

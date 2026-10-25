@@ -1,5 +1,96 @@
 [
   {
+    "date": "2026-10-25",
+    "title": "前端体验第三轮：模板层收敛、交互四态补全与 chat 岛对齐",
+    "enTitle": "Frontend experience round three: template-layer convergence, full interaction states, and chat-island alignment",
+    "items": [
+      "门禁锁形图标、列表工具栏、表格备注列三块「16/2/2 页各自复制」的页面私有 CSS 全部上收 club-ui.css 成为唯一真源，页面侧零残留（守卫校验通过）。",
+      "组件交互四态补全：全部按钮变体获得禁用态与按压反馈，输入框/下拉/文本域获得禁用态与悬停描边，筛选 chips 与标签页补齐悬停/按压/过渡，亮暗双套同步。",
+      "主要列表页初始加载从「正在读取…」文字升级为骨架屏（24 处，15 个页面），读屏与语言切换仍保留加载文案；更新日志时间轴收成 760px 阅读列并接入长文模板 club-prose。",
+      "修复资源页两个真实缺陷：标题 h2 以错误标签闭合；文档封面条嵌在标题内会被语言切换整体抹掉——封面移出标题层，层级与 i18n 均恢复正常。",
+      "标题层级规范化：通知中心与站内搜索的页面主标题从卡片内提升到页面顶层（眉题 + 标题 + 导语的全站节奏）；通知筛选 chips 与「全部已读」并排成标准工具行。",
+      "表格表头字号消灭 11.5px 半档（统一 11px 令牌，删除 6 页本地覆盖），徽章/统计/时间等同类标签同步归档；中文标题负字距违例全站归零（含 club 组件层与首页大标题）。",
+      "chat 视觉岛与主体系等值对齐：chat 三处语义色与缓动/阴影、chat-admin 整组语义变量、AI 悬浮球亮色从暖奶油系改为全站冷白系——全站语义色现在是同一套值。",
+      "数值变化高亮脉冲从死代码变为实际能力：新增 ClubCommon.pulse 工具，积分商城余额变化时自动高亮；club-features/资源中心/上手指南的静态内容接入滚动显现。",
+      "首页（不动 3D 背景与翻页）：五处中文标题负字距归零；内联样式里的十余种过渡时长字面值收敛为 140/200/320ms 三档动效令牌，与全站节奏一致。"
+    ],
+    "enItems": [
+      "Three blocks of copy-pasted page CSS — the gate lock icon (16 pages), list toolbars (2), and table description cells (2) — were hoisted into club-ui.css as the single source of truth, with zero page-side copies left (guard-verified).",
+      "Interaction states completed across components: every button variant gains disabled and pressed states, inputs/selects/textareas gain disabled and hover states, filter chips and tabs gain hover/press/transition — in both dark and light themes.",
+      "Initial list loading upgraded from “loading…” text to skeletons (24 spots across 15 pages), keeping the loading text for screen readers and language switching; the changelog timeline becomes a 760px reading column using the club-prose template.",
+      "Two real defects fixed on the resources page: an h2 closed with the wrong tag, and document cover bars nested inside heading elements that language switching would wipe — covers moved out of the headings, restoring both hierarchy and i18n safety.",
+      "Heading hierarchy normalized: the notifications and site-search page titles moved from inside cards to the page top level (the site-wide eyebrow + title + lead rhythm); notification filter chips and “mark all read” now form a standard toolbar row.",
+      "The 11.5px half-step font size is gone (unified on the 11px token, removing 6 pages' local overrides), with badges/stats/timestamps aligned to the same token; Chinese-heading negative-tracking violations are now zero site-wide, including the component layer and the homepage.",
+      "The chat visual island aligned to the main system by exact values: three semantic colors plus easing/shadow in chat, the full semantic variable set in chat-admin, and the assistant launcher's light theme moved from warm cream to the site-wide cool-white family — one set of semantic colors everywhere now.",
+      "The numeric highlight pulse went from dead code to a real capability: a new ClubCommon.pulse helper auto-highlights balance changes in the points mall; static content on club-features/resources/guide gained scroll reveal.",
+      "Homepage (3D background and page-flip untouched): five Chinese-heading negative-tracking spots zeroed; a dozen transition-duration literals in inline styles converged onto the 140/200/320ms motion tokens, matching the site-wide rhythm."
+    ]
+  },
+  {
+    "date": "2026-10-25",
+    "title": "全站 UI 体系化收敛（第二轮）：语义令牌、动效体系与实验室收编",
+    "enTitle": "Site-wide UI system convergence (round two): semantic tokens, motion system, and lab adoption",
+    "items": [
+      "设计令牌补齐语义层：字号 7 档阶梯、行高、间距 8 档、圆角中档、z-index 阶梯与容器宽度令牌，全部亮暗双套，全站唯一真源仍是 club-ui.css。",
+      "动效令牌全量采纳：全站过渡时长收敛为 140/200/320ms 三档 + 统一缓动；新增页面切换过渡（View Transitions 渐进增强）与数值变化高亮脉冲。",
+      "keyframes 收编为全站注册表：club-* 动画名只允许在 club-ui.css 定义，新增守卫工具强制；「减少动效」兜底从 club 页扩展到全站（含实验室/游戏/首页）。",
+      "十个实验室与监控页全部收编共享体系：迷宫/排序/数据结构/动态规划/图论/堆/树/实验室选择/Satori 剖析/APPMonitor 挂入 body.club-page，删除页内自绘顶栏、旧变量映射与本地亮色覆盖块，主题真源从 3 处归 1。",
+      "Satori 决策剖析实验室按「实验页零后端」契约摘除服务门禁，专用检查器在 main 上首次 file:// 与 HTTP 双侧全绿。",
+      "club-shell 新增共享页脚（品牌 + 快速链接 + 版权，随语言切换重建）与滚动显现（data-reveal，无 JS/减少动效时始终可见）；更新日志时间线接入阶梯显现。",
+      "中文排版细节：标题不再吃负字距、标题/正文启用 balance/pretty 换行、新增 .club-prose 长文模板（68ch 阅读宽度）与 .club-mono 数据字体工具类。",
+      "响应式断点归一为 420/640/720/900/1100 五档，消灭 720/721、760/761、600/601 三胞胎断点；游戏页倒计时等旧时长字面值全部令牌化。",
+      "标题语义修复：登录门禁内 h1 降级为 h2，AI Chat 与小Bru 补屏幕阅读器专用 h1；首页补加载 ClubCommon 工具层。",
+      "新增 tools/check-ui-tokens.mjs 体系守卫（令牌真源、字体栈、动画注册表、main 骨架硬校验 + 断点/时长软提醒）并纳入 AGENTS.md 变更后检查；新增 docs/design-system.md 设计系统文档。",
+      "3D 背景纯性能优化（视觉零变化）：three.js 移至文档末尾解除首屏阻塞；两处 WebGL 场景的首帧渲染推迟到首屏绘制之后（着色器编译不再卡白屏）；新增动态分辨率——持续掉帧的设备逐级降低内部渲染分辨率保流畅、稳定后回升，健康设备逐像素不变；补 WebGL 上下文丢失自动恢复、窗口缩放防抖与 bfcache 返回后星尘层重启。"
+    ],
+    "enItems": [
+      "Design tokens gained a semantic layer: a 7-step type scale, line heights, an 8-step spacing scale, a mid radius, a z-index ladder, and container widths — all in dark and light pairs, with club-ui.css remaining the single source of truth.",
+      "Motion tokens adopted everywhere: transition durations converge on 140/200/320 ms plus one shared easing; added page-transition crossfades (View Transitions progressive enhancement) and a numeric-change highlight pulse.",
+      "Keyframes became a site-wide registry: club-* animation names may only be defined in club-ui.css, enforced by a new guard tool; the reduced-motion fallback now covers the whole site including labs, games, and the homepage.",
+      "All ten lab and monitor pages joined the shared system: maze/sorting/DS/DP/graph/heap/tree/lab-hub/Satori/APPMonitor now run body.club-page with self-drawn topbars, legacy variable mappings, and local light-theme blocks removed — theme sources went from three to one.",
+      "The Satori decision-trace lab dropped its service gate per the “labs stay local, zero backend” contract, and its dedicated checker passes both file:// and HTTP sides on main for the first time.",
+      "club-shell gained a shared footer (brand + quick links + copyright, rebuilt on language change) and scroll reveal (data-reveal, always visible without JS or under reduced motion); the changelog timeline uses staggered reveals.",
+      "Chinese typography details: headings no longer use negative tracking, balance/pretty line breaking is enabled for headings and body, and new .club-prose (68ch reading width) and .club-mono utilities shipped.",
+      "Responsive breakpoints converged on the 420/640/720/900/1100 ladder, eliminating the 720/721, 760/761 and 600/601 triplets; legacy duration literals such as game countdowns are tokenized.",
+      "Heading semantics fixed: gate headings demoted from h1 to h2, AI Chat and the assistant gained screen-reader-only h1s, and the homepage now loads the ClubCommon utility layer.",
+      "Added tools/check-ui-tokens.mjs (token sources, font stacks, animation registry, main skeleton as hard checks; breakpoints and durations as warnings) to the AGENTS.md checklist, plus a docs/design-system.md reference.",
+      "Pure performance pass on the 3D background (zero visual change): three.js moved to the end of the document to unblock first paint; both WebGL scenes defer their first frame until after first paint so shader compilation can no longer white-screen the page; added dynamic resolution — devices that keep dropping frames step down internal render resolution to stay smooth and recover when stable, while healthy devices stay pixel-identical; plus WebGL context-loss auto-recovery, debounced window resizing, and a star-dust restart after bfcache restores."
+    ]
+  },
+  {
+    "date": "2026-10-25",
+    "title": "全站企业级 UI 三轮打磨：品牌字体、设计令牌与全页面翻新",
+    "enTitle": "Site-wide enterprise UI polish: brand fonts, design tokens, and a full-page refresh",
+    "items": [
+      "全站接入自托管品牌字体：MiSans VF 中文变量字体（56 个分块按需加载）+ Inter 西文数字 + JetBrains Mono 等宽，排行榜与倒计时数字等宽对齐。",
+      "设计令牌收敛为一套 --club-* 体系：动效时长/缓动、阴影层级、焦点环、精修滚动条统一；新增全局 toast 通知、骨架屏、空状态与按钮加载态（ClubCommon.toast / setBusy）。",
+      "主内容统一进场动效（320ms 上浮淡入、逐级阶梯延迟），尊重系统「减少动效」设置。",
+      "首页：手机访问提示从全屏弹窗改为底部横幅，页脚升级为品牌块 + 快速链接，成员/项目/时间线卡片补齐悬停细节。",
+      "游戏页全面接入统一组件：五子棋执子选择升级为棋子大卡、模型选择按系列分组、木纹棋盘亮暗双主题适配；俄罗斯方块统计卡与 NEXT 面板化；贪吃蛇工具栏分组并补移动端安全区。",
+      "八个算法实验室新增统一速度控制（0.5×–4×，跨页记忆）与「算法档案」教学面板：每个算法的核心思想、时间/空间复杂度与适用场景随选择联动。",
+      "修复四个真 bug：数据结构实验室切换提示缺变量、迷宫搜索已访问格从不着色、动态规划亮色填表高亮失效、俄罗斯方块排行榜翻页引用未定义变量。",
+      "管理后台安全升级：删除公告/活动补确认框与 5 秒撤销，成员/报名/配额删除同样支持撤销；新增搜索过滤与可重试的错误态。",
+      "会员页体验补齐：表格手机端不再横向溢出、提交按钮防重复、原生 prompt 全部替换为内联表单、日期随语言切换。",
+      "登录门禁统一锁形图标与文案结构，覆盖 15 个页面；错误页（404/502/503）正文获得完整排版。",
+      "内容页细节：报名表单字段级校验、站内搜索即时联想与关键词高亮、更新日志按年分组、教学资源卡补文档封面与体积信息、社团盘支持键盘操作。",
+      "双语补漏：全站扫描静态中文残留并清零（模型产品名除外），错误提示不再透出英文原始报错。"
+    ],
+    "enItems": [
+      "Rolled out self-hosted brand fonts site-wide: MiSans VF variable Chinese (56 on-demand unicode-range chunks), Inter for Latin and digits, and JetBrains Mono — with tabular numerals for leaderboards and countdowns.",
+      "Consolidated design tokens into one --club-* system: motion durations and easing, shadow levels, focus rings, and refined scrollbars; added global toasts, skeletons, empty states, and button loading states (ClubCommon.toast / setBusy).",
+      "Added a unified entrance animation for main panels (320ms rise with staggered delays) that respects prefers-reduced-motion.",
+      "Homepage: the mobile-visit modal became a bottom banner, the footer gained brand and quick links, and member/project/timeline cards received hover polish.",
+      "Game pages moved onto the shared component system: gomoku side-picking became large stone cards with grouped model optgroups and a theme-aware wood board; Tetris gained stat cards and a NEXT panel; Snake got grouped toolbar and mobile safe-area.",
+      "All eight algorithm labs gained a shared speed control (0.5×–4×, remembered across pages) and an “Algorithm profile” teaching panel with core idea, time/space complexity, and use cases for every algorithm.",
+      "Fixed four real bugs: a missing variable in the DS lab switch log, search-lab visited cells never coloring, DP lab light-theme table highlights wiped out, and an undefined variable in Tetris leaderboard paging.",
+      "Admin safety upgrade: deleting announcements/events now requires confirmation with a 5-second undo, member/join/quota deletions support undo too, plus search filters and retryable error states.",
+      "Member pages: tables no longer overflow on mobile, submit buttons guard against double clicks, native prompt() calls were replaced with inline forms, and dates follow the UI language.",
+      "All 15 sign-in gates share one lock-icon pattern; error pages (404/502/503) received full typography for admin-authored content.",
+      "Content pages: field-level form validation, instant search with keyword highlighting, changelog grouped by year, resource cards with document covers and sizes, and keyboard-accessible drive rows.",
+      "Localization sweep: scanned and cleared residual static Chinese across pages (model product names excepted), and error messages no longer leak raw English exceptions."
+    ]
+  },
+  {
     "date": "2026-10-18",
     "title": "全站前端体验统一升级与 Chat 管理重组",
     "enTitle": "Site-wide UI overhaul and Chat admin restructure",

@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="lab.tree.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8" />
@@ -11,38 +11,19 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
 <style>
+    /* 收编说明：主题 token 一律走 --club-*（club-ui.css 的 body.club-page 作用域提供同名映射与亮色覆盖），
+       本块只保留实验室专用显示色（紫/粉/金/绿，用于树节点状态与图例）与可视化专有样式。 */
     :root {
-      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
-      color: #f6fbff;
-      background: #020409;
-      --bg: #020409;
-      --panel: rgba(8, 13, 30, .8);
-      --cyan: #00e5ff;
       --violet: #7c4dff;
       --pink: #ff5fc8;
       --gold: #ffd166;
       --green: #71f3bf;
-      --text: #c8d4e2;
-      --muted: #8fa3b8;
-      --line: rgba(115, 221, 255, .2);
-      --shadow: 0 24px 90px rgba(0, 229, 255, .11);
-      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-width: 320px;
-      min-height: 100vh;
-      background:
-        radial-gradient(ellipse 70% 50% at 15% 4%, rgba(0, 229, 255, .15), transparent 62%),
-        radial-gradient(ellipse 60% 42% at 88% 7%, rgba(124, 77, 255, .22), transparent 65%),
-        linear-gradient(180deg, #020409, #050917 50%, #020409);
-      color: #f6fbff;
-      overflow-x: hidden;
-    }
+    body { overflow-x: hidden; }
     body::before {
       content: "";
       position: fixed;
@@ -60,92 +41,14 @@
     button { cursor: pointer; }
     button:disabled { cursor: not-allowed; opacity: .48; }
 
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      padding: 14px clamp(18px, 5vw, 72px);
-      border-bottom: 1px solid var(--line);
-      background: rgba(2, 4, 12, .78);
-      backdrop-filter: blur(18px);
-    }
-    .brand { display: inline-flex; align-items: center; gap: 12px; margin-right: auto; }
-    .brand-mark {
-      display: grid;
-      place-items: center;
-      width: 42px;
-      height: 42px;
-      border: 1px solid rgba(0, 229, 255, .55);
-      border-radius: 8px;
-      background: linear-gradient(135deg, rgba(0, 229, 255, .18), rgba(124, 77, 255, .22));
-      color: var(--cyan);
-      font-weight: 900;
-      box-shadow: 0 0 28px rgba(0, 229, 255, .22), inset 0 0 24px rgba(124, 77, 255, .18);
-    }
-    .brand strong, .brand small { display: block; }
-    .brand strong { font-size: 16px; }
-    .brand small { color: var(--muted); font-size: 12px; text-transform: uppercase; }
-    .member-identity {
-      display: none;
-      padding: 5px 9px;
-      border: 1px solid rgba(0, 229, 255, .34);
-      border-radius: 999px;
-      color: var(--cyan);
-      font-size: 12px;
-      white-space: nowrap;
-    }
-    .member-identity:not([hidden]) { display: inline-flex; }
-    .back-link {
-      padding: 8px 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      color: var(--muted);
-      font-size: 14px;
-      transition: .2s;
-    }
-    .back-link:hover {
-      border-color: rgba(0, 229, 255, .55);
-      background: rgba(0, 229, 255, .08);
-      color: var(--cyan);
-    }
-
-    main { max-width: 1280px; margin: 0 auto; padding: 54px clamp(18px, 5vw, 72px) 64px; }
-    .hero {
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 24px;
-      margin-bottom: 30px;
-    }
-    .eyebrow {
-      margin: 0 0 10px;
-      color: var(--cyan);
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 2px;
-    }
-    .hero h1 {
-      margin: 0;
-      font-size: clamp(30px, 5vw, 50px);
-      letter-spacing: .5px;
-      text-shadow: 0 0 28px rgba(0, 229, 255, .25);
-    }
-    .hero p:not(.eyebrow) {
-      max-width: 700px;
-      margin: 14px 0 0;
-      color: var(--text);
-      line-height: 1.75;
-    }
+    .hero p.lead { margin-bottom: 0; }
     .algorithm-note {
       min-width: 255px;
       padding: 14px 17px;
-      border: 1px solid var(--line);
+      border: 1px solid var(--club-line);
       border-radius: 12px;
-      background: rgba(8, 13, 30, .62);
-      color: var(--muted);
+      background: var(--club-surface-2);
+      color: var(--club-muted);
       font-size: 13px;
       line-height: 1.65;
     }
@@ -156,91 +59,87 @@
       grid-template-columns: 310px minmax(0, 1fr);
       gap: 22px;
     }
-    .panel {
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: var(--panel);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(12px);
-    }
     .controls { padding: 20px; }
     .controls h2, .visual-header h2 { margin: 0; font-size: 18px; }
     .control-group { margin-top: 18px; }
     .control-group label, .control-group legend {
       display: block;
       margin-bottom: 8px;
-      color: var(--muted);
+      color: var(--club-muted);
       font-size: 13px;
     }
     .control-group fieldset { margin: 0; padding: 0; border: 0; }
-    .field, select, textarea {
-      width: 100%;
-      border: 1px solid rgba(115, 221, 255, .24);
-      border-radius: 9px;
-      background: rgba(2, 7, 18, .85);
-      color: #f6fbff;
-      outline: none;
-    }
-    .field, select { height: 42px; padding: 0 11px; }
-    textarea {
+    /* textarea 补充必须带 body.club-page 前缀，否则会被 club 的全局 textarea 规则（font/min-height）压过 */
+    body.club-page .controls textarea {
       min-height: 72px;
-      padding: 10px 11px;
-      resize: vertical;
+      font-family: var(--club-mono, ui-monospace, Consolas, monospace);
+      font-size: 13px;
       line-height: 1.5;
-      font: 13px/1.5 ui-monospace, Consolas, monospace;
     }
-    .field:focus, select:focus, textarea:focus {
-      border-color: var(--cyan);
-      box-shadow: 0 0 0 3px rgba(0, 229, 255, .11);
-    }
-    .hint {
+    /* .hint / .error 必须带 body.club-page 前缀：club 的 body.club-page p / .hint 规则特异性更高，否则会被压掉 */
+    body.club-page .hint {
       margin: 7px 0 0;
-      color: var(--muted);
+      color: var(--club-muted);
       font-size: 12px;
       line-height: 1.55;
     }
-    .error {
+    body.club-page .error {
       min-height: 18px;
       margin: 7px 0 0;
-      color: #ff8fcf;
+      color: var(--club-danger);
       font-size: 12px;
       line-height: 1.4;
     }
     .button-stack { display: grid; gap: 10px; margin-top: 18px; }
     .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 42px;
-      padding: 9px 14px;
-      border: 1px solid var(--line);
-      border-radius: 9px;
-      background: rgba(9, 20, 42, .82);
-      color: #f6fbff;
-      font-size: 14px;
-      font-weight: 700;
-      transition: transform .18s, border-color .18s, background .18s, color .18s;
+    /* display:inline-flex 会压过 [hidden] 的 UA 样式：显式补齐（club 的 [hidden] !important 亦兜底），保证 insert/delete 互斥隐藏生效 */
+    .btn[hidden] { display: none; }
+    body.club-page .btn.btn-warn {
+      border-color: color-mix(in srgb, var(--club-warn) 45%, transparent);
+      background: var(--club-warn-soft);
+      color: var(--club-warn);
     }
-    .btn:hover:not(:disabled) {
-      transform: translateY(-1px);
-      border-color: rgba(0, 229, 255, .62);
-      color: var(--cyan);
+    body.club-page .btn.btn-warn:hover {
+      border-color: color-mix(in srgb, var(--club-warn) 65%, transparent);
+      background: color-mix(in srgb, var(--club-warn) 16%, transparent);
+      color: var(--club-warn);
     }
-    .btn-primary {
-      border-color: rgba(0, 229, 255, .7);
-      background: linear-gradient(135deg, rgba(0, 229, 255, .22), rgba(124, 77, 255, .3));
-      color: #eaffff;
+    body.club-page .btn.btn-danger {
+      border-color: color-mix(in srgb, var(--club-danger) 45%, transparent);
+      background: var(--club-danger-soft);
+      color: var(--club-danger);
     }
-    .btn-warn {
-      border-color: rgba(255, 209, 102, .45);
-      color: var(--gold);
-    }
-    .btn-danger {
-      border-color: rgba(255, 95, 200, .45);
-      color: var(--pink);
+    body.club-page .btn.btn-danger:hover {
+      border-color: color-mix(in srgb, var(--club-danger) 65%, transparent);
+      background: color-mix(in srgb, var(--club-danger) 16%, transparent);
+      color: var(--club-danger);
     }
     .mode-hint[hidden], .action-panel[hidden] { display: none; }
+    /* 互斥的模式按钮面板收进一个容器：间距收紧，且 hidden 面板真正隐藏（display:grid 会压过 [hidden]） */
+    .mode-panels { display: grid; gap: 10px; margin-top: 18px; }
+    .mode-panels .button-stack { margin-top: 0; }
+    .mode-panels .button-stack[hidden] { display: none; }
+
+    /* 画布缩放控制：仅视觉缩放 SVG（transform: scale），不改布局算法 */
+    .zoom-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    /* 缩放按钮尺寸补充：带 body.club-page 前缀压过 club 的 .btn 基础尺寸 */
+    body.club-page .btn.zoom-btn {
+      min-height: 34px;
+      padding: 4px 12px;
+      font-size: 14px;
+    }
+    .zoom-value {
+      min-width: 48px;
+      text-align: center;
+      color: var(--muted);
+      font: 600 12px/1 ui-monospace, Consolas, monospace;
+      font-variant-numeric: tabular-nums;
+    }
 
     .visual { padding: 20px; min-width: 0; }
     .visual-header {
@@ -249,11 +148,12 @@
       justify-content: space-between;
       gap: 16px;
     }
-    .status {
+    /* 裸 .status 胶囊是页面自由样式（club 的状态卡规则已收窄为 .panel.status）；加前缀防 club 回归 */
+    body.club-page .status {
       padding: 6px 10px;
-      border: 1px solid rgba(0, 229, 255, .3);
+      border: 1px solid var(--club-accent-line);
       border-radius: 999px;
-      color: var(--cyan);
+      color: var(--club-accent);
       font-size: 12px;
       white-space: nowrap;
     }
@@ -278,7 +178,7 @@
       fill: none;
       stroke: rgba(0, 229, 255, .42);
       stroke-width: 2;
-      transition: stroke .18s ease, stroke-width .18s ease;
+      transition: stroke var(--club-dur, 200ms) var(--club-ease, ease), stroke-width var(--club-dur, 200ms) var(--club-ease, ease);
     }
     .tree-edge.active {
       stroke: var(--gold);
@@ -295,7 +195,7 @@
       stroke: rgba(0, 229, 255, .72);
       stroke-width: 2;
       filter: drop-shadow(0 0 10px rgba(0, 229, 255, .28));
-      transition: fill .16s ease, stroke .16s ease, filter .16s ease;
+      transition: fill var(--club-dur-fast, 140ms) var(--club-ease, ease), stroke var(--club-dur-fast, 140ms) var(--club-ease, ease), filter var(--club-dur-fast, 140ms) var(--club-ease, ease);
     }
     .node-g.visit .node-circle {
       stroke: var(--gold);
@@ -387,8 +287,9 @@
     .metric strong {
       display: block;
       margin-top: 4px;
-      color: #f6fbff;
-      font: 700 22px/1.15 ui-monospace, Consolas, monospace;
+      color: var(--club-text, #e8f1fb);
+      font: 700 22px/1.15 var(--club-mono, ui-monospace, Consolas, monospace);
+      font-variant-numeric: tabular-nums;
     }
     .legend {
       display: flex;
@@ -440,31 +341,79 @@
       border: 0;
     }
 
+    /* —— 亮色补丁：舞台/树节点/边统一为暖色可读配色，字典盒 code 用深赭（!important 覆盖 theme.css）—— */
+    html[data-theme="light"] .stage-wrap {
+      background: #FFFFFF !important;
+      border-color: #E5E5EA !important;
+    }
+    html[data-theme="light"] .tree-edge { stroke: #8A93A1 !important; }
+    html[data-theme="light"] .tree-edge.active { stroke: #C98900 !important; }
+    html[data-theme="light"] .tree-edge.remove { stroke: #A83B68 !important; }
+    html[data-theme="light"] .node-circle {
+      fill: #FFE3D6 !important;
+      stroke: #E07A5F !important;
+      filter: none !important;
+    }
+    html[data-theme="light"] .node-g.visit .node-circle { fill: #FFE08A !important; stroke: #C98900 !important; filter: none !important; }
+    html[data-theme="light"] .node-g.done .node-circle { fill: #CDEEDD !important; stroke: #2FA36C !important; filter: none !important; }
+    html[data-theme="light"] .node-g.current .node-circle { fill: #F4B942 !important; stroke: #8A5600 !important; filter: none !important; }
+    html[data-theme="light"] .node-g.insert .node-circle { fill: #DDE5FB !important; stroke: #5475E8 !important; filter: none !important; }
+    html[data-theme="light"] .node-g.delete .node-circle { fill: #F9D8E4 !important; stroke: #A83B68 !important; filter: none !important; }
+    html[data-theme="light"] .node-g.successor .node-circle { fill: #E4D9FB !important; stroke: #6D28D9 !important; filter: none !important; }
+    html[data-theme="light"] .dict-box code {
+      background: #FDF0EA !important;
+      color: #9a3412 !important;
+    }
+    html[data-theme="light"] .op-log .fresh { color: #C2410C !important; }
+    /* 亮色图例色点与树节点亮色描边一致（--gold/--green 原色在白底可读性不足） */
+    html[data-theme="light"] .legend i { background: #C2410C !important; }
+    html[data-theme="light"] .legend .l-visit { background: #C98900 !important; }
+    html[data-theme="light"] .legend .l-done { background: #2FA36C !important; }
+    html[data-theme="light"] .legend .l-delete { background: #A83B68 !important; }
+    html[data-theme="light"] .legend .l-successor { background: #6D28D9 !important; }
+    html[data-theme="light"] .error { color: #B4233B !important; }
+
+    /* —— 算法档案：随当前模式切换的教学面板（配色对齐 .metric，亮暗自适应；淡入时长走 club token，reduced-motion 由 club-ui 全局规则兜底） —— */
+    .algo-profile { margin-top: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--club-surface-2, rgba(2, 7, 18, .48)); }
+    .algo-profile summary {
+      list-style: none; display: flex; align-items: center;
+      padding: 11px 13px; cursor: pointer;
+      color: var(--muted); font-size: 13px; font-weight: 700; user-select: none;
+      transition: color var(--club-dur, 200ms) var(--ease);
+    }
+    .algo-profile summary::-webkit-details-marker { display: none; }
+    .algo-profile summary::after {
+      content: "+"; margin-left: auto; padding-left: 10px;
+      color: var(--muted); font: 700 15px/1 var(--club-mono, ui-monospace, Consolas, monospace);
+    }
+    .algo-profile[open] summary::after { content: "−"; }
+    .algo-profile summary:hover { color: var(--cyan); }
+    .algo-profile-body { border-top: 1px solid var(--line); padding: 1px 13px 11px; }
+    .algo-profile-body > div {
+      display: grid; grid-template-columns: max-content 1fr; gap: 10px;
+      padding: 7px 0; border-top: 1px solid var(--line);
+      font-size: 12px; line-height: 1.65; align-items: baseline;
+    }
+    .algo-profile-body > div:first-child { border-top: 0; padding-top: 5px; }
+    .algo-profile-label { color: var(--muted); white-space: nowrap; }
+    .algo-profile-value { color: var(--text); overflow-wrap: break-word; }
+    .algo-profile-value.mono { font-family: var(--club-mono, ui-monospace, Consolas, monospace); font-variant-numeric: tabular-nums; }
+    .algo-profile.fade-in .algo-profile-body { animation: algoProfileIn var(--club-dur, 200ms) var(--ease) both; }
+    @keyframes algoProfileIn { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+
     @media (max-width: 900px) {
       .lab-grid { grid-template-columns: 1fr; }
       .controls { order: 2; }
-      .hero { align-items: start; flex-direction: column; }
       .algorithm-note { min-width: 0; width: 100%; }
       .metrics { grid-template-columns: repeat(2, 1fr); }
     }
-    @media (max-width: 560px) {
-      .topbar { gap: 10px; padding: 12px 16px; }
-      .brand small { display: none; }
-      .member-identity { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
-      .back-link { padding: 8px; font-size: 12px; }
+    @media (max-width: 640px) {
       .visual, .controls { padding: 15px; }
       .metrics { grid-template-columns: 1fr; }
       .visual-header { flex-direction: column; }
-      .status { align-self: flex-start; }
+      body.club-page .status { align-self: flex-start; }
       .btn-row { grid-template-columns: 1fr; }
       .stage-wrap { min-height: 320px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        scroll-behavior: auto !important;
-        animation-duration: .01ms !important;
-        transition-duration: .01ms !important;
-      }
     }
   </style>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
@@ -482,14 +431,16 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body>
+<body class="club-page">
   <header class="topbar">
-    <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页">
-      <span class="brand-mark">A</span>
-      <span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span>
-    </a>
-    <span class="member-identity" data-member-identity hidden></span>
-    <a class="back-link" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
+    <div class="topbar-inner">
+      <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页">
+        <span class="brand-mark">A</span>
+        <span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span>
+      </a>
+      <span class="member-identity" data-member-identity hidden></span>
+      <a class="back" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
+    </div>
   </header>
 
   <main>
@@ -497,7 +448,7 @@
       <div>
         <p class="eyebrow">BINARY TREE LAB · V1</p>
         <h1 id="pageTitle" data-i18n="lab.tree.h1">二叉树可视化实验室</h1>
-        <p data-i18n="lab.tree.lead">用 SVG 自动布局观察二叉树结构，演示前序 / 中序 / 后序 / 深搜 / 广搜层序遍历，并按二叉搜索树（BST）规则完成插入与删除。字典序模式展示「中序遍历即有序序列」。</p>
+        <p class="lead" data-i18n="lab.tree.lead">用 SVG 自动布局观察二叉树结构，演示前序 / 中序 / 后序 / 深搜 / 广搜层序遍历，并按二叉搜索树（BST）规则完成插入与删除。字典序模式展示「中序遍历即有序序列」。</p>
       </div>
       <aside class="algorithm-note" id="algorithmNote">
         <b data-i18n="lab.tree.preorder">前序遍历</b>
@@ -523,9 +474,18 @@
           </select>
         </div>
 
+        <details class="algo-profile" id="algoProfile" open>
+          <summary><span id="algoProfileTitle">算法档案</span></summary>
+          <div class="algo-profile-body">
+            <div><span class="algo-profile-label" data-i18n="lab.tree.profile.idea">核心思想</span><span class="algo-profile-value" id="algoProfileIdea"></span></div>
+            <div><span class="algo-profile-label" data-i18n="lab.tree.profile.time">时间复杂度</span><span class="algo-profile-value mono" id="algoProfileTime"></span></div>
+            <div><span class="algo-profile-label" data-i18n="lab.tree.profile.extra">空间 / 特性</span><span class="algo-profile-value mono" id="algoProfileExtra"></span></div>
+          </div>
+        </details>
+
         <div class="control-group" id="valueGroup">
           <label for="valueInput" id="valueLabel" data-i18n="lab.tree.valueLabel">操作数值</label>
-          <input class="field" id="valueInput" type="text" inputmode="numeric" data-i18n-placeholder="lab.tree.valuePh" placeholder="例如：42" maxlength="8" />
+          <input id="valueInput" type="text" inputmode="numeric" data-i18n-placeholder="lab.tree.valuePh" placeholder="例如：42" maxlength="8" />
           <p class="hint mode-hint" id="valueHint" data-i18n="lab.tree.valueHint">插入 / 删除时输入整数；遍历模式可不填。</p>
           <p class="error" id="inputError" role="alert" aria-live="polite"></p>
         </div>
@@ -536,39 +496,51 @@
           <p class="hint" data-i18n="lab.tree.seedHint">以逗号或空格分隔的整数，按 BST 规则依次插入生成树。</p>
         </div>
 
+        <div class="control-group">
+          <label for="speedSelect" data-i18n="lab.speed">速度</label>
+          <select id="speedSelect" class="speed-select" aria-label="动画速度">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+          </select>
+        </div>
+
+        <div class="mode-panels">
         <div class="button-stack" id="playPanel">
-          <button class="btn btn-primary" type="button" id="startButton" data-i18n="lab.common.start">开始演示</button>
+          <button class="btn" type="button" id="startButton" data-i18n="lab.common.start">开始演示</button>
           <div class="btn-row">
-            <button class="btn" type="button" id="stepButton" data-i18n="lab.common.step">单步执行</button>
-            <button class="btn btn-warn" type="button" id="resetButton" data-i18n="lab.tree.resetAnim">重置动画</button>
+            <button class="btn secondary" type="button" id="stepButton" data-i18n="lab.common.step">单步执行</button>
+            <button class="btn btn-warn secondary" type="button" id="resetButton" data-i18n="lab.tree.resetAnim">重置动画</button>
           </div>
           <div class="btn-row">
-            <button class="btn" type="button" id="exampleButton" data-i18n="lab.tree.loadExample">加载示例树</button>
-            <button class="btn" type="button" id="buildButton" data-i18n="lab.tree.buildSeq">按序列建树</button>
+            <button class="btn secondary" type="button" id="exampleButton" data-i18n="lab.tree.loadExample">加载示例树</button>
+            <button class="btn secondary" type="button" id="buildButton" data-i18n="lab.tree.buildSeq">按序列建树</button>
           </div>
         </div>
 
         <div class="button-stack action-panel" id="mutatePanel" hidden>
-          <button class="btn btn-primary" type="button" id="insertButton" data-i18n="lab.tree.doInsert">执行插入</button>
+          <button class="btn" type="button" id="insertButton" data-i18n="lab.tree.doInsert">执行插入</button>
           <button class="btn btn-danger" type="button" id="deleteButton" data-i18n="lab.tree.doDelete">执行删除</button>
           <div class="btn-row">
-            <button class="btn" type="button" id="stepMutateButton" data-i18n="lab.common.step">单步执行</button>
-            <button class="btn btn-warn" type="button" id="resetMutateButton" data-i18n="lab.tree.resetAnim">重置动画</button>
+            <button class="btn secondary" type="button" id="stepMutateButton" data-i18n="lab.common.step">单步执行</button>
+            <button class="btn btn-warn secondary" type="button" id="resetMutateButton" data-i18n="lab.tree.resetAnim">重置动画</button>
           </div>
           <div class="btn-row">
-            <button class="btn" type="button" id="exampleMutateButton" data-i18n="lab.tree.loadExample">加载示例树</button>
-            <button class="btn" type="button" id="buildMutateButton" data-i18n="lab.tree.buildSeq">按序列建树</button>
+            <button class="btn secondary" type="button" id="exampleMutateButton" data-i18n="lab.tree.loadExample">加载示例树</button>
+            <button class="btn secondary" type="button" id="buildMutateButton" data-i18n="lab.tree.buildSeq">按序列建树</button>
           </div>
         </div>
 
         <div class="button-stack action-panel" id="dictPanel" hidden>
-          <button class="btn btn-primary" type="button" id="dictExampleButton" data-i18n="lab.tree.dictExample">一键生成字典序示例</button>
-          <button class="btn" type="button" id="dictInsertButton" data-i18n="lab.tree.dictInsert">按序插入当前值</button>
+          <button class="btn" type="button" id="dictExampleButton" data-i18n="lab.tree.dictExample">一键生成字典序示例</button>
+          <button class="btn secondary" type="button" id="dictInsertButton" data-i18n="lab.tree.dictInsert">按序插入当前值</button>
           <div class="btn-row">
-            <button class="btn" type="button" id="dictInorderButton" data-i18n="lab.tree.dictInorder">演示中序（有序）</button>
-            <button class="btn btn-warn" type="button" id="dictResetButton" data-i18n="lab.tree.resetAnim">重置动画</button>
+            <button class="btn secondary" type="button" id="dictInorderButton" data-i18n="lab.tree.dictInorder">演示中序（有序）</button>
+            <button class="btn btn-warn secondary" type="button" id="dictResetButton" data-i18n="lab.tree.resetAnim">重置动画</button>
           </div>
-          <button class="btn" type="button" id="dictBuildButton" data-i18n="lab.tree.buildSeq">按序列建树</button>
+          <button class="btn secondary" type="button" id="dictBuildButton" data-i18n="lab.tree.buildSeq">按序列建树</button>
+        </div>
         </div>
       </form>
 
@@ -579,6 +551,13 @@
             <span class="sr-only" id="announcement" aria-live="polite"></span>
           </div>
           <span class="status" id="statusText" role="status" data-i18n="lab.common.ready">就绪</span>
+        </div>
+
+        <div class="zoom-bar" data-i18n-aria="lab.tree.zoomAria" aria-label="画布缩放">
+          <button class="btn secondary zoom-btn" type="button" id="zoomOutButton" data-i18n-aria="lab.tree.zoomOut" aria-label="缩小">−</button>
+          <span class="zoom-value" id="zoomValue">100%</span>
+          <button class="btn secondary zoom-btn" type="button" id="zoomInButton" data-i18n-aria="lab.tree.zoomIn" aria-label="放大">＋</button>
+          <button class="btn secondary zoom-btn" type="button" id="zoomResetButton" data-i18n-aria="lab.tree.zoomReset" aria-label="重置缩放">1:1</button>
         </div>
 
         <div class="stage-wrap" id="stageWrap">
@@ -650,6 +629,11 @@
         dictInorder: el('dictInorderButton'),
         dictReset: el('dictResetButton'),
         dictBuild: el('dictBuildButton'),
+        speed: el('speedSelect'),
+        zoomValue: el('zoomValue'),
+        zoomIn: el('zoomInButton'),
+        zoomOut: el('zoomOutButton'),
+        zoomReset: el('zoomResetButton'),
       };
 
       const descKeys = {
@@ -668,6 +652,76 @@
           o[k] = [ClubI18n.t(descKeys[k][0]), ClubI18n.t(descKeys[k][1])];
         }
         return o;
+      }
+
+      /* —— 算法档案（教学面板）：内容随所选模式切换；前/中/后序与 DFS 共用遍历复杂度档案，各自一行差异；i18n 用页内 mergeDict 注入 —— */
+      const ALGO_PROFILE_DICT = {
+        zh: { lab: { tree: {
+          profile: { title: '算法档案', idea: '核心思想', time: '时间复杂度', extra: '空间 / 特性' },
+          algo: {
+            preorder: { idea: '先访问根，再递归左子树、右子树——“根左右”。' },
+            inorder: { idea: '先左子树，再根，再右子树——在 BST 上得到升序序列。' },
+            postorder: { idea: '先递归左右子树，最后访问根——“左右根”，适合自底向上处理。' },
+            dfs: { idea: '与先序遍历等价：沿一条分支走到底，再回头访问另一侧。' },
+            trav: { time: 'O(n)（每个节点恰好访问一次）', extra: '空间 O(h)（递归栈深度，h 为树高，最坏 O(n)）' },
+            bfs: { idea: '用队列逐层访问：先走完一整层，再进入下一层。', time: 'O(n)（每个节点入队一次）', extra: '空间 O(w)（队列最宽为最宽一层）· 适合按层处理 / 求最小深度' },
+            insert: { idea: '从根向下比较：小走左、大走右，直到空位挂上新节点，重复值跳过。', time: 'O(h)（平均 O(log n)，退化成链时 O(n)）', extra: '空间 O(1)（迭代查找）· 新节点总是成为叶子' },
+            delete: { idea: '先查找到目标，再按三情形处理：叶子直接删、单孩上提、双孩用中序后继替换。', time: 'O(h)（含后继查找，平均 O(log n)，最坏 O(n)）', extra: '空间 O(1) · 用后继顶替是保持 BST 性质的关键' },
+            dict: { idea: '同样是“左 < 根 < 右”的 BST，比较规则换成字典序，中序输出即字典序。', time: '插入 / 查找 O(h)；中序展示 O(n)', extra: '空间 O(n)（整棵树）· 字符串键的有序索引正是这样组织的' }
+          }
+        } } },
+        en: { lab: { tree: {
+          profile: { title: 'Algorithm profile', idea: 'Idea', time: 'Time complexity', extra: 'Space / traits' },
+          algo: {
+            preorder: { idea: 'Visit the root first, then recurse left, then right — root, left, right.' },
+            inorder: { idea: 'Left subtree, then root, then right — yields ascending order on a BST.' },
+            postorder: { idea: 'Both subtrees first, the root last — left, right, root; good for bottom-up processing.' },
+            dfs: { idea: 'Equivalent to preorder here: follow one branch to the bottom, then back up for the other side.' },
+            trav: { time: 'O(n) — every node is visited exactly once', extra: 'Space O(h) recursion depth (h = tree height, O(n) worst case)' },
+            bfs: { idea: 'Walks the tree level by level with a queue: finish one depth before entering the next.', time: 'O(n) — each node is enqueued once', extra: 'Space O(w), the widest level · Great for level-wise processing and minimum depth' },
+            insert: { idea: 'Compare downward from the root — smaller goes left, larger goes right — and attach at the first empty slot; duplicates are skipped.', time: 'O(h) — O(log n) on average, O(n) if the tree degenerates', extra: 'Space O(1) iterative search · The new node always becomes a leaf' },
+            delete: { idea: 'Find the target, then handle three cases: a leaf is removed, a single child is spliced up, two children use the in-order successor.', time: 'O(h) including the successor search — O(log n) average, O(n) worst', extra: 'Space O(1) · Swapping in the successor is what keeps the BST property' },
+            dict: { idea: 'The same left < root < right BST with lexicographic comparison; an in-order walk emits dictionary order.', time: 'O(h) to insert or find; O(n) for the in-order showcase', extra: 'Space O(n) for the whole tree · Exactly how sorted string-key indexes are organized' }
+          }
+        } } }
+      };
+      function mergePageDict(){
+        if (window.ClubI18n && typeof ClubI18n.mergeDict === 'function') {
+          ClubI18n.mergeDict(ALGO_PROFILE_DICT);
+          // state.dict 一旦非空，resolve() 不再回落到全局词典；同步并入全局词典，
+          // 保证 boot 前的早期 t() 与页面其余动态文案仍能命中既有 key。
+          if (window.ClubI18nDict) ClubI18n.mergeDict(window.ClubI18nDict);
+        }
+      }
+      mergePageDict();
+      // 各模式 [idea, time, extra] 的档案键：前/中/后序与 DFS 复用 trav 的复杂度档案
+      const PROFILE_KEY_MAP = {
+        preorder: ['preorder', 'trav', 'trav'],
+        inorder: ['inorder', 'trav', 'trav'],
+        postorder: ['postorder', 'trav', 'trav'],
+        dfs: ['dfs', 'trav', 'trav'],
+        bfs: ['bfs', 'bfs', 'bfs'],
+        insert: ['insert', 'insert', 'insert'],
+        delete: ['delete', 'delete', 'delete'],
+        dict: ['dict', 'dict', 'dict']
+      };
+      const profileNameKeys = { preorder: 'lab.tree.preorder', inorder: 'lab.tree.inorder', postorder: 'lab.tree.postorder', dfs: 'lab.tree.dfs', bfs: 'lab.tree.bfs', insert: 'lab.tree.insert', delete: 'lab.tree.delete', dict: 'lab.tree.dict' };
+      const profileEls = { box: el('algoProfile'), title: el('algoProfileTitle'), idea: el('algoProfileIdea'), time: el('algoProfileTime'), extra: el('algoProfileExtra') };
+      let lastProfileAlgo = null;
+      function renderAlgoProfile(animate){
+        if (!profileEls.box) return;
+        const type = ui.mode.value;
+        const keys = PROFILE_KEY_MAP[type] || ['trav', 'trav', 'trav'];
+        profileEls.title.textContent = `${ClubI18n.t('lab.tree.profile.title')} · ${ClubI18n.t(profileNameKeys[type] || type)}`;
+        profileEls.idea.textContent = ClubI18n.t(`lab.tree.algo.${keys[0]}.idea`);
+        profileEls.time.textContent = ClubI18n.t(`lab.tree.algo.${keys[1]}.time`);
+        profileEls.extra.textContent = ClubI18n.t(`lab.tree.algo.${keys[2]}.extra`);
+        if (animate && lastProfileAlgo && lastProfileAlgo !== type) {
+          profileEls.box.classList.remove('fade-in');
+          void profileEls.box.offsetWidth;
+          profileEls.box.classList.add('fade-in');
+        }
+        lastProfileAlgo = type;
       }
 
       const EXAMPLE_SEED = [50, 30, 70, 20, 40, 60, 80];
@@ -691,6 +745,37 @@
       let edgeHighlight = new Set();
       let visitPath = [];
       let busy = false;
+
+      // 演示速度（0.5/1/2/4），四页共享 localStorage('lab-speed')；实际延时 = DELAY / speed
+      const SPEED_KEY = 'lab-speed';
+      let speed = 1;
+      function initSpeed() {
+        let saved = 1;
+        try { saved = parseFloat(localStorage.getItem(SPEED_KEY)); } catch (_e) { /* 忽略存储不可用 */ }
+        if (saved !== 0.5 && saved !== 1 && saved !== 2 && saved !== 4) saved = 1;
+        speed = saved;
+        if (!ui.speed) return;
+        ui.speed.value = String(saved);
+        ui.speed.addEventListener('change', () => {
+          speed = parseFloat(ui.speed.value) || 1;
+          try { localStorage.setItem(SPEED_KEY, ui.speed.value); } catch (_e) { /* 私密模式等场景忽略 */ }
+        });
+      }
+
+      // 画布缩放：只对 SVG 做视觉 transform: scale，不影响节点布局计算；render() 重绘后仍然生效
+      const ZOOM_MIN = 0.5;
+      const ZOOM_MAX = 2;
+      const ZOOM_STEP = 0.25;
+      let zoom = 1;
+      function applyZoom() {
+        ui.svg.style.transformOrigin = 'top center';
+        ui.svg.style.transform = `scale(${zoom})`;
+        if (ui.zoomValue) ui.zoomValue.textContent = `${Math.round(zoom * 100)}%`;
+      }
+      function setZoom(next) {
+        zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(next * 100) / 100));
+        applyZoom();
+      }
 
       class TreeNode {
         constructor(val) {
@@ -1194,7 +1279,7 @@
       function loop() {
         if (!playing) return;
         if (!applyNext()) return;
-        timer = setTimeout(loop, DELAY);
+        timer = setTimeout(loop, DELAY / speed);
       }
 
       function startPause() {
@@ -1417,6 +1502,7 @@
           render();
           updateStatus(ClubI18n.t('lab.tree.valueHintDict'));
         }
+        renderAlgoProfile(true);
       }
 
       function syncStartLabel() {
@@ -1431,30 +1517,10 @@
         }
       }
 
-      // Events
-      ui.mode.addEventListener('change', syncPanels);
-      ui.start.addEventListener('click', startPause);
-      ui.step.addEventListener('click', stepOnce);
-      ui.reset.addEventListener('click', resetAnim);
-      ui.example.addEventListener('click', () => loadExample(EXAMPLE_SEED));
-      ui.build.addEventListener('click', buildFromInput);
-
-      ui.insertBtn.addEventListener('click', () => runMutate('insert'));
-      ui.deleteBtn.addEventListener('click', () => runMutate('delete'));
-      ui.stepMutate.addEventListener('click', stepMutate);
-      ui.resetMutate.addEventListener('click', resetAnim);
-      ui.exampleMutate.addEventListener('click', () => loadExample(EXAMPLE_SEED));
-      ui.buildMutate.addEventListener('click', buildFromInput);
-
-      ui.dictExample.addEventListener('click', dictGenerate);
-      ui.dictInsert.addEventListener('click', dictInsertNow);
-      ui.dictInorder.addEventListener('click', dictPlayInorder);
-      ui.dictReset.addEventListener('click', resetAnim);
-      ui.dictBuild.addEventListener('click', buildFromInput);
-
-      el('controlForm').addEventListener('submit', (e) => e.preventDefault());
-
-      window.addEventListener('club:langchange', () => {
+      // club:langchange 与初始化兜底共用：动态文案统一在此刷新（AGENTS 约定）
+      function refreshAll() {
+        mergePageDict();
+        renderAlgoProfile(false);
         const mode = ui.mode.value;
         const [name, text] = getDescriptions()[mode];
         ui.note.innerHTML = `<b>${name}</b><span>${text}</span>`;
@@ -1490,16 +1556,48 @@
             updateStatus(ClubI18n.t('lab.tree.valueHintDict'));
           }
         }
-        if (typeof render === 'function') render();
+        render();
         if (typeof ClubI18n?.apply === 'function') ClubI18n.apply(document);
-      });
+      }
+
+      // Events
+      ui.mode.addEventListener('change', syncPanels);
+      ui.start.addEventListener('click', startPause);
+      ui.step.addEventListener('click', stepOnce);
+      ui.reset.addEventListener('click', resetAnim);
+      ui.example.addEventListener('click', () => loadExample(EXAMPLE_SEED));
+      ui.build.addEventListener('click', buildFromInput);
+
+      ui.insertBtn.addEventListener('click', () => runMutate('insert'));
+      ui.deleteBtn.addEventListener('click', () => runMutate('delete'));
+      ui.stepMutate.addEventListener('click', stepMutate);
+      ui.resetMutate.addEventListener('click', resetAnim);
+      ui.exampleMutate.addEventListener('click', () => loadExample(EXAMPLE_SEED));
+      ui.buildMutate.addEventListener('click', buildFromInput);
+
+      ui.dictExample.addEventListener('click', dictGenerate);
+      ui.dictInsert.addEventListener('click', dictInsertNow);
+      ui.dictInorder.addEventListener('click', dictPlayInorder);
+      ui.dictReset.addEventListener('click', resetAnim);
+      ui.dictBuild.addEventListener('click', buildFromInput);
+
+      el('controlForm').addEventListener('submit', (e) => e.preventDefault());
+
+      ui.zoomIn.addEventListener('click', () => setZoom(zoom + ZOOM_STEP));
+      ui.zoomOut.addEventListener('click', () => setZoom(zoom - ZOOM_STEP));
+      ui.zoomReset.addEventListener('click', () => setZoom(1));
+
+      window.addEventListener('club:langchange', refreshAll);
 
       // Init
       loadExample(EXAMPLE_SEED);
       syncPanels();
+      initSpeed();
+      applyZoom();
+      // i18n boot 晚于内联脚本，初始化后再兜底刷一次（AGENTS 约定）
+      setTimeout(refreshAll, 0);
     })();
   </script>
-<script>!function(){try{var t=document.querySelector('.topbar');if(t&&!document.getElementById('langSwitcherHost')){var h=document.createElement('div');h.id='langSwitcherHost';t.appendChild(h);}if(window.ClubI18n)window.ClubI18n.mountSwitcher(document.getElementById('langSwitcherHost'));if(window.ClubTheme&&typeof window.ClubTheme.autoMountSwitcher==='function')window.ClubTheme.autoMountSwitcher();}catch(e){}}();</script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

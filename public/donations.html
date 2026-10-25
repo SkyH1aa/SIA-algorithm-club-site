@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.donations.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -11,8 +11,8 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
   <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>
   <meta name="description" content="算法社社团捐赠名单：按金额排序，登录可查看，超级管理员可维护记录与收款码。">
   <meta property="og:type" content="website">
@@ -28,13 +28,15 @@
   <meta name="twitter:image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
+  <style>
+  </style>
 </head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Donations</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="club-features.html" data-i18n="common.backFeatures">返回社团功能</a></div></header>
 
   <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div>
   <main>
-    <section id="memberGate" class="panel member-gate"><div><strong data-i18n="donations.gateTitle">请先登录</strong><p data-i18n="donations.gateLead">捐赠名单仅对已登录的算法社成员开放。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+    <section id="memberGate" class="panel member-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><h2 data-i18n="donations.gateTitle">请先登录</h2><p data-i18n="donations.gateLead">捐赠名单仅对已登录的算法社成员开放。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
 
     <div id="content" class="hidden">
       <section class="hero">
@@ -74,6 +76,9 @@
         .donation-summary { flex: 1 1 100%; order: 3; color: var(--club-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
         .donation-summary strong { color: var(--club-text); }
         #exportCsv { flex: 0 0 auto; }
+        /* 表格 caption 仅读屏可见；新增记录落位高亮 */
+        .sr-only-clb { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+        #donationList tr.row-flash td { background: var(--club-accent-soft); transition: background .9s ease; }
         @media (max-width: 640px) { .donation-year { flex: 1 1 120px; } }
         /* 窄屏：表格行转卡片，金额不再被横向裁切 */
         @media (max-width: 640px) {
@@ -168,7 +173,7 @@
           <div class="donation-summary" id="donationSummary" role="status"></div>
           <button class="button secondary" type="button" id="exportCsv" data-i18n="donations.exportCsv">导出 CSV</button>
         </div>
-        <div class="table-wrap" id="donationList"><div class="empty loading" data-i18n="donations.loading">正在读取捐赠名单…</div></div>
+        <div class="table-wrap" id="donationList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="donations.loading">正在读取捐赠名单…</span></div>
         <p class="message" id="listMessage" role="status"></p>
       </section>
     </div>
@@ -186,6 +191,16 @@
     let editingId = '';
     let settings = { payment_qr_url: '' };
     let qrDirty = false;
+    // 本页新增 i18n 键（页内合并，不改公共词典文件）。
+    // donations.currency：中英文实际都用 ¥ 符号（与词典 totalSummary/filteredSummary 文案一致），
+    // 仍提为键以便未来多币种/多语言时只改词典。
+    const DONATIONS_PAGE_DICT = {
+      zh: { donations: { currency: '¥', tableCaption: '捐赠记录' } },
+      en: { donations: { currency: '¥', tableCaption: 'Donation records' } }
+    };
+    function mergeDonationsPageDict() { if (window.ClubI18n && typeof ClubI18n.mergeDict === 'function') ClubI18n.mergeDict(DONATIONS_PAGE_DICT); }
+    mergeDonationsPageDict();
+    document.addEventListener('DOMContentLoaded', mergeDonationsPageDict);
 
     const escapeHtml = window.ClubCommon ? ClubCommon.escapeHtml : (value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])));
     function setMessage(node, text, type = '') {
@@ -302,14 +317,16 @@
           : t('donations.totalSummary', { n: visible.length, total: formatAmount(total) });
       }
       if (!visible.length) {
+        // 无匹配（有数据但被筛选）与真的没有记录都走 empty 态；加载失败在
+        // refreshDonations 的 catch 里走 error 态 + onRetry，三种状态不再混用。
         ClubCommon.listState(list, {
-          kind: donations.length ? 'empty' : 'empty',
+          kind: 'empty',
           title: donations.length ? t('donations.noMatch') : t('donations.empty'),
           message: donations.length ? t('donations.noMatchHint') : t('donations.emptyHint')
         });
         return;
       }
-      list.innerHTML = `<table class="table"><thead><tr>
+      list.innerHTML = `<table class="table"><caption class="sr-only-clb">${escapeHtml(t('donations.tableCaption'))}</caption><thead><tr>
           <th>${escapeHtml(t('donations.colRank'))}</th>
           <th>${escapeHtml(t('donations.colDonor'))}</th>
           <th>${escapeHtml(t('donations.colDate'))}</th>
@@ -320,7 +337,7 @@
             <td class="donation-rank" data-label="${escapeHtml(t('donations.colRank'))}">${index + 1}</td>
             <td data-label="${escapeHtml(t('donations.colDonor'))}">${escapeHtml(item.donor_name)}</td>
             <td class="donation-date" data-label="${escapeHtml(t('donations.colDate'))}">${escapeHtml(formatDate(item.donated_on))}</td>
-            <td class="donation-amount" data-label="${escapeHtml(t('donations.colAmount'))}">¥${escapeHtml(formatAmount(item.amount))}</td>
+            <td class="donation-amount" data-label="${escapeHtml(t('donations.colAmount'))}">${escapeHtml(t('donations.currency'))}${escapeHtml(formatAmount(item.amount))}</td>
             ${isSuperAdmin ? `<td class="donation-actions">
               <button class="row-button" type="button" data-edit="${escapeHtml(item.id)}">${escapeHtml(t('common.edit'))}</button>
               <button class="row-button delete" type="button" data-delete="${escapeHtml(item.id)}">${escapeHtml(t('common.delete'))}</button>
@@ -401,6 +418,20 @@
         rows
       );
       setMessage($('listMessage'), t('donations.exportOk', { n: count }), 'success');
+    }
+
+    // 新增/编辑保存成功后：滚动定位到对应行并短暂高亮（按姓名+日期匹配当前列表首行）。
+    function flashDonationRow(donorName, donatedOn) {
+      const row = [...$('donationList').querySelectorAll('tbody tr')].find(tr => {
+        const cells = tr.querySelectorAll('td');
+        return cells.length >= 4
+          && cells[1].textContent.trim() === donorName
+          && cells[2].textContent.trim() === donatedOn;
+      });
+      if (!row) return;
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      row.classList.add('row-flash');
+      setTimeout(() => row.classList.remove('row-flash'), 2400);
     }
 
     async function refreshDonations() {
@@ -498,6 +529,7 @@
         setMessage($('formMessage'), editingId ? t('donations.updated') : t('donations.added'), 'success');
         resetForm();
         await refreshDonations();
+        flashDonationRow(donorName, donatedOn);
       } catch (error) {
         setMessage($('formMessage'), error.message, 'error');
       }
@@ -508,6 +540,7 @@
 
     window.addEventListener('club:langchange', () => {
       try {
+        mergeDonationsPageDict();
         if (window.ClubI18n?.apply) window.ClubI18n.apply(document);
         if (!$('content').classList.contains('hidden')) {
           $('saveButton').textContent = editingId ? t('donations.saveEdit') : t('donations.add');
@@ -518,6 +551,6 @@
       } catch (_error) {}
     });
   </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

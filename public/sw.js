@@ -5,7 +5,7 @@
 // * HTML 走 network-first，保证公告与活动不陈旧；离线时回退到缓存的壳。
 // * CSS/JS/字体走 cache-first，文件名带内容哈希，天然可长期缓存。
 // * 版本号来自 asset-versions.json，构建时写死；改共享资源后重新生成即可。
-const VERSION = '927ea98774';
+const VERSION = 'b525095a89';
 const SHELL_CACHE = `club-shell-${VERSION}`;
 const RUNTIME_CACHE = `club-runtime-${VERSION}`;
 
@@ -20,7 +20,12 @@ const SHELL_ASSETS = [
   './public/club-common.js',
   './public/club-shell.js',
   './public/favicon.svg',
-  './public/manifest.webmanifest'
+  './public/manifest.webmanifest',
+  // 品牌字体：字体 CSS 与 Inter 拉丁块离线可用；MiSans 的 56 个分块走
+  // 运行时 cache-first，浏览到哪块缓存哪块，不把 4.6MB 全塞进安装包。
+  './public/assets/fonts/club-fonts.css',
+  './public/assets/fonts/misans/MiSansVF.min.css',
+  './public/assets/fonts/inter/inter-latin-wght-normal.woff2'
 ];
 
 self.addEventListener('install', event => {
@@ -67,6 +72,23 @@ self.addEventListener('fetch', event => {
           const cached = await caches.match(request);
           return cached || caches.match('./index.html');
         })
+    );
+    return;
+  }
+
+  // 数据文件（公告/成员/项目/更新日志）可被后台改写，必须 network-first：
+  // 页面的 cache:'no-store' 只管 HTTP 缓存，拦不住 SW 的 caches.match。
+  if (url.pathname.includes('/data/') && (url.pathname.endsWith('.json') || url.pathname.endsWith('changelog-data.js'))) {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(RUNTIME_CACHE).then(cache => cache.put(request, copy)).catch(() => undefined);
+          }
+          return response;
+        })
+        .catch(async () => (await caches.match(request)) || Response.error())
     );
     return;
   }

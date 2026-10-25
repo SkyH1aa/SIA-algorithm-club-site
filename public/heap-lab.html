@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="lab.heap.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8" />
@@ -11,37 +11,18 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
 <style>
+    /* 收编说明：主题 token 一律走 --club-*（club-ui.css 的 body.club-page 作用域提供
+       --bg/--panel/--cyan/--text/--muted/--line 同名映射与亮色覆盖），
+       本块只保留 club 映射没有的实验室显示色（金/绿/粉）与可视化专有样式（数组格/堆树 SVG、图例、日志等）。 */
     :root {
-      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
-      color: #f6fbff;
-      background: #020409;
-      --bg: #020409;
-      --panel: rgba(8, 13, 30, .8);
-      --cyan: #00e5ff;
-      --violet: #7c4dff;
-      --pink: #ff5fc8;
       --gold: #ffd166;
+      --pink: #ff5fc8;
       --green: #71f3bf;
-      --text: #c8d4e2;
-      --muted: #8fa3b8;
-      --line: rgba(115, 221, 255, .2);
-      --shadow: 0 24px 90px rgba(0, 229, 255, .11);
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-width: 320px;
-      min-height: 100vh;
-      background:
-        radial-gradient(ellipse 70% 50% at 15% 4%, rgba(0, 229, 255, .15), transparent 62%),
-        radial-gradient(ellipse 60% 42% at 88% 7%, rgba(124, 77, 255, .22), transparent 65%),
-        linear-gradient(180deg, #020409, #050917 50%, #020409);
-      color: #f6fbff;
-      overflow-x: hidden;
-    }
+    body { overflow-x: hidden; }
     body::before {
       content: "";
       position: fixed;
@@ -59,92 +40,14 @@
     button { cursor: pointer; }
     button:disabled { cursor: not-allowed; opacity: .48; }
 
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      padding: 14px clamp(18px, 5vw, 72px);
-      border-bottom: 1px solid var(--line);
-      background: rgba(2, 4, 12, .78);
-      backdrop-filter: blur(18px);
-    }
-    .brand { display: inline-flex; align-items: center; gap: 12px; margin-right: auto; }
-    .brand-mark {
-      display: grid;
-      place-items: center;
-      width: 42px;
-      height: 42px;
-      border: 1px solid rgba(0, 229, 255, .55);
-      border-radius: 8px;
-      background: linear-gradient(135deg, rgba(0, 229, 255, .18), rgba(124, 77, 255, .22));
-      color: var(--cyan);
-      font-weight: 900;
-      box-shadow: 0 0 28px rgba(0, 229, 255, .22), inset 0 0 24px rgba(124, 77, 255, .18);
-    }
-    .brand strong, .brand small { display: block; }
-    .brand strong { font-size: 16px; }
-    .brand small { color: var(--muted); font-size: 12px; text-transform: uppercase; }
-    .member-identity {
-      display: none;
-      padding: 5px 9px;
-      border: 1px solid rgba(0, 229, 255, .34);
-      border-radius: 999px;
-      color: var(--cyan);
-      font-size: 12px;
-      white-space: nowrap;
-    }
-    .member-identity:not([hidden]) { display: inline-flex; }
-    .back-link {
-      padding: 8px 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      color: var(--muted);
-      font-size: 14px;
-      transition: .2s;
-    }
-    .back-link:hover {
-      border-color: rgba(0, 229, 255, .55);
-      background: rgba(0, 229, 255, .08);
-      color: var(--cyan);
-    }
-
-    main { max-width: 1280px; margin: 0 auto; padding: 54px clamp(18px, 5vw, 72px) 64px; }
-    .hero {
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 24px;
-      margin-bottom: 30px;
-    }
-    .eyebrow {
-      margin: 0 0 10px;
-      color: var(--cyan);
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 2px;
-    }
-    .hero h1 {
-      margin: 0;
-      font-size: clamp(30px, 5vw, 50px);
-      letter-spacing: .5px;
-      text-shadow: 0 0 28px rgba(0, 229, 255, .25);
-    }
-    .hero p:not(.eyebrow) {
-      max-width: 700px;
-      margin: 14px 0 0;
-      color: var(--text);
-      line-height: 1.75;
-    }
+    .hero p.lead { margin-bottom: 0; }
     .algorithm-note {
       min-width: 250px;
       padding: 14px 17px;
-      border: 1px solid var(--line);
+      border: 1px solid var(--club-line);
       border-radius: 12px;
-      background: rgba(8, 13, 30, .62);
-      color: var(--muted);
+      background: var(--club-surface-2);
+      color: var(--club-muted);
       font-size: 13px;
       line-height: 1.65;
     }
@@ -155,103 +58,64 @@
       grid-template-columns: 310px minmax(0, 1fr);
       gap: 22px;
     }
-    .panel {
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: var(--panel);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(12px);
-    }
     .controls { padding: 20px; }
-    .controls h2, .visual-header h2, .view-title { margin: 0; font-size: 18px; }
-    .view-title { font-size: 14px; color: var(--muted); font-weight: 700; letter-spacing: .4px; }
+    .controls h2, .visual-header h2 { margin: 0; font-size: 18px; }
+    body.club-page .view-title { margin: 0; font-size: 14px; color: var(--muted); font-weight: 700; letter-spacing: .4px; }
     .control-group { margin-top: 18px; }
     .control-group label, .control-group legend {
       display: block;
       margin-bottom: 8px;
-      color: var(--muted);
+      color: var(--club-muted);
       font-size: 13px;
     }
     .control-group fieldset { margin: 0; padding: 0; border: 0; }
-    .field, select, textarea {
-      width: 100%;
-      border: 1px solid rgba(115, 221, 255, .24);
-      border-radius: 9px;
-      background: rgba(2, 7, 18, .85);
-      color: #f6fbff;
-      outline: none;
-    }
-    .field, select { height: 42px; padding: 0 11px; }
-    textarea {
-      min-height: 82px;
-      padding: 10px 11px;
-      resize: vertical;
-      line-height: 1.5;
-    }
-    .field:focus, select:focus, textarea:focus {
-      border-color: var(--cyan);
-      box-shadow: 0 0 0 3px rgba(0, 229, 255, .11);
-    }
     .radio-row { display: flex; gap: 8px; }
     .radio-row label { flex: 1; margin: 0; }
     .radio-row input { position: absolute; opacity: 0; }
     .radio-row span {
       display: block;
       padding: 10px 8px;
-      border: 1px solid rgba(115, 221, 255, .22);
+      border: 1px solid var(--club-line);
       border-radius: 8px;
-      color: var(--muted);
+      color: var(--club-muted);
       font-size: 13px;
       text-align: center;
-      transition: .2s;
+      transition: all var(--club-dur, 200ms) var(--club-ease, ease);
     }
     .radio-row input:checked + span {
-      border-color: var(--cyan);
-      background: rgba(0, 229, 255, .1);
-      color: var(--cyan);
+      border-color: var(--club-accent);
+      background: var(--club-accent-soft);
+      color: var(--club-accent);
     }
-    .hint {
+    body.club-page .hint {
       margin: 7px 0 0;
-      color: var(--muted);
+      color: var(--club-muted);
       font-size: 12px;
       line-height: 1.55;
     }
-    .error {
+    /* .error 需带 body.club-page 前缀：club 的 body.club-page p 规则特异性更高，否则错误提示颜色会被覆盖 */
+    body.club-page .error {
       min-height: 18px;
       margin: 7px 0 0;
-      color: #ff8fcf;
+      color: var(--club-danger);
       font-size: 12px;
       line-height: 1.4;
     }
     .custom-input[hidden], .insert-input[hidden] { display: none; }
+    /* textarea 补充需带 body.club-page 前缀，否则被 club 全局 textarea 规则（min-height 等）压过 */
+    body.club-page .controls textarea { min-height: 82px; line-height: 1.5; }
+    /* 随机数量滑杆：club 的通用 input 规则不含 range，这里补宽度与主题色 */
+    body.club-page .controls input[type="range"] { width: 100%; accent-color: var(--club-accent); }
     .button-stack { display: grid; gap: 10px; margin-top: 18px; }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 42px;
-      padding: 9px 14px;
-      border: 1px solid var(--line);
-      border-radius: 9px;
-      background: rgba(9, 20, 42, .82);
-      color: #f6fbff;
-      font-size: 14px;
-      font-weight: 700;
-      transition: transform .18s, border-color .18s, background .18s, color .18s;
+    body.club-page .btn.btn-warn {
+      border-color: color-mix(in srgb, var(--club-warn) 45%, transparent);
+      background: var(--club-warn-soft);
+      color: var(--club-warn);
     }
-    .btn:hover:not(:disabled) {
-      transform: translateY(-1px);
-      border-color: rgba(0, 229, 255, .62);
-      color: var(--cyan);
-    }
-    .btn-primary {
-      border-color: rgba(0, 229, 255, .7);
-      background: linear-gradient(135deg, rgba(0, 229, 255, .22), rgba(124, 77, 255, .3));
-      color: #eaffff;
-    }
-    .btn-warn {
-      border-color: rgba(255, 209, 102, .45);
-      color: var(--gold);
+    body.club-page .btn.btn-warn:hover {
+      border-color: color-mix(in srgb, var(--club-warn) 65%, transparent);
+      background: color-mix(in srgb, var(--club-warn) 16%, transparent);
+      color: var(--club-warn);
     }
 
     .visual { padding: 20px; min-width: 0; }
@@ -261,11 +125,11 @@
       justify-content: space-between;
       gap: 16px;
     }
-    .status {
+    body.club-page .status {
       padding: 6px 10px;
-      border: 1px solid rgba(0, 229, 255, .3);
+      border: 1px solid var(--club-accent-line);
       border-radius: 999px;
-      color: var(--cyan);
+      color: var(--club-accent);
       font-size: 12px;
       white-space: nowrap;
     }
@@ -319,7 +183,7 @@
       color: #eaffff;
       font: 700 16px/1 ui-monospace, Consolas, monospace;
       box-shadow: 0 0 12px rgba(0, 229, 255, .2);
-      transition: border-color .16s ease, background .16s ease, box-shadow .16s ease, transform .16s ease, opacity .16s ease;
+      transition: border-color var(--club-dur-fast, 140ms) var(--club-ease, ease), background var(--club-dur-fast, 140ms) var(--club-ease, ease), box-shadow var(--club-dur-fast, 140ms) var(--club-ease, ease), transform var(--club-dur-fast, 140ms) var(--club-ease, ease), opacity var(--club-dur-fast, 140ms) var(--club-ease, ease);
     }
     .cell-index {
       position: absolute;
@@ -379,7 +243,7 @@
       stroke: rgba(0, 229, 255, .7);
       stroke-width: 2;
       filter: drop-shadow(0 0 8px rgba(0, 229, 255, .35));
-      transition: fill .16s ease, stroke .16s ease;
+      transition: fill var(--club-dur-fast, 140ms) var(--club-ease, ease), stroke var(--club-dur-fast, 140ms) var(--club-ease, ease);
     }
     .tree-svg .node.compare .node-circle {
       fill: #ffb347;
@@ -439,8 +303,9 @@
     .metric strong {
       display: block;
       margin-top: 4px;
-      color: #f6fbff;
-      font: 700 23px/1.15 ui-monospace, Consolas, monospace;
+      color: var(--club-text, #e8f1fb);
+      font: 700 23px/1.15 var(--club-mono, ui-monospace, Consolas, monospace);
+      font-variant-numeric: tabular-nums;
     }
     .legend {
       display: flex;
@@ -484,29 +349,107 @@
       border: 0;
     }
 
-    @media (max-width: 820px) {
+    /* —— 亮色补丁：数组格与树节点统一为同一套暖色可读配色（!important 覆盖 theme.css 的通用 .cell 刷白）—— */
+    html[data-theme="light"] .cell {
+      background: #FFFFFF !important;
+      border-color: rgba(194, 65, 12, .45) !important;
+      color: #1C1C1E !important;
+      box-shadow: none !important;
+    }
+    html[data-theme="light"] .cell.compare {
+      background: #FFE08A !important;
+      border-color: #C98900 !important;
+      color: #1C1C1E !important;
+      box-shadow: none !important;
+    }
+    html[data-theme="light"] .cell.swap {
+      background: #F9D8E4 !important;
+      border-color: #A83B68 !important;
+      color: #1C1C1E !important;
+      box-shadow: none !important;
+    }
+    html[data-theme="light"] .cell.focus {
+      background: #DDE5FB !important;
+      border-color: #5475E8 !important;
+      color: #1C1C1E !important;
+      box-shadow: none !important;
+    }
+    html[data-theme="light"] .cell.sorted {
+      background: #CDEEDD !important;
+      border-color: #2FA36C !important;
+      color: #1C1C1E !important;
+      box-shadow: none !important;
+    }
+    html[data-theme="light"] .tree-svg .edge { stroke: #8A93A1 !important; }
+    html[data-theme="light"] .tree-svg .edge.active { stroke: #C98900 !important; }
+    html[data-theme="light"] .tree-svg .node-circle {
+      fill: #FFE3D6 !important;
+      stroke: #E07A5F !important;
+      filter: none !important;
+    }
+    html[data-theme="light"] .tree-svg .node.compare .node-circle {
+      fill: #FFE08A !important;
+      stroke: #C98900 !important;
+      filter: none !important;
+    }
+    html[data-theme="light"] .tree-svg .node.swap .node-circle {
+      fill: #F9D8E4 !important;
+      stroke: #A83B68 !important;
+      filter: none !important;
+    }
+    html[data-theme="light"] .tree-svg .node.focus .node-circle {
+      fill: #DDE5FB !important;
+      stroke: #5475E8 !important;
+      filter: none !important;
+    }
+    html[data-theme="light"] .tree-svg .node.sorted .node-circle {
+      fill: #CDEEDD !important;
+      stroke: #2FA36C !important;
+      filter: none !important;
+    }
+    html[data-theme="light"] .panel .error,
+    html[data-theme="light"] .error { color: #B4233B !important; }
+
+    /* —— 算法档案：随当前操作切换的教学面板（配色对齐 .metric，亮暗自适应；淡入时长走 club token，reduced-motion 由 club-ui 全局规则兜底） —— */
+    .algo-profile { margin-top: 18px; border: 1px solid var(--club-line); border-radius: 10px; background: var(--club-surface-2, rgba(2, 7, 18, .48)); }
+    .algo-profile summary {
+      list-style: none; display: flex; align-items: center;
+      padding: 11px 13px; cursor: pointer;
+      color: var(--club-muted); font-size: 13px; font-weight: 700; user-select: none;
+      transition: color var(--club-dur, 200ms) var(--club-ease, ease);
+    }
+    .algo-profile summary::-webkit-details-marker { display: none; }
+    .algo-profile summary::after {
+      content: "+"; margin-left: auto; padding-left: 10px;
+      color: var(--club-muted); font: 700 15px/1 var(--club-mono, ui-monospace, Consolas, monospace);
+    }
+    .algo-profile[open] summary::after { content: "−"; }
+    .algo-profile summary:hover { color: var(--club-accent); }
+    .algo-profile-body { border-top: 1px solid var(--club-line); padding: 1px 13px 11px; }
+    .algo-profile-body > div {
+      display: grid; grid-template-columns: max-content 1fr; gap: 10px;
+      padding: 7px 0; border-top: 1px solid var(--club-line);
+      font-size: 12px; line-height: 1.65; align-items: baseline;
+    }
+    .algo-profile-body > div:first-child { border-top: 0; padding-top: 5px; }
+    .algo-profile-label { color: var(--club-muted); white-space: nowrap; }
+    .algo-profile-value { color: var(--club-text); overflow-wrap: break-word; }
+    .algo-profile-value.mono { font-family: var(--club-mono, ui-monospace, Consolas, monospace); font-variant-numeric: tabular-nums; }
+    .algo-profile.fade-in .algo-profile-body { animation: algoProfileIn var(--club-dur, 200ms) var(--club-ease, ease) both; }
+    @keyframes algoProfileIn { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+
+    @media (max-width: 900px) {
       .lab-grid { grid-template-columns: 1fr; }
       .controls { order: 2; }
-      .hero { align-items: start; flex-direction: column; }
       .algorithm-note { min-width: 0; width: 100%; }
     }
-    @media (max-width: 560px) {
-      .topbar { gap: 10px; padding: 12px 16px; }
-      .brand small { display: none; }
+    @media (max-width: 640px) {
       .member-identity { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
-      .back-link { padding: 8px; font-size: 12px; }
       .visual, .controls { padding: 15px; }
       .metrics { grid-template-columns: 1fr; }
       .visual-header { flex-direction: column; }
       .status { align-self: flex-start; }
       .cell { min-width: 46px; min-height: 46px; font-size: 14px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        scroll-behavior: auto !important;
-        animation-duration: .01ms !important;
-        transition-duration: .01ms !important;
-      }
     }
   </style>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
@@ -524,14 +467,16 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body>
+<body class="club-page">
   <header class="topbar">
-    <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页">
-      <span class="brand-mark">A</span>
-      <span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span>
-    </a>
-    <span class="member-identity" data-member-identity hidden></span>
-    <a class="back-link" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
+    <div class="topbar-inner">
+      <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页">
+        <span class="brand-mark">A</span>
+        <span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span>
+      </a>
+      <span class="member-identity" data-member-identity hidden></span>
+      <a class="back" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
+    </div>
   </header>
 
   <main>
@@ -539,7 +484,7 @@
       <div>
         <p class="eyebrow">HEAP VISUALIZATION LAB · V1</p>
         <h1 id="pageTitle" data-i18n="lab.heap.h1">堆可视化实验室</h1>
-        <p data-i18n="lab.heap.lead">同时观察堆的数组存储与二叉树结构。可逐步演示建堆、上浮插入、下沉删除堆顶，以及完整堆排序过程，理解父子索引关系与堆序维护。</p>
+        <p class="lead" data-i18n="lab.heap.lead">同时观察堆的数组存储与二叉树结构。可逐步演示建堆、上浮插入、下沉删除堆顶，以及完整堆排序过程，理解父子索引关系与堆序维护。</p>
       </div>
       <aside class="algorithm-note" id="modeNote">
         <b data-i18n="lab.heap.buildName">建堆 Build-Heap</b>
@@ -560,6 +505,15 @@
             <option value="sort" data-i18n="lab.heap.sort">堆排序</option>
           </select>
         </div>
+
+        <details class="algo-profile" id="algoProfile" open>
+          <summary><span id="algoProfileTitle">算法档案</span></summary>
+          <div class="algo-profile-body">
+            <div><span class="algo-profile-label" data-i18n="lab.heap.profile.idea">核心思想</span><span class="algo-profile-value" id="algoProfileIdea"></span></div>
+            <div><span class="algo-profile-label" data-i18n="lab.heap.profile.time">时间复杂度</span><span class="algo-profile-value mono" id="algoProfileTime"></span></div>
+            <div><span class="algo-profile-label" data-i18n="lab.heap.profile.extra">空间 / 特性</span><span class="algo-profile-value mono" id="algoProfileExtra"></span></div>
+          </div>
+        </details>
 
         <div class="control-group">
           <fieldset>
@@ -590,22 +544,32 @@
 
         <div class="control-group" id="sizeGroup">
           <label for="size"><span data-i18n="lab.common.randomSize">随机数据数量：</span><span id="sizeValue">9</span></label>
-          <input class="field" id="size" type="range" min="5" max="15" value="9" />
+          <input id="size" type="range" min="5" max="15" value="9" />
           <p class="hint" data-i18n="lab.heap.randomHint">随机数据使用 5–99 的不重复整数。节点过多时树形图会自动压缩。</p>
         </div>
 
         <div class="control-group insert-input" id="insertWrap" hidden>
           <label for="insertValue" data-i18n="lab.heap.insertValue">插入数值</label>
-          <input class="field" id="insertValue" type="text" inputmode="numeric" placeholder="例如：42" maxlength="5" data-i18n-placeholder="lab.heap.insertPh" />
+          <input id="insertValue" type="text" inputmode="numeric" placeholder="例如：42" maxlength="5" data-i18n-placeholder="lab.heap.insertPh" />
           <p class="hint" data-i18n="lab.heap.insertHint">插入前会先静默建堆（若当前不是堆），再演示上浮过程。</p>
           <p class="error" id="insertError" role="alert" aria-live="polite"></p>
         </div>
 
+        <div class="control-group">
+          <label for="speedSelect" data-i18n="lab.speed">速度</label>
+          <select id="speedSelect" class="speed-select" aria-label="动画速度">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+          </select>
+        </div>
+
         <div class="button-stack">
-          <button class="btn btn-primary" type="button" id="startButton" data-i18n="lab.common.start">开始演示</button>
-          <button class="btn" type="button" id="stepButton" data-i18n="lab.common.step">单步执行</button>
-          <button class="btn btn-warn" type="button" id="resetButton" data-i18n="lab.common.reset">重置当前数据</button>
-          <button class="btn" type="button" id="randomButton" data-i18n="lab.common.random">随机生成</button>
+          <button class="btn" type="button" id="startButton" data-i18n="lab.common.start">开始演示</button>
+          <button class="btn secondary" type="button" id="stepButton" data-i18n="lab.common.step">单步执行</button>
+          <button class="btn btn-warn secondary" type="button" id="resetButton" data-i18n="lab.common.reset">重置当前数据</button>
+          <button class="btn secondary" type="button" id="randomButton" data-i18n="lab.common.random">随机生成</button>
         </div>
       </form>
 
@@ -672,7 +636,8 @@
         reset: el('resetButton'),
         random: el('randomButton'),
         announcement: el('announcement'),
-        opLog: el('opLog')
+        opLog: el('opLog'),
+        speed: el('speedSelect')
       };
 
       const descKeys = {
@@ -688,11 +653,67 @@
         }
         return o;
       }
+
+      /* —— 算法档案（教学面板）：内容随所选操作切换；i18n 用页内 mergeDict 注入（boot 后并入、file:// 安全） —— */
+      const ALGO_PROFILE_DICT = {
+        zh: { lab: { heap: {
+          profile: { title: '算法档案', idea: '核心思想', time: '时间复杂度', extra: '空间 / 特性' },
+          algo: {
+            build: { idea: '从最后一个非叶节点倒序逐个下沉，把无序数组原地调整成堆。', time: 'O(n)（自底向上建堆的总代价）', extra: '空间 O(1)（原地交换）· 一半节点是叶子，无需下沉' },
+            insert: { idea: '新值追加到数组末尾，再与父节点比较交换，一路“上浮”到合法位置。', time: 'O(log n)（最多上浮树高层数）', extra: '空间 O(1) · 本页若当前不是堆会先静默建堆' },
+            extract: { idea: '堆顶与末尾交换后移除，原末值放到顶再“下沉”到合法位置。', time: 'O(log n)（一次下沉）', extra: '空间 O(1) · 取出的总是当前最大 / 最小值' },
+            sort: { idea: '先建堆，再反复“堆顶换到末尾 + 重新下沉”，每轮固定好一个元素。', time: '最好 O(n log n) · 平均 O(n log n) · 最坏 O(n log n)', extra: '空间 O(1)（原地区间收缩）· 不稳定' }
+          }
+        } } },
+        en: { lab: { heap: {
+          profile: { title: 'Algorithm profile', idea: 'Idea', time: 'Time complexity', extra: 'Space / traits' },
+          algo: {
+            build: { idea: 'Sifts each non-leaf node down in reverse index order, turning the array into a heap in place.', time: 'O(n) total for bottom-up heap construction', extra: 'Space O(1), swaps in place · Half the nodes are leaves and never move' },
+            insert: { idea: 'Appends the value at the end, then bubbles it up by swapping with its parent while out of order.', time: 'O(log n) — at most the tree height', extra: 'Space O(1) · This demo silently heapifies first if the array is not yet a heap' },
+            extract: { idea: 'Swaps the top with the last element, removes it, then sifts the promoted value back down.', time: 'O(log n) for one sift-down', extra: 'Space O(1) · Always removes the current max (or min)' },
+            sort: { idea: 'Builds a heap, then repeatedly swaps the top to the end and re-sifts, fixing one element per round.', time: 'Best O(n log n) · Avg O(n log n) · Worst O(n log n)', extra: 'Space O(1), in place · Not stable' }
+          }
+        } } }
+      };
+      function mergePageDict(){
+        if (window.ClubI18n && typeof ClubI18n.mergeDict === 'function') {
+          ClubI18n.mergeDict(ALGO_PROFILE_DICT);
+          // state.dict 一旦非空，resolve() 不再回落到全局词典；同步并入全局词典，
+          // 保证 boot 前的早期 t() 与页面其余动态文案仍能命中既有 key。
+          if (window.ClubI18nDict) ClubI18n.mergeDict(window.ClubI18nDict);
+        }
+      }
+      mergePageDict();
+      const profileNameKeys = { build: 'lab.heap.buildName', insert: 'lab.heap.insertName', extract: 'lab.heap.extractName', sort: 'lab.heap.sortName' };
+      const profileEls = { box: el('algoProfile'), title: el('algoProfileTitle'), idea: el('algoProfileIdea'), time: el('algoProfileTime'), extra: el('algoProfileExtra') };
+      let lastProfileAlgo = null;
+      function renderAlgoProfile(animate){
+        if (!profileEls.box) return;
+        const type = ui.operation.value;
+        profileEls.title.textContent = `${ClubI18n.t('lab.heap.profile.title')} · ${ClubI18n.t(profileNameKeys[type])}`;
+        profileEls.idea.textContent = ClubI18n.t(`lab.heap.algo.${type}.idea`);
+        profileEls.time.textContent = ClubI18n.t(`lab.heap.algo.${type}.time`);
+        profileEls.extra.textContent = ClubI18n.t(`lab.heap.algo.${type}.extra`);
+        if (animate && lastProfileAlgo && lastProfileAlgo !== type) {
+          profileEls.box.classList.remove('fade-in');
+          void profileEls.box.offsetWidth;
+          profileEls.box.classList.add('fade-in');
+        }
+        lastProfileAlgo = type;
+      }
       function syncStartLabel() {
         if (cursor >= operations.length && operations.length) ui.start.textContent = ClubI18n.t('lab.common.restart');
         else if (playing) ui.start.textContent = ClubI18n.t('lab.common.pause');
         else if (cursor > 0) ui.start.textContent = ClubI18n.t('lab.common.resume');
         else ui.start.textContent = ClubI18n.t('lab.common.start');
+      }
+      // 完成后注明当前数据来源：build/insert/extract 完成后 source 已被替换为堆，sort 完成后是有序数组
+      function doneStatusText() {
+        const opType = ui.operation.value;
+        let text = ClubI18n.t('lab.common.doneOps', { n: cursor });
+        if (opType === 'build' || opType === 'insert' || opType === 'extract') text += ' · ' + ClubI18n.t('lab.heap.srcHeap');
+        else if (opType === 'sort') text += ' · ' + ClubI18n.t('lab.heap.srcSorted');
+        return text;
       }
       function refreshStaticStatus() {
         if (ui.inputError.textContent || ui.insertError.textContent) {
@@ -701,7 +722,7 @@
         }
         if (playing) { updateStatus(ClubI18n.t('lab.common.running')); return; }
         if (cursor >= operations.length && operations.length) {
-          updateStatus(ClubI18n.t('lab.common.doneOps', { n: cursor }));
+          updateStatus(doneStatusText());
           return;
         }
         if (cursor > 0) { updateStatus(ClubI18n.t('lab.common.paused')); return; }
@@ -727,6 +748,21 @@
       let isHeap = false;
       let preOpIsHeap = false;
       const sleepDelay = 420;
+      // 演示速度（0.5/1/2/4），四页共享 localStorage('lab-speed')；实际延时 = sleepDelay / speed
+      const SPEED_KEY = 'lab-speed';
+      let speed = 1;
+      function initSpeed() {
+        let saved = 1;
+        try { saved = parseFloat(localStorage.getItem(SPEED_KEY)); } catch (_e) { /* 忽略存储不可用 */ }
+        if (saved !== 0.5 && saved !== 1 && saved !== 2 && saved !== 4) saved = 1;
+        speed = saved;
+        if (!ui.speed) return;
+        ui.speed.value = String(saved);
+        ui.speed.addEventListener('change', () => {
+          speed = parseFloat(ui.speed.value) || 1;
+          try { localStorage.setItem(SPEED_KEY, ui.speed.value); } catch (_e) { /* 私密模式等场景忽略 */ }
+        });
+      }
 
       function heapType() {
         return document.querySelector('input[name="heapType"]:checked').value;
@@ -1175,14 +1211,14 @@
         }
         const last = operations[Math.max(0, cursor - 1)] || operations[operations.length - 1];
         render(last || { message: ClubI18n.t('lab.heap.demoEnd') });
-        updateStatus(ClubI18n.t('lab.common.doneOps', { n: cursor }));
+        updateStatus(doneStatusText());
         ui.start.textContent = ClubI18n.t('lab.common.restart');
       }
 
       function loop() {
         if (!playing) return;
         if (!applyNext()) return;
-        timer = setTimeout(loop, sleepDelay);
+        timer = setTimeout(loop, sleepDelay / speed);
       }
 
       function syncCustomData() {
@@ -1245,6 +1281,7 @@
       ui.operation.addEventListener('change', () => {
         syncOpPanels();
         refreshNote();
+        renderAlgoProfile(true);
         const op = ui.operation.value;
         if (op === 'build' || op === 'sort') restoreBase();
         else prepare();
@@ -1305,11 +1342,15 @@
 
       syncOpPanels();
       refreshNote();
+      renderAlgoProfile(false);
       syncEmptyLabel();
       useData(randomData());
-      window.addEventListener('club:langchange', () => {
+      initSpeed();
+      function refreshAll() {
+        mergePageDict();
         if (typeof ClubI18n?.apply === 'function') ClubI18n.apply(document);
         refreshNote();
+        renderAlgoProfile(false);
         syncEmptyLabel();
         syncStartLabel();
         if (cursor === 0 && !playing) {
@@ -1319,10 +1360,12 @@
           const last = cursor > 0 && cursor <= operations.length ? operations[cursor - 1] : null;
           render(last);
         }
-      });
+      }
+      window.addEventListener('club:langchange', refreshAll);
+      // i18n boot 晚于内联脚本，初始化后再兜底刷一次（AGENTS 约定）
+      setTimeout(refreshAll, 0);
     })();
   </script>
-<script>!function(){try{var t=document.querySelector('.topbar');if(t&&!document.getElementById('langSwitcherHost')){var h=document.createElement('div');h.id='langSwitcherHost';t.appendChild(h);}if(window.ClubI18n)window.ClubI18n.mountSwitcher(document.getElementById('langSwitcherHost'));if(window.ClubTheme&&typeof window.ClubTheme.autoMountSwitcher==='function')window.ClubTheme.autoMountSwitcher();}catch(e){}}();</script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

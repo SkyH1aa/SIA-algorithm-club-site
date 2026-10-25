@@ -6,15 +6,17 @@
   <meta name="description" content="算法社站内通知：公告、活动、报名、积分与留言提醒。">
   <title>通知 · 算法社</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
+  <style>
+  </style>
   <script src="theme.js?v=1b745a4f"></script>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=c79bfe69"></script>
+  <script src="i18n-dict.js?v=f75071ae"></script>
   <script src="member-identity.js?v=ad75d585" defer></script>
   <script src="i18n.js?v=ba66328e"></script>
-  <script src="club-common.js?v=b3d82c39"></script>
+  <script src="club-common.js?v=333db1c4"></script>
   <script src="service-prompts.js?v=1cfff2ab"></script>
   <script src="service-gate.js?v=6acc9c5f"></script>
   <meta property="og:type" content="website">
@@ -38,30 +40,31 @@
     <a class="back" href="member-center.html" data-i18n="notify.backCenter">返回个人中心</a>
   </div></header>
   <main>
+    <p class="eyebrow">NOTIFICATION CENTER</p>
+    <h1 data-i18n="notify.title">通知</h1>
+    <p class="lead" data-i18n="notify.intro">公告、活动、报名、积分与留言提醒集中在这里。</p>
+
     <section class="panel" id="gate" hidden>
-      <h1 data-i18n="notify.gateTitle">请先登录</h1>
+      <span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span>
+      <h2 data-i18n="notify.gateTitle">请先登录</h2>
       <p class="intro" data-i18n="notify.gateLead">通知只对已登录的算法社成员开放。</p>
       <a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a>
     </section>
 
     <section class="panel" id="panel" hidden>
       <div class="section-head">
-        <div>
-          <h1 data-i18n="notify.title">通知</h1>
-          <p class="intro" data-i18n="notify.intro">公告、活动、报名、积分与留言提醒集中在这里。</p>
+        <div class="club-notify-filters" id="filters">
+          <button class="chip is-active" type="button" data-kind="" aria-pressed="true" data-i18n="notify.all">全部</button>
+          <button class="chip" type="button" data-kind="announcement" aria-pressed="false" data-i18n="notify.kindAnnouncement">公告</button>
+          <button class="chip" type="button" data-kind="event" aria-pressed="false" data-i18n="notify.kindEvent">活动</button>
+          <button class="chip" type="button" data-kind="signup" aria-pressed="false" data-i18n="notify.kindSignup">报名</button>
+          <button class="chip" type="button" data-kind="points" aria-pressed="false" data-i18n="notify.kindPoints">积分</button>
+          <button class="chip" type="button" data-kind="message" aria-pressed="false" data-i18n="notify.kindMessage">留言</button>
+          <button class="chip" type="button" data-kind="account" aria-pressed="false" data-i18n="notify.kindAccount">账号</button>
         </div>
         <button class="button secondary" type="button" id="markAll" data-i18n="notify.markAll">全部已读</button>
       </div>
-      <div class="club-notify-filters" id="filters">
-        <button class="chip is-active" type="button" data-kind="" data-i18n="notify.all">全部</button>
-        <button class="chip" type="button" data-kind="announcement" data-i18n="notify.kindAnnouncement">公告</button>
-        <button class="chip" type="button" data-kind="event" data-i18n="notify.kindEvent">活动</button>
-        <button class="chip" type="button" data-kind="signup" data-i18n="notify.kindSignup">报名</button>
-        <button class="chip" type="button" data-kind="points" data-i18n="notify.kindPoints">积分</button>
-        <button class="chip" type="button" data-kind="message" data-i18n="notify.kindMessage">留言</button>
-        <button class="chip" type="button" data-kind="account" data-i18n="notify.kindAccount">账号</button>
-      </div>
-      <div id="list" aria-live="polite"><div class="empty loading" data-i18n="notify.loading">正在读取通知…</div></div>
+      <div id="list" aria-live="polite"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="notify.loading">正在读取通知…</span></div>
       <p class="message" id="message" role="status"></p>
     </section>
   </main>
@@ -96,6 +99,15 @@
       return activeKind ? items.filter(item => item.kind === activeKind) : items;
     }
 
+    // 时间统一按当前语言 toLocaleString 渲染，不再直接截取 ISO 字符串。
+    function formatTime(value) {
+      if (!value) return '';
+      const date = new Date(value);
+      if (Number.isNaN(date.valueOf())) return String(value);
+      const lang = window.ClubI18n && ClubI18n.getLang() === 'en' ? 'en-US' : 'zh-CN';
+      return date.toLocaleString(lang, { hour12: false });
+    }
+
     function render() {
       const list = $('list');
       const rows = visibleItems();
@@ -109,7 +121,7 @@
             <span class="club-notify-kind">${escapeHtml(t('notify.kind' + item.kind.charAt(0).toUpperCase() + item.kind.slice(1), item.kind))}</span>
             <strong>${escapeHtml(item.title)}</strong>
             ${item.body ? `<p>${escapeHtml(item.body)}</p>` : ''}
-            <time>${escapeHtml(String(item.created_at || '').slice(0, 16).replace('T', ' '))}</time>
+            <time>${escapeHtml(formatTime(item.created_at))}</time>
           </div>
           ${item.link ? `<a class="button secondary" href="${escapeHtml(item.link)}" data-open="${escapeHtml(item.id)}">${escapeHtml(t('notify.open'))}</a>` : ''}
         </article>`).join('');
@@ -162,7 +174,11 @@
       const button = event.target.closest('[data-kind]');
       if (!button) return;
       activeKind = button.dataset.kind;
-      $('filters').querySelectorAll('[data-kind]').forEach(node => node.classList.toggle('is-active', node === button));
+      $('filters').querySelectorAll('[data-kind]').forEach(node => {
+        const active = node === button;
+        node.classList.toggle('is-active', active);
+        node.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
       render();
     });
 
@@ -173,6 +189,6 @@
       window.addEventListener('club:langchange', () => { if (!$('panel').hidden) render(); });
     });
   </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

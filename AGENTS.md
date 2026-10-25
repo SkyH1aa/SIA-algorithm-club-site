@@ -43,6 +43,8 @@
 
 ## 变更后的检查
 
+更新日志数据只改 `public/data/changelog.json`（唯一数据源），改完必须重跑 `node tools/build-changelog-data.mjs` 重建 `public/data/changelog-data.js` 内置快照：changelog.html 先渲染快照、再 fetch 最新数据，file:// 与离线/弱网时用快照兜底，不再出现"读取更新日志失败"白屏；SW 对 `data/*.json` 与 `changelog-data.js` 均为网络优先。
+
 至少运行：
 
 ```bash
@@ -50,6 +52,8 @@ node tools/build-gomoku-training-model.mjs
 node --check tools/build-gomoku-training-model.mjs
 node --check public/data/gomoku-training-model.js
 node tools/check-gomoku-sql-syntax.mjs   # 改过 SQL 必须跑：pglast 真实语法校验
+node tools/check-ui-tokens.mjs           # 改过任何 club-page 页面/CSS 必须跑：UI 体系守卫（令牌真源/字体栈/断点阶梯/动画注册表）
+node tools/version-static-assets.mjs     # 改过 CSS/JS 后必须跑：同步 ?v= 哈希引用，再跑 test-asset-versions 验证
 git diff --check
 ```
 

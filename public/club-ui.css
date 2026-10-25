@@ -11,6 +11,9 @@
  * 3. 所有交互元素保证 3:1 以上对比度，主按钮亮色用 #C2410C。
  */
 
+@import url("assets/fonts/club-fonts.css");
+@import url("assets/fonts/misans/MiSansVF.min.css");
+
 /* ============================================================
    1. 令牌
    ============================================================ */
@@ -42,14 +45,59 @@ body.club-page,
   --club-info-soft: rgba(143, 180, 255, 0.12);
   --club-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
   --club-shadow-sm: 0 8px 22px rgba(0, 0, 0, 0.22);
+  --club-shadow-hover: 0 22px 52px rgba(0, 0, 0, 0.42);
+  --club-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --club-ring: 0 0 0 3px var(--club-accent-soft);
+  /* 质感层：顶部内高光 + 表面/主按钮渐变 + 品牌色投影（分层光） */
+  --club-highlight: rgba(255, 255, 255, 0.055);
+  --club-highlight-strong: rgba(255, 255, 255, 0.14);
+  --club-grad-surface: linear-gradient(180deg, color-mix(in srgb, var(--club-surface) 92%, #ffffff) 0%, var(--club-surface) 100%);
+  --club-grad-primary: linear-gradient(180deg, color-mix(in srgb, var(--club-accent) 84%, #ffffff) 0%, var(--club-accent) 62%, color-mix(in srgb, var(--club-accent) 90%, #000000) 100%);
+  --club-glow-accent: 0 6px 18px color-mix(in srgb, var(--club-accent) 26%, transparent);
+  --club-dur-fast: 140ms;
+  --club-dur: 200ms;
+  --club-dur-slow: 320ms;
+  --club-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --club-radius: 14px;
   --club-radius-sm: 9px;
+  --club-radius-xs: 6px;
   --club-radius-pill: 999px;
   --club-topbar: 62px;
   --club-max: 1240px;
   --club-gap: 18px;
-  --club-font: "Inter", "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
-  --club-mono: ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace;
+  --club-font: "Inter Variable", "MiSans VF", "MiSans", "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --club-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace;
+  /* 排版阶梯：全站正文/标签字号只允许取这 7 档（数据大数字除外） */
+  --club-fs-xs: 11px;
+  --club-fs-sm: 12.5px;
+  --club-fs-md: 13.5px;
+  --club-fs-base: 15px;
+  --club-fs-lg: 17px;
+  --club-fs-xl: 21px;
+  --club-fs-display: clamp(28px, 4.2vw, 44px);
+  --club-lh-tight: 1.25;
+  --club-lh-body: 1.65;
+  /* 间距阶梯 4/8/12/16/20/28/40/64 */
+  --club-space-1: 4px;
+  --club-space-2: 8px;
+  --club-space-3: 12px;
+  --club-space-4: 16px;
+  --club-space-5: 20px;
+  --club-space-6: 28px;
+  --club-space-7: 40px;
+  --club-space-8: 64px;
+  /* 圆角中档：吸收全站高频的 12px 硬编码（10px 并入 sm，≤8px 为微元素保留字面值） */
+  --club-radius-md: 12px;
+  /* 容器阶梯 */
+  --club-narrow: 720px;
+  --club-read: 760px;
+  /* z-index 阶梯：sticky < 顶栏 < 弹层 < 模态 < toast < 跳转链接 */
+  --club-z-sticky: 40;
+  --club-z-nav: 60;
+  --club-z-overlay: 900;
+  --club-z-modal: 1200;
+  --club-z-toast: 1400;
+  --club-z-skip: 2000;
 }
 
 html[data-theme="light"] body.club-page,
@@ -80,6 +128,13 @@ html[data-theme="light"] .club-launcher {
   --club-info-soft: #eef2fb;
   --club-shadow: 0 10px 30px rgba(23, 24, 28, 0.07);
   --club-shadow-sm: 0 4px 14px rgba(23, 24, 28, 0.06);
+  /* 亮色质感层：内高光改为纯白压在浅表面，投影更柔 */
+  --club-highlight: rgba(255, 255, 255, 0.85);
+  --club-highlight-strong: #ffffff;
+  --club-grad-surface: linear-gradient(180deg, #ffffff 0%, var(--club-surface) 100%);
+  --club-grad-primary: linear-gradient(180deg, color-mix(in srgb, var(--club-accent) 88%, #ffffff) 0%, var(--club-accent) 70%, color-mix(in srgb, var(--club-accent) 92%, #000000) 100%);
+  --club-glow-accent: 0 6px 16px color-mix(in srgb, var(--club-accent) 22%, transparent);
+  --club-shadow-xs: 0 1px 2px rgba(23, 24, 28, 0.08);
 }
 
 /* ============================================================
@@ -89,6 +144,11 @@ body.club-page {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  /* 粘性页脚骨架：内容短时页脚钉在视口底部（.club-footer 的 margin-top:auto），
+     内容长或面板展开时页脚自然跟在末尾。flex 列对 block 流页面渲染等价，
+     main 的 margin:0 auto 在列向 flex 中同样居中。 */
+  display: flex;
+  flex-direction: column;
   color: var(--club-text);
   font-family: var(--club-font);
   font-size: 15px;
@@ -108,11 +168,12 @@ body.club-page *::after { box-sizing: border-box; }
 body.club-page h1,
 body.club-page h2,
 body.club-page h3,
-body.club-page h4 { margin: 0 0 10px; color: var(--club-text); line-height: 1.25; letter-spacing: -0.015em; }
-body.club-page h1 { font-size: clamp(30px, 4.2vw, 44px); font-weight: 760; letter-spacing: -0.03em; }
-body.club-page h2 { font-size: 21px; font-weight: 700; }
-body.club-page h3 { font-size: 17px; font-weight: 700; }
-body.club-page p { margin: 0 0 12px; color: var(--club-text-soft); }
+body.club-page h4 { margin: 0 0 10px; color: var(--club-text); line-height: var(--club-lh-tight); letter-spacing: 0; text-wrap: balance; }
+/* 中文标题不吃负字距：MiSans 的汉字方字面加负距会互相挤压；西文节奏交给 Inter 自身 */
+body.club-page h1 { font-size: var(--club-fs-display); font-weight: 760; }
+body.club-page h2 { font-size: var(--club-fs-xl); font-weight: 700; }
+body.club-page h3 { font-size: var(--club-fs-lg); font-weight: 700; }
+body.club-page p { margin: 0 0 12px; color: var(--club-text-soft); text-wrap: pretty; }
 body.club-page a { color: inherit; text-decoration: none; }
 body.club-page img { max-width: 100%; }
 body.club-page code,
@@ -140,7 +201,7 @@ body.club-page [hidden] { display: none !important; }
   color: var(--club-on-accent);
   font-weight: 700;
   transform: translateY(-160%);
-  transition: transform 0.18s ease;
+  transition: transform var(--club-dur, 200ms) var(--club-ease, ease);
 }
 .club-skip:focus { transform: translateY(0); }
 
@@ -255,7 +316,7 @@ body.club-page .back {
   color: var(--club-muted);
   font-size: 13px;
   white-space: nowrap;
-  transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+  transition: color var(--club-dur, 200ms) var(--club-ease, ease), border-color var(--club-dur, 200ms) var(--club-ease, ease), background var(--club-dur, 200ms) var(--club-ease, ease);
 }
 body.club-page .back:hover {
   border-color: var(--club-line);
@@ -290,7 +351,7 @@ body.club-page .theme-switcher button {
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
-  transition: background 0.16s ease, color 0.16s ease;
+  transition: background var(--club-dur, 200ms) var(--club-ease, ease), color var(--club-dur, 200ms) var(--club-ease, ease);
 }
 body.club-page .lang-switcher button:hover,
 body.club-page .theme-switcher button:hover { color: var(--club-text); }
@@ -316,7 +377,7 @@ body.club-page .club-launcher-button {
   font-weight: 650;
   cursor: pointer;
   white-space: nowrap;
-  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+  transition: border-color var(--club-dur, 200ms) var(--club-ease, ease), background var(--club-dur, 200ms) var(--club-ease, ease), color var(--club-dur, 200ms) var(--club-ease, ease);
 }
 body.club-page .club-launcher-button:hover {
   border-color: var(--club-accent-line);
@@ -428,7 +489,8 @@ body.club-page .club-panel {
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius);
   background: var(--club-surface);
-  box-shadow: var(--club-shadow-sm);
+  background-image: var(--club-grad-surface);
+  box-shadow: inset 0 1px 0 var(--club-highlight), var(--club-shadow-sm);
 }
 body.club-page .panel,
 body.club-page .panel-block,
@@ -493,6 +555,23 @@ body.club-page .member-gate .button,
 body.club-page .gate .button,
 body.club-page .denied .button { margin: 0 auto; }
 
+/* 门禁锁形图标：全站统一的视觉锚点（16 页曾各自复制，现已上收为唯一真源） */
+body.club-page .gate-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: 0 0 14px;
+  border: 1px solid var(--club-accent-line);
+  border-radius: var(--club-radius-md);
+  background: var(--club-accent-soft);
+  color: var(--club-accent);
+}
+body.club-page .gate-icon svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+body.club-page .gate .gate-icon,
+body.club-page .member-gate .gate-icon,
+body.club-page .denied .gate-icon { margin-left: auto; margin-right: auto; }
+
 /* 状态卡 / 概览卡 */
 body.club-page .status-panel,
 body.club-page .status-card,
@@ -500,8 +579,9 @@ body.club-page .session-card {
   padding: 18px 20px;
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius);
-  background: var(--club-surface);
-  box-shadow: var(--club-shadow-sm);
+  background-color: var(--club-surface);
+  background-image: var(--club-grad-surface);
+  box-shadow: inset 0 1px 0 var(--club-highlight), var(--club-shadow-sm);
 }
 body.club-page .status-panel strong,
 body.club-page .status-card strong,
@@ -519,6 +599,7 @@ body.club-page .hero-card {
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius);
   background: linear-gradient(140deg, var(--club-accent-soft), transparent 62%), var(--club-surface);
+  box-shadow: inset 0 1px 0 var(--club-highlight), var(--club-shadow-sm);
 }
 body.club-page .hero-card strong { display: block; margin-bottom: 6px; color: var(--club-accent); font-size: 16px; }
 body.club-page .hero-card span { color: var(--club-muted); font-size: 13px; line-height: 1.7; }
@@ -534,9 +615,11 @@ body.club-page .stat {
   padding: 15px 16px;
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius-sm);
-  background: var(--club-surface);
+  background-color: var(--club-surface);
+  background-image: var(--club-grad-surface);
+  box-shadow: inset 0 1px 0 var(--club-highlight), 0 1px 2px rgba(0, 0, 0, 0.12);
 }
-body.club-page .stat small { display: block; margin-bottom: 4px; color: var(--club-muted); font-size: 11.5px; letter-spacing: 0.02em; }
+body.club-page .stat small { display: block; margin-bottom: 4px; color: var(--club-muted); font-size: var(--club-fs-xs); letter-spacing: 0.02em; }
 body.club-page .stat strong { color: var(--club-text); font-size: 24px; font-weight: 750; line-height: 1.2; font-variant-numeric: tabular-nums; }
 body.club-page .stat span { display: block; margin-top: 2px; color: var(--club-muted); font-size: 12px; }
 
@@ -548,7 +631,7 @@ body.club-page .card {
   min-height: 132px;
   padding: 18px;
   color: var(--club-text);
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  transition: transform var(--club-dur, 200ms) var(--club-ease, ease), border-color var(--club-dur, 200ms) var(--club-ease, ease), box-shadow var(--club-dur, 200ms) var(--club-ease, ease), background var(--club-dur, 200ms) var(--club-ease, ease);
 }
 body.club-page a.card:hover {
   transform: translateY(-2px);
@@ -609,56 +692,83 @@ body.club-page .row-button {
   gap: 7px;
   min-height: 40px;
   padding: 8px 14px;
-  border: 1px solid var(--club-accent-line);
+  border: 1px solid color-mix(in srgb, var(--club-accent) 62%, #000000 10%);
   border-radius: var(--club-radius-sm);
-  background: var(--club-accent);
+  background-image: var(--club-grad-primary);
+  background-color: var(--club-accent);
   color: var(--club-on-accent);
   font: inherit;
   font-size: 13px;
   font-weight: 700;
+  letter-spacing: 0.015em;
   line-height: 1.2;
   text-align: center;
   text-decoration: none;
   cursor: pointer;
-  transition: filter 0.16s ease, background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
+  box-shadow: inset 0 1px 0 var(--club-highlight-strong), 0 1px 2px rgba(0, 0, 0, 0.18), var(--club-glow-accent);
+  transition: filter var(--club-dur) var(--club-ease), background-color var(--club-dur) var(--club-ease), border-color var(--club-dur) var(--club-ease), color var(--club-dur) var(--club-ease), transform var(--club-dur) var(--club-ease), box-shadow var(--club-dur) var(--club-ease);
 }
 body.club-page .button:hover,
-body.club-page .primary-action:hover { filter: brightness(1.08); }
+body.club-page .primary-action:hover {
+  filter: brightness(1.06) saturate(1.04);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 var(--club-highlight-strong), 0 2px 4px rgba(0, 0, 0, 0.2), 0 10px 24px color-mix(in srgb, var(--club-accent) 34%, transparent);
+}
 body.club-page .button:active,
-body.club-page .primary-action:active { transform: translateY(1px); }
+body.club-page .primary-action:active {
+  transform: translateY(1px);
+  filter: brightness(0.98);
+  box-shadow: inset 0 1px 0 var(--club-highlight-strong), inset 0 2px 6px rgba(0, 0, 0, 0.22), 0 1px 3px color-mix(in srgb, var(--club-accent) 18%, transparent);
+}
 body.club-page .button:disabled,
-body.club-page .row-button:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+body.club-page .btn:disabled,
+body.club-page .primary-action:disabled,
+body.club-page .secondary-action:disabled,
+body.club-page .row-button:disabled { opacity: 0.45; cursor: not-allowed; filter: none; transform: none; box-shadow: inset 0 1px 0 var(--club-highlight-strong); }
 
 body.club-page .button.secondary,
+body.club-page .btn.secondary,
 body.club-page .secondary-action,
 body.club-page .row-button {
   border-color: var(--club-line-strong);
-  background: var(--club-surface-2);
+  background-color: var(--club-surface-2);
+  background-image: var(--club-grad-surface);
   color: var(--club-text-soft);
+  box-shadow: inset 0 1px 0 var(--club-highlight), 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 body.club-page .button.secondary:hover,
+body.club-page .btn.secondary:hover,
 body.club-page .secondary-action:hover,
 body.club-page .row-button:hover {
   border-color: var(--club-accent-line);
-  background: var(--club-accent-soft);
+  background-color: var(--club-accent-soft);
+  background-image: none;
   color: var(--club-accent);
   filter: none;
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 var(--club-highlight), 0 6px 16px rgba(0, 0, 0, 0.16);
 }
+body.club-page .button.secondary:active,
+body.club-page .btn.secondary:active,
+body.club-page .secondary-action:active { transform: translateY(1px); box-shadow: inset 0 1px 0 var(--club-highlight); }
 body.club-page .button.danger,
 body.club-page .danger.button,
 body.club-page .row-button.delete {
   border-color: color-mix(in srgb, var(--club-danger) 55%, transparent);
-  background: var(--club-danger-soft);
+  background-color: var(--club-danger-soft);
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--club-danger-soft) 70%, #ffffff 10%) 0%, var(--club-danger-soft) 100%);
   color: var(--club-danger);
+  box-shadow: inset 0 1px 0 var(--club-highlight), 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 body.club-page .button.danger:hover,
-body.club-page .row-button.delete:hover { filter: brightness(1.1); }
+body.club-page .row-button.delete:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 6px 16px color-mix(in srgb, var(--club-danger) 22%, transparent); }
 body.club-page .button.ghost {
   border-color: transparent;
   background: transparent;
   color: var(--club-muted);
+  box-shadow: none;
 }
-body.club-page .button.ghost:hover { background: var(--club-surface-2); color: var(--club-text); }
+body.club-page .button.ghost:hover { background: var(--club-surface-2); color: var(--club-text); transform: none; box-shadow: none; }
 
 body.club-page .actions,
 body.club-page .form-actions,
@@ -705,7 +815,8 @@ body.club-page textarea {
   font-size: 14px;
   line-height: 1.5;
   outline: none;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22);
+  transition: border-color var(--club-dur, 200ms) var(--club-ease, ease), box-shadow var(--club-dur, 200ms) var(--club-ease, ease), background var(--club-dur, 200ms) var(--club-ease, ease);
 }
 body.club-page .textarea,
 body.club-page textarea { min-height: 92px; resize: vertical; }
@@ -721,9 +832,26 @@ body.club-page select:focus,
 body.club-page textarea:focus {
   border-color: var(--club-accent);
   background: var(--club-surface);
-  box-shadow: 0 0 0 3px var(--club-accent-soft);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18), 0 0 0 3px var(--club-accent-soft);
 }
 body.club-page .input[readonly] { background: var(--club-surface-3); color: var(--club-muted); }
+body.club-page .input:disabled,
+body.club-page .select:disabled,
+body.club-page .textarea:disabled,
+body.club-page input:disabled,
+body.club-page select:disabled,
+body.club-page textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: var(--club-surface-3);
+  border-color: var(--club-line);
+}
+body.club-page .input:not(:disabled):not([readonly]):hover,
+body.club-page .select:not(:disabled):not([readonly]):hover,
+body.club-page .textarea:not(:disabled):not([readonly]):hover,
+body.club-page input:not(:disabled):not([readonly]):hover,
+body.club-page select:not(:disabled):not([readonly]):hover,
+body.club-page textarea:not(:disabled):not([readonly]):hover { border-color: var(--club-line-strong); }
 body.club-page select option { background: var(--club-surface); color: var(--club-text); }
 body.club-page input[type="checkbox"],
 body.club-page input[type="radio"] { accent-color: var(--club-accent); width: 15px; height: 15px; }
@@ -807,7 +935,7 @@ body.club-page th {
   border-bottom: 1px solid var(--club-line);
   background: var(--club-surface-2);
   color: var(--club-muted);
-  font-size: 11.5px;
+  font-size: var(--club-fs-xs);
   font-weight: 650;
   letter-spacing: 0.03em;
   text-align: left;
@@ -843,6 +971,12 @@ body.club-page .thumb {
 }
 body.club-page .perm-tags { display: flex; flex-wrap: wrap; gap: 5px; }
 
+/* 列表工具栏（搜索 + 筛选 + 操作按钮行）与表格备注列：
+   曾在 members-admin / join-admin / donations / events-admin 各自复制，上收为唯一真源。 */
+body.club-page .list-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 14px 0 0; }
+body.club-page .list-toolbar .input { max-width: 280px; }
+body.club-page .cell-desc { margin-top: 2px; color: var(--club-muted); font-size: var(--club-fs-sm); line-height: 1.5; max-width: 280px; overflow-wrap: anywhere; }
+
 /* ============================================================
    9. 徽章 / 提示 / 空状态 / 加载
    ============================================================ */
@@ -857,7 +991,7 @@ body.club-page .status-pill {
   border-radius: var(--club-radius-pill);
   background: var(--club-surface-2);
   color: var(--club-muted);
-  font-size: 11.5px;
+  font-size: var(--club-fs-xs);
   font-weight: 650;
   line-height: 1.6;
   white-space: nowrap;
@@ -959,8 +1093,9 @@ body.club-page .profile-item {
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius-sm);
   background: var(--club-surface-2);
+  box-shadow: inset 0 1px 0 var(--club-highlight);
 }
-body.club-page .profile-item small { display: block; margin-bottom: 4px; color: var(--club-muted); font-size: 11.5px; }
+body.club-page .profile-item small { display: block; margin-bottom: 4px; color: var(--club-muted); font-size: var(--club-fs-xs); }
 body.club-page .profile-item strong { display: block; color: var(--club-text); font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
 body.club-page .profile-item strong.accent { color: var(--club-ok); font-size: 22px; font-variant-numeric: tabular-nums; }
 
@@ -978,12 +1113,14 @@ body.club-page .quick-link {
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius-sm);
   background: var(--club-surface-2);
-  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+  box-shadow: inset 0 1px 0 var(--club-highlight);
+  transition: transform var(--club-dur) var(--club-ease), border-color var(--club-dur) var(--club-ease), background var(--club-dur) var(--club-ease), box-shadow var(--club-dur) var(--club-ease);
 }
 body.club-page .quick-link:hover {
   transform: translateY(-2px);
   border-color: var(--club-accent-line);
   background: var(--club-accent-soft);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
 }
 body.club-page .quick-link strong { color: var(--club-text); font-size: 14px; }
 body.club-page .quick-link span { color: var(--club-muted); font-size: 12.5px; line-height: 1.55; }
@@ -1004,7 +1141,7 @@ body.club-page .theme-option {
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.16s ease, background 0.16s ease;
+  transition: border-color var(--club-dur, 200ms) var(--club-ease, ease), background var(--club-dur, 200ms) var(--club-ease, ease);
 }
 body.club-page .theme-option:hover { border-color: var(--club-accent-line); }
 body.club-page .theme-option.is-active { border-color: var(--club-accent); background: var(--club-accent-soft); }
@@ -1033,6 +1170,7 @@ body.club-page .message-card {
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius-sm);
   background: var(--club-surface-2);
+  box-shadow: inset 0 1px 0 var(--club-highlight);
 }
 body.club-page .message-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
 body.club-page .message-card-head strong { color: var(--club-text); font-size: 14px; }
@@ -1179,7 +1317,7 @@ body.club-page .resource-card {
   border-radius: var(--club-radius);
   background: var(--club-surface);
   box-shadow: var(--club-shadow-sm);
-  transition: transform 0.18s ease, border-color 0.18s ease;
+  transition: transform var(--club-dur, 200ms) var(--club-ease, ease), border-color var(--club-dur, 200ms) var(--club-ease, ease);
 }
 body.club-page .resource-card:hover { transform: translateY(-2px); border-color: var(--club-accent-line); }
 body.club-page .resource-card p { flex: 1 1 auto; color: var(--club-muted); font-size: 13px; }
@@ -1233,11 +1371,13 @@ body.club-page .club-tabs button {
   font: inherit;
   font-size: 13px;
   font-weight: 650;
+  line-height: 1.1;
   white-space: nowrap;
   cursor: pointer;
-  transition: background 0.16s ease, color 0.16s ease;
+  transition: background var(--club-dur, 200ms) var(--club-ease, ease), color var(--club-dur, 200ms) var(--club-ease, ease);
 }
 body.club-page .club-tabs button:hover { background: var(--club-surface-2); color: var(--club-text); }
+body.club-page .club-tabs button:active { transform: translateY(1px); }
 body.club-page .club-tabs button[aria-selected="true"] {
   background: var(--club-accent);
   border-color: var(--club-accent);
@@ -1270,6 +1410,7 @@ body.club-page .club-section-nav a {
   color: var(--club-muted);
   font-size: 12.5px;
   font-weight: 600;
+  line-height: 1.1;
   white-space: nowrap;
 }
 body.club-page .club-section-nav a:hover { background: var(--club-surface-2); color: var(--club-text); }
@@ -1303,6 +1444,7 @@ body.club-page .club-admin-rail a {
   color: var(--club-muted);
   font-size: 12.5px;
   font-weight: 600;
+  line-height: 1.1;
   white-space: nowrap;
 }
 body.club-page .club-admin-rail a:hover { background: var(--club-surface-2); color: var(--club-text); }
@@ -1348,7 +1490,7 @@ html[data-theme="light"] .club-launcher { background: rgba(23, 24, 28, 0.34); }
   border-radius: 16px;
   background: var(--club-surface);
   box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
-  animation: club-pop 0.16s ease-out;
+  animation: club-pop var(--club-dur-fast, 140ms) var(--club-ease, ease);
 }
 @keyframes club-pop { from { opacity: 0; transform: translateY(-6px) scale(0.99); } }
 .club-launcher-search {
@@ -1417,7 +1559,7 @@ html[data-theme="light"] .club-launcher { background: rgba(23, 24, 28, 0.34); }
 }
 .club-launcher-item .club-launcher-copy { display: grid; gap: 1px; min-width: 0; }
 .club-launcher-item strong { color: var(--club-text); font-weight: 650; }
-.club-launcher-item small { color: var(--club-muted); font-size: 11.5px; }
+.club-launcher-item small { color: var(--club-muted); font-size: var(--club-fs-xs); }
 .club-launcher-item.is-active,
 .club-launcher-item:hover { border-color: var(--club-accent-line); background: var(--club-accent-soft); }
 .club-launcher-item[hidden] { display: none !important; }
@@ -1451,7 +1593,7 @@ html[data-theme="light"] .club-launcher { background: rgba(23, 24, 28, 0.34); }
   opacity: 0;
   pointer-events: none;
   transform: translateY(8px);
-  transition: opacity 0.18s ease, transform 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  transition: opacity var(--club-dur, 200ms) var(--club-ease, ease), transform var(--club-dur, 200ms) var(--club-ease, ease), border-color var(--club-dur, 200ms) var(--club-ease, ease), color var(--club-dur, 200ms) var(--club-ease, ease);
 }
 .club-to-top.is-visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
 .club-to-top:hover { border-color: var(--club-accent-line); color: var(--club-accent); }
@@ -1510,7 +1652,7 @@ body.club-page .club-admin-side .club-admin-side-foot {
   padding: 9px 10px;
   border-top: 1px solid var(--club-line);
   color: var(--club-muted);
-  font-size: 11.5px;
+  font-size: var(--club-fs-xs);
   line-height: 1.55;
 }
 
@@ -1554,7 +1696,7 @@ body.club-page .checks { display: grid; grid-template-columns: repeat(2, minmax(
 /* ============================================================
    19. 响应式
    ============================================================ */
-@media (max-width: 1080px) {
+@media (max-width: 1100px) {
   body.club-page .club-admin-layout { grid-template-columns: 1fr; }
   body.club-page .club-admin-side {
     position: static;
@@ -1621,7 +1763,6 @@ body.club-page .checks { display: grid; grid-template-columns: repeat(2, minmax(
   body.club-page .actions .button,
   body.club-page .hero-actions .button { flex: 1 1 auto; }
   body.club-page .club-page-head { gap: 14px; margin-bottom: 20px; }
-  body.club-page .club-page-head h1 { font-size: 28px; }
   body.club-page .lang-switcher,
   body.club-page .theme-switcher { zoom: 0.94; }
   body.club-page .table,
@@ -1631,7 +1772,7 @@ body.club-page .checks { display: grid; grid-template-columns: repeat(2, minmax(
   body.club-page .club-launcher-panel { max-height: 84vh; }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   /* 品牌本身已链接首页：窄屏去掉重复的「返回官网」，把空间留给语言/主题切换。 */
   body.club-page .topbar .back,
   body.club-page .club-topbar .back { display: none; }
@@ -1686,7 +1827,7 @@ html[data-theme="light"] body.club-page .club-section-nav {
   background: #FFFFFF !important;
   border-color: var(--club-line) !important;
   color: var(--club-text) !important;
-  box-shadow: var(--club-shadow-sm) !important;
+  box-shadow: inset 0 1px 0 var(--club-highlight), var(--club-shadow-sm) !important;
 }
 html[data-theme="light"] body.club-page .card-body,
 html[data-theme="light"] body.club-page .profile-item,
@@ -1701,6 +1842,7 @@ html[data-theme="light"] body.club-page .stat {
   background: var(--club-surface-2) !important;
   border-color: var(--club-line) !important;
   color: var(--club-text) !important;
+  box-shadow: inset 0 1px 0 #ffffff !important;
 }
 html[data-theme="light"] body.club-page .input,
 html[data-theme="light"] body.club-page .select,
@@ -1711,37 +1853,78 @@ html[data-theme="light"] body.club-page textarea {
   background: #FFFFFF !important;
   border-color: var(--club-line) !important;
   color: var(--club-text) !important;
+  box-shadow: inset 0 1px 2px rgba(23, 24, 28, 0.05);
 }
 html[data-theme="light"] body.club-page .input::placeholder,
 html[data-theme="light"] body.club-page textarea::placeholder,
 html[data-theme="light"] body.club-page input::placeholder { color: #7a808a !important; opacity: 1 !important; }
+/* 亮色下禁用输入同样要压过上面的白色 !important 覆盖 */
+html[data-theme="light"] body.club-page .input:disabled,
+html[data-theme="light"] body.club-page .select:disabled,
+html[data-theme="light"] body.club-page .textarea:disabled,
+html[data-theme="light"] body.club-page input:disabled,
+html[data-theme="light"] body.club-page select:disabled,
+html[data-theme="light"] body.club-page textarea:disabled {
+  background: var(--club-surface-3) !important;
+  border-color: var(--club-line) !important;
+  opacity: 0.6 !important;
+  cursor: not-allowed;
+}
+html[data-theme="light"] body.club-page .input:not(:disabled):hover,
+html[data-theme="light"] body.club-page select:not(:disabled):hover,
+html[data-theme="light"] body.club-page textarea:not(:disabled):hover,
+html[data-theme="light"] body.club-page input:not(:disabled):hover { border-color: var(--club-line-strong) !important; }
+html[data-theme="light"] body.club-page .button:disabled,
+html[data-theme="light"] body.club-page .btn:disabled,
+html[data-theme="light"] body.club-page .primary-action:disabled,
+html[data-theme="light"] body.club-page .secondary-action:disabled,
+html[data-theme="light"] body.club-page .row-button:disabled {
+  opacity: 0.45 !important;
+  filter: none !important;
+  transform: none !important;
+  box-shadow: inset 0 1px 0 var(--club-highlight) !important;
+  cursor: not-allowed;
+}
 html[data-theme="light"] body.club-page .button,
 html[data-theme="light"] body.club-page .primary-action {
-  background: var(--club-accent) !important;
+  background-color: var(--club-accent) !important;
+  background-image: var(--club-grad-primary) !important;
   border-color: var(--club-accent) !important;
   color: #FFFFFF !important;
-  box-shadow: none !important;
+  box-shadow: inset 0 1px 0 var(--club-highlight-strong), var(--club-glow-accent) !important;
 }
-html[data-theme="light"] body.club-page .button:hover,
-html[data-theme="light"] body.club-page .primary-action:hover {
-  background: var(--club-accent-strong) !important;
+html[data-theme="light"] body.club-page .button:hover:not(:disabled),
+html[data-theme="light"] body.club-page .primary-action:hover:not(:disabled) {
+  background-color: var(--club-accent-strong) !important;
+  background-image: none !important;
   border-color: var(--club-accent-strong) !important;
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 var(--club-highlight-strong), 0 10px 22px color-mix(in srgb, var(--club-accent) 30%, transparent) !important;
+}
+html[data-theme="light"] body.club-page .button:active,
+html[data-theme="light"] body.club-page .primary-action:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 0 var(--club-highlight-strong), inset 0 2px 6px rgba(0, 0, 0, 0.18), 0 1px 3px color-mix(in srgb, var(--club-accent) 16%, transparent) !important;
 }
 html[data-theme="light"] body.club-page .button.secondary,
+html[data-theme="light"] body.club-page .btn.secondary,
 html[data-theme="light"] body.club-page .secondary-action,
 html[data-theme="light"] body.club-page .row-button,
 html[data-theme="light"] body.club-page .button.ghost {
   background: #FFFFFF !important;
   border-color: var(--club-line-strong) !important;
   color: var(--club-text-soft) !important;
-  box-shadow: none !important;
+  box-shadow: inset 0 1px 0 var(--club-highlight), 0 1px 2px rgba(23, 24, 28, 0.06) !important;
 }
-html[data-theme="light"] body.club-page .button.secondary:hover,
-html[data-theme="light"] body.club-page .secondary-action:hover,
-html[data-theme="light"] body.club-page .row-button:hover {
+html[data-theme="light"] body.club-page .button.secondary:hover:not(:disabled),
+html[data-theme="light"] body.club-page .btn.secondary:hover:not(:disabled),
+html[data-theme="light"] body.club-page .secondary-action:hover:not(:disabled),
+html[data-theme="light"] body.club-page .row-button:hover:not(:disabled) {
   background: var(--club-accent-soft) !important;
   border-color: var(--club-accent-line) !important;
   color: var(--club-accent) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(23, 24, 28, 0.1) !important;
 }
 html[data-theme="light"] body.club-page .button.danger,
 html[data-theme="light"] body.club-page .row-button.delete {
@@ -1816,8 +1999,8 @@ html[data-theme="light"] body.club-page .transfer { background: var(--club-accen
 /* 兼容旧标记中的语义徽章与状态卡 */
 body.club-page .badge.cyan { border-color: var(--club-accent-line); background: var(--club-accent-soft); color: var(--club-accent); }
 body.club-page .badge.green { border-color: color-mix(in srgb, var(--club-ok) 45%, transparent); background: var(--club-ok-soft); color: var(--club-ok); }
-body.club-page .panel.status,
-body.club-page .status {
+/* 旧标记的状态卡只认 .panel.status：裸 .status 留给实验室页的小胶囊 */
+body.club-page .panel.status {
   padding: 18px 20px;
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius);
@@ -1857,7 +2040,7 @@ body:not(.club-page) .club-launcher-button {
   font-size: 12.5px;
   font-weight: 650;
   cursor: pointer;
-  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+  transition: border-color var(--club-dur, 200ms) var(--club-ease, ease), background var(--club-dur, 200ms) var(--club-ease, ease), color var(--club-dur, 200ms) var(--club-ease, ease);
 }
 body:not(.club-page) .club-launcher-button:hover {
   border-color: rgba(0, 229, 255, 0.45);
@@ -2015,7 +2198,7 @@ body.club-page .link-accent:hover { color: var(--club-accent-strong); }
   white-space: nowrap;
   cursor: pointer;
   transform: none;
-  transition: background 0.16s ease, color 0.16s ease;
+  transition: background var(--club-dur, 200ms) var(--club-ease, ease), color var(--club-dur, 200ms) var(--club-ease, ease);
 }
 .lang-switcher button:hover,
 .theme-switcher button:hover {
@@ -2074,8 +2257,9 @@ body.club-page .club-site-nav a {
   color: var(--club-muted);
   font-size: 12.5px;
   font-weight: 600;
+  line-height: 1.1;
   white-space: nowrap;
-  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+  transition: background var(--club-dur, 200ms) var(--club-ease, ease), color var(--club-dur, 200ms) var(--club-ease, ease), border-color var(--club-dur, 200ms) var(--club-ease, ease);
 }
 body.club-page .club-site-nav a:hover {
   background: var(--club-surface-2);
@@ -2086,7 +2270,7 @@ body.club-page .club-site-nav a[aria-current="page"] {
   background: var(--club-accent-soft);
   color: var(--club-accent);
 }
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   body.club-page .club-site-nav { display: none; }
 }
 
@@ -2208,7 +2392,7 @@ body.club-page .club-auth-aux {
 body.club-page .club-auth-card .message { margin: 0; min-height: 18px; text-align: center; }
 body.club-page input[data-invalid] { border-color: var(--club-danger) !important; }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   body.club-page .club-auth-shell { grid-template-columns: 1fr; }
   body.club-page .club-auth-aside { border-right: 0; border-bottom: 1px solid var(--club-line); }
   body.club-page .club-auth-points { display: none; }
@@ -2241,7 +2425,7 @@ body.club-page main > .hero + .lead { margin-top: 0; }
 
 /* 手机端：实验室/游戏页的切换器收成「当前值」两个胶囊，
    否则 语言(2) + 主题(3) 共 5 个按钮并排会撑出横向滚动。 */
-@media (max-width: 620px) {
+@media (max-width: 640px) {
   .club-topbar-utils .lang-switcher button:not(.is-active),
   .club-topbar-utils .theme-switcher button:not(.is-active) { display: none; }
   .club-topbar-utils { max-width: 100%; }
@@ -2312,7 +2496,7 @@ body.club-page .club-feature-group > summary::after {
   margin-left: 8px;
   color: var(--club-muted);
   font-size: 11px;
-  transition: transform 0.16s ease;
+  transition: transform var(--club-dur, 200ms) var(--club-ease, ease);
 }
 body.club-page .club-feature-group[open] > summary::after { transform: rotate(180deg); }
 body.club-page .club-feature-group > summary small {
@@ -2525,7 +2709,7 @@ html[data-theme="light"] body.club-page .club-feature-group > summary:hover { ba
   line-height: 1.5;
 }
 .club-notify-item time {
-  font-size: 11.5px;
+  font-size: var(--club-fs-xs);
   color: var(--club-muted, var(--muted, #90a4bb));
   font-variant-numeric: tabular-nums;
 }
@@ -2547,9 +2731,14 @@ html[data-theme="light"] body.club-page .club-feature-group > summary:hover { ba
   border-radius: 999px;
   background: transparent;
   color: var(--club-text-soft);
+  font: inherit;
   font-size: 12.5px;
+  line-height: 1.1;
   cursor: pointer;
+  transition: border-color var(--club-dur-fast, 140ms) var(--club-ease, ease), background var(--club-dur-fast, 140ms) var(--club-ease, ease), color var(--club-dur-fast, 140ms) var(--club-ease, ease), transform var(--club-dur-fast, 140ms) var(--club-ease, ease);
 }
+.club-notify-filters .chip:hover { border-color: var(--club-accent-line); color: var(--club-accent); }
+.club-notify-filters .chip:active { transform: translateY(1px); }
 .club-notify-filters .chip.is-active {
   border-color: var(--club-accent-line);
   background: var(--club-accent-soft);
@@ -2568,7 +2757,7 @@ html[data-theme="light"] body.club-page .club-feature-group > summary:hover { ba
 .club-notify-row-main { flex: 1 1 auto; min-width: 0; display: grid; gap: 4px; }
 .club-notify-row-main strong { font-size: 14px; }
 .club-notify-row-main p { margin: 0; color: var(--club-text-soft); font-size: 13px; line-height: 1.6; }
-.club-notify-row-main time { color: var(--club-muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.club-notify-row-main time { color: var(--club-muted); font-size: var(--club-fs-xs); font-variant-numeric: tabular-nums; }
 .club-notify-kind {
   justify-self: start;
   padding: 1px 8px;
@@ -2656,13 +2845,17 @@ html[data-theme="light"] body.club-page .club-feature-group > summary:hover { ba
 .events-view-toggle { display: flex; gap: 6px; }
 .events-view-toggle .chip {
   padding: 5px 12px; border: 1px solid var(--club-line); border-radius: 999px;
-  background: transparent; color: var(--club-text-soft); font-size: 12.5px; cursor: pointer;
+  background: transparent; color: var(--club-text-soft); cursor: pointer;
+  font: inherit; font-size: 12.5px; line-height: 1.1;
+  transition: border-color var(--club-dur-fast, 140ms) var(--club-ease, ease), background var(--club-dur-fast, 140ms) var(--club-ease, ease), color var(--club-dur-fast, 140ms) var(--club-ease, ease), transform var(--club-dur-fast, 140ms) var(--club-ease, ease);
 }
+.events-view-toggle .chip:hover { border-color: var(--club-accent-line); color: var(--club-accent); }
+.events-view-toggle .chip:active { transform: translateY(1px); }
 .events-view-toggle .chip.is-active { border-color: var(--club-accent-line); background: var(--club-accent-soft); color: var(--club-accent); font-weight: 650; }
 .event-calendar-head { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 6px 0 12px; }
 .event-calendar-head strong { font-size: 14px; min-width: 120px; text-align: center; }
 .event-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
-.event-calendar-weekday { padding: 4px 0; text-align: center; color: var(--club-muted); font-size: 11.5px; }
+.event-calendar-weekday { padding: 4px 0; text-align: center; color: var(--club-muted); font-size: var(--club-fs-xs); }
 .event-calendar-day {
   min-height: 74px; padding: 5px 6px;
   border: 1px solid var(--club-line); border-radius: 8px;
@@ -2671,7 +2864,7 @@ html[data-theme="light"] body.club-page .club-feature-group > summary:hover { ba
 }
 .event-calendar-day.is-empty { border: 0; background: transparent; }
 .event-calendar-day.has-events { border-color: var(--club-accent-line); }
-.event-calendar-date { color: var(--club-muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.event-calendar-date { color: var(--club-muted); font-size: var(--club-fs-xs); font-variant-numeric: tabular-nums; }
 .event-calendar-item {
   display: block; padding: 2px 5px;
   border-radius: 5px; background: var(--club-accent-soft);
@@ -2704,7 +2897,7 @@ html[data-theme="light"] body.club-page .club-feature-group > summary:hover { ba
   font-size: 13px;
   font-weight: 650;
   text-decoration: none;
-  transition: top .15s ease;
+  transition: top var(--club-dur-fast, 140ms) var(--club-ease, ease);
 }
 .club-skip-link:focus { top: 0; }
 @media print { .club-skip-link { display: none !important; } }
@@ -2730,7 +2923,7 @@ html[data-theme="light"] body.club-page .club-feature-group > summary:hover { ba
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color .15s ease, color .15s ease, transform .15s ease;
+  transition: border-color var(--club-dur-fast, 140ms) var(--club-ease, ease), color var(--club-dur-fast, 140ms) var(--club-ease, ease), transform var(--club-dur-fast, 140ms) var(--club-ease, ease);
 }
 .share-action:hover,
 .share-action:focus-visible {
@@ -2822,7 +3015,7 @@ html[data-theme="light"] body.club-page .club-feature-group > summary:hover { ba
   font-size: 13px; line-height: 1.5;
   box-shadow: 0 12px 32px rgba(0,0,0,.32);
   opacity: 0; pointer-events: none;
-  transition: opacity .2s ease, transform .2s ease;
+  transition: opacity var(--club-dur, 200ms) var(--club-ease, ease), transform var(--club-dur, 200ms) var(--club-ease, ease);
   z-index: 1300;
 }
 .club-share-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
@@ -2834,7 +3027,7 @@ html[data-theme="light"] body.club-page .club-feature-group > summary:hover { ba
 .drive-usage-figures strong { font-size: 22px; font-variant-numeric: tabular-nums; }
 .drive-usage-figures span { color: var(--club-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 .drive-usage-bar { height: 8px; border-radius: 999px; background: var(--club-surface-3); overflow: hidden; }
-.drive-usage-bar span { display: block; height: 100%; border-radius: 999px; background: var(--club-accent); transition: width .3s ease; }
+.drive-usage-bar span { display: block; height: 100%; border-radius: 999px; background: var(--club-accent); transition: width var(--club-dur-slow, 320ms) var(--club-ease, ease); }
 .drive-usage .hint { margin: 0; }
 @media print { .drive-usage { border-color: #bbb; background: #fff; } }
 
@@ -2843,3 +3036,294 @@ html[data-theme="light"] body.club-page .club-feature-group > summary:hover { ba
 .button.small { padding: 4px 10px; font-size: 12px; line-height: 1.5; }
 .drive-usage.is-blocked .drive-usage-bar span { background: #C2410C; }
 .drive-usage.is-full .drive-usage-bar span { background: #B45309; }
+
+/* ============================================================
+   30. 企业级细节层（2026-10 全站 UI 升级）
+   追加式段落：动效节奏、滚动条、数字对齐、toast、骨架屏、
+   空状态、按钮 loading。全部走 --club-* 令牌，亮暗自动适配。
+   ============================================================ */
+
+/* 全站数字等宽：表格、统计、徽章里的数字纵向对齐 */
+body.club-page td,
+body.club-page th { font-variant-numeric: tabular-nums; }
+body.club-page .club-num { font-variant-numeric: tabular-nums; }
+
+/* 精修滚动条：窄、圆角、悬停可见 */
+body.club-page * {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--club-muted) 38%, transparent) transparent;
+}
+body.club-page *::-webkit-scrollbar { width: 9px; height: 9px; }
+body.club-page *::-webkit-scrollbar-track { background: transparent; }
+body.club-page *::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  background-color: color-mix(in srgb, var(--club-muted) 34%, transparent);
+}
+body.club-page *::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--club-muted) 55%, transparent); }
+
+/* 卡片悬停抬升统一使用新阴影令牌 */
+body.club-page a.card:hover { box-shadow: var(--club-shadow-hover); }
+
+/* 按钮：加载态 + 按压反馈 + 图标对齐 */
+body.club-page .button.is-loading,
+body.club-page .btn.is-loading,
+body.club-page .primary-action.is-loading,
+body.club-page .secondary-action.is-loading {
+  pointer-events: none;
+  color: transparent !important;
+  position: relative;
+}
+body.club-page .button.is-loading::after,
+body.club-page .btn.is-loading::after,
+body.club-page .primary-action.is-loading::after,
+body.club-page .secondary-action.is-loading::after {
+  content: "";
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: club-spin 0.7s linear infinite;
+}
+body.club-page .button.is-loading { color: transparent; }
+body.club-page .button.secondary.is-loading::after,
+body.club-page .button.danger.is-loading::after,
+body.club-page .button.ghost.is-loading::after { color: var(--club-text-soft); }
+body.club-page .button:active:not(:disabled),
+body.club-page .btn:active:not(:disabled),
+body.club-page .row-button:active:not(:disabled) { transform: translateY(1px) scale(0.99); }
+
+/* ---------- Toast 全局通知 ---------- */
+.club-toast-region {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 1400;
+  display: grid;
+  gap: 10px;
+  width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+}
+.club-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--club-line-strong, rgba(132, 190, 225, 0.32));
+  border-radius: 12px;
+  background: var(--club-surface, #101a2a);
+  color: var(--club-text, #e8f1fb);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.4);
+  font-size: 13px;
+  line-height: 1.55;
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
+  transition: opacity var(--club-dur, 200ms) var(--club-ease, ease), transform var(--club-dur, 200ms) var(--club-ease, ease);
+}
+.club-toast.is-in { opacity: 1; transform: translateY(0) scale(1); }
+.club-toast.is-out { opacity: 0; transform: translateY(6px) scale(0.98); }
+.club-toast::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--club-info, #8fb4ff);
+}
+.club-toast.club-toast-ok::before { background: var(--club-ok, #56d9a0); }
+.club-toast.club-toast-error::before { background: var(--club-danger, #ff8095); }
+.club-toast.club-toast-warn::before { background: var(--club-warn, #f2c66d); }
+.club-toast span { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.club-toast button {
+  flex: 0 0 auto;
+  border: 0;
+  padding: 2px;
+  background: transparent;
+  color: var(--club-muted, #90a4bb);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.club-toast button:hover { color: var(--club-text, #e8f1fb); }
+@media (max-width: 640px) {
+  .club-toast-region { right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ---------- 骨架屏 ---------- */
+body.club-page .club-skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--club-radius-xs, 6px);
+  background: var(--club-surface-2);
+  min-height: 14px;
+}
+body.club-page .club-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--club-text) 7%, transparent), transparent);
+  animation: club-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes club-shimmer { to { transform: translateX(100%); } }
+body.club-page .club-skeleton-rows { display: grid; gap: 10px; }
+body.club-page .club-skeleton-rows .club-skeleton { height: 15px; }
+body.club-page .club-skeleton-rows .club-skeleton:last-child { width: 62%; }
+
+/* ---------- 空状态 ---------- */
+body.club-page .club-empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 44px 20px;
+  text-align: center;
+}
+body.club-page .club-empty::before {
+  content: "";
+  width: 44px;
+  height: 44px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--club-accent) 46%, transparent), transparent 60%),
+    var(--club-grad-surface), var(--club-surface-2);
+  border: 1px solid var(--club-line);
+  box-shadow: inset 0 1px 0 var(--club-highlight), 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+body.club-page .club-empty strong { color: var(--club-text); font-size: 14.5px; }
+body.club-page .club-empty span { max-width: 380px; color: var(--club-muted); font-size: 12.5px; line-height: 1.6; }
+body.club-page .club-empty .button { margin-top: 10px; min-height: 34px; padding: 6px 13px; font-size: 12.5px; }
+
+/* ---------- 减少动效兜底 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  body.club-page *,
+  body.club-page *::before,
+  body.club-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .club-toast { opacity: 1; transform: none; }
+}
+
+/* ---------- 统一进场：主内容面板一次性轻上浮（尊重减少动效） ---------- */
+@keyframes club-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+body.club-page main > * { animation: club-enter var(--club-dur-slow, 320ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)) both; }
+body.club-page main > *:nth-child(2) { animation-delay: 45ms; }
+body.club-page main > *:nth-child(3) { animation-delay: 90ms; }
+body.club-page main > *:nth-child(n + 4) { animation-delay: 120ms; }
+
+/* ============================================================
+   31. 第二轮体系化升级（2026-10-25）
+   动效令牌全量采纳、keyframes 注册表、全局 reduced-motion、
+   View Transitions、滚动 reveal、长文排版、共享页脚。
+   ============================================================ */
+
+/* keyframes 注册表（全站只允许这里的 club-* 动画名）：
+   club-spin（加载环）/ club-shimmer（骨架屏）/ club-pop（弹层进入）/
+   club-enter（页面进场）/ club-num-pulse（数字变化高亮，见下）。
+   页面私有动画（游戏/实验室可视化）保留在各自页内，不得与本表重名。 */
+
+/* 数字/关键值变化时的轻脉冲：JS 侧在更新数值后对元素 add('club-num-pulse')，
+   animationend 后可移除；未移除也不影响下一次触发（重新触发需先移除）。 */
+@keyframes club-num-pulse {
+  0% { color: var(--club-accent-strong, currentColor); transform: scale(1.06); }
+}
+body.club-page .club-num-pulse { animation: club-num-pulse 600ms var(--club-ease, ease) 1; }
+
+/* 全局减少动效兜底：覆盖实验室 / 游戏页 / 首页等未挂 club-page 的页面。
+   club-page 作用域内的同款规则保留（双保险，优先级相同不冲突）。 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 页面切换过渡：MPA 导航时整页轻交叉淡入（Chrome/Edge 渐进增强，
+   其余浏览器自动忽略；file:// 下同样安全）。 */
+@view-transition { navigation: auto; }
+
+/* 滚动 reveal：由 club-shell.js 的 ClubReveal 驱动。
+   html.club-reveal-ready 只在 JS 成功启动后才加上——无 JS 时内容始终可见。 */
+html.club-reveal-ready [data-reveal] {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 480ms var(--club-ease, ease), transform 480ms var(--club-ease, ease);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+html.club-reveal-ready [data-reveal].is-revealed { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html.club-reveal-ready [data-reveal] { opacity: 1; transform: none; transition: none; }
+}
+
+/* 长文排版模板：使用指引 / 更新日志 / 说明段落等以阅读为主的区块。
+   <div class="club-prose"> 包住正文即可获得中文友好的阅读宽度与节奏。 */
+body.club-page .club-prose { max-width: 68ch; }
+body.club-page .club-prose p { line-height: 1.78; }
+body.club-page .club-prose h2 { margin: var(--club-space-6) 0 var(--club-space-3); font-size: var(--club-fs-lg); }
+body.club-page .club-prose h3 { margin: var(--club-space-5) 0 var(--club-space-2); }
+body.club-page .club-prose ul,
+body.club-page .club-prose ol { margin: 0 0 var(--club-space-4); padding-left: 1.35em; line-height: 1.78; color: var(--club-text-soft); }
+body.club-page .club-prose li + li { margin-top: 6px; }
+body.club-page .club-prose blockquote {
+  margin: var(--club-space-4) 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--club-accent-line);
+  border-radius: 0 var(--club-radius-sm) var(--club-radius-sm) 0;
+  background: var(--club-surface-2);
+  color: var(--club-muted);
+}
+body.club-page .club-prose blockquote p { margin: 0; }
+body.club-page .club-prose hr { margin: var(--club-space-5) 0; border: 0; border-top: 1px solid var(--club-line); }
+
+/* 等宽数据工具类：ID / 哈希 / 版本号列 */
+body.club-page .club-mono { font-family: var(--club-mono); font-variant-numeric: tabular-nums; }
+
+/* ---------- 共享页脚（club-shell.js 注入到 body 末尾） ---------- */
+body.club-page .club-footer {
+  margin-top: auto;
+  padding-top: var(--club-space-5);
+  border-top: 1px solid var(--club-line);
+  background: color-mix(in srgb, var(--club-surface) 55%, transparent);
+}
+body.club-page .club-footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  max-width: var(--club-max);
+  margin: 0 auto;
+  padding: 20px clamp(16px, 3vw, 30px) calc(20px + env(safe-area-inset-bottom, 0px));
+}
+body.club-page .club-footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--club-muted);
+  font-size: var(--club-fs-sm);
+}
+body.club-page .club-footer-brand .brand-mark { width: 26px; height: 26px; border-radius: 7px; font-size: 12px; }
+body.club-page .club-footer-nav { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+body.club-page .club-footer-nav a {
+  color: var(--club-muted);
+  font-size: var(--club-fs-sm);
+  transition: color var(--club-dur, 200ms) var(--club-ease, ease);
+}
+body.club-page .club-footer-nav a:hover { color: var(--club-accent); }
+body.club-page .club-footer-meta { color: var(--club-muted); font-size: var(--club-fs-xs); }
+@media print { body.club-page .club-footer { display: none !important; } }

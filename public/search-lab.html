@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="lab.search.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8" />
@@ -11,16 +11,45 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
 <style>
-    :root { font-family:"Microsoft YaHei","PingFang SC","Noto Sans CJK SC",system-ui,sans-serif; color:#f6fbff; background:#020409; --bg:#020409; --panel:rgba(8,13,30,.8); --cyan:#00e5ff; --violet:#7c4dff; --pink:#ff5fc8; --gold:#ffd166; --green:#71f3bf; --text:#c8d4e2; --muted:#8fa3b8; --line:rgba(115,221,255,.2); --shadow:0 24px 90px rgba(0,229,255,.11); }
-    *{box-sizing:border-box} body{margin:0;min-width:320px;min-height:100vh;background:radial-gradient(ellipse 70% 50% at 15% 4%,rgba(0,229,255,.15),transparent 62%),radial-gradient(ellipse 60% 42% at 88% 7%,rgba(124,77,255,.22),transparent 65%),linear-gradient(180deg,#020409,#050917 50%,#020409);color:#f6fbff;overflow-x:hidden} body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(rgba(0,229,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.045) 1px,transparent 1px);background-size:72px 72px;mask-image:radial-gradient(ellipse 110% 100% at 50% 10%,#000,transparent 92%)}
-    a{color:inherit;text-decoration:none} button,input,select,textarea{font:inherit} button{cursor:pointer} button:disabled{cursor:not-allowed;opacity:.48}.topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:20px;padding:14px clamp(18px,5vw,72px);border-bottom:1px solid var(--line);background:rgba(2,4,12,.78);backdrop-filter:blur(18px)}.brand{display:inline-flex;align-items:center;gap:12px;margin-right:auto}.brand-mark{display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:linear-gradient(135deg,rgba(0,229,255,.18),rgba(124,77,255,.22));color:var(--cyan);font-weight:900;box-shadow:0 0 28px rgba(0,229,255,.22),inset 0 0 24px rgba(124,77,255,.18)}.brand strong,.brand small{display:block}.brand strong{font-size:16px}.brand small{color:var(--muted);font-size:12px;text-transform:uppercase}.member-identity{display:none;padding:5px 9px;border:1px solid rgba(0,229,255,.34);border-radius:999px;color:var(--cyan);font-size:12px;white-space:nowrap}.member-identity:not([hidden]){display:inline-flex}.back-link{padding:8px 12px;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:14px;transition:.2s}.back-link:hover{border-color:rgba(0,229,255,.55);background:rgba(0,229,255,.08);color:var(--cyan)}
-    main{max-width:1320px;margin:0 auto;padding:54px clamp(18px,5vw,72px) 64px}.hero{display:flex;align-items:end;justify-content:space-between;gap:24px;margin-bottom:30px}.eyebrow{margin:0 0 10px;color:var(--cyan);font-size:12px;font-weight:800;letter-spacing:2px}.hero h1{margin:0;font-size:clamp(30px,5vw,50px);letter-spacing:.5px;text-shadow:0 0 28px rgba(0,229,255,.25)}.hero p:not(.eyebrow){max-width:690px;margin:14px 0 0;color:var(--text);line-height:1.75}.algorithm-note{min-width:250px;padding:14px 17px;border:1px solid var(--line);border-radius:12px;background:rgba(8,13,30,.62);color:var(--muted);font-size:13px;line-height:1.65}.algorithm-note b{display:block;color:var(--gold);font-size:14px}
-    .lab-grid{display:grid;grid-template-columns:310px minmax(0,1fr);gap:22px}.panel{border:1px solid var(--line);border-radius:16px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(12px)}.controls{padding:20px}.controls h2,.visual-header h2{margin:0;font-size:18px}.control-group{margin-top:18px}.control-group label,.control-group legend{display:block;margin-bottom:8px;color:var(--muted);font-size:13px}.control-group fieldset{margin:0;padding:0;border:0}.field,select,textarea{width:100%;border:1px solid rgba(115,221,255,.24);border-radius:9px;background:rgba(2,7,18,.85);color:#f6fbff;outline:none}.field,select{height:42px;padding:0 11px}textarea{min-height:156px;padding:10px 11px;resize:vertical;line-height:1.45;font:13px/1.45 ui-monospace,Consolas,monospace}.field:focus,select:focus,textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.11)}.radio-row{display:flex;gap:8px}.radio-row label{flex:1;margin:0}.radio-row input{position:absolute;opacity:0}.radio-row span{display:block;padding:10px 8px;border:1px solid rgba(115,221,255,.22);border-radius:8px;color:var(--muted);font-size:13px;text-align:center;transition:.2s}.radio-row input:checked+span{border-color:var(--cyan);background:rgba(0,229,255,.1);color:var(--cyan)}.hint{margin:7px 0 0;color:var(--muted);font-size:12px;line-height:1.55}.error{min-height:18px;margin:7px 0 0;color:#ff8fcf;font-size:12px;line-height:1.4}.custom-input[hidden]{display:none}.button-stack{display:grid;gap:10px;margin-top:18px}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 14px;border:1px solid var(--line);border-radius:9px;background:rgba(9,20,42,.82);color:#f6fbff;font-size:14px;font-weight:700;transition:transform .18s,border-color .18s,background .18s,color .18s}.btn:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(0,229,255,.62);color:var(--cyan)}.btn-primary{border-color:rgba(0,229,255,.7);background:linear-gradient(135deg,rgba(0,229,255,.22),rgba(124,77,255,.3));color:#eaffff}.btn-warn{border-color:rgba(255,209,102,.45);color:var(--gold)}
-    .visual{padding:20px;min-width:0}.visual-header{display:flex;align-items:start;justify-content:space-between;gap:16px}.status{padding:6px 10px;border:1px solid rgba(0,229,255,.3);border-radius:999px;color:var(--cyan);font-size:12px;white-space:nowrap}.maze-frame{margin-top:18px;padding:16px;border:1px solid rgba(115,221,255,.28);border-radius:12px;background:linear-gradient(180deg,rgba(0,229,255,.07),rgba(124,77,255,.08));box-shadow:inset 0 0 28px rgba(0,229,255,.045);overflow:auto}.maze{display:grid;gap:2px;width:max-content;min-width:100%;justify-content:center}.cell{width:clamp(15px,3.6vw,34px);aspect-ratio:1;border:1px solid rgba(164,226,255,.48);border-radius:3px;background:#294b68;transition:background .13s ease,box-shadow .13s ease,transform .13s ease}.cell.wall{background:#07111f;border-color:rgba(0,0,0,.9);box-shadow:inset 0 0 0 1px rgba(115,221,255,.12),inset 0 -3px 0 rgba(0,0,0,.28)}.cell.start{background:linear-gradient(135deg,#00e5ff,#2196f3);box-shadow:0 0 14px rgba(0,229,255,.55)}.cell.end{background:linear-gradient(135deg,#ff5fc8,#7c4dff);box-shadow:0 0 14px rgba(255,95,200,.55)}.cell.frontier{background:linear-gradient(135deg,#ffd166,#ff9f43);box-shadow:0 0 11px rgba(255,209,102,.45)}.cell.current{background:linear-gradient(135deg,#fff7bd,#ffd166);box-shadow:0 0 20px rgba(255,209,102,.8);transform:scale(.9)}.cell.visited{background:linear-gradient(135deg,#007b9e,#274b8b);border-color:rgba(0,229,255,.28)}.cell.path{background:linear-gradient(135deg,#71f3bf,#00a99d);box-shadow:0 0 14px rgba(113,243,191,.55)}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}.metric{padding:13px;border:1px solid rgba(115,221,255,.16);border-radius:10px;background:rgba(2,7,18,.48)}.metric span{display:block;color:var(--muted);font-size:12px}.metric strong{display:block;margin-top:4px;color:#f6fbff;font:700 23px/1.15 ui-monospace,Consolas,monospace}.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:15px;color:var(--muted);font-size:12px}.legend i{display:inline-block;width:9px;height:9px;margin-right:5px;border-radius:50%;background:var(--cyan)}.legend .l-wall{background:#07111f}.legend .l-frontier{background:var(--gold)}.legend .l-visited{background:#2473a8}.legend .l-path{background:var(--green)}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-    @media(max-width:820px){.lab-grid{grid-template-columns:1fr}.controls{order:2}.hero{align-items:start;flex-direction:column}.algorithm-note{min-width:0;width:100%}}@media(max-width:560px){.topbar{gap:10px;padding:12px 16px}.brand small{display:none}.member-identity{max-width:110px;overflow:hidden;text-overflow:ellipsis}.back-link{padding:8px;font-size:12px}.visual,.controls{padding:15px}.maze-frame{padding:10px}.cell{width:clamp(14px,6vw,26px)}.metrics{grid-template-columns:1fr}.visual-header{flex-direction:column}.status{align-self:flex-start}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+    /* 收编说明：主题色一律走 --club-*（club-ui.css 的 body.club-page 作用域），
+       本块只保留实验室专用显示色（紫/粉/金/绿，用于迷宫状态与图例）与可视化专有样式。 */
+    :root { --violet:#7c4dff; --pink:#ff5fc8; --gold:#ffd166; --green:#71f3bf; --ease:cubic-bezier(0.22,1,0.36,1); }
+    body{overflow-x:hidden} body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(rgba(0,229,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.045) 1px,transparent 1px);background-size:72px 72px;mask-image:radial-gradient(ellipse 110% 100% at 50% 10%,#000,transparent 92%)}
+    a{color:inherit;text-decoration:none} button,input,select,textarea{font:inherit} button{cursor:pointer} button:disabled{cursor:not-allowed;opacity:.48}
+    .hero p.lead{margin-bottom:0}
+    .algorithm-note{min-width:250px;padding:14px 17px;border:1px solid var(--club-line);border-radius:12px;background:var(--club-surface-2);color:var(--club-muted);font-size:13px;line-height:1.65}.algorithm-note b{display:block;color:var(--gold);font-size:14px}
+    .lab-grid{display:grid;grid-template-columns:310px minmax(0,1fr);gap:22px}.controls{padding:20px}.controls h2,.visual-header h2{margin:0;font-size:18px}.control-group{margin-top:18px}.control-group label,.control-group legend{display:block;margin-bottom:8px;color:var(--club-muted);font-size:13px}.control-group fieldset{margin:0;padding:0;border:0}
+    body.club-page .controls textarea{min-height:156px;font-family:var(--club-mono,ui-monospace,Consolas,monospace);font-size:13px;line-height:1.45}
+    .radio-row{display:flex;gap:8px}.radio-row label{flex:1;margin:0}.radio-row input{position:absolute;opacity:0}.radio-row span{display:block;padding:10px 8px;border:1px solid var(--club-line);border-radius:8px;color:var(--club-muted);font-size:13px;text-align:center;transition:all var(--club-dur-fast,140ms) var(--ease)}.radio-row input:checked+span{border-color:var(--club-accent);background:var(--club-accent-soft);color:var(--club-accent)}body.club-page .hint{margin:7px 0 0;color:var(--club-muted);font-size:12px;line-height:1.55}body.club-page .error{min-height:18px;margin:7px 0 0;color:var(--club-danger);font-size:12px;line-height:1.4}.custom-input[hidden]{display:none}.button-stack{display:grid;gap:10px;margin-top:18px}
+    body.club-page .btn.btn-warn{border-color:color-mix(in srgb,var(--club-warn) 45%,transparent);background:var(--club-warn-soft);color:var(--club-warn)}
+    body.club-page .btn.btn-warn:hover{border-color:color-mix(in srgb,var(--club-warn) 65%,transparent);background:color-mix(in srgb,var(--club-warn) 16%,transparent);color:var(--club-warn)}
+    .visual{padding:20px;min-width:0}.visual-header{display:flex;align-items:start;justify-content:space-between;gap:16px}.status{padding:6px 10px;border:1px solid var(--club-accent-line);border-radius:999px;color:var(--club-accent);font-size:12px;white-space:nowrap}.maze-frame{margin-top:18px;padding:16px;border:1px solid rgba(115,221,255,.28);border-radius:12px;background:linear-gradient(180deg,rgba(0,229,255,.07),rgba(124,77,255,.08));box-shadow:inset 0 0 28px rgba(0,229,255,.045);overflow:auto}.maze{display:grid;gap:2px;width:max-content;min-width:100%;justify-content:center}.cell{width:clamp(15px,3.6vw,34px);aspect-ratio:1;border:1px solid rgba(164,226,255,.48);border-radius:3px;background:#294b68;transition:background var(--club-dur-fast,140ms) var(--ease),box-shadow var(--club-dur-fast,140ms) var(--ease),transform var(--club-dur-fast,140ms) var(--ease)}.cell.wall{background:#07111f;border-color:rgba(0,0,0,.9);box-shadow:inset 0 0 0 1px rgba(115,221,255,.12),inset 0 -3px 0 rgba(0,0,0,.28)}.cell.start{background:linear-gradient(135deg,#00e5ff,#2196f3);box-shadow:0 0 14px rgba(0,229,255,.55)}.cell.end{background:linear-gradient(135deg,#ff5fc8,#7c4dff);box-shadow:0 0 14px rgba(255,95,200,.55)}.cell.frontier{background:linear-gradient(135deg,#ffd166,#ff9f43);box-shadow:0 0 11px rgba(255,209,102,.45)}.cell.current{background:linear-gradient(135deg,#fff7bd,#ffd166);box-shadow:0 0 20px rgba(255,209,102,.8);transform:scale(.9)}.cell.visited{background:linear-gradient(135deg,#007b9e,#274b8b);border-color:rgba(0,229,255,.28)}.cell.path{background:linear-gradient(135deg,#71f3bf,#00a99d);box-shadow:0 0 14px rgba(113,243,191,.55)}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}.metric{padding:13px;border:1px solid rgba(115,221,255,.16);border-radius:10px;background:rgba(2,7,18,.48)}.metric span{display:block;color:var(--club-muted);font-size:12px}.metric strong{display:block;margin-top:4px;color:var(--club-text,#e8f1fb);font:700 23px/1.15 var(--club-mono,ui-monospace,Consolas,monospace);font-variant-numeric:tabular-nums}.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:15px;color:var(--club-muted);font-size:12px}.legend i{display:inline-block;width:9px;height:9px;margin-right:5px;border-radius:50%;background:var(--club-accent)}.legend .l-wall{background:#07111f}.legend .l-frontier{background:var(--gold)}.legend .l-visited{background:#007b9e}.legend .l-path{background:var(--green)}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    /* —— 亮色补丁：图例色点与 theme.css 亮色迷宫格配色一致（visited 取其描边色 #8995BE 保证白底可辨） —— */
+    html[data-theme="light"] .legend i{background:#2F9EDE !important}
+    html[data-theme="light"] .legend .l-wall{background:#7A828C !important}
+    html[data-theme="light"] .legend .l-frontier{background:#C98900 !important}
+    html[data-theme="light"] .legend .l-visited{background:#8995BE !important}
+    html[data-theme="light"] .legend .l-path{background:#2FA36C !important}
+    /* —— 算法档案：随当前算法切换的教学面板（配色对齐 .metric，亮暗自适应） —— */
+    .algo-profile{margin-top:18px;border:1px solid var(--club-line);border-radius:10px;background:var(--club-surface-2,rgba(2,7,18,.48))}
+    .algo-profile summary{list-style:none;display:flex;align-items:center;padding:11px 13px;cursor:pointer;color:var(--club-muted);font-size:13px;font-weight:700;user-select:none;transition:color var(--club-dur-fast,140ms) var(--ease)}
+    .algo-profile summary::-webkit-details-marker{display:none}
+    .algo-profile summary::after{content:"+";margin-left:auto;padding-left:10px;color:var(--club-muted);font:700 15px/1 var(--club-mono,ui-monospace,Consolas,monospace)}
+    .algo-profile[open] summary::after{content:"−"}
+    .algo-profile summary:hover{color:var(--club-accent)}
+    .algo-profile-body{border-top:1px solid var(--club-line);padding:1px 13px 11px}
+    .algo-profile-body>div{display:grid;grid-template-columns:max-content 1fr;gap:10px;padding:7px 0;border-top:1px solid var(--club-line);font-size:12px;line-height:1.65;align-items:baseline}
+    .algo-profile-body>div:first-child{border-top:0;padding-top:5px}
+    .algo-profile-label{color:var(--club-muted);white-space:nowrap}
+    .algo-profile-value{color:var(--club-text);overflow-wrap:break-word}
+    .algo-profile-value.mono{font-family:var(--club-mono,ui-monospace,Consolas,monospace);font-variant-numeric:tabular-nums}
+    .algo-profile.fade-in .algo-profile-body{animation:algoProfileIn var(--club-dur,200ms) var(--ease) both}
+    @keyframes algoProfileIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+    @media(max-width:900px){.lab-grid{grid-template-columns:1fr}.controls{order:2}.algorithm-note{min-width:0;width:100%}}
+    @media(max-width:640px){.member-identity{max-width:110px;overflow:hidden;text-overflow:ellipsis}.visual,.controls{padding:15px}.maze-frame{padding:10px}.cell{width:clamp(14px,6vw,26px)}.metrics{grid-template-columns:1fr}.visual-header{flex-direction:column}.status{align-self:flex-start}}
   </style>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
@@ -37,21 +66,31 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body>
+<body class="club-page">
   <header class="topbar">
-    <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a>
-    <span class="member-identity" data-member-identity hidden></span>
-    <a class="back-link" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
+    <div class="topbar-inner">
+      <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a>
+      <span class="member-identity" data-member-identity hidden></span>
+      <a class="back" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
+    </div>
   </header>
   <main>
     <section class="hero" aria-labelledby="pageTitle">
-      <div><p class="eyebrow">MAZE SEARCH VISUALIZATION · V1</p><h1 id="pageTitle" data-i18n="lab.search.h1">迷宫找路可视化实验室</h1><p data-i18n="lab.search.lead">在同一个迷宫中观察广度优先搜索与深度优先搜索如何探索。可随机生成可通行迷宫，或输入字符网格自定义题目，并连续演示或单步查看每一次扩展。</p></div>
+      <div><p class="eyebrow">MAZE SEARCH VISUALIZATION · V1</p><h1 id="pageTitle" data-i18n="lab.search.h1">迷宫找路可视化实验室</h1><p class="lead" data-i18n="lab.search.lead">在同一个迷宫中观察广度优先搜索与深度优先搜索如何探索。可随机生成可通行迷宫，或输入字符网格自定义题目，并连续演示或单步查看每一次扩展。</p></div>
       <aside class="algorithm-note" id="algorithmNote"><b data-i18n="lab.search.bfsName">广度优先搜索</b><span data-i18n="lab.search.bfsDesc">按层推进队列，首次到达终点时得到步数最少的路径。</span></aside>
     </section>
     <section class="lab-grid" data-i18n-aria="lab.search.consoleAria" aria-label="迷宫搜索演示控制台">
       <form class="panel controls" id="controlForm">
         <h2 data-i18n="lab.common.settings">实验设置</h2>
         <div class="control-group"><label for="algorithm" data-i18n="lab.search.algoLabel">搜索算法</label><select id="algorithm"><option value="bfs" data-i18n="lab.search.bfs">广度优先搜索 BFS</option><option value="dfs" data-i18n="lab.search.dfs">深度优先搜索 DFS</option></select></div>
+        <details class="algo-profile" id="algoProfile" open>
+          <summary><span id="algoProfileTitle">算法档案</span></summary>
+          <div class="algo-profile-body">
+            <div><span class="algo-profile-label" data-i18n="lab.search.profile.idea">核心思想</span><span class="algo-profile-value" id="algoProfileIdea"></span></div>
+            <div><span class="algo-profile-label" data-i18n="lab.search.profile.time">时间复杂度</span><span class="algo-profile-value mono" id="algoProfileTime"></span></div>
+            <div><span class="algo-profile-label" data-i18n="lab.search.profile.extra">空间 / 特性</span><span class="algo-profile-value mono" id="algoProfileExtra"></span></div>
+          </div>
+        </details>
         <div class="control-group"><fieldset><legend data-i18n="lab.search.mazeMode">迷宫模式</legend><div class="radio-row"><label><input type="radio" name="mode" value="random" checked /><span data-i18n="lab.search.randomMaze">随机迷宫</span></label><label><input type="radio" name="mode" value="custom" /><span data-i18n="lab.common.custom">自定义</span></label></div></fieldset></div>
         <div class="control-group" id="randomOptions"><label for="mazeSize" data-i18n="lab.search.mazeSize">随机迷宫规格</label><select id="mazeSize"><option value="9x13">9 × 13</option><option value="11x17" selected>11 × 17</option><option value="13x21">13 × 21</option></select><p class="hint" data-i18n="lab.search.mazeSizeHint">随机墙体会反复生成，直到起点和终点可达。</p></div>
         <div class="control-group custom-input" id="customWrap" hidden><label for="customMaze" data-i18n="lab.search.customMaze">自定义字符迷宫</label><textarea id="customMaze" spellcheck="false">S..#.....
@@ -59,7 +98,8 @@
 .#...#...
 .###.#.#.
 .....#..E</textarea><p class="hint" data-i18n="lab.search.customHint">使用 S 起点、E 终点、. 通路、# 墙体。每行等长，范围 5–21 行、5–31 列。</p><p class="error" id="inputError" role="alert" aria-live="polite"></p></div>
-        <div class="button-stack"><button class="btn btn-primary" type="button" id="startButton" data-i18n="lab.common.start">开始演示</button><button class="btn" type="button" id="stepButton" data-i18n="lab.common.step">单步执行</button><button class="btn btn-warn" type="button" id="resetButton" data-i18n="lab.search.resetMaze">重置当前迷宫</button><button class="btn" type="button" id="randomButton" data-i18n="lab.common.random">随机生成</button></div>
+        <div class="control-group"><label for="speedSelect" data-i18n="lab.speed">速度</label><select id="speedSelect" class="speed-select" aria-label="动画速度"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></div>
+        <div class="button-stack"><button class="btn" type="button" id="startButton" data-i18n="lab.common.start">开始演示</button><button class="btn secondary" type="button" id="stepButton" data-i18n="lab.common.step">单步执行</button><button class="btn btn-warn secondary" type="button" id="resetButton" data-i18n="lab.search.resetMaze">重置当前迷宫</button><button class="btn secondary" type="button" id="randomButton" data-i18n="lab.common.random">随机生成</button></div>
       </form>
       <section class="panel visual" aria-labelledby="visualTitle">
         <div class="visual-header"><div><h2 id="visualTitle" data-i18n="lab.search.visualTitle">迷宫探索过程</h2><span class="sr-only" id="announcement" aria-live="polite"></span></div><span class="status" id="statusText" role="status" data-i18n="lab.common.ready">就绪</span></div>
@@ -72,16 +112,63 @@
   <script>
     (() => {
       const el=id=>document.getElementById(id);
-      const ui={algorithm:el('algorithm'),customWrap:el('customWrap'),customMaze:el('customMaze'),randomOptions:el('randomOptions'),mazeSize:el('mazeSize'),inputError:el('inputError'),maze:el('maze'),status:el('statusText'),note:el('algorithmNote'),visited:el('visitedCount'),frontier:el('frontierCount'),frontierLabel:el('frontierLabel'),steps:el('steps'),start:el('startButton'),step:el('stepButton'),reset:el('resetButton'),random:el('randomButton'),announcement:el('announcement')};
+      const ui={algorithm:el('algorithm'),customWrap:el('customWrap'),customMaze:el('customMaze'),randomOptions:el('randomOptions'),mazeSize:el('mazeSize'),inputError:el('inputError'),maze:el('maze'),status:el('statusText'),note:el('algorithmNote'),visited:el('visitedCount'),frontier:el('frontierCount'),frontierLabel:el('frontierLabel'),steps:el('steps'),start:el('startButton'),step:el('stepButton'),reset:el('resetButton'),random:el('randomButton'),announcement:el('announcement'),speed:el('speedSelect')};
       const descKeys={bfs:['lab.search.bfsName','lab.search.bfsDesc'],dfs:['lab.search.dfsName','lab.search.dfsDesc']};
       function getDescriptions(){const o={};for(const k of Object.keys(descKeys)){o[k]=[ClubI18n.t(descKeys[k][0]),ClubI18n.t(descKeys[k][1])];}return o;}
       function refreshNote(){const [name,text]=getDescriptions()[ui.algorithm.value];ui.note.innerHTML=`<b>${name}</b><span>${text}</span>`;}
+      /* —— 算法档案（教学面板）：内容随所选算法切换；i18n 用页内 mergeDict 注入（boot 后并入、file:// 安全） —— */
+      const ALGO_PROFILE_DICT = {
+        zh: { lab: { search: {
+          profile: { title: '算法档案', idea: '核心思想', time: '时间复杂度', extra: '空间 / 特性' },
+          algo: {
+            bfs: { idea: '从起点按层扩展队列，先访问离起点近的格子，首次到终点即最少步数。', time: 'O(V+E)（三情形一致；网格迷宫即 O(行×列)）', extra: '空间 O(V)（队列 + 标记）· 适用：无权图 / 网格最短路' },
+            dfs: { idea: '沿一条通路走到底再回溯，用栈（或递归）记忆回头位置。', time: 'O(V+E)（三情形一致；网格迷宫即 O(行×列)）', extra: '空间 O(V)（栈深度）· 不保证最短路，适合连通性 / 回溯类问题' }
+          }
+        } } },
+        en: { lab: { search: {
+          profile: { title: 'Algorithm profile', idea: 'Idea', time: 'Time complexity', extra: 'Space / traits' },
+          algo: {
+            bfs: { idea: 'Explores the maze level by level with a queue; the first arrival at the exit is a shortest path.', time: 'O(V+E) in all cases (rows × cols on a grid)', extra: 'Space O(V) for the queue and marks · Best for shortest paths on unweighted graphs' },
+            dfs: { idea: 'Follows one path as deep as possible, then backtracks; a stack (or recursion) remembers where to turn back.', time: 'O(V+E) in all cases (rows × cols on a grid)', extra: 'Space O(V) for the stack · Not guaranteed shortest; good for connectivity and backtracking' }
+          }
+        } } }
+      };
+      function mergePageDict(){
+        if (window.ClubI18n && typeof ClubI18n.mergeDict === 'function') {
+          ClubI18n.mergeDict(ALGO_PROFILE_DICT);
+          // state.dict 一旦非空，resolve() 不再回落到全局词典；同步并入全局词典，
+          // 保证 boot 前的早期 t() 与页面其余动态文案仍能命中既有 key。
+          if (window.ClubI18nDict) ClubI18n.mergeDict(window.ClubI18nDict);
+        }
+      }
+      mergePageDict();
+      const profileNameKeys = { bfs: 'lab.search.bfsName', dfs: 'lab.search.dfsName' };
+      const profileEls = { box: el('algoProfile'), title: el('algoProfileTitle'), idea: el('algoProfileIdea'), time: el('algoProfileTime'), extra: el('algoProfileExtra') };
+      let lastProfileAlgo = null;
+      function renderAlgoProfile(animate){
+        if (!profileEls.box) return;
+        const type = ui.algorithm.value;
+        profileEls.title.textContent = `${ClubI18n.t('lab.search.profile.title')} · ${ClubI18n.t(profileNameKeys[type])}`;
+        profileEls.idea.textContent = ClubI18n.t(`lab.search.algo.${type}.idea`);
+        profileEls.time.textContent = ClubI18n.t(`lab.search.algo.${type}.time`);
+        profileEls.extra.textContent = ClubI18n.t(`lab.search.algo.${type}.extra`);
+        if (animate && lastProfileAlgo && lastProfileAlgo !== type) {
+          profileEls.box.classList.remove('fade-in');
+          void profileEls.box.offsetWidth;
+          profileEls.box.classList.add('fade-in');
+        }
+        lastProfileAlgo = type;
+      }
       function syncStartLabel(){if(cursor>=operations.length&&operations.length){ui.start.textContent=ClubI18n.t('lab.common.restart');}else if(playing){ui.start.textContent=ClubI18n.t('lab.common.pause');}else if(cursor>0){ui.start.textContent=ClubI18n.t('lab.common.resume');}else{ui.start.textContent=ClubI18n.t('lab.common.start');}}
       function refreshFrontierLabel(){ui.frontierLabel.textContent=ui.algorithm.value==='bfs'?ClubI18n.t('lab.search.frontierQueue'):ClubI18n.t('lab.search.frontierStack');}
       function refreshStaticStatus(){if(ui.inputError.textContent){updateStatus(ClubI18n.t('lab.search.errFixCustom'));return;}if(playing){updateStatus(ClubI18n.t('lab.common.running'));return;}if(cursor>=operations.length&&operations.length){const completed=operations[operations.length-1];updateStatus(completed?.found?ClubI18n.t('lab.search.doneFound',{n:visitedCount}):ClubI18n.t('lab.search.doneMiss'));return;}if(cursor>0){updateStatus(ClubI18n.t('lab.common.paused'));return;}updateStatus(ClubI18n.t('lab.common.readyOps',{n:operations.length}));}
       const key=cell=>`${cell.r},${cell.c}`; const same=(a,b)=>a.r===b.r&&a.c===b.c;
       let source=null,grid=null,operations=[],cursor=0,visitedCount=0,frontierCount=0,timer=null,playing=false;
       const delay=95;
+      // 演示速度（0.5/1/2/4），四页共享 localStorage('lab-speed')；实际延时 = delay / speed
+      const SPEED_KEY='lab-speed';
+      let speed=1;
+      function initSpeed(){let saved=1;try{saved=parseFloat(localStorage.getItem(SPEED_KEY));}catch(_e){/* 忽略存储不可用 */}if(saved!==0.5&&saved!==1&&saved!==2&&saved!==4)saved=1;speed=saved;if(!ui.speed)return;ui.speed.value=String(saved);ui.speed.addEventListener('change',()=>{speed=parseFloat(ui.speed.value)||1;try{localStorage.setItem(SPEED_KEY,ui.speed.value);}catch(_e){/* 私密模式等场景忽略 */}});}
       function cloneMaze(maze){return {cells:maze.cells.map(row=>row.slice()),start:{...maze.start},end:{...maze.end}}}
       function openNeighbors(maze,cell){const result=[];for(const [dr,dc] of [[-1,0],[0,1],[1,0],[0,-1]]){const r=cell.r+dr,c=cell.c+dc;if(r>=0&&r<maze.cells.length&&c>=0&&c<maze.cells[0].length&&maze.cells[r][c]!=='#')result.push({r,c});}return result}
       function reachable(maze){const queue=[maze.start],seen=new Set([key(maze.start)]);for(let i=0;i<queue.length;i++){const current=queue[i];if(same(current,maze.end))return true;for(const next of openNeighbors(maze,current)){if(!seen.has(key(next))){seen.add(key(next));queue.push(next)}}}return false}
@@ -114,31 +201,37 @@
       }
       function buildOps(maze,type){const ops=[],frontier=[maze.start],seen=new Set([key(maze.start)]),previous=new Map();let found=false;ops.push({type:'frontier',cell:maze.start,frontier:1});while(frontier.length){const current=type==='bfs'?frontier.shift():frontier.pop();ops.push({type:'visit',cell:current,frontier:frontier.length});if(same(current,maze.end)){found=true;break}const nexts=openNeighbors(maze,current);if(type==='dfs')nexts.reverse();for(const next of nexts){if(seen.has(key(next)))continue;seen.add(key(next));previous.set(key(next),current);frontier.push(next);ops.push({type:'frontier',cell:next,frontier:frontier.length});}}if(found){const path=[];let current=maze.end;while(!same(current,maze.start)){path.push(current);current=previous.get(key(current));if(!current)break}path.reverse().forEach(cell=>ops.push({type:'path',cell,frontier:0}));ops.push({type:'complete',found:true,frontier:0})}else ops.push({type:'complete',found:false,frontier:0});return ops}
       function classFor(cell){const value=grid.cells[cell.r][cell.c];if(value==='S')return'start';if(value==='E')return'end';return value==='#'?'wall':''}
-      function render(active=null){const states=new Map();for(let i=0;i<cursor;i++){const op=operations[i];if(['frontier','visit','path'].includes(op.type))states.set(key(op.cell),op.type)}if(active&&active.cell)states.set(key(active.cell),active.type);const rows=grid.cells.length,cols=grid.cells[0].length;ui.maze.style.gridTemplateColumns=`repeat(${cols}, clamp(15px, 3.6vw, 34px))`;ui.maze.innerHTML=grid.cells.map((row,r)=>row.map((_,c)=>{const cell={r,c};let state=states.get(key(cell));const base=classFor(cell);if(base==='start'||base==='end'||base==='wall')state='';return `<div class="cell ${base} ${state||''}" aria-label="${ClubI18n.t('lab.search.cellAria',{r:r+1,c:c+1})}"></div>`}).join('')).join('');ui.visited.textContent=visitedCount;ui.frontier.textContent=frontierCount;ui.steps.textContent=cursor}
+      function render(active=null){const states=new Map();for(let i=0;i<cursor;i++){const op=operations[i];if(['frontier','visit','path'].includes(op.type))states.set(key(op.cell),op.type==='visit'?'visited':op.type)}if(active&&active.cell)states.set(key(active.cell),active.type==='visit'?'visited':active.type);const rows=grid.cells.length,cols=grid.cells[0].length;ui.maze.style.gridTemplateColumns=`repeat(${cols}, clamp(15px, 3.6vw, 34px))`;ui.maze.innerHTML=grid.cells.map((row,r)=>row.map((_,c)=>{const cell={r,c};let state=states.get(key(cell));const base=classFor(cell);if(base==='start'||base==='end'||base==='wall')state='';return `<div class="cell ${base} ${state||''}" aria-label="${ClubI18n.t('lab.search.cellAria',{r:r+1,c:c+1})}"></div>`}).join('')).join('');ui.visited.textContent=visitedCount;ui.frontier.textContent=frontierCount;ui.steps.textContent=cursor}
       function updateStatus(text){ui.status.textContent=text;ui.announcement.textContent=text}
       function stop(){playing=false;if(timer){clearTimeout(timer);timer=null}}
       function prepare(){stop();cursor=0;visitedCount=0;frontierCount=0;grid=cloneMaze(source);operations=buildOps(grid,ui.algorithm.value);refreshFrontierLabel();render();updateStatus(ClubI18n.t('lab.common.readyOps',{n:operations.length}));ui.start.textContent=ClubI18n.t('lab.common.start')}
       function applyNext(){if(cursor>=operations.length){finish();return false}const op=operations[cursor++];if(op.type==='visit')visitedCount++;frontierCount=op.frontier??frontierCount;render(op);const labelKeys={enqueue:'lab.search.opEnqueue',push:'lab.search.opPush',visit:'lab.search.opVisit',path:'lab.search.opPath',found:'lab.search.opFound',miss:'lab.search.opMiss'};const label=ClubI18n.t(labelKeys[op.type]||'lab.common.executing');updateStatus(ClubI18n.t('lab.common.stepOf',{label,cur:cursor,total:operations.length}));if(op.type==='complete')finish();return true}
       function finish(){stop();render();const completed=operations[operations.length-1];updateStatus(completed?.found?ClubI18n.t('lab.search.doneFound',{n:visitedCount}):ClubI18n.t('lab.search.doneMiss'));ui.start.textContent=ClubI18n.t('lab.common.restart')}
-      function loop(){if(!playing)return;if(!applyNext())return;timer=setTimeout(loop,delay)}
+      function loop(){if(!playing)return;if(!applyNext())return;timer=setTimeout(loop,delay/speed)}
       function syncCustom(){if(cursor!==0||document.querySelector('input[name="mode"]:checked').value!=='custom')return true;try{ui.inputError.textContent='';source=parseCustom();prepare();return true}catch(error){ui.inputError.textContent=error.message;updateStatus(ClubI18n.t('lab.search.errFixCustom'));return false}}
       function startPause(){if(!playing&&!syncCustom())return;if(cursor>=operations.length)prepare();playing=!playing;ui.start.textContent=playing?ClubI18n.t('lab.common.pause'):ClubI18n.t('lab.common.resume');updateStatus(playing?ClubI18n.t('lab.common.running'):ClubI18n.t('lab.common.paused'));if(playing)loop()}
       function makeRandom(){ui.inputError.textContent='';document.querySelector('input[name="mode"][value="random"]').checked=true;ui.customWrap.hidden=true;ui.randomOptions.hidden=false;source=randomMaze();prepare()}
-      ui.algorithm.addEventListener('change',()=>{refreshNote();prepare()});
+      ui.algorithm.addEventListener('change',()=>{refreshNote();renderAlgoProfile(true);prepare()});
       document.querySelectorAll('input[name="mode"]').forEach(input=>input.addEventListener('change',()=>{if(!input.checked)return;const custom=input.value==='custom';ui.customWrap.hidden=!custom;ui.randomOptions.hidden=custom;if(!custom)makeRandom();}));
       ui.mazeSize.addEventListener('change',makeRandom);ui.start.addEventListener('click',startPause);ui.step.addEventListener('click',()=>{stop();if(!syncCustom())return;ui.start.textContent=ClubI18n.t('lab.common.resume');applyNext()});ui.reset.addEventListener('click',()=>{if(syncCustom())prepare()});ui.random.addEventListener('click',makeRandom);ui.customMaze.addEventListener('change',()=>{if(document.querySelector('input[name="mode"]:checked').value!=='custom')return;try{ui.inputError.textContent='';source=parseCustom();prepare()}catch(error){ui.inputError.textContent=error.message}});el('controlForm').addEventListener('submit',event=>event.preventDefault());
       source=randomMaze();prepare();
       refreshNote();
-      window.addEventListener('club:langchange', () => {
+      renderAlgoProfile(false);
+      initSpeed();
+      function refreshAll(){
+        mergePageDict();
         refreshNote();
+        renderAlgoProfile(false);
         refreshFrontierLabel();
         syncStartLabel();
         refreshStaticStatus();
         if (typeof ClubI18n?.apply === 'function') ClubI18n.apply(document);
-      });
+      }
+      window.addEventListener('club:langchange', refreshAll);
+      // i18n boot 晚于内联脚本，初始化后再兜底刷一次（AGENTS 约定）
+      setTimeout(refreshAll, 0);
     })();
   </script>
-<script>!function(){try{var t=document.querySelector('.topbar');if(t&&!document.getElementById('langSwitcherHost')){var h=document.createElement('div');h.id='langSwitcherHost';t.appendChild(h);}if(window.ClubI18n)window.ClubI18n.mountSwitcher(document.getElementById('langSwitcherHost'));if(window.ClubTheme&&typeof window.ClubTheme.autoMountSwitcher==='function')window.ClubTheme.autoMountSwitcher();}catch(e){}}();</script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

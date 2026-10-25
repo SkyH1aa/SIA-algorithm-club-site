@@ -400,7 +400,9 @@
       this.canvas = canvas;
       this.quality = global.useQualityTier ? global.useQualityTier() : { tier: 'medium', pixelRatio: 1.25 };
       this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false, powerPreference: 'high-performance' });
+      // 不请求 high-performance：双显卡笔记本上该偏好会在创建上下文时唤醒
+      // 独显，造成 ~200ms 的可感冻结；本层是单材质全屏 shader，默认 GPU 足够。
+      this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
       this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, this.quality.pixelRatio || 1.25, 1.5));
       this.renderer.setSize(innerWidth, innerHeight, false);
       this.scene = new THREE.Scene();
@@ -436,12 +438,44 @@
       this.last = performance.now();
       this.frame = 0;
       this.slowFrames = 0;
+      // 动态分辨率：初始像素比与旧行为完全一致。只有持续掉帧时才逐级降低
+      // 渲染分辨率保住流畅度，恢复稳定后再逐级回升（滞后阈值防抖动）。
+      // 健康设备上永远不会触发，画面与原来逐像素相同。
+      this.pixelRatioCap = Math.min(devicePixelRatio || 1, this.quality.pixelRatio || 1.25, 1.5);
+      this.pixelRatio = this.pixelRatioCap;
+      this.fastFrames = 0;
+      this.resizeTimer = 0;
       this.cameraPath = new THREE.CatmullRomCurve3(chapters.map(c => new THREE.Vector3(...c.camPos)), false, 'catmullrom', 0.55);
       this.cameraState = { position: new THREE.Vector3(), look: new THREE.Vector3(), fov: 55, roll: 0 };
+      this.renderer.setPixelRatio(this.pixelRatioCap);
       this.bind();
       this.resize();
-      this.render();
-      if (!this.reduced) this.loop();
+      // 首帧渲染推迟到首屏绘制之后：raymarching 着色器的编译可能耗时数百毫秒，
+      // 同步执行会阻塞内容出现（弱设备上表现为白屏“加载不出来”）。
+      // CSS 深空底色与画布透明度无缝衔接，首帧晚到不可感知。
+      // v9：编译走驱动的并行通道（KHR_parallel_shader_compile）在后台线程
+      // 完成；首帧渲染两帧后再给画布加 is-live，由 CSS 渐显到位——驱动侧
+      // 停顿被挡在全透明阶段，用户看不到冻结。
+      const start = () => {
+        const begin = () => {
+          this.render();
+          if (!this.reduced) this.loop();
+          requestAnimationFrame(() => requestAnimationFrame(() => this.canvas.classList.add('is-live')));
+        };
+        // compileAsync 在个别驱动上可能迟迟不 settle：1500ms 后强制开始，
+        // 最坏退回同步编译路径（与旧行为一致），绝不悬挂。
+        if (this.renderer.compileAsync) {
+          const cap = new Promise(resolve => setTimeout(resolve, 1500));
+          Promise.race([this.renderer.compileAsync(this.scene, this.camera), cap]).then(begin, begin);
+        } else begin();
+      };
+      if (typeof requestIdleCallback === 'function') requestIdleCallback(start, { timeout: 600 });
+      else setTimeout(start, 60);
+    }
+    applyPixelRatio(ratio) {
+      this.pixelRatio = ratio;
+      this.renderer.setPixelRatio(ratio);
+      this.renderer.setSize(innerWidth, innerHeight, false);
     }
     bind(){
       this.onScroll = () => {
@@ -459,6 +493,19 @@
       addEventListener('club:themechange', e => { this.uniforms.uTheme.value = e.detail?.theme === 'dark' ? 1 : 0; });
       addEventListener('zone:focus', e => { this.uniforms.uFocus.value = e.detail?.kind === 'work' ? 1 : 0.65; });
       addEventListener('resize', () => this.resize(), { passive: true });
+      // WebGL 上下文被系统回收（切换应用/显卡重置/内存压力）时：
+      // preventDefault 交给 three.js 自动重建资源，恢复后这里重启渲染循环。
+      // 没有这对处理器，弱设备上背景会永久黑掉，直到手动刷新。
+      this.canvas.addEventListener('webglcontextlost', event => {
+        event.preventDefault();
+        cancelAnimationFrame(this.frame);
+        this.frame = 0;
+      }, false);
+      this.canvas.addEventListener('webglcontextrestored', () => {
+        this.resize();
+        this.render();
+        if (!this.reduced && !this.frame && !document.hidden) this.loop();
+      }, false);
       document.addEventListener('visibilitychange', () => {
         cancelAnimationFrame(this.frame);
         if (!document.hidden && !this.reduced) this.loop();
@@ -474,8 +521,13 @@
       });
     }
     resize(){
-      this.renderer.setSize(innerWidth, innerHeight, false);
-      this.uniforms?.uResolution.value.set(innerWidth, innerHeight);
+      // 拖拽窗口时 setSize 每帧都强制重建画布后备存储，防抖到停顿后一次生效；
+      // 画布 CSS 尺寸是 100%，过渡期间内容按比例缩放，视觉连续。
+      clearTimeout(this.resizeTimer);
+      this.resizeTimer = setTimeout(() => {
+        this.renderer.setSize(innerWidth, innerHeight, false);
+        this.uniforms?.uResolution.value.set(innerWidth, innerHeight);
+      }, 140);
     }
     update(dt){
       this.progress = THREE.MathUtils.damp(this.progress, this.targetProgress, 2.55, dt);
@@ -497,8 +549,23 @@
       const dt = Math.min((now - this.last) / 1000, 1 / 30);
       this.last = now;
       if (dt >= 0.026) this.slowFrames += 1;
-      else this.slowFrames = Math.max(0, this.slowFrames - 2);
+      else {
+        this.slowFrames = Math.max(0, this.slowFrames - 2);
+        // 连续流畅约 10 秒后才尝试回升一档；期间任何一次掉帧都会清零计数，
+        // 避免设备在两档分辨率之间反复横跳。
+        if (this.slowFrames === 0 && this.pixelRatio < this.pixelRatioCap) this.fastFrames += 1;
+      }
       if (this.slowFrames > 14 && this.uniforms.uQuality.value > 0.52) this.uniforms.uQuality.value = 0.52;
+      // 动态分辨率：持续掉帧时逐级降低内部渲染分辨率保住流畅（画面内容与
+      // 构图不变，等同不同设备像素比上限的差异）；长期稳定后逐级回升到上限。
+      if (this.slowFrames > 14 && this.pixelRatio > 0.5) {
+        this.applyPixelRatio(Math.max(0.5, this.pixelRatio - 0.15));
+        this.slowFrames = 0;
+        this.fastFrames = 0;
+      } else if (this.fastFrames > 600 && this.pixelRatio < this.pixelRatioCap) {
+        this.applyPixelRatio(Math.min(this.pixelRatioCap, this.pixelRatio + 0.15));
+        this.fastFrames = 0;
+      }
       this.update(dt);
       this.render();
       this.frame = requestAnimationFrame(() => this.loop());

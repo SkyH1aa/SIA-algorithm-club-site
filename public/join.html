@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="join.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -11,8 +11,8 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
@@ -27,6 +27,15 @@
   <meta name="twitter:image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
+  <style>
+    /* 只影响本页：字段级校验的红边与错误 hint 配色 */
+    body.club-page .input[aria-invalid="true"],
+    body.club-page .select[aria-invalid="true"] {
+      border-color: var(--club-danger);
+      box-shadow: 0 0 0 3px var(--club-danger-soft);
+    }
+    body.club-page .hint.hint-error { color: var(--club-danger); }
+  </style>
 </head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Join Application</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
@@ -47,16 +56,17 @@
       <section class="panel">
         <h2 data-i18n="join.form">报名表单</h2>
         <p class="intro" data-i18n="join.formIntro" data-i18n-mode="html">带 <span class="required">*</span> 的为必填项。联系方式请先选择类型，再填写对应号码 / 账号。</p>
-        <form class="form" id="joinForm">
+        <form class="form" id="joinForm" novalidate>
           <div class="grid-2">
             <div>
               <label class="label" for="chineseName"><span data-i18n="join.name">中文姓名*</span></label>
-              <input class="input" id="chineseName" name="chineseName" maxlength="20" required placeholder="例如 张三" data-i18n-placeholder="join.namePlaceholder" pattern="[\u4e00-\u9fa5]{2,20}" autocomplete="name">
-              <p class="hint" data-i18n="join.nameInvalid">请填写 2–20 个连续中文字符。</p>
+              <input class="input" id="chineseName" name="chineseName" maxlength="20" required placeholder="例如 张三" data-i18n-placeholder="join.namePlaceholder" pattern="[\u4e00-\u9fa5]{2,20}" autocomplete="name" aria-describedby="nameHint">
+              <p class="hint" id="nameHint" data-i18n="join.nameInvalid">请填写 2–20 个连续中文字符。</p>
             </div>
             <div>
               <label class="label" for="memberClass"><span data-i18n="join.className">班级*</span></label>
-              <input class="input" id="memberClass" name="memberClass" maxlength="80" required placeholder="例如 A1C5 / 计科 2401" data-i18n-placeholder="join.classPlaceholder" autocomplete="organization-title">
+              <input class="input" id="memberClass" name="memberClass" maxlength="80" required placeholder="例如 A1C5 / 计科 2401" data-i18n-placeholder="join.classPlaceholder" autocomplete="off" aria-describedby="classHint">
+              <p class="hint" id="classHint" data-i18n="join.classRequired" hidden>请填写班级</p>
             </div>
           </div>
           <div>
@@ -68,8 +78,9 @@
                 <option value="qq" data-i18n="join.qq">QQ号</option>
                 <option value="email" data-i18n="join.email">邮箱</option>
               </select>
-              <input class="input" id="contactValue" name="contactValue" maxlength="120" required placeholder="请输入微信号" data-i18n-placeholder="join.contactValuePh">
+              <input class="input" id="contactValue" name="contactValue" maxlength="120" required placeholder="请输入微信号" data-i18n-placeholder="join.contactValuePh" aria-describedby="contactHint">
             </div>
+            <p class="hint" id="contactHint" data-i18n="join.contactRequired" hidden>请填写联系方式</p>
           </div>
           <div>
             <label class="label" for="selfIntro" data-i18n="join.selfIntro">介绍你自己（选填）</label>
@@ -86,6 +97,7 @@
           <div class="actions">
             <button class="button" type="submit" id="submitButton" data-i18n="join.submit">提交报名</button>
             <button class="button secondary" type="reset" id="resetButton" data-i18n="common.clearForm">清空表单</button>
+            <a class="button secondary" id="afterSubmitLink" href="events.html" data-i18n="join.afterSubmit" hidden>查看活动与公告 →</a>
           </div>
         </form>
         <p class="message" id="joinMessage" role="status"></p>
@@ -97,6 +109,15 @@
     const SUPABASE_KEY = 'sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl';
     const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/club-drive`;
     const $ = id => document.getElementById(id);
+    // 本页新增 i18n 键（页内合并，不改公共词典文件）
+    const JOIN_PAGE_DICT = {
+      zh: { join: { afterSubmit: '查看活动与公告 →' } },
+      en: { join: { afterSubmit: 'View events & notices →' } }
+    };
+    function mergeJoinPageDict() { if (window.ClubI18n && typeof ClubI18n.mergeDict === 'function') ClubI18n.mergeDict(JOIN_PAGE_DICT); }
+    mergeJoinPageDict();
+    document.addEventListener('DOMContentLoaded', mergeJoinPageDict);
+    const NAME_PATTERN = /^[\u4e00-\u9fa5]{2,20}$/;
     const CONTACT_PLACEHOLDERS = () => ({
       wechat: ClubI18n.t('join.phWechat'),
       phone: ClubI18n.t('join.phPhone'),
@@ -107,6 +128,20 @@
     function setMessage(text, type = '') {
       $('joinMessage').textContent = text || '';
       $('joinMessage').className = `message ${type}`;
+    }
+
+    // 字段级校验：aria-invalid 红边 + hint 错误文案（aria-describedby 关联）。
+    // nameHint 常显规则说明，只变色；classHint / contactHint 仅在校验失败时出现。
+    function setFieldInvalid(input, invalid, hintId, hintAlwaysVisible) {
+      if (invalid) input.setAttribute('aria-invalid', 'true');
+      else input.removeAttribute('aria-invalid');
+      const hint = hintId ? $(hintId) : null;
+      if (!hint) return;
+      if (hintAlwaysVisible) hint.classList.toggle('hint-error', invalid);
+      else { hint.hidden = !invalid; hint.classList.toggle('hint-error', invalid); }
+    }
+    function clearFieldInvalid(input, hintId, hintAlwaysVisible) {
+      setFieldInvalid(input, false, hintId, hintAlwaysVisible);
     }
 
     function syncContactPlaceholder() {
@@ -125,14 +160,30 @@
       return result;
     }
 
-    $('contactType').addEventListener('change', syncContactPlaceholder);
+    $('contactType').addEventListener('change', () => { clearFieldInvalid($('contactValue'), 'contactHint', false); syncContactPlaceholder(); });
     syncContactPlaceholder();
-    window.addEventListener('club:langchange', () => { syncContactPlaceholder(); if (window.ClubI18n) ClubI18n.apply(document); });
+    ['chineseName', 'memberClass', 'contactValue'].forEach((fieldId, index) => {
+      const hintIds = ['nameHint', 'classHint', 'contactHint'];
+      const alwaysVisible = [true, false, false];
+      $(fieldId).addEventListener('input', () => clearFieldInvalid($(fieldId), hintIds[index], alwaysVisible[index]));
+    });
+    window.addEventListener('club:langchange', () => { mergeJoinPageDict(); syncContactPlaceholder(); if (window.ClubI18n) ClubI18n.apply(document); });
 
+    // 提交成功后的程序化 reset 不清成功态（保留“查看活动与公告”引导），仅同步联系方式占位符。
+    let suppressResetUi = false;
     $('joinForm').addEventListener('reset', () => {
+      if (suppressResetUi) {
+        suppressResetUi = false;
+        setTimeout(syncContactPlaceholder, 0);
+        return;
+      }
       setTimeout(() => {
         syncContactPlaceholder();
         setMessage('');
+        clearFieldInvalid($('chineseName'), 'nameHint', true);
+        clearFieldInvalid($('memberClass'), 'classHint', false);
+        clearFieldInvalid($('contactValue'), 'contactHint', false);
+        $('afterSubmitLink').hidden = true;
       }, 0);
     });
 
@@ -142,19 +193,28 @@
       const memberClass = $('memberClass').value.trim();
       const contactType = $('contactType').value;
       const contactValue = $('contactValue').value.trim();
-      if (!/^[\u4e00-\u9fa5]{2,20}$/.test(chineseName)) {
+      const invalidName = !NAME_PATTERN.test(chineseName);
+      const invalidClass = !memberClass;
+      const invalidContact = !contactValue;
+      setFieldInvalid($('chineseName'), invalidName, 'nameHint', true);
+      setFieldInvalid($('memberClass'), invalidClass, 'classHint', false);
+      setFieldInvalid($('contactValue'), invalidContact, 'contactHint', false);
+      if (invalidName) {
         setMessage(ClubI18n.t('join.nameInvalid'), 'error');
+        $('chineseName').focus();
         return;
       }
-      if (!memberClass) {
+      if (invalidClass) {
         setMessage(ClubI18n.t('join.classRequired'), 'error');
+        $('memberClass').focus();
         return;
       }
-      if (!contactValue) {
+      if (invalidContact) {
         setMessage(ClubI18n.t('join.contactRequired'), 'error');
+        $('contactValue').focus();
         return;
       }
-      $('submitButton').disabled = true;
+      ClubCommon.setBusy($('submitButton'), true);
       setMessage(ClubI18n.t('join.submitting'));
       try {
         const result = await submitJoin({
@@ -167,15 +227,17 @@
           expectation: $('expectation').value.trim()
         });
         setMessage(result.message || ClubI18n.t('join.submitted'), 'success');
+        $('afterSubmitLink').hidden = false;
+        suppressResetUi = true;
         $('joinForm').reset();
         syncContactPlaceholder();
       } catch (error) {
         setMessage(error.message || ClubI18n.t('join.failed'), 'error');
       } finally {
-        $('submitButton').disabled = false;
+        ClubCommon.setBusy($('submitButton'), false);
       }
     });
   </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

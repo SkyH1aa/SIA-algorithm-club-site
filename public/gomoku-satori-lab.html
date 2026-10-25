@@ -1,31 +1,23 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gomoku-Satori 决策剖析实验室 · 算法社</title>
-  <script src="i18n-dict.js?v=c79bfe69"></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n-dict.js?v=f75071ae"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
 <style>
+    /* 收编说明：主题色走 --club-*（body.club-page 映射），本块只保留
+       实验室专用显示色与 --lab-* 组件令牌（棋盘/决策卡的页面自有设计系统）。 */
     :root {
-      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
-      color: #f6fbff;
-      background: #020409;
-      --bg: #020409;
-      --panel: rgba(8, 13, 30, .8);
-      --cyan: #00e5ff;
-      --violet: #7c4dff;
       --pink: #ff5fc8;
       --gold: #ffd166;
       --green: #71f3bf;
       --red: #ff6b81;
-      --text: #c8d4e2;
-      --muted: #8fa3b8;
-      --line: rgba(115, 221, 255, .2);
       --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
       /* 本站主题约定是“默认暗色 + html[data-theme=light] 覆盖”。下列自定义变量
          让本页自有的深色组件（统计卡、威胁卡、徽章、下拉与棋盘）也能跟随主题，
@@ -51,47 +43,39 @@
       --lab-control: rgba(255, 255, 255, .96);
       --lab-strong: #1c1c1e;
       --lab-strong-soft: #3a3a3c;
-      --lab-board-bg: linear-gradient(160deg, rgba(214, 168, 92, .18), rgba(180, 140, 80, .22));
-      --lab-board-cell: rgba(214, 168, 92, .12);
-      --lab-board-line: rgba(150, 100, 40, .55);
-      --lab-grid-line: rgba(150, 100, 40, .22);
-      --lab-board-shadow: 0 8px 24px rgba(120, 80, 30, .18), 0 1px 3px rgba(120, 80, 30, .14);
+      /* 日间棋盘保持与夜间同一套木色（浅米木色在白页上看起来像白板） */
+      --lab-board-bg: linear-gradient(150deg, #dcb37e 0%, #d2a671 52%, #c69a65 100%);
+      --lab-board-cell: rgba(74, 50, 24, .10);
+      --lab-board-line: #8a6a42;
+      --lab-grid-line: rgba(74, 50, 24, .40);
+      --lab-board-shadow: 0 8px 24px rgba(120, 80, 30, .22), 0 1px 3px rgba(120, 80, 30, .18);
       /* 亮色：强调色映射为站内橙红，其上的文字必须是深色才可读。 */
       --lab-on-accent: #2a1a12;
       --lab-accent-fg: #a03d20;
       --lab-notice-fg: #7a4a10;
-      --line: rgba(0, 0, 0, .16);
     }
-    html[data-theme="light"] body {
-      background: none;
-      color: #1c1c1e;
-    }
-    html[data-theme="light"] body::before { opacity: .35; }
-    /* 亮色棋盘：琥珀底 + 明确的格线，保证 15×15 网格与落点高亮都看得清。
-       注意 theme.css 有一条全站规则 `html[data-theme="light"] .board { background:#FFFFFF !important }`
-       （为棋盘类组件统一设定白底），它优先级高于本页的 .board，会把棋盘刷成一片白。
-       这里用同级选择器 + !important 覆盖回来，只影响本页的剖析棋盘。 */
+    /* 亮色棋盘：木色底 + 明确的格线，保证 15×15 网格与落点高亮都看得清。
+       注意 theme.css 有两条全站规则会打到本页：
+       1. `html[data-theme="light"] .board { background:#FFFFFF !important }` —— 棋盘白底；
+       2. `html[data-theme="light"] .cell { background:#FFF !important }`（实验室数据格）—— 格子白底。
+       都用更高特异性 + !important 夺回，只影响本页的剖析棋盘。 */
     html[data-theme="light"] .board {
       background: var(--lab-board-bg) !important;
       border-color: var(--lab-board-line) !important;
-      /* 全站规则会把 .board 的 box-shadow 也清掉，这里恢复本页自己的日间投影。 */
       box-shadow: var(--lab-board-shadow) !important;
     }
-    html[data-theme="light"] .cell.empty:hover { background: rgba(224, 122, 95, .28); }
-    html[data-theme="light"] .cell.played { background: rgba(31, 157, 99, .34); }
-    html[data-theme="light"] .cell.candidate { background: rgba(124, 77, 255, .28); }
-    html[data-theme="light"] .cell.best { background: rgba(201, 137, 0, .45); }
-    body {
-      margin: 0;
-      min-width: 320px;
-      min-height: 100vh;
-      background:
-        radial-gradient(ellipse 70% 50% at 15% 4%, rgba(0, 229, 255, .15), transparent 62%),
-        radial-gradient(ellipse 60% 42% at 88% 7%, rgba(124, 77, 255, .22), transparent 65%),
-        linear-gradient(180deg, #020409, #050917 50%, #020409);
-      color: #f6fbff;
-      overflow-x: hidden;
+    html[data-theme="light"] .board .cell {
+      background: var(--lab-board-cell) !important;
+      border-color: var(--lab-grid-line) !important;
     }
+    /* 状态高亮同步带 !important，否则同样被全站 .cell 白底压掉 */
+    html[data-theme="light"] .board .cell.cell-empty:hover { background: rgba(224, 122, 95, .30) !important; }
+    html[data-theme="light"] .board .cell.played { background: rgba(31, 157, 99, .36) !important; }
+    html[data-theme="light"] .board .cell.candidate { background: rgba(124, 77, 255, .30) !important; }
+    html[data-theme="light"] .board .cell.best { background: rgba(201, 137, 0, .48) !important; }
+    /* 坐标标注：暗色是白字，浅木底上必须换深字 */
+    html[data-theme="light"] .board .cell .coord { color: rgba(90, 60, 28, .8); }
+    body { overflow-x: hidden; }
     body::before {
       content: "";
       position: fixed;
@@ -109,40 +93,11 @@
     button { cursor: pointer; }
     button:disabled { cursor: not-allowed; opacity: .48; }
 
-    .topbar {
-      position: sticky; top: 0; z-index: 20;
-      display: flex; align-items: center; gap: 14px;
-      padding: 14px clamp(16px, 4vw, 48px);
-      background: rgba(2, 4, 9, .82);
-      border-bottom: 1px solid var(--line);
-      backdrop-filter: blur(12px);
-    }
-    .brand { display: inline-flex; align-items: center; gap: 12px; margin-right: auto; }
-    .brand-mark {
-      display: grid; place-items: center;
-      width: 36px; height: 36px; border-radius: 12px;
-      background: linear-gradient(135deg, var(--cyan), var(--violet));
-      color: #02060f; font-weight: 800;
-    }
-    .brand strong, .brand small { display: block; }
-    .brand strong { font-size: 16px; }
-    .brand small { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
-    .back-link {
-      padding: 9px 16px; border-radius: 999px;
-      border: 1px solid var(--line); color: var(--text); font-size: 13px;
-      transition: all .25s var(--ease-out);
-    }
-    .back-link:hover { color: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(224, 122, 95, .16); background: rgba(224, 122, 95, .08); }
-
-    main { padding: clamp(20px, 3.4vw, 44px) clamp(16px, 4vw, 48px) 72px; max-width: 1680px; margin: 0 auto; }
-    .intro { max-width: 940px; margin-bottom: 26px; }
-    .eyebrow {
-      margin: 0 0 10px; color: var(--cyan); font-size: 12px;
-      letter-spacing: .22em; text-transform: uppercase;
-    }
-    .intro h1 { margin: 0 0 12px; font-size: clamp(26px, 3.6vw, 42px); line-height: 1.18; }
-    .intro p { margin: 0; color: var(--text); line-height: 1.75; }
-    .intro .notice {
+    /* 页首区（.lab-intro 避开 club-ui 的 .intro 小字规则） */
+    body.club-page .lab-intro { max-width: 940px; margin-bottom: 26px; }
+    body.club-page .lab-intro p { margin: 0; color: var(--club-text-soft); line-height: 1.75; }
+    body.club-page .lab-intro .notice {
+      display: block;
       margin-top: 14px; padding: 12px 16px; border-radius: 12px;
       background: rgba(255, 209, 102, .08); border: 1px solid rgba(255, 209, 102, .28);
       color: var(--lab-notice-fg); font-size: 13px; line-height: 1.7;
@@ -153,63 +108,22 @@
       grid-template-columns: minmax(320px, 520px) minmax(0, 1fr);
       align-items: start;
     }
-    @media (max-width: 1080px) { .lab-grid { grid-template-columns: minmax(0, 1fr); } }
+    @media (max-width: 1100px) { .lab-grid { grid-template-columns: minmax(0, 1fr); } }
 
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 18px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 18px 60px rgba(0, 0, 0, .35);
-    }
-    .panel + .panel { margin-top: 16px; }
-    .panel h2 {
+    body.club-page .panel h2 {
       margin: 0 0 14px; font-size: 15px; letter-spacing: .04em;
       color: var(--lab-strong); display: flex; align-items: center; gap: 8px;
     }
-    .panel h2 .step-tag {
-      margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 400;
+    body.club-page .panel h2 .step-tag {
+      margin-left: auto; font-size: 11px; color: var(--club-muted); font-weight: 400;
     }
-    .hint { color: var(--muted); font-size: 12px; line-height: 1.7; margin: 0; }
+    body.club-page .hint { color: var(--club-muted); font-size: 12px; line-height: 1.7; margin: 0; }
 
     /* ---- 控制区 ---- */
     .controls { display: grid; gap: 12px; }
     .control-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
     .control-row label { font-size: 12px; color: var(--muted); }
-    select, .btn {
-      padding: 9px 14px; border-radius: 10px;
-      background: var(--lab-control);
-      border: 1px solid var(--line); color: var(--text); font-size: 13px;
-      transition: all .2s var(--ease-out);
-    }
-    select:focus { outline: none; border-color: var(--cyan); }
-    .btn:hover:not(:disabled) { border-color: var(--cyan); color: var(--cyan); }
-    .btn.primary {
-      background: linear-gradient(135deg, rgba(0, 229, 255, .22), rgba(124, 77, 255, .22));
-      border-color: rgba(0, 229, 255, .45); color: var(--lab-on-accent); font-weight: 600;
-    }
-    /* 亮色下主按钮接全站强调色（橙红实底 + 白字），与其它页面的 .btn-primary 观感一致。
-       theme.css 里 `html[data-theme="light"] .btn { background:#FFFFFF !important }`
-       会把渐变底刷掉，因此这里同样用 !important 覆盖。 */
-    html[data-theme="light"] .btn.primary {
-      /* 全站强调色 #E07A5F 配白字对比度只有 2.95:1，主按钮上会写字发虚；
-         这里用更深的橙红 #C2410C（5.18:1）保证按钮文字清晰可读。 */
-      background: #C2410C !important;
-      border-color: #9A3412 !important;
-      color: #FFFFFF !important;
-    }
-    html[data-theme="light"] .btn.primary:hover:not(:disabled) {
-      background: #9A3412 !important;
-      color: #FFFFFF !important;
-    }
-    /* 亮色下普通按钮：全站把边框设成 #E5E5EA（对白底约 1.1:1），按钮边界与文字
-       都偏弱。这里给本页控件加深边框与文字，保证可辨识。 */
-    html[data-theme="light"] select,
-    html[data-theme="light"] .btn:not(.primary) {
-      border-color: rgba(0, 0, 0, .32) !important;
-    }
-    html[data-theme="light"] .btn:not(.primary) { color: #1C1C1E !important; }
+    body.club-page .panel select { font-size: 13px; }
     .mode-tabs { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--lab-control); border: 1px solid var(--line); }
     .mode-tabs button {
       padding: 8px 16px; border: none; background: none; color: var(--muted);
@@ -221,7 +135,12 @@
     .board-wrap { display: grid; justify-items: center; gap: 12px; }
     .board {
       display: grid;
-      grid-template-columns: repeat(15, 1fr);
+      /* 行列都显式均分且下限为 0：此前行轨道是 auto，靠容器 stretch 撑方——
+         一旦格子内容（::after 的 62% 高度在不确定高度下按 auto 解析）把
+         min-content 撑大，行就被顶开，棋盘纵向拉成 ~1:2。minmax(0,1fr)
+         不依赖 stretch 也不受内容最小高度影响，格子恒为正方形。 */
+      grid-template-columns: repeat(15, minmax(0, 1fr));
+      grid-template-rows: repeat(15, minmax(0, 1fr));
       gap: 1px;
       width: min(100%, 470px);
       aspect-ratio: 1;
@@ -238,7 +157,7 @@
       border: 1px solid var(--lab-grid-line);
       border-radius: 3px;
       display: grid; place-items: center;
-      transition: background .18s var(--ease-out);
+      transition: background var(--club-dur, 200ms) var(--ease-out);
     }
     .cell::after { content: ""; width: 62%; height: 62%; border-radius: 50%; }
     /* 棋子投影：日间棋盘上让落子有立体感、也更容易看清。 */
@@ -247,7 +166,9 @@
     .cell.white::after { box-shadow: inset 0 0 0 1px rgba(20, 30, 45, .55), 0 1px 3px rgba(40, 25, 5, .45); }
     .cell.black::after { background: radial-gradient(circle at 34% 30%, #6f7b8c, #0b0f16 72%); }
     .cell.white::after { background: radial-gradient(circle at 34% 30%, #fff, #b9c4d2 78%); }
-    .cell.empty:hover { background: rgba(0, 229, 255, .2); }
+    /* 类名用 cell-empty 而非 empty：club-ui 的空态类 .empty 带 30px 内边距，
+       裸 empty 会撞名把格子撑成 62px 高（棋盘纵向拉伸的根因）。 */
+    .cell.cell-empty:hover { background: rgba(0, 229, 255, .2); }
     .cell.played { background: rgba(113, 243, 191, .3); }
     .cell.candidate { background: rgba(124, 77, 255, .3); }
     .cell.best { background: rgba(255, 209, 102, .36); }
@@ -263,7 +184,7 @@
 
     /* ---- 决策卡 ---- */
     .decision-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
-    .badge {
+    body.club-page .badge {
       padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 600;
       border: 1px solid transparent;
     }
@@ -277,26 +198,27 @@
     html[data-theme="light"] .badge.side-black { background: rgba(0, 0, 0, .06); border-color: rgba(0, 0, 0, .22); color: #1c1c1e; }
     html[data-theme="light"] .badge.side-white { background: rgba(0, 0, 0, .06); border-color: rgba(0, 0, 0, .22); color: #1c1c1e; }
 
-    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 10px; }
-    .stat {
+    body.club-page .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 10px; }
+    body.club-page .stat {
       padding: 10px 12px; border-radius: 12px;
       background: var(--lab-surface); border: 1px solid rgba(115, 221, 255, .13);
+      box-shadow: none; background-image: none;
     }
-    .stat span { display: block; font-size: 11px; color: var(--muted); margin-bottom: 5px; }
-    .stat strong { font-size: 15px; color: var(--lab-strong); font-variant-numeric: tabular-nums; }
+    body.club-page .stat span { display: block; font-size: 11px; color: var(--club-muted); margin-bottom: 5px; }
+    body.club-page .stat strong { font-size: 15px; color: var(--lab-strong); font-variant-numeric: tabular-nums; }
 
     /* ---- 表格 ---- */
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    th, td { padding: 7px 9px; text-align: right; white-space: nowrap; }
-    th { color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--line); font-size: 11px; }
-    td { border-bottom: 1px solid rgba(115, 221, 255, .07); font-variant-numeric: tabular-nums; }
-    th:first-child, td:first-child { text-align: left; }
+    body.club-page .panel .table-wrap { overflow-x: auto; border: 0; border-radius: 0; background: transparent; }
+    body.club-page .panel table { width: 100%; min-width: 0; border-collapse: collapse; font-size: 12px; background: transparent; }
+    body.club-page .panel th, body.club-page .panel td { padding: 7px 9px; text-align: right; white-space: nowrap; position: static; background: transparent; }
+    body.club-page .panel th { color: var(--club-muted); font-weight: 500; border-bottom: 1px solid var(--club-line); font-size: 11px; }
+    body.club-page .panel td { border-bottom: 1px solid rgba(115, 221, 255, .07); color: var(--club-text-soft); }
+    body.club-page .panel th:first-child, body.club-page .panel td:first-child { text-align: left; }
     tbody tr.kept { background: rgba(113, 243, 191, .07); }
     tbody tr.dropped { opacity: .5; }
     tbody tr.best td { color: var(--gold); font-weight: 600; }
     html[data-theme="light"] tbody tr.best td { color: #8a5a00; }
-    .tag {
+    body.club-page .tag {
       display: inline-block; margin-left: 5px; padding: 1px 6px; border-radius: 999px;
       font-size: 10px; background: rgba(124, 77, 255, .2); color: #c9b6ff;
     }
@@ -339,7 +261,11 @@
     .tree .root-line { color: var(--lab-accent-fg); font-weight: 600; }
     .tree-note { margin-top: 10px; }
 
-    .empty-state { padding: 22px 14px; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.8; }
+    .empty-state {
+      padding: 26px 14px; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.8;
+      border: 1px dashed var(--line); border-radius: 12px; background: rgba(2, 6, 16, .25);
+    }
+    html[data-theme="light"] .empty-state { background: rgba(255, 255, 255, .55); }
     .progress {
       height: 6px; border-radius: 999px; overflow: hidden;
       background: rgba(115, 221, 255, .12); margin-top: 10px;
@@ -364,18 +290,21 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body>
+<body class="club-page">
   <header class="topbar">
-    <a class="brand" href="../index.html" aria-label="返回算法社首页"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></span>
-    <a class="back-link" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
+    <div class="topbar-inner">
+      <a class="brand" href="../index.html" aria-label="返回算法社首页"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a>
+      <span class="member-identity" data-member-identity hidden></span>
+      <a class="back" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
+    </div>
   </header>
 
   <main>
-    <section class="intro">
+    <section class="lab-intro">
       <p class="eyebrow">GOMOKU-SATORI · DECISION TRACE LAB</p>
       <h1 data-i18n="satoriLab.h1">Gomoku-Satori 决策剖析实验室</h1>
-      <p>Gomoku-Satori 是本站从零自研、不使用任何外部引擎与神经网络的五子棋 AI。这个页面把它的每一次思考完全摊开：先看到威胁普查，再看候选着法如何逐项打分与排序，然后逐层加深搜索，最后用搜索树和证明过程交代“为什么是这一步”。</p>
-      <p class="notice">诚实说明：Satori 是展示版引擎，实力弱于 V9Thinker、V10Ultra 等正式模型。这里展示的是它的真实决策过程，用于讲解 AI 如何思考，而不是宣称它的棋力。</p>
+      <p data-i18n="satoriLab.intro">Gomoku-Satori 是本站从零自研、不使用任何外部引擎与神经网络的五子棋 AI。这个页面把它的每一次思考完全摊开：先看到威胁普查，再看候选着法如何逐项打分与排序，然后逐层加深搜索，最后用搜索树和证明过程交代“为什么是这一步”。</p>
+      <p class="notice" data-i18n="satoriLab.notice">诚实说明：Satori 是展示版引擎，实力弱于 V9Thinker、V10Ultra 等正式模型。这里展示的是它的真实决策过程，用于讲解 AI 如何思考，而不是宣称它的棋力。</p>
     </section>
 
     <div class="lab-grid">
@@ -409,7 +338,7 @@
                 <option value="2" selected data-i18n="satoriLab.whiteSecond">白棋（后手）</option>
               </select>
               <button type="button" class="btn primary" id="startLive" data-i18n="satoriLab.startGame">开始对局</button>
-              <button type="button" class="btn" id="stopLive" disabled data-i18n="satoriLab.restart">重新开始</button>
+              <button type="button" class="btn secondary" id="stopLive" disabled data-i18n="satoriLab.restart">重新开始</button>
             </div>
             <p class="hint" id="statusLine">选择开局后点“开始逐手剖析”，Satori 会自己和自己下若干手，再逐手回看它的完整思路。</p>
             <div class="progress" id="progressBar" hidden><i id="progressFill"></i></div>
@@ -427,9 +356,9 @@
               <span><i style="background:rgba(124,77,255,.7)"></i>进入搜索的候选</span>
             </div>
             <div class="step-nav" id="stepNav" hidden>
-              <button type="button" class="btn" id="prevStep" data-i18n="satoriLab.prevStep">← 上一步</button>
+              <button type="button" class="btn secondary" id="prevStep" data-i18n="satoriLab.prevStep">← 上一步</button>
               <span class="counter" id="stepCounter">—</span>
-              <button type="button" class="btn" id="nextStep" data-i18n="satoriLab.nextStep">下一步 →</button>
+              <button type="button" class="btn secondary" id="nextStep" data-i18n="satoriLab.nextStep">下一步 →</button>
             </div>
           </div>
         </section>
@@ -532,7 +461,7 @@
     for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
       const cell = document.createElement('button');
       cell.type = 'button';
-      cell.className = 'cell empty';
+      cell.className = 'cell cell-empty';
       cell.dataset.row = r; cell.dataset.col = c;
       cell.addEventListener('click', () => onCellClick(r, c));
       boardEl.appendChild(cell);
@@ -561,7 +490,7 @@
       for (const cell of cells) {
         const r = Number(cell.dataset.row), c = Number(cell.dataset.col);
         const v = board[r][c];
-        cell.className = 'cell ' + (v === BLACK ? 'black' : v === WHITE ? 'white' : 'empty');
+        cell.className = 'cell ' + (v === BLACK ? 'black' : v === WHITE ? 'white' : 'cell-empty');
         cell.title = '(' + (r + 1) + ', ' + (c + 1) + ')';
       }
       if (active) {
@@ -1060,7 +989,6 @@
     window.__labRun = () => ({ seq: runSeq, busy });
   })();
   </script>
-  <script>!function(){try{var t=document.querySelector('.topbar');if(!document.getElementById('langSwitcherHost')){var h=document.createElement('div');h.id='langSwitcherHost';t.appendChild(h);}if(window.ClubI18n)window.ClubI18n.mountSwitcher(document.getElementById('langSwitcherHost'));}catch(e){}}();</script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

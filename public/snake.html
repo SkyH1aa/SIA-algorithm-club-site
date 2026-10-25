@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="snake.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8">
@@ -10,18 +10,24 @@
   <title>算法社 · 贪吃蛇多模式</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
 <style>
+    /* 贪吃蛇页样式：2026-10 起接入全站 club-ui 令牌（body.club-page）。
+       本块只覆盖本页特有组件；按钮、表单、排版等通用样式来自 club-ui.css。 */
     :root { color-scheme: dark; --mobile-chrome: 210px; }
     * { box-sizing: border-box; }
     html, body { height: 100%; }
     body {
       position: relative; min-height: 100vh; min-height: 100dvh; margin: 0;
-      padding: 10px 12px; background: #07111f; color: #e7f7ff;
-      font-family: Arial, system-ui, sans-serif; overflow: hidden;
+      padding: 10px 12px;
+      font-family: var(--club-font);
+      /* 矮屏不再整页裁切：滚动交给页面本身，overflow:hidden 收窄到画布区 .play-area */
+      overflow-x: hidden; overflow-y: auto;
     }
+    /* club-ui 的 main 版式规则针对文档流页面；本页 main 是棋局面板，恢复本页布局 */
+    body.club-page main.panel { max-width: none; margin: 0; padding: 10px; z-index: auto; }
     .ambient-background{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
     .ambient-orb{position:absolute;width:min(48vw,620px);aspect-ratio:1;border-radius:50%;filter:blur(72px);opacity:.18;mix-blend-mode:screen;animation:drift-orb 18s ease-in-out infinite alternate}
     .orb-cyan{top:-18%;left:-12%;background:#00e5ff}
@@ -30,75 +36,96 @@
     @keyframes drift-orb{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(7%,5%,0) scale(1.1)}}
     @keyframes grid-shift{to{transform:translate3d(72px,72px,0)}}
     .page-shell{position:relative;z-index:1;width:min(1360px,100%);height:calc(100vh - 20px);height:calc(100dvh - 20px);margin:0 auto;display:flex;flex-direction:column;gap:8px;min-height:0}
-    .member-identity{display:none;margin:0;padding:3px 8px;border:1px solid rgba(0,229,255,.34);border-radius:999px;color:#00e5ff;font-size:11px;width:max-content}
+    .member-identity{display:none;margin:0;padding:3px 8px;border:1px solid var(--club-accent-line);border-radius:var(--club-radius-pill);background:var(--club-accent-soft);color:var(--club-accent);font-size:11px;width:max-content}
     .member-identity:not([hidden]){display:inline-block}
     .page-header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0;flex:0 0 auto}
-    .page-header a{color:#49e7ff;text-decoration:none;font-size:13px}
-    .page-header h1{margin:0;font-size:clamp(16px,2vw,20px);font-weight:700}
+    body.club-page .page-header a{color:var(--club-accent);text-decoration:none;font-size:13px;transition:color var(--club-dur) var(--club-ease)}
+    body.club-page .page-header a:hover{color:var(--club-accent-strong)}
+    body.club-page .page-header h1{margin:0;font-size:clamp(16px,2vw,20px);font-weight:700;color:var(--club-text)}
     .page-header p{display:none}
     .layout{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:12px;align-items:stretch}
-    .panel{padding:10px;border:1px solid rgba(73,231,255,.24);border-radius:12px;background:rgba(13,28,47,.84);box-shadow:0 12px 28px rgba(0,0,0,.22);min-height:0}
-    main.panel{display:flex;flex-direction:column;gap:8px;overflow:hidden}
+    .panel{padding:10px;border:1px solid var(--club-line);border-radius:var(--club-radius);background:color-mix(in srgb, var(--club-surface) 88%, transparent);box-shadow:inset 0 1px 0 var(--club-highlight),var(--club-shadow-sm);min-height:0}
+    main.panel{display:flex;flex-direction:column;gap:8px}
     .toolbar{display:flex;flex-direction:column;gap:6px;flex:0 0 auto}
     .setup{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:0}
-    label{color:#91a9b8;font-size:12px}
-    input{min-width:140px;padding:6px 10px;border:1px solid #31536a;border-radius:6px;background:#081522;color:#fff;font-size:13px}
-    .hint{color:#91a9b8;font-size:12px}
-    .control-strip{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-    .mode-btn,.action-btn,.lb-tab{padding:6px 11px;border:1px solid rgba(73,231,255,.28);border-radius:999px;background:#0d1c2f;color:#e7f7ff;cursor:pointer;font-size:12px;font-weight:600;line-height:1.2;white-space:nowrap}
-    .mode-btn.active,.lb-tab.active{background:#0284c7;border-color:#38bdf8;box-shadow:0 0 14px rgba(56,189,248,.3)}
-    .action-btn.primary{background:#FF6F00;border-color:#FF6F00}
-    .action-btn.danger{background:#7f1d1d;border-color:#ef4444}
-    .action-btn:disabled{opacity:.45;cursor:not-allowed}
-    .assist-note{display:none;margin:0;padding:5px 8px;border:1px solid rgba(73,231,255,.16);border-radius:10px;background:rgba(8,21,34,.72);color:#cfefff;font-size:12px}
+    label{color:var(--club-muted);font-size:12px}
+    input{min-width:140px;padding:6px 10px;border:1px solid var(--club-line-strong);border-radius:var(--club-radius-xs);background:var(--club-surface-2);color:var(--club-text);font:inherit;font-size:13px}
+    .hint{color:var(--club-muted);font-size:12px}
+    .control-strip{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+    .strip-sep{flex:0 0 1px;width:1px;height:20px;align-self:center;margin:0 3px;background:var(--club-line-strong)}
+    /* 胶囊按钮：token 化的次要按钮观感；active 为强调色软底（theme.css 亮色另有全站覆盖） */
+    .mode-btn,.action-btn,.lb-tab,.speed-btn,.toggle-opt{padding:6px 12px;border:1px solid var(--club-line-strong);border-radius:var(--club-radius-pill);background:var(--club-surface-2);color:var(--club-text-soft);cursor:pointer;font:inherit;font-size:12px;font-weight:600;line-height:1.2;white-space:nowrap;transition:background var(--club-dur) var(--club-ease),border-color var(--club-dur) var(--club-ease),color var(--club-dur) var(--club-ease),box-shadow var(--club-dur) var(--club-ease),transform var(--club-dur-fast) var(--club-ease)}
+    .mode-btn:hover,.lb-tab:hover,.speed-btn:hover:not(:disabled),.toggle-opt:hover:not(:disabled),.action-btn:hover:not(:disabled):not(.primary):not(.danger){border-color:var(--club-accent-line);background:var(--club-accent-soft);color:var(--club-accent)}
+    .mode-btn:active,.action-btn:active,.lb-tab:active,.speed-btn:active,.toggle-opt:active{transform:translateY(1px)}
+    .mode-btn.active,.lb-tab.active,.speed-btn.active,.toggle-opt.active{background:var(--club-accent-soft);border-color:var(--club-accent);color:var(--club-accent);box-shadow:var(--club-ring)}
+    .action-btn.primary{background:var(--club-accent);border-color:var(--club-accent);color:var(--club-on-accent)}
+    .action-btn.primary:hover:not(:disabled){background:var(--club-accent-strong);border-color:var(--club-accent-strong);color:var(--club-on-accent)}
+    .action-btn.danger{background:var(--club-danger-soft);border-color:color-mix(in srgb, var(--club-danger) 55%, transparent);color:var(--club-danger)}
+    .action-btn.danger:hover:not(:disabled){border-color:var(--club-danger)}
+    .action-btn:disabled,.speed-btn:disabled,.toggle-opt:disabled,.toggle-opt.is-disabled{opacity:.45;cursor:not-allowed}
+    .toggle-opt{display:inline-flex;align-items:center;gap:6px;user-select:none}
+    .assist-note{display:none;margin:0;padding:5px 10px;border:1px solid var(--club-accent-line);border-radius:var(--club-radius-sm);background:var(--club-accent-soft);color:var(--club-text-soft);font-size:12px}
     .assist-note.visible{display:block}
     .speed-opts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-    .speed-label{color:#91a9b8;font-size:12px;font-weight:700}
-    .speed-btn{padding:5px 10px;border:1px solid rgba(73,231,255,.28);border-radius:999px;background:#0d1c2f;color:#e7f7ff;cursor:pointer;font-size:12px;font-weight:700;line-height:1.2}
-    .speed-btn.active{background:#0284c7;border-color:#38bdf8;box-shadow:0 0 12px rgba(56,189,248,.28)}
-    .speed-btn:disabled{opacity:.45;cursor:not-allowed}
-    .opt-desc{color:#91a9b8;font-size:12px}
-    .mode-opts{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
-    .toggle-opt{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid rgba(73,231,255,.28);border-radius:999px;background:#0d1c2f;color:#e7f7ff;font-size:12px;font-weight:700;cursor:pointer;user-select:none}
-    .toggle-opt.active{background:#7c3aed;border-color:#a78bfa;box-shadow:0 0 12px rgba(167,139,250,.28)}
-    .toggle-opt:disabled,.toggle-opt.is-disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
-    .control-method{display:inline-flex;align-items:center;gap:6px;color:#91a9b8;font-size:12px;font-weight:700}.control-method select{padding:5px 8px;border:1px solid rgba(73,231,255,.28);border-radius:7px;background:#0d1c2f;color:#e7f7ff;font:inherit}
-    .play-area{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:8px}
+    .speed-label{color:var(--club-muted);font-size:12px;font-weight:700}
+    .opt-desc{color:var(--club-muted);font-size:11px;line-height:1.5}
+    .mode-opts{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:6px}
+    .control-method{display:inline-flex;align-items:center;gap:6px;color:var(--club-muted);font-size:12px;font-weight:700}
+    .control-method select{padding:5px 8px;border:1px solid var(--club-line-strong);border-radius:var(--club-radius-xs);background:var(--club-surface-2);color:var(--club-text);font:inherit}
+    .play-area{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:8px;overflow:hidden}
     .boards{display:flex;gap:12px;justify-content:center;align-items:flex-start;flex:1 1 auto;min-height:0}
     .board-card{display:flex;flex-direction:column;gap:6px;align-items:center;min-width:0}
     .hidden{display:none!important}
     .board-card.hidden{display:none}
-    .board-title{margin:0;font-size:13px;color:#91a9b8;font-weight:700}
-    .board-meta{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;font-size:12px;color:#cfefff}
-    .board-meta strong{color:#ffd166}
-    canvas.snake-board{display:block;width:min(520px,100%);height:auto;max-height:none;aspect-ratio:1/1;background:#0b1437;border:1px solid rgba(73,231,255,.28);border-radius:10px;touch-action:none}
+    body.club-page .board-title{margin:0;font-size:13px;color:var(--club-muted);font-weight:700}
+    .board-meta{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;font-size:12px;color:var(--club-text-soft)}
+    .board-meta strong{color:var(--club-warn);font-variant-numeric:tabular-nums}
+    canvas.snake-board{display:block;width:min(520px,100%);height:auto;max-height:none;aspect-ratio:1/1;background:var(--club-surface-3);border:1px solid var(--club-line-strong);border-radius:var(--club-radius-sm);touch-action:none}
     body.is-versus canvas.snake-board{width:min(420px,100%);}
-    .versus-diff{font-size:12px;color:#91a9b8}
-    .versus-diff strong{color:#ffd166;font-size:14px}
-    .result{min-height:18px;margin:0;color:#49e7ff;font-weight:700;font-size:13px}
+    .versus-diff{font-size:12px;color:var(--club-muted)}
+    .versus-diff strong{color:var(--club-warn);font-size:14px;font-variant-numeric:tabular-nums}
+    body.club-page .result{min-height:18px;margin:0;color:var(--club-accent);font-weight:700;font-size:13px}
     .leaderboard{display:flex;flex-direction:column;gap:8px;overflow:auto}
-    .leaderboard h2{margin:0;font-size:16px}
+    body.club-page .leaderboard h2{margin:0;font-size:16px;color:var(--club-text)}
     .lb-tabs{display:flex;gap:6px;flex-wrap:wrap}
     .leaderboard-list{display:grid;gap:6px;padding:0;margin:0;list-style:none}
-    .leaderboard-list li{display:grid;grid-template-columns:28px 1fr auto;gap:8px;padding:8px;border-bottom:1px solid rgba(73,231,255,.12);font-size:13px}
-    .rank{color:#49e7ff;font-weight:700}
-    .score{color:#ffd166;font-weight:700}
-    .empty{color:#91a9b8;font-size:13px}
-    .explain-panel{margin:0;padding:6px 8px;border:1px solid rgba(73,231,255,.16);border-radius:10px;background:rgba(8,21,34,.72);color:#e7f7ff;font-size:12px}.explain-toggle{display:flex;gap:7px;align-items:center}.explain-toggle input{width:15px;height:15px;accent-color:#C54A34}.explain-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}.explain-grid>div{padding:6px;border:1px solid rgba(73,231,255,.16);border-radius:7px}.explain-grid span{display:block;color:#91a9b8;font-size:10px}.explain-grid strong{color:#49e7ff;font-size:12px}.explain-panel p{color:#91a9b8;font-size:10px;line-height:1.45}html[data-theme="light"] .explain-panel{background:#FFFDFC !important;border-color:#E7DDD5 !important;color:#2A2421 !important}html[data-theme="light"] .explain-toggle{color:#2A2421 !important}html[data-theme="light"] .explain-toggle input{accent-color:#C54A34;outline:1px solid rgba(167,58,41,.42);outline-offset:1px}html[data-theme="light"] .explain-grid>div{background:#F2EDE7 !important;border-color:#E7DDD5 !important}html[data-theme="light"] .explain-grid strong{color:#A73A29 !important}
-    .mobile-controls{display:none;position:fixed;left:0;right:0;bottom:0;z-index:20;padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(7,17,31,0),rgba(7,17,31,.96) 28%);gap:12px;justify-content:space-between;align-items:flex-end;pointer-events:none}
+    .leaderboard-list li{display:grid;grid-template-columns:28px 1fr auto;gap:8px;padding:8px;border-bottom:1px solid var(--club-line);font-size:13px;transition:background var(--club-dur-fast) ease}
+    .leaderboard-list li:hover{background:var(--club-surface-2)}
+    .rank{color:var(--club-accent);font-weight:700;font-variant-numeric:tabular-nums}
+    .score{color:var(--club-warn);font-weight:700;font-variant-numeric:tabular-nums}
+    .empty{color:var(--club-muted);font-size:13px}
+    .leaderboard-pagination{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--club-muted)}
+    .explain-panel{margin-top:6px;padding:6px 8px;border:1px solid var(--club-line);border-radius:var(--club-radius-sm);background:color-mix(in srgb, var(--club-surface-2) 72%, transparent);color:var(--club-text-soft);font-size:12px}
+    .explain-toggle{display:flex;gap:7px;align-items:center}
+    .explain-toggle input{width:15px;height:15px;accent-color:var(--club-accent)}
+    .explain-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+    .explain-grid>div{padding:6px;border:1px solid var(--club-line);border-radius:var(--club-radius-xs);background:color-mix(in srgb, var(--club-surface-3) 60%, transparent)}
+    .explain-grid span{display:block;color:var(--club-muted);font-size:10px}
+    .explain-grid strong{color:var(--club-accent);font-size:12px;font-family:var(--club-mono);font-variant-numeric:tabular-nums}
+    body.club-page .explain-panel p{color:var(--club-muted);font-size:10px;line-height:1.45}
+    html[data-theme="light"] .explain-panel{background:var(--club-surface-2)!important;border-color:var(--club-line)!important;color:var(--club-text)!important}
+    html[data-theme="light"] .explain-toggle{color:var(--club-text)!important}
+    html[data-theme="light"] .explain-grid>div{background:var(--club-surface-3)!important;border-color:var(--club-line)!important}
+    /* theme.css 的亮色全站规则会把主/危险/激活胶囊刷成白底；本页用 club token 恢复语义色 */
+    html[data-theme="light"] .action-btn.primary{background:var(--club-accent)!important;border-color:var(--club-accent)!important;color:#FFFFFF!important;box-shadow:none!important}
+    html[data-theme="light"] .action-btn.primary:hover:not(:disabled){background:var(--club-accent-strong)!important;border-color:var(--club-accent-strong)!important}
+    html[data-theme="light"] .action-btn.danger{background:var(--club-danger-soft)!important;border-color:color-mix(in srgb, var(--club-danger) 45%, transparent)!important;color:var(--club-danger)!important}
+    html[data-theme="light"] .toggle-opt.active{background:var(--club-accent-soft)!important;border-color:var(--club-accent)!important;color:var(--club-accent)!important}
+    html[data-theme="light"] .strip-sep{background:var(--club-line-strong)!important}
+    .mobile-controls{display:none;position:fixed;left:0;right:0;bottom:0;z-index:20;padding:8px 12px calc(10px + env(safe-area-inset-bottom, 0px));background:linear-gradient(180deg, transparent, color-mix(in srgb, var(--club-bg) 96%, transparent) 28%);gap:12px;justify-content:space-between;align-items:flex-end;pointer-events:none}
     .mobile-controls.visible{display:flex}
     .pad,.actions{display:grid;gap:6px;pointer-events:auto}
     .pad{grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,46px)}
-    .actions{grid-template-columns:1fr;width:72px}
-    .mobile-controls button{border:1px solid rgba(73,231,255,.35);border-radius:12px;background:rgba(13,28,47,.92);color:#e7f7ff;font-size:18px;font-weight:700;min-height:46px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+    .actions{grid-template-columns:1fr;grid-auto-rows:46px;width:72px}
+    .mobile-controls button{border:1px solid var(--club-accent-line);border-radius:var(--club-radius-sm);background:color-mix(in srgb, var(--club-surface-2) 94%, transparent);color:var(--club-text);font:inherit;font-size:18px;font-weight:700;min-height:46px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;transition:background var(--club-dur-fast) var(--club-ease),border-color var(--club-dur-fast) var(--club-ease)}
+    .mobile-controls button:active:not(:disabled){background:var(--club-accent-soft);border-color:var(--club-accent)}
     .mobile-controls button:disabled{opacity:.35}
     .pad .up{grid-column:2;grid-row:1}
     .pad .left{grid-column:1;grid-row:2}
     .pad .down{grid-column:2;grid-row:2}
     .pad .right{grid-column:3;grid-row:2}
-    .key-hint{color:#91a9b8;font-size:11px}
+    body.club-page .key-hint{margin:0;color:var(--club-muted);font-size:11px}
     @media (max-width: 1100px){
-      body{overflow:auto;min-height:100dvh}
       .page-shell{height:auto;min-height:calc(100dvh - 12px)}
       .layout{grid-template-columns:1fr}
       .leaderboard{max-height:220px}
@@ -106,7 +133,7 @@
       body.is-versus canvas.snake-board{width:100%;max-height:none;}
     }
     @media (max-width: 1100px){
-      body{padding:6px 8px 96px;overflow:auto}
+      body{padding:6px 8px calc(96px + env(safe-area-inset-bottom, 0px))}
       .page-shell{height:auto;min-height:calc(100dvh - 12px)}
       .play-area{padding-bottom:calc(100px + env(safe-area-inset-bottom, 0px))}
       .page-header p{display:none}
@@ -129,7 +156,7 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body>
+<body class="club-page">
   <div class="ambient-background" aria-hidden="true"><div class="ambient-orb orb-cyan"></div><div class="ambient-orb orb-violet"></div><div class="ambient-grid"></div></div>
   <div class="page-shell">
     <header class="page-header">
@@ -151,9 +178,11 @@
             <button type="button" class="mode-btn" data-mode="ai" data-i18n="games.modeAi">AI 游玩</button>
             <button type="button" class="mode-btn" data-mode="assist" data-i18n="games.modeAssist">AI 辅助</button>
             <button type="button" class="mode-btn" data-mode="versus" data-i18n="games.modeVersus">人机对战</button>
+            <span class="strip-sep" aria-hidden="true"></span>
             <button type="button" class="action-btn primary" id="startBtn" data-i18n="games.start">开始</button>
             <button type="button" class="action-btn" id="stopBtn" hidden data-i18n="games.stop">停止</button>
             <button type="button" class="action-btn danger" id="surrenderBtn" hidden disabled data-i18n="games.surrender">投降</button>
+            <span class="strip-sep" aria-hidden="true"></span>
             <label class="control-method"><span data-i18n="games.controlMethod">操作方式</span><select id="controlMethod"><option value="keyboard" data-i18n="games.keyboardControl">键盘操作</option><option value="buttons" data-i18n="games.buttonControl">按钮操作</option></select></label>
           </div>
           <div class="assist-note" id="assistNote" data-i18n="snake.assistNote">AI 辅助：深色阴影轨迹与转向箭头均来自同一套 AI 决策（逐步模拟至当前苹果）。你仍完全手动操控。</div>
@@ -165,6 +194,7 @@
               <button type="button" class="speed-btn" data-speed="1.5">1.5×</button>
               <button type="button" class="speed-btn" data-speed="2">2×</button>
             </div>
+            <span class="strip-sep" aria-hidden="true"></span>
             <button type="button" class="toggle-opt" id="penetrateBtn" aria-pressed="false" data-i18n="snake.penetrateOff">穿透模式：关</button>
             <span class="opt-desc" id="speedHint" data-i18n="snake.optDescStatic">普通 / 人机对战：记榜 × 倍速；穿透可穿身但撞墙会死，再 ×0.5，原始分最高 30</span>
           </div>
@@ -212,6 +242,7 @@
     </div>
     <div class="actions">
       <button type="button" id="mobilePause" title="暂停" data-i18n-title="snake.pauseTitle">⏸</button>
+      <button type="button" id="mobileRestart" title="重新开始" aria-label="重新开始" data-i18n-title="games.restart" data-i18n-aria="games.restart">↻</button>
     </div>
   </div>
 
@@ -688,6 +719,7 @@
     leaderboardList: document.getElementById('leaderboardList'),
     mobileControls: document.getElementById('mobileControls'),
     mobilePause: document.getElementById('mobilePause')
+    ,mobileRestart: document.getElementById('mobileRestart')
     ,controlMethod: document.getElementById('controlMethod')
   };
   let explainEnabled = false;
@@ -1212,6 +1244,8 @@
     state.player.togglePause();
     setResult(state.player.paused ? ClubI18n.t('games.paused') : ClubI18n.t('games.resumed'));
   });
+  // 移动端底栏「重开」：仅复用现有开始入口（对局中为空操作，结束后立即重开），不改任何游戏逻辑
+  els.mobileRestart?.addEventListener('click', () => { void startGame(); });
 
   window.addEventListener('resize', () => { syncMobileControlsUI(); requestAnimationFrame(fitSnakeBoards); });
   window.addEventListener('orientationchange', () => setTimeout(fitSnakeBoards, 80));
@@ -1233,6 +1267,6 @@
   els.stopBtn.disabled = true;
 })();
 </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

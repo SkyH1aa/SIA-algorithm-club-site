@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="lab.common.hubTitle">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8" />
@@ -11,16 +11,18 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
 <style>
-    :root{font-family:"Microsoft YaHei","PingFang SC","Noto Sans CJK SC",system-ui,sans-serif;color:#f6fbff;background:#020409;--bg:#020409;--panel:rgba(8,13,30,.8);--cyan:#00e5ff;--violet:#7c4dff;--pink:#ff5fc8;--gold:#ffd166;--green:#71f3bf;--text:#c8d4e2;--muted:#8fa3b8;--line:rgba(115,221,255,.2);--shadow:0 24px 90px rgba(0,229,255,.13)}
-    *{box-sizing:border-box}body{margin:0;min-width:320px;min-height:100vh;background:radial-gradient(ellipse 70% 50% at 14% 4%,rgba(0,229,255,.16),transparent 62%),radial-gradient(ellipse 60% 42% at 88% 7%,rgba(124,77,255,.22),transparent 65%),linear-gradient(180deg,#020409,#050917 50%,#020409);color:#f6fbff;overflow-x:hidden}body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(rgba(0,229,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.045) 1px,transparent 1px);background-size:72px 72px;mask-image:radial-gradient(ellipse 110% 100% at 50% 10%,#000,transparent 92%)}
+    /* 收编说明：主题色一律走 --club-*（club-ui.css 的 body.club-page 作用域），
+       本块只保留实验室选择卡的专用显示色（粉/金）与装饰阴影，及各卡片自己的悬停光圈。
+       注意：页首区块类名用 lab-intro，避免与 club-ui 的 .intro（小号说明文字）撞名。 */
+    :root { --pink:#ff5fc8; --gold:#ffd166; --shadow:0 24px 90px rgba(0,229,255,.13); --ease:cubic-bezier(0.22,1,0.36,1) }
+    body{overflow-x:hidden}body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(rgba(0,229,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.045) 1px,transparent 1px);background-size:72px 72px;mask-image:radial-gradient(ellipse 110% 100% at 50% 10%,#000,transparent 92%)}
     a{color:inherit;text-decoration:none}
-    .topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:20px;padding:14px clamp(18px,5vw,72px);border-bottom:1px solid var(--line);background:rgba(2,4,12,.78);backdrop-filter:blur(18px)}.brand{display:inline-flex;align-items:center;gap:12px;margin-right:auto}.brand-mark{display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(0,229,255,.55);border-radius:8px;background:linear-gradient(135deg,rgba(0,229,255,.18),rgba(124,77,255,.22));color:var(--cyan);font-weight:900;box-shadow:0 0 28px rgba(0,229,255,.22),inset 0 0 24px rgba(124,77,255,.18)}.brand strong,.brand small{display:block}.brand strong{font-size:16px}.brand small{color:var(--muted);font-size:12px;text-transform:uppercase}.member-identity{display:none;padding:5px 9px;border:1px solid rgba(0,229,255,.34);border-radius:999px;color:var(--cyan);font-size:12px;white-space:nowrap}.member-identity:not([hidden]){display:inline-flex}.back-link{padding:8px 12px;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:14px;transition:.2s}.back-link:hover{border-color:rgba(0,229,255,.55);background:rgba(0,229,255,.08);color:var(--cyan)}
-    main{max-width:1240px;margin:0 auto;padding:clamp(48px,8vw,96px) clamp(18px,5vw,72px) 70px}.intro{max-width:820px}.eyebrow{margin:0 0 12px;color:var(--cyan);font-size:12px;font-weight:800;letter-spacing:2px}.intro h1{margin:0;font-size:clamp(34px,6vw,60px);letter-spacing:.5px;text-shadow:0 0 28px rgba(0,229,255,.25)}.intro p:not(.eyebrow){margin:16px 0 0;color:var(--text);font-size:17px;line-height:1.8}
+    .lab-intro{max-width:820px}
     .choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:42px}
-    .choice{position:relative;min-height:280px;padding:26px;overflow:hidden;border:1px solid var(--line);border-radius:16px;background:var(--panel);box-shadow:var(--shadow);transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}
+    .choice{position:relative;min-height:216px;padding:24px;overflow:hidden;border:1px solid var(--line);border-radius:16px;background:var(--panel);box-shadow:var(--shadow);transition:transform var(--club-dur,200ms) var(--ease),border-color var(--club-dur,200ms) var(--ease),box-shadow var(--club-dur,200ms) var(--ease)}
     .choice::before{content:"";position:absolute;inset:auto -12% -46% auto;width:220px;aspect-ratio:1;border:1px solid rgba(0,229,255,.25);border-radius:50%;box-shadow:0 0 70px rgba(0,229,255,.2),inset 0 0 45px rgba(0,229,255,.09)}
     .choice.search::before{border-color:rgba(255,95,200,.25);box-shadow:0 0 70px rgba(124,77,255,.25),inset 0 0 45px rgba(255,95,200,.08)}
     .choice.ds::before{border-color:rgba(255,209,102,.28);box-shadow:0 0 70px rgba(255,209,102,.18),inset 0 0 45px rgba(124,77,255,.1)}
@@ -29,23 +31,20 @@
     .choice.tree::before{border-color:rgba(0,229,255,.3);box-shadow:0 0 70px rgba(0,229,255,.16),inset 0 0 45px rgba(113,243,191,.08)}
     .choice.heap::before{border-color:rgba(255,140,66,.35);box-shadow:0 0 70px rgba(255,140,66,.18),inset 0 0 45px rgba(255,209,102,.08)}
     .choice.gomoku::before{border-color:rgba(113,243,191,.34);box-shadow:0 0 70px rgba(113,243,191,.18),inset 0 0 45px rgba(124,77,255,.1)}
-    .choice:hover{transform:translateY(-5px);border-color:rgba(0,229,255,.62);box-shadow:0 30px 100px rgba(0,229,255,.2)}
-    .choice.search:hover{border-color:rgba(255,95,200,.65)}
-    .choice.ds:hover{border-color:rgba(255,209,102,.7);box-shadow:0 30px 100px rgba(255,209,102,.16)}
-    .choice.graph:hover{border-color:rgba(113,243,191,.7);box-shadow:0 30px 100px rgba(113,243,191,.14)}
-    .choice.dp:hover{border-color:rgba(179,147,255,.75);box-shadow:0 30px 100px rgba(124,77,255,.2)}
-    .choice.tree:hover{border-color:rgba(0,229,255,.75)}
-    .choice.heap:hover{border-color:rgba(255,140,66,.75);box-shadow:0 30px 100px rgba(255,140,66,.16)}
-    .choice.gomoku:hover{border-color:rgba(113,243,191,.75);box-shadow:0 30px 100px rgba(113,243,191,.16)}
+    /* hover 统一抬升 + accent 描边（club token），不再按卡各配一套 */
+    .choice:hover{transform:translateY(-5px);border-color:var(--club-accent-line,rgba(58,212,230,.4));box-shadow:var(--club-shadow-hover,0 22px 52px rgba(0,0,0,.42))}
     .choice-content{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;align-items:flex-start}
-    .choice-icon{display:grid;place-items:center;width:48px;height:48px;border:1px solid rgba(0,229,255,.55);border-radius:9px;color:var(--cyan);font:800 20px/1 ui-monospace,Consolas,monospace;background:rgba(0,229,255,.1)}
+    .choice-icon{display:grid;place-items:center;width:48px;height:48px;border:1px solid rgba(0,229,255,.55);border-radius:9px;color:var(--cyan);background:rgba(0,229,255,.1)}
+    .choice-icon svg{width:24px;height:24px;display:block}
     .search .choice-icon{border-color:rgba(255,95,200,.55);color:var(--pink);background:rgba(255,95,200,.1)}
     .ds .choice-icon{border-color:rgba(255,209,102,.6);color:var(--gold);background:rgba(255,209,102,.1)}
     .graph .choice-icon{border-color:rgba(113,243,191,.6);color:var(--green);background:rgba(113,243,191,.1)}
     .dp .choice-icon{border-color:rgba(179,147,255,.6);color:#b393ff;background:rgba(124,77,255,.14)}
     .tree .choice-icon{border-color:rgba(0,229,255,.6);color:var(--cyan);background:rgba(0,229,255,.1)}
     .heap .choice-icon{border-color:rgba(255,140,66,.65);color:#ff9f43;background:rgba(255,140,66,.12)}
-    .choice h2{margin:20px 0 8px;font-size:24px}.choice p{max-width:360px;margin:0;color:var(--text);line-height:1.7;font-size:14px}
+    /* 卡内标题/描述压过 club 的 h2/p 基础规则，保持卡片排版（页面身份） */
+    body.club-page .choice h2{margin:20px 0 8px;font-size:24px}
+    body.club-page .choice p{max-width:360px;margin:0;color:var(--club-text-soft);line-height:1.7;font-size:14px;flex:1}
     .go{display:inline-flex;align-items:center;justify-content:center;min-height:40px;margin-top:auto;padding:8px 13px;border:1px solid rgba(0,229,255,.58);border-radius:9px;background:rgba(0,229,255,.11);color:#eaffff;font-size:13px;font-weight:700}
     .search .go{border-color:rgba(255,95,200,.55);background:rgba(124,77,255,.16)}
     .ds .go{border-color:rgba(255,209,102,.55);background:rgba(255,209,102,.12);color:#fff6df}
@@ -53,9 +52,8 @@
     .dp .go{border-color:rgba(179,147,255,.55);background:rgba(124,77,255,.18);color:#f0e9ff}
     .tree .go{border-color:rgba(0,229,255,.55);background:rgba(0,229,255,.12)}
     .heap .go{border-color:rgba(255,140,66,.55);background:rgba(255,140,66,.12);color:#ffe8d4}
-    @media(max-width:980px){.choices{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(max-width:620px){.topbar{gap:10px;padding:12px 16px}.brand small{display:none}.member-identity{max-width:110px;overflow:hidden;text-overflow:ellipsis}.back-link{padding:8px;font-size:12px}.choices{grid-template-columns:1fr;margin-top:34px}.choice{min-height:240px;padding:22px}}
-    @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important}}
+    @media(max-width:1100px){.choices{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:640px){.choices{grid-template-columns:1fr;margin-top:34px}.choice{min-height:0;padding:20px}}
   </style>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
@@ -72,30 +70,31 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body>
+<body class="club-page">
   <header class="topbar">
-    <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a>
-    <span class="member-identity" data-member-identity hidden></span>
-    <a class="back-link" href="../index.html" data-i18n="common.backHome">返回首页</a>
+    <div class="topbar-inner">
+      <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a>
+      <span class="member-identity" data-member-identity hidden></span>
+      <a class="back" href="../index.html" data-i18n="common.backHome">返回首页</a>
+    </div>
   </header>
   <main>
-    <section class="intro" aria-labelledby="pageTitle">
+    <section class="lab-intro" aria-labelledby="pageTitle">
       <p class="eyebrow">ALGORITHM VISUALIZATION LAB</p>
       <h1 id="pageTitle" data-i18n="lab.common.chooseTitle">选择你的实验</h1>
-      <p data-i18n="lab.common.chooseLead">覆盖排序、搜索、数据结构、图论最短路、动态规划、二叉树与堆。把算法过程变成可观察、可单步推演的动态演示。</p>
+      <p class="lead" data-i18n="lab.common.chooseLead">覆盖排序、搜索、数据结构、图论最短路、动态规划、二叉树与堆。把算法过程变成可观察、可单步推演的动态演示。</p>
     </section>
     <section class="choices" data-i18n-aria="lab.common.hubAria" aria-label="实验室分类">
-      <a class="choice" href="sorting-lab.html"><span class="choice-content"><span class="choice-icon">⇅</span><h2 data-i18n="lab.common.sort">排序</h2><p data-i18n="lab.common.sortDesc">以柱状图追踪冒泡、桶、快速与插入排序的比较、交换和数据移动。</p><span class="go" data-i18n="lab.common.enterSort">进入排序实验室</span></span></a>
-      <a class="choice search" href="search-lab.html"><span class="choice-content"><span class="choice-icon">⌕</span><h2 data-i18n="lab.common.search">搜索</h2><p data-i18n="lab.common.searchDesc">在迷宫找路中比较广度优先搜索与深度优先搜索的探索顺序和最终路径。</p><span class="go" data-i18n="lab.common.enterSearch">进入搜索实验室</span></span></a>
-      <a class="choice ds" href="ds-lab.html"><span class="choice-content"><span class="choice-icon">⧉</span><h2 data-i18n="lab.common.ds">数据结构</h2><p data-i18n="lab.common.dsDesc">亲手操作栈、队列与链表：观察 LIFO / FIFO，以及头插、尾插与按值删除。</p><span class="go" data-i18n="lab.common.enterDs">进入数据结构实验室</span></span></a>
-      <a class="choice graph" href="graph-lab.html"><span class="choice-content"><span class="choice-icon">⬡</span><h2 data-i18n="lab.common.graph">图论</h2><p data-i18n="lab.common.graphDesc">可视化 Dijkstra、Bellman–Ford、SPFA 与 Floyd–Warshall 的松弛过程与最短路。</p><span class="go" data-i18n="lab.common.enterGraph">进入图论实验室</span></span></a>
-      <a class="choice dp" href="dp-lab.html"><span class="choice-content"><span class="choice-icon">▦</span><h2 data-i18n="lab.common.dp">动态规划</h2><p data-i18n="lab.common.dpDesc">观察一维递推、LIS 与 0-1 背包的状态转移填表，以及最优方案回溯。</p><span class="go" data-i18n="lab.common.enterDp">进入 DP 实验室</span></span></a>
-      <a class="choice tree" href="tree-lab.html"><span class="choice-content"><span class="choice-icon">⑂</span><h2 data-i18n="lab.common.tree">二叉树</h2><p data-i18n="lab.common.treeDesc">前中后序与层序遍历，BST 插入删除，以及字典序二叉树的中序有序性。</p><span class="go" data-i18n="lab.common.enterTree">进入二叉树实验室</span></span></a>
-      <a class="choice heap" href="heap-lab.html"><span class="choice-content"><span class="choice-icon">▲</span><h2 data-i18n="lab.common.heap">堆</h2><p data-i18n="lab.common.heapDesc">建堆、插入上浮、删除下沉与堆排序；数组视图与树视图同步展示。</p><span class="go" data-i18n="lab.common.enterHeap">进入堆实验室</span></span></a>
-      <a class="choice gomoku" href="gomoku-satori-lab.html"><span class="choice-content"><span class="choice-icon">◎</span><h2 data-i18n="lab.common.satori">五子棋 AI 决策剖析</h2><p data-i18n="lab.common.satoriDesc">把自研五子棋 AI Gomoku-Satori 的每一步思考完全摊开：威胁普查、候选排序、逐层加深、搜索树与必胜证明。</p><span class="go" data-i18n="lab.common.enterSatori">进入 Satori 决策剖析实验室</span></span></a>
+      <a class="choice" href="sorting-lab.html"><span class="choice-content"><span class="choice-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M7 20v-6"/><path d="M12 20V9"/><path d="M17 20V4"/></svg></span><h2 data-i18n="lab.common.sort">排序</h2><p data-i18n="lab.common.sortDesc">以柱状图追踪冒泡、桶、快速与插入排序的比较、交换和数据移动。</p><span class="go" data-i18n="lab.common.enterSort">进入排序实验室</span></span></a>
+      <a class="choice search" href="search-lab.html"><span class="choice-content"><span class="choice-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M20.5 20.5 16 16"/></svg></span><h2 data-i18n="lab.common.search">搜索</h2><p data-i18n="lab.common.searchDesc">在迷宫找路中比较广度优先搜索与深度优先搜索的探索顺序和最终路径。</p><span class="go" data-i18n="lab.common.enterSearch">进入搜索实验室</span></span></a>
+      <a class="choice ds" href="ds-lab.html"><span class="choice-content"><span class="choice-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="8" height="8" rx="1.5"/><rect x="12" y="12" width="8" height="8" rx="1.5"/></svg></span><h2 data-i18n="lab.common.ds">数据结构</h2><p data-i18n="lab.common.dsDesc">亲手操作栈、队列与链表：观察 LIFO / FIFO，以及头插、尾插与按值删除。</p><span class="go" data-i18n="lab.common.enterDs">进入数据结构实验室</span></span></a>
+      <a class="choice graph" href="graph-lab.html"><span class="choice-content"><span class="choice-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="9" r="2.4"/><circle cx="9" cy="18" r="2.4"/><path d="M8.4 6.7l7.2 1.9M16.9 11.2l-6.3 5.2M7.1 8.3l1.2 7.3"/></svg></span><h2 data-i18n="lab.common.graph">图论</h2><p data-i18n="lab.common.graphDesc">可视化 Dijkstra、Bellman–Ford、SPFA 与 Floyd–Warshall 的松弛过程与最短路。</p><span class="go" data-i18n="lab.common.enterGraph">进入图论实验室</span></span></a>
+      <a class="choice dp" href="dp-lab.html"><span class="choice-content"><span class="choice-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 19H13v-6h4.4"/><circle cx="5" cy="19" r="1.6"/><circle cx="19" cy="13" r="1.6"/><path d="M19 11.4V5.6"/></svg></span><h2 data-i18n="lab.common.dp">动态规划</h2><p data-i18n="lab.common.dpDesc">观察一维递推、LIS 与 0-1 背包的状态转移填表，以及最优方案回溯。</p><span class="go" data-i18n="lab.common.enterDp">进入 DP 实验室</span></span></a>
+      <a class="choice tree" href="tree-lab.html"><span class="choice-content"><span class="choice-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><circle cx="5.5" cy="18" r="2.2"/><circle cx="18.5" cy="18" r="2.2"/><path d="M10.6 6.9l-4 9.2M13.4 6.9l4 9.2"/></svg></span><h2 data-i18n="lab.common.tree">二叉树</h2><p data-i18n="lab.common.treeDesc">前中后序与层序遍历，BST 插入删除，以及字典序二叉树的中序有序性。</p><span class="go" data-i18n="lab.common.enterTree">进入二叉树实验室</span></span></a>
+      <a class="choice heap" href="heap-lab.html"><span class="choice-content"><span class="choice-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 15H3Z"/><path d="M8.2 13h7.6"/></svg></span><h2 data-i18n="lab.common.heap">堆</h2><p data-i18n="lab.common.heapDesc">建堆、插入上浮、删除下沉与堆排序；数组视图与树视图同步展示。</p><span class="go" data-i18n="lab.common.enterHeap">进入堆实验室</span></span></a>
+      <a class="choice gomoku" href="gomoku-satori-lab.html"><span class="choice-content"><span class="choice-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="4.5" r="1.8"/><circle cx="18" cy="4.5" r="1.8"/><path d="M6 6.5v1.7c0 3.3 2.7 5.8 6 5.8s6-2.5 6-5.8V6.5"/><path d="M12 14v5.5"/></svg></span><h2 data-i18n="lab.common.satori">五子棋 AI 决策剖析</h2><p data-i18n="lab.common.satoriDesc">把自研五子棋 AI Gomoku-Satori 的每一步思考完全摊开：威胁普查、候选排序、逐层加深、搜索树与必胜证明。</p><span class="go" data-i18n="lab.common.enterSatori">进入 Satori 决策剖析实验室</span></span></a>
     </section>
   </main>
-<script>!function(){try{var t=document.querySelector('.topbar');if(t&&!document.getElementById('langSwitcherHost')){var h=document.createElement('div');h.id='langSwitcherHost';t.appendChild(h);}if(window.ClubI18n)window.ClubI18n.mountSwitcher(document.getElementById('langSwitcherHost'));if(window.ClubTheme&&typeof window.ClubTheme.autoMountSwitcher==='function')window.ClubTheme.autoMountSwitcher();}catch(e){}}();</script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

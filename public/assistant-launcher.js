@@ -274,7 +274,9 @@
     const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = new URL('assistant-launcher.css',base).href; document.head.appendChild(css);
     root = document.createElement('div'); root.id = 'club-assistant';
     if (/\/(?:platformer|snake|tetris)\.html$/i.test(location.pathname)) root.classList.add('club-assistant-game');
-    ball = button('club-assistant-ball','✦');
+    ball = button('club-assistant-ball','');
+    /* 内联 SVG 四角星替代字符 ✦：字体跨平台渲染不一，SVG 用 currentColor 且无外部依赖。 */
+    ball.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 2q1.2 8.8 10 10-8.8 1.2-10 10Q10.8 13.2 2 12q8.8-1.2 10-10z"/></svg>';
     ball.setAttribute('aria-expanded','false'); ball.setAttribute('aria-controls','club-assistant-panel');
     ball.addEventListener('click',() => {
       /* 拖拽结束后浏览器仍会补一次 click；suppressClick 由拖拽结束时的实际位移设置。 */

@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.membersAdmin.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -11,15 +11,28 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script></head>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>
+  <style>
+    /* 本页专用：列表间距、搜索工具栏与图片即时预览，全部使用 club 令牌，亮暗自适应 */
+    body.club-page .list-gap { margin-top: 16px; }
+
+    body.club-page .img-field { display: flex; align-items: center; gap: 10px; }
+    body.club-page .img-field .input { flex: 1 1 auto; min-width: 0; }
+    body.club-page .img-preview { flex: 0 0 auto; }
+    body.club-page .img-preview[hidden] { display: none; }
+
+    /* 表头字号收紧：与全站管理表格保持一致的密度 */
+
+  </style>
+</head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Members Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a></div></header>
 
   <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div><main>
-    <section id="gate" class="panel gate"><div><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="admin.membersGateLead">成员展示管理需要对应权限。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
-    <section id="denied" class="panel denied hidden"><div><strong data-i18n="admin.membersDenied">无成员展示管理权限</strong><p class="intro" data-i18n="admin.membersDeniedLead">请联系超管开通「成员展示」权限。</p></div></section>
+    <section id="gate" class="panel gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="admin.membersGateLead">成员展示管理需要对应权限。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+    <section id="denied" class="panel denied hidden"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.membersDenied">无成员展示管理权限</strong><p class="intro" data-i18n="admin.membersDeniedLead">请联系超管开通「成员展示」权限。</p></div></section>
     <div id="content" class="hidden">
       <p class="eyebrow">SHOWCASE MEMBERS ADMIN</p>
       <h1 data-i18n="pages.membersAdmin.h1">成员展示管理</h1>
@@ -41,7 +54,7 @@
             <div><label class="label" for="memberClass" data-i18n="admin.memberClass">班级 / 职务</label><input class="input" id="memberClass" maxlength="80" placeholder="例如 A1C5-社长" data-i18n-placeholder="admin.phMemberClass"></div>
           </div>
           <div class="grid-2">
-            <div><label class="label" for="memberImageUrl" data-i18n="admin.memberImage">图床图片 URL（可选）</label><input class="input" id="memberImageUrl" maxlength="500" placeholder="https://... 留空=无图片" data-i18n-placeholder="admin.phMemberImage"></div>
+            <div><label class="label" for="memberImageUrl" data-i18n="admin.memberImage">图床图片 URL（可选）</label><div class="img-field"><input class="input" id="memberImageUrl" maxlength="500" placeholder="https://... 留空=无图片" data-i18n-placeholder="admin.phMemberImage"><img class="thumb img-preview" id="memberImagePreview" alt="" hidden></div></div>
             <div><label class="label" for="memberSort" data-i18n="admin.memberSort">排序（越小越靠前）</label><input class="input" id="memberSort" type="number" min="0" max="100000" value="0"></div>
           </div>
           <label class="label" for="memberIntro" data-i18n="admin.memberIntro">简介</label>
@@ -53,7 +66,10 @@
           </div>
         </form>
         <p class="message" id="memberMessage" role="status"></p>
-        <div class="table-wrap" id="memberList" style="margin-top:16px"><div class="empty loading" data-i18n="admin.loadingMembers">正在读取成员展示…</div></div>
+        <div class="list-toolbar">
+          <input class="input" id="memberSearch" type="search" placeholder="搜索姓名或班级…" data-i18n-placeholder="admin.searchMember">
+        </div>
+        <div class="table-wrap list-gap" id="memberList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="admin.loadingMembers">正在读取成员展示…</span></div>
       </section>
     </div>
   </main>
@@ -64,8 +80,30 @@
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const $ = id => document.getElementById(id);
     const t = (key, vars) => (window.ClubI18n ? ClubI18n.t(key, vars) : key);
+    // 本页新增 i18n 键的页内补充包：先合并进 ClubI18n，全站词典后续并入时自动接管。
+    const PAGE_I18N = {
+      zh: {
+        admin: {
+          searchMember: '搜索姓名或班级…',
+          memberSearchEmpty: '没有匹配「{query}」的成员。',
+          pendingDeleteMember: '已删除成员「{name}」，5 秒内可撤销。',
+          undoCommitFailed: '删除提交失败，已恢复列表，请稍后重试。'
+        }
+      },
+      en: {
+        admin: {
+          searchMember: 'Search name or class…',
+          memberSearchEmpty: 'No members match "{query}".',
+          pendingDeleteMember: 'Deleted member "{name}". Undo within 5 seconds.',
+          undoCommitFailed: 'Delete failed to save. The list was restored, please retry.'
+        }
+      }
+    };
+    if (window.ClubI18n?.mergeDict) ClubI18n.mergeDict(PAGE_I18N);
     let membersCache = [];
     let currentSession = null;
+    let memberFilter = '';
+    let memberSearchTimer = null;
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -74,7 +112,8 @@
       if (!value) return '-';
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return '-';
-      return date.toLocaleString('zh-CN', { hour12: false });
+      const lang = window.ClubI18n ? ClubI18n.getLang() : 'zh';
+      return date.toLocaleString(lang === 'en' ? 'en-US' : 'zh-CN', { hour12: false });
     }
     function setMessage(node, text, type = '') {
       node.textContent = text || '';
@@ -103,6 +142,19 @@
       $('memberVisible').checked = true;
       $('memberSaveButton').textContent = t('admin.saveMember');
       setMessage($('memberMessage'), '');
+      updateMemberImagePreview();
+    }
+
+    // 图片 URL 即时预览：输入有效地址立即缩略，加载失败自动隐藏。
+    function updateMemberImagePreview() {
+      const img = $('memberImagePreview');
+      const url = $('memberImageUrl').value.trim();
+      if (!url) {
+        img.hidden = true;
+        img.removeAttribute('src');
+        return;
+      }
+      if (img.getAttribute('src') !== url) img.src = url;
     }
 
     function startEditMember(id) {
@@ -117,13 +169,31 @@
       $('memberVisible').checked = member.is_visible !== false;
       $('memberSaveButton').textContent = t('admin.saveChanges');
       setMessage($('memberMessage'), t('admin.editingMember', { name: member.name }), 'success');
+      updateMemberImagePreview();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function renderMembers(members) {
       membersCache = members;
-      if (!members.length) {
+      renderMemberRows();
+    }
+
+    function filteredMembers() {
+      const query = memberFilter.trim().toLowerCase();
+      if (!query) return membersCache;
+      return membersCache.filter(item =>
+        String(item.name || '').toLowerCase().includes(query) ||
+        String(item.member_class || '').toLowerCase().includes(query));
+    }
+
+    function renderMemberRows() {
+      if (!membersCache.length) {
         ClubCommon.listState($('memberList'), { kind: 'empty', title: t('admin.emptyMembers') });
+        return;
+      }
+      const members = filteredMembers();
+      if (!members.length) {
+        ClubCommon.listState($('memberList'), { kind: 'empty', title: t('admin.memberSearchEmpty', { query: memberFilter.trim() }) });
         return;
       }
       $('memberList').innerHTML = `<table class="table"><thead><tr><th>${t('admin.colPhoto')}</th><th>${t('admin.colName')}</th><th>${t('admin.colRole')}</th><th>${t('admin.memberIntro')}</th><th>${t('admin.colStatus')}</th><th>${t('admin.colSort')}</th><th>${t('admin.colUpdated')}</th><th>${t('admin.colActions')}</th></tr></thead><tbody>${members.map(item => `
@@ -131,7 +201,7 @@
           <td>${item.image_url ? `<img class="thumb" src="${escapeHtml(item.image_url)}" alt="" loading="lazy" decoding="async">` : `<span class="badge off">${t('admin.noPhoto')}</span>`}</td>
           <td><strong>${escapeHtml(item.name)}</strong></td>
           <td>${escapeHtml(item.member_class || '-')}</td>
-          <td><div style="color:var(--muted);font-size:12px;line-height:1.5;max-width:280px">${escapeHtml(item.intro || '-')}</div></td>
+          <td><div class="cell-desc">${escapeHtml(item.intro || '-')}</div></td>
           <td><span class="badge ${item.is_visible ? 'on' : 'off'}">${item.is_visible ? t('admin.visible') : t('admin.hidden')}</span></td>
           <td>${escapeHtml(item.sort_order ?? 0)}</td>
           <td>${escapeHtml(formatTime(item.updated_at))}</td>
@@ -150,16 +220,40 @@
         button.addEventListener('click', async () => {
           const id = button.getAttribute('data-delete-member');
           const member = membersCache.find(item => item.id === id);
+          if (!member) return;
           if (!(await ClubCommon.confirm({ message: t('admin.confirmRemoveMember', { name: member?.name || id }) }))) return;
-          setMessage($('memberMessage'), t('admin.removing'));
-          try {
-            await call('admin_showcase_members_delete', { id });
-            setMessage($('memberMessage'), t('admin.memberRemoved'), 'success');
-            if ($('memberId').value === id) resetMemberForm();
-            await refreshMembers();
-          } catch (error) {
-            setMessage($('memberMessage'), error.message, 'error');
-          }
+          const index = membersCache.findIndex(item => item.id === id);
+          membersCache = membersCache.filter(item => item.id !== id);
+          renderMemberRows();
+          if ($('memberId').value === id) resetMemberForm();
+          ClubCommon.scheduleUndo({
+            message: t('admin.pendingDeleteMember', { name: member.name || id }),
+            undoLabel: t('common.undo'),
+            onUndo: () => {
+              membersCache.splice(index, 0, member);
+              renderMemberRows();
+              setMessage($('memberMessage'), t('admin.deleteUndone'), 'success');
+            },
+            commit: async ({ pagehide }) => {
+              try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) throw new Error(t('admin.loginPlease'));
+                const response = await fetch(FUNCTION_URL, {
+                  method: 'POST',
+                  headers: { 'content-type': 'application/json', authorization: `Bearer ${session.access_token}` },
+                  body: JSON.stringify({ action: 'admin_showcase_members_delete', id }),
+                  keepalive: Boolean(pagehide)
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(payload.error || t('admin.opFailed'));
+                if (!pagehide) setMessage($('memberMessage'), t('admin.memberRemoved'), 'success');
+              } catch (error) {
+                membersCache.splice(Math.min(index, membersCache.length), 0, member);
+                renderMemberRows();
+                ClubCommon.toast({ message: error.message || t('admin.undoCommitFailed'), kind: 'error' });
+              }
+            }
+          });
         });
       });
     }
@@ -183,8 +277,8 @@
         renderMembers(payload.members || []);
         setMessage($('memberMessage'), '');
       } catch (error) {
-        ClubCommon.listState($('memberList'), { kind: 'error', title: t('admin.emptyMembersFail'), onRetry: refreshMembers });
-        setMessage($('memberMessage'), error.message, 'error');
+        // 错误单一来源：列表区交给 listState（含重试），memberMessage 只服务表单区。
+        ClubCommon.listState($('memberList'), { kind: 'error', title: t('admin.emptyMembersFail'), message: error.message, onRetry: refreshMembers });
       }
     }
 
@@ -208,8 +302,21 @@
 
     $('resetMember').addEventListener('click', resetMemberForm);
     $('refreshMembers').addEventListener('click', refreshMembers);
+    // 搜索过滤：300ms 防抖，仅前端过滤昵称/姓名与班级。
+    $('memberSearch').addEventListener('input', () => {
+      clearTimeout(memberSearchTimer);
+      memberSearchTimer = setTimeout(() => {
+        memberFilter = $('memberSearch').value;
+        if (membersCache.length) renderMemberRows();
+      }, 300);
+    });
+    // 图片即时预览：加载失败自动隐藏，成功才显示缩略。
+    $('memberImageUrl').addEventListener('input', updateMemberImagePreview);
+    $('memberImagePreview').addEventListener('error', () => { $('memberImagePreview').hidden = true; });
+    $('memberImagePreview').addEventListener('load', () => { $('memberImagePreview').hidden = false; });
     $('memberForm').addEventListener('submit', async (event) => {
       event.preventDefault();
+      ClubCommon.setBusy($('memberSaveButton'), true);
       setMessage($('memberMessage'), t('admin.savingMember'));
       try {
         const id = $('memberId').value.trim();
@@ -227,6 +334,8 @@
         await refreshMembers();
       } catch (error) {
         setMessage($('memberMessage'), error.message, 'error');
+      } finally {
+        ClubCommon.setBusy($('memberSaveButton'), false);
       }
     });
 
@@ -240,6 +349,6 @@
       } catch (_e) {}
     });
   </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

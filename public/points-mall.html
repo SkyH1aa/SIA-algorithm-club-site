@@ -1,8 +1,17 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.mall.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
+  <style>
+    /* 页内微调：原内联样式收敛为类，颜色一律使用 --club-* 令牌 */
+    .mall-gate-intro{margin:10px 0 18px}
+    .mall-points-extra{margin-top:14px}
+    .mall-points-extra small{color:var(--club-muted)}
+    .mall-bind-link{text-decoration:underline}
+    /* 商城卡片是 article.card，不吃 club-ui 的 a.card:hover：这里补齐同款悬停抬升 */
+    #productGrid .card:hover{transform:translateY(-2px);border-color:var(--club-accent-line);box-shadow:var(--club-shadow);background:var(--club-surface-2)}
+  </style>
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -11,8 +20,8 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
@@ -37,7 +46,7 @@
     </div>
   </header>
   <main>
-    <section id="gate" class="panel gate"><div><strong data-i18n="mall.gateTitle">您还不是算法社社员！</strong><p class="intro" style="margin:10px 0 18px" data-i18n="mall.gateHint">请先使用受邀请码创建的社团盘账号登录。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+    <section id="gate" class="panel gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="mall.gateTitle">您还不是算法社社员！</strong><p class="intro mall-gate-intro" data-i18n="mall.gateHint">请先使用受邀请码创建的社团盘账号登录。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
     <div id="content" class="hidden">
       <section class="hero">
         <div>
@@ -48,13 +57,13 @@
         <div class="panel status">
           <strong id="statusTitle" data-i18n="mall.loggedIn">社员已登录</strong>
           <span id="statusHint" data-i18n="mall.loadingStatus">正在读取积分与商品…</span>
-          <div style="margin-top:14px"><small style="color:var(--muted)" data-i18n="mall.currentPoints">当前积分</small><div class="points-accent" id="myPoints">--</div></div>
+          <div class="mall-points-extra"><small data-i18n="mall.currentPoints">当前积分</small><div class="points-accent" id="myPoints">--</div></div>
         </div>
       </section>
 
       <section id="bindNotice" class="notice">
         <strong data-i18n="mall.bindTitle">兑换前请先绑定姓名与班级</strong>
-        <p data-i18n="mall.bindHint" data-i18n-mode="html">积分商城按积分榜扣分。请先到<a class="link-accent" href="member-center.html" style="text-decoration:underline">个人中心</a>设置中文姓名和班级，并确认积分榜已有对应记录后再兑换。</p>
+        <p data-i18n="mall.bindHint" data-i18n-mode="html">积分商城按积分榜扣分。请先到<a class="link-accent mall-bind-link" href="member-center.html">个人中心</a>设置中文姓名和班级，并确认积分榜已有对应记录后再兑换。</p>
       </section>
 
       <section class="panel">
@@ -65,7 +74,7 @@
           </div>
           <button class="button secondary" type="button" id="refreshButton" data-i18n="common.refresh">刷新</button>
         </div>
-        <div id="productGrid"><div class="empty loading" data-i18n="mall.loadingProducts">正在读取商品…</div></div>
+        <div id="productGrid"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="mall.loadingProducts">正在读取商品…</span></div>
         <p class="message" id="mallMessage" role="status"></p>
       </section>
     </div>
@@ -79,6 +88,17 @@
     let currentSession = null;
     let currentProfile = null;
     let redeemingId = '';
+
+    // 页内新增文案（商品空态提示）：在 i18n boot 之后并入词典（幂等）。
+    const MALL_PAGE_DICT = {
+      zh: { mall: { emptyProductsHint: '管理员还没有上架商品，可以稍后再来看看。' } },
+      en: { mall: { emptyProductsHint: 'No items have been listed yet. Check back later.' } }
+    };
+    function mergeMallPageDict() {
+      if (window.ClubI18n && typeof ClubI18n.mergeDict === 'function') ClubI18n.mergeDict(MALL_PAGE_DICT);
+    }
+    document.addEventListener('DOMContentLoaded', mergeMallPageDict);
+    window.addEventListener('club:langchange', mergeMallPageDict);
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -106,7 +126,12 @@
       const profile = currentProfile?.profile;
       const bound = Boolean(currentProfile?.bound && profile);
       $('bindNotice').classList.toggle('active', !bound);
-      $('myPoints').textContent = bound ? String(profile.points ?? 0) : '--';
+      const pointsEl = $('myPoints');
+      const nextPoints = bound ? String(profile.points ?? 0) : '--';
+      if (pointsEl.textContent !== nextPoints) {
+        pointsEl.textContent = nextPoints;
+        ClubCommon.pulse(pointsEl);
+      }
       if (bound) {
         $('statusTitle').textContent = ClubI18n.t('mall.canRedeem');
         $('statusHint').textContent = ClubI18n.t('mall.boundHint', { name: profile.member_name, klass: profile.member_class });
@@ -118,7 +143,7 @@
 
     function renderProducts(products) {
       if (!products.length) {
-        $('productGrid').innerHTML = '<div class="empty">' + ClubI18n.t('mall.emptyProducts') + '</div>';
+        $('productGrid').innerHTML = '<div class="club-empty"><strong>' + ClubI18n.t('mall.emptyProducts') + '</strong><span>' + ClubI18n.t('mall.emptyProductsHint') + '</span></div>';
         return;
       }
       const bound = Boolean(currentProfile?.bound && currentProfile?.profile);
@@ -142,7 +167,7 @@
         </article>`;
       }).join('')}</div>`;
       $('productGrid').querySelectorAll('.redeem-btn').forEach(button => {
-        button.onclick = () => redeemProduct(button.dataset.id, button.dataset.name, Number(button.dataset.price || 0));
+        button.onclick = () => redeemProduct(button, button.dataset.id, button.dataset.name, Number(button.dataset.price || 0));
       });
     }
 
@@ -163,7 +188,7 @@
         renderProducts(payload.products || []);
         setMessage($('mallMessage'), '');
       } catch (error) {
-        $('productGrid').innerHTML = '<div class="empty">' + ClubI18n.t('mall.failProducts') + '</div>';
+        $('productGrid').innerHTML = '<div class="club-empty"><strong>' + ClubI18n.t('mall.failProducts') + '</strong><span>' + escapeHtml(error.message) + '</span></div>';
         setMessage($('mallMessage'), error.message, 'error');
       }
     }
@@ -173,7 +198,7 @@
       await loadProducts();
     }
 
-    async function redeemProduct(productId, productName, price) {
+    async function redeemProduct(button, productId, productName, price) {
       if (!productId || redeemingId) return;
       if (!currentProfile?.bound) {
         setMessage($('mallMessage'), ClubI18n.t('mall.bindRequired'), 'error');
@@ -181,6 +206,7 @@
       }
       if (!(await ClubCommon.confirm({ message: ClubI18n.t('mall.confirmRedeem', { price, name: productName }) }))) return;
       redeemingId = productId;
+      ClubCommon.setBusy(button, true);
       setMessage($('mallMessage'), ClubI18n.t('mall.redeeming'));
       try {
         const payload = await callPublic('mall_redeem', { productId });
@@ -196,6 +222,8 @@
         await refreshAll();
       } finally {
         redeemingId = '';
+        // 成功路径里列表已重渲染，按钮多为游离节点；对游离节点恢复同样安全。
+        ClubCommon.setBusy(button, false);
       }
     }
 
@@ -213,6 +241,6 @@
     supabaseClient.auth.getSession().then(({ data: { session } }) => { void updateSession(session); });
     window.addEventListener('club:langchange', () => { updateProfileUi(); void loadProducts(); if (window.ClubI18n) ClubI18n.apply(document); });
   </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

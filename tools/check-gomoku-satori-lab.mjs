@@ -221,11 +221,11 @@ try {
         document.documentElement.setAttribute('data-theme', theme);
       }
       const themeChecks = [
-        ['.back-link', 'back link'], ['.panel h2', 'panel heading'], ['.hint', 'hint text'],
+        ['.topbar a.back', 'back link'], ['.panel h2', 'panel heading'], ['.hint', 'hint text'],
         ['.stat strong', 'stat value'], ['.stat span', 'stat label'],
         ['.badge.reason', 'decision badge'], ['.badge.move', 'move badge'],
         ['.threat-card dd', 'threat value'], ['.threat-card dt', 'threat label'],
-        ['.intro .notice', 'notice text'], ['.tree .root-line', 'tree root label'],
+        ['.lab-intro .notice', 'notice text'], ['.tree .root-line', 'tree root label'],
         ['#runReplay', 'primary action button'], ['#modeTabs button.active', 'active mode tab'],
         ['#modeTabs button:not(.active)', 'idle mode tab']
       ];

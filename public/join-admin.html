@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.joinAdmin.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -11,15 +11,24 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script></head>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>
+  <style>
+    /* 本页专用：搜索工具栏与单元格内间距，全部使用 club 令牌，亮暗自适应 */
+
+    body.club-page .list-gap { margin-top: 16px; }
+    body.club-page .cell-gap { margin-top: 6px; }
+    /* 表头字号收紧：与全站管理表格保持一致的密度 */
+
+  </style>
+</head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Join Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a></div></header>
 
   <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div><main>
-    <section id="gate" class="panel gate"><div><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="admin.joinGateLead">报名管理需要对应权限。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
-    <section id="denied" class="panel denied hidden"><div><strong data-i18n="admin.joinDenied">无报名管理权限</strong><p class="intro" data-i18n="admin.joinDeniedLead">请联系超管开通「报名管理」权限。</p></div></section>
+    <section id="gate" class="panel gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="admin.joinGateLead">报名管理需要对应权限。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+    <section id="denied" class="panel denied hidden"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.joinDenied">无报名管理权限</strong><p class="intro" data-i18n="admin.joinDeniedLead">请联系超管开通「报名管理」权限。</p></div></section>
     <div id="content" class="hidden">
       <p class="eyebrow">JOIN APPLICATIONS ADMIN</p>
       <h1 data-i18n="pages.joinAdmin.h1">报名管理</h1>
@@ -38,7 +47,10 @@
           <div class="stat"><strong id="statTotal">0</strong><span data-i18n="admin.joinTotal">报名总数</span></div>
         </div>
         <p class="message" id="joinAdminMessage" role="status"></p>
-        <div class="table-wrap" id="applicationList"><div class="empty loading" data-i18n="admin.loadingJoin">正在读取报名列表…</div></div>
+        <div class="list-toolbar">
+          <input class="input" id="joinSearch" type="search" placeholder="搜索姓名、班级或联系方式…" data-i18n-placeholder="admin.searchJoin">
+        </div>
+        <div class="table-wrap list-gap" id="applicationList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="admin.loadingJoin">正在读取报名列表…</span></div>
       </section>
     </div>
   </main>
@@ -49,12 +61,34 @@
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const $ = id => document.getElementById(id);
     const t = (key, vars) => (window.ClubI18n ? ClubI18n.t(key, vars) : key);
+    // 本页新增 i18n 键的页内补充包：先合并进 ClubI18n，全站词典后续并入时自动接管。
+    const PAGE_I18N = {
+      zh: {
+        admin: {
+          searchJoin: '搜索姓名、班级或联系方式…',
+          joinSearchEmpty: '没有匹配「{query}」的报名。',
+          pendingDeleteJoin: '已删除「{name}」的报名，5 秒内可撤销。',
+          undoCommitFailed: '删除提交失败，已恢复列表，请稍后重试。'
+        }
+      },
+      en: {
+        admin: {
+          searchJoin: 'Search name, class or contact…',
+          joinSearchEmpty: 'No applications match "{query}".',
+          pendingDeleteJoin: 'Deleted the application from "{name}". Undo within 5 seconds.',
+          undoCommitFailed: 'Delete failed to save. The list was restored, please retry.'
+        }
+      }
+    };
+    if (window.ClubI18n?.mergeDict) ClubI18n.mergeDict(PAGE_I18N);
     const contactLabel = (type) => {
       const map = { wechat: 'admin.contactWechat', phone: 'admin.contactPhone', qq: 'admin.contactQq', email: 'admin.contactEmail' };
       return map[type] ? t(map[type]) : (type || '-');
     };
     let applicationsCache = [];
     let currentSession = null;
+    let joinFilter = '';
+    let joinSearchTimer = null;
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -63,7 +97,8 @@
       if (!value) return '-';
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return '-';
-      return date.toLocaleString('zh-CN', { hour12: false });
+      const lang = window.ClubI18n ? ClubI18n.getLang() : 'zh';
+      return date.toLocaleString(lang === 'en' ? 'en-US' : 'zh-CN', { hour12: false });
     }
     function setMessage(node, text, type = '') {
       node.textContent = text || '';
@@ -88,8 +123,28 @@
     function renderApplications(applications) {
       applicationsCache = applications;
       $('statTotal').textContent = String(applications.length);
-      if (!applications.length) {
+      renderApplicationRows();
+    }
+
+    function filteredApplications() {
+      const query = joinFilter.trim().toLowerCase();
+      if (!query) return applicationsCache;
+      return applicationsCache.filter(item =>
+        String(item.chinese_name || '').toLowerCase().includes(query) ||
+        String(item.member_class || '').toLowerCase().includes(query) ||
+        String(item.contact_value || '').toLowerCase().includes(query));
+    }
+
+    function renderApplicationRows() {
+      // 统计卡始终反映全量总数（乐观删除/撤销后也保持同步）。
+      $('statTotal').textContent = String(applicationsCache.length);
+      if (!applicationsCache.length) {
         ClubCommon.listState($('applicationList'), { kind: 'empty', title: t('admin.emptyJoin') });
+        return;
+      }
+      const applications = filteredApplications();
+      if (!applications.length) {
+        ClubCommon.listState($('applicationList'), { kind: 'empty', title: t('admin.joinSearchEmpty', { query: joinFilter.trim() }) });
         return;
       }
       $('applicationList').innerHTML = `<table class="table"><thead><tr><th>${t('admin.colName')}</th><th>${t('admin.colClass')}</th><th>${t('admin.colContact')}</th><th>${t('admin.colSelfIntro')}</th><th>${t('admin.colAttraction')}</th><th>${t('admin.colExpectation')}</th><th>${t('admin.colSubmittedAt')}</th><th>${t('admin.colActions')}</th></tr></thead><tbody>${applications.map(item => `
@@ -98,7 +153,7 @@
           <td>${escapeHtml(item.member_class || '-')}</td>
           <td>
             <span class="badge">${escapeHtml(contactLabel(item.contact_type))}</span>
-            <div class="muted-box" style="margin-top:6px">${escapeHtml(item.contact_value || '-')}</div>
+            <div class="muted-box cell-gap">${escapeHtml(item.contact_value || '-')}</div>
           </td>
           <td><div class="muted-box">${escapeHtml(item.self_intro || '-')}</div></td>
           <td><div class="muted-box">${escapeHtml(item.attraction || '-')}</div></td>
@@ -115,15 +170,39 @@
         button.addEventListener('click', async () => {
           const id = button.getAttribute('data-delete-application');
           const item = applicationsCache.find(row => row.id === id);
-          if (!(await ClubCommon.confirm({ message: t('admin.confirmDeleteJoin', { name: item?.chinese_name || id }) }))) return;
-          setMessage($('joinAdminMessage'), t('admin.deleting'));
-          try {
-            await call('admin_join_applications_delete', { id });
-            setMessage($('joinAdminMessage'), t('admin.joinDeleted'), 'success');
-            await refreshApplications();
-          } catch (error) {
-            setMessage($('joinAdminMessage'), error.message, 'error');
-          }
+          if (!item) return;
+          if (!(await ClubCommon.confirm({ danger: true, message: t('admin.confirmDeleteJoin', { name: item?.chinese_name || id }) }))) return;
+          const index = applicationsCache.findIndex(row => row.id === id);
+          applicationsCache = applicationsCache.filter(row => row.id !== id);
+          renderApplicationRows();
+          ClubCommon.scheduleUndo({
+            message: t('admin.pendingDeleteJoin', { name: item.chinese_name || id }),
+            undoLabel: t('common.undo'),
+            onUndo: () => {
+              applicationsCache.splice(index, 0, item);
+              renderApplicationRows();
+              setMessage($('joinAdminMessage'), t('admin.deleteUndone'), 'success');
+            },
+            commit: async ({ pagehide }) => {
+              try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) throw new Error(t('admin.loginPlease'));
+                const response = await fetch(FUNCTION_URL, {
+                  method: 'POST',
+                  headers: { 'content-type': 'application/json', authorization: `Bearer ${session.access_token}` },
+                  body: JSON.stringify({ action: 'admin_join_applications_delete', id }),
+                  keepalive: Boolean(pagehide)
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(payload.error || t('admin.opFailed'));
+                if (!pagehide) setMessage($('joinAdminMessage'), t('admin.joinDeleted'), 'success');
+              } catch (error) {
+                applicationsCache.splice(Math.min(index, applicationsCache.length), 0, item);
+                renderApplicationRows();
+                ClubCommon.toast({ message: error.message || t('admin.undoCommitFailed'), kind: 'error' });
+              }
+            }
+          });
         });
       });
     }
@@ -132,11 +211,15 @@
 
     function exportApplications() {
       if (!applicationsCache.length) { setMessage($('joinAdminMessage'), t('admin.exportEmpty'), 'error'); return; }
+      // 导出列与表格列保持一致：姓名 / 班级 / 联系方式 / 自我介绍 / 吸引力 / 期待 / 提交时间。
       const count = ClubCommon.exportCsv(`club-applications-${new Date().toISOString().slice(0,10)}.csv`, [
-        { label: t('admin.colName'), value: row => row.member_name },
+        { label: t('admin.colName'), value: row => row.chinese_name },
         { label: t('admin.colClass'), value: row => row.member_class },
-        { label: t('admin.colContact'), value: row => row.contact },
-        { label: t('admin.colSubmittedAt'), value: row => String(row.created_at || '').slice(0, 10) }
+        { label: t('admin.colContact'), value: row => (row.contact_value ? `${contactLabel(row.contact_type)}: ${row.contact_value}` : '') },
+        { label: t('admin.colSelfIntro'), value: row => row.self_intro },
+        { label: t('admin.colAttraction'), value: row => row.attraction },
+        { label: t('admin.colExpectation'), value: row => row.expectation },
+        { label: t('admin.colSubmittedAt'), value: row => formatTime(row.created_at) }
       ], applicationsCache);
       setMessage($('joinAdminMessage'), t('admin.exportOk', { n: count }), 'success');
     }
@@ -148,8 +231,8 @@
         renderApplications(payload.applications || []);
         setMessage($('joinAdminMessage'), '');
       } catch (error) {
-        $('applicationList').innerHTML = '<div class="empty">' + t('admin.emptyJoinFail') + '</div>';
-        setMessage($('joinAdminMessage'), error.message, 'error');
+        // 错误单一来源：列表区交给 listState（含重试），message 只服务操作反馈。
+        ClubCommon.listState($('applicationList'), { kind: 'error', title: t('admin.emptyJoinFail'), message: error.message, onRetry: refreshApplications });
       }
     }
 
@@ -172,6 +255,14 @@
     }
 
     $('refreshApplications').addEventListener('click', refreshApplications);
+    // 搜索过滤：300ms 防抖，仅前端过滤姓名 / 班级 / 联系方式。
+    $('joinSearch').addEventListener('input', () => {
+      clearTimeout(joinSearchTimer);
+      joinSearchTimer = setTimeout(() => {
+        joinFilter = $('joinSearch').value;
+        if (applicationsCache.length) renderApplicationRows();
+      }, 300);
+    });
     supabaseClient.auth.onAuthStateChange((_event, session) => { void updateView(session); });
     supabaseClient.auth.getSession().then(({ data: { session } }) => updateView(session));
 
@@ -182,6 +273,6 @@
       } catch (_e) {}
     });
   </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

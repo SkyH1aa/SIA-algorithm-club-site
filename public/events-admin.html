@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.eventsAdmin.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -11,15 +11,24 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script></head>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>
+  <style>
+    /* 本页专用：列表区与报名工具栏的间距收敛，全部使用 club 令牌，亮暗主题自适应 */
+    body.club-page .list-gap { margin-top: 16px; }
+    body.club-page .signup-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+    body.club-page .signup-toolbar .select { max-width: 360px; }
+    /* 表头字号收紧：与全站管理表格保持一致的密度 */
+
+  </style>
+</head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Events Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a></div></header>
 
   <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div><main>
-    <section id="gate" class="panel gate"><div><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="admin.eventsGateLead">活动公告管理需要对应权限。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
-    <section id="denied" class="panel denied hidden"><div><strong data-i18n="admin.eventsDenied">无活动管理权限</strong><p class="intro" data-i18n="admin.eventsDeniedLead">请联系 Haimingadmin / Collen 开通「活动和公告系统内容管理」权限。</p></div></section>
+    <section id="gate" class="panel gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="admin.eventsGateLead">活动公告管理需要对应权限。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+    <section id="denied" class="panel denied hidden"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.eventsDenied">无活动管理权限</strong><p class="intro" data-i18n="admin.eventsDeniedLead">请联系 Haimingadmin / Collen 开通「活动和公告系统内容管理」权限。</p></div></section>
     <div id="content" class="hidden">
       <p class="eyebrow">EVENTS ADMIN</p>
       <h1 data-i18n="pages.eventsAdmin.h1">活动与公告管理</h1>
@@ -54,7 +63,7 @@
           <div class="actions"><button class="button" type="submit" data-i18n="admin.saveAnnouncement">保存公告</button><button class="button secondary" type="button" id="resetAnnouncement" data-i18n="common.clearForm">清空表单</button></div>
         </form>
         <p class="message" id="announcementMessage" role="status"></p>
-        <div class="table-wrap" id="announcementList" style="margin-top:16px"><div class="empty loading" data-i18n="admin.loadingAnn">正在读取公告…</div></div>
+        <div class="table-wrap list-gap" id="announcementList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="admin.loadingAnn">正在读取公告…</span></div>
       </section>
 
       <section class="panel" id="eventPanel">
@@ -109,14 +118,14 @@
           <div class="actions"><button class="button" type="submit" data-i18n="admin.saveEvent">保存活动</button><button class="button secondary" type="button" id="resetEvent" data-i18n="common.clearForm">清空表单</button></div>
         </form>
         <p class="message" id="eventMessage" role="status"></p>
-        <div class="table-wrap" id="eventList" style="margin-top:16px"><div class="empty loading" data-i18n="admin.loadingEvents">正在读取活动…</div></div>
+        <div class="table-wrap list-gap" id="eventList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="admin.loadingEvents">正在读取活动…</span></div>
       </section>
 
       <section class="panel" id="signupPanel">
         <h2 data-i18n="admin.signupsTitle">报名名单</h2>
         <p class="intro" data-i18n="admin.signupsIntro">选择活动后查看报名名单，并可取消/拒绝报名。</p>
-        <div class="actions" style="margin-bottom:12px">
-          <select class="select" id="signupEventSelect" style="max-width:360px"></select>
+        <div class="signup-toolbar">
+          <select class="select" id="signupEventSelect"></select>
           <button class="button secondary" type="button" id="refreshSignups" data-i18n="admin.refreshSignups">刷新名单</button>
         </div>
         <div class="table-wrap" id="signupList"><div class="empty" data-i18n="admin.pickEvent">请选择活动。</div></div>
@@ -131,7 +140,44 @@
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const $ = id => document.getElementById(id);
     const t = (key, vars) => (window.ClubI18n ? ClubI18n.t(key, vars) : key);
+    // 本页新增 i18n 键的页内补充包：先合并进 ClubI18n，全站词典后续并入时自动接管。
+    const PAGE_I18N = {
+      zh: {
+        admin: {
+          confirmDeleteAnn: '确定删除公告「{title}」？删除后首页将不再展示。',
+          confirmDeleteEvent: '确定删除活动「{title}」？报名名单将一并失效。',
+          pendingDeleteAnn: '已删除公告「{title}」，5 秒内可撤销。',
+          pendingDeleteEvent: '已删除活动「{title}」，5 秒内可撤销。',
+          undoCommitFailed: '删除提交失败，已恢复列表，请稍后重试。',
+          emptyAnnHint: '使用上方表单发布第一条公告。',
+          emptyEventsHint: '使用上方表单发布第一个活动。',
+          emptyAnnFail: '公告读取失败',
+          emptyEventsFail: '活动读取失败',
+          signupStatusSignedUp: '已报名',
+          signupStatusCancelled: '已取消',
+          signupStatusRejected: '已拒绝'
+        }
+      },
+      en: {
+        admin: {
+          confirmDeleteAnn: 'Delete announcement "{title}"? It will disappear from the site.',
+          confirmDeleteEvent: 'Delete event "{title}"? Its signup list will become unavailable.',
+          pendingDeleteAnn: 'Deleted announcement "{title}". Undo within 5 seconds.',
+          pendingDeleteEvent: 'Deleted event "{title}". Undo within 5 seconds.',
+          undoCommitFailed: 'Delete failed to save. The list was restored, please retry.',
+          emptyAnnHint: 'Publish the first announcement with the form above.',
+          emptyEventsHint: 'Publish the first event with the form above.',
+          emptyAnnFail: 'Could not load announcements',
+          emptyEventsFail: 'Could not load events',
+          signupStatusSignedUp: 'Signed up',
+          signupStatusCancelled: 'Cancelled',
+          signupStatusRejected: 'Rejected'
+        }
+      }
+    };
+    if (window.ClubI18n?.mergeDict) ClubI18n.mergeDict(PAGE_I18N);
     let currentSession = null;
+    let announcementsCache = [];
     let eventsCache = [];
 
     function escapeHtml(value) {
@@ -141,7 +187,8 @@
       if (!value) return '-';
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return '-';
-      return date.toLocaleString('zh-CN', { hour12: false });
+      const lang = window.ClubI18n ? ClubI18n.getLang() : 'zh';
+      return date.toLocaleString(lang === 'en' ? 'en-US' : 'zh-CN', { hour12: false });
     }
     function toLocalInput(value) {
       if (!value) return '';
@@ -199,8 +246,9 @@
     }
 
     function renderAnnouncements(items) {
+      announcementsCache = items;
       if (!items.length) {
-        $('announcementList').innerHTML = '<div class="empty">' + t('admin.emptyAnn') + '</div>';
+        ClubCommon.listState($('announcementList'), { kind: 'empty', title: t('admin.emptyAnn'), message: t('admin.emptyAnnHint') });
         return;
       }
       $('announcementList').innerHTML = `<table class="table"><thead><tr><th>${t('admin.colTitle')}</th><th>${t('admin.colCategory')}</th><th>${t('admin.colStatus')}</th><th>${t('admin.colUpdated')}</th><th>${t('admin.colActions')}</th></tr></thead><tbody>${items.map(item => `<tr>
@@ -233,6 +281,7 @@
       $('announcementList').querySelectorAll('[data-repush-ann]').forEach(button => {
         button.onclick = async () => {
           if (!(await ClubCommon.confirm({ message: t('admin.confirmRepushAnn') }))) return;
+          ClubCommon.setBusy(button, true);
           setMessage('announcementMessage', t('admin.repushing'));
           try {
             const payload = await call('admin_announcements_repush_home', { id: button.getAttribute('data-repush-ann') });
@@ -240,19 +289,49 @@
             await refresh();
           } catch (error) {
             setMessage('announcementMessage', error.message, 'error');
+          } finally {
+            ClubCommon.setBusy(button, false);
           }
         };
       });
       $('announcementList').querySelectorAll('[data-del-ann]').forEach(button => {
         button.onclick = async () => {
-          setMessage('announcementMessage', t('admin.deleting'));
-          try {
-            await call('admin_announcements_delete', { id: button.getAttribute('data-del-ann') });
-            setMessage('announcementMessage', t('admin.annDeleted'), 'success');
-            await refresh();
-          } catch (error) {
-            setMessage('announcementMessage', error.message, 'error');
-          }
+          const id = button.getAttribute('data-del-ann');
+          const item = announcementsCache.find(row => row.id === id);
+          if (!item) return;
+          if (!(await ClubCommon.confirm({ danger: true, title: t('common.delete'), message: t('admin.confirmDeleteAnn', { title: item.title || id }), confirmText: t('common.delete') }))) return;
+          const index = announcementsCache.findIndex(row => row.id === id);
+          announcementsCache = announcementsCache.filter(row => row.id !== id);
+          renderAnnouncements(announcementsCache);
+          if ($('announcementId').value === id) resetAnnouncementForm();
+          ClubCommon.scheduleUndo({
+            message: t('admin.pendingDeleteAnn', { title: item.title || id }),
+            undoLabel: t('common.undo'),
+            onUndo: () => {
+              announcementsCache.splice(index, 0, item);
+              renderAnnouncements(announcementsCache);
+              setMessage('announcementMessage', t('admin.deleteUndone'), 'success');
+            },
+            commit: async ({ pagehide }) => {
+              try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) throw new Error(t('admin.loginPlease'));
+                const response = await fetch(FUNCTION_URL, {
+                  method: 'POST',
+                  headers: { 'content-type': 'application/json', authorization: `Bearer ${session.access_token}` },
+                  body: JSON.stringify({ action: 'admin_announcements_delete', id }),
+                  keepalive: Boolean(pagehide)
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(payload.error || t('admin.opFailed'));
+                if (!pagehide) setMessage('announcementMessage', t('admin.annDeleted'), 'success');
+              } catch (error) {
+                announcementsCache.splice(Math.min(index, announcementsCache.length), 0, item);
+                renderAnnouncements(announcementsCache);
+                ClubCommon.toast({ message: error.message || t('admin.undoCommitFailed'), kind: 'error' });
+              }
+            }
+          });
         };
       });
     }
@@ -261,7 +340,7 @@
       eventsCache = items;
       $('signupEventSelect').innerHTML = items.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.title)}</option>`).join('') || `<option value="">${t('admin.noEventOption')}</option>`;
       if (!items.length) {
-        $('eventList').innerHTML = '<div class="empty">' + t('admin.emptyEvents') + '</div>';
+        ClubCommon.listState($('eventList'), { kind: 'empty', title: t('admin.emptyEvents'), message: t('admin.emptyEventsHint') });
         return;
       }
       $('eventList').innerHTML = `<table class="table"><thead><tr><th>${t('admin.colTitle')}</th><th>${t('admin.colStatus')}</th><th>${t('admin.colDeadlineShort')}</th><th>${t('admin.colPublish')}</th><th>${t('admin.colActions')}</th></tr></thead><tbody>${items.map(item => `<tr>
@@ -308,6 +387,7 @@
       $('eventList').querySelectorAll('[data-repush-event]').forEach(button => {
         button.onclick = async () => {
           if (!(await ClubCommon.confirm({ message: t('admin.confirmRepushEvent') }))) return;
+          ClubCommon.setBusy(button, true);
           setMessage('eventMessage', t('admin.repushing'));
           try {
             const payload = await call('admin_events_repush_home', { id: button.getAttribute('data-repush-event') });
@@ -315,35 +395,77 @@
             await refresh();
           } catch (error) {
             setMessage('eventMessage', error.message, 'error');
+          } finally {
+            ClubCommon.setBusy(button, false);
           }
         };
       });
       $('eventList').querySelectorAll('[data-del-event]').forEach(button => {
         button.onclick = async () => {
-          setMessage('eventMessage', t('admin.deleting'));
-          try {
-            await call('admin_events_delete', { id: button.getAttribute('data-del-event') });
-            setMessage('eventMessage', t('admin.eventDeleted'), 'success');
-            await refresh();
-          } catch (error) {
-            setMessage('eventMessage', error.message, 'error');
-          }
+          const id = button.getAttribute('data-del-event');
+          const item = eventsCache.find(row => row.id === id);
+          if (!item) return;
+          if (!(await ClubCommon.confirm({ danger: true, title: t('common.delete'), message: t('admin.confirmDeleteEvent', { title: item.title || id }), confirmText: t('common.delete') }))) return;
+          const index = eventsCache.findIndex(row => row.id === id);
+          eventsCache = eventsCache.filter(row => row.id !== id);
+          renderEvents(eventsCache);
+          if ($('eventId').value === id) resetEventForm();
+          ClubCommon.scheduleUndo({
+            message: t('admin.pendingDeleteEvent', { title: item.title || id }),
+            undoLabel: t('common.undo'),
+            onUndo: () => {
+              eventsCache.splice(index, 0, item);
+              renderEvents(eventsCache);
+              setMessage('eventMessage', t('admin.deleteUndone'), 'success');
+            },
+            commit: async ({ pagehide }) => {
+              try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) throw new Error(t('admin.loginPlease'));
+                const response = await fetch(FUNCTION_URL, {
+                  method: 'POST',
+                  headers: { 'content-type': 'application/json', authorization: `Bearer ${session.access_token}` },
+                  body: JSON.stringify({ action: 'admin_events_delete', id }),
+                  keepalive: Boolean(pagehide)
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(payload.error || t('admin.opFailed'));
+                if (!pagehide) setMessage('eventMessage', t('admin.eventDeleted'), 'success');
+              } catch (error) {
+                eventsCache.splice(Math.min(index, eventsCache.length), 0, item);
+                renderEvents(eventsCache);
+                ClubCommon.toast({ message: error.message || t('admin.undoCommitFailed'), kind: 'error' });
+              }
+            }
+          });
         };
       });
+    }
+
+    // 报名状态展示：值仍按服务端中文枚举传输，仅渲染层走 i18n 键。
+    const SIGNUP_STATUS = {
+      '已报名': { key: 'admin.signupStatusSignedUp', badge: 'on' },
+      '已取消': { key: 'admin.signupStatusCancelled', badge: 'cancelled' },
+      '已拒绝': { key: 'admin.signupStatusRejected', badge: 'rejected' }
+    };
+    function signupStatusBadge(status) {
+      const meta = SIGNUP_STATUS[status];
+      const label = meta ? t(meta.key) : escapeHtml(status || '-');
+      return `<span class="badge ${meta ? meta.badge : ''}">${label}</span>`;
     }
 
     async function loadSignups() {
       const eventId = $('signupEventSelect').value;
       if (!eventId) {
-        $('signupList').innerHTML = '<div class="empty">' + t('admin.pickEvent') + '</div>';
+        ClubCommon.listState($('signupList'), { kind: 'empty', title: t('admin.pickEvent') });
         return;
       }
-      $('signupList').innerHTML = '<div class="empty loading">' + t('admin.loadingSignups') + '</div>';
+      ClubCommon.listState($('signupList'), { kind: 'loading', message: t('admin.loadingSignups') });
       try {
         const payload = await call('admin_event_signups_list', { eventId });
         const rows = Array.isArray(payload.signups) ? payload.signups : [];
         if (!rows.length) {
-          $('signupList').innerHTML = '<div class="empty">' + t('admin.emptySignups') + '</div>';
+          ClubCommon.listState($('signupList'), { kind: 'empty', title: t('admin.emptySignups') });
           return;
         }
         $('signupList').innerHTML = `<table class="table"><thead><tr><th>${t('admin.colName')}</th><th>${t('admin.colClass')}</th><th>${t('admin.colAccountName')}</th><th>${t('admin.colContact')}</th><th>${t('admin.colStatus')}</th><th>${t('admin.colActions')}</th></tr></thead><tbody>${rows.map(item => `<tr>
@@ -351,7 +473,7 @@
           <td>${escapeHtml(item.member_class || '-')}</td>
           <td>${escapeHtml(item.username || '-')}</td>
           <td>${escapeHtml(item.contact || '-')}</td>
-          <td>${escapeHtml(item.status)}</td>
+          <td>${signupStatusBadge(item.status)}</td>
           <td class="actions">
             <button class="button secondary" type="button" data-signup-status="${escapeHtml(item.id)}" data-status="已取消" data-i18n="common.cancel">取消</button>
             <button class="button danger" type="button" data-signup-status="${escapeHtml(item.id)}" data-status="已拒绝">${t('admin.reject')}</button>
@@ -360,6 +482,7 @@
         if (window.ClubI18n?.apply) ClubI18n.apply($('signupList'));
         $('signupList').querySelectorAll('[data-signup-status]').forEach(button => {
           button.onclick = async () => {
+            ClubCommon.setBusy(button, true);
             setMessage('signupMessage', t('admin.updatingSignup'));
             try {
               await call('admin_event_signup_update', {
@@ -370,22 +493,38 @@
               await loadSignups();
             } catch (error) {
               setMessage('signupMessage', error.message, 'error');
+            } finally {
+              ClubCommon.setBusy(button, false);
             }
           };
         });
       } catch (error) {
-        $('signupList').innerHTML = '<div class="empty">' + t('admin.signupReadFail') + '</div>';
-        setMessage('signupMessage', error.message, 'error');
+        ClubCommon.listState($('signupList'), { kind: 'error', title: t('admin.signupReadFail'), message: error.message, onRetry: loadSignups });
+      }
+    }
+
+    async function refreshAnnouncements() {
+      ClubCommon.listState($('announcementList'), { kind: 'loading', message: t('admin.loadingAnn') });
+      try {
+        const payload = await call('admin_announcements_list');
+        renderAnnouncements(Array.isArray(payload.announcements) ? payload.announcements : []);
+      } catch (error) {
+        ClubCommon.listState($('announcementList'), { kind: 'error', title: t('admin.emptyAnnFail'), message: error.message, onRetry: refreshAnnouncements });
+      }
+    }
+
+    async function refreshEvents() {
+      ClubCommon.listState($('eventList'), { kind: 'loading', message: t('admin.loadingEvents') });
+      try {
+        const payload = await call('admin_events_list');
+        renderEvents(Array.isArray(payload.events) ? payload.events : []);
+      } catch (error) {
+        ClubCommon.listState($('eventList'), { kind: 'error', title: t('admin.emptyEventsFail'), message: error.message, onRetry: refreshEvents });
       }
     }
 
     async function refresh() {
-      const [announcementsPayload, eventsPayload] = await Promise.all([
-        call('admin_announcements_list'),
-        call('admin_events_list')
-      ]);
-      renderAnnouncements(Array.isArray(announcementsPayload.announcements) ? announcementsPayload.announcements : []);
-      renderEvents(Array.isArray(eventsPayload.events) ? eventsPayload.events : []);
+      await Promise.all([refreshAnnouncements(), refreshEvents()]);
       if ($('signupEventSelect').value) await loadSignups();
     }
 
@@ -415,6 +554,8 @@
     $('refreshSignups').onclick = () => void loadSignups();
     $('announcementForm').onsubmit = async (event) => {
       event.preventDefault();
+      const submitButton = event.currentTarget.querySelector('button[type="submit"]');
+      ClubCommon.setBusy(submitButton, true);
       setMessage('announcementMessage', t('admin.savingAnn'));
       try {
         await call('admin_announcements_save', {
@@ -431,10 +572,14 @@
         await refresh();
       } catch (error) {
         setMessage('announcementMessage', error.message, 'error');
+      } finally {
+        ClubCommon.setBusy(submitButton, false);
       }
     };
     $('eventForm').onsubmit = async (event) => {
       event.preventDefault();
+      const submitButton = event.currentTarget.querySelector('button[type="submit"]');
+      ClubCommon.setBusy(submitButton, true);
       setMessage('eventMessage', t('admin.savingEvent'));
       try {
         await call('admin_events_save', {
@@ -458,6 +603,8 @@
         await refresh();
       } catch (error) {
         setMessage('eventMessage', error.message, 'error');
+      } finally {
+        ClubCommon.setBusy(submitButton, false);
       }
     };
 
@@ -471,6 +618,6 @@
       } catch (_e) {}
     });
   </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

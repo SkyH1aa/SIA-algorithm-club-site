@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="lab.graph.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8" />
@@ -11,37 +11,18 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
 <style>
+    /* 收编说明：主题 token 一律走 --club-*（club-ui.css 的 body.club-page 作用域提供同名映射与亮色覆盖），
+       本块只保留实验室专用显示色（金/绿/粉）与可视化专有样式（SVG 图 / 距离矩阵 / 图例等）。 */
     :root {
-      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
-      color: #f6fbff;
-      background: #020409;
-      --bg: #020409;
-      --panel: rgba(8, 13, 30, .8);
-      --cyan: #00e5ff;
-      --violet: #7c4dff;
-      --pink: #ff5fc8;
       --gold: #ffd166;
       --green: #71f3bf;
-      --text: #c8d4e2;
-      --muted: #8fa3b8;
-      --line: rgba(115, 221, 255, .2);
-      --shadow: 0 24px 90px rgba(0, 229, 255, .11);
+      --pink: #ff5fc8;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-width: 320px;
-      min-height: 100vh;
-      background:
-        radial-gradient(ellipse 70% 50% at 15% 4%, rgba(0, 229, 255, .15), transparent 62%),
-        radial-gradient(ellipse 60% 42% at 88% 7%, rgba(124, 77, 255, .22), transparent 65%),
-        linear-gradient(180deg, #020409, #050917 50%, #020409);
-      color: #f6fbff;
-      overflow-x: hidden;
-    }
+    body { overflow-x: hidden; }
     body::before {
       content: "";
       position: fixed;
@@ -59,92 +40,14 @@
     button { cursor: pointer; }
     button:disabled { cursor: not-allowed; opacity: .48; }
 
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      padding: 14px clamp(18px, 5vw, 72px);
-      border-bottom: 1px solid var(--line);
-      background: rgba(2, 4, 12, .78);
-      backdrop-filter: blur(18px);
-    }
-    .brand { display: inline-flex; align-items: center; gap: 12px; margin-right: auto; }
-    .brand-mark {
-      display: grid;
-      place-items: center;
-      width: 42px;
-      height: 42px;
-      border: 1px solid rgba(0, 229, 255, .55);
-      border-radius: 8px;
-      background: linear-gradient(135deg, rgba(0, 229, 255, .18), rgba(124, 77, 255, .22));
-      color: var(--cyan);
-      font-weight: 900;
-      box-shadow: 0 0 28px rgba(0, 229, 255, .22), inset 0 0 24px rgba(124, 77, 255, .18);
-    }
-    .brand strong, .brand small { display: block; }
-    .brand strong { font-size: 16px; }
-    .brand small { color: var(--muted); font-size: 12px; text-transform: uppercase; }
-    .member-identity {
-      display: none;
-      padding: 5px 9px;
-      border: 1px solid rgba(0, 229, 255, .34);
-      border-radius: 999px;
-      color: var(--cyan);
-      font-size: 12px;
-      white-space: nowrap;
-    }
-    .member-identity:not([hidden]) { display: inline-flex; }
-    .back-link {
-      padding: 8px 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      color: var(--muted);
-      font-size: 14px;
-      transition: .2s;
-    }
-    .back-link:hover {
-      border-color: rgba(0, 229, 255, .55);
-      background: rgba(0, 229, 255, .08);
-      color: var(--cyan);
-    }
-
-    main { max-width: 1320px; margin: 0 auto; padding: 54px clamp(18px, 5vw, 72px) 64px; }
-    .hero {
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 24px;
-      margin-bottom: 30px;
-    }
-    .eyebrow {
-      margin: 0 0 10px;
-      color: var(--cyan);
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 2px;
-    }
-    .hero h1 {
-      margin: 0;
-      font-size: clamp(30px, 5vw, 50px);
-      letter-spacing: .5px;
-      text-shadow: 0 0 28px rgba(0, 229, 255, .25);
-    }
-    .hero p:not(.eyebrow) {
-      max-width: 700px;
-      margin: 14px 0 0;
-      color: var(--text);
-      line-height: 1.75;
-    }
+    .hero p.lead { margin-bottom: 0; }
     .algorithm-note {
       min-width: 250px;
       padding: 14px 17px;
-      border: 1px solid var(--line);
+      border: 1px solid var(--club-line);
       border-radius: 12px;
-      background: rgba(8, 13, 30, .62);
-      color: var(--muted);
+      background: var(--club-surface-2);
+      color: var(--club-muted);
       font-size: 13px;
       line-height: 1.65;
     }
@@ -155,37 +58,16 @@
       grid-template-columns: 310px minmax(0, 1fr);
       gap: 22px;
     }
-    .panel {
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: var(--panel);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(12px);
-    }
     .controls { padding: 20px; }
     .controls h2, .visual-header h2 { margin: 0; font-size: 18px; }
     .control-group { margin-top: 18px; }
     .control-group label, .control-group legend {
       display: block;
       margin-bottom: 8px;
-      color: var(--muted);
+      color: var(--club-muted);
       font-size: 13px;
     }
     .control-group fieldset { margin: 0; padding: 0; border: 0; }
-    .field, select {
-      width: 100%;
-      height: 42px;
-      padding: 0 11px;
-      border: 1px solid rgba(115, 221, 255, .24);
-      border-radius: 9px;
-      background: rgba(2, 7, 18, .85);
-      color: #f6fbff;
-      outline: none;
-    }
-    .field:focus, select:focus {
-      border-color: var(--cyan);
-      box-shadow: 0 0 0 3px rgba(0, 229, 255, .11);
-    }
     .row-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -193,46 +75,22 @@
     }
     .hint {
       margin: 7px 0 0;
-      color: var(--muted);
+      color: var(--club-muted);
       font-size: 12px;
       line-height: 1.55;
     }
-    .error {
+    /* .error / .matrix-title 需带 body.club-page 前缀：club 的 body.club-page p 规则特异性更高，
+       否则错误提示颜色与矩阵标题的字号/边距会被全局 p 规则覆盖 */
+    body.club-page .error {
       min-height: 18px;
       margin: 7px 0 0;
-      color: #ff8fcf;
+      color: var(--club-danger);
       font-size: 12px;
       line-height: 1.4;
     }
     .button-stack { display: grid; gap: 10px; margin-top: 18px; }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 42px;
-      padding: 9px 14px;
-      border: 1px solid var(--line);
-      border-radius: 9px;
-      background: rgba(9, 20, 42, .82);
-      color: #f6fbff;
-      font-size: 14px;
-      font-weight: 700;
-      transition: transform .18s, border-color .18s, background .18s, color .18s;
-    }
-    .btn:hover:not(:disabled) {
-      transform: translateY(-1px);
-      border-color: rgba(0, 229, 255, .62);
-      color: var(--cyan);
-    }
-    .btn-primary {
-      border-color: rgba(0, 229, 255, .7);
-      background: linear-gradient(135deg, rgba(0, 229, 255, .22), rgba(124, 77, 255, .3));
-      color: #eaffff;
-    }
-    .btn-warn {
-      border-color: rgba(255, 209, 102, .45);
-      color: var(--gold);
-    }
+    body.club-page .btn.btn-warn { border-color: color-mix(in srgb, var(--club-warn) 45%, transparent); background: var(--club-warn-soft); color: var(--club-warn); }
+    body.club-page .btn.btn-warn:hover { border-color: color-mix(in srgb, var(--club-warn) 65%, transparent); background: color-mix(in srgb, var(--club-warn) 16%, transparent); color: var(--club-warn); }
 
     .visual { padding: 20px; min-width: 0; }
     .visual-header {
@@ -243,9 +101,9 @@
     }
     .status {
       padding: 6px 10px;
-      border: 1px solid rgba(0, 229, 255, .3);
+      border: 1px solid var(--club-accent-line);
       border-radius: 999px;
-      color: var(--cyan);
+      color: var(--club-accent);
       font-size: 12px;
       white-space: nowrap;
     }
@@ -269,7 +127,7 @@
       fill: none;
       stroke: rgba(164, 226, 255, .45);
       stroke-width: 2.2;
-      transition: stroke .16s ease, stroke-width .16s ease, opacity .16s ease;
+      transition: stroke var(--club-dur-fast, 140ms) var(--ease), stroke-width var(--club-dur-fast, 140ms) var(--ease), opacity var(--club-dur-fast, 140ms) var(--ease);
     }
     .edge-line.relax {
       stroke: var(--gold);
@@ -296,7 +154,7 @@
       fill: rgba(9, 20, 42, .95);
       stroke: rgba(0, 229, 255, .7);
       stroke-width: 2.4;
-      transition: fill .16s ease, stroke .16s ease, filter .16s ease;
+      transition: fill var(--club-dur-fast, 140ms) var(--ease), stroke var(--club-dur-fast, 140ms) var(--ease), filter var(--club-dur-fast, 140ms) var(--ease);
     }
     .node-circle.source {
       fill: rgba(0, 229, 255, .28);
@@ -324,7 +182,10 @@
     }
     .node-label {
       fill: #f6fbff;
-      font: 800 14px/1 "Microsoft YaHei", system-ui, sans-serif;
+      font-family: var(--club-font, system-ui, sans-serif);
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1;
       text-anchor: middle;
       dominant-baseline: central;
       pointer-events: none;
@@ -341,9 +202,10 @@
       overflow: auto;
     }
     .matrix-wrap[hidden] { display: none; }
-    .matrix-title {
+    /* 带 body.club-page 前缀：压过 club 的 body.club-page p 全局规则，保住小字号与边距 */
+    body.club-page .matrix-title {
       margin: 0 0 8px;
-      color: var(--muted);
+      color: var(--club-muted);
       font-size: 12px;
     }
     .matrix {
@@ -386,8 +248,9 @@
     .metric strong {
       display: block;
       margin-top: 4px;
-      color: #f6fbff;
-      font: 700 23px/1.15 ui-monospace, Consolas, monospace;
+      color: var(--club-text, #e8f1fb);
+      font: 700 23px/1.15 var(--club-mono, ui-monospace, Consolas, monospace);
+      font-variant-numeric: tabular-nums;
     }
     .legend {
       display: flex;
@@ -421,30 +284,88 @@
       border: 0;
     }
 
-    @media (max-width: 820px) {
+    /* —— 亮色补丁：图框与 SVG 边/节点/矩阵统一为暖色可读配色（!important 覆盖暗色内联描边）—— */
+    html[data-theme="light"] .graph-frame {
+      background: #FFFFFF !important;
+      border-color: #E2E5EB !important;
+      box-shadow: none !important;
+    }
+    html[data-theme="light"] .edge-line { stroke: #8A93A1 !important; }
+    html[data-theme="light"] .edge-line.relax { stroke: #C98900 !important; filter: none !important; }
+    html[data-theme="light"] .edge-line.settled { stroke: #2F9EDE !important; }
+    html[data-theme="light"] .edge-line.path { stroke: #2FA36C !important; filter: none !important; }
+    html[data-theme="light"] .edge-weight { fill: #1C1C1E !important; stroke: #FFFFFF !important; }
+    html[data-theme="light"] #arrowHead path { fill: #8A93A1 !important; }
+    html[data-theme="light"] #arrowRelax path { fill: #C98900 !important; }
+    html[data-theme="light"] #arrowPath path { fill: #2FA36C !important; }
+    html[data-theme="light"] #arrowSettled path { fill: #2F9EDE !important; }
+    html[data-theme="light"] .node-circle {
+      fill: #FFFFFF !important;
+      stroke: #C9604A !important;
+      filter: none !important;
+    }
+    html[data-theme="light"] .node-circle.source { fill: #FDEAE2 !important; stroke: #C2410C !important; filter: none !important; }
+    html[data-theme="light"] .node-circle.target { fill: #F9D8E4 !important; stroke: #A83B68 !important; filter: none !important; }
+    html[data-theme="light"] .node-circle.current { fill: #FFE08A !important; stroke: #C98900 !important; filter: none !important; }
+    html[data-theme="light"] .node-circle.visited { fill: #D9E7F2 !important; stroke: #1971A8 !important; filter: none !important; }
+    html[data-theme="light"] .node-circle.settled { fill: #CDEEDD !important; stroke: #2FA36C !important; filter: none !important; }
+    html[data-theme="light"] .matrix th,
+    html[data-theme="light"] .matrix td {
+      background: #FFFFFF !important;
+      border-color: #E5E5EA !important;
+      color: #1C1C1E !important;
+    }
+    html[data-theme="light"] .matrix th { background: #F0F2F6 !important; }
+    html[data-theme="light"] .matrix td.updated {
+      background: linear-gradient(135deg, #FFE08A, #F4B942) !important;
+      color: #1C1C1E !important;
+      box-shadow: inset 0 0 0 1px rgba(201, 137, 0, .8) !important;
+    }
+    html[data-theme="light"] .matrix td.inf { color: #8A8F98 !important; }
+    html[data-theme="light"] .panel .error,
+    html[data-theme="light"] .error { color: #B4233B !important; }
+
+    /* —— 算法档案：随当前算法切换的教学面板（配色对齐 .metric，亮暗自适应；淡入时长走 club token，reduced-motion 由 club-ui 全局规则兜底） —— */
+    .algo-profile { margin-top: 18px; border: 1px solid var(--club-line); border-radius: 10px; background: var(--club-surface-2, rgba(2, 7, 18, .48)); }
+    .algo-profile summary {
+      list-style: none; display: flex; align-items: center;
+      padding: 11px 13px; cursor: pointer;
+      color: var(--club-muted); font-size: 13px; font-weight: 700; user-select: none;
+      transition: color var(--club-dur, 200ms) var(--ease);
+    }
+    .algo-profile summary::-webkit-details-marker { display: none; }
+    .algo-profile summary::after {
+      content: "+"; margin-left: auto; padding-left: 10px;
+      color: var(--club-muted); font: 700 15px/1 var(--club-mono, ui-monospace, Consolas, monospace);
+    }
+    .algo-profile[open] summary::after { content: "−"; }
+    .algo-profile summary:hover { color: var(--club-accent); }
+    .algo-profile-body { border-top: 1px solid var(--club-line); padding: 1px 13px 11px; }
+    .algo-profile-body > div {
+      display: grid; grid-template-columns: max-content 1fr; gap: 10px;
+      padding: 7px 0; border-top: 1px solid var(--club-line);
+      font-size: 12px; line-height: 1.65; align-items: baseline;
+    }
+    .algo-profile-body > div:first-child { border-top: 0; padding-top: 5px; }
+    .algo-profile-label { color: var(--club-muted); white-space: nowrap; }
+    .algo-profile-value { color: var(--club-text); overflow-wrap: break-word; }
+    .algo-profile-value.mono { font-family: var(--club-mono, ui-monospace, Consolas, monospace); font-variant-numeric: tabular-nums; }
+    .algo-profile.fade-in .algo-profile-body { animation: algoProfileIn var(--club-dur, 200ms) var(--ease) both; }
+    @keyframes algoProfileIn { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+
+    @media (max-width: 900px) {
       .lab-grid { grid-template-columns: 1fr; }
       .controls { order: 2; }
-      .hero { align-items: start; flex-direction: column; }
       .algorithm-note { min-width: 0; width: 100%; }
     }
-    @media (max-width: 560px) {
-      .topbar { gap: 10px; padding: 12px 16px; }
-      .brand small { display: none; }
+    @media (max-width: 640px) {
       .member-identity { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
-      .back-link { padding: 8px; font-size: 12px; }
       .visual, .controls { padding: 15px; }
       .graph-svg { min-height: 280px; }
       .metrics { grid-template-columns: 1fr; }
       .visual-header { flex-direction: column; }
       .status { align-self: flex-start; }
       .row-2 { grid-template-columns: 1fr; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        scroll-behavior: auto !important;
-        animation-duration: .01ms !important;
-        transition-duration: .01ms !important;
-      }
     }
   </style>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
@@ -462,14 +383,16 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body>
+<body class="club-page">
   <header class="topbar">
-    <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页">
-      <span class="brand-mark">A</span>
-      <span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span>
-    </a>
-    <span class="member-identity" data-member-identity hidden></span>
-    <a class="back-link" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
+    <div class="topbar-inner">
+      <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页">
+        <span class="brand-mark">A</span>
+        <span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span>
+      </a>
+      <span class="member-identity" data-member-identity hidden></span>
+      <a class="back" href="visualization-lab.html" data-i18n="lab.common.labChoose">实验室选择</a>
+    </div>
   </header>
 
   <main>
@@ -477,7 +400,7 @@
       <div>
         <p class="eyebrow">GRAPH SHORTEST PATH LAB · V1</p>
         <h1 id="pageTitle" data-i18n="lab.graph.h1">图论最短路可视化实验室</h1>
-        <p data-i18n="lab.graph.lead">在加权图上观察松弛、确定距离与回溯路径。支持 Dijkstra、Bellman–Ford、SPFA 与 Floyd–Warshall；可切换预设图，连续演示或单步执行。</p>
+        <p class="lead" data-i18n="lab.graph.lead">在加权图上观察松弛、确定距离与回溯路径。支持 Dijkstra、Bellman–Ford、SPFA 与 Floyd–Warshall；可切换预设图，连续演示或单步执行。</p>
       </div>
       <aside class="algorithm-note" id="algorithmNote">
         <b>Dijkstra</b>
@@ -498,6 +421,15 @@
             <option value="floyd">Floyd–Warshall</option>
           </select>
         </div>
+
+        <details class="algo-profile" id="algoProfile" open>
+          <summary><span id="algoProfileTitle">算法档案</span></summary>
+          <div class="algo-profile-body">
+            <div><span class="algo-profile-label" data-i18n="lab.graph.profile.idea">核心思想</span><span class="algo-profile-value" id="algoProfileIdea"></span></div>
+            <div><span class="algo-profile-label" data-i18n="lab.graph.profile.time">时间复杂度</span><span class="algo-profile-value mono" id="algoProfileTime"></span></div>
+            <div><span class="algo-profile-label" data-i18n="lab.graph.profile.extra">空间 / 特性</span><span class="algo-profile-value mono" id="algoProfileExtra"></span></div>
+          </div>
+        </details>
 
         <div class="control-group">
           <label for="preset" data-i18n="lab.graph.presetLabel">预设图</label>
@@ -524,11 +456,21 @@
           <p class="error" id="inputError" role="alert" aria-live="polite"></p>
         </div>
 
+        <div class="control-group">
+          <label for="speedSelect" data-i18n="lab.speed">速度</label>
+          <select id="speedSelect" class="speed-select" aria-label="动画速度">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+          </select>
+        </div>
+
         <div class="button-stack">
-          <button class="btn btn-primary" type="button" id="startButton" data-i18n="lab.common.start">开始演示</button>
-          <button class="btn" type="button" id="stepButton" data-i18n="lab.common.step">单步执行</button>
-          <button class="btn btn-warn" type="button" id="resetButton" data-i18n="lab.graph.resetGraph">重置当前图</button>
-          <button class="btn" type="button" id="reloadPreset" data-i18n="lab.graph.reloadPreset">切换 / 重载预设</button>
+          <button class="btn" type="button" id="startButton" data-i18n="lab.common.start">开始演示</button>
+          <button class="btn secondary" type="button" id="stepButton" data-i18n="lab.common.step">单步执行</button>
+          <button class="btn btn-warn secondary" type="button" id="resetButton" data-i18n="lab.graph.resetGraph">重置当前图</button>
+          <button class="btn secondary" type="button" id="reloadPreset" data-i18n="lab.graph.reloadPreset">切换 / 重载预设</button>
         </div>
       </form>
 
@@ -605,7 +547,8 @@
         start: el('startButton'),
         step: el('stepButton'),
         reset: el('resetButton'),
-        reloadPreset: el('reloadPreset')
+        reloadPreset: el('reloadPreset'),
+        speed: el('speedSelect')
       };
 
       const descKeys = {
@@ -625,6 +568,55 @@
           o[k] = [descKeys[k][0], ClubI18n.t(descKeys[k][1])];
         }
         return o;
+      }
+
+      /* —— 算法档案（教学面板）：内容随所选算法切换；i18n 用页内 mergeDict 注入（boot 后并入、file:// 安全） —— */
+      const ALGO_PROFILE_DICT = {
+        zh: { lab: { graph: {
+          profile: { title: '算法档案', idea: '核心思想', time: '时间复杂度', extra: '空间 / 特性' },
+          algo: {
+            dijkstra: { idea: '每次取出当前距离最小的未定节点并确定它，再松弛它的出边。', time: 'O(V²)（本页线性找最小；堆优化后 O((V+E) log V)）', extra: '空间 O(V)（距离 + 已定集合）· 仅适用于非负权图' },
+            bellman: { idea: '对所有边做至多 V-1 轮松弛，某一轮无更新即可提前结束。', time: 'O(V·E)（含提前停止；本页末轮检测负环）', extra: '空间 O(V)（距离数组）· 可处理负权边并检测负环' },
+            spfa: { idea: 'Bellman–Ford 的队列优化：只有距离被松弛的节点才重新入队。', time: '平均 O(k·E)（k≈2），最坏退化为 O(V·E)', extra: '空间 O(V)（队列 + 标记）· 负权可用；入队超 V 次即有负环' },
+            floyd: { idea: '依次允许每个中转点 k，比较“直达”与“经 k 中转”，三重循环更新矩阵。', time: 'O(V³)（三层循环，与边数无关）', extra: '空间 O(V²)（距离矩阵）· 一次求出全源最短路' }
+          }
+        } } },
+        en: { lab: { graph: {
+          profile: { title: 'Algorithm profile', idea: 'Idea', time: 'Time complexity', extra: 'Space / traits' },
+          algo: {
+            dijkstra: { idea: 'Repeatedly settles the unsettled node with the smallest distance, then relaxes its outgoing edges.', time: 'O(V²) here (linear minimum scan); O((V+E) log V) with a heap', extra: 'Space O(V) · Requires non-negative edge weights' },
+            bellman: { idea: 'Relaxes every edge for up to V-1 rounds; stops early when a round makes no update.', time: 'O(V·E) with early stop; this demo also detects negative cycles', extra: 'Space O(V) · Handles negative weights and detects negative cycles' },
+            spfa: { idea: 'A queue-based Bellman–Ford: only nodes whose distance improved re-enter the queue.', time: 'Avg O(k·E) with k≈2; degrades to O(V·E) in the worst case', extra: 'Space O(V) · Works with negative weights; more than V enqueues signals a negative cycle' },
+            floyd: { idea: 'Allows each vertex k in turn as a waypoint, keeping the better of direct vs. via-k routes in a triple loop.', time: 'O(V³) — three nested loops, independent of edge count', extra: 'Space O(V²) for the matrix · Solves all-pairs shortest paths at once' }
+          }
+        } } }
+      };
+      function mergePageDict(){
+        if (window.ClubI18n && typeof ClubI18n.mergeDict === 'function') {
+          ClubI18n.mergeDict(ALGO_PROFILE_DICT);
+          // state.dict 一旦非空，resolve() 不再回落到全局词典；同步并入全局词典，
+          // 保证 boot 前的早期 t() 与页面其余动态文案仍能命中既有 key。
+          if (window.ClubI18nDict) ClubI18n.mergeDict(window.ClubI18nDict);
+        }
+      }
+      mergePageDict();
+      const profileNameKeys = { dijkstra: 'Dijkstra', bellman: 'Bellman–Ford', spfa: 'SPFA', floyd: 'Floyd–Warshall' };
+      const profileEls = { box: el('algoProfile'), title: el('algoProfileTitle'), idea: el('algoProfileIdea'), time: el('algoProfileTime'), extra: el('algoProfileExtra') };
+      let lastProfileAlgo = null;
+      function renderAlgoProfile(animate){
+        if (!profileEls.box) return;
+        const type = ui.algorithm.value;
+        const nameKey = profileNameKeys[type] || type;
+        profileEls.title.textContent = `${ClubI18n.t('lab.graph.profile.title')} · ${nameKey.startsWith('lab.') ? ClubI18n.t(nameKey) : nameKey}`;
+        profileEls.idea.textContent = ClubI18n.t(`lab.graph.algo.${type}.idea`);
+        profileEls.time.textContent = ClubI18n.t(`lab.graph.algo.${type}.time`);
+        profileEls.extra.textContent = ClubI18n.t(`lab.graph.algo.${type}.extra`);
+        if (animate && lastProfileAlgo && lastProfileAlgo !== type) {
+          profileEls.box.classList.remove('fade-in');
+          void profileEls.box.offsetWidth;
+          profileEls.box.classList.add('fade-in');
+        }
+        lastProfileAlgo = type;
       }
 
       const PRESETS = {
@@ -690,6 +682,21 @@
 
       const INF = Infinity;
       const delay = 320;
+      // 演示速度（0.5/1/2/4），四页共享 localStorage('lab-speed')；实际延时 = delay / speed
+      const SPEED_KEY = 'lab-speed';
+      let speed = 1;
+      function initSpeed() {
+        let saved = 1;
+        try { saved = parseFloat(localStorage.getItem(SPEED_KEY)); } catch (_e) { /* 忽略存储不可用 */ }
+        if (saved !== 0.5 && saved !== 1 && saved !== 2 && saved !== 4) saved = 1;
+        speed = saved;
+        if (!ui.speed) return;
+        ui.speed.value = String(saved);
+        ui.speed.addEventListener('change', () => {
+          speed = parseFloat(ui.speed.value) || 1;
+          try { localStorage.setItem(SPEED_KEY, ui.speed.value); } catch (_e) { /* 私密模式等场景忽略 */ }
+        });
+      }
       let graph = null;
       let operations = [];
       let cursor = 0;
@@ -698,6 +705,8 @@
       let timer = null;
       let playing = false;
       let view = null;
+      // Floyd 起点等于终点不是错误：演示继续，但需在错误提示位注明（否则静默）
+      let floydSelfNote = false;
 
       function cloneGraph(g) {
         return {
@@ -1166,10 +1175,6 @@
           let marker = directed ? 'url(#arrowHead)' : '';
           const isPath = keys.some(k => view.pathEdges.has(k));
           const isActive = keys.some(k => view.activeEdge === k);
-          const isSettled = keys.some(k => {
-            // settled tree-ish edge: both ends settled/visited and not path
-            return false;
-          });
           if (isPath) {
             cls += ' path';
             marker = directed ? 'url(#arrowPath)' : '';
@@ -1282,6 +1287,10 @@
       }
 
       function refreshStaticStatus() {
+        if (floydSelfNote && cursor === 0) {
+          updateStatus(ClubI18n.t('lab.graph.sameSTFloyd'));
+          return;
+        }
         if (ui.inputError.textContent) {
           updateStatus(ClubI18n.t('lab.graph.errConfig'));
           return;
@@ -1324,6 +1333,8 @@
         try {
           ui.inputError.textContent = '';
           operations = buildOps();
+          floydSelfNote = ui.algorithm.value === 'floyd' && graph.source === graph.target;
+          if (floydSelfNote) ui.inputError.textContent = ClubI18n.t('lab.graph.sameSTFloyd');
           // Seed initial dist for non-floyd
           if (ui.algorithm.value !== 'floyd') {
             view.dist[graph.source] = 0;
@@ -1333,9 +1344,11 @@
           }
           render();
           updateStatus(ClubI18n.t('lab.common.readyOps', { n: operations.length }));
+          if (floydSelfNote) updateStatus(ClubI18n.t('lab.graph.sameSTFloyd'));
           syncStartLabel();
         } catch (err) {
           operations = [];
+          floydSelfNote = false;
           render();
           ui.inputError.textContent = err.message;
           updateStatus(ClubI18n.t('lab.graph.errConfig'));
@@ -1417,7 +1430,7 @@
       function loop() {
         if (!playing) return;
         if (!applyNext()) return;
-        timer = setTimeout(loop, delay);
+        timer = setTimeout(loop, delay / speed);
       }
 
       function startPause() {
@@ -1444,6 +1457,7 @@
 
       ui.algorithm.addEventListener('change', () => {
         refreshNote();
+        renderAlgoProfile(true);
         prepare();
       });
       ui.preset.addEventListener('change', () => loadPreset(ui.preset.value));
@@ -1462,8 +1476,10 @@
       ui.reloadPreset.addEventListener('click', () => loadPreset(ui.preset.value));
       el('controlForm').addEventListener('submit', e => e.preventDefault());
 
-      window.addEventListener('club:langchange', () => {
+      function refreshAll() {
+        mergePageDict();
         refreshNote();
+        renderAlgoProfile(false);
         const key = ui.preset.value;
         ui.presetHint.textContent = ClubI18n.t(presetHintKeys[key]);
         ui.presetHint.setAttribute('data-i18n', presetHintKeys[key]);
@@ -1474,13 +1490,18 @@
           syncStartLabel();
         }
         if (typeof ClubI18n?.apply === 'function') ClubI18n.apply(document);
-      });
+      }
+
+      window.addEventListener('club:langchange', refreshAll);
 
       refreshNote();
+      renderAlgoProfile(false);
       loadPreset('campus');
+      initSpeed();
+      // i18n boot 晚于内联脚本，初始化后再兜底刷一次（AGENTS 约定）
+      setTimeout(refreshAll, 0);
     })();
   </script>
-<script>!function(){try{var t=document.querySelector('.topbar');if(t&&!document.getElementById('langSwitcherHost')){var h=document.createElement('div');h.id='langSwitcherHost';t.appendChild(h);}if(window.ClubI18n)window.ClubI18n.mountSwitcher(document.getElementById('langSwitcherHost'));if(window.ClubTheme&&typeof window.ClubTheme.autoMountSwitcher==='function')window.ClubTheme.autoMountSwitcher();}catch(e){}}();</script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

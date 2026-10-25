@@ -1,4 +1,9 @@
 /* 算法社全站主题：默认暗色，html[data-theme="light"] 启用亮色覆盖 */
+
+/* 全站品牌字体（MiSans VF 中文 + Inter 西文数字 + JetBrains Mono 等宽） */
+@import url("assets/fonts/club-fonts.css");
+@import url("assets/fonts/misans/MiSansVF.min.css");
+
 html {
   color-scheme: dark;
   --scene-galaxy: #60a5fa;
@@ -876,7 +881,7 @@ html[data-theme="light"] .footer {
   cursor: pointer;
   font: inherit;
   text-align: left;
-  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  transition: border-color var(--club-dur, 0.2s) var(--club-ease, ease), background var(--club-dur, 0.2s) var(--club-ease, ease), transform var(--club-dur, 0.2s) var(--club-ease, ease);
 }
 
 html[data-theme="light"] .theme-option {

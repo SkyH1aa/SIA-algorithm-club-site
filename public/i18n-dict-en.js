@@ -13,6 +13,8 @@
     noScore: 'Free-play lab · matches on this page are unscored and never uploaded',
     exportRecord: 'Export this game',
     compareTitle: 'Experimental version comparison',
+    compareTitle: 'Experimental version comparison',
+    localOnlyHint: 'V10Exp official challenge grants 15 points per win and uploads results. This lab page is local-only: unscored, never uploaded. For official matches, return to the Gomoku page.',
   },
     guide: {
       title: 'Usage Guide · Algorithm Club', h1: 'Usage Guide', lead: 'Use the homepage navigation to enter club features, AI games, algorithm labs, and member tools.', quickStart: 'Quick start', quickStartText: 'Open Member Center from the homepage to register, sign in, and bind your profile, then choose a module from Club Features.', accountTitle: 'Account and member center', accountText: 'Register with an invite code, then bind your Chinese name and class and view your profile and points in Member Center. For check-in, open Check-in from Club Features.', featuresTitle: 'Club features', featuresText: 'Find teaching resources, algorithm labs, Gomoku, Tetris, Snake, check-in, the points mall, messages, and activities here. Open the points board from Member Center or Points in Jump to module.', gamesTitle: 'AI games', gamesText: 'Games offer regular play, AI play, AI assist, and versus modes. Enable the AI decision panel to inspect candidate actions, scores, targets, or predicted paths.', checkinTitle: 'Check-in and course check-in', checkinText: 'Open Check-in from Club Features. Points redemption uses an administrator-issued code; for course check-in, select the corresponding type on the check-in page and submit it for administrator review.', themeTitle: 'Language and theme', themeText: 'Switch between Chinese and English, and choose auto, light, or dark themes. Auto uses the light theme from 06:00 to 18:00 Beijing time.', changelogTitle: 'Changelog', changelogText: 'Review feature updates and maintenance records.', openChangelog: 'View changelog →', backHome: 'Back to homepage'
@@ -325,6 +327,7 @@
       start: 'Start',
       stop: 'Stop',
       surrender: 'Surrender',
+      startGame: 'Start game',
       restart: 'Restart',
       modeNormal: 'Normal',
       modeAi: 'AI Play',
@@ -697,6 +700,8 @@
       colPoints: 'Points'
     },
   satoriLab: {
+    intro: 'Gomoku-Satori is the site’s in-house engine, built from scratch with no external engine or neural network. This page lays every decision bare: the threat survey, per-candidate scoring and ordering, iterative deepening, then the search tree and proof trail that explain “why this move”.',
+    notice: 'Honest note: Satori is an exhibition engine, weaker than official models like V9Thinker and V10Ultra. What you see is its real decision process — a lesson in how an AI thinks, not a claim of strength.',
     h1: 'Gomoku-Satori Decision Lab',
     controls: 'Match controls',
     replay: 'Record replay',
@@ -802,6 +807,7 @@
     }
   },
     lab: {
+      speed: 'Speed',
       common: {
         labChoose: 'Lab gallery',
         settings: 'Lab settings',
@@ -859,6 +865,7 @@
         emptyDash: '—'
       },
       sorting: {
+        legNeg: 'Negative',
         title: 'Sorting Visualization Lab · Algorithm Club',
         h1: 'Sorting Visualization Lab',
         lead: 'Watch every compare, swap, and move. Pick an algorithm and dataset, then run continuously or step manually.',
@@ -947,6 +954,17 @@
         doneMiss: 'Done · no feasible path'
       },
       ds: {
+        logPush: 'push({v}) → top is now {v}; stack (bottom→top): [{items}]',
+        logPop: 'pop() → returned {v}; stack (bottom→top): [{items}]',
+        logPeek: 'peek() → {v} (not removed); stack (bottom→top): [{items}]',
+        logEnqueue: 'enqueue({v}) → rear updated; queue (front→rear): [{items}]',
+        logDequeue: 'dequeue() → returned {v}; queue (front→rear): [{items}]',
+        logFront: 'front() → {v} (not removed); queue (front→rear): [{items}]',
+        logInsert: '{op}({v}) → list: [{list}] → null',
+        logDeleteOk: 'delete({v}) succeeded · new list: [{list}] → null',
+        logSeedStack: 'Sample stack (bottom→top): [{items}]',
+        logSeedQueue: 'Sample queue (front→rear): [{items}]',
+        logSeedList: 'Sample list: [{items}] → null',
         title: 'Data Structure Visualization Lab · Algorithm Club',
         h1: 'Data Structure Visualization Lab',
         lead: 'Operate stack, queue, and linked list: watch push/pop, enqueue/dequeue, and how head/tail insert or delete-by-value move nodes and pointers.',
@@ -1054,6 +1072,7 @@
         empty: 'empty'
       },
       graph: {
+        sameSTFloyd: 'Note: source equals target · Floyd shows the shortest path to itself (distance 0)',
         title: 'Graph Shortest Path Lab · Algorithm Club',
         h1: 'Graph Shortest Path Lab',
         lead: 'Watch relaxation, settled distances, and path reconstruction on weighted graphs. Supports Dijkstra, Bellman–Ford, SPFA, and Floyd–Warshall with presets, continuous play, or stepping.',
@@ -1190,6 +1209,10 @@
         lisInit: 'Each position starts with LIS length 1'
       },
       tree: {
+        zoomIn: 'Zoom in',
+        zoomOut: 'Zoom out',
+        zoomReset: 'Reset zoom',
+        zoomAria: 'Canvas zoom',
         title: 'Binary Tree Visualization Lab · Algorithm Club',
         h1: 'Binary Tree Visualization Lab',
         lead: 'SVG auto-layout of binary trees: pre/in/post/DFS/BFS traversals, BST insert/delete, and a lexicographic mode showing “in-order is sorted”.',
@@ -1310,6 +1333,8 @@
         succ: 'succ'
       },
       heap: {
+        srcHeap: 'Current data: heap view',
+        srcSorted: 'Current data: sorted array',
         title: 'Heap Visualization Lab · Algorithm Club',
         h1: 'Heap Visualization Lab',
         lead: 'Watch array storage and binary-tree shape together. Step through build-heap, swim insert, sink extract-max/min, and full heap sort.',
@@ -1448,6 +1473,10 @@
       signupOk: 'Registration successful.'
     },
     driveAdmin: {
+      limitPlaceholder: '0 = unlimited, -1 = blocked',
+      pendingRemoveQuota: 'Removed the personal quota of {name}. Undo within 5 seconds.',
+      quotaUndone: 'Undo succeeded. The quota is restored.',
+      undoCommitFailed: 'Quota removal failed to save. The list was restored, please retry.',
       title: 'Club Drive',
       lead: 'Set a folder size limit per user, or one global default that applies to everyone. Leave empty for unlimited. Usage is measured on every write.',
       gateLead: 'Drive quota management is super-admin only.',
@@ -1986,6 +2015,7 @@
       resetOk: 'Password reset.'
     },
     changelog: {
+    snapshot: 'Showing the local snapshot — it refreshes automatically once online.',
       lead: 'Feature updates and maintenance notes for the Algorithm Club site. Open to all visitors.',
       loading: 'Loading changelog…',
       loadFail: 'Failed to load changelog.',

@@ -1,8 +1,14 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="pages.messages.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
+  <style>
+    /* 管理员内联编辑表单（替代 prompt 弹窗）：展开在留言卡片内部 */
+    .message-edit-form{display:grid;gap:12px;margin-top:14px;padding-top:14px;border-top:1px dashed var(--club-line)}
+    .message-edit-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+    .message-edit-form .form-actions{margin:0}
+  </style>
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -10,9 +16,9 @@
   <title>社员留言箱 · 算法社</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
@@ -27,24 +33,56 @@
   <meta name="twitter:image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
+  <style>
+      </style>
 </head>
 <body class="club-page">
 <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a><span class="member-identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
 <main>
-  <section id="memberGate" class="panel member-gate"><div><strong data-i18n="messages.gateTitle">您还不是算法社社员！</strong><p data-i18n="messages.gateHint">请先使用受邀请码邀请创建的社团盘账号登录。</p><p><a class="button secondary" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></p></div></section>
+  <section id="memberGate" class="panel member-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><h2 data-i18n="messages.gateTitle">您还不是算法社社员！</h2><p data-i18n="messages.gateHint">请先使用受邀请码邀请创建的社团盘账号登录。</p><p><a class="button secondary" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></p></div></section>
   <div id="memberContent" class="member-content hidden">
     <section class="hero"><div><p class="eyebrow">MEMBER MESSAGE BOX</p><h1 data-i18n="pages.messages.h1">社员留言箱</h1><p data-i18n="messages.lead">记录社员的建议、想法与日常留言。全部内容仅对已登录的算法社成员开放。</p></div><div class="status-panel"><strong id="sessionStatus" data-i18n="messages.loggedIn">社员已登录</strong><span id="sessionHint" data-i18n="messages.sessionHint">你可以浏览留言并提交自己的内容。</span></div></section>
     <section class="panel"><div class="panel-head"><div><h2 data-i18n="messages.leave">留下留言</h2><p class="panel-intro" data-i18n="messages.leaveIntro">请留下姓名、班级和想说的话。</p></div></div><form id="messageForm" class="message-form"><div><label class="label" for="memberName" data-i18n="messages.name">姓名</label><input class="input" id="memberName" type="text" required maxlength="40" autocomplete="name"></div><div><label class="label" for="memberClass" data-i18n="messages.className">班级</label><input class="input" id="memberClass" type="text" required maxlength="40" placeholder="例如 高一（1）班" data-i18n-placeholder="messages.classPlaceholder"></div><div class="form-wide"><label class="label" for="messageContent" data-i18n="messages.content">留言内容</label><textarea class="input" id="messageContent" required maxlength="1000" placeholder="写下你的建议或想法…" data-i18n-placeholder="messages.contentPlaceholder"></textarea></div><div class="form-wide form-actions"><span class="message" id="formMessage" role="status"></span><button class="button" type="submit" data-i18n="messages.submit">提交留言</button></div></form></section>
-    <section class="panel"><div class="panel-head"><div><h2 data-i18n="messages.all">全部留言</h2><p class="panel-intro" data-i18n="messages.allIntro">按最新提交时间排序。</p></div><button id="refreshButton" class="button secondary" type="button" data-i18n="messages.refresh">刷新留言</button></div><div id="messageList" class="message-list"><div class="empty loading" data-i18n="messages.loading">正在读取留言…</div></div><p id="listMessage" class="message" role="status"></p></section>
+    <section class="panel"><div class="panel-head"><div><h2 data-i18n="messages.all">全部留言</h2><p class="panel-intro" data-i18n="messages.allIntro">按最新提交时间排序。</p></div><button id="refreshButton" class="button secondary" type="button" data-i18n="messages.refresh">刷新留言</button></div><div id="messageList" class="message-list"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="messages.loading">正在读取留言…</span></div><p id="listMessage" class="message" role="status"></p></section>
   </div>
 </main>
 <script>
 const SUPABASE_URL='https://jgezpvmlnhycxslqbwcx.supabase.co',SUPABASE_KEY='sb_publishable_B29ClgwZagW32Ow5x6VdKQ_IL65F7dl',FUNCTION_URL=`${SUPABASE_URL}/functions/v1/club-drive`;
 const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY),memberGate=document.getElementById('memberGate'),memberContent=document.getElementById('memberContent'),messageList=document.getElementById('messageList'),formMessage=document.getElementById('formMessage'),listMessage=document.getElementById('listMessage'),sessionStatus=document.getElementById('sessionStatus'),sessionHint=document.getElementById('sessionHint');let messages=[],isAdminMember=false;
-function escapeHtml(value){return String(value).replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}function setMessage(node,text,type=''){node.textContent=text;node.className=`message ${type}`}function formatDate(value){const date=new Date(value);return Number.isNaN(date.valueOf())?'':date.toLocaleString('zh-CN',{dateStyle:'medium',timeStyle:'short'})}async function callMember(action,body={}){const {data:{session}}=await supabaseClient.auth.getSession();if(!session)throw new Error(ClubI18n.t('messages.notMember'));const response=await fetch(FUNCTION_URL,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${session.access_token}`},body:JSON.stringify({action,...body})}),payload=await response.json().catch(()=>({}));if(!response.ok)throw ClubCommon.handleAuthError(response,payload,ClubI18n.t('messages.opFailed'));return payload}
-function renderMessages(){if(!messages.length){messageList.innerHTML='<div class="empty">'+ClubI18n.t('messages.empty')+'</div>';return}messageList.innerHTML=messages.map(item=>`<article class="message-card"><div class="message-card-head"><div><h3>${escapeHtml(item.member_name)}</h3><span class="class-name">${escapeHtml(item.member_class)}</span><time datetime="${escapeHtml(item.created_at)}"> · ${escapeHtml(formatDate(item.created_at))}</time></div>${isAdminMember?`<div class="message-actions"><button class="row-button message-edit" data-id="${escapeHtml(item.id)}" type="button">${ClubI18n.t('messages.edit')}</button><button class="row-button delete message-delete" data-id="${escapeHtml(item.id)}" type="button">${ClubI18n.t('common.delete')}</button></div>`:''}</div><p>${escapeHtml(item.message_content)}</p></article>`).join('');if(isAdminMember){messageList.querySelectorAll('.message-edit').forEach(button=>button.onclick=()=>editMessage(button.dataset.id));messageList.querySelectorAll('.message-delete').forEach(button=>button.onclick=()=>deleteMessage(button.dataset.id))}}
+function escapeHtml(value){return String(value).replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}function setMessage(node,text,type=''){node.textContent=text;node.className=`message ${type}`}function formatDate(value){const date=new Date(value);if(Number.isNaN(date.valueOf()))return'';const lang=window.ClubI18n&&ClubI18n.getLang()==='en'?'en-US':'zh-CN';return date.toLocaleString(lang,{dateStyle:'medium',timeStyle:'short'})}async function callMember(action,body={}){const {data:{session}}=await supabaseClient.auth.getSession();if(!session)throw new Error(ClubI18n.t('messages.notMember'));const response=await fetch(FUNCTION_URL,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${session.access_token}`},body:JSON.stringify({action,...body})}),payload=await response.json().catch(()=>({}));if(!response.ok)throw ClubCommon.handleAuthError(response,payload,ClubI18n.t('messages.opFailed'));return payload}
+function renderMessages(){if(!messages.length){messageList.innerHTML='<div class="empty">'+ClubI18n.t('messages.empty')+'</div>';return}messageList.innerHTML=messages.map(item=>`<article class="message-card"><div class="message-card-head"><div><h3>${escapeHtml(item.member_name)}</h3><span class="class-name">${escapeHtml(item.member_class)}</span><time datetime="${escapeHtml(item.created_at)}"> · ${escapeHtml(formatDate(item.created_at))}</time></div>${isAdminMember?`<div class="message-actions"><button class="row-button message-edit" data-id="${escapeHtml(item.id)}" type="button">${ClubI18n.t('messages.edit')}</button><button class="row-button delete message-delete" data-id="${escapeHtml(item.id)}" type="button">${ClubI18n.t('common.delete')}</button></div>`:''}</div><p>${escapeHtml(item.message_content)}</p></article>`).join('');if(isAdminMember){messageList.querySelectorAll('.message-edit').forEach(button=>button.onclick=()=>toggleMessageEditor(button));messageList.querySelectorAll('.message-delete').forEach(button=>button.onclick=()=>deleteMessage(button.dataset.id))}}
 async function refreshMessages(){try{const payload=await callMember('member_messages_list');messages=payload.messages||[];renderMessages();setMessage(listMessage,'')}catch(error){messageList.innerHTML='<div class="empty">'+ClubI18n.t('messages.failList')+'</div>';setMessage(listMessage,error.message,'error')}}
-async function editMessage(id){const item=messages.find(message=>message.id===id);if(!item)return;const memberName=prompt(ClubI18n.t('messages.promptName'),item.member_name);if(memberName===null)return;const memberClass=prompt(ClubI18n.t('messages.promptClass'),item.member_class);if(memberClass===null)return;const messageContent=prompt(ClubI18n.t('messages.promptContent'),item.message_content);if(messageContent===null)return;try{await callMember('admin_member_messages_update',{id,memberName,memberClass,messageContent});setMessage(listMessage,ClubI18n.t('messages.updated'),'success');await refreshMessages()}catch(error){setMessage(listMessage,error.message,'error')}}
+// 管理员编辑留言：不再使用三连 prompt 弹窗，点击「编辑」在卡片内展开内联表单（保存走原提交接口）。
+function closeMessageEditors(){messageList.querySelectorAll('.message-edit-form').forEach(form=>form.remove())}
+function toggleMessageEditor(button){
+  const card=button.closest('.message-card');if(!card)return;
+  const item=messages.find(message=>message.id===button.dataset.id);if(!item)return;
+  const existing=card.querySelector('.message-edit-form');
+  closeMessageEditors();
+  if(existing)return; // 再次点击同一「编辑」视为收起
+  const form=document.createElement('form');
+  form.className='message-edit-form';
+  form.innerHTML=`<div class="message-edit-fields"><div><label class="label" for="messageEditName">${escapeHtml(ClubI18n.t('messages.name'))}</label><input class="input" id="messageEditName" name="memberName" maxlength="40" required></div><div><label class="label" for="messageEditClass">${escapeHtml(ClubI18n.t('messages.className'))}</label><input class="input" id="messageEditClass" name="memberClass" maxlength="40" required></div></div><div><label class="label" for="messageEditContent">${escapeHtml(ClubI18n.t('messages.content'))}</label><textarea class="input" id="messageEditContent" name="messageContent" maxlength="1000" rows="3" required></textarea></div><div class="form-actions"><button class="button" type="submit">${escapeHtml(ClubI18n.t('common.save'))}</button><button class="button secondary" type="button" data-edit-cancel>${escapeHtml(ClubI18n.t('common.cancel'))}</button></div>`;
+  form.querySelector('[name=memberName]').value=item.member_name||'';
+  form.querySelector('[name=memberClass]').value=item.member_class||'';
+  form.querySelector('[name=messageContent]').value=item.message_content||'';
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const saveButton=form.querySelector('button[type=submit]');
+    ClubCommon.setBusy(saveButton,true);
+    try{
+      await callMember('admin_member_messages_update',{id:item.id,memberName:form.memberName.value,memberClass:form.memberClass.value,messageContent:form.messageContent.value});
+      setMessage(listMessage,ClubI18n.t('messages.updated'),'success');
+      await refreshMessages();
+    }catch(error){
+      setMessage(listMessage,error.message,'error');
+      ClubCommon.setBusy(saveButton,false);
+    }
+  });
+  form.querySelector('[data-edit-cancel]').addEventListener('click',()=>form.remove());
+  card.appendChild(form);
+  form.querySelector('[name=memberName]').focus();
+}
 async function deleteMessage(id){
   const item=messages.find(message=>message.id===id);
   if(!item)return;
@@ -70,6 +108,6 @@ async function updateSession(session){const member=Boolean(session?.user?.id);me
 document.getElementById('refreshButton').onclick=refreshMessages;document.getElementById('messageForm').addEventListener('submit',async event=>{event.preventDefault();const memberName=document.getElementById('memberName').value,memberClass=document.getElementById('memberClass').value,messageContent=document.getElementById('messageContent').value;try{await callMember('member_messages_create',{memberName,memberClass,messageContent});event.target.reset();applyBoundProfile();setMessage(formMessage,ClubI18n.t('messages.submitted'),'success');await refreshMessages()}catch(error){setMessage(formMessage,error.message,'error')}});supabaseClient.auth.onAuthStateChange((_event,session)=>{void updateSession(session);if(session?.user?.id)void refreshMessages()});supabaseClient.auth.getSession().then(async({data:{session}})=>{await updateSession(session);if(session?.user?.id)await refreshMessages()});
 window.addEventListener('club:langchange',()=>{renderMessages();if(window.ClubI18n)ClubI18n.apply(document);});
 </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

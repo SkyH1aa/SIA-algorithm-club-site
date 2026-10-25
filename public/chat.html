@@ -6,9 +6,9 @@
 <script defer src="assistant-launcher.js"></script>
 <meta name="color-scheme" content="dark light">
 <title>AI 对话</title>
-<link rel="stylesheet" href="theme.css?v=39014235"><link rel="stylesheet" href="vendor/chat/katex/katex.min.css"><link rel="stylesheet" href="chat.css?v=a00d4365">
+<link rel="stylesheet" href="theme.css?v=39c53cdb"><link rel="stylesheet" href="vendor/chat/katex/katex.min.css"><link rel="stylesheet" href="chat.css?v=28fe2c08">
 <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
-  <script src="club-auth-storage.js?v=5469c150"></script><script src="theme.js?v=1b745a4f"></script><script src="i18n-dict.js?v=c79bfe69"></script><script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script><script src="chat-i18n.js?v=95eb56b8"></script><script src="vendor/chat/marked.js"></script><script src="vendor/chat/purify.js"></script><script src="vendor/chat/katex/katex.min.js"></script><script src="chat-math.js"></script><script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script><script>
+  <script src="club-auth-storage.js?v=5469c150"></script><script src="theme.js?v=1b745a4f"></script><script src="i18n-dict.js?v=f75071ae"></script><script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script><script src="chat-i18n.js?v=95eb56b8"></script><script src="vendor/chat/marked.js"></script><script src="vendor/chat/purify.js"></script><script src="vendor/chat/katex/katex.min.js"></script><script src="chat-math.js"></script><script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script><script>
     /* file:// 下浏览器会按 CORS 拦截 ES module 的 import，页面会整页不执行（黑屏）。
        HTTP(S) 仍用原生 module；本地文件改用等价的单文件包（逻辑相同，仅加载方式不同）。 */
     (function () {
@@ -43,7 +43,8 @@
   </a>
   <div class="chat-brand">
     <span class="chat-brand-mark" aria-hidden="true">✦</span>
-    <span class="chat-brand-copy"><strong data-i18n="chat.title">AI 对话</strong><small>Algorithm Club</small></span>
+    <h1 class="chat-sr-only" data-i18n="chat.title">AI 对话</h1>
+    <span class="chat-brand-copy"><strong data-i18n="chat.title" aria-hidden="true">AI 对话</strong><small>Algorithm Club</small></span>
   </div>
   <span class="chat-topbar-divider" aria-hidden="true"></span>
   <span id="headerChatTitle" class="chat-header-chat-title"></span>
@@ -150,6 +151,7 @@
               <div id="effortMenu" class="chat-model-menu" role="listbox" hidden></div>
             </div>
             <span class="chat-composer-hint" data-i18n="chat.composerHint">Enter 发送 · Shift+Enter 换行</span>
+            <span id="promptCount" class="chat-char-count" hidden aria-live="off"></span>
             <button id="stop" class="chat-stop-button" type="button" data-i18n="chat.stop" disabled>停止</button>
             <button id="send" class="chat-send-button" type="submit">
               <span id="sendLabel" data-i18n="chat.send">发送</span>
@@ -223,5 +225,37 @@
     </section>
   </div>
 </section>
+<script>
+  /* 输入字数提示：纯展示（超过 10000 字才显示），不参与发送/存储逻辑。 */
+  (function () {
+    var MIN_SHOW = 10000;
+    function render() {
+      var box = document.getElementById('promptCount');
+      var field = document.getElementById('prompt');
+      if (!box || !field) return;
+      var count = field.value.length;
+      if (count > MIN_SHOW) {
+        var text = '已输入 ' + count + ' 字';
+        if (window.ClubI18n && ClubI18n.t) text = ClubI18n.t('chat.charCount', { n: count });
+        box.textContent = text;
+        box.hidden = false;
+      } else {
+        box.textContent = '';
+        box.hidden = true;
+      }
+    }
+    if (window.ClubI18n && ClubI18n.mergeDict) {
+      ClubI18n.mergeDict({
+        zh: { chat: { charCount: '已输入 {n} 字' } },
+        en: { chat: { charCount: '{n} characters entered' } }
+      });
+    }
+    var field = document.getElementById('prompt');
+    if (field) field.addEventListener('input', render);
+    window.addEventListener('club:langchange', render);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render, { once: true });
+    else render();
+  })();
+</script>
 </body>
 </html>

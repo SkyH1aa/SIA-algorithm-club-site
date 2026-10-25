@@ -2,8 +2,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="pages.appmonitor.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8" />
@@ -11,55 +11,55 @@
   <title>APPMonitor · 软件发布页</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
 <style>
+    /* 收编说明：--club-* 主题 token 唯一真源是 club-ui.css 的 body.club-page 作用域（原 :root 整套复刻已删除）；
+       本块只保留页面氛围派生 token（粒子 / 网格 / 光晕；--particle-rgb 由页内 JS 读取）与版式专有样式。 */
     :root {
-      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
-      color: #f6fbff;
-      background: #020409;
-      --bg: #020409;
-      --white: #f6fbff;
-      --text: #c8d4e2;
-      --muted: #8fa3b8;
-      --cyan: #00e5ff;
-      --violet: #7c4dff;
-      --pink: #ff5fc8;
-      --line: rgba(115, 221, 255, .2);
-      --panel: rgba(8, 13, 30, .78);
+      --glow-a: rgba(58, 212, 230, 0.13);
+      --glow-b: rgba(143, 180, 255, 0.16);
+      --grid-line: rgba(58, 212, 230, 0.045);
+      --grid-line-strong: rgba(58, 212, 230, 0.12);
+      --orb-a: rgba(58, 212, 230, 0.42);
+      --orb-b: rgba(143, 180, 255, 0.42);
+      --title-glow-a: rgba(58, 212, 230, 0.45);
+      --title-glow-b: rgba(143, 180, 255, 0.32);
+      --particle-rgb: 58, 212, 230;
+      --panel-glass: rgba(6, 10, 18, 0.78);
     }
-    * { box-sizing: border-box; }
+    html[data-theme="light"] {
+      --glow-a: rgba(194, 65, 12, 0.07);
+      --glow-b: rgba(47, 79, 143, 0.08);
+      --grid-line: rgba(194, 65, 12, 0.05);
+      --grid-line-strong: rgba(194, 65, 12, 0.10);
+      --orb-a: rgba(194, 65, 12, 0.26);
+      --orb-b: rgba(47, 79, 143, 0.24);
+      --title-glow-a: rgba(194, 65, 12, 0.28);
+      --title-glow-b: rgba(47, 79, 143, 0.20);
+      --particle-rgb: 194, 65, 12;
+      --panel-glass: rgba(255, 255, 255, 0.86);
+    }
     html { scroll-behavior: smooth; scroll-snap-type: y proximity; scroll-padding-top: 72px; }
-    body {
-      position: relative;
-      margin: 0;
-      min-width: 320px;
-      isolation: isolate;
-      color: var(--white);
-      background:
-        radial-gradient(ellipse 70% 50% at 12% 0%, rgba(0,229,255,.15), transparent 62%),
-        radial-gradient(ellipse 64% 46% at 90% 4%, rgba(124,77,255,.22), transparent 66%),
-        linear-gradient(180deg, #020409 0%, #050917 50%, #020409 100%);
-      overflow-x: hidden;
-    }
+    body { position: relative; margin: 0; min-width: 320px; isolation: isolate; overflow-x: hidden; }
     body::before {
       content: "";
       position: fixed;
       inset: 0;
       z-index: 0;
       pointer-events: none;
-      background-image: linear-gradient(rgba(0,229,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,.045) 1px, transparent 1px);
+      background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
       background-size: 86px 86px;
       mask-image: radial-gradient(ellipse 120% 120% at 50% 20%, #000, transparent 92%);
     }
     .ambient-background, .pointer-glow { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
     .ambient-orb { position: absolute; width: min(48vw, 620px); aspect-ratio: 1; border-radius: 50%; filter: blur(72px); opacity: .22; mix-blend-mode: screen; animation: drift-orb 18s ease-in-out infinite alternate; }
-    .orb-cyan { top: -18%; left: -10%; background: rgba(0,229,255,.5); }
-    .orb-violet { top: 8%; right: -12%; background: rgba(124,77,255,.56); animation-delay: -7s; }
-    .ambient-grid { position: absolute; inset: -80px; background-image: linear-gradient(rgba(0,229,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,.12) 1px, transparent 1px); background-size: 72px 72px; opacity: .58; mix-blend-mode: screen; animation: grid-shift 26s linear infinite; }
+    .orb-cyan { top: -18%; left: -10%; background: var(--orb-a); }
+    .orb-violet { top: 8%; right: -12%; background: var(--orb-b); animation-delay: -7s; }
+    .ambient-grid { position: absolute; inset: -80px; background-image: linear-gradient(var(--grid-line-strong) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line-strong) 1px, transparent 1px); background-size: 72px 72px; opacity: .58; mix-blend-mode: screen; animation: grid-shift 26s linear infinite; }
     #particleCanvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .9; }
-    .pointer-glow { inset: auto; width: 460px; height: 460px; left: var(--pointer-x, 50%); top: var(--pointer-y, 14%); transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(0,229,255,.14), transparent 68%); }
+    .pointer-glow { inset: auto; width: 460px; height: 460px; left: var(--pointer-x, 50%); top: var(--pointer-y, 14%); transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, var(--glow-a), transparent 68%); }
     main, .topbar, .footer { position: relative; z-index: 1; }
     .reveal-ready { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.75,.25,1); }
     .release-card.reveal-ready { transition-delay: var(--reveal-delay, 0ms); }
@@ -67,63 +67,56 @@
     .reveal-ready.is-visible { opacity: 1; transform: translateY(0); }
     @keyframes drift-orb { from { transform: translate3d(-2%, -1%, 0) scale(1); } to { transform: translate3d(8%, 6%, 0) scale(1.12); } }
     @keyframes grid-shift { from { background-position: 0 0; } to { background-position: 72px 72px; } }
-    @keyframes title-breathe { 0%,100% { text-shadow: 0 0 24px rgba(0,229,255,.42), 0 0 56px rgba(124,77,255,.28); } 50% { text-shadow: 0 0 34px rgba(0,229,255,.7), 0 0 78px rgba(124,77,255,.4); } }
+    @keyframes title-breathe { 0%,100% { text-shadow: 0 0 24px var(--title-glow-a), 0 0 56px var(--title-glow-b); } 50% { text-shadow: 0 0 34px var(--title-glow-a), 0 0 78px var(--title-glow-b); } }
     a { color: inherit; text-decoration: none; }
-    .topbar { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:14px clamp(18px,5vw,72px); border-bottom:1px solid var(--line); background:rgba(2,4,12,.78); backdrop-filter:blur(18px); }
-    .brand { display:inline-flex; align-items:center; gap:12px; }
-    .brand-mark { display:grid; width:42px; height:42px; place-items:center; border:1px solid rgba(0,229,255,.55); border-radius:8px; background:linear-gradient(135deg,rgba(0,229,255,.18),rgba(124,77,255,.22)); color:var(--cyan); font-weight:900; box-shadow:0 0 28px rgba(0,229,255,.22); }
-    .brand strong, .brand small { display:block; }
-    .brand small { color:var(--muted); font-size:12px; }
-    .member-identity { display:none; margin-left:10px; padding:5px 9px; border:1px solid rgba(0,229,255,.34); border-radius:999px; color:var(--cyan); font-size:12px; white-space:nowrap; }
-    .member-identity:not([hidden]) { display:inline-flex; }
-    .back-link { padding:9px 13px; border:1px solid rgba(0,229,255,.26); border-radius:8px; color:var(--muted); font-size:14px; }
-    .back-link:hover { color:var(--cyan); border-color:rgba(0,229,255,.6); background:rgba(0,229,255,.07); }
-    main { width:min(1180px, calc(100% - 36px)); margin:0 auto; padding:34px 0 90px; }
-    .hero { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:32px; align-items:end; padding-bottom:44px; border-bottom:1px solid var(--line); }
-    .eyebrow { margin:0 0 14px; color:var(--cyan); font-size:13px; font-weight:800; letter-spacing:.08em; }
-    h1 { margin:0 0 18px; font-size:clamp(46px,8vw,88px); line-height:.98; text-shadow:0 0 24px rgba(0,229,255,.45), 0 0 56px rgba(124,77,255,.34); animation:title-breathe 4s ease-in-out infinite; }
-    .hero p { max-width:700px; margin:0; color:var(--text); font-size:18px; line-height:1.8; }
-    .hero-status { padding:20px; border:1px solid rgba(0,229,255,.25); border-radius:12px; background:var(--panel); box-shadow:0 24px 90px rgba(0,229,255,.11); }
-    .hero-status strong { display:block; margin-bottom:8px; color:var(--cyan); font-size:24px; }
-    .hero-status span { color:var(--muted); font-size:14px; line-height:1.7; }
-    .notice { margin:28px 0 42px; padding:18px 20px; border:1px solid rgba(255,95,200,.36); border-left:3px solid var(--pink); border-radius:10px; background:rgba(255,95,200,.07); color:var(--text); line-height:1.8; }
-    .notice strong { color:#ffd8f2; }
-    .notice a { color:var(--cyan); text-decoration:underline; text-underline-offset:3px; }
+    /* hero 分隔线与标题辉光是页面版式/氛围：列结构、eyebrow、h1 字号由 club 的 .hero / .eyebrow / h1 接管 */
+    body.club-page .hero { padding-bottom:44px; border-bottom:1px solid var(--club-line); }
+    body.club-page .hero h1 { text-shadow:0 0 24px var(--title-glow-a), 0 0 56px var(--title-glow-b); animation:title-breathe 4s ease-in-out infinite; }
+    .hero-status { padding:20px; border:1px solid var(--club-accent-line); border-radius:12px; background:var(--panel); box-shadow:var(--club-shadow); }
+    .hero-status strong { display:block; margin-bottom:8px; color:var(--club-accent); font-size:24px; }
+    .hero-status span { color:var(--club-muted); font-size:14px; line-height:1.7; }
+    /* club 的 body.club-page .notice 是默认隐藏的 toast：本页安装提示同名但语义不同，
+       且 JS 观察器引用 main .notice，故类名不动，用前缀规则压回本页语义（亮色再压过 theme.css 的 .notice !important） */
+    body.club-page .notice { display:block; margin:28px 0 42px; padding:18px 20px; border:1px solid var(--club-line-strong); border-left:3px solid var(--club-danger); border-radius:10px; background:var(--club-danger-soft); color:var(--club-text-soft); line-height:1.8; }
+    body.club-page .notice strong { display:inline; margin-bottom:0; color:var(--club-danger); font-size:inherit; }
+    body.club-page .notice a { color:var(--club-accent); text-decoration:underline; text-underline-offset:3px; }
+    html[data-theme="light"] body.club-page main .notice { background:var(--club-danger-soft) !important; border-color:var(--club-line-strong) !important; border-left-color:var(--club-danger) !important; }
+    .sensitive-badge { display:inline-flex; align-items:center; margin-left:8px; padding:2px 9px; border:1px solid var(--club-warn); border-radius:999px; background:var(--club-warn-soft); color:var(--club-warn); font-size:11px; font-weight:600; white-space:nowrap; vertical-align:1px; }
     .section-title { display:flex; align-items:end; justify-content:space-between; gap:18px; margin-bottom:18px; }
-    h2 { margin:0; font-size:clamp(28px,4vw,44px); }
-    .section-title span { color:var(--muted); font-size:13px; }
+    .section-title span { color:var(--club-muted); font-size:13px; }
     .release-list, #dynamicReleases { display:grid; gap:16px; }
     .hero, .notice, main > section, .release-card, .footer { scroll-snap-align: start; }
-    .release-card { position:relative; padding:24px; border:1px solid rgba(0,229,255,.2); border-radius:12px; background:linear-gradient(180deg,rgba(8,13,30,.86),rgba(5,9,23,.72)); box-shadow:0 18px 55px rgba(0,229,255,.06); overflow:hidden; }
-    .release-card::before { content:""; position:absolute; top:0; left:20px; width:48px; height:2px; background:linear-gradient(90deg,var(--cyan),var(--violet)); box-shadow:0 0 18px rgba(0,229,255,.65); }
+    .release-card { position:relative; padding:24px; border:1px solid var(--club-line); border-radius:12px; background:linear-gradient(180deg,var(--club-surface),var(--club-surface-2)); box-shadow:inset 0 1px 0 rgba(255,255,255,.055),var(--club-shadow-sm); overflow:hidden; }
+    .release-card::before { content:""; position:absolute; top:0; left:20px; width:48px; height:2px; background:linear-gradient(90deg,var(--club-accent),var(--club-info)); box-shadow:0 0 18px var(--club-accent-soft); }
     .release-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:14px; }
-    .version { color:var(--cyan); font-size:24px; font-weight:900; }
-    .date { color:var(--muted); font-family:Consolas,"Courier New",monospace; font-size:13px; }
-    .release-card ul, .release-description { margin:0; color:var(--text); line-height:1.8; }
+    .version { color:var(--club-accent); font-size:24px; font-weight:900; }
+    .date { color:var(--club-muted); font-family:Consolas,"Courier New",monospace; font-size:13px; }
+    .release-card ul, .release-description { margin:0; color:var(--club-text-soft); line-height:1.8; }
     .release-card ul { padding-left:20px; }
     .release-card li + li { margin-top:3px; }
-    .download { display:inline-flex; align-items:center; justify-content:center; min-height:42px; margin-top:18px; padding:10px 15px; border:1px solid rgba(0,229,255,.55); border-radius:8px; background:linear-gradient(135deg,rgba(0,229,255,.92),rgba(124,77,255,.9)); color:#020409; font-weight:900; box-shadow:0 0 25px rgba(0,229,255,.2); }
-    .download:hover { transform:translateY(-1px); box-shadow:0 0 34px rgba(0,229,255,.4); }
-    .footer { display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; padding:24px clamp(18px,5vw,72px); border-top:1px solid var(--line); color:var(--muted); font-size:14px; background:rgba(2,4,12,.84); }
-    html[data-theme="light"] body { background:linear-gradient(180deg,#fff9f5 0%,#f0f2f6 100%) !important; }
-    html[data-theme="light"] .topbar, html[data-theme="light"] .footer { background:rgba(255,255,255,.92); }
-    html[data-theme="light"] .hero-status, html[data-theme="light"] .release-card { background:#fff; border-color:#ead6cf; box-shadow:0 10px 30px rgba(130,65,39,.08); }
-    html[data-theme="light"] .notice { background:#fff4ef; border-color:#e7b3a3; color:#382825; }
-    html[data-theme="light"] .notice strong { color:#8d3f2e; }
-    html[data-theme="light"] .release-card::before { background:linear-gradient(90deg,#e07a5f,#d65a31); box-shadow:none; }
-    html[data-theme="light"] .download { background:linear-gradient(135deg,#e07a5f,#d65a31); color:#fff; border-color:#c95336; box-shadow:0 5px 16px rgba(214,90,49,.2); }
-    @media (max-width:760px) { .hero { grid-template-columns:1fr; padding-bottom:34px; } main { padding-top:48px; } .release-head { align-items:flex-start; flex-direction:column; gap:5px; } }
+    .download { display:inline-flex; align-items:center; justify-content:center; min-height:42px; margin-top:18px; padding:10px 15px; border:1px solid var(--club-accent-line); border-radius:8px; background:var(--club-accent); color:var(--club-on-accent); font-weight:900; box-shadow:var(--club-shadow-sm); cursor:pointer; }
+    .download:hover { transform:translateY(-1px); background:var(--club-accent-strong); box-shadow:var(--club-shadow); }
+    /* 骨架屏 / 空态视觉由 club-ui.css 的 .club-skeleton / .club-empty（body.club-page 作用域）提供，本页只留间距与重试按钮补充 */
+    .release-skeleton .club-skeleton + .club-skeleton { margin-top:14px; }
+    body.club-page .club-empty .release-retry { margin-top:10px; min-height:34px; padding:6px 13px; font-size:12.5px; }
+    .footer { display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; padding:24px clamp(18px,5vw,72px); border-top:1px solid var(--line); color:var(--club-muted); font-size:14px; background:var(--panel-glass); }
+    /* 亮色下氛围层改用正片叠底，避免 screen 混合被白底吃掉 */
+    html[data-theme="light"] .ambient-orb, html[data-theme="light"] .ambient-grid { mix-blend-mode: multiply; opacity: .5; }
+    html[data-theme="light"] #particleCanvas { opacity: .55; }
+    @media (max-width:900px) { body.club-page .hero { padding-bottom:34px; } .release-head { align-items:flex-start; flex-direction:column; gap:5px; } }
   </style>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script></head>
-<body>
+<body class="club-page">
   <div class="ambient-background" aria-hidden="true"><div class="ambient-orb orb-cyan"></div><div class="ambient-orb orb-violet"></div><div class="ambient-grid"></div><canvas id="particleCanvas"></canvas></div><div class="pointer-glow" aria-hidden="true"></div>
   <header class="topbar">
-    <a class="brand" href="../index.html">
-      <span class="brand-mark">A</span>
-      <span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span>
-    </a>
-    <span class="member-identity" data-member-identity hidden></span>
-    <a class="back-link" href="../index.html#projects" data-i18n="appmonitor.backProjects">← 返回官网项目</a>
+    <div class="topbar-inner">
+      <a class="brand" href="../index.html">
+        <span class="brand-mark">A</span>
+        <span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span>
+      </a>
+      <span class="member-identity" data-member-identity hidden></span>
+      <a class="back" href="../index.html#projects" data-i18n="appmonitor.backProjects">← 返回官网项目</a>
+    </div>
   </header>
 
   <main>
@@ -131,7 +124,7 @@
       <div>
         <p class="eyebrow">APPMonitor · WINDOWS SOFTWARE</p>
         <h1 data-i18n="pages.appmonitor.h1">APPMonitor</h1>
-        <p data-i18n="appmonitor.lead">由算法社社长鼎力开发。Windows 软件管控与网络监控工具，持续加入自律助手、使用统计、USB 管控和高级防护能力。</p>
+        <p class="lead" data-i18n="appmonitor.lead">由算法社社长鼎力开发。Windows 软件管控与网络监控工具，持续加入自律助手、使用统计、USB 管控和高级防护能力。</p>
       </div>
       <div class="hero-status"><strong data-i18n="appmonitor.statusTitle">持续更新中</strong><span data-i18n="appmonitor.statusMeta" data-i18n-mode="html">当前发布版本：V7.0<br />更新时间：2026-08-09</span></div>
     </section>
@@ -140,6 +133,7 @@
       <strong data-i18n="appmonitor.installTipPrefix">首次安装提示：</strong><span data-i18n="appmonitor.installTipMid">如果 NPCAP 驱动无法自动下载，请前往</span>
       <a href="https://1828041119.share.123pan.cn/123pan/oTfUjv-t8Bv3" target="_blank" rel="noopener" data-i18n="appmonitor.installTipLink">123 云盘手动下载 NPCAP</a>
       <span data-i18n="appmonitor.installTipSuffix">并完成安装，否则将无法使用网络监控相关功能。作者微信：CHM008027</span>
+      <span class="sensitive-badge" data-i18n="appmonitor.sensitiveBadge">含联系方式 / 网盘口令，注意保密</span>
     </div>
 
     <section>
@@ -215,9 +209,9 @@
     </section>
   </main>
 
-  <footer class="footer"><span data-i18n="appmonitor.footerLeft">算法社 · APPMonitor</span><span data-i18n="appmonitor.footerRight">Windows 软件管控工具 · 作者微信：CHM008027</span></footer>
+  <footer class="footer"><span data-i18n="appmonitor.footerLeft">算法社 · APPMonitor</span><span data-i18n="appmonitor.footerRight">Windows 软件管控工具 · 作者微信：CHM008027</span><span class="sensitive-badge" data-i18n="appmonitor.sensitiveBadge">含联系方式 / 网盘口令，注意保密</span></footer>
 <script>
-const motionQuery=window.matchMedia('(prefers-reduced-motion: no-preference)');if(!motionQuery.matches)document.documentElement.style.scrollSnapType='none';if(motionQuery.matches){const observer=new IntersectionObserver(entries=>entries.forEach(entry=>entry.target.classList.toggle('is-visible',entry.isIntersecting)),{threshold:.12});window.appMonitorObserveReleases=()=>{document.querySelectorAll('main .release-card:not([data-reveal-observed])').forEach((item,index)=>{item.classList.add('reveal-ready');item.style.setProperty('--reveal-delay',`${(index%6)*90}ms`);item.dataset.revealObserved='true';observer.observe(item);});};const items=document.querySelectorAll('main .hero,main .notice,main section,.footer');items.forEach(item=>{item.classList.add('reveal-ready');observer.observe(item)});window.appMonitorObserveReleases();if(matchMedia('(pointer: fine)').matches)addEventListener('pointermove',e=>{document.documentElement.style.setProperty('--pointer-x',`${e.clientX}px`);document.documentElement.style.setProperty('--pointer-y',`${e.clientY}px`)},{passive:true});const canvas=document.getElementById('particleCanvas'),ctx=canvas.getContext('2d');let particles=[],frame;function resize(){const scale=Math.min(devicePixelRatio||1,2);canvas.width=innerWidth*scale;canvas.height=innerHeight*scale;ctx.setTransform(scale,0,0,scale,0,0);particles=Array.from({length:Math.min(52,Math.max(22,innerWidth/26|0))},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:.5+Math.random()*1.4,s:.05+Math.random()*.16,a:.2+Math.random()*.4}))}function draw(){ctx.clearRect(0,0,innerWidth,innerHeight);particles.forEach(p=>{p.y-=p.s;if(p.y<0)p.y=innerHeight;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(0,229,255,${p.a})`;ctx.fill()});frame=requestAnimationFrame(draw)}resize();draw();addEventListener('resize',resize,{passive:true});addEventListener('pagehide',()=>cancelAnimationFrame(frame),{once:true})}
+const motionQuery=window.matchMedia('(prefers-reduced-motion: no-preference)');if(!motionQuery.matches)document.documentElement.style.scrollSnapType='none';if(motionQuery.matches){const observer=new IntersectionObserver(entries=>entries.forEach(entry=>entry.target.classList.toggle('is-visible',entry.isIntersecting)),{threshold:.12});window.appMonitorObserveReleases=()=>{document.querySelectorAll('main .release-card:not([data-reveal-observed])').forEach((item,index)=>{item.classList.add('reveal-ready');item.style.setProperty('--reveal-delay',`${(index%6)*90}ms`);item.dataset.revealObserved='true';observer.observe(item);});};const items=document.querySelectorAll('main .hero,main .notice,main section,.footer');items.forEach(item=>{item.classList.add('reveal-ready');observer.observe(item)});window.appMonitorObserveReleases();if(matchMedia('(pointer: fine)').matches)addEventListener('pointermove',e=>{document.documentElement.style.setProperty('--pointer-x',`${e.clientX}px`);document.documentElement.style.setProperty('--pointer-y',`${e.clientY}px`)},{passive:true});const canvas=document.getElementById('particleCanvas'),ctx=canvas.getContext('2d');let particleRGB=(getComputedStyle(document.documentElement).getPropertyValue('--particle-rgb')||'58,212,230').trim()||'58,212,230';addEventListener('club:themechange',()=>{const next=(getComputedStyle(document.documentElement).getPropertyValue('--particle-rgb')||'').trim();if(next)particleRGB=next},{passive:true});let particles=[],frame;function resize(){const scale=Math.min(devicePixelRatio||1,2);canvas.width=innerWidth*scale;canvas.height=innerHeight*scale;ctx.setTransform(scale,0,0,scale,0,0);particles=Array.from({length:Math.min(52,Math.max(22,innerWidth/26|0))},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:.5+Math.random()*1.4,s:.05+Math.random()*.16,a:.2+Math.random()*.4}))}function draw(){ctx.clearRect(0,0,innerWidth,innerHeight);particles.forEach(p=>{p.y-=p.s;if(p.y<0)p.y=innerHeight;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(${particleRGB},${p.a})`;ctx.fill()});frame=requestAnimationFrame(draw)}resize();draw();addEventListener('resize',resize,{passive:true});addEventListener('pagehide',()=>cancelAnimationFrame(frame),{once:true})}
 </script>
 <script>
 (() => {
@@ -226,7 +220,14 @@ const motionQuery=window.matchMedia('(prefers-reduced-motion: no-preference)');i
   const host = document.getElementById('dynamicReleases');
   const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[char]));
   const language = () => document.documentElement.lang === 'en' ? 'en' : 'zh';
+  // 页内新增文案：不改动 i18n-dict*.js，通过 ClubI18n.mergeDict 注入中英双语。
+  window.ClubI18n?.mergeDict?.({
+    zh: { appmonitor: { releasesLoading: '正在加载版本…', releasesLoadFailed: '版本信息加载失败', releasesLoadFailedHint: '网络波动或发布服务暂时不可用，请稍后重试。', releasesRetry: '重试加载', sensitiveBadge: '含联系方式 / 网盘口令，注意保密' } },
+    en: { appmonitor: { releasesLoading: 'Loading releases…', releasesLoadFailed: 'Failed to load releases', releasesLoadFailedHint: 'The network hiccuped or the release service is temporarily unavailable. Please try again.', releasesRetry: 'Retry', sensitiveBadge: 'Contains contact info / drive passcodes — keep private' } }
+  });
+  const t = (key, vars, fallback) => { try { const value = window.ClubI18n?.t?.(key, vars); return value && value !== key ? value : fallback; } catch (_) { return fallback; } };
   let releases = [];
+  let loadState = 'loading';
   function render() {
     host.innerHTML = releases.map(item => {
       const intro = language() === 'en' ? item.intro_en : item.intro_zh;
@@ -237,13 +238,26 @@ const motionQuery=window.matchMedia('(prefers-reduced-motion: no-preference)');i
     const latest = releases[0];
     if (latest) { const status = document.querySelector('.hero-status span'); if (status) status.innerHTML = window.ClubI18n?.t?.('appmonitor.statusMetaLatest', { ver: latest.version, date: latest.release_date }) || `Current release: ${escapeHtml(latest.version)}<br>Updated: ${escapeHtml(latest.release_date)}`; }
   }
-  fetch(endpoint, { method: 'POST', headers: { 'content-type':'application/json', apikey: key }, body: JSON.stringify({ action:'appmonitor_releases_list' }) })
-    .then(response => response.ok ? response.json() : Promise.reject(new Error('request failed')))
-    .then(data => { releases = Array.isArray(data.releases) ? data.releases : []; render(); })
-    .catch(() => { host.innerHTML = ''; });
-  window.addEventListener('club:langchange', render);
+  function renderLoading() {
+    const label = escapeHtml(t('appmonitor.releasesLoading', null, '正在加载版本…'));
+    host.innerHTML = `<div class="release-card release-skeleton" role="status" aria-label="${label}"><span class="club-skeleton" style="height:22px;width:118px"></span><span class="club-skeleton"></span><span class="club-skeleton" style="width:62%"></span></div>`;
+  }
+  function renderError() {
+    host.innerHTML = `<div class="club-empty" role="alert"><strong>${escapeHtml(t('appmonitor.releasesLoadFailed', null, '版本信息加载失败'))}</strong><span>${escapeHtml(t('appmonitor.releasesLoadFailedHint', null, '网络波动或发布服务暂时不可用，请稍后重试。'))}</span><button class="download release-retry" type="button">${escapeHtml(t('appmonitor.releasesRetry', null, '重试加载'))}</button></div>`;
+    host.querySelector('.release-retry')?.addEventListener('click', () => loadReleases());
+  }
+  function loadReleases() {
+    loadState = 'loading';
+    renderLoading();
+    fetch(endpoint, { method: 'POST', headers: { 'content-type':'application/json', apikey: key }, body: JSON.stringify({ action:'appmonitor_releases_list' }) })
+      .then(response => response.ok ? response.json() : Promise.reject(new Error('request failed')))
+      .then(data => { releases = Array.isArray(data.releases) ? data.releases : []; loadState = 'ok'; render(); })
+      .catch(() => { loadState = 'error'; renderError(); });
+  }
+  window.addEventListener('club:langchange', () => { if (loadState === 'ok') render(); else if (loadState === 'error') renderError(); else renderLoading(); });
+  loadReleases();
 })();
 </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

@@ -6,15 +6,17 @@
   <meta name="description" content="算法社社员个人主页：积分、捐赠、游戏战绩与签到记录，由本人决定公开范围。">
   <title>社员主页 · 算法社</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
+  <style>
+  </style>
   <script src="theme.js?v=1b745a4f"></script>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=c79bfe69"></script>
+  <script src="i18n-dict.js?v=f75071ae"></script>
   <script src="member-identity.js?v=ad75d585" defer></script>
   <script src="i18n.js?v=ba66328e"></script>
-  <script src="club-common.js?v=b3d82c39"></script>
+  <script src="club-common.js?v=333db1c4"></script>
   <script src="service-prompts.js?v=1cfff2ab"></script>
   <script src="service-gate.js?v=6acc9c5f"></script>
   <meta property="og:type" content="website">
@@ -39,9 +41,18 @@
   </div></header>
   <main>
     <section class="panel" id="gate" hidden>
-      <h1 data-i18n="notify.gateTitle">请先登录</h1>
+      <span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span>
+      <h2 data-i18n="notify.gateTitle">请先登录</h2>
       <p class="intro" data-i18n="notify.gateLead">通知只对已登录的算法社成员开放。</p>
       <a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a>
+    </section>
+
+    <!-- 专用的「未找到 / 读取失败」提示容器：不再复用登录门禁的标题键（notify.gateTitle）。 -->
+    <section class="panel" id="gateError" hidden>
+      <div class="club-empty">
+        <strong id="gateErrorTitle"></strong>
+        <span id="gateErrorHint"></span>
+      </div>
     </section>
 
     <section class="panel" id="profilePanel" hidden>
@@ -56,7 +67,7 @@
           <p class="member-profile-headline" id="headline" hidden></p>
         </div>
         <div class="member-profile-actions">
-          <a class="button secondary" id="editButton" href="member-center.html#profileSettings" data-i18n="memberProfile.settingsTitle" hidden>个人主页展示设置</a>
+          <a class="button secondary" id="editButton" href="member-center.html#profileSettingsLink" data-i18n="memberProfile.settingsTitle" hidden>个人主页展示设置</a>
         </div>
       </div>
 
@@ -142,7 +153,16 @@
     }
 
     function formatNumber(value) {
-      return Number(value || 0).toLocaleString('zh-CN');
+      const lang = window.ClubI18n && ClubI18n.getLang() === 'en' ? 'en-US' : 'zh-CN';
+      return Number(value || 0).toLocaleString(lang);
+    }
+
+    // 专用错误容器：标题 + 说明，替代复用登录门禁标题键的旧做法。
+    function showGateError(title, hint) {
+      $('gateErrorTitle').textContent = title;
+      $('gateErrorHint').textContent = hint || '';
+      $('gate').hidden = true;
+      $('gateError').hidden = false;
     }
 
     function renderGames(games) {
@@ -207,9 +227,7 @@
         setMessage('message', '');
       } catch (error) {
         $('profilePanel').hidden = true;
-        $('gate').hidden = false;
-        $('gate').querySelector('h1').textContent = t('memberProfile.notFound');
-        $('gate').querySelector('.intro').textContent = error.message || t('memberProfile.loadFailed');
+        showGateError(t('memberProfile.notFound'), error.message || t('memberProfile.loadFailed'));
       }
     }
 
@@ -231,6 +249,7 @@
       const loggedIn = Boolean(next?.user?.id);
       if (!loggedIn) {
         $('gate').hidden = false;
+        $('gateError').hidden = true;
         $('profilePanel').hidden = true;
         $('settingsPanel').hidden = true;
         return;
@@ -249,12 +268,11 @@
       if (memberId) await loadProfile();
       else {
         $('profilePanel').hidden = true;
-        $('gate').hidden = false;
-        $('gate').querySelector('h1').textContent = t('memberProfile.notFound');
-        $('gate').querySelector('.intro').textContent = t('memberProfile.unbound');
+        showGateError(t('memberProfile.notFound'), t('memberProfile.unbound'));
       }
       await loadSettings();
-      $('settingsPanel').hidden = false;
+      // 展示设置面板只属于本人主页：查看他人主页时隐藏。
+      $('settingsPanel').hidden = !(profile && profile.is_self);
       $('viewOwn').href = memberId ? `member-profile.html?id=${encodeURIComponent(memberId)}` : 'member-profile.html';
     }
 
@@ -283,6 +301,6 @@
       window.addEventListener('club:langchange', () => { if (profile) renderProfile(); });
     });
   </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

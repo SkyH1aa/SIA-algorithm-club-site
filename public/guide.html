@@ -3,9 +3,9 @@
 <head>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7"><script src="theme.js?v=1b745a4f"></script>
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script><script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f"><script src="theme.js?v=1b745a4f"></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script><script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
   <title>使用指引 · 算法社</title>
 
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
@@ -22,6 +22,31 @@
   <meta name="twitter:image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
+  <style>
+    /* 三步上手：编号圆点 + 卡片；面板图标与功能枢纽页同体系 */
+    body.club-page .guide-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--club-gap); margin: 22px 0 26px; }
+    body.club-page .guide-step { position: relative; padding: 18px 18px 16px; border: 1px solid var(--club-line); border-radius: var(--club-radius); background: var(--club-surface); box-shadow: var(--club-shadow-sm); }
+    body.club-page .guide-step .step-num {
+      display: inline-grid; place-items: center;
+      width: 30px; height: 30px; margin-bottom: 10px;
+      border-radius: 9px; background: var(--club-accent); color: var(--club-on-accent);
+      font: 800 14px/1 var(--club-font); font-variant-numeric: tabular-nums;
+    }
+    body.club-page .guide-step strong { display: block; margin-bottom: 5px; font-size: 15px; }
+    body.club-page .guide-step p { margin: 0; color: var(--club-muted); font-size: 13px; line-height: 1.65; }
+    @media (max-width: 900px) { body.club-page .guide-steps { grid-template-columns: 1fr; } }
+
+    body.club-page .guide-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--club-gap); }
+    body.club-page .guide-grid .panel { margin: 0; }
+    body.club-page .guide-grid .panel-wide { grid-column: 1 / -1; }
+    body.club-page .panel-icon {
+      display: inline-grid; place-items: center;
+      width: 36px; height: 36px; margin-bottom: 10px;
+      border-radius: 10px; background: var(--club-accent-soft); color: var(--club-accent);
+    }
+    body.club-page .panel-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    @media (max-width: 900px) { body.club-page .guide-grid { grid-template-columns: 1fr; } }
+  </style>
 </head>
 <body class="club-page">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="guide.backHome">返回首页</a></div></header>
@@ -29,16 +54,43 @@
     <p class="eyebrow">ALGORITHM CLUB · GUIDE</p>
     <h1 data-i18n="guide.h1">使用指引</h1>
     <p class="lead" data-i18n="guide.lead">从首页导航进入社团功能、AI 游戏、算法实验室和社员系统。</p>
-    <section class="guide-grid">
-      <article class="panel"><h2 data-i18n="guide.quickStart">快速开始</h2><p data-i18n="guide.quickStartText">从首页的“个人中心”进入注册、登录与资料绑定，再通过“社团功能”选择想要使用的模块。</p></article>
-      <article class="panel"><h2 data-i18n="guide.accountTitle">账号与个人中心</h2><p data-i18n="guide.accountText">使用邀请码注册并登录，可在个人中心绑定中文姓名与班级、查看个人资料和积分。签到请从“社团功能”页面进入“签到兑换”。</p></article>
-      <article class="panel"><h2 data-i18n="guide.featuresTitle">社团功能</h2><p data-i18n="guide.featuresText">这里汇总教材下载、算法实验室、五子棋、俄罗斯方块、贪吃蛇、签到兑换、积分商城、留言和活动入口。积分榜可从个人中心或“跳转模块”中的“社员积分”进入。</p></article>
-      <article class="panel"><h2 data-i18n="guide.gamesTitle">AI 游戏</h2><p data-i18n="guide.gamesText">游戏支持普通游玩、AI 游玩、AI 辅助和人机对战。开启 AI 决策面板后，可查看候选动作、评估分、目标位置或预测路径。</p></article>
-      <article class="panel"><h2 data-i18n="guide.checkinTitle">签到与课程签到</h2><p data-i18n="guide.checkinText">从“社团功能”页面进入“签到兑换”。积分兑换使用管理员发布的兑换码；课程签到需在签到页面选择对应类型并提交，之后等待管理员审核。</p></article>
-      <article class="panel"><h2 data-i18n="guide.themeTitle">语言与主题</h2><p data-i18n="guide.themeText">页面支持中英双语，并可选择自动、日间或暗色主题；自动模式按北京时间 06:00–18:00 使用日间主题。</p></article>
-      <article class="panel panel-wide"><h2 data-i18n="guide.changelogTitle">更新日志</h2><p data-i18n="guide.changelogText">查看网站的功能更新和维护记录。</p><div class="actions"><a class="button" href="changelog.html" data-i18n="guide.openChangelog">查看更新日志 →</a><a class="button secondary" href="../index.html" data-i18n="guide.backHome">返回首页</a></div></article>
+    <div class="actions"><a class="button" href="club-features.html" data-i18n="guide.goFeatures">前往社团功能 →</a></div>
+    <section class=”guide-steps” aria-label=”三步上手”>
+      <article class=”guide-step” data-reveal style=”--reveal-delay:0ms”><span class=”step-num”>1</span><strong data-i18n=”guide.step1Title”>创建账号</strong><p data-i18n=”guide.step1Desc”>在个人中心使用邀请码注册，并登录社团账号。</p></article>
+      <article class=”guide-step” data-reveal style=”--reveal-delay:45ms”><span class=”step-num”>2</span><strong data-i18n=”guide.step2Title”>绑定资料</strong><p data-i18n=”guide.step2Desc”>绑定中文姓名与班级，即可查看个人资料与积分。</p></article>
+      <article class=”guide-step” data-reveal style=”--reveal-delay:90ms”><span class=”step-num”>3</span><strong data-i18n=”guide.step3Title”>选择模块</strong><p data-i18n=”guide.step3Desc”>从社团功能进入实验室、AI 游戏、签到与日常功能。</p></article>
+    </section>
+    <section class=”guide-grid”>
+      <article class=”panel” data-reveal style=”--reveal-delay:135ms”><h2 data-i18n=”guide.quickStart”>快速开始</h2><p data-i18n=”guide.quickStartText”>从首页的“个人中心”进入注册、登录与资料绑定，再通过“社团功能”选择想要使用的模块。</p></article>
+      <article class=”panel” data-reveal style=”--reveal-delay:180ms”><span class=”panel-icon” aria-hidden=”true”><svg viewBox=”0 0 24 24” aria-hidden=”true”><circle cx=”12” cy=”8” r=”3.5”/><path d=”M5 20c.8-3.4 3.6-5.5 7-5.5s6.2 2.1 7 5.5”/></svg></span><h2 data-i18n=”guide.accountTitle”>账号与个人中心</h2><p data-i18n=”guide.accountText”>使用邀请码注册并登录，可在个人中心绑定中文姓名与班级、查看个人资料和积分。签到请从“社团功能”页面进入“签到兑换”。</p></article>
+      <article class=”panel” data-reveal style=”--reveal-delay:225ms”><span class=”panel-icon” aria-hidden=”true”><svg viewBox=”0 0 24 24” aria-hidden=”true”><rect x=”3.5” y=”3.5” width=”7” height=”7” rx=”1.5”/><rect x=”13.5” y=”3.5” width=”7” height=”7” rx=”1.5”/><rect x=”3.5” y=”13.5” width=”7” height=”7” rx=”1.5”/><rect x=”13.5” y=”13.5” width=”7” height=”7” rx=”1.5”/></svg></span><h2 data-i18n=”guide.featuresTitle”>社团功能</h2><p data-i18n=”guide.featuresText”>这里汇总教材下载、算法实验室、五子棋、俄罗斯方块、贪吃蛇、签到兑换、积分商城、留言和活动入口。积分榜可从个人中心或“跳转模块”中的“社员积分”进入。</p></article>
+      <article class=”panel” data-reveal style=”--reveal-delay:270ms”><span class=”panel-icon” aria-hidden=”true”><svg viewBox=”0 0 24 24” aria-hidden=”true”><path d=”M6 9h12a4 4 0 0 1 4 4v1.5a2.5 2.5 0 0 1-4.6 1.4L16 14H8l-1.4 1.9A2.5 2.5 0 0 1 2 14.5V13a4 4 0 0 1 4-4z”/><path d=”M8 12h2M9 11v2M15.5 11.5h.01M17.5 13h.01”/></svg></span><h2 data-i18n=”guide.gamesTitle”>AI 游戏</h2><p data-i18n=”guide.gamesText”>游戏支持普通游玩、AI 游玩、AI 辅助和人机对战。开启 AI 决策面板后，可查看候选动作、评估分、目标位置或预测路径。</p></article>
+      <article class=”panel” data-reveal style=”--reveal-delay:315ms”><span class=”panel-icon” aria-hidden=”true”><svg viewBox=”0 0 24 24” aria-hidden=”true”><rect x=”3.5” y=”5” width=”17” height=”15” rx=”2.5”/><path d=”M8 3v4M16 3v4M3.5 10h17”/><path d=”M9 15.5l2 2 4-4”/></svg></span><h2 data-i18n=”guide.checkinTitle”>签到与课程签到</h2><p data-i18n=”guide.checkinText”>从“社团功能”页面进入“签到兑换”。积分兑换使用管理员发布的兑换码；课程签到需在签到页面选择对应类型并提交，之后等待管理员审核。</p></article>
+      <article class=”panel” data-reveal style=”--reveal-delay:360ms”><span class=”panel-icon” aria-hidden=”true”><svg viewBox=”0 0 24 24” aria-hidden=”true”><circle cx=”12” cy=”12” r=”8.5”/><path d=”M12 3.5v17M3.5 12h17”/><path d=”M15.5 6.5a6.5 6.5 0 1 1-9 9 7.5 7.5 0 0 0 9-9z”/></svg></span><h2 data-i18n=”guide.themeTitle”>语言与主题</h2><p data-i18n=”guide.themeText”>页面支持中英双语，并可选择自动、日间或暗色主题；自动模式按北京时间 06:00–18:00 使用日间主题。</p></article>
+      <article class=”panel panel-wide” data-reveal style=”--reveal-delay:405ms”><span class=”panel-icon” aria-hidden=”true”><svg viewBox=”0 0 24 24” aria-hidden=”true”><path d=”M8 6h12M8 12h12M8 18h12”/><circle cx=”4” cy=”6” r=”1”/><circle cx=”4” cy=”12” r=”1”/><circle cx=”4” cy=”18” r=”1”/></svg></span><h2 data-i18n=”guide.changelogTitle”>更新日志</h2><p data-i18n=”guide.changelogText”>查看网站的功能更新和维护记录。</p><div class=”actions”><a class=”button” href=”changelog.html” data-i18n=”guide.openChangelog”>查看更新日志 →</a><a class=”button secondary” href=”../index.html” data-i18n=”guide.backHome”>返回首页 →</a></div></article>
     </section>
   </main>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script>
+    // 本页新增 i18n 键（页内合并，不改公共词典文件）
+    const GUIDE_PAGE_DICT = {
+      zh: { guide: {
+        goFeatures: '前往社团功能 →',
+        step1Title: '创建账号', step1Desc: '在个人中心使用邀请码注册，并登录社团账号。',
+        step2Title: '绑定资料', step2Desc: '绑定中文姓名与班级，即可查看个人资料与积分。',
+        step3Title: '选择模块', step3Desc: '从社团功能进入实验室、AI 游戏、签到与日常功能。',
+      } },
+      en: { guide: {
+        goFeatures: 'Go to club features →',
+        step1Title: 'Create your account', step1Desc: 'Register with an invite code in Member Center and sign in.',
+        step2Title: 'Bind your profile', step2Desc: 'Bind your Chinese name and class to view your profile and points.',
+        step3Title: 'Pick a module', step3Desc: 'Open labs, AI games, check-in and daily tools from Club Features.',
+      } }
+    };
+    function mergeGuidePageDict() { if (window.ClubI18n && typeof ClubI18n.mergeDict === 'function') ClubI18n.mergeDict(GUIDE_PAGE_DICT); }
+    mergeGuidePageDict();
+    document.addEventListener('DOMContentLoaded', mergeGuidePageDict);
+    window.addEventListener('club:langchange', mergeGuidePageDict);
+  </script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>

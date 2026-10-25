@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="tetris.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39014235">
-  <link rel="stylesheet" href="club-ui.css?v=39cc10f7">
+  <link rel="stylesheet" href="theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="club-ui.css?v=2a950b7f">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8">
@@ -10,10 +10,12 @@
   <title>算法社 · 俄罗斯方块多模式</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=c79bfe69"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=b3d82c39"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
 <style>
+    /* 俄罗斯方块页样式：2026-10 起接入全站 club-ui 令牌（body.club-page）。
+       本块只覆盖本页特有组件；按钮、表单、排版等通用样式来自 club-ui.css。 */
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
     html, body { height: 100%; }
@@ -23,11 +25,13 @@
       min-height: 100dvh;
       margin: 0;
       padding: 10px 12px;
-      background: #07111f;
-      color: #e7f7ff;
-      font-family: Arial, system-ui, sans-serif;
-      overflow: hidden;
+      font-family: var(--club-font);
+      /* 矮屏不再整页裁切：滚动交给页面本身，overflow:hidden 收窄到画布区 .play-area */
+      overflow-x: hidden;
+      overflow-y: auto;
     }
+    /* club-ui 的 main 版式规则针对文档流页面；本页 main 是棋局面板，恢复本页布局 */
+    body.club-page main.panel { max-width: none; margin: 0; padding: 10px; z-index: auto; }
     .ambient-background{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
     .ambient-orb{position:absolute;width:min(48vw,620px);aspect-ratio:1;border-radius:50%;filter:blur(72px);opacity:.18;mix-blend-mode:screen;animation:drift-orb 18s ease-in-out infinite alternate}
     .orb-cyan{top:-18%;left:-12%;background:#00e5ff}
@@ -48,7 +52,7 @@
       gap: 8px;
       min-height: 0;
     }
-    .member-identity{display:none;margin:0;padding:3px 8px;border:1px solid rgba(0,229,255,.34);border-radius:999px;color:#00e5ff;font-size:11px;width:max-content}
+    .member-identity{display:none;margin:0;padding:3px 8px;border:1px solid var(--club-accent-line);border-radius:var(--club-radius-pill);background:var(--club-accent-soft);color:var(--club-accent);font-size:11px;width:max-content}
     .member-identity:not([hidden]){display:inline-block}
 
     .page-header {
@@ -59,12 +63,14 @@
       margin: 0;
       flex: 0 0 auto;
     }
-    .page-header a { color: #49e7ff; text-decoration: none; font-size: 13px; }
-    .page-header h1 {
+    body.club-page .page-header a { color: var(--club-accent); text-decoration: none; font-size: 13px; transition: color var(--club-dur) var(--club-ease); }
+    body.club-page .page-header a:hover { color: var(--club-accent-strong); }
+    body.club-page .page-header h1 {
       margin: 0;
       font-size: clamp(16px, 2vw, 20px);
       font-weight: 700;
       letter-spacing: .2px;
+      color: var(--club-text);
     }
     .page-header p { display: none; }
 
@@ -79,17 +85,16 @@
 
     .panel {
       padding: 10px;
-      border: 1px solid rgba(73, 231, 255, .24);
-      border-radius: 12px;
-      background: rgba(13, 28, 47, .84);
-      box-shadow: 0 12px 28px rgba(0,0,0,.22);
+      border: 1px solid var(--club-line);
+      border-radius: var(--club-radius);
+      background: color-mix(in srgb, var(--club-surface) 88%, transparent);
+      box-shadow: inset 0 1px 0 var(--club-highlight), var(--club-shadow-sm);
       min-height: 0;
     }
     main.panel {
       display: flex;
       flex-direction: column;
       gap: 8px;
-      overflow: hidden;
     }
 
     .toolbar {
@@ -105,42 +110,52 @@
       align-items: center;
       margin: 0;
     }
-    label { color: #91a9b8; font-size: 12px; }
+    label { color: var(--club-muted); font-size: 12px; }
     input, select {
       min-width: 140px;
       padding: 6px 10px;
-      border: 1px solid #31536a;
-      border-radius: 6px;
-      background: #081522;
-      color: #fff;
+      border: 1px solid var(--club-line-strong);
+      border-radius: var(--club-radius-xs);
+      background: var(--club-surface-2);
+      color: var(--club-text);
+      font: inherit;
       font-size: 13px;
     }
-    .hint { color: #91a9b8; font-size: 12px; }
+    .hint { color: var(--club-muted); font-size: 12px; }
 
     .control-strip {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 6px 8px;
       align-items: center;
     }
+    .strip-sep { flex: 0 0 1px; width: 1px; height: 20px; align-self: center; margin: 0 3px; background: var(--club-line-strong); }
     .mode-row { display: contents; }
+    /* 胶囊按钮：token 化的次要按钮观感；active 为强调色软底（theme.css 亮色另有全站覆盖） */
     .mode-btn, .action-btn {
-      padding: 6px 11px;
-      border: 1px solid rgba(73,231,255,.28);
-      border-radius: 999px;
-      background: #0d1c2f;
-      color: #e7f7ff;
+      padding: 6px 12px;
+      border: 1px solid var(--club-line-strong);
+      border-radius: var(--club-radius-pill);
+      background: var(--club-surface-2);
+      color: var(--club-text-soft);
       cursor: pointer;
+      font: inherit;
       font-size: 12px;
       font-weight: 600;
       line-height: 1.2;
       white-space: nowrap;
+      transition: background var(--club-dur) var(--club-ease), border-color var(--club-dur) var(--club-ease), color var(--club-dur) var(--club-ease), box-shadow var(--club-dur) var(--club-ease), transform var(--club-dur-fast) var(--club-ease);
     }
-    .mode-btn.active { background: #0284c7; border-color: #38bdf8; box-shadow: 0 0 14px rgba(56,189,248,.3); }
-    .action-btn.primary { background: #FF6F00; border-color: #FF6F00; }
-    .action-btn.danger { background: #7f1d1d; border-color: #ef4444; }
+    .mode-btn:hover, .action-btn:hover:not(:disabled):not(.primary):not(.danger) { border-color: var(--club-accent-line); background: var(--club-accent-soft); color: var(--club-accent); }
+    .mode-btn:active, .action-btn:active { transform: translateY(1px); }
+    .mode-btn.active { background: var(--club-accent-soft); border-color: var(--club-accent); color: var(--club-accent); box-shadow: var(--club-ring); }
+    .action-btn.primary { background: var(--club-accent); border-color: var(--club-accent); color: var(--club-on-accent); }
+    .action-btn.primary:hover:not(:disabled) { background: var(--club-accent-strong); border-color: var(--club-accent-strong); color: var(--club-on-accent); }
+    .action-btn.danger { background: var(--club-danger-soft); border-color: color-mix(in srgb, var(--club-danger) 55%, transparent); color: var(--club-danger); }
+    .action-btn.danger:hover:not(:disabled) { border-color: var(--club-danger); }
     .action-btn:disabled { opacity: .45; cursor: not-allowed; }
-    .control-method{display:inline-flex;align-items:center;gap:6px;color:#91a9b8;font-size:12px;font-weight:700}.control-method select{padding:5px 8px;border:1px solid rgba(73,231,255,.28);border-radius:7px;background:#0d1c2f;color:#e7f7ff;font:inherit}
+    .control-method{display:inline-flex;align-items:center;gap:6px;color:var(--club-muted);font-size:12px;font-weight:700}
+    .control-method select{padding:5px 8px;border:1px solid var(--club-line-strong);border-radius:var(--club-radius-xs);background:var(--club-surface-2);color:var(--club-text);font:inherit}
 
     .assist-opts {
       display: flex;
@@ -148,16 +163,16 @@
       gap: 6px 12px;
       margin: 0;
       padding: 5px 8px;
-      border: 1px solid rgba(73,231,255,.16);
-      border-radius: 10px;
-      background: rgba(8, 21, 34, .72);
+      border: 1px solid var(--club-line);
+      border-radius: var(--club-radius-sm);
+      background: color-mix(in srgb, var(--club-surface-2) 72%, transparent);
       align-items: center;
     }
     .assist-opts label {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      color: #cfefff;
+      color: var(--club-text-soft);
       font-size: 12px;
       cursor: pointer;
       user-select: none;
@@ -168,24 +183,24 @@
       height: 14px;
       min-width: 14px;
       padding: 0;
-      accent-color: #38bdf8;
+      accent-color: var(--club-accent);
       cursor: pointer;
     }
-    .assist-opts .opt-desc { color: #91a9b8; font-size: 11px; }
+    .assist-opts .opt-desc { color: var(--club-muted); font-size: 11px; }
     .versus-ai-opts {
       display: none;
       flex-wrap: wrap;
       gap: 6px 12px;
       margin: 0;
       padding: 5px 8px;
-      border: 1px solid rgba(255, 183, 77, .28);
-      border-radius: 10px;
-      background: rgba(40, 24, 8, .55);
+      border: 1px solid color-mix(in srgb, var(--club-warn) 38%, transparent);
+      border-radius: var(--club-radius-sm);
+      background: var(--club-warn-soft);
       align-items: center;
     }
     .versus-ai-opts.visible { display: flex; }
     .versus-ai-opts .opts-title {
-      color: #ffb74d;
+      color: var(--club-warn);
       font-size: 12px;
       font-weight: 700;
       margin-right: 4px;
@@ -194,7 +209,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      color: #ffe8c7;
+      color: var(--club-text-soft);
       font-size: 12px;
       cursor: pointer;
       user-select: none;
@@ -205,24 +220,24 @@
       height: 14px;
       min-width: 14px;
       padding: 0;
-      accent-color: #ff9800;
+      accent-color: var(--club-warn);
       cursor: pointer;
     }
-    .versus-ai-opts .opt-desc { color: #c4a484; font-size: 11px; }
+    .versus-ai-opts .opt-desc { color: var(--club-muted); font-size: 11px; }
     .ai-play-opts {
       display: none;
       flex-wrap: wrap;
       gap: 6px 12px;
       margin: 0;
       padding: 5px 8px;
-      border: 1px solid rgba(73,231,255,.28);
-      border-radius: 10px;
-      background: rgba(8, 28, 40, .72);
+      border: 1px solid var(--club-accent-line);
+      border-radius: var(--club-radius-sm);
+      background: color-mix(in srgb, var(--club-accent-soft) 70%, transparent);
       align-items: center;
     }
     .ai-play-opts.visible { display: flex; }
     .ai-play-opts .opts-title {
-      color: #7dd3fc;
+      color: var(--club-accent);
       font-size: 12px;
       font-weight: 700;
       margin-right: 4px;
@@ -231,7 +246,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      color: #cfefff;
+      color: var(--club-text-soft);
       font-size: 12px;
       cursor: pointer;
       user-select: none;
@@ -242,10 +257,10 @@
       height: 14px;
       min-width: 14px;
       padding: 0;
-      accent-color: #38bdf8;
+      accent-color: var(--club-accent);
       cursor: pointer;
     }
-    .ai-play-opts .opt-desc { color: #91a9b8; font-size: 11px; }
+    .ai-play-opts .opt-desc { color: var(--club-muted); font-size: 11px; }
 
     .play-area {
       flex: 1 1 auto;
@@ -253,6 +268,7 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
+      overflow: hidden;
     }
 
     .boards {
@@ -281,7 +297,7 @@
     .board-card h3 {
       grid-area: title;
       margin: 0;
-      color: #49e7ff;
+      color: var(--club-accent);
       font-weight: 500;
       font-size: 13px;
       line-height: 1.2;
@@ -292,16 +308,16 @@
       display: block;
       width: fit-content;
       max-width: 100%;
-      border: 2px solid #38bdf8;
-      border-radius: 8px;
-      box-shadow: 0 0 18px rgba(56,189,248,.22);
-      background: #0b1437;
+      border: 2px solid var(--club-accent-line);
+      border-radius: var(--club-radius-sm);
+      box-shadow: 0 0 18px var(--club-accent-soft);
+      background: var(--club-surface-3);
       min-height: 0;
     }
     canvas.board {
       display: block;
-      background: #11142A;
-      border-radius: 6px;
+      background: var(--club-surface-3);
+      border-radius: var(--club-radius-xs);
       width: auto;
       height: min(600px, calc(100dvh - 210px));
       max-height: calc(100dvh - 210px);
@@ -317,42 +333,75 @@
       gap: 8px;
       min-width: 108px;
       padding-top: 2px;
+      color: var(--club-text-soft);
     }
     .overlay {
       position: absolute; inset: 0;
-      background: rgba(11,20,55,.82);
+      background: color-mix(in srgb, var(--club-bg) 86%, transparent);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
       display: none; align-items: center; justify-content: center; flex-direction: column;
-      border-radius: 6px; z-index: 5;
+      border-radius: var(--club-radius-xs); z-index: 5;
     }
     .overlay.active { display: flex; }
-    .overlay h2 { margin: 0; color: #FF6F00; font-size: 22px; letter-spacing: 1px; }
-    .overlay p { margin: 6px 0 0; color: #94a3b8; font-size: 13px; }
+    /* GAME OVER 遮罩对比度：暗色下压深底色 + 标题投影；亮色由 theme.css 白底规则接管 */
+    body.club-page .overlay h2 { margin: 0; color: var(--club-warn); font-size: 22px; font-weight: 700; letter-spacing: 1px; text-shadow: 0 2px 14px rgba(0, 0, 0, .55); }
+    body.club-page .overlay p { margin: 6px 0 0; color: var(--club-text-soft); font-size: 13px; }
 
+    /* 得分/行数/等级：三张小统计卡（surface-2 底 + 圆角，label 小字 + 数值大字 tabular-nums） */
     .stats {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 6px;
+      gap: 8px;
       margin: 0;
       font-size: 12px;
-      color: #91a9b8;
+      color: var(--club-muted);
+    }
+    .stats > div {
+      padding: 8px 10px;
+      border: 1px solid var(--club-line);
+      border-radius: var(--club-radius-sm);
+      background: var(--club-surface-2);
+    }
+    .stats span {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--club-muted);
+      font-size: 10.5px;
+      letter-spacing: .06em;
     }
     .stats strong {
       display: block;
-      color: #e7f7ff;
-      font-size: 15px;
+      color: var(--club-text);
+      font-size: 18px;
+      line-height: 1.15;
+      font-family: var(--club-mono);
       font-variant-numeric: tabular-nums;
+      letter-spacing: .02em;
     }
     .next-box {
       margin: 0;
-      padding: 8px;
-      border: 1px solid #1e293b;
-      border-radius: 8px;
-      background: #0b1437;
+      padding: 8px 10px 10px;
+      border: 1px solid var(--club-line);
+      border-radius: var(--club-radius-sm);
+      background: var(--club-surface-3);
       display: block;
       width: 100%;
       text-align: center;
     }
-    .next-box .label { font-size: 11px; color: #64748b; margin-bottom: 4px; }
+    .next-box .label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+      text-align: left;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      color: var(--club-muted);
+      text-transform: uppercase;
+    }
+    .next-box .label::before { content: ''; flex: 0 0 auto; width: 6px; height: 6px; border-radius: 2px; background: var(--club-accent); }
     .next-box canvas { max-width: 100%; height: auto; }
 
     .footer-bar {
@@ -373,10 +422,10 @@
       justify-content: space-between;
       margin-top: 2px;
       padding: 8px;
-      border: 1px solid rgba(73,231,255,.22);
-      border-radius: 14px;
-      background: linear-gradient(180deg, rgba(8,21,34,.92), rgba(6,14,28,.96));
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+      border: 1px solid var(--club-line);
+      border-radius: var(--club-radius);
+      background: linear-gradient(180deg, color-mix(in srgb, var(--club-surface-2) 92%, transparent), color-mix(in srgb, var(--club-bg) 96%, transparent));
+      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--club-text) 5%, transparent);
       touch-action: manipulation;
       user-select: none;
       -webkit-user-select: none;
@@ -406,12 +455,13 @@
     .mobile-controls .pad-right .btn-hard { grid-area: hard; min-height: 52px; }
     .mobile-btn {
       appearance: none;
-      border: 1px solid rgba(56,189,248,.35);
-      border-radius: 12px;
+      border: 1px solid var(--club-accent-line);
+      border-radius: var(--club-radius-sm);
       min-height: 44px;
       padding: 6px 4px;
-      background: rgba(12, 28, 48, .95);
-      color: #e7f7ff;
+      background: color-mix(in srgb, var(--club-surface-2) 95%, transparent);
+      color: var(--club-text);
+      font: inherit;
       font-size: 18px;
       font-weight: 700;
       line-height: 1.1;
@@ -421,31 +471,31 @@
       align-items: center;
       justify-content: center;
       gap: 2px;
-      box-shadow: 0 4px 0 rgba(2, 18, 34, .85);
-      transition: transform .08s ease, background .12s ease, border-color .12s ease;
+      box-shadow: 0 4px 0 color-mix(in srgb, var(--club-bg) 82%, transparent);
+      transition: transform var(--club-dur-fast) var(--club-ease), background var(--club-dur-fast) var(--club-ease), border-color var(--club-dur-fast) var(--club-ease);
       -webkit-tap-highlight-color: transparent;
     }
     .mobile-btn span {
       font-size: 10px;
       font-weight: 600;
-      color: #91a9b8;
+      color: var(--club-muted);
       letter-spacing: .02em;
     }
     .mobile-btn:active,
     .mobile-btn.is-pressed {
       transform: translateY(2px);
-      box-shadow: 0 1px 0 rgba(2, 18, 34, .85);
-      background: rgba(14, 70, 110, .95);
-      border-color: #49e7ff;
+      box-shadow: 0 1px 0 color-mix(in srgb, var(--club-bg) 82%, transparent);
+      background: var(--club-accent-soft);
+      border-color: var(--club-accent);
     }
     .mobile-btn.btn-hard {
-      background: linear-gradient(180deg, rgba(255,111,0,.28), rgba(120,40,0,.55));
-      border-color: rgba(255,152,0,.55);
-      color: #ffe7c2;
+      background: color-mix(in srgb, var(--club-warn) 16%, var(--club-surface-2));
+      border-color: color-mix(in srgb, var(--club-warn) 55%, transparent);
+      color: var(--club-warn);
     }
-    .mobile-btn.btn-hard span { color: #ffc98a; }
+    .mobile-btn.btn-hard span { color: var(--club-warn); }
     .mobile-btn.btn-rot {
-      background: linear-gradient(180deg, rgba(56,189,248,.22), rgba(8,47,73,.7));
+      background: color-mix(in srgb, var(--club-accent) 14%, var(--club-surface-2));
     }
     .mobile-btn:disabled {
       opacity: .42;
@@ -456,7 +506,7 @@
 
     .controls-hint {
       margin: 0;
-      color: #64748b;
+      color: var(--club-muted);
       font-size: 11px;
       line-height: 1.35;
       white-space: nowrap;
@@ -464,10 +514,10 @@
       text-overflow: ellipsis;
       max-width: 100%;
     }
-    .result {
+    body.club-page .result {
       min-height: 0;
       margin: 0;
-      color: #49e7ff;
+      color: var(--club-accent);
       font-weight: bold;
       font-size: 12px;
     }
@@ -475,9 +525,9 @@
       margin: 0;
       text-align: left;
       font-size: 12px;
-      color: #c4b5fd;
+      color: var(--club-text-soft);
     }
-    .versus-diff strong { color: #ffd166; font-size: 14px; }
+    .versus-diff strong { color: var(--club-warn); font-size: 14px; font-variant-numeric: tabular-nums; }
 
     .leaderboard.panel {
       display: flex;
@@ -489,16 +539,20 @@
     .lb-tab {
       flex: 1;
       padding: 6px 8px;
-      border-radius: 8px;
-      border: 1px solid rgba(73,231,255,.24);
-      background: #081522;
-      color: #91a9b8;
+      border-radius: var(--club-radius-pill);
+      border: 1px solid var(--club-line-strong);
+      background: var(--club-surface-2);
+      color: var(--club-muted);
       cursor: pointer;
+      font: inherit;
       font-weight: 600;
       font-size: 12px;
+      transition: background var(--club-dur) var(--club-ease), border-color var(--club-dur) var(--club-ease), color var(--club-dur) var(--club-ease), box-shadow var(--club-dur) var(--club-ease), transform var(--club-dur-fast) var(--club-ease);
     }
-    .lb-tab.active { background: #0284c7; color: #fff; border-color: #38bdf8; }
-    .leaderboard h2 { margin: 0 0 6px; font-size: 15px; flex: 0 0 auto; }
+    .lb-tab:hover { border-color: var(--club-accent-line); background: var(--club-accent-soft); color: var(--club-accent); }
+    .lb-tab:active { transform: translateY(1px); }
+    .lb-tab.active { background: var(--club-accent-soft); color: var(--club-accent); border-color: var(--club-accent); box-shadow: var(--club-ring); }
+    body.club-page .leaderboard h2 { margin: 0 0 6px; font-size: 15px; color: var(--club-text); flex: 0 0 auto; }
     .leaderboard > .hint { flex: 0 0 auto; margin: 0 0 6px; }
     .leaderboard-list {
       display: grid;
@@ -515,21 +569,29 @@
       grid-template-columns: 26px 1fr auto;
       gap: 6px;
       padding: 7px 6px;
-      border-bottom: 1px solid rgba(73,231,255,.12);
+      border-bottom: 1px solid var(--club-line);
       font-size: 12px;
+      transition: background var(--club-dur-fast) ease;
     }
-    .rank { color: #49e7ff; font-weight: bold; }
-    .score { color: #ffd166; font-weight: bold; }
-    .empty { color: #91a9b8; font-size: 13px; }
-    .explain-panel { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(73,231,255,.16); }
-    .explain-toggle { display:flex; gap:7px; align-items:center; font-size:12px; color:#e7f7ff; }
-    .explain-toggle input { width: 15px; height: 15px; accent-color: #C54A34; }
+    .leaderboard-list li:hover { background: var(--club-surface-2); }
+    .rank { color: var(--club-accent); font-weight: bold; font-variant-numeric: tabular-nums; }
+    .score { color: var(--club-warn); font-weight: bold; font-variant-numeric: tabular-nums; }
+    .empty { color: var(--club-muted); font-size: 13px; }
+    .explain-panel { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--club-line); }
+    .explain-toggle { display:flex; gap:7px; align-items:center; font-size:12px; color:var(--club-text-soft); }
+    .explain-toggle input { width: 15px; height: 15px; accent-color: var(--club-accent); }
     .explain-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:8px; }
-    .explain-grid > div { padding:7px; border:1px solid rgba(73,231,255,.16); border-radius:7px; background:rgba(8,17,38,.45); }
-    .explain-grid span { display:block; color:#91a9b8; font-size:10px; }.explain-grid strong { color:#49e7ff; font-size:12px; }
-    .explain-panel p { color:#91a9b8; font-size:10px; line-height:1.45; }
-    html[data-theme="light"] .explain-panel { border-color:#E7DDD5 !important; } html[data-theme="light"] .explain-grid > div { background:#F2EDE7 !important; border-color:#E7DDD5 !important; } html[data-theme="light"] .explain-grid strong { color:#A73A29 !important; }
-    html[data-theme="light"] .explain-toggle { color:#2A2421 !important; } html[data-theme="light"] .explain-toggle input { accent-color:#C54A34; outline:1px solid rgba(167,58,41,.42); outline-offset:1px; }
+    .explain-grid > div { padding:7px; border:1px solid var(--club-line); border-radius:var(--club-radius-xs); background:color-mix(in srgb, var(--club-surface-3) 60%, transparent); }
+    .explain-grid span { display:block; color:var(--club-muted); font-size:10px; }.explain-grid strong { color:var(--club-accent); font-size:12px; font-variant-numeric:tabular-nums; }
+    body.club-page .explain-panel p { color:var(--club-muted); font-size:10px; line-height:1.45; }
+    html[data-theme="light"] .explain-panel { border-color: var(--club-line) !important; }
+    html[data-theme="light"] .explain-grid > div { background: var(--club-surface-3) !important; border-color: var(--club-line) !important; }
+    html[data-theme="light"] .explain-toggle { color: var(--club-text) !important; }
+    /* theme.css 的亮色全站规则会把主/危险胶囊刷成白底；本页用 club token 恢复语义色 */
+    html[data-theme="light"] .action-btn.primary { background: var(--club-accent) !important; border-color: var(--club-accent) !important; color: #FFFFFF !important; box-shadow: none !important; }
+    html[data-theme="light"] .action-btn.primary:hover:not(:disabled) { background: var(--club-accent-strong) !important; border-color: var(--club-accent-strong) !important; }
+    html[data-theme="light"] .action-btn.danger { background: var(--club-danger-soft) !important; border-color: color-mix(in srgb, var(--club-danger) 45%, transparent) !important; color: var(--club-danger) !important; }
+    html[data-theme="light"] .strip-sep { background: var(--club-line-strong) !important; }
     .hidden { display: none !important; }
 
     @media (max-width: 1100px) {
@@ -613,11 +675,14 @@
       }
       .stats {
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 2px;
+        gap: 4px;
         font-size: 10px;
       }
-      .stats strong { font-size: 12px; }
-      .next-box { padding: 4px; }
+      .stats > div { padding: 5px 6px; border-radius: var(--club-radius-xs); }
+      .stats span { font-size: 9px; margin-bottom: 1px; }
+      .stats strong { font-size: 13px; }
+      .next-box { padding: 4px 6px 6px; }
+      .next-box .label { margin-bottom: 3px; }
       .next-box canvas { width: 56px; height: 36px; }
 
       canvas.board {
@@ -702,7 +767,7 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body>
+<body class="club-page">
   <div class="ambient-background" aria-hidden="true">
     <div class="ambient-orb orb-cyan"></div>
     <div class="ambient-orb orb-violet"></div>
@@ -730,10 +795,12 @@
             <button type="button" class="mode-btn" data-mode="ai" data-i18n="games.modeAi">AI 游玩</button>
             <button type="button" class="mode-btn" data-mode="assist" data-i18n="games.modeAssist">AI 辅助</button>
             <button type="button" class="mode-btn" data-mode="versus" data-i18n="games.modeVersus">人机对战</button>
+            <span class="strip-sep" aria-hidden="true"></span>
             <button type="button" class="action-btn primary" id="startBtn" data-i18n="games.start">开始</button>
             <button type="button" class="action-btn" id="restartBtn" disabled data-i18n="games.restart">重新开始</button>
             <button type="button" class="action-btn danger hidden" id="stopBtn" disabled data-i18n="games.stop">停止</button>
             <button type="button" class="action-btn danger hidden" id="surrenderBtn" disabled data-i18n="games.surrender">投降</button>
+            <span class="strip-sep" aria-hidden="true"></span>
             <label class="control-method"><span data-i18n="games.controlMethod">操作方式</span><select id="controlMethod"><option value="keyboard" data-i18n="games.keyboardControl">键盘操作</option><option value="buttons" data-i18n="games.buttonControl">按钮操作</option></select></label>
           </div>
 
@@ -784,7 +851,7 @@
                   <div><span data-i18n="tetris.level">等级</span><strong id="playerLevel">0</strong></div>
                 </div>
                 <div class="next-box">
-                  <div class="label">NEXT</div>
+                  <div class="label" data-i18n="tetris.nextTitle">下一个 NEXT</div>
                   <canvas id="playerNext" width="120" height="80"></canvas>
                 </div>
               </div>
@@ -803,7 +870,7 @@
                   <div><span data-i18n="tetris.level">等级</span><strong id="aiLevel">0</strong></div>
                 </div>
                 <div class="next-box">
-                  <div class="label">NEXT</div>
+                  <div class="label" data-i18n="tetris.nextTitle">下一个 NEXT</div>
                   <canvas id="aiNext" width="120" height="80"></canvas>
                 </div>
               </div>
@@ -847,6 +914,13 @@
     </div>
   </div>
 
+<script>
+  // 页内新增文案：不改动 i18n-dict*.js，通过 ClubI18n.mergeDict 注入中英双语。
+  window.ClubI18n?.mergeDict?.({
+    zh: { tetris: { nextTitle: '下一个 NEXT' } },
+    en: { tetris: { nextTitle: 'NEXT' } }
+  });
+</script>
 <script>
 (() => {
   const COLS = 10;
@@ -1810,7 +1884,7 @@
     pagination.hidden = page.hidden;
     document.getElementById('leaderboardPageInfo').textContent = ClubI18n.t('games.pageInfo', { page: page.page, total: page.totalPages });
     document.getElementById('leaderboardPrev').disabled = !page.hasPrev;
-    document.getElementById('leaderboardNext').disabled = leaderboardPage >= total;
+    document.getElementById('leaderboardNext').disabled = !page.hasNext;
   }
   document.getElementById('leaderboardPrev').addEventListener('click', () => { leaderboardPage -= 1; renderLeaderboard(); });
   document.getElementById('leaderboardNext').addEventListener('click', () => { leaderboardPage += 1; renderLeaderboard(); });
@@ -2465,6 +2539,6 @@
   loadLeaderboard();
 })();
 </script>
-  <script src="club-shell.js?v=6f76acb2"></script>
+  <script src="club-shell.js?v=4ec6cd0d"></script>
 </body>
 </html>
