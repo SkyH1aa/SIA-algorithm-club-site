@@ -87,6 +87,27 @@
 - 截图验收：亮/暗 × 1280/390（`tools/ui-shot.mjs`，需静态服务器 + Chrome 9222；**必须用全新 Chrome profile**，SW 会缓存旧资产）。
 - 固定套件：`test-club-common / test-club-launcher-favorites / test-i18n-dict / test-theme-system / test-brand-mark / test-seo / test-404-page / test-error-pages / test-pwa / test-asset-versions / test-site-search`。
 
+## 9. 弹层动效与微交互（第四轮约定）
+
+- **弹层语言统一**：进场 `club-pop`、出场 `club-pop-out` + 遮罩 `club-fade-out`（注册表 keyframes，180/160ms）。启动器与通知面板用 `.is-closing` 态 + JS 190ms 定时隐藏（`closeLayerWithAnimation`），重开必须 `cancelLayerClose` 取消未完成的出场定时器。club-common 的确认框/撤销条走 **WAAPI**（`animateOut`）：真实浏览器播完再移除，桩环境/旧浏览器无 `element.animate` 立即回调——保持「dismiss 后节点已不在 DOM」的同步契约（test-club-common 依赖它）。assistant 面板同法。
+- **注入 CSS 的 keyframes 不得用 club- 前缀**：club-common 注入样式用 `common-pop-in/common-fade-in/common-undo-in`（club-* 注册表只许 club-ui.css 定义，守卫强制）。
+- **按压反馈**：所有可点元素至少具备「过渡 + :active」。顶栏四控件/导航链接组/share/transfer-cancel/event-calendar 的补全在 club-ui.css §31；排行榜翻页在 theme.css 文件尾（**theme.css 新增规则一律放文件尾**，见地雷 1）。
+- **丝滑三件套**：长列表条目用 `content-visibility:auto + contain-intrinsic-size`（changelog）；tabpanel/视图切换出现时播 `club-enter 200ms`；club 页锚点平滑滚动走 `html:has(body.club-page)` 渐进增强 + `[id]{scroll-margin-top:topbar+12px}`。
+- **backdrop-filter 预算**：常驻模糊 ≤12px、不加 saturate（顶栏与 chat 顶栏已降）；新增毛玻璃先问是否常驻。
+- **动态列表 stagger**：fetch 后渲染的卡片/行加 `data-reveal style="--reveal-delay:Nms"`（40ms 步进、封顶 240ms；用 `Math.min(index,6)*40`）。**reveal 观察器对“启动时无静态 data-reveal 的页面”也会挂 MutationObserver（setupReveal 不再因空集提前返回）**。频繁重渲染的列表（notifications 行）不要加，避免每次更新重播动画。
+- **死代码清理**：club-ui.css 的死组件段（如旧 `.club-toast-*`、`.club-skip`）删除前必须全仓 grep 确认零引用。
+
+## 9.1 质感专项（第五轮约定）
+
+- **display 渐变文字**：`--club-grad-text`（暗色顶部提亮 + 底部 12% accent 染色；亮色弱染色保对比度），只作用于 `body.club-page main > h1`，用 `@supports (background-clip:text)` 包裹，不支持时回退纯色。新增 h1 不要再自带 color/gradient。
+- **瓦片质感层**：surface-2 瓦片（.info-list li / .club-feature-group / .member-card-block / .theme-option / .event-calendar-day / .site-search-group li）统一 `inset 0 1px 0 var(--club-highlight)`；面板级容器（table-wrap/file-list/club-admin-side/resource-card）补 `--club-grad-surface` + 高光，**但亮色 §20 用 background 简写 !important 平涂，容器组渐变必须限定 `html:not([data-theme="light"])`**（§33 现成写法）。
+- **chip 基类**：`body.club-page .chip`（§34）是唯一基类；`.club-notify-filters .chip` 与 `.events-view-toggle .chip` 只保留各自的 is-active 差异。新组件用 chips 直接用基类。
+- **badge 语义**：补齐 `.badge.warn/.badge.info`（亮色例外在 §20 追加行）；状态语义一律用 badge，不许页面自造彩色文字（drive 邀请状态已收敛为 badge used/off）。
+- **数字列**：表格数字单元格用 `td.num` 或 `.points-value`（右对齐 + tabular-nums）；新表格数字列禁止左对齐混排。
+- **小件基类**：`kbd`（键帽）、`:not(pre)>code`（行内表面）、`hr`（细线）在 §34；launcher 内两处 kbd 已再声明保持原样，改 launcher 键帽只动那两条。
+- **岛对齐**：platformer 不加载 theme.css（避免全站 !important 误伤游戏组件），选区色/滚动条页内自补；chat 亮色底 `--chat-bg: var(--bg)` 跟随全站暖白；平台游戏主按钮已接 `--club-grad-primary`（其 token 副本含质感层）。
+- **P0 教训**：guide.html 曾整段属性引号写成全角弯引号 `”`，半页组件裸奔——批量修 HTML 属性时只替换「前导 `=` 或后随 ASCII」的引号位，正文中文引号不动。
+
 ## 8. 已知地雷（改前必读）
 
 1. theme.css 亮色覆盖含大量 `!important`，且尾部有「朱砂暖白 V2」段会覆盖前段 —— 新增亮色规则放 V2 段之后。

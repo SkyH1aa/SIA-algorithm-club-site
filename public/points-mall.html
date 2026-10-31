@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.mall.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39c53cdb">
-  <link rel="stylesheet" href="club-ui.css?v=793635b1">
+  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
+  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
   <style>
     /* 页内微调：原内联样式收敛为类，颜色一律使用 --club-* 令牌 */
     .mall-gate-intro{margin:10px 0 18px}
@@ -21,7 +21,7 @@
   <script src="club-auth-storage.js?v=5469c150"></script>
 
   <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
@@ -148,7 +148,7 @@
       }
       const bound = Boolean(currentProfile?.bound && currentProfile?.profile);
       const points = Number(currentProfile?.profile?.points ?? 0);
-      $('productGrid').innerHTML = `<div class="grid">${products.map(product => {
+      $('productGrid').innerHTML = `<div class="grid">${products.map((product, index) => {
         const price = Number(product.price || 0);
         const stock = Number(product.stock || 0);
         const canAfford = bound && points >= price && stock > 0;
@@ -156,7 +156,7 @@
           ? `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:ClubI18n.t('mall.noImage')}))">`
           : '<span>' + ClubI18n.t('mall.noImage') + '</span>';
         const tip = !bound ? ClubI18n.t('mall.bindFirst') : (stock <= 0 ? ClubI18n.t('mall.soldOut') : (points < price ? ClubI18n.t('mall.insufficient') : ClubI18n.t('mall.redeemNow')));
-        return `<article class="card">
+        return `<article class="card" data-reveal style="--reveal-delay:${Math.min(index, 6) * 40}ms">
           <div class="cover">${cover}</div>
           <div class="card-body">
             <h3>${escapeHtml(product.name)}</h3>
@@ -241,6 +241,6 @@
     supabaseClient.auth.getSession().then(({ data: { session } }) => { void updateSession(session); });
     window.addEventListener('club:langchange', () => { updateProfileUi(); void loadProducts(); if (window.ClubI18n) ClubI18n.apply(document); });
   </script>
-  <script src="club-shell.js?v=158d2108"></script>
+  <script src="club-shell.js?v=9b6a29db"></script>
 </body>
 </html>

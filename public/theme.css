@@ -843,8 +843,8 @@ html[data-theme="light"] .footer {
   white-space: nowrap;
 }
 .theme-switcher button.is-active {
-  background: linear-gradient(135deg, #22d3ee, #818cf8);
-  color: #0f172a;
+  background: linear-gradient(135deg, var(--cyan, #00e5ff), var(--violet, #7c4dff));
+  color: #04141a;
 }
 .nav .theme-switcher {
   align-self: center;
@@ -1710,7 +1710,7 @@ html[data-theme="light"] .row-button:hover {
 }
 
 html[data-theme="light"] .tag,
-html[data-theme="light"] .chip,
+html[data-theme="light"] .chip:not(.is-active),
 html[data-theme="light"] .status-pill,
 html[data-theme="light"] .lab-tags span,
 html[data-theme="light"] .step-list span {
@@ -1901,4 +1901,57 @@ html[data-theme="light"] .timeline-item:hover,
 html[data-theme="light"] .join-card .qr-box:hover {
   background: rgba(255, 255, 255, .74) !important;
   border-color: rgba(194, 65, 12, .34) !important;
+}
+
+/* ============================================================
+   第四轮 UI 升级 · 交互反馈补全
+   追加于文件尾：本文件上方存在大量亮色 !important 修补层，
+   新增规则放这里才能稳定生效（设计系统地雷 #1）。
+   ============================================================ */
+
+/* 排行榜翻页按钮：hover / 按压 / 过渡（游戏页高频控件，原先零反馈） */
+.leaderboard-pagination button {
+  transition: border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.2s cubic-bezier(0.22, 1, 0.36, 1), transform 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.leaderboard-pagination button:hover:not(:disabled) {
+  border-color: var(--cyan, rgba(0, 229, 255, 0.55));
+  background: rgba(0, 229, 255, 0.14);
+}
+.leaderboard-pagination button:active:not(:disabled) { transform: translateY(1px) scale(0.99); }
+html[data-theme="light"] .leaderboard-pagination button:hover:not(:disabled) {
+  border-color: var(--day-brand, #c2410c);
+  background: var(--day-brand-soft);
+}
+
+/* View Transitions 上移到全站：chat / assistant 不加载 club-ui.css，
+   声明放 theme.css 后全站 39+ 页互相跳转都有轻交叉淡入；
+   index.html 保留自己的 navigation:none（3D 翻页自成体系）。 */
+@view-transition { navigation: auto; }
+
+/* ---------- 第四轮 R5 · 豁免层键盘可见性与选区色 ----------
+   chat/assistant 不加载 club-ui.css，此前键盘焦点环与选区色缺失；
+   规则用 :where 零特异性，不会压过页面自定义样式。 */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--cyan, #3ad4e6);
+  outline-offset: 2px;
+}
+html[data-theme="light"] :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline-color: var(--day-brand, #c2410c);
+}
+::selection { background: rgba(0, 229, 255, 0.26); }
+html[data-theme="light"] ::selection { background: rgba(194, 65, 12, 0.18); }
+
+/* ---------- 第五轮 · 亮色主按钮质感补齐 ----------
+   上方亮色覆盖是纯平涂（background !important），夜间主按钮的三段渐变 +
+   顶缘高光在日间丢失。这里在文件尾用 background-image 补回渐变层
+   （background-image 与 background-color 分离，不会被上面的平涂清掉）。 */
+html[data-theme="light"] .primary-action,
+html[data-theme="light"] .button:not(.secondary):not(.danger),
+html[data-theme="light"] button.button:not(.secondary):not(.danger) {
+  background-image: linear-gradient(180deg,
+    color-mix(in srgb, var(--day-brand) 84%, #ffffff) 0%,
+    var(--day-brand) 62%,
+    color-mix(in srgb, var(--day-brand) 90%, #000000) 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 8px 18px rgba(197, 74, 52, 0.18) !important;
 }

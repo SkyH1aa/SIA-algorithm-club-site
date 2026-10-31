@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="gomoku.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39c53cdb">
-  <link rel="stylesheet" href="club-ui.css?v=793635b1">
+  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
+  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8">
@@ -12,7 +12,7 @@
   <script src="club-auth-storage.js?v=5469c150"></script>
   <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
 <style>
     /* 五子棋页样式：2026-10 起接入全站 club-ui 令牌（body.club-page）。
        本块只覆盖本页特有组件；按钮、表单、排版等通用样式来自 club-ui.css。 */
@@ -138,6 +138,8 @@
     #gameActionButton { min-width: 180px; }
 
     .ambient-background{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}.ambient-orb{position:absolute;width:min(48vw,620px);aspect-ratio:1;border-radius:50%;filter:blur(72px);opacity:.18;mix-blend-mode:screen;animation:drift-orb 18s ease-in-out infinite alternate}.orb-cyan{top:-18%;left:-12%;background:#00e5ff}.orb-violet{top:20%;right:-16%;background:#7c4dff;animation-delay:-7s}.ambient-grid{position:absolute;inset:-80px;background-image:linear-gradient(rgba(0,229,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.055) 1px,transparent 1px);background-size:72px 72px;opacity:.45;animation:grid-shift 26s linear infinite}#particleCanvas{position:absolute;inset:0;width:100%;height:100%;opacity:.75}.pointer-glow{position:fixed;z-index:0;width:420px;height:420px;left:var(--pointer-x,50%);top:var(--pointer-y,14%);transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(73,231,255,.1),transparent 68%);pointer-events:none}.panel,.page-header{transition:transform var(--club-dur-slow, 320ms) var(--club-ease, ease),border-color var(--club-dur-slow, 320ms) var(--club-ease, ease),box-shadow var(--club-dur-slow, 320ms) var(--club-ease, ease)}.panel:hover{border-color:var(--club-accent-line);box-shadow:0 22px 60px rgba(0,0,0,.3),0 0 30px rgba(73,231,255,.08)}@keyframes drift-orb{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(7%,5%,0) scale(1.1)}}@keyframes grid-shift{to{transform:translate3d(72px,72px,0)}}.reveal-ready{opacity:0;transform:translateY(24px);transition:opacity .75s ease,transform .75s ease}.reveal-ready.is-visible{opacity:1;transform:none}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.ambient-orb,.ambient-grid{animation:none}.pointer-glow{display:none}.reveal-ready{opacity:1;transform:none;transition:none}.panel,.page-header{transition:none}}
+/* 第四轮：触屏设备氛围层降负（视觉几乎无差，合成开销显著下降） */
+@media(pointer:coarse){.ambient-orb{filter:blur(48px);opacity:.14}.pointer-glow{display:none}}
     .board {
       --cell-size: 30px;
       display: grid;
@@ -1726,6 +1728,6 @@
       } catch (_e) {}
     });
 </script>
-  <script src="club-shell.js?v=158d2108"></script>
+  <script src="club-shell.js?v=9b6a29db"></script>
 </body>
 </html>

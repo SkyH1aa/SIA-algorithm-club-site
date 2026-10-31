@@ -745,6 +745,8 @@
       var foot = launcher.querySelector('.club-launcher-foot');
       if (foot) foot.innerHTML = launcherFootHtml(en);
     }
+    cancelLayerClose(launcher);
+    launcher.classList.remove('is-closing');
     launcher.classList.add('is-open');
     launcherInput.value = '';
     renderLauncher('');
@@ -754,16 +756,51 @@
     try { launcherInput.setSelectionRange(0, 0); } catch (_error) { /* ignore */ }
   }
 
+  function prefersReducedMotion() {
+    try { return global.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_error) { return false; }
+  }
+
+  // 弹层出场：先播 180ms 反向动画再隐藏（.is-closing 由 club-ui.css 定义）。
+  // reduced-motion 时直接隐藏，不引入延迟；重开时取消未完成的出场定时器。
+  function cancelLayerClose(layer) {
+    if (layer && layer.__closeTimer) {
+      clearTimeout(layer.__closeTimer);
+      layer.__closeTimer = 0;
+    }
+  }
+
+  function closeLayerWithAnimation(layer, hiddenClass, openClass, done) {
+    if (!layer) return;
+    cancelLayerClose(layer);
+    layer.classList.remove(openClass);
+    if (prefersReducedMotion()) {
+      layer.classList.remove(hiddenClass);
+      if (done) done();
+      return;
+    }
+    layer.classList.add(hiddenClass);
+    layer.__closeTimer = setTimeout(function () {
+      layer.__closeTimer = 0;
+      layer.classList.remove(hiddenClass);
+      if (done) done();
+    }, 190);
+  }
+
   function closeLauncher() {
     if (!launcher) return;
     var wasOpen = launcher.classList.contains('is-open');
-    launcher.classList.remove('is-open');
+    if (!wasOpen) {
+      launcher.classList.remove('is-open', 'is-closing');
+      document.body.classList.remove('club-launcher-open');
+      return;
+    }
     document.body.classList.remove('club-launcher-open');
-    if (!wasOpen) return;
     var target = lastTrigger && document.contains(lastTrigger)
       ? lastTrigger
       : document.querySelector('.club-launcher-button');
-    if (target) target.focus({ preventScroll: true });
+    closeLayerWithAnimation(launcher, 'is-closing', 'is-open', function () {
+      if (target) target.focus({ preventScroll: true });
+    });
   }
 
   function isLauncherOpen() {
@@ -808,7 +845,9 @@
   }
 
   function closeNotifyPanel() {
-    if (notifyPanel) notifyPanel.classList.remove('is-open');
+    if (notifyPanel) {
+      closeLayerWithAnimation(notifyPanel, 'is-closing', 'is-open');
+    }
     var button = document.querySelector('[data-club-notify-button]');
     if (button) button.setAttribute('aria-expanded', 'false');
   }
@@ -870,6 +909,8 @@
     if (!notifyPanel) return;
     var isOpen = notifyPanel.classList.contains('is-open');
     if (isOpen) { closeNotifyPanel(); return; }
+    cancelLayerClose(notifyPanel);
+    notifyPanel.classList.remove('is-closing');
     notifyPanel.classList.add('is-open');
     var button = document.querySelector('[data-club-notify-button]');
     if (button) button.setAttribute('aria-expanded', 'true');
@@ -1371,7 +1412,6 @@
   var revealWatcher = null;
   function setupReveal() {
     var items = document.querySelectorAll('[data-reveal]');
-    if (!items.length && !revealWatcher) return;
     var reduced = false;
     try { reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_error) { reduced = false; }
     if (reduced || !('IntersectionObserver' in global)) {

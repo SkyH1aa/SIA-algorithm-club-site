@@ -1,5 +1,51 @@
 [
   {
+    "date": "2026-10-31",
+    "title": "第五轮质感专项：修复使用指引渲染断裂、display 渐变标题与全站微质感收编",
+    "enTitle": "Quality round five: fix broken guide rendering, gradient display titles, and site-wide micro-texture consolidation",
+    "items": [
+      "修复使用指引页半页渲染断裂：整段属性引号被写成全角弯引号，三步上手卡、八张功能面板、SVG 图标、中英切换与进场动效全部失效——现已恢复（P0）。",
+      "修复首页主/次按钮过渡失效：transition 值里混入非法的「0var()」前缀导致整条声明作废，悬停抬升与按压回弹恢复顺滑。",
+      "display 标题质感：club 页面主标题新增渐变文字令牌（顶部提亮、底部极轻品牌染色），亮色自动回退保证对比度，不支持的浏览器回退纯色。",
+      "亮色状态修复：筛选 chips 的选中态不再被全站亮色覆盖打穿；公告分类/置顶徽章在亮色下恢复语义色。",
+      "组件质感层补齐：表格容器、网盘文件列表、管理侧栏、资源卡与六类瓦片统一「渐变面 + 顶缘内高光」；胶囊标签页容器升级半透明模糊；暗色亮色各自成立。",
+      "豁免岛对齐：行于无垠接入品牌字体与主按钮渐变、触屏按键日间按压色修正、页内补选区色与滚动条；AI Chat 亮色底对齐全站暖白、键帽改等宽；版本监控页下载按钮补渐变与按压、日期改品牌等宽字。",
+      "小件收编：chips 基类上收、徽章补 warn/info 语义、积分表与商城数字列右对齐等宽、kbd/code/hr 全站基类、页脚标识圆角与四处字号归档令牌。",
+      "首页亮色缝隙：eyebrow 双线跟随文字色、右侧章节导航刻度补亮色、提示条按钮获得与次级按钮一致的质感语言；语言/主题切换器激活胶囊色相与品牌青紫同源。"
+    ],
+    "enItems": [
+      "Fixed a broken render on the guide page: an entire section's attribute quotes were full-width curly quotes, leaving the three-step cards, eight feature panels, SVG icons, i18n and reveal animations dead — now restored (P0).",
+      "Fixed the homepage's primary/secondary button transitions: an illegal “0var()” token prefix invalidated the whole declaration; hover lift and press feedback are smooth again.",
+      "Display-title texture: club page h1s gain a gradient-text token (top-lit with a whisper of brand tint at the base); light theme falls back safely and unsupported browsers get solid color.",
+      "Light-theme state fixes: filter chips keep their selected style; announcement category/pinned badges regain their semantic colors in light mode.",
+      "Component texture completion: table containers, drive file lists, the admin sidebar, resource cards and six tile families now share the gradient-surface + top-inset-highlight language; pill tab containers upgraded to translucent blur; both themes hold.",
+      "Island alignment: platformer joins the brand font stack with gradient primary buttons, a fixed light-mode touch-press color, and page-local selection/scrollbar styles; AI Chat's light background follows the site-wide warm white with monospace key caps; appmonitor's download CTA gains gradient/press states and brand mono dates.",
+      "Small-part consolidation: a single chip base class, warn/info badge semantics, right-aligned tabular numeric columns, site-wide kbd/code/hr primitives, and tokenized radii and font sizes.",
+      "Homepage light gaps: the eyebrow rule follows text color, the right rail dots get a light variant, tip-banner buttons match the secondary-action texture, and switcher active pills now use the brand cyan-to-violet ramp."
+    ]
+  },
+  {
+    "date": "2026-10-30",
+    "title": "第四轮体验升级：弹层动效闭环、交互反馈零死角与渲染降负",
+    "enTitle": "Experience round four: complete overlay motion, gapless interaction feedback, and render-cost trims",
+    "items": [
+      "弹层动效闭环：模块启动器与通知面板补齐出场动画（与进场成对，重开会取消未完成的出场）；全站确认对话框与撤销条获得进出场动效；AI 助手面板展开/收起不再硬切——减少动效偏好下全部自动跳过。",
+      "交互反馈零死角：通知铃铛、管理导航组、面包屑、分享面板、网盘取消按钮、活动日历条目、排行榜翻页（游戏页）与顶栏四控件共 13 组可点元素补齐 hover 过渡与按压反馈。",
+      "滚动更省：更新日志 53 条长列表启用 content-visibility 跳过视口外布局绘制；顶栏与 AI Chat 的常驻毛玻璃从 18px+saturate 降为 12px，长页滚动与流式输出时合成开销显著下降。",
+      "视图切换与锚点：标签页、活动页列表↔日历切换出现时轻上浮；club 页面锚点跳转平滑滚动并自动预留顶栏高度，不再被吸顶栏遮住目标。",
+      "动态列表阶梯显现：积分商城商品卡、活动公告/活动卡、社团盘文件行渲染时 40ms 步进上浮；修复 reveal 观察器在「启动时页面还没有动态列表」的页面上根本不挂载的问题。",
+      "一致性修缮与清理：资源卡悬停补阴影层次、主题选项卡位移与描边同步过渡、行级按钮支持加载态；View Transitions 覆盖扩展到 chat 与助手页；删除启动器死样式段约 60 行；社团盘邀请表补移动端横向滚动容器。"
+    ],
+    "enItems": [
+      "Overlay motion closed loop: the module launcher and notification panel gain exit animations paired with their entries (reopening cancels a pending exit); the site-wide confirm dialog and undo bar gain full in/out motion; the AI assistant panel no longer hard-cuts on expand/minimize — all skipped automatically under prefers-reduced-motion.",
+      "Gapless interaction feedback: 13 groups of clickable elements — the notify bell, admin navigation groups, breadcrumbs, share panel, drive cancel button, event calendar entries, game leaderboard pagination and the four topbar controls — now all have hover transitions and pressed states.",
+      "Cheaper scrolling: the 53-entry changelog enables content-visibility to skip off-screen layout/paint; the permanent backdrop blur on the topbar and AI Chat drops from 18px+saturate to 12px, cutting compositor cost during long scrolls and streaming output.",
+      "View switches and anchors: tab panels and the events list↔calendar switch float in on appear; anchors on club pages scroll smoothly and reserve the topbar height so targets are never hidden beneath it.",
+      "Staggered dynamic lists: points-mall product cards, events cards and drive file rows float in with a 40ms stagger; also fixes the reveal watcher never mounting on pages whose dynamic lists render only after boot.",
+      "Consistency repairs and cleanup: resource cards gain hover shadow depth, theme options transition their transform in sync, row buttons support a loading state; View Transitions now cover chat and assistant pages; ~60 lines of dead launcher styles removed and the drive invite table gains a mobile scroll wrapper."
+    ]
+  },
+  {
     "date": "2026-10-25",
     "title": "模块启动器新增「收藏」置顶分类、最近使用与账号同步",
     "enTitle": "Module launcher gains a pinned Favorites group, recent modules, and account sync",

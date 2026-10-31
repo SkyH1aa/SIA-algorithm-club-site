@@ -1,15 +1,15 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.checkin.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39c53cdb">
-  <link rel="stylesheet" href="club-ui.css?v=793635b1">
+  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
+  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
   <style>
     /* 「加入积分榜」班级内联输入行（替代 prompt 弹窗）：输入框占满剩余宽度，确认/取消同行排列 */
     .course-class-editor{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
     .course-class-editor .input{flex:1 1 180px;width:auto;min-width:0}
     /* 管理面板密度：表头行高收紧、表格字号略降，720px 下六列表格不换行错乱 */
     body.club-page .admin .table th{font-size:11px;padding:9px 10px}
-    body.club-page .admin .table td{font-size:13px;padding:10px}
+    body.club-page .admin .table td{font-size:var(--club-fs-md);padding:10px}
     body.club-page .panel-heading{align-items:center}
     @media (max-width:720px){
       body.club-page .admin .table th,body.club-page .admin .table td{padding:9px}
@@ -24,7 +24,7 @@
   <script src="club-auth-storage.js?v=5469c150"></script>
   <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
@@ -143,6 +143,6 @@ window.addEventListener('club:langchange',mergeCheckinPageDict);
 updateCheckinType();window.addEventListener('club:servicestate',event=>{serviceState=event.detail||null;applyCheckinServiceState()});supabaseClient.auth.onAuthStateChange((_event,session)=>void updateSession(session));supabaseClient.auth.getSession().then(({data:{session}})=>void updateSession(session));
 window.addEventListener('club:langchange',()=>{updateCheckinType();if(adminPanel.classList.contains('active'))void refreshAdmin();if(window.ClubI18n)ClubI18n.apply(document);});setTimeout(applyCheckinServiceState,0);
 </script>
-  <script src="club-shell.js?v=158d2108"></script>
+  <script src="club-shell.js?v=9b6a29db"></script>
 </body>
 </html>

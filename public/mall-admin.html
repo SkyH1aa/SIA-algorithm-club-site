@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.mallAdmin.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39c53cdb">
-  <link rel="stylesheet" href="club-ui.css?v=793635b1">
+  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
+  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -12,7 +12,7 @@
   <script src="club-auth-storage.js?v=5469c150"></script>
 
   <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>
   <style>
     /* 本页专用：列表间距与商品说明文字，全部使用 club 令牌，亮暗自适应 */
@@ -159,10 +159,10 @@
         <tr>
           <td>${item.image_url ? `<img class="thumb" src="${escapeHtml(item.image_url)}" alt="" loading="lazy" decoding="async">` : `<span class="badge off">${t('admin.noImage')}</span>`}</td>
           <td><strong>${escapeHtml(item.name)}</strong><div class="cell-desc">${escapeHtml(item.description || '-')}</div></td>
-          <td>${escapeHtml(item.price)}</td>
-          <td>${escapeHtml(item.stock)}</td>
+          <td class="num">${escapeHtml(item.price)}</td>
+          <td class="num">${escapeHtml(item.stock)}</td>
           <td><span class="badge ${item.is_listed ? 'on' : 'off'}">${item.is_listed ? t('admin.listed') : t('admin.unlisted')}</span></td>
-          <td>${escapeHtml(item.sort_order ?? 0)}</td>
+          <td class="num">${escapeHtml(item.sort_order ?? 0)}</td>
           <td>${escapeHtml(formatTime(item.updated_at))}</td>
           <td class="actions">
             <button class="button secondary" type="button" data-edit-product="${escapeHtml(item.id)}" data-i18n="common.edit">编辑</button>
@@ -347,6 +347,6 @@
       } catch (_e) {}
     });
   </script>
-  <script src="club-shell.js?v=158d2108"></script>
+  <script src="club-shell.js?v=9b6a29db"></script>
 </body>
 </html>

@@ -53,6 +53,8 @@ body.club-page,
   --club-highlight-strong: rgba(255, 255, 255, 0.14);
   --club-grad-surface: linear-gradient(180deg, color-mix(in srgb, var(--club-surface) 92%, #ffffff) 0%, var(--club-surface) 100%);
   --club-grad-primary: linear-gradient(180deg, color-mix(in srgb, var(--club-accent) 84%, #ffffff) 0%, var(--club-accent) 62%, color-mix(in srgb, var(--club-accent) 90%, #000000) 100%);
+  /* display 标题渐变文字：顶部提亮、底部极轻品牌染色（第五轮） */
+  --club-grad-text: linear-gradient(180deg, color-mix(in srgb, var(--club-text) 84%, #ffffff) 0%, var(--club-text) 52%, color-mix(in srgb, var(--club-text) 88%, var(--club-accent)) 100%);
   --club-glow-accent: 0 6px 18px color-mix(in srgb, var(--club-accent) 26%, transparent);
   --club-dur-fast: 140ms;
   --club-dur: 200ms;
@@ -133,6 +135,7 @@ html[data-theme="light"] .club-launcher {
   --club-highlight-strong: #ffffff;
   --club-grad-surface: linear-gradient(180deg, #ffffff 0%, var(--club-surface) 100%);
   --club-grad-primary: linear-gradient(180deg, color-mix(in srgb, var(--club-accent) 88%, #ffffff) 0%, var(--club-accent) 70%, color-mix(in srgb, var(--club-accent) 92%, #000000) 100%);
+  --club-grad-text: linear-gradient(180deg, var(--club-text) 0%, color-mix(in srgb, var(--club-text) 90%, var(--club-accent)) 100%);
   --club-glow-accent: 0 6px 16px color-mix(in srgb, var(--club-accent) 22%, transparent);
   --club-shadow-xs: 0 1px 2px rgba(23, 24, 28, 0.08);
 }
@@ -189,22 +192,6 @@ body.club-page :where(a, button, input, select, textarea, summary, [tabindex]):f
 body.club-page .hidden { display: none !important; }
 body.club-page [hidden] { display: none !important; }
 
-/* 跳到主内容 */
-.club-skip {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  z-index: 1200;
-  padding: 10px 14px;
-  border-radius: var(--club-radius-sm);
-  background: var(--club-accent);
-  color: var(--club-on-accent);
-  font-weight: 700;
-  transform: translateY(-160%);
-  transition: transform var(--club-dur, 200ms) var(--club-ease, ease);
-}
-.club-skip:focus { transform: translateY(0); }
-
 /* ============================================================
    3. 顶栏
    ============================================================ */
@@ -220,8 +207,10 @@ body.club-page .club-topbar {
   padding: 10px clamp(16px, 3vw, 30px);
   border-bottom: 1px solid var(--club-line);
   background: color-mix(in srgb, var(--club-bg) 82%, transparent);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  backdrop-filter: blur(18px) saturate(140%);
+  /* 第四轮降负：18px+saturate 常驻重采样在长页滚动/流式内容下成本高，
+     12px 视觉差异极小而合成开销显著更低。 */
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
 }
 @supports not (background: color-mix(in srgb, red 50%, blue)) {
   body.club-page .topbar { background: var(--club-bg); }
@@ -1141,9 +1130,9 @@ body.club-page .theme-option {
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color var(--club-dur, 200ms) var(--club-ease, ease), background var(--club-dur, 200ms) var(--club-ease, ease);
+  transition: border-color var(--club-dur, 200ms) var(--club-ease, ease), background var(--club-dur, 200ms) var(--club-ease, ease), transform var(--club-dur, 200ms) var(--club-ease, ease);
 }
-body.club-page .theme-option:hover { border-color: var(--club-accent-line); }
+body.club-page .theme-option:hover { transform: translateY(-2px); border-color: var(--club-accent-line); }
 body.club-page .theme-option.is-active { border-color: var(--club-accent); background: var(--club-accent-soft); }
 body.club-page .theme-option strong { font-size: 13.5px; }
 body.club-page .theme-option span { color: var(--club-muted); font-size: 12px; line-height: 1.5; }
@@ -1319,7 +1308,7 @@ body.club-page .resource-card {
   box-shadow: var(--club-shadow-sm);
   transition: transform var(--club-dur, 200ms) var(--club-ease, ease), border-color var(--club-dur, 200ms) var(--club-ease, ease);
 }
-body.club-page .resource-card:hover { transform: translateY(-2px); border-color: var(--club-accent-line); }
+body.club-page .resource-card:hover { transform: translateY(-2px); border-color: var(--club-accent-line); box-shadow: var(--club-shadow); }
 body.club-page .resource-card p { flex: 1 1 auto; color: var(--club-muted); font-size: 13px; }
 body.club-page .resource-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 body.club-page .info-list { margin: 0 0 14px; padding: 0; list-style: none; display: grid; gap: 10px; }
@@ -1480,6 +1469,9 @@ body.club-page .club-admin-rail .club-admin-rail-label {
 }
 html[data-theme="light"] .club-launcher { background: rgba(23, 24, 28, 0.34); }
 .club-launcher.is-open { display: flex; }
+/* 出场：保留 display 播完 180ms 反向动画再隐藏（club-shell.js 定时移除 .is-closing） */
+.club-launcher.is-closing { display: flex; pointer-events: none; animation: club-fade-out 180ms var(--club-ease, ease) forwards; }
+.club-launcher.is-closing .club-launcher-panel { animation: club-pop-out 180ms var(--club-ease, ease) forwards; }
 .club-launcher-panel {
   width: min(680px, 100%);
   max-height: min(76vh, 720px);
@@ -1493,6 +1485,9 @@ html[data-theme="light"] .club-launcher { background: rgba(23, 24, 28, 0.34); }
   animation: club-pop var(--club-dur-fast, 140ms) var(--club-ease, ease);
 }
 @keyframes club-pop { from { opacity: 0; transform: translateY(-6px) scale(0.99); } }
+/* 弹层出场：与 club-pop 成对（启动器/通知面板的 .is-closing 态使用） */
+@keyframes club-pop-out { to { opacity: 0; transform: translateY(-6px) scale(0.99); } }
+@keyframes club-fade-out { to { opacity: 0; } }
 .club-launcher-search {
   display: flex;
   align-items: center;
@@ -1893,7 +1888,7 @@ html[data-theme="light"] body.club-page .club-admin-side,
 html[data-theme="light"] body.club-page .table-wrap,
 html[data-theme="light"] body.club-page .club-tabs,
 html[data-theme="light"] body.club-page .club-section-nav {
-  background: #FFFFFF !important;
+  background: var(--club-surface) !important;
   border-color: var(--club-line) !important;
   color: var(--club-text) !important;
   box-shadow: inset 0 1px 0 var(--club-highlight), var(--club-shadow-sm) !important;
@@ -1919,14 +1914,14 @@ html[data-theme="light"] body.club-page .textarea,
 html[data-theme="light"] body.club-page input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
 html[data-theme="light"] body.club-page select,
 html[data-theme="light"] body.club-page textarea {
-  background: #FFFFFF !important;
+  background: var(--club-surface) !important;
   border-color: var(--club-line) !important;
   color: var(--club-text) !important;
   box-shadow: inset 0 1px 2px rgba(23, 24, 28, 0.05);
 }
 html[data-theme="light"] body.club-page .input::placeholder,
 html[data-theme="light"] body.club-page textarea::placeholder,
-html[data-theme="light"] body.club-page input::placeholder { color: #7a808a !important; opacity: 1 !important; }
+html[data-theme="light"] body.club-page input::placeholder { color: var(--club-muted) !important; opacity: 1 !important; }
 /* 亮色下禁用输入同样要压过上面的白色 !important 覆盖 */
 html[data-theme="light"] body.club-page .input:disabled,
 html[data-theme="light"] body.club-page .select:disabled,
@@ -1959,7 +1954,7 @@ html[data-theme="light"] body.club-page .primary-action {
   background-color: var(--club-accent) !important;
   background-image: var(--club-grad-primary) !important;
   border-color: var(--club-accent) !important;
-  color: #FFFFFF !important;
+  color: var(--club-on-accent) !important;
   box-shadow: inset 0 1px 0 var(--club-highlight-strong), var(--club-glow-accent) !important;
 }
 html[data-theme="light"] body.club-page .button:hover:not(:disabled),
@@ -1980,7 +1975,7 @@ html[data-theme="light"] body.club-page .btn.secondary,
 html[data-theme="light"] body.club-page .secondary-action,
 html[data-theme="light"] body.club-page .row-button,
 html[data-theme="light"] body.club-page .button.ghost {
-  background: #FFFFFF !important;
+  background: var(--club-surface) !important;
   border-color: var(--club-line-strong) !important;
   color: var(--club-text-soft) !important;
   box-shadow: inset 0 1px 0 var(--club-highlight), 0 1px 2px rgba(23, 24, 28, 0.06) !important;
@@ -2034,16 +2029,20 @@ html[data-theme="light"] body.club-page .status-pill {
 }
 html[data-theme="light"] body.club-page .badge.on,
 html[data-theme="light"] body.club-page .badge.approved,
-html[data-theme="light"] body.club-page .badge.used { background: var(--club-ok-soft) !important; color: var(--club-ok) !important; border-color: #b9dfcd !important; }
+html[data-theme="light"] body.club-page .badge.used { background: var(--club-ok-soft) !important; color: var(--club-ok) !important; border-color: color-mix(in srgb, var(--club-ok) 30%, #ffffff) !important; }
 html[data-theme="light"] body.club-page .badge.pending { background: var(--club-warn-soft) !important; color: var(--club-warn) !important; }
+html[data-theme="light"] body.club-page .badge.warn { background: var(--club-warn-soft) !important; color: var(--club-warn) !important; border-color: color-mix(in srgb, var(--club-warn) 45%, transparent) !important; }
+html[data-theme="light"] body.club-page .badge.info { background: var(--club-info-soft) !important; color: var(--club-info) !important; border-color: color-mix(in srgb, var(--club-info) 45%, transparent) !important; }
+html[data-theme="light"] body.club-page .badge.cyan { background: var(--club-accent-soft) !important; color: var(--club-accent) !important; border-color: var(--club-accent-line) !important; }
+html[data-theme="light"] body.club-page .badge.green { background: var(--club-ok-soft) !important; color: var(--club-ok) !important; border-color: color-mix(in srgb, var(--club-ok) 45%, transparent) !important; }
 html[data-theme="light"] body.club-page .badge.cancelled,
 html[data-theme="light"] body.club-page .badge.expired,
 html[data-theme="light"] body.club-page .badge.rejected { background: var(--club-danger-soft) !important; color: var(--club-danger) !important; }
-html[data-theme="light"] body.club-page .notice { background: var(--club-warn-soft) !important; border-color: #e8cf9d !important; }
-html[data-theme="light"] body.club-page .notice p { color: #5a4a2c !important; }
-html[data-theme="light"] body.club-page .drive-status { background: var(--club-ok-soft) !important; border-color: #b9dfcd !important; }
-html[data-theme="light"] body.club-page .drive-status span { color: #33503f !important; }
-html[data-theme="light"] body.club-page .drive-status.warn { background: var(--club-warn-soft) !important; border-color: #e8cf9d !important; }
+html[data-theme="light"] body.club-page .notice { background: var(--club-warn-soft) !important; border-color: color-mix(in srgb, var(--club-warn) 38%, #ffffff) !important; }
+html[data-theme="light"] body.club-page .notice p { color: var(--club-warn) !important; }
+html[data-theme="light"] body.club-page .drive-status { background: var(--club-ok-soft) !important; border-color: color-mix(in srgb, var(--club-ok) 30%, #ffffff) !important; }
+html[data-theme="light"] body.club-page .drive-status span { color: var(--club-ok) !important; }
+html[data-theme="light"] body.club-page .drive-status.warn { background: var(--club-warn-soft) !important; border-color: color-mix(in srgb, var(--club-warn) 38%, #ffffff) !important; }
 html[data-theme="light"] body.club-page .club-admin-rail a[aria-current="page"],
 html[data-theme="light"] body.club-page .club-admin-side a[aria-current="page"],
 html[data-theme="light"] body.club-page .club-section-nav a.is-active {
@@ -2054,12 +2053,12 @@ html[data-theme="light"] body.club-page .club-section-nav a.is-active {
 html[data-theme="light"] body.club-page .back:hover,
 html[data-theme="light"] body.club-page .club-launcher-button:hover { background: var(--club-accent-soft) !important; color: var(--club-accent) !important; border-color: var(--club-accent-line) !important; }
 html[data-theme="light"] body.club-page .club-launcher-panel,
-html[data-theme="light"] .club-launcher-panel { background: #FFFFFF !important; border-color: var(--club-line-strong) !important; }
+html[data-theme="light"] .club-launcher-panel { background: var(--club-surface) !important; border-color: var(--club-line-strong) !important; }
 html[data-theme="light"] .club-launcher-item:hover,
 html[data-theme="light"] .club-launcher-item.is-active { background: var(--club-accent-soft) !important; }
 html[data-theme="light"] .club-launcher-search input { color: #17181c !important; }
 html[data-theme="light"] body.club-page .code-result { background: var(--club-accent-soft) !important; }
-html[data-theme="light"] body.club-page .file-list { background: #FFFFFF !important; border-color: var(--club-line) !important; }
+html[data-theme="light"] body.club-page .file-list { background: var(--club-surface) !important; border-color: var(--club-line) !important; }
 html[data-theme="light"] body.club-page .secret-box { background: var(--club-accent-soft) !important; }
 html[data-theme="light"] body.club-page .hero-card,
 html[data-theme="light"] body.club-page .club-profile-banner,
@@ -2468,14 +2467,24 @@ body.club-page input[data-invalid] { border-color: var(--club-danger) !important
   body.club-page .club-auth-back { display: none; }
 }
 
-html[data-theme="light"] body.club-page .club-auth-shell { background: #FFFFFF !important; border-color: var(--club-line) !important; }
+html[data-theme="light"] body.club-page .club-auth-shell { background: var(--club-surface) !important; border-color: var(--club-line) !important; }
 html[data-theme="light"] body.club-page .club-auth-aside { background: var(--club-accent-soft) !important; border-color: var(--club-line) !important; }
-html[data-theme="light"] body.club-page .club-auth-card { background: #FFFFFF !important; }
+html[data-theme="light"] body.club-page .club-auth-card { background: var(--club-surface) !important; }
 
 /* 页面标题节奏：各页统一 eyebrow → h1 → lead 的间距 */
 body.club-page main > .eyebrow:first-child,
 body.club-page main > .club-page-head .eyebrow { margin-bottom: 8px; }
 body.club-page main > h1 { margin: 0 0 8px; }
+/* display 标题质感：渐变文字（不支持 background-clip 时回退纯色，亮色由令牌保证对比度） */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  body.club-page main > h1 {
+    background: var(--club-grad-text);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+}
 body.club-page main > .lead { margin: 0 0 22px; }
 body.club-page main > .hero + .lead { margin-top: 0; }
 
@@ -2610,7 +2619,7 @@ body.club-page .club-feature-toggles {
 body.club-page .club-feature-toggles span { display: inline-flex; align-items: center; gap: 6px; }
 body.club-page .club-feature-field .input { min-height: 34px; font-size: 12.5px; padding: 6px 9px; }
 html[data-theme="light"] body.club-page .club-feature-group,
-html[data-theme="light"] body.club-page .club-feature-field { background: #FFFFFF !important; border-color: var(--club-line) !important; }
+html[data-theme="light"] body.club-page .club-feature-field { background: var(--club-surface) !important; border-color: var(--club-line) !important; }
 html[data-theme="light"] body.club-page .club-feature-group > summary:hover { background: var(--club-accent-soft) !important; }
 
 /* ---------- 打印 ----------
@@ -2742,7 +2751,9 @@ html[data-theme="light"] body.club-page .club-feature-group > summary:hover { ba
   z-index: 900;
   overflow: hidden;
 }
-.club-notify-panel.is-open { display: flex; }
+.club-notify-panel.is-open { display: flex; animation: club-pop 180ms var(--club-ease, ease); transform-origin: top right; }
+/* 出场与启动器同一语言：播完 160ms 反向动画再隐藏 */
+.club-notify-panel.is-closing { display: flex; pointer-events: none; animation: club-pop-out 160ms var(--club-ease, ease) forwards; }
 .club-notify-head {
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; padding: 12px 14px;
@@ -3139,7 +3150,8 @@ body.club-page a.card:hover { box-shadow: var(--club-shadow-hover); }
 body.club-page .button.is-loading,
 body.club-page .btn.is-loading,
 body.club-page .primary-action.is-loading,
-body.club-page .secondary-action.is-loading {
+body.club-page .secondary-action.is-loading,
+body.club-page .row-button.is-loading {
   pointer-events: none;
   color: transparent !important;
   position: relative;
@@ -3147,7 +3159,8 @@ body.club-page .secondary-action.is-loading {
 body.club-page .button.is-loading::after,
 body.club-page .btn.is-loading::after,
 body.club-page .primary-action.is-loading::after,
-body.club-page .secondary-action.is-loading::after {
+body.club-page .secondary-action.is-loading::after,
+body.club-page .row-button.is-loading::after {
   content: "";
   position: absolute;
   width: 15px;
@@ -3164,65 +3177,6 @@ body.club-page .button.ghost.is-loading::after { color: var(--club-text-soft); }
 body.club-page .button:active:not(:disabled),
 body.club-page .btn:active:not(:disabled),
 body.club-page .row-button:active:not(:disabled) { transform: translateY(1px) scale(0.99); }
-
-/* ---------- Toast 全局通知 ---------- */
-.club-toast-region {
-  position: fixed;
-  right: 18px;
-  bottom: 18px;
-  z-index: 1400;
-  display: grid;
-  gap: 10px;
-  width: min(360px, calc(100vw - 32px));
-  pointer-events: none;
-}
-.club-toast {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  border: 1px solid var(--club-line-strong, rgba(132, 190, 225, 0.32));
-  border-radius: 12px;
-  background: var(--club-surface, #101a2a);
-  color: var(--club-text, #e8f1fb);
-  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.4);
-  font-size: 13px;
-  line-height: 1.55;
-  pointer-events: auto;
-  opacity: 0;
-  transform: translateY(10px) scale(0.98);
-  transition: opacity var(--club-dur, 200ms) var(--club-ease, ease), transform var(--club-dur, 200ms) var(--club-ease, ease);
-}
-.club-toast.is-in { opacity: 1; transform: translateY(0) scale(1); }
-.club-toast.is-out { opacity: 0; transform: translateY(6px) scale(0.98); }
-.club-toast::before {
-  content: "";
-  flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
-  margin-top: 6px;
-  border-radius: 50%;
-  background: var(--club-info, #8fb4ff);
-}
-.club-toast.club-toast-ok::before { background: var(--club-ok, #56d9a0); }
-.club-toast.club-toast-error::before { background: var(--club-danger, #ff8095); }
-.club-toast.club-toast-warn::before { background: var(--club-warn, #f2c66d); }
-.club-toast span { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
-.club-toast button {
-  flex: 0 0 auto;
-  border: 0;
-  padding: 2px;
-  background: transparent;
-  color: var(--club-muted, #90a4bb);
-  font: inherit;
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-}
-.club-toast button:hover { color: var(--club-text, #e8f1fb); }
-@media (max-width: 640px) {
-  .club-toast-region { right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
-}
 
 /* ---------- 骨架屏 ---------- */
 body.club-page .club-skeleton {
@@ -3386,7 +3340,7 @@ body.club-page .club-footer-brand {
   color: var(--club-muted);
   font-size: var(--club-fs-sm);
 }
-body.club-page .club-footer-brand .brand-mark { width: 26px; height: 26px; border-radius: 7px; font-size: 12px; }
+body.club-page .club-footer-brand .brand-mark { width: 26px; height: 26px; border-radius: var(--club-radius-sm); font-size: 12px; }
 body.club-page .club-footer-nav { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 body.club-page .club-footer-nav a {
   color: var(--club-muted);
@@ -3396,3 +3350,174 @@ body.club-page .club-footer-nav a {
 body.club-page .club-footer-nav a:hover { color: var(--club-accent); }
 body.club-page .club-footer-meta { color: var(--club-muted); font-size: var(--club-fs-xs); }
 @media print { body.club-page .club-footer { display: none !important; } }
+
+/* ============================================================
+   31. 交互反馈补全（第四轮）：hover 过渡 + 按压态零死角
+   目标：任何可点元素要么有完整四态，要么至少有过渡与按压反馈。
+   ============================================================ */
+.club-notify-button {
+  transition: border-color var(--club-dur, 200ms) var(--club-ease, ease), background var(--club-dur, 200ms) var(--club-ease, ease), color var(--club-dur, 200ms) var(--club-ease, ease), transform var(--club-dur-fast, 140ms) var(--club-ease, ease);
+}
+.club-notify-button:active { transform: scale(0.94); }
+
+body.club-page .crumb,
+body.club-page .club-section-nav a,
+body.club-page .club-admin-rail a,
+body.club-page .club-admin-side a {
+  transition: background var(--club-dur, 200ms) var(--club-ease, ease), color var(--club-dur, 200ms) var(--club-ease, ease), border-color var(--club-dur, 200ms) var(--club-ease, ease);
+}
+body.club-page .crumb:active,
+body.club-page .club-section-nav a:active,
+body.club-page .club-admin-rail a:active { transform: translateY(1px); }
+
+.club-share-option,
+.club-share-cancel {
+  transition: border-color var(--club-dur, 200ms) var(--club-ease, ease), color var(--club-dur, 200ms) var(--club-ease, ease), background var(--club-dur, 200ms) var(--club-ease, ease), transform var(--club-dur-fast, 140ms) var(--club-ease, ease);
+}
+.club-share-option:active { transform: translateY(1px) scale(0.99); }
+.club-share-cancel:active { transform: translateY(1px); }
+
+body.club-page .transfer-cancel {
+  transition: border-color var(--club-dur, 200ms) var(--club-ease, ease), background var(--club-dur, 200ms) var(--club-ease, ease), color var(--club-dur, 200ms) var(--club-ease, ease), transform var(--club-dur-fast, 140ms) var(--club-ease, ease);
+}
+body.club-page .transfer-cancel:hover {
+  border-color: var(--club-danger);
+  background: var(--club-danger-soft);
+  color: var(--club-danger);
+}
+body.club-page .transfer-cancel:active { transform: translateY(1px); }
+
+/* 顶栏四控件 + 回到顶部：按压反馈 */
+body.club-page .back:active,
+body.club-page .lang-switcher button:active,
+body.club-page .theme-switcher button:active,
+body.club-page .club-launcher-button:active,
+.club-to-top:active { transform: translateY(1px); }
+
+/* 活动日历：可点条目与有活动日期的悬停 */
+.event-calendar-item {
+  transition: background var(--club-dur, 200ms) var(--club-ease, ease), color var(--club-dur, 200ms) var(--club-ease, ease);
+}
+.event-calendar-item:hover { background: var(--club-accent); color: var(--club-on-accent); }
+.event-calendar-day {
+  transition: border-color var(--club-dur, 200ms) var(--club-ease, ease), background var(--club-dur, 200ms) var(--club-ease, ease);
+}
+.event-calendar-day.has-events:hover { border-color: var(--club-accent); background: var(--club-accent-soft); }
+
+/* ============================================================
+   32. 丝滑度（第四轮）：切换过渡 / 锚点 / 渲染成本
+   ============================================================ */
+/* 标签页与视图切换：面板出现时轻上浮，不再硬切。 */
+body.club-page [role="tabpanel"]:not([hidden]) {
+  animation: club-enter 200ms var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+/* 锚点：平滑滚动（:has 渐进增强，index 自有滚动体系不受影响）+
+   章节目标预留顶栏高度，跳转不再被 62px sticky 顶栏遮住。 */
+@supports selector(html:has(body)) {
+  html:has(body.club-page) { scroll-behavior: smooth; }
+}
+body.club-page [id] { scroll-margin-top: calc(var(--club-topbar, 62px) + 12px); }
+
+/* ============================================================
+   33. 质感层补齐（第五轮）：面板级容器与瓦片统一分层光
+   目标：round1 给 .panel/.card 族加的「渐变面 + 顶缘内高光」
+   推广到漏掉的组件族；亮色令牌自动生效，无需另写覆盖。
+   ============================================================ */
+/* 亮色 §20 对这些容器用 background 简写 !important（纯白平涂），
+   渐变与内高光只在暗色补齐；亮色保持既有平面观感。 */
+html:not([data-theme="light"]) body.club-page .table-wrap,
+html:not([data-theme="light"]) body.club-page .report-table-wrap,
+html:not([data-theme="light"]) body.club-page .file-list,
+html:not([data-theme="light"]) body.club-page .club-admin-side {
+  background-image: var(--club-grad-surface);
+  box-shadow: inset 0 1px 0 var(--club-highlight);
+}
+body.club-page .resource-card {
+  background-image: var(--club-grad-surface);
+  box-shadow: var(--club-shadow-sm), inset 0 1px 0 var(--club-highlight);
+}
+body.club-page .resource-card:hover { box-shadow: var(--club-shadow), inset 0 1px 0 var(--club-highlight); }
+body.club-page .info-list li,
+body.club-page .club-feature-group,
+body.club-page .member-card-block,
+body.club-page .theme-option,
+body.club-page .event-calendar-day,
+body.club-page .site-search-group li {
+  box-shadow: inset 0 1px 0 var(--club-highlight);
+}
+/* 胶囊导航容器材质统一：.club-tabs 从平涂 surface 升级为半透明 blur
+   （与 .club-section-nav 同语言）；滚动条隐藏规则沿用原定义。 */
+body.club-page .club-tabs {
+  background: color-mix(in srgb, var(--club-bg) 88%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+/* ============================================================
+   34. 小件基类（第五轮收编）
+   ============================================================ */
+/* kbd 键帽：等宽 + 微键帽感（launcher 内的两处键帽保持原样，见下方再声明） */
+body.club-page kbd {
+  padding: 2px 6px;
+  border: 1px solid var(--club-line-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--club-radius-xs);
+  background: var(--club-surface-2);
+  color: var(--club-text);
+  font-family: var(--club-mono);
+  font-size: 0.92em;
+  line-height: 1.2;
+}
+body.club-page .club-launcher-button kbd,
+body.club-page .club-launcher-search kbd {
+  padding: 2px 5px;
+  border: 1px solid var(--club-line);
+  border-bottom-width: 1px;
+  border-radius: 4px;
+  background: transparent;
+  font-size: 10px;
+}
+/* 行内 code 表面（排除 pre 代码块；pre 内保持裸排） */
+body.club-page :not(pre) > code {
+  padding: 1px 5px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-xs);
+  background: var(--club-surface-3);
+  font-family: var(--club-mono);
+  font-size: 0.92em;
+}
+body.club-page hr { border: 0; border-top: 1px solid var(--club-line); margin: 18px 0; }
+/* 数字列工具：右对齐 + 等宽（配合既有 .club-num 等宽定义） */
+body.club-page .club-num,
+body.club-page .points-value,
+body.club-page td.num { text-align: right; }
+/* badge 语义补齐：warn / info（亮色例外见 §20 追加行） */
+body.club-page .badge.warn {
+  border-color: color-mix(in srgb, var(--club-warn) 45%, transparent);
+  background: var(--club-warn-soft);
+  color: var(--club-warn);
+}
+body.club-page .badge.info {
+  border-color: color-mix(in srgb, var(--club-info) 45%, transparent);
+  background: var(--club-info-soft);
+  color: var(--club-info);
+}
+/* chip 基类：统一两份作用域拷贝的核心观感（is-active 仍按所在组件定义） */
+body.club-page .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius-pill);
+  background: var(--club-surface-2);
+  color: var(--club-muted);
+  font: inherit;
+  font-size: var(--club-fs-sm);
+  font-weight: 650;
+  line-height: 1.1;
+  cursor: pointer;
+  transition: border-color var(--club-dur, 200ms) var(--club-ease, ease), background var(--club-dur, 200ms) var(--club-ease, ease), color var(--club-dur, 200ms) var(--club-ease, ease), transform var(--club-dur-fast, 140ms) var(--club-ease, ease);
+}
+body.club-page .chip:hover { border-color: var(--club-accent-line); color: var(--club-text); }
+body.club-page .chip:active { transform: translateY(1px); }

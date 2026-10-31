@@ -228,11 +228,34 @@
     previousFocus = document.activeElement;
     opened = true; panel.hidden = false; ball.setAttribute('aria-expanded','true');
     root.classList.add('is-open');
+    try {
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!reduced && panel.animate) {
+        panel.animate(
+          [{ opacity: 0, transform: 'scale(.97) translateY(8px)' }, { opacity: 1, transform: 'none' }],
+          { duration: 180, easing: 'cubic-bezier(.22,1,.36,1)' }
+        );
+      }
+    } catch (_error) { /* 动效失败不影响打开 */ }
     load(); modalState(); applyPanel(); sync(); if (ready) send('refreshCatalog'); close.focus();
   }
   function minimize() {
-    opened = false; panel.hidden = true; ball.setAttribute('aria-expanded','false');
+    opened = false; ball.setAttribute('aria-expanded','false');
     root.classList.remove('is-open'); unlock();
+    const finishHide = () => { panel.hidden = true; if (panel.style) panel.style.pointerEvents = ''; };
+    try {
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!reduced && panel.animate) {
+        // 收起先播 150ms 淡出缩小再隐藏；期间禁止交互，避免「看不见却挡点击」。
+        if (panel.style) panel.style.pointerEvents = 'none';
+        const anim = panel.animate(
+          [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(.97) translateY(6px)' }],
+          { duration: 150, easing: 'cubic-bezier(.22,1,.36,1)' }
+        );
+        anim.addEventListener('finish', finishHide, { once: true });
+        anim.addEventListener('cancel', finishHide, { once: true });
+      } else finishHide();
+    } catch (_error) { finishHide(); }
     const focus = previousFocus?.isConnected && previousFocus !== document.body ? previousFocus : ball;
     focus.focus?.({preventScroll:true});
   }

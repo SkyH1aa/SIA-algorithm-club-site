@@ -2,8 +2,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="pages.appmonitor.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39c53cdb">
-  <link rel="stylesheet" href="club-ui.css?v=793635b1">
+  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
+  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8" />
@@ -13,7 +13,7 @@
   <script src="club-auth-storage.js?v=5469c150"></script>
   <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
 <style>
     /* 收编说明：--club-* 主题 token 唯一真源是 club-ui.css 的 body.club-page 作用域（原 :root 整套复刻已删除）；
        本块只保留页面氛围派生 token（粒子 / 网格 / 光晕；--particle-rgb 由页内 JS 读取）与版式专有样式。 */
@@ -90,12 +90,14 @@
     .release-card::before { content:""; position:absolute; top:0; left:20px; width:48px; height:2px; background:linear-gradient(90deg,var(--club-accent),var(--club-info)); box-shadow:0 0 18px var(--club-accent-soft); }
     .release-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:14px; }
     .version { color:var(--club-accent); font-size:24px; font-weight:900; }
-    .date { color:var(--club-muted); font-family:Consolas,"Courier New",monospace; font-size:13px; }
+    .date { color:var(--club-muted); font-family:var(--club-mono); font-size:13px; }
     .release-card ul, .release-description { margin:0; color:var(--club-text-soft); line-height:1.8; }
     .release-card ul { padding-left:20px; }
     .release-card li + li { margin-top:3px; }
     .download { display:inline-flex; align-items:center; justify-content:center; min-height:42px; margin-top:18px; padding:10px 15px; border:1px solid var(--club-accent-line); border-radius:8px; background:var(--club-accent); color:var(--club-on-accent); font-weight:900; box-shadow:var(--club-shadow-sm); cursor:pointer; }
-    .download:hover { transform:translateY(-1px); background:var(--club-accent-strong); box-shadow:var(--club-shadow); }
+        .download { background-image: linear-gradient(180deg, color-mix(in srgb, var(--club-accent) 84%, #ffffff) 0%, var(--club-accent) 62%, color-mix(in srgb, var(--club-accent) 90%, #000000) 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), var(--club-shadow-sm); transition: transform var(--club-dur-fast,140ms) var(--club-ease,ease), box-shadow var(--club-dur-fast,140ms) var(--club-ease,ease), background-color var(--club-dur-fast,140ms) var(--club-ease,ease); }
+    .download:hover { transform:translateY(-1px); background-color:var(--club-accent-strong); box-shadow:inset 0 1px 0 rgba(255,255,255,.14), var(--club-shadow); }
+    .download:active { transform:translateY(1px) scale(.99); box-shadow:inset 0 1px 0 rgba(255,255,255,.14); }
     /* 骨架屏 / 空态视觉由 club-ui.css 的 .club-skeleton / .club-empty（body.club-page 作用域）提供，本页只留间距与重试按钮补充 */
     .release-skeleton .club-skeleton + .club-skeleton { margin-top:14px; }
     body.club-page .club-empty .release-retry { margin-top:10px; min-height:34px; padding:6px 13px; font-size:12.5px; }
@@ -258,6 +260,6 @@ const motionQuery=window.matchMedia('(prefers-reduced-motion: no-preference)');i
   loadReleases();
 })();
 </script>
-  <script src="club-shell.js?v=158d2108"></script>
+  <script src="club-shell.js?v=9b6a29db"></script>
 </body>
 </html>

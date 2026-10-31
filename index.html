@@ -18,14 +18,14 @@
     <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
     <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
     <link rel="canonical" href="https://skyh1aa.github.io/SIA-algorithm-club-site/index.html">
-  <link rel="stylesheet" href="public/theme.css?v=39c53cdb">
+  <link rel="stylesheet" href="public/theme.css?v=b8a5b0c9">
   <script src="public/theme.js?v=1b745a4f"></script>
     <title>算法社 · Algorithm Club</title>
 
     <script src="public/vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="public/club-auth-storage.js?v=5469c150"></script>
     <script src="public/i18n-dict.js?v=f75071ae"></script>
-    <script src="public/i18n.js?v=ba66328e"></script><script src="public/club-common.js?v=333db1c4"></script>
+    <script src="public/i18n.js?v=ba66328e"></script><script src="public/club-common.js?v=8e9acff3"></script>
     <script src="public/member-identity.js?v=ad75d585" defer></script>
     <style>
       :root {
@@ -107,6 +107,7 @@
       .zone-readout strong { color: var(--cyan); font-weight: 700; }
       .section-index { position: fixed; top: 50%; right: clamp(12px, 2.4vw, 34px); z-index: 25; display: grid; gap: 8px; transform: translateY(-50%); }
       .section-index button { display: grid; grid-template-columns: 22px 0fr; align-items: center; width: 26px; min-height: 24px; overflow: hidden; padding: 0 2px; border: 0; border-left: 1px solid rgba(115,221,255,.28); background: transparent; color: var(--muted); font: 11px var(--mono); text-align: left; cursor: pointer; transition: width var(--dur) ease, color var(--dur) ease, border-color var(--dur) ease; }
+      html[data-theme="light"] .section-index button { border-left-color: rgba(197, 74, 52, 0.30); }
       .section-index button span { opacity: 0; white-space: nowrap; transition: opacity var(--dur) ease; }
       .section-index button:hover, .section-index button.is-active { width: 112px; color: var(--cyan); border-color: var(--cyan); }
       .section-index button:hover span, .section-index button.is-active span { opacity: 1; }
@@ -405,8 +406,8 @@
       }
       .lang-switcher button.is-active,
       .theme-switcher button.is-active {
-        background: linear-gradient(135deg, #22d3ee, #818cf8);
-        color: #0f172a;
+        background: linear-gradient(135deg, var(--cyan), var(--violet));
+        color: #04141a;
       }
       .menu-button {
         display: none;
@@ -1229,6 +1230,12 @@
         cursor: pointer;
       }
       .pc-tip-dismiss:hover { background: rgba(0, 229, 255, 0.12); }
+      .pc-tip-dismiss, .feed-modal-never {
+        background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 60%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+        transition: transform var(--dur-fast) ease, background var(--dur-fast) ease, border-color var(--dur-fast) ease;
+      }
+      .pc-tip-dismiss:active, .feed-modal-never:active { transform: translateY(1px) scale(0.99); }
       html[data-theme="light"] .pc-tip-modal {
         border-color: rgba(197, 74, 52, 0.3);
         background: rgba(255, 252, 250, 0.97);
@@ -1346,7 +1353,7 @@
         width: 18px;
         height: 1px;
         background: currentColor;
-        box-shadow: 24px 0 0 rgba(87, 234, 248, 0.32);
+        box-shadow: 24px 0 0 color-mix(in srgb, currentColor 32%, transparent);
       }
       .hero-copy { position: relative; }
       .hero-copy::before {
@@ -1676,7 +1683,7 @@
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
       }
       /* 按钮微交互：悬停抬升、按压回弹 */
-      .primary-action, .secondary-action, .share-action { transition: transform 0var(--dur-fast) ease, filter 0var(--dur-fast) ease, border-color 0var(--dur-fast) ease, background 0var(--dur-fast) ease, box-shadow 0var(--dur-fast) ease; }
+      .primary-action, .secondary-action, .share-action { transition: transform var(--dur-fast) ease, filter var(--dur-fast) ease, border-color var(--dur-fast) ease, background var(--dur-fast) ease, box-shadow var(--dur-fast) ease; }
       .primary-action:hover { transform: translateY(-1px); box-shadow: 0 8px 26px rgba(0, 229, 255, 0.26); }
       .primary-action:active { transform: translateY(1px) scale(0.99); box-shadow: none; }
       .secondary-action:hover { transform: translateY(-1px); }
@@ -1770,7 +1777,7 @@
     </style>
   <script src="public/club-share.js?v=33b11b13"></script>
   <script src="public/service-prompts.js?v=1cfff2ab"></script><script src="public/service-gate.js?v=6acc9c5f"></script>
-  <link rel="stylesheet" href="public/club-ui.css?v=793635b1">
+  <link rel="stylesheet" href="public/club-ui.css?v=ecf6e1b3">
   <style>
     /* 首页退出跨文档 View Transition：首页是全站最重的页面，转场会冻结旧页
        快照等待新文档首绘（离站时截图 WebGL 画布也有开销），体感为「卡一下」。
@@ -4106,6 +4113,6 @@
       init();
 
     </script>
-    <script src="public/club-shell.js?v=158d2108"></script>
+    <script src="public/club-shell.js?v=9b6a29db"></script>
   </body>
 </html>

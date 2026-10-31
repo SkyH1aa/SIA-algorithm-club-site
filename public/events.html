@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.events.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39c53cdb">
-  <link rel="stylesheet" href="club-ui.css?v=793635b1">
+  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
+  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -12,7 +12,7 @@
   <script src="club-auth-storage.js?v=5469c150"></script>
 
   <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
@@ -27,6 +27,11 @@
   <meta name="twitter:image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
+  <style>
+    /* 列表 ↔ 日历切换：出现时轻上浮（club-enter 注册表动画），不再硬切 */
+    body.club-page #eventList:not([hidden]),
+    body.club-page #eventCalendar:not([hidden]) { animation: club-enter 200ms var(--club-ease, ease); }
+  </style>
   <style>
     /* 只影响本页：活动卡脚注与报名就近提示（不改全站约定） */
     body.club-page .meta.card-foot { margin-top: 10px; }
@@ -90,8 +95,8 @@
         $('announcementList').innerHTML = '<div class="empty">' + ClubI18n.t('events.emptyAnnouncements') + '</div>';
         return;
       }
-      $('announcementList').innerHTML = items.map(item => `
-        <article class="card">
+      $('announcementList').innerHTML = items.map((item, index) => `
+        <article class="card" data-reveal style="--reveal-delay:${Math.min(index, 6) * 40}ms">
           <strong>${escapeHtml(item.title)}</strong>
           <div class="meta">
             <span class="badge cyan">${escapeHtml(item.category || ClubI18n.t('events.defaultCategoryAnn'))}</span>
@@ -201,8 +206,8 @@
         return;
       }
       if (eventsView === 'calendar') { applyEventsView(); return; }
-      $('eventList').innerHTML = items.map(item => `
-        <article class="card" data-event-id="${escapeHtml(item.id)}">
+      $('eventList').innerHTML = items.map((item, index) => `
+        <article class="card" data-event-id="${escapeHtml(item.id)}" data-reveal style="--reveal-delay:${Math.min(index, 6) * 40}ms">
           <strong>${escapeHtml(item.title)}</strong>
           <div class="meta">
             <span class="badge cyan">${escapeHtml(item.category || ClubI18n.t('events.defaultCategoryEvt'))}</span>
@@ -312,6 +317,6 @@
     });
     window.addEventListener('club:langchange', () => { void refresh(); });
   </script>
-  <script src="club-shell.js?v=158d2108"></script>
+  <script src="club-shell.js?v=9b6a29db"></script>
 </body>
 </html>

@@ -6,12 +6,12 @@
   <meta name="description" content="算法社站内搜索：社员、公告、活动、积分商城商品一站查找。">
   <title>站内搜索 · 算法社</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="theme.css?v=39c53cdb">
-  <link rel="stylesheet" href="club-ui.css?v=793635b1">
+  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
+  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
   <script src="theme.js?v=1b745a4f"></script>
   <script src="i18n-dict.js?v=f75071ae"></script>
   <script src="i18n.js?v=ba66328e"></script>
-  <script src="club-common.js?v=333db1c4"></script>
+  <script src="club-common.js?v=8e9acff3"></script>
   <script src="service-prompts.js?v=1cfff2ab"></script>
   <script src="service-gate.js?v=6acc9c5f"></script>
   <meta property="og:type" content="website">
@@ -29,7 +29,7 @@
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <style>
     /* 只影响本页：结果关键词高亮与分组标题层级（h2 → h3，样式沿用 club-ui 的分组标题约定） */
-    body.club-page .site-search-group h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 14px; }
+    body.club-page .site-search-group h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: var(--club-fs-md); }
     body.club-page .site-search-group mark {
       background: var(--club-accent-soft); color: inherit;
       padding: 0 2px; border-radius: 3px;
@@ -158,6 +158,6 @@
       window.addEventListener('club:langchange', () => { if (lastQuery) void runSearch(lastQuery); });
     });
   </script>
-  <script src="club-shell.js?v=158d2108"></script>
+  <script src="club-shell.js?v=9b6a29db"></script>
 </body>
 </html>

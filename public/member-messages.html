@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="pages.messages.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39c53cdb">
-  <link rel="stylesheet" href="club-ui.css?v=793635b1">
+  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
+  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
   <style>
     /* 管理员内联编辑表单（替代 prompt 弹窗）：展开在留言卡片内部 */
     .message-edit-form{display:grid;gap:12px;margin-top:14px;padding-top:14px;border-top:1px dashed var(--club-line)}
@@ -18,7 +18,7 @@
   <script src="club-auth-storage.js?v=5469c150"></script>
   <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
@@ -108,6 +108,6 @@ async function updateSession(session){const member=Boolean(session?.user?.id);me
 document.getElementById('refreshButton').onclick=refreshMessages;document.getElementById('messageForm').addEventListener('submit',async event=>{event.preventDefault();const memberName=document.getElementById('memberName').value,memberClass=document.getElementById('memberClass').value,messageContent=document.getElementById('messageContent').value;try{await callMember('member_messages_create',{memberName,memberClass,messageContent});event.target.reset();applyBoundProfile();setMessage(formMessage,ClubI18n.t('messages.submitted'),'success');await refreshMessages()}catch(error){setMessage(formMessage,error.message,'error')}});supabaseClient.auth.onAuthStateChange((_event,session)=>{void updateSession(session);if(session?.user?.id)void refreshMessages()});supabaseClient.auth.getSession().then(async({data:{session}})=>{await updateSession(session);if(session?.user?.id)await refreshMessages()});
 window.addEventListener('club:langchange',()=>{renderMessages();if(window.ClubI18n)ClubI18n.apply(document);});
 </script>
-  <script src="club-shell.js?v=158d2108"></script>
+  <script src="club-shell.js?v=9b6a29db"></script>
 </body>
 </html>

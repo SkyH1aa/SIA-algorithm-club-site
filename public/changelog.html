@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.changelog.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=39c53cdb">
-  <link rel="stylesheet" href="club-ui.css?v=793635b1">
+  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
+  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -10,7 +10,7 @@
   <title>更新维护日志 · 算法社</title>
   <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=333db1c4"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
   <!-- 内置快照：file:// 与离线时兜底渲染，网络可用时仍以 fetch 到的 changelog.json 为准 -->
   <script src="data/changelog-data.js"></script>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
@@ -51,6 +51,8 @@
        club-prose 的 h2 节奏是按正文设计的，条目标题保持紧凑节奏 */
     body.club-page #logList { max-width: var(--club-read, 760px); margin-left: auto; margin-right: auto; }
     body.club-page #logList .entry h2 { margin: 0 0 10px; }
+    /* 长列表渲染成本：53 条 × 双层阴影/圆角，滚出视口的条目跳过布局与绘制 */
+    body.club-page #logList .entry { content-visibility: auto; contain-intrinsic-size: auto 220px; }
   </style>
   <script>
     function escapeHtml(value) {
@@ -117,6 +119,6 @@
     loadChangelog();
     window.addEventListener('club:langchange', () => { void loadChangelog(); });
   </script>
-  <script src="club-shell.js?v=158d2108"></script>
+  <script src="club-shell.js?v=9b6a29db"></script>
 </body>
 </html>
