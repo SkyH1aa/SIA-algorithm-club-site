@@ -2013,21 +2013,7 @@
       </div>
     </div>
 
-  <script src="public/vendor/three/three.min.js?v=170c6789"></script>
-  <script>
-    // 本地 three.js 失败时回退到 CDN。
-    // 这里绝不能用 document.write：它在 <head> 里执行，会重写整个文档流，
-    // 让社交抓取器（微信/QQ）读不到后面的 og:* 标签，分享卡片就变成空白。
-    (function () {
-      if (window.THREE) return;
-      var fallback = document.createElement('script');
-      fallback.src = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js';
-      fallback.async = false;
-      document.head.appendChild(fallback);
-    })();
-  </script>
   <script type="importmap">{"imports":{"three":"public/vendor/three/three.module.js"}}</script>
-  <script src="public/SceneDirector.js?v=20261025-perf-v9"></script>
     <script>
       const t = (key, vars) => (window.ClubI18n && typeof window.ClubI18n.t === 'function')
         ? window.ClubI18n.t(key, vars)
@@ -2781,12 +2767,7 @@
         };
         draw(); addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight, false); uniforms.uResolution.value.set(innerWidth, innerHeight); updateScroll(); }, { passive: true }); document.addEventListener('visibilitychange', () => { cancelAnimationFrame(frame); if (!document.hidden) draw(); });
       };
-      // 全屏 shader 层（WebGL 上下文 + raymarching 着色器）的搭建整体推迟到
-      // 空闲期：返回首页时不再与首屏布局/首次滚动争抢主线程。画布透明、
-      // CSS 深空底色先行的设计不变，晚起在视觉上不可感知。
-      // 固定延迟而非空闲回调：加载期的“空闲”来得太早（实测 ~250ms 即触发），
-      // 会让 WebGL 上下文创建撞上用户刚到达首页的时隙。700ms 起步、与主场景错峰。
-      setTimeout(bootShaderField, 700);
+      // 两个 WebGL 场景按首帧就绪顺序启动，避免并行编译争抢驱动。
 
       // Scroll-driven algorithm scene with optional GPU-computed particle simulation.
       const bootAlgorithmScene = async () => {
@@ -2794,10 +2775,11 @@
         // 启动分帧：在组装与首帧编译之间各让出一帧，把「3D 出现瞬间」的长任务
         // 拆成多个小片，避免那 0.x 秒的卡顿。rAF 与 120ms 超时竞速——页面
         // 隐藏时 rAF 不触发，超时兜底保证 boot 仍能逐片走完。
-        const nextFrame = () => Promise.race([
-          new Promise(resolve => requestAnimationFrame(resolve)),
-          new Promise(resolve => setTimeout(resolve, 120)),
-        ]);
+        const nextFrame = () => new Promise(resolve => {
+          let timer = 0;
+          const frame = requestAnimationFrame(() => { clearTimeout(timer); resolve(); });
+          timer = setTimeout(() => { cancelAnimationFrame(frame); resolve(); }, 120);
+        });
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const ua = String(navigator.userAgent || '').toLowerCase();
         const touchSurface = /ipad|iphone|ipod/.test(ua) || (navigator.maxTouchPoints > 1 && /macintosh/.test(ua));
@@ -3237,8 +3219,8 @@
         const scroll = () => { const raw = getComputedStyle(document.documentElement).getPropertyValue('--scroll-progress'); const cssProgress = Number.parseFloat(raw); const max = document.documentElement.scrollHeight - innerHeight; target = Number.isFinite(cssProgress) && (raw || '').trim() ? THREE.MathUtils.clamp(cssProgress, 0, 1) : max > 0 ? THREE.MathUtils.clamp(window.scrollY / max, 0, 1) : 0; };
         addEventListener('club:sceneprogress', event => { if (Number.isFinite(event.detail?.progress)) target = THREE.MathUtils.clamp(event.detail.progress, 0, 1); });
         addEventListener('scroll', scroll, { passive: true }); scroll();
-        const resize = () => { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); composer?.setSize(innerWidth, innerHeight); bloomPass?.setSize(innerWidth, innerHeight); }; addEventListener('resize', resize, { passive: true });
-        const clock = new THREE.Clock(); let sceneTime = 0; let frame;
+        const clock = new THREE.Clock(); let sceneTime = 0; let frame = 0;
+        let sceneReady = false, scenePaused = false, contextLost = false;
         let gpuFrameSkip = 0, slowFrames = 0;
         const chapterProfiles = {
           morph: [0, 0, .30, .50, .68, .84, 1],
@@ -3314,7 +3296,8 @@
           }
         });
         function draw() {
-          if (document.hidden) return;
+          frame = 0;
+          if (!sceneReady || scenePaused || document.hidden || contextLost) return;
           try {
           const delta = Math.min(clock.getDelta(), .033); sceneTime += delta; const time = sceneTime;
           progress = THREE.MathUtils.damp(progress, target, 4.6, delta);
@@ -3469,9 +3452,7 @@
           }
           frame = requestAnimationFrame(draw);
         }
-        addEventListener('scroll', scroll, { passive: true });
-        // 窗口尺寸变化防抖：滚动目标实时更新；画布后备存储与相机宽高比在停顿后
-        // 一次重建。旧代码从不更新它们——缩放窗口后画布会一直按初始分辨率拉伸。
+        // 画布后备存储只在尺寸变化停顿后重建一次。
         let sceneResizeTimer = 0;
         addEventListener('resize', () => {
           scroll();
@@ -3483,33 +3464,80 @@
           }, 160);
         }, { passive: true });
         scroll();
-        // 首帧推迟到首屏绘制之后：首次渲染会同步编译全部材质的着色器，弱 GPU
-        // 上可达数百毫秒并阻塞内容出现（即“加载不出来”的主因之一）。
-        const startSceneDraw = () => {
-          if (!frame && !document.hidden) {
-            draw();
-            // 首帧渲染完成后隔两帧再渐显画布：出现即淡入，
-            // 剩余的驱动侧停顿全部发生在画布全透明阶段。
-            requestAnimationFrame(() => requestAnimationFrame(() => canvas.classList.add('is-live')));
-          }
+        const stopSceneDraw = () => {
+          cancelAnimationFrame(frame);
+          frame = 0;
+          clock.stop();
         };
-        // 分帧点 2：事件接线完成后先让出一帧；随后用驱动的并行着色器编译
-        // （KHR_parallel_shader_compile，Chrome 85+ 支持）在后台线程完成全部
-        // 材质链接，完成后再开始渲染循环——首帧渲染不再触发同步编译冻结。
-        // 不支持并行编译的驱动退化为原同步路径，行为不劣于现状。
+        const startSceneDraw = () => {
+          if (!sceneReady || frame || scenePaused || document.hidden || contextLost) return;
+          clock.start();
+          frame = requestAnimationFrame(draw);
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (sceneReady && !contextLost) canvas.classList.add('is-live');
+          }));
+        };
+        canvas.addEventListener('webglcontextlost', event => {
+          event.preventDefault();
+          contextLost = true;
+          stopSceneDraw();
+        }, false);
+        canvas.addEventListener('webglcontextrestored', () => {
+          contextLost = false;
+          touchClearColor();
+          startSceneDraw();
+        }, false);
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) stopSceneDraw();
+          else startSceneDraw();
+        });
+        addEventListener('pagehide', () => { scenePaused = true; stopSceneDraw(); });
+        addEventListener('pageshow', () => { scenePaused = false; startSceneDraw(); });
         await nextFrame();
-        try { if (typeof renderer.compileAsync === 'function') await renderer.compileAsync(scene, camera); } catch (error) { /* 同步路径兜底 */ }
+        if (typeof renderer.compileAsync === 'function') await renderer.compileAsync(scene, camera);
+        sceneReady = true;
         startSceneDraw();
-        // WebGL 上下文被系统回收（显卡重置/内存压力/切应用）时：preventDefault
-        // 交给 three.js 自动重建资源，这里只负责重启渲染循环，弱设备不再黑屏到底。
-        canvas.addEventListener('webglcontextlost', event => { event.preventDefault(); cancelAnimationFrame(frame); frame = 0; }, false);
-        canvas.addEventListener('webglcontextrestored', () => { touchClearColor(); if (!frame && !document.hidden) draw(); }, false);
-        document.addEventListener('visibilitychange', () => { cancelAnimationFrame(frame); if (!document.hidden) draw(); }); addEventListener('pagehide', () => cancelAnimationFrame(frame), { once: true });
       };
-      // 主场景（渲染器 + GPGPU 粒子搭建 + 多材质着色器编译）同样推迟到空闲期，
-      // 并比 shader 层晚半拍启动，两层不会在同一帧里扎堆编译。
-      // 主场景比 shader 层再晚半拍起步，两层上下文创建与编译互不同帧。
-      setTimeout(bootAlgorithmScene, 1500);
+      let homeScenesStarted = false;
+      const startHomeScenes = async () => {
+        if (homeScenesStarted || document.hidden || !window.THREE || !window.SceneDirector) return;
+        homeScenesStarted = true;
+        try {
+          await bootAlgorithmScene();
+          if (!document.hidden) bootShaderField();
+          else document.addEventListener('visibilitychange', function resumeField() {
+            if (document.hidden) return;
+            document.removeEventListener('visibilitychange', resumeField);
+            bootShaderField();
+          });
+        } catch (error) {
+          console.error('Homepage 3D startup failed', error);
+        }
+      };
+      const scheduleHomeScenes = () => {
+        if (!document.hidden) setTimeout(startHomeScenes, 0);
+      };
+      document.addEventListener('visibilitychange', scheduleHomeScenes);
+      document.addEventListener('DOMContentLoaded', scheduleHomeScenes, { once: true });
+      const loadSceneRuntime = (source, fallback) => new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = source;
+        script.onload = resolve;
+        script.onerror = () => {
+          script.remove();
+          if (fallback) loadSceneRuntime(fallback).then(resolve, reject);
+          else reject(new Error(`Unable to load ${source}`));
+        };
+        document.head.appendChild(script);
+      });
+      // 动态脚本不阻塞 HTML 解析或 DOMContentLoaded，弱网下先开放导航和章节。
+      document.addEventListener('DOMContentLoaded', () => {
+        Promise.all([
+          loadSceneRuntime('public/vendor/three/three.min.js?v=170c6789', 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js'),
+          loadSceneRuntime('public/SceneDirector.js?v=ff0282cf')
+        ]).then(scheduleHomeScenes).catch(error => console.error('Homepage 3D resources failed', error));
+      }, { once: true });
 
       (() => {
         const zones = [
@@ -4099,6 +4127,8 @@
         // Window resize is handled by configure; flight remains enabled for
         // desktop/iPad and phones retain native document flow.
         configure();
+        cancelAnimationFrame(frame);
+        tick(performance.now());
         document.querySelectorAll('a[href^="#"]').forEach(link => link.addEventListener('click', event => {
           if (goToZone(link.hash.slice(1))) { event.preventDefault(); history.pushState(null, '', link.hash); }
         }));

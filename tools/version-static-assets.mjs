@@ -20,7 +20,7 @@ const VERSIONED = [
   'club-common.js', 'club-share.js', 'chat-i18n.js', 'assistant-i18n.js', 'member-identity.js',
   'club-auth-storage.js', 'service-gate.js', 'service-prompts.js', 'error-page.js',
   'chat-core.js', 'chat.js', 'chat-file-bundle.js', 'chat.css', 'assistant.css',
-  'vendor/supabase/supabase.min.js', 'vendor/three/three.min.js', 'vendor/three/three.module.js', 'sw.js'
+  'vendor/supabase/supabase.min.js', 'vendor/three/three.min.js', 'vendor/three/three.module.js', 'SceneDirector.js', 'sw.js'
 ];
 
 // 行尾归一化后再算哈希。
@@ -83,6 +83,14 @@ const apply = (source, isRoot) => {
     const normalized = rel.replace(/^\.\//, '').replace(/^public\//, '');
     const name = normalized.split('/').length > 1 ? normalized : path.basename(normalized);
     const digest = hashes[name] || byBasename.get(path.basename(normalized));
+    if (!digest) return whole;
+    const next = withVersion(url, digest);
+    if (next !== url) { changed++; return `${pre}${next}${post}`; }
+    return whole;
+  });
+  source = source.replace(/(loadSceneRuntime\(\s*['"])([^'"]+)(['"])/g, (whole, pre, url, post) => {
+    const normalized = stripVersion(url).replace(/^public\//, '');
+    const digest = hashes[normalized];
     if (!digest) return whole;
     const next = withVersion(url, digest);
     if (next !== url) { changed++; return `${pre}${next}${post}`; }

@@ -1,7 +1,6 @@
 (function (global) {
   'use strict';
-  const THREE = global.THREE;
-  if (!THREE) return;
+  let THREE = global.THREE;
 
   const chapters = [
     { id: 'core', section: 'home', camPos: [0, 0, 14], look: [0, 0, 0], fov: 55 },
@@ -26,6 +25,17 @@
     varying vec2 vUv;
     #define PI 3.14159265359
     #define TAU 6.28318530718
+
+    // Private to this fragment: prepare once, reuse across every field/normal sample.
+    float fieldTime, fieldMorph, fieldArms, fieldShape, fieldRingCount;
+    float fieldTopology, fieldFlow, fieldDensity, fieldBoxSize, fieldRingAmplitude;
+    vec3 fieldFlowOffset, fieldCoreBlend;
+    vec4 fieldRings[7]; // radius, x scale, tube radius, enabled
+    vec3 fieldRingWaves[7]; // azimuth multiplier, time term, shape term (keep additions ordered)
+    vec3 fieldNodes[8], fieldNextNodes[8], fieldLinks[8];
+    float fieldLinkDenominators[8];
+    vec3 fieldCompanions[2];
+    vec2 fieldCompanionRotations[2];
 
     float hash21(vec2 p){
       p = fract(p * vec2(123.34, 345.45));
@@ -90,13 +100,75 @@
       return mix(v5, v6, t);
     }
     float chapterValue(){ return clamp(uScroll * 6.0, 0.0, 5.999); }
-    float coreMorph(){ return chapterKey(chapterValue(), 0.0, 0.33, 0.52, 0.68, 0.78, 0.90, 1.0); }
-    float armCount(){ return chapterKey(chapterValue(), 3.0, 4.0, 5.0, 6.0, 4.0, 5.0, 6.0); }
-    float ringShape(){ return chapterKey(chapterValue(), 0.0, 0.24, 0.56, 0.90, 0.42, 0.78, 1.0); }
-    float ringCount(){ return chapterKey(chapterValue(), 3.0, 5.0, 6.0, 7.0, 5.0, 6.0, 7.0); }
-    float topologyValue(){ return chapterKey(chapterValue(), 0.0, 0.33, 0.66, 1.0, 0.34, 0.66, 1.0); }
-    float flowValue(){ return chapterKey(chapterValue(), 0.0, 0.65, 0.34, 1.0, 0.50, 0.68, 1.0); }
-    float densityValue(){ return chapterKey(chapterValue(), 0.58, 0.72, 0.84, 0.68, 0.78, 0.90, 0.96); }
+    float coreMorph(){ return fieldMorph; }
+    float armCount(){ return fieldArms; }
+    float ringShape(){ return fieldShape; }
+    float ringCount(){ return fieldRingCount; }
+    float topologyValue(){ return fieldTopology; }
+    float flowValue(){ return fieldFlow; }
+    float densityValue(){ return fieldDensity; }
+
+    void prepareChapter(){
+      float chapter = chapterValue();
+      fieldMorph = chapterKey(chapter, 0.0, 0.33, 0.52, 0.68, 0.78, 0.90, 1.0);
+      fieldArms = chapterKey(chapter, 3.0, 4.0, 5.0, 6.0, 4.0, 5.0, 6.0);
+      fieldShape = chapterKey(chapter, 0.0, 0.24, 0.56, 0.90, 0.42, 0.78, 1.0);
+      fieldRingCount = chapterKey(chapter, 3.0, 5.0, 6.0, 7.0, 5.0, 6.0, 7.0);
+      fieldTopology = chapterKey(chapter, 0.0, 0.33, 0.66, 1.0, 0.34, 0.66, 1.0);
+      fieldFlow = chapterKey(chapter, 0.0, 0.65, 0.34, 1.0, 0.50, 0.68, 1.0);
+      fieldDensity = chapterKey(chapter, 0.58, 0.72, 0.84, 0.68, 0.78, 0.90, 0.96);
+    }
+
+    void prepareScene(){
+      // This is intentionally independent of main's reduced-motion analytic time.
+      float t = uTime * 0.10 + uScroll * 3.5;
+      fieldTime = t;
+      fieldFlowOffset = vec3(t * 0.15, -t * 0.11, t * 0.08);
+      float morph = coreMorph();
+      fieldCoreBlend = vec3(smoothstep(0.0, 0.34, morph), smoothstep(0.26, 0.70, morph), smoothstep(0.62, 1.0, morph));
+      fieldBoxSize = 0.30 + morph * 0.08;
+      float shape = ringShape();
+      float activeRings = ringCount();
+      fieldRingAmplitude = 0.025 + shape * 0.025;
+      for(int i = 0; i < 7; i++){
+        float fi = float(i);
+        fieldRings[i] = vec4(0.96 + fi * (0.36 + shape * 0.035), 1.0 + shape * (0.18 + fi * 0.018), 0.012 + fi * 0.0018, 1.0 - smoothstep(activeRings - 0.80, activeRings + 0.05, fi));
+        fieldRingWaves[i] = vec3(2.0 + fi * 0.35, t * (0.35 + fi * 0.04), shape * fi);
+      }
+      float topology = topologyValue();
+      vec3 topologyBlend = vec3(smoothstep(0.0, 0.33, topology), smoothstep(0.26, 0.66, topology), smoothstep(0.58, 1.0, topology));
+      float nodeRadius = 1.40 + 0.18 * densityValue() + 0.10 * sin(t * 0.7);
+      float nodeScale = 0.72 + densityValue() * 0.38;
+      for(int i = 0; i < 8; i++){
+        float fi = float(i);
+        float a = fi / 8.0 * TAU + t * 0.12 + uScroll * 0.7;
+        vec3 ringNode = vec3(cos(a) * nodeRadius, sin(fi * 1.7 + t) * 0.22, sin(a) * nodeRadius * 0.62);
+        vec3 gridNode = vec3((mod(fi, 4.0) - 1.5) * 0.46, (floor(fi / 4.0) - 0.5) * 0.48, sin(fi + t) * 0.05);
+        vec3 treeNode = vec3((mod(fi, 2.0) - 0.5) * (0.34 + floor(fi / 2.0) * 0.08), (floor(fi / 2.0) - 1.5) * 0.34, sin(fi * 1.3 + t) * 0.08);
+        vec3 graphNode = vec3(cos(a * 1.7) * 0.72, sin(fi * 2.1 + t) * 0.30, sin(a * 1.7) * 0.38);
+        vec3 node = mix(gridNode, graphNode, topologyBlend.x);
+        node = mix(node, treeNode, topologyBlend.y);
+        node = mix(node, ringNode, topologyBlend.z);
+        node *= nodeScale;
+        fieldNodes[i] = node;
+        // Preserve the distinct nextGraph phase and the unwrapped final endpoint.
+        vec3 nextRing = vec3(cos(a + TAU / 8.0) * nodeRadius, sin((fi + 1.0) * 1.7 + t) * 0.22, sin(a + TAU / 8.0) * nodeRadius * 0.62);
+        vec3 nextGrid = vec3((mod(fi + 1.0, 4.0) - 1.5) * 0.46, (floor((fi + 1.0) / 4.0) - 0.5) * 0.48, sin(fi + 1.0 + t) * 0.05);
+        vec3 nextTree = vec3((mod(fi + 1.0, 2.0) - 0.5) * (0.34 + floor((fi + 1.0) / 2.0) * 0.08), (floor((fi + 1.0) / 2.0) - 1.5) * 0.34, sin((fi + 1.0) * 1.3 + t) * 0.08);
+        vec3 nextGraph = vec3(cos((a + 0.8) * 1.7) * 0.72, sin((fi + 1.0) * 2.1 + t) * 0.30, sin((a + 0.8) * 1.7) * 0.38);
+        vec3 nextNode = mix(nextGrid, nextGraph, topologyBlend.x);
+        nextNode = mix(nextNode, nextTree, topologyBlend.y);
+        nextNode = mix(nextNode, nextRing, topologyBlend.z);
+        nextNode *= nodeScale;
+        fieldNextNodes[i] = nextNode;
+        fieldLinks[i] = nextNode - node;
+        fieldLinkDenominators[i] = max(dot(fieldLinks[i], fieldLinks[i]), 0.0001);
+      }
+      fieldCompanions[0] = vec3(-1.95 + sin(t * 0.025) * 0.12, 0.34 + cos(t * 0.031) * 0.06, -0.90);
+      fieldCompanions[1] = vec3(2.05 + cos(t * 0.021) * 0.14, -0.40 + sin(t * 0.028) * 0.08, -1.10);
+      fieldCompanionRotations[0] = vec2(cos(t * 0.18), sin(t * 0.18));
+      fieldCompanionRotations[1] = vec2(cos(-t * 0.14), sin(-t * 0.14));
+    }
 
     float sdLattice(vec3 p, float spacing, float thickness){
       vec3 cell = abs(fract(p / spacing + 0.5) - 0.5) * spacing;
@@ -107,8 +179,9 @@
       float c = cos(angle), s = sin(angle);
       return vec3(c * p.x - s * p.z, p.y, s * p.x + c * p.z);
     }
-    vec2 companionMap(vec3 p, vec3 center, float scale, float spin){
-      vec3 q = rotateY((p - center) / scale, spin);
+    vec2 companionMap(vec3 p, vec3 center, float scale, vec2 rotation){
+      vec3 local = (p - center) / scale;
+      vec3 q = vec3(rotation.x * local.x - rotation.y * local.z, local.y, rotation.y * local.x + rotation.x * local.z);
       float core = sdSphere(q, 0.42);
       core = smoothMin(core, sdTorus(q * vec3(1.0, 0.78, 1.0), vec2(0.62, 0.035)), 0.08);
       core = smoothMin(core, sdBox(q, vec3(0.24)), 0.08);
@@ -116,12 +189,11 @@
     }
 
     vec2 sceneMap(vec3 p){
-      float t = uTime * 0.10 + uScroll * 3.5;
+      float t = fieldTime;
       float az = atan(p.z, p.x);
-      float flow = fbm(p * 1.35 + vec3(t * 0.15, -t * 0.11, t * 0.08));
+      float flow = fbm(p * 1.35 + fieldFlowOffset);
       p += (flow - 0.5) * 0.08 * normalize(p + vec3(0.001));
 
-      float morph = coreMorph();
       float coreIco = sdSphere(p, 0.56) + sin(az * 5.0 + p.y * 3.0) * 0.014;
       float coreTorus = sdTorus(p * vec3(1.0, 0.82, 1.0), vec2(0.82, 0.045));
       vec3 boxP = p;
@@ -130,54 +202,32 @@
       vec3 knotP = p;
       knotP.y += sin(az * 3.0 + t * 0.8) * 0.18;
       float coreKnot = sdTorus(knotP, vec2(0.66, 0.048));
-      float core = mix(coreIco, coreTorus, smoothstep(0.0, 0.34, morph));
-      core = mix(core, coreLattice, smoothstep(0.26, 0.70, morph));
-      core = mix(core, coreKnot, smoothstep(0.62, 1.0, morph));
-      core = smoothMin(core, sdBox(boxP, vec3(0.30 + morph * 0.08)), 0.10);
+      float core = mix(coreIco, coreTorus, fieldCoreBlend.x);
+      core = mix(core, coreLattice, fieldCoreBlend.y);
+      core = mix(core, coreKnot, fieldCoreBlend.z);
+      core = smoothMin(core, sdBox(boxP, vec3(fieldBoxSize)), 0.10);
       vec2 result = vec2(core, 1.0);
 
-      float shape = ringShape();
-      float activeRings = ringCount();
       for(int i = 0; i < 7; i++){
-        float fi = float(i);
-        float radius = 0.96 + fi * (0.36 + shape * 0.035);
+        vec4 ringData = fieldRings[i];
+        vec3 wave = fieldRingWaves[i];
         vec3 ringP = p;
-        ringP.x *= 1.0 + shape * (0.18 + fi * 0.018);
-        ringP.y += sin(az * (2.0 + fi * 0.35) + t * (0.35 + fi * 0.04) + shape * fi) * (0.025 + shape * 0.025);
-        float ring = sdTorus(ringP, vec2(radius, 0.012 + fi * 0.0018));
-        float enabled = 1.0 - smoothstep(activeRings - 0.80, activeRings + 0.05, fi);
-        result = unionScene(result, vec2(mix(10.0, ring, enabled), 2.0));
+        ringP.x *= ringData.y;
+        ringP.y += sin(az * wave.x + wave.y + wave.z) * fieldRingAmplitude;
+        float ring = sdTorus(ringP, vec2(ringData.x, ringData.z));
+        result = unionScene(result, vec2(mix(10.0, ring, ringData.w), 2.0));
       }
 
-      float topology = topologyValue();
-      float nodeRadius = 1.40 + 0.18 * densityValue() + 0.10 * sin(t * 0.7);
       for(int i = 0; i < 8; i++){
-        float fi = float(i);
-        float a = fi / 8.0 * TAU + t * 0.12 + uScroll * 0.7;
-        vec3 ringNode = vec3(cos(a) * nodeRadius, sin(fi * 1.7 + t) * 0.22, sin(a) * nodeRadius * 0.62);
-        vec3 gridNode = vec3((mod(fi, 4.0) - 1.5) * 0.46, (floor(fi / 4.0) - 0.5) * 0.48, sin(fi + t) * 0.05);
-        vec3 treeNode = vec3((mod(fi, 2.0) - 0.5) * (0.34 + floor(fi / 2.0) * 0.08), (floor(fi / 2.0) - 1.5) * 0.34, sin(fi * 1.3 + t) * 0.08);
-        vec3 graphNode = vec3(cos(a * 1.7) * 0.72, sin(fi * 2.1 + t) * 0.30, sin(a * 1.7) * 0.38);
-        vec3 node = mix(gridNode, graphNode, smoothstep(0.0, 0.33, topology));
-        node = mix(node, treeNode, smoothstep(0.26, 0.66, topology));
-        node = mix(node, ringNode, smoothstep(0.58, 1.0, topology));
-        node *= 0.72 + densityValue() * 0.38;
-        result = unionScene(result, vec2(sdSphere(p - node, 0.052), 3.0));
-        vec3 nextRing = vec3(cos(a + TAU / 8.0) * nodeRadius, sin((fi + 1.0) * 1.7 + t) * 0.22, sin(a + TAU / 8.0) * nodeRadius * 0.62);
-        vec3 nextGrid = vec3((mod(fi + 1.0, 4.0) - 1.5) * 0.46, (floor((fi + 1.0) / 4.0) - 0.5) * 0.48, sin(fi + 1.0 + t) * 0.05);
-        vec3 nextTree = vec3((mod(fi + 1.0, 2.0) - 0.5) * (0.34 + floor((fi + 1.0) / 2.0) * 0.08), (floor((fi + 1.0) / 2.0) - 1.5) * 0.34, sin((fi + 1.0) * 1.3 + t) * 0.08);
-        vec3 nextGraph = vec3(cos((a + 0.8) * 1.7) * 0.72, sin((fi + 1.0) * 2.1 + t) * 0.30, sin((a + 0.8) * 1.7) * 0.38);
-        vec3 nextNode = mix(nextGrid, nextGraph, smoothstep(0.0, 0.33, topology));
-        nextNode = mix(nextNode, nextTree, smoothstep(0.26, 0.66, topology));
-        nextNode = mix(nextNode, nextRing, smoothstep(0.58, 1.0, topology));
-        nextNode *= 0.72 + densityValue() * 0.38;
-        result = unionScene(result, vec2(sdLink(p, node, nextNode, 0.012), 4.0));
+        result = unionScene(result, vec2(sdSphere(p - fieldNodes[i], 0.052), 3.0));
+        vec3 pa = p - fieldNodes[i];
+        float h = clamp(dot(pa, fieldLinks[i]) / fieldLinkDenominators[i], 0.0, 1.0);
+        float link = length(pa - fieldLinks[i] * h) - 0.012;
+        result = unionScene(result, vec2(link, 4.0));
       }
       // Two distant companion galaxies share the same field and draw call.
-      vec3 companionA = vec3(-1.95 + sin(t * 0.025) * 0.12, 0.34 + cos(t * 0.031) * 0.06, -0.90);
-      vec3 companionB = vec3(2.05 + cos(t * 0.021) * 0.14, -0.40 + sin(t * 0.028) * 0.08, -1.10);
-      result = unionScene(result, companionMap(p, companionA, 0.78, t * 0.18));
-      result = unionScene(result, companionMap(p, companionB, 0.62, -t * 0.14));
+      result = unionScene(result, companionMap(p, fieldCompanions[0], 0.78, fieldCompanionRotations[0]));
+      result = unionScene(result, companionMap(p, fieldCompanions[1], 0.62, fieldCompanionRotations[1]));
       return result;
     }
 
@@ -303,6 +353,8 @@
     }
 
     void main(){
+      prepareChapter();
+      if(uQuality >= 0.50) prepareScene();
       vec2 uv = vUv - 0.5;
       uv.x *= uResolution.x / max(uResolution.y, 1.0);
       float motion = 1.0 - uReducedMotion;
@@ -437,6 +489,9 @@
       this.time = 0;
       this.last = performance.now();
       this.frame = 0;
+      this.ready = false;
+      this.paused = false;
+      this.contextLost = false;
       this.slowFrames = 0;
       // 动态分辨率：初始像素比与旧行为完全一致。只有持续掉帧时才逐级降低
       // 渲染分辨率保住流畅度，恢复稳定后再逐级回升（滞后阈值防抖动）。
@@ -456,21 +511,30 @@
       // v9：编译走驱动的并行通道（KHR_parallel_shader_compile）在后台线程
       // 完成；首帧渲染两帧后再给画布加 is-live，由 CSS 渐显到位——驱动侧
       // 停顿被挡在全透明阶段，用户看不到冻结。
-      const start = () => {
-        const begin = () => {
-          this.render();
-          if (!this.reduced) this.loop();
-          requestAnimationFrame(() => requestAnimationFrame(() => this.canvas.classList.add('is-live')));
-        };
-        // compileAsync 在个别驱动上可能迟迟不 settle：1500ms 后强制开始，
-        // 最坏退回同步编译路径（与旧行为一致），绝不悬挂。
-        if (this.renderer.compileAsync) {
-          const cap = new Promise(resolve => setTimeout(resolve, 1500));
-          Promise.race([this.renderer.compileAsync(this.scene, this.camera), cap]).then(begin, begin);
-        } else begin();
+      const start = async () => {
+        try {
+          if (this.renderer.compileAsync) await this.renderer.compileAsync(this.scene, this.camera);
+          else this.renderer.compile(this.scene, this.camera);
+          this.ready = true;
+          this.resume();
+        } catch (error) {
+          console.warn('SceneDirector shader compilation failed', error);
+        }
       };
       if (typeof requestIdleCallback === 'function') requestIdleCallback(start, { timeout: 600 });
       else setTimeout(start, 60);
+    }
+    stop(){
+      cancelAnimationFrame(this.frame);
+      this.frame = 0;
+    }
+    resume(){
+      if (!this.ready || this.paused || document.hidden || this.contextLost || this.frame) return;
+      this.last = performance.now();
+      this.frame = requestAnimationFrame(() => this.loop());
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (this.ready && !this.paused && !document.hidden && !this.contextLost) this.canvas.classList.add('is-live');
+      }));
     }
     applyPixelRatio(ratio) {
       this.pixelRatio = ratio;
@@ -498,17 +562,25 @@
       // 没有这对处理器，弱设备上背景会永久黑掉，直到手动刷新。
       this.canvas.addEventListener('webglcontextlost', event => {
         event.preventDefault();
-        cancelAnimationFrame(this.frame);
-        this.frame = 0;
+        this.contextLost = true;
+        this.stop();
       }, false);
       this.canvas.addEventListener('webglcontextrestored', () => {
+        this.contextLost = false;
         this.resize();
-        this.render();
-        if (!this.reduced && !this.frame && !document.hidden) this.loop();
+        this.resume();
       }, false);
       document.addEventListener('visibilitychange', () => {
-        cancelAnimationFrame(this.frame);
-        if (!document.hidden && !this.reduced) this.loop();
+        if (document.hidden) this.stop();
+        else this.resume();
+      });
+      addEventListener('pagehide', () => {
+        this.paused = true;
+        this.stop();
+      });
+      addEventListener('pageshow', () => {
+        this.paused = false;
+        this.resume();
       });
       this.observer = new IntersectionObserver(entries => entries.forEach(entry => {
         if (!entry.isIntersecting) return;
@@ -545,6 +617,8 @@
     }
     render(){ this.renderer.render(this.scene, this.camera); }
     loop(){
+      this.frame = 0;
+      if (!this.ready || document.hidden || this.paused || this.contextLost) return;
       const now = performance.now();
       const dt = Math.min((now - this.last) / 1000, 1 / 30);
       this.last = now;
@@ -568,13 +642,14 @@
       }
       this.update(dt);
       this.render();
-      this.frame = requestAnimationFrame(() => this.loop());
+      if (!this.reduced) this.frame = requestAnimationFrame(() => this.loop());
     }
   }
 
   global.SceneDirector = SceneDirector;
   global.SceneDirector.mount = function mount(canvas){
-    if (!canvas || global.__algorithmFieldDirector) return global.__algorithmFieldDirector;
+    THREE = global.THREE;
+    if (!THREE || !canvas || global.__algorithmFieldDirector) return global.__algorithmFieldDirector;
     try {
       global.__algorithmFieldDirector = new SceneDirector(canvas);
       return global.__algorithmFieldDirector;

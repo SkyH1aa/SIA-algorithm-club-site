@@ -1,5 +1,24 @@
 [
   {
+    "date": "2026-11-01",
+    "title": "首页启动与渲染调度修复",
+    "enTitle": "Homepage startup and render scheduling fixes",
+    "items": [
+      "首页内容与 3D 运行库解耦加载，导航、语言切换与初始章节不再等待 three.js 下载或首帧回调。",
+      "主星系与背景场分阶段编译；取消背景着色器 1.5 秒后强制渲染，避免编译未完成时进入同步等待。",
+      "后台、页面返回与显卡上下文恢复统一检查就绪状态，防止提前绘制和重复渲染循环；窗口尺寸变化只保留一次防抖重建。",
+      "背景场将光线采样内重复的章节、环与节点计算提前复用，保留原几何、采样步数和翻页视觉参数，并加入数值等价与启动生命周期回归检查。",
+      "SceneDirector 与动态加载资源接入内容哈希版本，更新后不再沿用固定的旧资源版本号。"
+    ],
+    "enItems": [
+      "Load homepage content independently of the 3D runtime so navigation, language controls and the initial chapter do not wait for three.js or a first animation frame.",
+      "Compile the galaxy and background field in stages; remove the forced render after 1.5 seconds while background shader compilation is still pending.",
+      "Guard readiness across background tabs, page return and context restoration to avoid premature drawing and duplicate loops; debounce canvas resizing once.",
+      "Reuse repeated chapter, ring and node calculations outside ray samples while preserving geometry, sample budgets and chapter transition parameters, with numerical equivalence and lifecycle regressions.",
+      "Version SceneDirector and dynamically loaded runtime assets with content hashes instead of a fixed resource version."
+    ]
+  },
+  {
     "date": "2026-10-31",
     "title": "第五轮质感专项：修复使用指引渲染断裂、display 渐变标题与全站微质感收编",
     "enTitle": "Quality round five: fix broken guide rendering, gradient display titles, and site-wide micro-texture consolidation",

@@ -65,6 +65,12 @@ jobs:
           node tools/test-pwa.mjs
           node tools/test-theme-system.mjs
 
+      - name: Homepage startup and rendering regressions
+        run: |
+          node tools/test-home-scene-startup.mjs
+          node tools/test-scene-lifecycle.mjs
+          node tools/test-scene-field-equivalence.mjs
+
       - name: Gomoku package integrity
         run: |
           node tools/test-gomoku-file-package-dedup.mjs
