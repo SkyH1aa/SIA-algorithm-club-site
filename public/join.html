@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="join.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -11,9 +11,9 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="加入算法社 · 报名">
@@ -35,14 +35,24 @@
       box-shadow: 0 0 0 3px var(--club-danger-soft);
     }
     body.club-page .hint.hint-error { color: var(--club-danger); }
-  </style>
+
+    body.club-page.gallery-join main > .premium-head { max-width: 68ch; margin-bottom: var(--club-space-7); }
+    body.club-page.gallery-join .layout { grid-template-columns: minmax(220px, .75fr) minmax(0, 1.5fr); gap: var(--club-space-7); align-items: start; }
+    body.club-page.gallery-join .layout > aside { padding: var(--club-space-5) 0; border: 0; border-top: 1px solid var(--club-line-strong); border-radius: 0; background: transparent; box-shadow: none; }
+    body.club-page.gallery-join .layout > section { padding: var(--club-space-6); }
+    body.club-page.gallery-join #joinForm { gap: var(--club-space-5); padding: 0; border: 0; box-shadow: none; }
+    body.club-page.gallery-join #joinForm .actions { margin: 0; padding-top: var(--club-space-5); border-top: 1px solid var(--club-line); }
+    body.club-page.gallery-join .intro { max-width: 65ch; margin-bottom: var(--club-space-5); }
+    @media (max-width: 900px) { body.club-page.gallery-join .layout { grid-template-columns: 1fr; gap: var(--club-space-5); } }
+
+</style>
 </head>
-<body class="club-page">
+<body class="club-page gallery-join">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Join Application</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
-  <main>
-    <p class="eyebrow">JOIN THE CLUB</p>
-    <h1 data-i18n="join.h1">加入算法社</h1>
+  <main class="premium-workspace">
+    <header class="premium-head"><h1 data-i18n="join.h1">加入算法社</h1>
     <p class="lead" data-i18n="join.lead">填写报名信息后提交即可。管理员会查看你的申请并尽快联系你。欢迎所有零基础选手加入！</p>
+    <p class="premium-meta">JOIN THE CLUB</p></header>
     <section class="layout">
       <aside class="panel">
         <h2 data-i18n="join.info">社团信息</h2>
@@ -56,7 +66,7 @@
       <section class="panel">
         <h2 data-i18n="join.form">报名表单</h2>
         <p class="intro" data-i18n="join.formIntro" data-i18n-mode="html">带 <span class="required">*</span> 的为必填项。联系方式请先选择类型，再填写对应号码 / 账号。</p>
-        <form class="form" id="joinForm" novalidate>
+        <form class="form premium-form" id="joinForm" novalidate>
           <div class="grid-2">
             <div>
               <label class="label" for="chineseName"><span data-i18n="join.name">中文姓名*</span></label>
@@ -78,7 +88,7 @@
                 <option value="qq" data-i18n="join.qq">QQ号</option>
                 <option value="email" data-i18n="join.email">邮箱</option>
               </select>
-              <input class="input" id="contactValue" name="contactValue" maxlength="120" required placeholder="请输入微信号" data-i18n-placeholder="join.contactValuePh" aria-describedby="contactHint">
+              <input class="input" id="contactValue" name="contactValue" maxlength="120" required placeholder="请输入微信号" data-i18n-placeholder="join.contactValuePh" aria-describedby="contactHint" aria-label="联系方式" data-i18n-aria="join.contact">
             </div>
             <p class="hint" id="contactHint" data-i18n="join.contactRequired" hidden>请填写联系方式</p>
           </div>
@@ -94,7 +104,7 @@
             <label class="label" for="expectation" data-i18n="join.expectation">你想在算法社获得什么（选填）</label>
             <textarea class="textarea" id="expectation" name="expectation" maxlength="500" placeholder="例如：学会一门语言、做出作品、参加比赛等" data-i18n-placeholder="join.expectationPh"></textarea>
           </div>
-          <div class="actions">
+          <div class="actions premium-toolbar">
             <button class="button" type="submit" id="submitButton" data-i18n="join.submit">提交报名</button>
             <button class="button secondary" type="reset" id="resetButton" data-i18n="common.clearForm">清空表单</button>
             <a class="button secondary" id="afterSubmitLink" href="events.html" data-i18n="join.afterSubmit" hidden>查看活动与公告 →</a>
@@ -238,6 +248,7 @@
       }
     });
   </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

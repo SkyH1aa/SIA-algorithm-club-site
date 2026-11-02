@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="lab.ds.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8" />
@@ -11,8 +11,8 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
 <style>
     /* 收编说明：主题 token 一律走 --club-*（club-ui.css 的 body.club-page 作用域提供
        --bg/--panel/--cyan/--text/--muted/--line 同名映射与亮色覆盖），
@@ -463,8 +463,36 @@
       .status { align-self: flex-start; }
       .cell { min-width: 52px; min-height: 48px; font-size: 16px; }
     }
-  </style>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+
+    /* Inset spacing belongs to this lab's controls, not the visualization. */
+    body.club-page .premium-lab .legend.premium-legend { padding: var(--club-space-3, 12px); border-radius: var(--club-radius-sm, 9px); }
+    body.club-page .premium-lab .button-stack.premium-toolbar { padding: var(--club-space-2, 8px); border-radius: var(--club-radius-sm, 9px); }
+
+    /* Controls, evidence figure, then measured context; preserve all stage geometry. */
+    body.club-page.gallery-ds-lab .hero { align-items: start; gap: var(--club-space-6); padding-bottom: var(--club-space-6); margin-bottom: var(--club-space-6); border-bottom: 1px solid var(--club-line-strong); }
+    body.club-page.gallery-ds-lab .hero .lead { max-width: 65ch; }
+    body.club-page.gallery-ds-lab .algorithm-note { padding: var(--club-space-5); background: var(--club-material-inset); box-shadow: none; border-color: var(--club-line); }
+    body.club-page.gallery-ds-lab .algorithm-note b { margin-bottom: var(--club-space-2); color: var(--club-text); }
+    body.club-page.gallery-ds-lab .lab-grid { align-items: start; gap: var(--club-space-5); }
+    body.club-page.gallery-ds-lab .controls { margin: 0; padding: var(--club-space-5); background: var(--club-material-read); box-shadow: none; }
+    body.club-page.gallery-ds-lab .controls > h2 { padding-bottom: var(--club-space-4); border-bottom: 1px solid var(--club-line); font-size: var(--club-fs-lg); }
+    body.club-page.gallery-ds-lab .control-group { margin-top: var(--club-space-5); }
+    body.club-page.gallery-ds-lab .algo-profile { padding: var(--club-space-3); background: var(--club-material-inset); border-color: var(--club-line); box-shadow: none; }
+    body.club-page.gallery-ds-lab .button-stack { padding-top: var(--club-space-4); border-top: 1px solid var(--club-line); gap: var(--club-space-2); }
+    body.club-page.gallery-ds-lab .visual { margin: 0; padding: var(--club-space-5); background: var(--club-material-read); box-shadow: none; }
+    body.club-page.gallery-ds-lab .visual-header { padding-bottom: var(--club-space-4); border-bottom: 1px solid var(--club-line); }
+    body.club-page.gallery-ds-lab .visual-header h2 { font-size: var(--club-fs-xl); }
+    body.club-page.gallery-ds-lab .metrics { gap: 0; border-block: 1px solid var(--club-line); background: transparent; box-shadow: none; margin-top: var(--club-space-5); }
+    body.club-page.gallery-ds-lab .metric { padding: var(--club-space-3); border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+    body.club-page.gallery-ds-lab .metric strong { font-size: var(--club-fs-xl); font-variant-numeric: tabular-nums; }
+    body.club-page.gallery-ds-lab .legend { padding-top: var(--club-space-4); gap: var(--club-space-3); font-size: var(--club-fs-sm); }
+    @media (max-width: 900px) {
+      body.club-page.gallery-ds-lab .controls { order: 0; }
+      body.club-page.gallery-ds-lab .visual { order: 0; }
+    }
+    body.club-page.gallery-ds-lab .stage-label { margin-bottom: var(--club-space-4); color: var(--club-text-soft); }
+</style>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="数据结构可视化实验室 · 算法社">
@@ -479,7 +507,7 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body class="club-page">
+<body class="club-page gallery-ds-lab">
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页">
@@ -491,21 +519,21 @@
     </div>
   </header>
 
-  <main>
-    <section class="hero" aria-labelledby="pageTitle">
+  <main class="premium-lab">
+    <section class="hero premium-head" aria-labelledby="pageTitle">
       <div>
-        <p class="eyebrow">DATA STRUCTURE LAB · V1</p>
         <h1 id="pageTitle" data-i18n="lab.ds.h1">数据结构可视化实验室</h1>
         <p class="lead" data-i18n="lab.ds.lead">亲手操作栈、队列与链表：观察 push/pop、enqueue/dequeue，以及头插、尾插与按值删除时节点与指针如何变化。</p>
+        <p class="premium-meta">DATA STRUCTURE LAB · V1</p>
       </div>
-      <aside class="algorithm-note" id="structureNote">
+      <aside class="algorithm-note premium-inset" id="structureNote">
         <b data-i18n="lab.ds.stack">栈 Stack</b>
         <span data-i18n="lab.ds.stackDesc">后进先出（LIFO）。只能在栈顶压入或弹出元素。</span>
       </aside>
     </section>
 
     <section class="lab-grid" data-i18n-aria="lab.ds.consoleAria" aria-label="数据结构演示控制台">
-      <form class="panel controls" id="controlForm">
+      <form class="panel controls premium-form" id="controlForm">
         <h2 data-i18n="lab.common.settings">实验设置</h2>
 
         <div class="control-group">
@@ -544,18 +572,18 @@
           </select>
         </div>
 
-        <div class="button-stack" id="actionButtons">
+        <div class="button-stack premium-toolbar" id="actionButtons">
           <!-- filled by JS -->
         </div>
 
-        <div class="button-stack" style="margin-top:12px">
+        <div class="button-stack premium-toolbar" style="margin-top:12px">
           <button class="btn btn-warn secondary" type="button" id="seedButton" data-i18n="lab.ds.seed">填充示例数据</button>
           <button class="btn secondary" type="button" id="clearButton" data-i18n="lab.ds.clear">清空结构</button>
         </div>
       </form>
 
-      <section class="panel visual" aria-labelledby="visualTitle">
-        <div class="visual-header">
+      <section class="panel visual premium-analysis" aria-labelledby="visualTitle">
+        <div class="visual-header premium-section-head">
           <div>
             <h2 id="visualTitle" data-i18n="lab.ds.visualTitle">结构视图</h2>
             <span class="sr-only" id="announcement" aria-live="polite"></span>
@@ -568,13 +596,13 @@
           <div class="stage" id="stage" data-i18n-aria="lab.ds.stageAria" aria-label="数据结构可视化区域"></div>
         </div>
 
-        <div class="metrics" data-i18n-aria="lab.ds.metricsAria" aria-label="结构计数">
+        <div class="metrics premium-metrics" data-i18n-aria="lab.ds.metricsAria" aria-label="结构计数">
           <div class="metric"><span id="metricALabel" data-i18n="lab.ds.metricCount">元素个数</span><strong id="metricA">0</strong></div>
           <div class="metric"><span id="metricBLabel" data-i18n="lab.ds.metricTopFront">栈顶 / 队首</span><strong id="metricB">—</strong></div>
           <div class="metric"><span data-i18n="lab.ds.opCount">操作次数</span><strong id="opCount">0</strong></div>
         </div>
 
-        <div class="legend" data-i18n-aria="lab.common.colorLegend" aria-label="颜色说明">
+        <div class="legend premium-legend" data-i18n-aria="lab.common.colorLegend" aria-label="颜色说明" role="note">
           <span><i></i><span data-i18n="lab.ds.legNode">普通节点</span></span>
           <span><i class="l-active"></i><span data-i18n="lab.ds.legActive">当前操作</span></span>
           <span><i class="l-highlight"></i><span data-i18n="lab.ds.legRemove">即将移出</span></span>
@@ -1164,6 +1192,7 @@
 
     })();
   </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

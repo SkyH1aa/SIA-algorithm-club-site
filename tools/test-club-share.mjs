@@ -132,4 +132,107 @@ for (const ua of [
   assert.ok(copied.includes('https://example.test/q'));
 }
 
-console.log('Club share: 2 triggers, desktop panel + mobile navigator.share, touchscreen-laptop guard, copy fallback and both themes passed.');
+// Real panel lifecycle: focus containment, interruption and opener restoration.
+function panelHarness() {
+  const docEvents = new Map();
+  const windowEvents = new Map();
+  const panels = [];
+  let document;
+  function node() {
+    const classes = new Set();
+    const events = new Map();
+    return {
+      style: {}, isConnected: true, disabled: false, hidden: false,
+      classList: { add: value => classes.add(value), remove: value => classes.delete(value), contains: value => classes.has(value) },
+      setAttribute() {}, appendChild() {},
+      addEventListener: (type, fn) => events.set(type, fn),
+      focus() { document.activeElement = this; },
+      remove() { this.isConnected = false; },
+      clickTarget(target) { events.get('click')?.({ target }); },
+      closest() { return null; }
+    };
+  }
+  document = {
+    readyState: 'loading', activeElement: null,
+    head: { appendChild() {} }, body: { appendChild() {} },
+    getElementById: () => null, querySelectorAll: () => [],
+    createElement() {
+      const item = node();
+      Object.defineProperty(item, 'innerHTML', { set() {
+        item.buttons = Array.from({ length: 4 }, () => node());
+        item.querySelector = () => item.buttons[0];
+        item.querySelectorAll = () => item.buttons;
+        panels.push(item);
+      } });
+      return item;
+    },
+    addEventListener(type, fn) {
+      if (!docEvents.has(type)) docEvents.set(type, new Set());
+      docEvents.get(type).add(fn);
+    },
+    removeEventListener(type, fn) { docEvents.get(type)?.delete(fn); }
+  };
+  const window = { document, location: { href: 'https://example.test/' }, addEventListener: (type, fn) => windowEvents.set(type, fn) };
+  window.window = window;
+  vm.runInNewContext(source, { window, document, location: window.location, navigator: { userAgent: 'Windows', platform: 'Win32' }, setTimeout, clearTimeout, console, Promise });
+  return {
+    share: window.ClubShare, document, panels, node,
+    key(key, shiftKey = false) {
+      const event = { key, shiftKey, prevented: false, preventDefault() { this.prevented = true; } };
+      for (const fn of docEvents.get('keydown') || []) fn(event);
+      return event;
+    },
+    languageChange() { windowEvents.get('club:langchange')(); },
+    listenerCount() { return docEvents.get('keydown')?.size || 0; }
+  };
+}
+{
+  const ui = panelHarness();
+  const opener = ui.node();
+  opener.focus();
+  ui.share.openPanel();
+  const panel = ui.panels[0];
+  const [first, second, , last] = panel.buttons;
+  assert.equal(ui.document.activeElement, first, 'open focuses the first option');
+  assert.equal(ui.key('Tab', true).prevented, true);
+  assert.equal(ui.document.activeElement, last, 'Shift+Tab wraps to cancel');
+  ui.key('Tab');
+  assert.equal(ui.document.activeElement, first, 'Tab wraps into the panel');
+  second.disabled = true;
+  ui.key('Tab');
+  assert.equal(ui.document.activeElement, panel.buttons[2], 'disabled actions are skipped');
+  opener.focus();
+  ui.key('Tab');
+  assert.equal(ui.document.activeElement, first, 'Tab recovers escaped focus');
+  ui.share.openPanel();
+  ui.key('Escape');
+  assert.equal(ui.document.activeElement, opener, 'Escape restores the original opener after repeated open');
+  assert.equal(panel.classList.contains('is-open'), false);
+  assert.equal(ui.key('Tab').prevented, false, 'closed panel does not intercept Tab');
+  ui.share.openPanel();
+  panel.clickTarget(panel);
+  assert.equal(ui.document.activeElement, opener, 'scrim dismissal restores focus');
+  ui.share.openPanel();
+  panel.clickTarget({ closest: selector => selector === '[data-share-cancel]' ? last : null });
+  assert.equal(ui.document.activeElement, opener, 'cancel restores focus');
+  ui.share.openPanel();
+  ui.languageChange();
+  assert.equal(ui.document.activeElement, opener, 'language rebuild restores focus before removal');
+  assert.equal(ui.listenerCount(), 0, 'removed panel releases its key handler');
+  assert.doesNotThrow(() => ui.key('Escape'), 'removed panel is safe during interruption');
+  ui.share.openPanel();
+  assert.equal(ui.listenerCount(), 1, 'rebuilt panel installs exactly one key handler');
+  opener.isConnected = false;
+  const focused = ui.document.activeElement;
+  ui.share.closePanel();
+  assert.equal(ui.document.activeElement, focused, 'disconnected opener is not focused');
+  const fallback = ui.node();
+  delete fallback.isConnected;
+  ui.document.documentElement = { contains: target => target === fallback };
+  fallback.focus();
+  ui.share.openPanel();
+  ui.share.closePanel();
+  assert.equal(ui.document.activeElement, fallback, 'contains fallback supports hosts without isConnected');
+}
+
+console.log('Club share: 2 triggers, native share/copy paths, device guard, both themes, Tab containment, Escape/cancel/scrim restoration, language cleanup and disconnected-opener fallback passed.');

@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="lab.tree.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8" />
@@ -11,8 +11,8 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
 <style>
     /* 收编说明：主题 token 一律走 --club-*（club-ui.css 的 body.club-page 作用域提供同名映射与亮色覆盖），
        本块只保留实验室专用显示色（紫/粉/金/绿，用于树节点状态与图例）与可视化专有样式。 */
@@ -415,8 +415,36 @@
       .btn-row { grid-template-columns: 1fr; }
       .stage-wrap { min-height: 320px; }
     }
-  </style>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+
+    /* Inset spacing belongs to this lab's controls, not the visualization. */
+    body.club-page .premium-lab .legend.premium-legend { padding: var(--club-space-3, 12px); border-radius: var(--club-radius-sm, 9px); }
+    body.club-page .premium-lab .button-stack.premium-toolbar { padding: var(--club-space-2, 8px); border-radius: var(--club-radius-sm, 9px); }
+
+    /* Controls, evidence figure, then measured context; preserve all stage geometry. */
+    body.club-page.gallery-tree-lab .hero { align-items: start; gap: var(--club-space-6); padding-bottom: var(--club-space-6); margin-bottom: var(--club-space-6); border-bottom: 1px solid var(--club-line-strong); }
+    body.club-page.gallery-tree-lab .hero .lead { max-width: 65ch; }
+    body.club-page.gallery-tree-lab .algorithm-note { padding: var(--club-space-5); background: var(--club-material-inset); box-shadow: none; border-color: var(--club-line); }
+    body.club-page.gallery-tree-lab .algorithm-note b { margin-bottom: var(--club-space-2); color: var(--club-text); }
+    body.club-page.gallery-tree-lab .lab-grid { align-items: start; gap: var(--club-space-5); }
+    body.club-page.gallery-tree-lab .controls { margin: 0; padding: var(--club-space-5); background: var(--club-material-read); box-shadow: none; }
+    body.club-page.gallery-tree-lab .controls > h2 { padding-bottom: var(--club-space-4); border-bottom: 1px solid var(--club-line); font-size: var(--club-fs-lg); }
+    body.club-page.gallery-tree-lab .control-group { margin-top: var(--club-space-5); }
+    body.club-page.gallery-tree-lab .algo-profile { padding: var(--club-space-3); background: var(--club-material-inset); border-color: var(--club-line); box-shadow: none; }
+    body.club-page.gallery-tree-lab .button-stack { padding-top: var(--club-space-4); border-top: 1px solid var(--club-line); gap: var(--club-space-2); }
+    body.club-page.gallery-tree-lab .visual { margin: 0; padding: var(--club-space-5); background: var(--club-material-read); box-shadow: none; }
+    body.club-page.gallery-tree-lab .visual-header { padding-bottom: var(--club-space-4); border-bottom: 1px solid var(--club-line); }
+    body.club-page.gallery-tree-lab .visual-header h2 { font-size: var(--club-fs-xl); }
+    body.club-page.gallery-tree-lab .metrics { gap: 0; border-block: 1px solid var(--club-line); background: transparent; box-shadow: none; margin-top: var(--club-space-5); }
+    body.club-page.gallery-tree-lab .metric { padding: var(--club-space-3); border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+    body.club-page.gallery-tree-lab .metric strong { font-size: var(--club-fs-xl); font-variant-numeric: tabular-nums; }
+    body.club-page.gallery-tree-lab .legend { padding-top: var(--club-space-4); gap: var(--club-space-3); font-size: var(--club-fs-sm); }
+    @media (max-width: 900px) {
+      body.club-page.gallery-tree-lab .controls { order: 0; }
+      body.club-page.gallery-tree-lab .visual { order: 0; }
+    }
+    body.club-page.gallery-tree-lab .path-bar { padding-block: var(--club-space-4); border-color: var(--club-line); background: var(--club-material-inset); }
+</style>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="二叉树可视化实验室 · 算法社">
@@ -431,7 +459,7 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body class="club-page">
+<body class="club-page gallery-tree-lab">
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页">
@@ -443,21 +471,21 @@
     </div>
   </header>
 
-  <main>
-    <section class="hero" aria-labelledby="pageTitle">
+  <main class="premium-lab">
+    <section class="hero premium-head" aria-labelledby="pageTitle">
       <div>
-        <p class="eyebrow">BINARY TREE LAB · V1</p>
         <h1 id="pageTitle" data-i18n="lab.tree.h1">二叉树可视化实验室</h1>
         <p class="lead" data-i18n="lab.tree.lead">用 SVG 自动布局观察二叉树结构，演示前序 / 中序 / 后序 / 深搜 / 广搜层序遍历，并按二叉搜索树（BST）规则完成插入与删除。字典序模式展示「中序遍历即有序序列」。</p>
+        <p class="premium-meta">BINARY TREE LAB · V1</p>
       </div>
-      <aside class="algorithm-note" id="algorithmNote">
+      <aside class="algorithm-note premium-inset" id="algorithmNote">
         <b data-i18n="lab.tree.preorder">前序遍历</b>
         <span data-i18n="lab.tree.preDesc">根 → 左子树 → 右子树。适合复制树结构或做前缀表达式展开。</span>
       </aside>
     </section>
 
     <section class="lab-grid" data-i18n-aria="lab.tree.consoleAria" aria-label="二叉树演示控制台">
-      <form class="panel controls" id="controlForm">
+      <form class="panel controls premium-form" id="controlForm">
         <h2 data-i18n="lab.common.settings">实验设置</h2>
 
         <div class="control-group">
@@ -474,7 +502,7 @@
           </select>
         </div>
 
-        <details class="algo-profile" id="algoProfile" open>
+        <details class="algo-profile premium-analysis" id="algoProfile" open>
           <summary><span id="algoProfileTitle">算法档案</span></summary>
           <div class="algo-profile-body">
             <div><span class="algo-profile-label" data-i18n="lab.tree.profile.idea">核心思想</span><span class="algo-profile-value" id="algoProfileIdea"></span></div>
@@ -507,7 +535,7 @@
         </div>
 
         <div class="mode-panels">
-        <div class="button-stack" id="playPanel">
+        <div class="button-stack premium-toolbar" id="playPanel">
           <button class="btn" type="button" id="startButton" data-i18n="lab.common.start">开始演示</button>
           <div class="btn-row">
             <button class="btn secondary" type="button" id="stepButton" data-i18n="lab.common.step">单步执行</button>
@@ -519,7 +547,7 @@
           </div>
         </div>
 
-        <div class="button-stack action-panel" id="mutatePanel" hidden>
+        <div class="button-stack action-panel premium-toolbar" id="mutatePanel" hidden>
           <button class="btn" type="button" id="insertButton" data-i18n="lab.tree.doInsert">执行插入</button>
           <button class="btn btn-danger" type="button" id="deleteButton" data-i18n="lab.tree.doDelete">执行删除</button>
           <div class="btn-row">
@@ -532,7 +560,7 @@
           </div>
         </div>
 
-        <div class="button-stack action-panel" id="dictPanel" hidden>
+        <div class="button-stack action-panel premium-toolbar" id="dictPanel" hidden>
           <button class="btn" type="button" id="dictExampleButton" data-i18n="lab.tree.dictExample">一键生成字典序示例</button>
           <button class="btn secondary" type="button" id="dictInsertButton" data-i18n="lab.tree.dictInsert">按序插入当前值</button>
           <div class="btn-row">
@@ -544,8 +572,8 @@
         </div>
       </form>
 
-      <section class="panel visual" aria-labelledby="visualTitle">
-        <div class="visual-header">
+      <section class="panel visual premium-analysis" aria-labelledby="visualTitle">
+        <div class="visual-header premium-section-head">
           <div>
             <h2 id="visualTitle" data-i18n="lab.tree.visualTitle">二叉树结构</h2>
             <span class="sr-only" id="announcement" aria-live="polite"></span>
@@ -572,13 +600,13 @@
           <span data-i18n="lab.tree.dictBoxBody" data-i18n-mode="html">按数值大小维护二叉搜索树：左子树 &lt; 根 &lt; 右子树。对字典序键（字母 / 字符串）同样适用——比较规则换成字典序即可。<br />关键点：对 BST 做<strong data-i18n="labView.inorder">中序遍历</strong>，得到的访问序列天然有序。示例插入顺序 <code>50 → 30 → 70 → 20 → 40 → 60 → 80</code>，中序结果为 <code>20, 30, 40, 50, 60, 70, 80</code>。</span>
         </div>
 
-        <div class="metrics" data-i18n-aria="lab.tree.metricsAria" aria-label="树指标">
+        <div class="metrics premium-metrics" data-i18n-aria="lab.tree.metricsAria" aria-label="树指标">
           <div class="metric"><span data-i18n="lab.tree.visited">访问节点数</span><strong id="visitedCount">0</strong></div>
           <div class="metric"><span data-i18n="lab.common.currentStep">当前步骤</span><strong id="stepCount">0</strong></div>
           <div class="metric"><span data-i18n="lab.tree.treeSize">树大小</span><strong id="treeSize">0</strong></div>
           <div class="metric"><span data-i18n="lab.tree.treeHeight">树高度</span><strong id="treeHeight">0</strong></div>
         </div>
-        <div class="legend" data-i18n-aria="lab.common.colorLegend" aria-label="颜色说明">
+        <div class="legend premium-legend" data-i18n-aria="lab.common.colorLegend" aria-label="颜色说明" role="note">
           <span><i></i><span data-i18n="lab.tree.legNode">普通节点</span></span>
           <span><i class="l-visit"></i><span data-i18n="lab.tree.legVisit">正在访问</span></span>
           <span><i class="l-done"></i><span data-i18n="lab.tree.legDone">已访问</span></span>
@@ -1598,6 +1626,7 @@
       setTimeout(refreshAll, 0);
     })();
   </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

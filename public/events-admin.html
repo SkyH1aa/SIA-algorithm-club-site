@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.eventsAdmin.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -11,9 +11,9 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>
   <style>
     /* 本页专用：列表区与报名工具栏的间距收敛，全部使用 club 令牌，亮暗主题自适应 */
     body.club-page .list-gap { margin-top: 16px; }
@@ -21,24 +21,34 @@
     body.club-page .signup-toolbar .select { max-width: 360px; }
     /* 表头字号收紧：与全站管理表格保持一致的密度 */
 
-  </style>
+
+    body.club-page.gallery-editor #content > .premium-head { max-width: 68ch; margin-bottom: var(--club-space-7); }
+    body.club-page.gallery-editor :is(#annPanel, #eventPanel, #signupPanel) { padding: var(--club-space-6); background: var(--club-material-read); }
+    body.club-page.gallery-editor :is(#announcementForm, #eventForm) { gap: var(--club-space-5); padding: var(--club-space-5); border: 1px solid var(--club-line); border-radius: var(--club-radius-sm); background: var(--club-material-inset); box-shadow: none; }
+    body.club-page.gallery-editor :is(#announcementForm, #eventForm) .actions { padding-top: var(--club-space-4); margin-top: 0; border-top: 1px solid var(--club-line); }
+    body.club-page.gallery-editor :is(#announcementList, #eventList, #signupList) { margin-top: var(--club-space-6); }
+    body.club-page.gallery-editor .signup-toolbar { align-items: end; padding-bottom: var(--club-space-4); border-bottom: 1px solid var(--club-line); }
+    body.club-page.gallery-editor .intro { max-width: 68ch; }
+    @media (max-width: 640px) { body.club-page.gallery-editor :is(#annPanel, #eventPanel, #signupPanel) { padding: var(--club-space-5); } }
+
+</style>
 </head>
-<body class="club-page">
+<body class="club-page gallery-editor">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Events Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a></div></header>
 
-  <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div><main>
-    <section id="gate" class="panel gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="admin.eventsGateLead">活动公告管理需要对应权限。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
-    <section id="denied" class="panel denied hidden"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.eventsDenied">无活动管理权限</strong><p class="intro" data-i18n="admin.eventsDeniedLead">请联系 Haimingadmin / Collen 开通「活动和公告系统内容管理」权限。</p></div></section>
+  <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div><main class="premium-workspace">
+    <section id="gate" class="panel gate premium-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="admin.eventsGateLead">活动公告管理需要对应权限。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+    <section id="denied" class="panel denied hidden premium-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.eventsDenied">无活动管理权限</strong><p class="intro" data-i18n="admin.eventsDeniedLead">请联系 Haimingadmin / Collen 开通「活动和公告系统内容管理」权限。</p></div></section>
     <div id="content" class="hidden">
-      <p class="eyebrow">EVENTS ADMIN</p>
-      <h1 data-i18n="pages.eventsAdmin.h1">活动与公告管理</h1>
+      <header class="premium-head"><h1 data-i18n="pages.eventsAdmin.h1">活动与公告管理</h1>
       <p class="lead" data-i18n="admin.eventsLead">发布社团通知、活动报名、课程安排、比赛信息；设置截止时间、活动状态，并查看报名名单。首页最新公告会读取这里发布的内容。</p>
+      <p class="premium-meta">EVENTS ADMIN</p></header>
 
       <div class="club-tabs" data-club-tabs role="tablist" aria-label="活动管理"><button type="button" role="tab" aria-selected="true" aria-controls="annPanel" data-tab-target="annPanel" data-i18n="admin.tabAnnouncement">公告</button><button type="button" role="tab" aria-selected="false" aria-controls="eventPanel" data-tab-target="eventPanel" data-i18n="admin.tabEvent">活动</button><button type="button" role="tab" aria-selected="false" aria-controls="signupPanel" data-tab-target="signupPanel" data-i18n="admin.tabSignup">报名名单</button></div>
       <section class="panel" id="annPanel">
         <h2 data-i18n="admin.annTitle">发布 / 编辑公告</h2>
         <p class="intro" data-i18n="admin.annIntro">公告可用于社团通知、课程安排、比赛信息，并支持置顶及首页推荐弹窗。</p>
-        <form class="form" id="announcementForm">
+        <form class="form premium-form" id="announcementForm">
           <input type="hidden" id="announcementId">
           <div class="grid-2">
             <div><label class="label" for="announcementTitle" data-i18n="admin.labelTitle">标题</label><input class="input" id="announcementTitle" required></div>
@@ -60,7 +70,7 @@
             <label><input type="checkbox" id="announcementFeatured"> <span data-i18n="admin.checkFeatured">首页推荐</span></label>
             <label><input type="checkbox" id="announcementPublished" checked> <span data-i18n="admin.checkPublished">发布</span></label>
           </div>
-          <div class="actions"><button class="button" type="submit" data-i18n="admin.saveAnnouncement">保存公告</button><button class="button secondary" type="button" id="resetAnnouncement" data-i18n="common.clearForm">清空表单</button></div>
+          <div class="actions premium-toolbar"><button class="button" type="submit" data-i18n="admin.saveAnnouncement">保存公告</button><button class="button secondary" type="button" id="resetAnnouncement" data-i18n="common.clearForm">清空表单</button></div>
         </form>
         <p class="message" id="announcementMessage" role="status"></p>
         <div class="table-wrap list-gap" id="announcementList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="admin.loadingAnn">正在读取公告…</span></div>
@@ -69,7 +79,7 @@
       <section class="panel" id="eventPanel">
         <h2 data-i18n="admin.eventTitle">发布 / 编辑活动</h2>
         <p class="intro" data-i18n="admin.eventIntro">可设置活动状态、报名截止时间、是否开放报名，以及是否推荐到首页。</p>
-        <form class="form" id="eventForm">
+        <form class="form premium-form" id="eventForm">
           <input type="hidden" id="eventId">
           <div class="grid-2">
             <div><label class="label" for="eventTitle" data-i18n="admin.labelTitle">标题</label><input class="input" id="eventTitle" required></div>
@@ -115,7 +125,7 @@
             <label><input type="checkbox" id="eventFeatured"> <span data-i18n="admin.checkFeatured">首页推荐</span></label>
             <label><input type="checkbox" id="eventPublished" checked> <span data-i18n="admin.checkPublished">发布</span></label>
           </div>
-          <div class="actions"><button class="button" type="submit" data-i18n="admin.saveEvent">保存活动</button><button class="button secondary" type="button" id="resetEvent" data-i18n="common.clearForm">清空表单</button></div>
+          <div class="actions premium-toolbar"><button class="button" type="submit" data-i18n="admin.saveEvent">保存活动</button><button class="button secondary" type="button" id="resetEvent" data-i18n="common.clearForm">清空表单</button></div>
         </form>
         <p class="message" id="eventMessage" role="status"></p>
         <div class="table-wrap list-gap" id="eventList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="admin.loadingEvents">正在读取活动…</span></div>
@@ -124,7 +134,8 @@
       <section class="panel" id="signupPanel">
         <h2 data-i18n="admin.signupsTitle">报名名单</h2>
         <p class="intro" data-i18n="admin.signupsIntro">选择活动后查看报名名单，并可取消/拒绝报名。</p>
-        <div class="signup-toolbar">
+        <div class="signup-toolbar premium-toolbar">
+          <label class="label" for="signupEventSelect" data-i18n="admin.labelTitle">标题</label>
           <select class="select" id="signupEventSelect"></select>
           <button class="button secondary" type="button" id="refreshSignups" data-i18n="admin.refreshSignups">刷新名单</button>
         </div>
@@ -618,6 +629,7 @@
       } catch (_e) {}
     });
   </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

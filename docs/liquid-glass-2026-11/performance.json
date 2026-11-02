@@ -1,0 +1,32 @@
+{
+  "scope":"Current liquid-glass homepage steady state in local in-app browser; not GPU presentation time or affected-device acceptance",
+  "startedAt":"2026-11-01T17:19:42.145Z",
+  "url":"http://127.0.0.1:4186/index.html",
+  "viewport":{"width":1440,"height":900},
+  "theme":"dark",
+  "chapter":"home",
+  "requestedWindowMs":330000,
+  "actualWindowMs":330003.4,
+  "elapsedAtReadMs":391523.6,
+  "finished":true,
+  "frameCallbacks":79158,
+  "sampleEveryNFrames":30,
+  "sampleCount":2638,
+  "sampledIntervalMs":{"p50":4.2,"p95":4.3,"p99":4.3,"max":8.4},
+  "hiddenEvents":0,
+  "longTasksDuringWindow":[],
+  "quality":{"tier":"high","pixelRatio":1.15,"particleCount":1536,"postprocessing":false},
+  "canvasAtEnd":[
+    {"id":"particleCanvas","width":300,"height":150,"clientWidth":1430,"clientHeight":900},
+    {"id":"algorithmScene","width":1655,"height":1035,"clientWidth":1430,"clientHeight":900},
+    {"id":"shaderField","width":1655,"height":1035,"clientWidth":1430,"clientHeight":900},
+    {"id":"chapterParticleCanvas","width":2160,"height":1350,"clientWidth":1440,"clientHeight":900}
+  ],
+  "limitations":[
+    "Only every30th callback interval retained; max is sampled maximum.",
+    "Observer installed after navigation; startup shader blocking is outside this window.",
+    "No relative speedup or original affected-device resolution established.",
+    "No continuous cursor movement or chapter switching during steady-state sample.",
+    "After the sample, additional home card/control pointer background layers were added; they add no idle loop and remain inactive without hover. Final interaction checked separately."
+  ]
+}

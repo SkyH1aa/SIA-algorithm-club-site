@@ -1,0 +1,26 @@
+{
+  "status": "inconclusive-host-throttling",
+  "finalSource": true,
+  "baseUrl": "http://127.0.0.1:4197/",
+  "viewport": [1440,900],
+  "theme": "dark",
+  "startedAt": "2026-11-02T01:52:29.508Z",
+  "requestedDurationMs": 330000,
+  "elapsedAtObservationMs": 429565.4,
+  "completed": false,
+  "framesAtObservation": 3324,
+  "sampleEveryFrames": 30,
+  "sampleCount": 110,
+  "sampleIntervalMs": {"p50":4.2,"p95":4.3,"p99":12.4,"max":29.2},
+  "hiddenEvents": 1,
+  "longTasks": [],
+  "phases": [{"name":"idle","startMs":0},{"name":"real-pointer-controls","startMs":35224.1}],
+  "pointerCommand": "36 real CUA moves attempted; command aborted due timeout; completed-move count not established",
+  "limitations": [
+    "The browser became hidden and RAF stopped progressing. The requested 330-second continuous run did not complete.",
+    "Observed intervals sample only callbacks that executed and cannot establish responsiveness, GPU presentation latency, or absence of stutter.",
+    "No performance pass, relative speedup, affected-device fix, or sustained chapter-switch performance claim is made.",
+    "Earlier contended sample is preserved separately in performance-contended.json.",
+    "Original scene and chapter source/quality configuration were preserved; new material scopes were bounded without lowering scene quality."
+  ]
+}

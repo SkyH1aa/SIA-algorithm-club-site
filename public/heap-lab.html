@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="lab.heap.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8" />
@@ -11,8 +11,8 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
 <style>
     /* 收编说明：主题 token 一律走 --club-*（club-ui.css 的 body.club-page 作用域提供
        --bg/--panel/--cyan/--text/--muted/--line 同名映射与亮色覆盖），
@@ -451,8 +451,36 @@
       .status { align-self: flex-start; }
       .cell { min-width: 46px; min-height: 46px; font-size: 14px; }
     }
-  </style>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+
+    /* Inset spacing belongs to this lab's controls, not the visualization. */
+    body.club-page .premium-lab .legend.premium-legend { padding: var(--club-space-3, 12px); border-radius: var(--club-radius-sm, 9px); }
+    body.club-page .premium-lab .button-stack.premium-toolbar { padding: var(--club-space-2, 8px); border-radius: var(--club-radius-sm, 9px); }
+
+    /* Controls, evidence figure, then measured context; preserve all stage geometry. */
+    body.club-page.gallery-heap-lab .hero { align-items: start; gap: var(--club-space-6); padding-bottom: var(--club-space-6); margin-bottom: var(--club-space-6); border-bottom: 1px solid var(--club-line-strong); }
+    body.club-page.gallery-heap-lab .hero .lead { max-width: 65ch; }
+    body.club-page.gallery-heap-lab .algorithm-note { padding: var(--club-space-5); background: var(--club-material-inset); box-shadow: none; border-color: var(--club-line); }
+    body.club-page.gallery-heap-lab .algorithm-note b { margin-bottom: var(--club-space-2); color: var(--club-text); }
+    body.club-page.gallery-heap-lab .lab-grid { align-items: start; gap: var(--club-space-5); }
+    body.club-page.gallery-heap-lab .controls { margin: 0; padding: var(--club-space-5); background: var(--club-material-read); box-shadow: none; }
+    body.club-page.gallery-heap-lab .controls > h2 { padding-bottom: var(--club-space-4); border-bottom: 1px solid var(--club-line); font-size: var(--club-fs-lg); }
+    body.club-page.gallery-heap-lab .control-group { margin-top: var(--club-space-5); }
+    body.club-page.gallery-heap-lab .algo-profile { padding: var(--club-space-3); background: var(--club-material-inset); border-color: var(--club-line); box-shadow: none; }
+    body.club-page.gallery-heap-lab .button-stack { padding-top: var(--club-space-4); border-top: 1px solid var(--club-line); gap: var(--club-space-2); }
+    body.club-page.gallery-heap-lab .visual { margin: 0; padding: var(--club-space-5); background: var(--club-material-read); box-shadow: none; }
+    body.club-page.gallery-heap-lab .visual-header { padding-bottom: var(--club-space-4); border-bottom: 1px solid var(--club-line); }
+    body.club-page.gallery-heap-lab .visual-header h2 { font-size: var(--club-fs-xl); }
+    body.club-page.gallery-heap-lab .metrics { gap: 0; border-block: 1px solid var(--club-line); background: transparent; box-shadow: none; margin-top: var(--club-space-5); }
+    body.club-page.gallery-heap-lab .metric { padding: var(--club-space-3); border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+    body.club-page.gallery-heap-lab .metric strong { font-size: var(--club-fs-xl); font-variant-numeric: tabular-nums; }
+    body.club-page.gallery-heap-lab .legend { padding-top: var(--club-space-4); gap: var(--club-space-3); font-size: var(--club-fs-sm); }
+    @media (max-width: 900px) {
+      body.club-page.gallery-heap-lab .controls { order: 0; }
+      body.club-page.gallery-heap-lab .visual { order: 0; }
+    }
+    body.club-page.gallery-heap-lab .view-box { background: var(--club-material-inset); border-color: var(--club-line); box-shadow: none; }
+</style>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="堆可视化实验室 · 算法社">
@@ -467,7 +495,7 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body class="club-page">
+<body class="club-page gallery-heap-lab">
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="../index.html" data-i18n-aria="lab.common.homeAria" aria-label="返回算法社首页">
@@ -479,21 +507,21 @@
     </div>
   </header>
 
-  <main>
-    <section class="hero" aria-labelledby="pageTitle">
+  <main class="premium-lab">
+    <section class="hero premium-head" aria-labelledby="pageTitle">
       <div>
-        <p class="eyebrow">HEAP VISUALIZATION LAB · V1</p>
         <h1 id="pageTitle" data-i18n="lab.heap.h1">堆可视化实验室</h1>
         <p class="lead" data-i18n="lab.heap.lead">同时观察堆的数组存储与二叉树结构。可逐步演示建堆、上浮插入、下沉删除堆顶，以及完整堆排序过程，理解父子索引关系与堆序维护。</p>
+        <p class="premium-meta">HEAP VISUALIZATION LAB · V1</p>
       </div>
-      <aside class="algorithm-note" id="modeNote">
+      <aside class="algorithm-note premium-inset" id="modeNote">
         <b data-i18n="lab.heap.buildName">建堆 Build-Heap</b>
         <span data-i18n="lab.heap.buildDesc">自底向上对每个非叶节点执行下沉，把无序数组调整为堆。</span>
       </aside>
     </section>
 
     <section class="lab-grid" data-i18n-aria="lab.heap.consoleAria" aria-label="堆演示控制台">
-      <form class="panel controls" id="controlForm">
+      <form class="panel controls premium-form" id="controlForm">
         <h2 data-i18n="lab.common.settings">实验设置</h2>
 
         <div class="control-group">
@@ -506,7 +534,7 @@
           </select>
         </div>
 
-        <details class="algo-profile" id="algoProfile" open>
+        <details class="algo-profile premium-analysis" id="algoProfile" open>
           <summary><span id="algoProfileTitle">算法档案</span></summary>
           <div class="algo-profile-body">
             <div><span class="algo-profile-label" data-i18n="lab.heap.profile.idea">核心思想</span><span class="algo-profile-value" id="algoProfileIdea"></span></div>
@@ -565,7 +593,7 @@
           </select>
         </div>
 
-        <div class="button-stack">
+        <div class="button-stack premium-toolbar">
           <button class="btn" type="button" id="startButton" data-i18n="lab.common.start">开始演示</button>
           <button class="btn secondary" type="button" id="stepButton" data-i18n="lab.common.step">单步执行</button>
           <button class="btn btn-warn secondary" type="button" id="resetButton" data-i18n="lab.common.reset">重置当前数据</button>
@@ -573,8 +601,8 @@
         </div>
       </form>
 
-      <section class="panel visual" aria-labelledby="visualTitle">
-        <div class="visual-header">
+      <section class="panel visual premium-analysis" aria-labelledby="visualTitle">
+        <div class="visual-header premium-section-head">
           <div>
             <h2 id="visualTitle" data-i18n="lab.heap.visualTitle">数组视图 · 二叉树视图</h2>
             <span class="sr-only" id="announcement" aria-live="polite"></span>
@@ -593,12 +621,12 @@
           </div>
         </div>
 
-        <div class="metrics" data-i18n-aria="lab.heap.metricsAria" aria-label="堆操作计数">
+        <div class="metrics premium-metrics" data-i18n-aria="lab.heap.metricsAria" aria-label="堆操作计数">
           <div class="metric"><span data-i18n="lab.heap.comparisons">比较次数</span><strong id="comparisons">0</strong></div>
           <div class="metric"><span data-i18n="lab.heap.swaps">交换次数</span><strong id="swaps">0</strong></div>
           <div class="metric"><span data-i18n="lab.common.currentStep">当前步骤</span><strong id="steps">0</strong></div>
         </div>
-        <div class="legend" data-i18n-aria="lab.common.colorLegend" aria-label="颜色说明">
+        <div class="legend premium-legend" data-i18n-aria="lab.common.colorLegend" aria-label="颜色说明" role="note">
           <span><i></i><span data-i18n="lab.heap.legNode">普通节点</span></span>
           <span><i class="l-compare"></i><span data-i18n="lab.heap.legCompare">正在比较</span></span>
           <span><i class="l-swap"></i><span data-i18n="lab.heap.legSwap">正在交换</span></span>
@@ -1366,6 +1394,7 @@
       setTimeout(refreshAll, 0);
     })();
   </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

@@ -26,6 +26,17 @@ vm.runInNewContext(dictZh, dictContext);
 vm.runInNewContext(dictEn, dictContext);
 const dict = { zh: dictContext.window.ClubI18nDictZh, en: dictContext.window.ClubI18nDictEn };
 assert.ok(dict?.zh?.donations && dict?.en?.donations, 'donations dictionary missing');
+// Include the page's own registration without running its DOM/network setup.
+const pageDictRegistration = page.match(/const DONATIONS_PAGE_DICT = \{[\s\S]*?^\s*mergeDonationsPageDict\(\);/m);
+assert.ok(pageDictRegistration, 'donations page dictionary registration missing');
+const pageI18n = {
+  mergeDict(extra) {
+    for (const lang of ['zh', 'en']) {
+      Object.assign(dict[lang].donations, extra[lang]?.donations);
+    }
+  }
+};
+vm.runInNewContext(pageDictRegistration[0], { window: { ClubI18n: pageI18n }, ClubI18n: pageI18n });
 const used = new Set([...page.matchAll(/data-i18n(?:-title|-placeholder|-aria)?="(donations\.[A-Za-z0-9_.]+)"/g)].map(m => m[1].slice('donations.'.length)));
 for (const match of page.matchAll(/t\('(donations\.[A-Za-z0-9_.]+)'/g)) used.add(match[1].slice('donations.'.length));
 assert.ok(used.size > 20, 'expected the page to use many translation keys');
@@ -76,8 +87,11 @@ assert.doesNotMatch(page, /#fff\b|#ffffff\b|color:\s*white/i, 'avoid hardcoded w
 assert.doesNotMatch(page, /:root\s*\{/, 'must not redefine global theme variables');
 
 // --- Entry points ---
-assert.match(features, /<a class="card" href="donations\.html">/);
-assert.match(features, /data-i18n="features\.donationsDesc"/);
+const donationEntry = [...features.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi)]
+  .find(([, attributes]) => /(?:^|\s)href\s*=\s*(["'])donations\.html\1(?=\s|$)/i.test(attributes));
+assert.ok(donationEntry, 'directory must link to donations.html with a semantic anchor');
+assert.match(donationEntry[2], /data-i18n="features\.donations"/, 'donation link must have a translated label');
+assert.match(donationEntry[2], /data-i18n="features\.donationsDesc"/);
 assert.match(shell, /\{ group: 'member'[^}]*href: 'donations\.html'/);
 assert.match(shell, /href: 'donations\.html', requires: 'super'/, 'admin rail entry must be super-admin only');
 assert.match(hub, /href: 'donations\.html'[^}]*superOnly: true/, 'admin hub entry must be super-admin only');

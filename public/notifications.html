@@ -6,19 +6,29 @@
   <meta name="description" content="算法社站内通知：公告、活动、报名、积分与留言提醒。">
   <title>通知 · 算法社</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <style>
-  </style>
+
+    body.club-page.gallery-inbox main { max-width: 1040px; }
+    body.club-page.gallery-inbox main > .premium-head { max-width: 68ch; margin-bottom: var(--club-space-7); }
+    body.club-page.gallery-inbox #panel { padding: var(--club-space-6); }
+    body.club-page.gallery-inbox #panel > .section-head { gap: var(--club-space-4); align-items: start; padding-bottom: var(--club-space-5); border-bottom: 1px solid var(--club-line); }
+    body.club-page.gallery-inbox #filters { gap: var(--club-space-2); }
+    body.club-page.gallery-inbox #list { margin-top: var(--club-space-5); }
+    body.club-page.gallery-inbox #markAll { flex: 0 0 auto; }
+    @media (max-width: 640px) { body.club-page.gallery-inbox #panel > .section-head { flex-direction: column; } }
+
+</style>
   <script src="theme.js?v=1b745a4f"></script>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=f75071ae"></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script>
   <script src="member-identity.js?v=ad75d585" defer></script>
   <script src="i18n.js?v=ba66328e"></script>
-  <script src="club-common.js?v=8e9acff3"></script>
+  <script src="club-common.js?v=9e72bd40"></script>
   <script src="service-prompts.js?v=1cfff2ab"></script>
-  <script src="service-gate.js?v=6acc9c5f"></script>
+  <script src="service-gate.js?v=fbbccf1b"></script>
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="通知 · 算法社">
@@ -33,18 +43,18 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body class="club-page">
+<body class="club-page gallery-inbox">
   <header class="topbar"><div class="topbar-inner">
     <a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Notifications</small></span></a>
     <span class="identity" data-member-identity hidden></span>
     <a class="back" href="member-center.html" data-i18n="notify.backCenter">返回个人中心</a>
   </div></header>
-  <main>
-    <p class="eyebrow">NOTIFICATION CENTER</p>
-    <h1 data-i18n="notify.title">通知</h1>
+  <main class="premium-workspace">
+    <header class="premium-head"><h1 data-i18n="notify.title">通知</h1>
     <p class="lead" data-i18n="notify.intro">公告、活动、报名、积分与留言提醒集中在这里。</p>
+    <p class="premium-meta">NOTIFICATION CENTER</p></header>
 
-    <section class="panel" id="gate" hidden>
+    <section class="panel premium-gate" id="gate" hidden>
       <span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span>
       <h2 data-i18n="notify.gateTitle">请先登录</h2>
       <p class="intro" data-i18n="notify.gateLead">通知只对已登录的算法社成员开放。</p>
@@ -52,8 +62,8 @@
     </section>
 
     <section class="panel" id="panel" hidden>
-      <div class="section-head">
-        <div class="club-notify-filters" id="filters">
+      <div class="section-head premium-section-head">
+        <div class="club-notify-filters premium-toolbar" id="filters">
           <button class="chip is-active" type="button" data-kind="" aria-pressed="true" data-i18n="notify.all">全部</button>
           <button class="chip" type="button" data-kind="announcement" aria-pressed="false" data-i18n="notify.kindAnnouncement">公告</button>
           <button class="chip" type="button" data-kind="event" aria-pressed="false" data-i18n="notify.kindEvent">活动</button>
@@ -189,6 +199,7 @@
       window.addEventListener('club:langchange', () => { if (!$('panel').hidden) render(); });
     });
   </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

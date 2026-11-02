@@ -1,0 +1,734 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-02T00:00:00+08:00",
+  "title": "Design System: SIA 算法社",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "暗色 · 清亮青色动作"
+      },
+      "light-accent": {
+        "role": "primary",
+        "displayName": "亮色 · 沉稳朱砂动作"
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "暗色 · 冷炭蓝底"
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "暗色 · 容器表面"
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "暗色 · 主要文字"
+      },
+      "light-bg": {
+        "role": "neutral",
+        "displayName": "亮色 · 暖中性合金底"
+      },
+      "light-surface": {
+        "role": "neutral",
+        "displayName": "亮色 · 容器表面"
+      },
+      "light-text": {
+        "role": "neutral",
+        "displayName": "亮色 · 主要文字"
+      },
+      "material-read": {
+        "role": "neutral",
+        "displayName": "暗色 · 不透明阅读"
+      },
+      "light-material-read": {
+        "role": "neutral",
+        "displayName": "亮色 · 不透明阅读"
+      },
+      "material-raised": {
+        "role": "neutral",
+        "displayName": "暗色 · 抬升入口"
+      },
+      "light-material-raised": {
+        "role": "neutral",
+        "displayName": "亮色 · 抬升入口"
+      },
+      "material-inset": {
+        "role": "neutral",
+        "displayName": "暗色 · 工具凹槽"
+      },
+      "light-material-inset": {
+        "role": "neutral",
+        "displayName": "亮色 · 工具凹槽"
+      },
+      "material-control": {
+        "role": "neutral",
+        "displayName": "暗色 · 控件"
+      },
+      "light-material-control": {
+        "role": "neutral",
+        "displayName": "亮色 · 控件"
+      },
+      "material-hover": {
+        "role": "neutral",
+        "displayName": "暗色 · 入口悬停"
+      },
+      "light-material-hover": {
+        "role": "neutral",
+        "displayName": "亮色 · 入口悬停"
+      },
+      "material-glass": {
+        "role": "neutral",
+        "displayName": "暗色 · 局部玻璃"
+      },
+      "light-material-glass": {
+        "role": "neutral",
+        "displayName": "亮色 · 局部玻璃"
+      },
+      "material-glass-fallback": {
+        "role": "neutral",
+        "displayName": "暗色 · 不透明回退"
+      },
+      "light-material-glass-fallback": {
+        "role": "neutral",
+        "displayName": "亮色 · 不透明回退"
+      },
+      "material-scrim": {
+        "role": "neutral",
+        "displayName": "暗色 · 模态遮罩"
+      },
+      "light-material-scrim": {
+        "role": "neutral",
+        "displayName": "亮色 · 模态遮罩"
+      },
+      "material-edge": {
+        "role": "neutral",
+        "displayName": "暗色 · 内缘高光"
+      },
+      "light-material-edge": {
+        "role": "neutral",
+        "displayName": "亮色 · 内缘高光"
+      },
+      "material-edge-strong": {
+        "role": "neutral",
+        "displayName": "暗色 · 强调内缘"
+      },
+      "light-material-edge-strong": {
+        "role": "neutral",
+        "displayName": "亮色 · 强调内缘"
+      },
+      "liquid-glass": {
+        "role": "neutral",
+        "displayName": "暗色 · 液态 glass"
+      },
+      "light-liquid-glass": {
+        "role": "neutral",
+        "displayName": "亮色 · 液态 glass"
+      },
+      "liquid-fallback": {
+        "role": "neutral",
+        "displayName": "暗色 · 液态 fallback"
+      },
+      "light-liquid-fallback": {
+        "role": "neutral",
+        "displayName": "亮色 · 液态 fallback"
+      },
+      "liquid-line": {
+        "role": "neutral",
+        "displayName": "暗色 · 液态 line"
+      },
+      "light-liquid-line": {
+        "role": "neutral",
+        "displayName": "亮色 · 液态 line"
+      },
+      "liquid-line-hover": {
+        "role": "neutral",
+        "displayName": "暗色 · 液态 line-hover"
+      },
+      "light-liquid-line-hover": {
+        "role": "neutral",
+        "displayName": "亮色 · 液态 line-hover"
+      },
+      "liquid-rim": {
+        "role": "neutral",
+        "displayName": "暗色 · 液态 rim"
+      },
+      "light-liquid-rim": {
+        "role": "neutral",
+        "displayName": "亮色 · 液态 rim"
+      },
+      "liquid-rim-low": {
+        "role": "neutral",
+        "displayName": "暗色 · 液态 rim-low"
+      },
+      "light-liquid-rim-low": {
+        "role": "neutral",
+        "displayName": "亮色 · 液态 rim-low"
+      },
+      "liquid-control": {
+        "role": "neutral",
+        "displayName": "暗色 · 保留的液态控件令牌（非普通次动作）"
+      },
+      "light-liquid-control": {
+        "role": "neutral",
+        "displayName": "亮色 · 保留的液态控件令牌（非普通次动作）"
+      },
+      "liquid-control-hover": {
+        "role": "neutral",
+        "displayName": "暗色 · 保留的液态控件令牌（非普通次动作）"
+      },
+      "light-liquid-control-hover": {
+        "role": "neutral",
+        "displayName": "亮色 · 保留的液态控件令牌（非普通次动作）"
+      },
+      "metal-read": {
+        "role": "neutral",
+        "displayName": "暗色 · 不透明阅读"
+      },
+      "metal-panel": {
+        "role": "neutral",
+        "displayName": "暗色 · 加工金属面板"
+      },
+      "metal-raised": {
+        "role": "neutral",
+        "displayName": "暗色 · 抬升金属入口"
+      },
+      "metal-inset": {
+        "role": "neutral",
+        "displayName": "暗色 · 金属凹槽"
+      },
+      "metal-control": {
+        "role": "neutral",
+        "displayName": "暗色 · 金属控件"
+      },
+      "metal-hover": {
+        "role": "neutral",
+        "displayName": "暗色 · 金属悬停"
+      },
+      "light-metal-read": {
+        "role": "neutral",
+        "displayName": "亮色 · 不透明阅读"
+      },
+      "light-metal-panel": {
+        "role": "neutral",
+        "displayName": "亮色 · 加工金属面板"
+      },
+      "light-metal-raised": {
+        "role": "neutral",
+        "displayName": "亮色 · 抬升金属入口"
+      },
+      "light-metal-inset": {
+        "role": "neutral",
+        "displayName": "亮色 · 金属凹槽"
+      },
+      "light-metal-control": {
+        "role": "neutral",
+        "displayName": "亮色 · 金属控件"
+      },
+      "light-metal-hover": {
+        "role": "neutral",
+        "displayName": "亮色 · 金属悬停"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "共享主标题",
+        "purpose": "提取默认 h1；read/operate 密度覆盖仍见源 CSS。"
+      },
+      "headline": {
+        "displayName": "二级标题",
+        "purpose": "共享 h2。"
+      },
+      "title": {
+        "displayName": "三级标题",
+        "purpose": "共享 h3。"
+      },
+      "body": {
+        "displayName": "正文",
+        "purpose": "默认共享正文；长文模板与首页另有专属设置。"
+      },
+      "label": {
+        "displayName": "字段标签",
+        "purpose": "表单字段标签，不代表所有小字的同一字重。"
+      },
+      "mono": {
+        "displayName": "等宽字体栈",
+        "purpose": "代码、标识与数值工具；不发明统一代码字号。"
+      },
+      "button": {
+        "displayName": "按钮文字",
+        "purpose": "普通动作9px圆角，13px/700/1.2；§35最终覆盖，不使用保留的12px liquid-control-radius。"
+      },
+      "input": {
+        "displayName": "字段文字",
+        "purpose": "共享文本输入默认排版。"
+      },
+      "nav": {
+        "displayName": "章节导航文字",
+        "purpose": "记录既有 12.5px 组件值，不增加字号阶梯。"
+      },
+      "chip": {
+        "displayName": "筛选文字",
+        "purpose": "预览提取未标记chip基类650/1.1；生产标记后的700与metal覆盖另见CSS。"
+      }
+    },
+    "shadows": [
+      {
+        "name": "club-shadow-xs",
+        "value": "inset 0 1px 0 var(--club-material-edge), 0 1px 2px rgba(0, 0, 0, 0.16)",
+        "purpose": "暗色 · 阅读层和按钮接触层"
+      },
+      {
+        "name": "club-shadow-sm",
+        "value": "inset 0 1px 0 var(--club-material-edge), 0 2px 4px rgba(0, 0, 0, 0.16), 0 8px 20px -12px rgba(0, 0, 0, 0.36)",
+        "purpose": "暗色 · 抬升入口结构层"
+      },
+      {
+        "name": "club-shadow",
+        "value": "inset 0 1px 0 var(--club-material-edge), 0 3px 8px rgba(0, 0, 0, 0.18), 0 18px 42px -16px rgba(0, 0, 0, 0.46)",
+        "purpose": "暗色 · 较高面板"
+      },
+      {
+        "name": "club-shadow-hover",
+        "value": "inset 0 1px 0 var(--club-material-edge-strong), 0 4px 10px rgba(0, 0, 0, 0.22), 0 20px 40px -16px rgba(0, 0, 0, 0.52)",
+        "purpose": "暗色 · 入口悬停与聚焦"
+      },
+      {
+        "name": "club-shadow-float",
+        "value": "inset 0 1px 0 var(--club-material-edge-strong), 0 8px 20px rgba(0, 0, 0, 0.24), 0 28px 72px -20px rgba(0, 0, 0, 0.56)",
+        "purpose": "暗色 · 通知与启动器浮层"
+      },
+      {
+        "name": "club-shadow-inset",
+        "value": "inset 0 1px 3px rgba(0, 0, 0, 0.24), 0 1px 0 var(--club-material-edge)",
+        "purpose": "暗色 · 字段与工具凹面"
+      },
+      {
+        "name": "club-shadow-press",
+        "value": "inset 0 2px 3px rgba(0, 0, 0, 0.22)",
+        "purpose": "暗色 · 按压"
+      },
+      {
+        "name": "club-ring",
+        "value": "0 0 0 3px var(--club-accent-soft)",
+        "purpose": "暗色 · 字段焦点环"
+      },
+      {
+        "name": "light-club-shadow-xs",
+        "value": "inset 0 1px 0 var(--club-material-edge), 0 1px 2px rgba(29, 48, 72, 0.05)",
+        "purpose": "亮色 · 阅读层和按钮接触层"
+      },
+      {
+        "name": "light-club-shadow-sm",
+        "value": "inset 0 1px 0 var(--club-material-edge), 0 2px 4px rgba(29, 48, 72, 0.04), 0 8px 20px -12px rgba(29, 48, 72, 0.16)",
+        "purpose": "亮色 · 抬升入口结构层"
+      },
+      {
+        "name": "light-club-shadow",
+        "value": "inset 0 1px 0 var(--club-material-edge), 0 3px 8px rgba(29, 48, 72, 0.05), 0 18px 42px -16px rgba(29, 48, 72, 0.18)",
+        "purpose": "亮色 · 较高面板"
+      },
+      {
+        "name": "light-club-shadow-hover",
+        "value": "inset 0 1px 0 var(--club-material-edge-strong), 0 4px 10px rgba(29, 48, 72, 0.07), 0 20px 40px -16px rgba(29, 48, 72, 0.23)",
+        "purpose": "亮色 · 入口悬停与聚焦"
+      },
+      {
+        "name": "light-club-shadow-float",
+        "value": "inset 0 1px 0 var(--club-material-edge-strong), 0 8px 20px rgba(29, 48, 72, 0.08), 0 28px 72px -20px rgba(29, 48, 72, 0.24)",
+        "purpose": "亮色 · 通知与启动器浮层"
+      },
+      {
+        "name": "light-club-shadow-inset",
+        "value": "inset 0 1px 2px rgba(29, 48, 72, 0.06), 0 1px 0 #ffffff",
+        "purpose": "亮色 · 字段与工具凹面"
+      },
+      {
+        "name": "light-club-shadow-press",
+        "value": "inset 0 2px 3px rgba(29, 48, 72, 0.10)",
+        "purpose": "亮色 · 按压"
+      },
+      {
+        "name": "light-club-ring",
+        "value": "0 0 0 3px var(--club-accent-soft)",
+        "purpose": "亮色 · 字段焦点环"
+      },
+      {
+        "name": "club-liquid-shadow",
+        "value": "inset 0 1px 0 var(--club-liquid-rim), inset 0 -1px 0 var(--club-liquid-rim-low), 0 2px 5px rgba(0, 7, 18, 0.20), 0 18px 40px -18px rgba(0, 7, 18, 0.66)",
+        "purpose": "暗色 · 选择性展品玻璃/主动作边缘预设，不授权普通面板采样"
+      },
+      {
+        "name": "light-club-liquid-shadow",
+        "value": "inset 0 1px 0 var(--club-liquid-rim), inset 0 -1px 0 var(--club-liquid-rim-low), 0 2px 4px rgba(53, 61, 73, 0.04), 0 18px 40px -20px rgba(53, 61, 73, 0.20)",
+        "purpose": "亮色 · 选择性展品玻璃/主动作边缘预设，不授权普通面板采样"
+      },
+      {
+        "name": "club-liquid-shadow-hover",
+        "value": "inset 0 1px 0 var(--club-liquid-rim), inset 0 -1px 0 var(--club-liquid-rim-low), 0 4px 8px rgba(0, 7, 18, 0.23), 0 22px 44px -18px rgba(0, 7, 18, 0.72)",
+        "purpose": "暗色 · 选择性展品玻璃/主动作边缘预设，不授权普通面板采样"
+      },
+      {
+        "name": "light-club-liquid-shadow-hover",
+        "value": "inset 0 1px 0 var(--club-liquid-rim), inset 0 -1px 0 var(--club-liquid-rim-low), 0 4px 8px rgba(53, 61, 73, 0.06), 0 22px 44px -20px rgba(53, 61, 73, 0.26)",
+        "purpose": "亮色 · 选择性展品玻璃/主动作边缘预设，不授权普通面板采样"
+      },
+      {
+        "name": "club-liquid-control-shadow",
+        "value": "inset 0 1px 0 var(--club-liquid-rim), inset 0 -1px 0 var(--club-liquid-rim-low), 0 2px 4px rgba(0, 7, 18, 0.20)",
+        "purpose": "暗色 · 选择性展品玻璃/主动作边缘预设，不授权普通面板采样"
+      },
+      {
+        "name": "light-club-liquid-control-shadow",
+        "value": "inset 0 1px 0 var(--club-liquid-rim), inset 0 -1px 0 var(--club-liquid-rim-low), 0 2px 4px rgba(53, 61, 73, 0.07)",
+        "purpose": "亮色 · 选择性展品玻璃/主动作边缘预设，不授权普通面板采样"
+      },
+      {
+        "name": "home-shadow",
+        "value": "0 18px 48px -16px rgba(0,3,12,.5)",
+        "purpose": "当前首页金属功能台、章节外框与实力展桌结构层。"
+      },
+      {
+        "name": "home-inset",
+        "value": "inset 0 1px 0 rgba(228,243,255,.18),inset 0 -1px 0 rgba(0,4,10,.5)",
+        "purpose": "当前首页金属功能台、章节外框与实力展桌结构层。"
+      },
+      {
+        "name": "light-home-shadow",
+        "value": "0 18px 48px -20px rgba(55,44,28,.22)",
+        "purpose": "当前首页金属功能台、章节外框与实力展桌结构层。"
+      },
+      {
+        "name": "light-home-inset",
+        "value": "inset 0 1px 0 #fff,inset 0 -1px 0 rgba(104,95,77,.13)",
+        "purpose": "当前首页金属功能台、章节外框与实力展桌结构层。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "club-dur-fast",
+        "value": "140ms",
+        "purpose": "局部快速反馈"
+      },
+      {
+        "name": "club-dur",
+        "value": "200ms",
+        "purpose": "控件状态过渡"
+      },
+      {
+        "name": "club-dur-slow",
+        "value": "320ms",
+        "purpose": "非 operate 主内容入场"
+      },
+      {
+        "name": "club-ease",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "共享主缓动；首页历史曲线保留"
+      },
+      {
+        "name": "reveal",
+        "value": "480ms / 14px",
+        "purpose": "IO 一次展示；pagehide 断开 IO/MO，pageshow 恢复未展示节点，实时 reduced 与失败回退可读。"
+      },
+      {
+        "name": "gsap-inner-seek",
+        "value": "duration:1; power3.out; stagger amount:.14; y:12→0; opacity:.72→1",
+        "purpose": "首页 paused 时间线归一化时序，由 ScrollBus seek；隐藏/pagehide revert 并取消订阅；phone/reduced 禁用。 本项沿用前轮脚本合同，本次未重审脚本或重验运行性能。"
+      },
+      {
+        "name": "capabilities-step",
+        "value": "1400ms",
+        "purpose": "用户启动的有限教学播放；中断暂停且不自动恢复，切 tab dispose 旧 timer。 本项沿用前轮脚本合同，本次未重审脚本或重验运行性能。"
+      },
+      {
+        "name": "liquid-pointer",
+        "value": "event → one pending RAF; local px; active 0/1",
+        "purpose": "document passive 委托，每次 render 一次目标 rect，无 idle RAF；fine+hover、无 reduced 偏好，隐藏/pagehide 回收。 本项沿用前轮脚本合同，本次未重审脚本或重验运行性能。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "max-420",
+        "value": "420px"
+      },
+      {
+        "name": "max-640",
+        "value": "640px"
+      },
+      {
+        "name": "max-720",
+        "value": "720px"
+      },
+      {
+        "name": "max-900",
+        "value": "900px"
+      },
+      {
+        "name": "max-1100",
+        "value": "1100px"
+      }
+    ],
+    "materials": [
+      {
+        "name": "club-liquid-filter",
+        "value": "blur(16px) saturate(1.3)",
+        "purpose": "仅 club-auth-shell/featured-lab/premium-exhibit；普通光照标记不采样，嵌套/阅读/控件不 blur。"
+      },
+      {
+        "name": "club-material-filter",
+        "value": "blur(10px) saturate(1.12)",
+        "purpose": "原 chrome 的 @supports 路径；默认 none，不支持或 reduced-transparency 回退不透明。"
+      },
+      {
+        "name": "home-glass-filter",
+        "value": "blur(12px) saturate(1.12)",
+        "purpose": "当前首页实力章 orbit-matrix 的 @supports 覆盖；内部 cap-exhibit 不透明。"
+      },
+      {
+        "name": "island-glass-filter",
+        "value": "blur(16px) saturate(1.22)",
+        "purpose": "前轮独立 island 参考，非本次提取/重验范围；不作为本轮统一值或完成证据。"
+      },
+      {
+        "name": "club-liquid-wash",
+        "value": "linear-gradient(155deg, rgba(188, 220, 244, 0.11), rgba(188, 220, 244, 0) 38%, rgba(58, 212, 230, 0.025) 100%)",
+        "purpose": "当前 CSS 静态材质，非颜色 primitive。"
+      },
+      {
+        "name": "light-club-liquid-wash",
+        "value": "linear-gradient(155deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0) 45%, rgba(205, 215, 229, 0.09) 100%)",
+        "purpose": "当前 CSS 静态材质，非颜色 primitive。"
+      },
+      {
+        "name": "club-liquid-control-gloss",
+        "value": "linear-gradient(180deg, rgba(231, 246, 255, 0.13), rgba(231, 246, 255, 0.025) 48%, rgba(4, 12, 24, 0.10) 100%)",
+        "purpose": "当前 CSS 静态材质，非颜色 primitive。"
+      },
+      {
+        "name": "light-club-liquid-control-gloss",
+        "value": "linear-gradient(180deg, rgba(255, 255, 255, 0.80), rgba(255, 255, 255, 0.08) 52%, rgba(108, 93, 74, 0.035) 100%)",
+        "purpose": "当前 CSS 静态材质，非颜色 primitive。"
+      },
+      {
+        "name": "club-liquid-ambient",
+        "value": "radial-gradient(ellipse 76% 520px at 10% 0, rgba(39, 112, 139, 0.18), transparent 72%), radial-gradient(ellipse 52% 640px at 100% 38%, rgba(73, 95, 137, 0.12), transparent 74%), linear-gradient(115deg, transparent 38%, rgba(160, 197, 224, 0.025) 38.1%, transparent 38.2%)",
+        "purpose": "当前 CSS 静态材质，非颜色 primitive。"
+      },
+      {
+        "name": "light-club-liquid-ambient",
+        "value": "radial-gradient(ellipse 76% 520px at 10% 0, rgba(207, 217, 228, 0.42), transparent 72%), radial-gradient(ellipse 52% 640px at 100% 38%, rgba(225, 212, 196, 0.22), transparent 74%), linear-gradient(115deg, transparent 38%, rgba(112, 125, 142, 0.045) 38.1%, transparent 38.2%)",
+        "purpose": "当前 CSS 静态材质，非颜色 primitive。"
+      },
+      {
+        "name": "club-metal-finish",
+        "value": "linear-gradient(112deg, rgba(210, 228, 245, 0.07), rgba(210, 228, 245, 0.015) 34%, rgba(5, 12, 22, 0.06) 72%, rgba(210, 228, 245, 0.025))",
+        "purpose": "当前不透明金属的方向提光，底色仍取对应 metal 角色。"
+      },
+      {
+        "name": "club-metal-read-finish",
+        "value": "linear-gradient(112deg, rgba(210, 228, 245, 0.025), transparent 45%)",
+        "purpose": "当前不透明金属的方向提光，底色仍取对应 metal 角色。"
+      },
+      {
+        "name": "club-metal-control-finish",
+        "value": "linear-gradient(180deg, rgba(221, 237, 250, 0.10), rgba(221, 237, 250, 0.015) 52%, rgba(4, 12, 24, 0.12))",
+        "purpose": "当前不透明金属的方向提光，底色仍取对应 metal 角色。"
+      },
+      {
+        "name": "light-club-metal-finish",
+        "value": "linear-gradient(112deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.08) 34%, rgba(115, 99, 77, 0.035) 72%, rgba(255, 255, 255, 0.22))",
+        "purpose": "当前不透明金属的方向提光，底色仍取对应 metal 角色。"
+      },
+      {
+        "name": "light-club-metal-read-finish",
+        "value": "linear-gradient(112deg, rgba(255, 255, 255, 0.38), transparent 45%)",
+        "purpose": "当前不透明金属的方向提光，底色仍取对应 metal 角色。"
+      },
+      {
+        "name": "light-club-metal-control-finish",
+        "value": "linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.08) 52%, rgba(108, 93, 74, 0.05))",
+        "purpose": "当前不透明金属的方向提光，底色仍取对应 metal 角色。"
+      },
+      {
+        "name": "home-glass",
+        "value": "rgba(17,26,38,.74)",
+        "purpose": "当前首页专属材质，不合并到共享 colors；home-metal 为不透明功能台/章节外框。"
+      },
+      {
+        "name": "home-glass-fallback",
+        "value": "#111a26",
+        "purpose": "当前首页专属材质，不合并到共享 colors；home-metal 为不透明功能台/章节外框。"
+      },
+      {
+        "name": "home-read",
+        "value": "#111922",
+        "purpose": "当前首页专属材质，不合并到共享 colors；home-metal 为不透明功能台/章节外框。"
+      },
+      {
+        "name": "home-edge",
+        "value": "rgba(174,198,219,.24)",
+        "purpose": "当前首页专属材质，不合并到共享 colors；home-metal 为不透明功能台/章节外框。"
+      },
+      {
+        "name": "home-sheen",
+        "value": "rgba(225,240,252,.1)",
+        "purpose": "当前首页专属材质，不合并到共享 colors；home-metal 为不透明功能台/章节外框。"
+      },
+      {
+        "name": "home-metal",
+        "value": "linear-gradient(145deg,#202b37 0%,#131d28 38%,#101822 100%)",
+        "purpose": "当前首页专属材质，不合并到共享 colors；home-metal 为不透明功能台/章节外框。"
+      },
+      {
+        "name": "light-home-glass",
+        "value": "rgba(255,253,249,.82)",
+        "purpose": "当前首页专属材质，不合并到共享 colors；home-metal 为不透明功能台/章节外框。"
+      },
+      {
+        "name": "light-home-glass-fallback",
+        "value": "#f8f6f2",
+        "purpose": "当前首页专属材质，不合并到共享 colors；home-metal 为不透明功能台/章节外框。"
+      },
+      {
+        "name": "light-home-read",
+        "value": "#faf9f6",
+        "purpose": "当前首页专属材质，不合并到共享 colors；home-metal 为不透明功能台/章节外框。"
+      },
+      {
+        "name": "light-home-edge",
+        "value": "rgba(113,103,87,.24)",
+        "purpose": "当前首页专属材质，不合并到共享 colors；home-metal 为不透明功能台/章节外框。"
+      },
+      {
+        "name": "light-home-sheen",
+        "value": "rgba(255,255,255,.85)",
+        "purpose": "当前首页专属材质，不合并到共享 colors；home-metal 为不透明功能台/章节外框。"
+      },
+      {
+        "name": "light-home-metal",
+        "value": "linear-gradient(145deg,#fffefa 0%,#f3f2ed 45%,#e9e9e4 100%)",
+        "purpose": "当前首页专属材质，不合并到共享 colors；home-metal 为不透明功能台/章节外框。"
+      }
+    ],
+    "extraction": {
+      "date": "2026-11-02",
+      "sources": [
+        "public/club-ui.css §1 / panel / button / input / section-nav / chip / §35 final overrides",
+        "public/home-showcase.css existing fonts/container/theme variables + final Precision gallery overrides",
+        "docs/design-system.md §9.5",
+        "docs/precision-gallery-2026-11/direction.md"
+      ],
+      "scope": "Shared tokens and representative primitives plus homepage material/layout description; existing values merged, historical sections retained.",
+      "validation": "Documentation/source consistency only; no rendered-page, account, device or sustained-performance acceptance in this pass.",
+      "finalEvidence": "docs/precision-gallery-2026-11/acceptance.md",
+      "evidenceStatus": "Main task writes final evidence later; path does not assert that evidence exists or acceptance passed."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "当前 §9.5 普通9px金属动作；品牌动作提光。禁用为opacity 1的inset/muted，不运行pointer脚本；宿主主题变量/当前暗色fallback。",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">保存更改</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:8px 14px;border:1px solid var(--club-line-strong, rgba(177, 196, 216, 0.34));border-radius:var(--club-radius-sm, 9px);font-family:var(--club-font, \"Inter Variable\", \"MiSans VF\", \"MiSans\", \"PingFang SC\", \"HarmonyOS Sans SC\", \"Microsoft YaHei\", system-ui, sans-serif);font-size:13px;font-weight:700;line-height:1.2;letter-spacing:.015em;text-align:center;text-decoration:none;cursor:pointer;backdrop-filter:none;-webkit-backdrop-filter:none;transition:background-color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),border-color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),box-shadow var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),transform var(--club-dur-fast, 140ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1));background-color:var(--club-accent, #3ad4e6);background-image:var(--club-grad-primary, linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0)));color:var(--club-on-accent, #04141a);border-color:color-mix(in srgb,var(--club-accent, #3ad4e6) 78%,var(--club-text, #edf2f7) 22%);box-shadow:inset 0 1px 0 var(--club-liquid-rim, rgba(224, 243, 255, 0.27)),inset 0 -1px 0 var(--club-liquid-rim-low, rgba(8, 17, 29, 0.52)),0 3px 8px rgba(0, 8, 20, 0.16);}.ds-btn-primary:is(:hover,:focus-visible):not(:disabled):not([aria-disabled=\"true\"]){background-color:var(--club-accent-strong, #7ce7f2);border-color:var(--club-accent-strong, #7ce7f2);box-shadow:var(--club-liquid-control-shadow, inset 0 1px 0 var(--club-liquid-rim, rgba(224, 243, 255, 0.27)), inset 0 -1px 0 var(--club-liquid-rim-low, rgba(8, 17, 29, 0.52)), 0 2px 4px rgba(0, 7, 18, 0.20));}.ds-btn-primary:focus-visible{outline:2px solid var(--club-accent, #3ad4e6);outline-offset:3px;box-shadow:var(--club-shadow-sm, inset 0 1px 0 var(--club-material-edge, rgba(213, 231, 248, 0.09)), 0 2px 4px rgba(0, 0, 0, 0.16), 0 8px 20px -12px rgba(0, 0, 0, 0.36));}.ds-btn-primary:active:not(:disabled):not([aria-disabled=\"true\"]){transform:translateY(1px);box-shadow:var(--club-shadow-press, inset 0 2px 3px rgba(0, 0, 0, 0.22));}.ds-btn-primary:is(:disabled,[aria-disabled=\"true\"]){background-color:var(--club-material-inset, var(--club-metal-inset, #131a22));background-image:none;border-color:var(--club-line, rgba(177, 196, 216, 0.17));color:var(--club-muted, #a5b1bf);opacity:1;cursor:not-allowed;filter:none;transform:none;box-shadow:none;}@media(pointer:coarse){.ds-btn-primary{min-width:44px;min-height:44px;}}@media(prefers-reduced-motion:reduce){.ds-btn-primary{transition-duration:.01ms;}}@media(prefers-reduced-motion:reduce),(hover:none),(pointer:coarse){.ds-btn-primary:is(:hover,:focus-visible,:active){transform:none;}}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "当前 §9.5 普通9px金属动作；次动作control/metal-control-finish。禁用为opacity 1的inset/muted，不运行pointer脚本；宿主主题变量/当前暗色fallback。",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">取消</button>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:8px 14px;border:1px solid var(--club-line-strong, rgba(177, 196, 216, 0.34));border-radius:var(--club-radius-sm, 9px);font-family:var(--club-font, \"Inter Variable\", \"MiSans VF\", \"MiSans\", \"PingFang SC\", \"HarmonyOS Sans SC\", \"Microsoft YaHei\", system-ui, sans-serif);font-size:13px;font-weight:700;line-height:1.2;letter-spacing:.015em;text-align:center;text-decoration:none;cursor:pointer;backdrop-filter:none;-webkit-backdrop-filter:none;transition:background-color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),border-color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),box-shadow var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),transform var(--club-dur-fast, 140ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1));background-color:var(--club-material-control, var(--club-metal-control, #242f3c));background-image:var(--club-metal-control-finish, linear-gradient(180deg, rgba(221, 237, 250, 0.10), rgba(221, 237, 250, 0.015) 52%, rgba(4, 12, 24, 0.12)));color:var(--club-text-soft, #cbd5df);box-shadow:var(--club-shadow-xs, inset 0 1px 0 var(--club-material-edge, rgba(213, 231, 248, 0.09)), 0 1px 2px rgba(0, 0, 0, 0.16));}@media(hover:hover) and (pointer:fine){.ds-btn-secondary:hover:not(:disabled):not([aria-disabled=\"true\"]){background-color:var(--club-material-hover, var(--club-metal-hover, #2c3a49));background-image:var(--club-metal-control-finish, linear-gradient(180deg, rgba(221, 237, 250, 0.10), rgba(221, 237, 250, 0.015) 52%, rgba(4, 12, 24, 0.12)));border-color:var(--club-line-strong, rgba(177, 196, 216, 0.34));color:var(--club-text, #edf2f7);box-shadow:var(--club-shadow-sm, inset 0 1px 0 var(--club-material-edge, rgba(213, 231, 248, 0.09)), 0 2px 4px rgba(0, 0, 0, 0.16), 0 8px 20px -12px rgba(0, 0, 0, 0.36));}}.ds-btn-secondary:focus-visible{outline:2px solid var(--club-accent, #3ad4e6);outline-offset:3px;box-shadow:var(--club-shadow-sm, inset 0 1px 0 var(--club-material-edge, rgba(213, 231, 248, 0.09)), 0 2px 4px rgba(0, 0, 0, 0.16), 0 8px 20px -12px rgba(0, 0, 0, 0.36));}.ds-btn-secondary:active:not(:disabled):not([aria-disabled=\"true\"]){transform:translateY(1px);box-shadow:var(--club-shadow-press, inset 0 2px 3px rgba(0, 0, 0, 0.22));}.ds-btn-secondary:is(:disabled,[aria-disabled=\"true\"]){background-color:var(--club-material-inset, var(--club-metal-inset, #131a22));background-image:none;border-color:var(--club-line, rgba(177, 196, 216, 0.17));color:var(--club-muted, #a5b1bf);opacity:1;cursor:not-allowed;filter:none;transform:none;box-shadow:none;}@media(pointer:coarse){.ds-btn-secondary{min-width:44px;min-height:44px;}}@media(prefers-reduced-motion:reduce){.ds-btn-secondary{transition-duration:.01ms;}}@media(prefers-reduced-motion:reduce),(hover:none),(pointer:coarse){.ds-btn-secondary:is(:hover,:focus-visible,:active){transform:none;}}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "当前 §9.5 普通9px金属动作；保留ghost语义。禁用为opacity 1的inset/muted，不运行pointer脚本；宿主主题变量/当前暗色fallback。",
+      "html": "<button class=\"ds-btn-ghost\" type=\"button\">稍后处理</button>",
+      "css": ".ds-btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:8px 14px;border:1px solid var(--club-line-strong, rgba(177, 196, 216, 0.34));border-radius:var(--club-radius-sm, 9px);font-family:var(--club-font, \"Inter Variable\", \"MiSans VF\", \"MiSans\", \"PingFang SC\", \"HarmonyOS Sans SC\", \"Microsoft YaHei\", system-ui, sans-serif);font-size:13px;font-weight:700;line-height:1.2;letter-spacing:.015em;text-align:center;text-decoration:none;cursor:pointer;backdrop-filter:none;-webkit-backdrop-filter:none;transition:background-color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),border-color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),box-shadow var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),transform var(--club-dur-fast, 140ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1));background:transparent;border-color:transparent;color:var(--club-muted, #a5b1bf);box-shadow:none;}.ds-btn-ghost:is(:hover,:focus-visible):not(:disabled):not([aria-disabled=\"true\"]){background:var(--club-material-inset, var(--club-metal-inset, #131a22));border-color:var(--club-line, rgba(177, 196, 216, 0.17));color:var(--club-text, #edf2f7);box-shadow:none;}.ds-btn-ghost:focus-visible{outline:2px solid var(--club-accent, #3ad4e6);outline-offset:3px;box-shadow:none;}.ds-btn-ghost:active:not(:disabled):not([aria-disabled=\"true\"]){transform:translateY(1px);box-shadow:var(--club-shadow-press, inset 0 2px 3px rgba(0, 0, 0, 0.22));}.ds-btn-ghost:is(:disabled,[aria-disabled=\"true\"]){background-color:var(--club-material-inset, var(--club-metal-inset, #131a22));background-image:none;border-color:var(--club-line, rgba(177, 196, 216, 0.17));color:var(--club-muted, #a5b1bf);opacity:1;cursor:not-allowed;filter:none;transform:none;box-shadow:none;}@media(pointer:coarse){.ds-btn-ghost{min-width:44px;min-height:44px;}}@media(prefers-reduced-motion:reduce){.ds-btn-ghost{transition-duration:.01ms;}}@media(prefers-reduced-motion:reduce),(hover:none),(pointer:coarse){.ds-btn-ghost:is(:hover,:focus-visible,:active){transform:none;}}"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "当前 §9.5 普通9px金属动作；保留danger语义。禁用为opacity 1的inset/muted，不运行pointer脚本；宿主主题变量/当前暗色fallback。",
+      "html": "<button class=\"ds-btn-danger\" type=\"button\">删除条目</button>",
+      "css": ".ds-btn-danger{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:8px 14px;border:1px solid var(--club-line-strong, rgba(177, 196, 216, 0.34));border-radius:var(--club-radius-sm, 9px);font-family:var(--club-font, \"Inter Variable\", \"MiSans VF\", \"MiSans\", \"PingFang SC\", \"HarmonyOS Sans SC\", \"Microsoft YaHei\", system-ui, sans-serif);font-size:13px;font-weight:700;line-height:1.2;letter-spacing:.015em;text-align:center;text-decoration:none;cursor:pointer;backdrop-filter:none;-webkit-backdrop-filter:none;transition:background-color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),border-color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),box-shadow var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),transform var(--club-dur-fast, 140ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1));background:var(--club-danger-soft, rgba(255, 128, 149, 0.12));border-color:color-mix(in srgb,var(--club-danger, #ff8095) 55%,transparent);color:var(--club-danger, #ff8095);box-shadow:inset 0 1px 0 var(--club-material-edge, rgba(213, 231, 248, 0.09));}.ds-btn-danger:is(:hover,:focus-visible):not(:disabled):not([aria-disabled=\"true\"]){background:var(--club-danger-soft, rgba(255, 128, 149, 0.12));border-color:var(--club-danger, #ff8095);color:var(--club-danger, #ff8095);}.ds-btn-danger:focus-visible{outline:2px solid var(--club-accent, #3ad4e6);outline-offset:3px;box-shadow:var(--club-shadow-sm, inset 0 1px 0 var(--club-material-edge, rgba(213, 231, 248, 0.09)), 0 2px 4px rgba(0, 0, 0, 0.16), 0 8px 20px -12px rgba(0, 0, 0, 0.36));}.ds-btn-danger:active:not(:disabled):not([aria-disabled=\"true\"]){transform:translateY(1px);box-shadow:var(--club-shadow-press, inset 0 2px 3px rgba(0, 0, 0, 0.22));}.ds-btn-danger:is(:disabled,[aria-disabled=\"true\"]){background-color:var(--club-material-inset, var(--club-metal-inset, #131a22));background-image:none;border-color:var(--club-line, rgba(177, 196, 216, 0.17));color:var(--club-muted, #a5b1bf);opacity:1;cursor:not-allowed;filter:none;transform:none;box-shadow:none;}@media(pointer:coarse){.ds-btn-danger{min-width:44px;min-height:44px;}}@media(prefers-reduced-motion:reduce){.ds-btn-danger{transition-duration:.01ms;}}@media(prefers-reduced-motion:reduce),(hover:none),(pointer:coarse){.ds-btn-danger:is(:hover,:focus-visible,:active){transform:none;}}"
+    },
+    {
+      "name": "Labeled Text Input",
+      "kind": "input",
+      "refersTo": "input-text",
+      "description": "当前 opaque control/inset 输入；focus read/ring，placeholder opacity 1，disabled opacity 1的inset/muted；保留真实label关联。",
+      "html": "<label class=\"ds-field\"><span class=\"ds-label\">显示名称</span><input class=\"ds-input\" type=\"text\" placeholder=\"输入名称\" autocomplete=\"off\"></label>",
+      "css": ".ds-field { display:grid; gap:6px; min-width:0; font-family:var(--club-font, \"Inter Variable\", \"MiSans VF\", \"MiSans\", \"PingFang SC\", \"HarmonyOS Sans SC\", \"Microsoft YaHei\", system-ui, sans-serif); } .ds-label { display:block; color:var(--club-text-soft, #cbd5df); font-size:var(--club-fs-sm, 13px); font-weight:600; letter-spacing:.01em; } .ds-input { width:100%; min-width:0; min-height:40px; padding:9px 12px; border:1px solid var(--club-line, rgba(177, 196, 216, 0.17)); border-radius:var(--club-radius-sm, 9px); background:var(--club-material-control, #242f3c); color:var(--club-text, #edf2f7); font-family:var(--club-font, \"Inter Variable\", \"MiSans VF\", \"MiSans\", \"PingFang SC\", \"HarmonyOS Sans SC\", \"Microsoft YaHei\", system-ui, sans-serif); font-size:var(--club-fs-md, 14px); line-height:1.5; caret-color:var(--club-accent, #3ad4e6); box-shadow:var(--club-shadow-inset, inset 0 1px 3px rgba(0, 0, 0, 0.24), 0 1px 0 var(--club-material-edge, rgba(213, 231, 248, 0.09))); transition:border-color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)), box-shadow var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)), background var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)); } .ds-input::placeholder { color:var(--club-muted, #a5b1bf); opacity:1; } .ds-input:hover:not(:disabled):not([readonly]):not(:focus) { border-color:var(--club-line-strong, rgba(177, 196, 216, 0.34)); } .ds-input:focus { border-color:var(--club-accent, #3ad4e6); background:var(--club-material-read, var(--club-metal-read, var(--club-surface, #191f26))); box-shadow:var(--club-shadow-inset, inset 0 1px 3px rgba(0, 0, 0, 0.24), 0 1px 0 var(--club-material-edge, rgba(213, 231, 248, 0.09))), var(--club-ring, 0 0 0 3px var(--club-accent-soft, rgba(58, 212, 230, 0.12))); } .ds-input:focus-visible { outline:2px solid var(--club-accent, #3ad4e6); outline-offset:2px; } .ds-input[readonly] { background:var(--club-surface-3, #2a3441); color:var(--club-muted, #a5b1bf); } .ds-input:disabled { opacity:1; cursor:not-allowed; background:var(--club-material-inset, var(--club-metal-inset, #131a22)); border-color:var(--club-line, rgba(177, 196, 216, 0.17)); color:var(--club-muted, #a5b1bf); box-shadow:none; } @media(pointer:coarse) { .ds-input { min-height:44px; } } @media(prefers-reduced-motion:reduce) { .ds-input { transition-duration:.01ms; } }"
+    },
+    {
+      "name": "Section Navigation",
+      "kind": "nav",
+      "refersTo": "nav-section",
+      "description": "当前连续章节chrome；material-filter条件启用，未标记链接accent-soft选中；静态fallback不擅自启用blur。",
+      "html": "<nav class=\"ds-section-nav\" aria-label=\"示例章节导航\"><a class=\"ds-section-link\" href=\"#ds-section-overview\" aria-current=\"location\">概览</a><a class=\"ds-section-link\" href=\"#ds-section-details\">详情</a></nav><section class=\"ds-section-target\" id=\"ds-section-overview\" aria-label=\"概览\">章节概览</section><section class=\"ds-section-target\" id=\"ds-section-details\" aria-label=\"详情\">章节详情</section>",
+      "css": ".ds-section-nav { display:flex; gap:6px; padding:6px; margin:0 0 18px; border:1px solid var(--club-line, rgba(177, 196, 216, 0.17)); border-radius:var(--club-radius-pill, 999px); background:var(--club-material-chrome, var(--club-material-glass-fallback, #191f26)); backdrop-filter:var(--club-material-filter, none); -webkit-backdrop-filter:var(--club-material-filter, none); overflow-x:auto; scrollbar-width:none; font-family:var(--club-font, \"Inter Variable\", \"MiSans VF\", \"MiSans\", \"PingFang SC\", \"HarmonyOS Sans SC\", \"Microsoft YaHei\", system-ui, sans-serif); } .ds-section-nav::-webkit-scrollbar { display:none; } .ds-section-link { flex:0 0 auto; padding:7px 13px; border-radius:var(--club-radius-pill, 999px); color:var(--club-muted, #a5b1bf); font-size:12.5px; font-weight:600; line-height:1.1; white-space:nowrap; text-decoration:none; transition:background var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)), color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)); } .ds-section-link:hover { background:var(--club-surface-2, #202833); color:var(--club-text, #edf2f7); } .ds-section-link[aria-current] { background:var(--club-accent-soft, rgba(58, 212, 230, 0.12)); color:var(--club-accent, #3ad4e6); } .ds-section-link:focus-visible { outline:2px solid var(--club-accent, #3ad4e6); outline-offset:2px; } .ds-section-link:active { transform:translateY(1px); } .ds-section-target { margin:8px 0; color:var(--club-text-soft, #cbd5df); font-family:var(--club-font, \"Inter Variable\", \"MiSans VF\", \"MiSans\", \"PingFang SC\", \"HarmonyOS Sans SC\", \"Microsoft YaHei\", system-ui, sans-serif); font-size:var(--club-fs-base, 15px); line-height:var(--club-lh-body, 1.65); } @media(pointer:coarse) { .ds-section-link { display:inline-flex; align-items:center; min-width:44px; min-height:44px; } } @media(prefers-reduced-motion:reduce) { .ds-section-link { transition-duration:.01ms; } } @media(prefers-reduced-transparency:reduce) { .ds-section-nav { background:var(--club-material-glass-fallback, #191f26); backdrop-filter:none; -webkit-backdrop-filter:none; } } .ds-section-nav { box-shadow:var(--club-shadow-sm, inset 0 1px 0 var(--club-material-edge, rgba(213, 231, 248, 0.09)), 0 2px 4px rgba(0, 0, 0, 0.16), 0 8px 20px -12px rgba(0, 0, 0, 0.36)); } .ds-section-nav { border-color:var(--club-liquid-line, rgba(151, 192, 218, 0.23)); background-image:var(--club-liquid-wash, linear-gradient(155deg, rgba(188, 220, 244, 0.11), rgba(188, 220, 244, 0) 38%, rgba(58, 212, 230, 0.025) 100%)); box-shadow:var(--club-liquid-control-shadow, inset 0 1px 0 var(--club-liquid-rim, rgba(224, 243, 255, 0.27)), inset 0 -1px 0 var(--club-liquid-rim-low, rgba(8, 17, 29, 0.52)), 0 2px 4px rgba(0, 7, 18, 0.20)); }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "当前未标记chip基类：surface-2、650、pill/1.1；标记后700/metal-control/选中accent为生产覆盖，不冒充本预览。",
+      "html": "<button class=\"ds-chip\" type=\"button\">全部活动</button>",
+      "css": ".ds-chip { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border:1px solid var(--club-line, rgba(177, 196, 216, 0.17)); border-radius:var(--club-radius-pill, 999px); background:var(--club-surface-2, #202833); color:var(--club-muted, #a5b1bf); font-family:var(--club-font, \"Inter Variable\", \"MiSans VF\", \"MiSans\", \"PingFang SC\", \"HarmonyOS Sans SC\", \"Microsoft YaHei\", system-ui, sans-serif); font-size:var(--club-fs-sm, 13px); font-weight:650; line-height:1.1; cursor:pointer; transition:border-color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)), color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)), transform var(--club-dur-fast, 140ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)); } .ds-chip:hover:not(:disabled) { border-color:var(--club-accent-line, rgba(58, 212, 230, 0.40)); color:var(--club-text, #edf2f7); } .ds-chip:active:not(:disabled) { transform:translateY(1px); } .ds-chip:focus-visible { outline:2px solid var(--club-accent, #3ad4e6); outline-offset:2px; } @media(pointer:coarse) { .ds-chip { min-width:44px; min-height:44px; } } @media(prefers-reduced-motion:reduce) { .ds-chip { transition-duration:.01ms; } }"
+    },
+    {
+      "name": "Entry Card",
+      "kind": "card",
+      "refersTo": "card-entry",
+      "description": "当前未标记基础入口：14px opaque raised/metal-finish/shadow-sm，18px基础padding（explore路由20px）；无tracker/blur。",
+      "html": "<a class=\"ds-entry-card\" href=\"#ds-entry-description\"><strong class=\"ds-entry-title\">算法实验室</strong><p class=\"ds-entry-copy\">通过交互探索算法步骤与数据结构。</p><span class=\"ds-entry-action\">探索实验</span></a><p class=\"ds-entry-caption\" id=\"ds-entry-description\">入口卡片样式示例</p>",
+      "css": ".ds-entry-card{display:flex;flex-direction:column;justify-content:space-between;min-height:132px;padding:18px;border:1px solid var(--club-line, rgba(177, 196, 216, 0.17));border-radius:var(--club-radius, 14px);background-color:var(--club-material-raised, var(--club-metal-raised, #232e3b));background-image:var(--club-metal-finish, linear-gradient(112deg, rgba(210, 228, 245, 0.07), rgba(210, 228, 245, 0.015) 34%, rgba(5, 12, 22, 0.06) 72%, rgba(210, 228, 245, 0.025)));color:var(--club-text, #edf2f7);font-family:var(--club-font, \"Inter Variable\", \"MiSans VF\", \"MiSans\", \"PingFang SC\", \"HarmonyOS Sans SC\", \"Microsoft YaHei\", system-ui, sans-serif);line-height:var(--club-lh-body, 1.65);text-decoration:none;box-shadow:var(--club-shadow-sm, inset 0 1px 0 var(--club-material-edge, rgba(213, 231, 248, 0.09)), 0 2px 4px rgba(0, 0, 0, 0.16), 0 8px 20px -12px rgba(0, 0, 0, 0.36));backdrop-filter:none;-webkit-backdrop-filter:none;transition:background-color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),border-color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),color var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),box-shadow var(--club-dur, 200ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)),transform var(--club-dur-fast, 140ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1));}.ds-entry-card:focus-visible{outline:2px solid var(--club-accent, #3ad4e6);outline-offset:3px;transform:translateY(-2px);border-color:var(--club-accent-line, rgba(58, 212, 230, 0.40));background-color:var(--club-material-hover, var(--club-metal-hover, #2c3a49));box-shadow:var(--club-shadow-hover, inset 0 1px 0 var(--club-material-edge-strong, rgba(213, 231, 248, 0.15)), 0 4px 10px rgba(0, 0, 0, 0.22), 0 20px 40px -16px rgba(0, 0, 0, 0.52));}@media(hover:hover) and (pointer:fine){.ds-entry-card:hover{transform:translateY(-1px);border-color:var(--club-line-strong, rgba(177, 196, 216, 0.34));background-color:var(--club-material-hover, var(--club-metal-hover, #2c3a49));box-shadow:var(--club-shadow-hover, inset 0 1px 0 var(--club-material-edge-strong, rgba(213, 231, 248, 0.15)), 0 4px 10px rgba(0, 0, 0, 0.22), 0 20px 40px -16px rgba(0, 0, 0, 0.52));}}.ds-entry-card:active{transform:translateY(0);box-shadow:var(--club-shadow-press, inset 0 2px 3px rgba(0, 0, 0, 0.22));}.ds-entry-title{display:block;font-size:16px;font-weight:700;}.ds-entry-copy{margin:6px 0 0;color:var(--club-muted, #a5b1bf);font-size:13px;line-height:1.6;}.ds-entry-action{margin-top:14px;color:var(--club-accent, #3ad4e6);font-size:12.5px;font-weight:650;}.ds-entry-caption{margin:8px 0 0;color:var(--club-muted, #a5b1bf);font-family:var(--club-font, \"Inter Variable\", \"MiSans VF\", \"MiSans\", \"PingFang SC\", \"HarmonyOS Sans SC\", \"Microsoft YaHei\", system-ui, sans-serif);font-size:var(--club-fs-xs, 12px);}@media(prefers-reduced-motion:reduce){.ds-entry-card{transition-duration:.01ms;}}@media(prefers-reduced-motion:reduce),(hover:none),(pointer:coarse){.ds-entry-card:is(:hover,:focus-visible,:active){transform:none;}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Precision Gallery 算法精密展馆",
+    "overview": "让原品牌、数学场景与真实算法成为展品。默认冷炭金属，亮色暖中性；阅读、任务与入口用不透明加工金属承托，登录外壳、精选展品与浮动 chrome 才用局部玻璃。保留现有字体、内容、目的地与业务，不以统一玻璃卡片墙代替信息层级。\n\n首页上半部是品牌与既有数学场景，下半部由内容网格背后的金属功能台承托原介绍与 CTA；原 DOM 和阅读顺序保留。实力是计算展桌，作品有主副展位，成员有主位，项目与活动采用条目和时间线，加入区区分说明与行动。旧全宽一体玻璃 Hero 已归入历史。\n\n**快照性质与来源**：[docs/design-system.md §9.5](docs/design-system.md#95-precision-gallery-当前约定) 是当前说明；[club-ui.css](public/club-ui.css) §1/§35 是共享代码真源，[home-showcase.css](public/home-showcase.css) 末尾覆盖定义首页。YAML 与侧车是成对刷新的描述性提取，不构成第二套运行时令牌。本次仅做文档/源码一致性检查，不重跑浏览器、真实账号或性能验收；最终证据由主任务写入 [precision-gallery acceptance](docs/precision-gallery-2026-11/acceptance.md)，该链接不代表记录已写入或本轮已通过，不继承旧轮次计数。",
+    "keyCharacteristics": [
+      "默认冷暗金属、亮色暖中性，沿用 Inter Variable、MiSans VF 与 JetBrains Mono。",
+      "普通阅读、工作面板和入口不透明；玻璃仅用于登录外壳、精选展品与浮动 chrome。",
+      "品牌与场景在上、内容网格背后的金属功能台在下，保留原 DOM、文案与 CTA 顺序。",
+      "实力、作品、成员、项目、活动与加入各有层级，不复用同规格玻璃卡片模板。",
+      "指针标记不授权 blur；嵌套/阅读/控件不重复采样，最终验收与文档提取分开。"
+    ],
+    "rules": [
+      {
+        "name": "The Material Role Rule",
+        "body": "普通阅读、工作面板、入口和控件使用不透明金属；只有明确的登录外壳、精选展品与浮动 chrome 可采样背景。club-liquid-surface 是光照标记，不是玻璃授权；高光不能替代语义状态或边界。",
+        "section": "colors"
+      },
+      {
+        "name": "The Chapter Hierarchy Rule",
+        "body": "实力用计算展桌，作品分主副展位，成员有主位，项目用条目、活动用时间线，加入区分说明与行动；不得把不同内容统一成同规格玻璃卡片墙。",
+        "section": "layout"
+      },
+      {
+        "name": "The Glass Budget Rule",
+        "body": "共享 club-auth-shell/featured-lab/premium-exhibit 在支持时使用 16px blur / saturate(1.3)，原 chrome 为 10px/1.12；首页实力展桌单独为 12px/1.12。普通金属面板即使标记光照也无 blur，控件与密集阅读内部不采样，嵌套不得增加第二层；无支持或 reduced-transparency 使用不透明 fallback。独立 island 不据此声称统一或通过验收。",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do 从当前 CSS 最终级联与 §9.5 成对刷新快照和侧车。",
+      "Do 保留品牌字体、原 DOM、文案、目的地、CTA 顺序和双主题。",
+      "Do 让普通阅读/工作面板/入口保持不透明金属，仅明确展品与 chrome 使用单层玻璃。",
+      "Do 为不同章节保留主次构图，保留可见键盘焦点、禁用态和减少偏好回退。",
+      "Do 将文档提取与最终实测分开，只引用本轮 precision-gallery 验收实际记录的证据。"
+    ],
+    "donts": [
+      "Don't 将快照、侧车或历史章节当作独立令牌真源。",
+      "Don't 用 club-liquid-surface 授权普通面板 blur，或给控件/阅读内部重复采样。",
+      "Don't 恢复全宽一体玻璃 Hero、同规格玻璃卡片墙或渐变文字。",
+      "Don't 改变原 ScrollBus/场景所有权、模型、训练、积分、权限或游戏几何。",
+      "Don't 用文档、静态预览、旧计数或旧验收宣称本轮全站完成。"
+    ]
+  }
+}

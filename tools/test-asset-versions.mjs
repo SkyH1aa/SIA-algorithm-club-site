@@ -29,6 +29,8 @@ for (const [name, digest] of Object.entries(hashes)) {
 const htmlFiles = [
   path.join(root, 'index.html'),
   path.join(root, '404.html'),
+  path.join(root, 'bad-gateway.html'),
+  path.join(root, 'service-unavailable.html'),
   ...(await readdir(publicDir)).filter(name => name.endsWith('.html')).map(name => path.join(publicDir, name)),
   ...['俄罗斯方块.html', '俄罗斯方块AI.html', '贪吃蛇.html', '贪吃蛇专家系统.html']
     .map(name => path.join(root, name))
@@ -41,12 +43,11 @@ for (const file of htmlFiles) {
   for (const match of source.matchAll(/<script\b[^>]*\bsrc="([^"]+)"[^>]*>/g)) {
     const url = match[1];
     if (/^https?:/i.test(url)) continue;
-    const base = url.split('?')[0].replace(/^\.\//, '').replace(/^public\//, '').split('/').pop();
-    if (base === 'supabase.min.js') {
-      const expected = hashes['vendor/supabase/supabase.min.js'];
-      assert.match(url, new RegExp(`[?&]v=${expected}$`), `${path.relative(root, file)} supabase version`);
-      checked++;
-    }
+    const base = url.split('?')[0].replace(/^\.\//, '').replace(/^public\//, '');
+    const name = Object.keys(hashes).find(item => item === base || path.basename(item) === path.basename(base));
+    if (!name) continue;
+    assert.match(url, new RegExp(`[?&]v=${hashes[name]}$`), `${path.relative(root, file)} ${name} version`);
+    checked++;
   }
   for (const match of source.matchAll(/<link\b[^>]*\bhref="([^"]+\.css[^"]*)"/g)) {
     const url = match[1];

@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.adminHub.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -10,10 +10,10 @@
   <title>管理员总览 · 算法社</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>
   <style>
     /* 本页专用：内联样式收敛后的版式类，全部使用 club 令牌，亮暗主题自适应 */
     body.club-page .list-gap { margin-top: 16px; }
@@ -25,22 +25,39 @@
     body.club-page .panel-divider { margin: 22px 0 18px; border: 0; border-top: 1px solid var(--club-line); }
     /* 管理入口卡片：描述行数不一，统一两行截断保持卡片等高节奏 */
     body.club-page #entryGrid .card p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  </style>
+
+    body.club-page.gallery-admin #content > .premium-head { padding-bottom: var(--club-space-6); margin-bottom: var(--club-space-5); border-bottom: 1px solid var(--club-line-strong); align-items: start; }
+    body.club-page.gallery-admin .club-profile-banner { padding: var(--club-space-4) 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+    body.club-page.gallery-admin #statsSection { gap: 0; margin-block: var(--club-space-4) var(--club-space-7); padding-block: var(--club-space-4); border-block: 1px solid var(--club-line); }
+    body.club-page.gallery-admin .stat { padding: var(--club-space-3) var(--club-space-4); border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+    body.club-page.gallery-admin .stat strong { font-size: var(--club-fs-xl); font-variant-numeric: tabular-nums; }
+    body.club-page.gallery-admin #entrySection { padding: 0; border: 0; background: transparent; box-shadow: none; }
+    body.club-page.gallery-admin #entryGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--club-space-6); }
+    body.club-page.gallery-admin #entryGrid .card { padding: var(--club-space-5) 0; border: 0; border-top: 1px solid var(--club-line); border-radius: 0; background: transparent; box-shadow: none; transform: none; }
+    body.club-page.gallery-admin #entryGrid .card p { display: block; overflow: visible; max-width: 60ch; line-height: var(--club-lh-body); }
+    body.club-page.gallery-admin #entryGrid .card:hover { background: var(--club-material-hover); }
+    body.club-page.gallery-admin .tools-head { padding-block: var(--club-space-5); border-top: 1px solid var(--club-line-strong); margin-top: var(--club-space-7); }
+    body.club-page.gallery-admin #superToolsSection > .panel { padding: var(--club-space-6); margin-top: var(--club-space-5); background: var(--club-material-read); }
+    body.club-page.gallery-admin .form { padding: var(--club-space-5); background: var(--club-material-inset); border: 1px solid var(--club-line); border-radius: var(--club-radius-sm); box-shadow: none; }
+    body.club-page.gallery-admin .intro { max-width: 68ch; }
+    @media (max-width: 640px) { body.club-page.gallery-admin #entryGrid { grid-template-columns: 1fr; } body.club-page.gallery-admin #superToolsSection > .panel { padding: var(--club-space-5); } }
+
+</style>
 </head>
-<body class="club-page">
+<body class="club-page gallery-admin">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Admin Hub</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
   <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div>
-  <main>
-    <section id="gate" class="panel gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.loginFirst">请先登录管理账号</strong><p data-i18n="admin.gateLead">管理员总览对超管，以及被授予任一管理权限的账号开放。</p><p id="fileLoginHint" class="hint" hidden data-i18n="admin.fileLoginHint">当前用本地文件（file://）打开。浏览器会按来源隔离登录态，请在本页打开的个人中心里登录一次，之后各模块即可复用。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
-    <section id="denied" class="panel denied hidden"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.noPerm">无管理权限</strong><p data-i18n="admin.deniedLead">当前账号没有可管理的模块。请联系现任超管开通对应权限。</p><a class="button" href="member-center.html" data-i18n="common.backMember">返回个人中心</a></div></section>
+  <main class="premium-workspace">
+    <section id="gate" class="panel gate premium-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.loginFirst">请先登录管理账号</strong><p data-i18n="admin.gateLead">管理员总览对超管，以及被授予任一管理权限的账号开放。</p><p id="fileLoginHint" class="hint" hidden data-i18n="admin.fileLoginHint">当前用本地文件（file://）打开。浏览器会按来源隔离登录态，请在本页打开的个人中心里登录一次，之后各模块即可复用。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+    <section id="denied" class="panel denied hidden premium-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.noPerm">无管理权限</strong><p data-i18n="admin.deniedLead">当前账号没有可管理的模块。请联系现任超管开通对应权限。</p><a class="button" href="member-center.html" data-i18n="common.backMember">返回个人中心</a></div></section>
     <div id="content" class="hidden">
-      <section class="club-page-head">
+      <section class="club-page-head premium-head">
         <div>
-          <p class="eyebrow">ADMIN OVERVIEW</p>
           <h1 data-i18n="pages.adminHub.h1">管理员总览</h1>
           <p class="lead" data-i18n="admin.hubLead">按权限显示可用管理入口。密码重置、直接改密、姓名班级绑定编辑、权限分配、超管交接仅现任超管可用。</p>
+          <p class="premium-meta">ADMIN OVERVIEW</p>
         </div>
-        <div class="club-head-actions">
+        <div class="club-head-actions premium-toolbar">
           <button class="button secondary" id="refreshButton" type="button" data-i18n="admin.refreshOverview">刷新概览</button>
         </div>
       </section>
@@ -53,7 +70,7 @@
         </div>
       </section>
 
-      <section class="stats" id="statsSection">
+      <section class="stats premium-metrics" id="statsSection">
         <div class="stat" data-stat="bindings"><small data-i18n="admin.statBoundReg">已绑定 / 注册</small><strong id="statBindings">--</strong></div>
         <div class="stat" data-stat="resets"><small data-i18n="admin.statPendingResets">待处理重置</small><strong id="statPendingResets">--</strong></div>
         <div class="stat" data-stat="checkin"><small data-i18n="admin.statCodes">签到码</small><strong id="statCodes">--</strong></div>
@@ -62,12 +79,12 @@
       </section>
 
       <section class="panel section" id="entrySection">
-        <div class="section-head"><div><h2 data-i18n="admin.panel">管理面板入口</h2><p class="intro" data-i18n="admin.panelIntro">只显示你当前拥有的管理权限对应入口。</p></div></div>
+        <div class="section-head premium-section-head"><div><h2 data-i18n="admin.panel">管理面板入口</h2><p class="intro" data-i18n="admin.panelIntro">只显示你当前拥有的管理权限对应入口。</p></div></div>
         <div class="grid" id="entryGrid"></div>
       </section>
 
       <section id="superToolsSection">
-        <div class="section-head tools-head">
+        <div class="section-head tools-head premium-section-head">
           <div>
             <h2 data-i18n="admin.superToolsTitle">超管工具</h2>
             <p class="intro" data-i18n="admin.superToolsIntro">账号、权限与站点配置集中在这里，按需切换即可，不再一次铺满整页。</p>
@@ -83,14 +100,14 @@
         </div>
 
       <section class="panel section" id="superAdminsSection">
-        <div class="section-head">
+        <div class="section-head premium-section-head">
           <div>
             <h2 data-i18n="admin.superTitle">超管交接</h2>
             <p class="intro" data-i18n="admin.superIntro">仅现任超管可见。可把指定账号升级为同级超管，也可撤销他人超管权限；不能撤销自己，且至少保留 1 名超管。</p>
           </div>
           <button class="button secondary" id="refreshSuperAdminsButton" type="button" data-i18n="admin.refreshSuper">刷新超管名单</button>
         </div>
-        <form class="form inline" id="superAdminForm">
+        <form class="form inline premium-form" id="superAdminForm">
           <div>
             <label class="label" for="superAdminUsername" data-i18n="admin.username">账号名</label>
             <input class="input" id="superAdminUsername" maxlength="40" required placeholder="例如 aabbcc" data-i18n-placeholder="admin.phUsername">
@@ -106,13 +123,13 @@
       </section>
 
       <section class="panel section" id="permissionsSection">
-        <div class="section-head">
+        <div class="section-head premium-section-head">
           <div>
             <h2 data-i18n="admin.permTitle">权限下放</h2>
             <p class="intro" data-i18n="admin.permIntro">仅超管可给其他账号选择性开启：签到管理、积分管理、留言箱管理、邀请码管理、活动和公告内容管理、积分商城管理、成员展示管理、报名管理。</p>
           </div>
         </div>
-        <form class="form perm" id="permissionForm">
+        <form class="form perm premium-form" id="permissionForm">
           <div>
             <label class="label" for="permUsername" data-i18n="admin.username">账号名</label>
             <input class="input" id="permUsername" maxlength="40" required placeholder="例如 aabbcc" data-i18n-placeholder="admin.phUsername">
@@ -139,8 +156,8 @@
       </section>
 
       <section class="panel section" id="siteServiceSection">
-        <div class="section-head"><div><h2 data-i18n="admin.siteServiceTitle">网站服务运行开关</h2><p class="intro" data-i18n="admin.siteServiceIntro">仅超管可用。暂停后所有网站页面将显示不可用提示。</p></div></div>
-        <form class="form" id="siteServiceForm">
+        <div class="section-head premium-section-head"><div><h2 data-i18n="admin.siteServiceTitle">网站服务运行开关</h2><p class="intro" data-i18n="admin.siteServiceIntro">仅超管可用。暂停后所有网站页面将显示不可用提示。</p></div></div>
+        <form class="form premium-form" id="siteServiceForm">
           <label class="label"><input type="checkbox" id="siteServiceEnabled" checked> <span data-i18n="admin.siteServiceRunning">网站服务运行中</span></label>
           <label class="label"><input type="checkbox" id="siteRandomEnabled"> <span data-i18n="admin.siteRandomEnabled">随机展示提示词</span></label>
           <label class="label"><span data-i18n="admin.siteDisplayMode">关闭时的方式</span>
@@ -164,8 +181,8 @@
       </section>
 
       <section class="panel section" id="errorPagesSection">
-        <div class="section-head"><div><h2 data-i18n="admin.errorPagesTitle">故障页内容（502 / 503 / 404）</h2><p class="intro" data-i18n="admin.errorPagesIntro">仅超管可编辑。页面结构固定，这里只能改文案与 Markdown 正文，不能注入脚本。留空则使用页面内置默认值。</p></div></div>
-        <form class="form" id="errorPageForm">
+        <div class="section-head premium-section-head"><div><h2 data-i18n="admin.errorPagesTitle">故障页内容（502 / 503 / 404）</h2><p class="intro" data-i18n="admin.errorPagesIntro">仅超管可编辑。页面结构固定，这里只能改文案与 Markdown 正文，不能注入脚本。留空则使用页面内置默认值。</p></div></div>
+        <form class="form premium-form" id="errorPageForm">
           <label class="label"><span data-i18n="admin.errorPagePick">选择页面</span>
             <select class="input" id="errorPageCode">
               <option value="503">503 · 服务暂停</option>
@@ -182,7 +199,7 @@
           <label class="label"><span data-i18n="admin.errorPageActionLabelZh">主按钮文案（中文，留空=默认）</span><input class="input" id="errActionLabelZh" maxlength="80"></label>
           <label class="label"><span data-i18n="admin.errorPageActionLabelEn">Primary button label (EN, blank = default)</span><input class="input" id="errActionLabelEn" maxlength="80"></label>
           <label class="label"><span data-i18n="admin.errorPageActionHref">主按钮链接（留空=默认；仅站内或 http(s)）</span><input class="input" id="errActionHref" maxlength="500" placeholder="index.html"></label>
-          <div class="form-actions">
+          <div class="form-actions premium-toolbar">
             <button class="button" type="submit" data-i18n="common.save">保存</button>
             <button class="button secondary" type="button" id="errorPageReset" data-i18n="admin.errorPageReset">恢复默认</button>
           </div>
@@ -191,22 +208,22 @@
       </section>
 
       <section class="panel section" id="appMonitorReleasesSection">
-        <div class="section-head"><div><h2 data-i18n="admin.appmonitorReleasesTitle">APPMonitor 版本发布</h2><p class="intro" data-i18n="admin.appmonitorReleasesIntro">仅超管可编辑。V7.0 及更早版本保留在发布页中；在这里管理 V7.5 及之后的版本。</p></div></div>
-        <form class="form" id="appMonitorReleaseForm">
+        <div class="section-head premium-section-head"><div><h2 data-i18n="admin.appmonitorReleasesTitle">APPMonitor 版本发布</h2><p class="intro" data-i18n="admin.appmonitorReleasesIntro">仅超管可编辑。V7.0 及更早版本保留在发布页中；在这里管理 V7.5 及之后的版本。</p></div></div>
+        <form class="form premium-form" id="appMonitorReleaseForm">
           <input type="hidden" id="appMonitorReleaseId">
           <label class="label"><span data-i18n="admin.appmonitorVersion">版本号</span><input class="input" id="appMonitorVersion" maxlength="40" required placeholder="V7.5"></label>
           <label class="label"><span data-i18n="admin.appmonitorDate">发布日期</span><input class="input" id="appMonitorReleaseDate" type="date" required></label>
           <label class="label"><span data-i18n="admin.appmonitorIntroZh">中文简介</span><textarea class="input" id="appMonitorIntroZh" maxlength="5000" rows="5" required></textarea></label>
           <label class="label"><span data-i18n="admin.appmonitorIntroEn">English description</span><textarea class="input" id="appMonitorIntroEn" maxlength="5000" rows="5" required></textarea></label>
           <label class="label"><span data-i18n="admin.appmonitorDownloadUrl">下载链接</span><input class="input" id="appMonitorDownloadUrl" type="url" maxlength="1000" required placeholder="https://..."></label>
-          <div class="actions"><button class="button" type="submit" data-i18n="admin.appmonitorSaveRelease">保存版本</button><button class="button secondary" type="button" id="appMonitorReleaseClear" data-i18n="common.clearForm">清空表单</button></div>
+          <div class="actions premium-toolbar"><button class="button" type="submit" data-i18n="admin.appmonitorSaveRelease">保存版本</button><button class="button secondary" type="button" id="appMonitorReleaseClear" data-i18n="common.clearForm">清空表单</button></div>
         </form>
         <p class="message" id="appMonitorReleaseMessage" role="status"></p>
         <div class="table-wrap list-gap" id="appMonitorReleasesList"></div>
       </section>
 
       <section class="panel section" id="resetsSection">
-        <div class="section-head">
+        <div class="section-head premium-section-head">
           <div>
             <h2 data-i18n="admin.resetsTitle">密码重置申请</h2>
             <p class="intro" data-i18n="admin.resetsIntro">社员提交申请后，超管生成与账号唯一对应的秘钥。秘钥自生成起 24 小时内有效，仅显示一次，请线下告知申请者。</p>
@@ -217,13 +234,13 @@
         <p class="message" id="resetsMessage" role="status"></p>
 
         <hr class="panel-divider">
-        <div class="section-head">
+        <div class="section-head premium-section-head">
           <div>
             <h2 data-i18n="admin.directTitle">直接修改账号密码</h2>
             <p class="intro" data-i18n="admin.directIntro">不删用户、不清数据。输入账号和新密码后，立即覆盖该账号密码；同时作废该账号未使用的重置申请。</p>
           </div>
         </div>
-        <form class="form inline" id="directResetForm">
+        <form class="form inline premium-form" id="directResetForm">
           <div>
             <label class="label" for="directUsername" data-i18n="admin.username">账号名</label>
             <input class="input" id="directUsername" maxlength="40" required placeholder="例如 aabbcc" data-i18n-placeholder="admin.phUsername">
@@ -239,13 +256,13 @@
       </section>
 
       <section class="panel section" id="bindingsSection">
-        <div class="section-head">
+        <div class="section-head premium-section-head">
           <div>
             <h2 data-i18n="admin.bindingsTitle">姓名 · 班级 · 账号绑定</h2>
             <p class="intro" data-i18n="admin.bindingsIntro">仅超管可见。这里列出全部已注册账号；未绑定中文姓名和班级时显示「未绑定」。超管可直接编辑任意账号的绑定资料。</p>
           </div>
         </div>
-        <form class="form perm" id="bindingForm">
+        <form class="form perm premium-form" id="bindingForm">
           <div>
             <label class="label" for="bindingUsername" data-i18n="admin.loginAccount">登录账号</label>
             <input class="input" id="bindingUsername" maxlength="40" required placeholder="例如 aabbcc" readonly data-i18n-placeholder="admin.phUsername">
@@ -1160,6 +1177,7 @@
     supabaseClient.auth.onAuthStateChange((_event, session) => { void updateSession(session); });
     supabaseClient.auth.getSession().then(({ data: { session } }) => updateSession(session));
   </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

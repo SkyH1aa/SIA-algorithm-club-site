@@ -6,14 +6,14 @@
   <meta name="description" content="算法社站内搜索：社员、公告、活动、积分商城商品一站查找。">
   <title>站内搜索 · 算法社</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
-  <script src="i18n-dict.js?v=f75071ae"></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script>
   <script src="i18n.js?v=ba66328e"></script>
-  <script src="club-common.js?v=8e9acff3"></script>
+  <script src="club-common.js?v=9e72bd40"></script>
   <script src="service-prompts.js?v=1cfff2ab"></script>
-  <script src="service-gate.js?v=6acc9c5f"></script>
+  <script src="service-gate.js?v=fbbccf1b"></script>
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="站内搜索 · 算法社">
@@ -34,19 +34,28 @@
       background: var(--club-accent-soft); color: inherit;
       padding: 0 2px; border-radius: 3px;
     }
-  </style>
+
+    body.club-page.gallery-search main { max-width: 1040px; }
+    body.club-page.gallery-search main > .premium-head { max-width: 68ch; margin-bottom: var(--club-space-7); }
+    body.club-page.gallery-search main > .panel { padding: 0; border: 0; background: transparent; box-shadow: none; }
+    body.club-page.gallery-search #searchForm { padding: var(--club-space-5); border: 1px solid var(--club-line-strong); border-radius: var(--club-radius); background: var(--club-material-read); box-shadow: var(--club-shadow-sm); gap: var(--club-space-3); }
+    body.club-page.gallery-search #searchInput { min-height: 44px; }
+    body.club-page.gallery-search #results { margin-top: var(--club-space-7); }
+    body.club-page.gallery-search #results .empty { max-width: 68ch; padding-block: var(--club-space-6); text-align: start; border-top: 1px solid var(--club-line); }
+
+</style>
 </head>
-<body class="club-page">
+<body class="club-page gallery-search">
   <header class="topbar"><div class="topbar-inner">
     <a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Search</small></span></a>
     <a class="back" href="club-features.html" data-i18n="common.backFeatures">返回社团功能</a>
   </div></header>
-  <main>
-    <p class="eyebrow">SITE SEARCH</p>
-    <h1 data-i18n="search.title">站内搜索</h1>
+  <main class="premium-workspace">
+    <header class="premium-head"><h1 data-i18n="search.title">站内搜索</h1>
     <p class="lead" data-i18n="search.intro">搜索社员、公告、活动与积分商城商品。未登录也可使用。</p>
+    <p class="premium-meta">SITE SEARCH</p></header>
     <section class="panel">
-      <form class="site-search-form" id="searchForm" role="search">
+      <form class="site-search-form premium-form" id="searchForm" role="search">
         <input class="input" id="searchInput" type="search" data-club-search autocomplete="off"
                data-i18n-placeholder="search.placeholder" placeholder="输入姓名、标题或关键词…" aria-label="搜索">
         <button class="button" type="submit" data-i18n="search.submit">搜索</button>
@@ -158,6 +167,7 @@
       window.addEventListener('club:langchange', () => { if (lastQuery) void runSearch(lastQuery); });
     });
   </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

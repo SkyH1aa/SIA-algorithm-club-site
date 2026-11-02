@@ -12,11 +12,11 @@
 .assistant-workspace .assistant-custom-settings,
 .assistant-workspace .assistant-effort-note { display: none !important; }
 .assistant-fixed-label { color: var(--chat-muted); font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
-.assistant-source-release { display: block; margin-top: 7px; color: var(--chat-muted); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.assistant-source-release { display: block; margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--chat-line); color: var(--chat-muted); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
 .assistant-sources { display: grid; gap: 8px; margin-top: 14px; }
 .assistant-sources[hidden] { display: none; }
-.assistant-source { display: block; padding: 12px 14px; border: 1px solid var(--chat-line-strong); border-radius: 12px; color: var(--chat-text); background: var(--chat-surface-2); text-decoration: none; overflow-wrap: anywhere; }
-.assistant-source:hover { color: var(--chat-text); border-color: var(--chat-accent); background: var(--chat-accent-soft); }
+.assistant-source { display: block; padding: 12px 14px; border: 1px solid var(--chat-line-strong); border-radius: 10px; color: var(--chat-text); background: var(--chat-material-reading, var(--chat-surface)); box-shadow: var(--chat-material-inset, none); text-decoration: none; transition: border-color var(--club-dur-fast, 140ms) var(--chat-ease), background var(--club-dur-fast, 140ms) var(--chat-ease); overflow-wrap: anywhere; }
+.assistant-source:hover { color: var(--chat-text); border-color: var(--chat-accent); background: var(--chat-material-control, var(--chat-surface-2)); }
 .assistant-source:focus-visible { outline: 2px solid var(--chat-accent); outline-offset: 3px; }
 .assistant-source strong { display: block; font-size: 13px; color: var(--chat-accent); }
 .assistant-source span { font-size: 11px; color: var(--chat-muted); }
@@ -28,7 +28,8 @@
 .assistant-embedded .chat-topbar {
   gap: 6px;
   padding: 0 8px;
-  background: var(--chat-surface);
+  background: linear-gradient(145deg, var(--chat-liquid-shine), transparent 52%), var(--chat-liquid-base);
+  box-shadow: var(--chat-liquid-shadow);
 }
 .assistant-embedded .chat-brand { gap: 7px; min-width: 0; }
 .assistant-embedded .chat-brand-mark { width: 26px; height: 26px; border-radius: 8px; font-size: 13px; }
@@ -58,8 +59,8 @@
   width: min(84%, 300px);
   transform: translateX(-104%);
   transition: transform .22s var(--chat-ease);
-  background: var(--chat-surface);
-  box-shadow: 16px 0 40px rgba(0, 0, 0, .35);
+  background: linear-gradient(145deg, var(--chat-liquid-shine), transparent 52%), var(--chat-liquid-base);
+  box-shadow: var(--chat-material-overlay);
 }
 .assistant-embedded .chat-layout.sidebar-open .chat-sidebar { transform: translateX(0); }
 .assistant-embedded .chat-sidebar-close { display: inline-grid; }
@@ -72,7 +73,7 @@
 .assistant-embedded .chat-layout.sidebar-open .chat-sidebar-backdrop { display: block; }
 
 /* 消息区：更紧的间距，去掉重复的头像列，给正文让出宽度。 */
-.assistant-embedded .chat-message-frame { padding: 14px 12px 10px; }
+.assistant-embedded .chat-message-frame { padding: 14px 12px 10px; background: var(--chat-bg); }
 .assistant-embedded .chat-turn + .chat-turn { margin-top: 18px; padding-top: 18px; }
 .assistant-embedded .chat-message + .chat-message { margin-top: 12px; }
 .assistant-embedded .chat-avatar { display: none; }
@@ -96,8 +97,8 @@
 
 /* 输入区：浮窗高度有限，消息区必须拿到更多空间。
    输入框从 3 行起改为 1 行自增高，工具栏与用量条都压到最小高度。 */
-.assistant-embedded .chat-composer-shell { padding: 2px 9px 6px; background: var(--chat-bg); }
-.assistant-embedded .chat-composer-box { border-radius: 13px; padding: 6px 8px 5px; gap: 0; }
+.assistant-embedded .chat-composer-shell { padding: 2px 9px 6px; background: transparent; }
+.assistant-embedded .chat-composer-box { border-radius: 16px; padding: 6px 8px 5px; gap: 0; box-shadow: var(--chat-liquid-shadow); }
 .assistant-embedded #prompt { font-size: 14px; min-height: 26px; max-height: 22dvh; padding: 2px 3px 0; }
 .assistant-embedded .chat-composer-toolbar { gap: 4px; }
 .assistant-embedded .chat-file { padding: 4px 6px; }
@@ -120,6 +121,7 @@
   left: 0;
   width: 100%;
   border-left: 0;
+  border-radius: 0;
   transform: translateY(102%);
 }
 .assistant-embedded .chat-settings-panel.is-open { transform: translateY(0); }
@@ -129,6 +131,24 @@
 @media (max-width: 380px) {
   .assistant-embedded .chat-brand-copy strong { font-size: 12px; }
   .assistant-embedded .chat-message-frame { padding: 10px 8px; }
+}
+
+/* The iframe inherits chat's one-layer glass budget. Source excerpts and
+   the conversation canvas remain opaque; density above stays authoritative. */
+.assistant-workspace .assistant-source:active { border-color: var(--chat-accent-strong); }
+html[data-theme="light"] .assistant-embedded .chat-sidebar-backdrop { background: rgba(52, 42, 30, .28); }
+@media (pointer: coarse) {
+  .assistant-workspace .assistant-source { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .assistant-workspace .assistant-source,
+  .assistant-embedded :is(.chat-sidebar, .chat-settings-panel) { transition: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  body.assistant-embedded :is(.chat-topbar, .chat-sidebar) { background: var(--chat-surface) !important; }
+}
+@media (forced-colors: active) {
+  body.assistant-embedded :is(.chat-topbar, .chat-sidebar) { background: Canvas !important; box-shadow: none; }
 }
 
 /* 独立页面在窄屏下的微调 */

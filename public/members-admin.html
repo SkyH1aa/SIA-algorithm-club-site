@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.membersAdmin.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -11,9 +11,9 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>
   <style>
     /* 本页专用：列表间距、搜索工具栏与图片即时预览，全部使用 club 令牌，亮暗自适应 */
     body.club-page .list-gap { margin-top: 16px; }
@@ -25,21 +25,29 @@
 
     /* 表头字号收紧：与全站管理表格保持一致的密度 */
 
-  </style>
+
+    body.club-page.gallery-member-admin #content > .premium-head { padding-bottom: var(--club-space-6); border-bottom: 1px solid var(--club-line-strong); margin-bottom: var(--club-space-6); }
+    body.club-page.gallery-member-admin #memberForm { max-width: 880px; padding: var(--club-space-5); gap: var(--club-space-5); background: var(--club-material-inset); border: 1px solid var(--club-line); border-radius: var(--club-radius-sm); box-shadow: none; }
+    body.club-page.gallery-member-admin #memberForm .actions { padding-top: var(--club-space-4); margin: 0; border-top: 1px solid var(--club-line); }
+    body.club-page.gallery-member-admin .list-toolbar { margin-top: var(--club-space-7); padding-block: var(--club-space-4); border-top: 1px solid var(--club-line-strong); }
+    body.club-page.gallery-member-admin #memberList { margin-top: var(--club-space-3); }
+    body.club-page.gallery-member-admin .intro { max-width: 68ch; }
+
+</style>
 </head>
-<body class="club-page">
+<body class="club-page gallery-member-admin">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Members Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a></div></header>
 
-  <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div><main>
-    <section id="gate" class="panel gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="admin.membersGateLead">成员展示管理需要对应权限。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
-    <section id="denied" class="panel denied hidden"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.membersDenied">无成员展示管理权限</strong><p class="intro" data-i18n="admin.membersDeniedLead">请联系超管开通「成员展示」权限。</p></div></section>
+  <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div><main class="premium-workspace">
+    <section id="gate" class="panel gate premium-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="admin.membersGateLead">成员展示管理需要对应权限。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+    <section id="denied" class="panel denied hidden premium-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.membersDenied">无成员展示管理权限</strong><p class="intro" data-i18n="admin.membersDeniedLead">请联系超管开通「成员展示」权限。</p></div></section>
     <div id="content" class="hidden">
-      <p class="eyebrow">SHOWCASE MEMBERS ADMIN</p>
-      <h1 data-i18n="pages.membersAdmin.h1">成员展示管理</h1>
+      <header class="premium-head"><h1 data-i18n="pages.membersAdmin.h1">成员展示管理</h1>
       <p class="lead" data-i18n="admin.membersLead">管理首页「成员展示」卡片：填写姓名、班级、简介与可选图床图片 URL。留空图片表示无图；取消展示后首页不会显示该卡片。</p>
+      <p class="premium-meta">SHOWCASE MEMBERS ADMIN</p></header>
 
       <section class="panel">
-        <div class="section-head">
+        <div class="section-head premium-section-head">
           <div>
             <h2 data-i18n="admin.memberFormTitle">添加 / 编辑成员卡片</h2>
             <p class="intro" data-i18n="admin.memberFormIntro">配图只需填写图床图片 URL；留空表示默认无图片。已展示成员也可直接编辑。</p>
@@ -47,7 +55,7 @@
           <button class="button secondary" type="button" id="exportMembers" data-i18n="admin.exportCsv">导出 CSV</button>
           <button class="button secondary" type="button" id="refreshMembers" data-i18n="admin.refreshList">刷新列表</button>
         </div>
-        <form class="form" id="memberForm">
+        <form class="form premium-form" id="memberForm">
           <input type="hidden" id="memberId">
           <div class="grid-2">
             <div><label class="label" for="memberName" data-i18n="admin.memberName">姓名</label><input class="input" id="memberName" maxlength="40" required placeholder="例如 陈海铭" data-i18n-placeholder="admin.phMemberName"></div>
@@ -60,13 +68,14 @@
           <label class="label" for="memberIntro" data-i18n="admin.memberIntro">简介</label>
           <textarea class="textarea" id="memberIntro" maxlength="500" placeholder="一句话介绍方向、职责或贡献" data-i18n-placeholder="admin.phMemberIntro"></textarea>
           <div class="checks"><label><input type="checkbox" id="memberVisible" checked> <span data-i18n="admin.showOnHome">在首页展示</span></label></div>
-          <div class="actions">
+          <div class="actions premium-toolbar">
             <button class="button" type="submit" id="memberSaveButton" data-i18n="admin.saveMember">保存成员</button>
             <button class="button secondary" type="button" id="resetMember" data-i18n="common.clearForm">清空表单</button>
           </div>
         </form>
         <p class="message" id="memberMessage" role="status"></p>
-        <div class="list-toolbar">
+        <div class="list-toolbar premium-toolbar">
+          <label class="label" for="memberSearch" data-i18n="admin.searchMember">搜索姓名或班级…</label>
           <input class="input" id="memberSearch" type="search" placeholder="搜索姓名或班级…" data-i18n-placeholder="admin.searchMember">
         </div>
         <div class="table-wrap list-gap" id="memberList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="admin.loadingMembers">正在读取成员展示…</span></div>
@@ -349,6 +358,7 @@
       } catch (_e) {}
     });
   </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.events.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -11,9 +11,9 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="活动与公告 · 算法社">
@@ -31,23 +31,32 @@
     /* 列表 ↔ 日历切换：出现时轻上浮（club-enter 注册表动画），不再硬切 */
     body.club-page #eventList:not([hidden]),
     body.club-page #eventCalendar:not([hidden]) { animation: club-enter 200ms var(--club-ease, ease); }
-  </style>
+
+    body.club-page.gallery-events main > .premium-head { max-width: 68ch; margin-bottom: var(--club-space-7); }
+    body.club-page.gallery-events .layout { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: var(--club-space-6); align-items: start; }
+    body.club-page.gallery-events .layout > .panel { padding: var(--club-space-6); margin: 0; }
+    body.club-page.gallery-events #announcementList { padding-top: var(--club-space-4); border-top: 1px solid var(--club-line); }
+    body.club-page.gallery-events .events-panel-head { align-items: start; margin-bottom: var(--club-space-5); gap: var(--club-space-4); }
+    body.club-page.gallery-events #eventList { margin-top: var(--club-space-5); }
+    @media (max-width: 900px) { body.club-page.gallery-events .layout { grid-template-columns: 1fr; } }
+
+</style>
   <style>
     /* 只影响本页：活动卡脚注与报名就近提示（不改全站约定） */
     body.club-page .meta.card-foot { margin-top: 10px; }
     body.club-page .signup-message { min-height: 0; margin-top: 8px; }
     body.club-page .card.is-event-flash { outline: 2px solid var(--club-accent); outline-offset: 2px; transition: outline-color .6s ease; }
-  </style>
+</style>
 </head>
-<body class="club-page">
+<body class="club-page gallery-events">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Events & Notices</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
-  <main>
-    <p class="eyebrow">EVENTS & NOTICES</p>
-    <h1 data-i18n="pages.events.h1">活动与公告</h1>
+  <main class="premium-workspace">
+    <header class="premium-head"><h1 data-i18n="pages.events.h1">活动与公告</h1>
     <p class="lead" data-i18n="events.lead">查看社团通知、课程安排、比赛信息与活动报名。登录后可直接报名；管理员可在活动管理后台发布和修改内容。</p>
+    <p class="premium-meta">EVENTS & NOTICES</p></header>
     <section class="layout">
       <div class="panel"><h2 data-i18n="events.announcements">最新公告</h2><p class="intro" data-i18n="events.announcementsIntro">置顶公告会优先显示，包含社团通知、课程安排和比赛信息。</p><div class="list" id="announcementList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="events.loadingAnnouncements">正在读取公告…</span></div></div>
-      <div class="panel"><div class="events-panel-head"><div><h2 data-i18n="events.signup">活动报名</h2><p class="intro" data-i18n="events.signupIntro">查看活动状态、截止时间，并提交报名。</p></div><div class="events-view-toggle" role="tablist"><button type="button" class="chip is-active" data-events-view="list" role="tab" aria-selected="true" data-i18n="events.viewList">列表</button><button type="button" class="chip" data-events-view="calendar" role="tab" aria-selected="false" data-i18n="events.viewCalendar">日历</button></div></div><div class="list" id="eventList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="events.loadingEvents">正在读取活动…</span></div><div id="eventCalendar" class="event-calendar" hidden></div><p class="message" id="pageMessage" role="status"></p></div>
+      <div class="panel"><div class="events-panel-head premium-section-head"><div><h2 data-i18n="events.signup">活动报名</h2><p class="intro" data-i18n="events.signupIntro">查看活动状态、截止时间，并提交报名。</p></div><div class="events-view-toggle" role="tablist" data-club-tabs aria-label="活动报名" data-i18n-aria="events.signup"><button type="button" id="eventsListTab" class="chip is-active" data-events-view="list" role="tab" aria-controls="eventList" aria-selected="true" tabindex="0" data-i18n="events.viewList">列表</button><button type="button" id="eventsCalendarTab" class="chip" data-events-view="calendar" role="tab" aria-controls="eventCalendar" aria-selected="false" tabindex="-1" data-i18n="events.viewCalendar">日历</button></div></div><div class="list" id="eventList" role="tabpanel" aria-labelledby="eventsListTab"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="events.loadingEvents">正在读取活动…</span></div><div id="eventCalendar" class="event-calendar" role="tabpanel" aria-labelledby="eventsCalendarTab" hidden></div><p class="message" id="pageMessage" role="status"></p></div>
     </section>
   </main>
   <script>
@@ -110,6 +119,7 @@
 
     let eventsCache = [];
     let eventsView = 'list';
+    let eventsListNeedsRender = false;
     let calendarMonth = null;
 
     function eventDay(item) {
@@ -173,14 +183,16 @@
         link.addEventListener('click', (event) => {
           event.preventDefault();
           if (eventsView !== 'list') {
-            eventsView = 'list';
-            applyEventsView();
+            ClubShell.setTab(document.querySelector('.events-view-toggle'), 'eventList');
           }
           // 数据在日历视图期间才到达时，列表可能还没渲染过，这里补一次。
           if (!$('eventList').querySelector('[data-event-id]')) renderEvents(eventsCache);
           const card = $('eventList').querySelector(`[data-event-id="${CSS.escape(link.getAttribute('data-event-target'))}"]`);
           if (!card) return;
-          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.setAttribute('tabindex', '-1');
+          card.focus({ preventScroll: true });
+          const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+          card.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
           card.classList.add('is-event-flash');
           setTimeout(() => card.classList.remove('is-event-flash'), 1600);
         });
@@ -193,13 +205,14 @@
       document.querySelectorAll('[data-events-view]').forEach(button => {
         const active = button.dataset.eventsView === eventsView;
         button.classList.toggle('is-active', active);
-        button.setAttribute('aria-selected', active ? 'true' : 'false');
       });
       if (eventsView === 'calendar') renderCalendar(eventsCache);
+      else if (eventsListNeedsRender) renderEvents(eventsCache);
     }
 
     function renderEvents(items) {
       eventsCache = Array.isArray(items) ? items : [];
+      eventsListNeedsRender = eventsView === 'calendar' && eventsCache.length > 0;
       if (!eventsCache.length) {
         $('eventList').innerHTML = '<div class="empty">' + ClubI18n.t('events.emptyEvents') + '</div>';
         $('eventCalendar').innerHTML = '<div class="empty">' + ClubI18n.t('events.emptyEvents') + '</div>';
@@ -279,13 +292,12 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      document.querySelectorAll('[data-events-view]').forEach(button => {
-        button.addEventListener('click', () => {
-          eventsView = button.dataset.eventsView === 'calendar' ? 'calendar' : 'list';
-          applyEventsView();
-        });
-      });
+    // 共享层统一管理 click/方向键/Home/End；页面只响应一次状态变化并渲染视图。
+    document.querySelector('.events-view-toggle').addEventListener('club:tabchange', event => {
+      const nextView = event.detail.target === 'eventCalendar' ? 'calendar' : 'list';
+      if (eventsView === nextView) return;
+      eventsView = nextView;
+      applyEventsView();
     });
 
     async function refresh() {
@@ -317,6 +329,7 @@
     });
     window.addEventListener('club:langchange', () => { void refresh(); });
   </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

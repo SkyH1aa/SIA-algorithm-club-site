@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8">
@@ -10,9 +10,9 @@
   <title>实验室 · 算法社 AI 五子棋挑战</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
 <style>
     :root { color-scheme: dark; --board-highlight: #00e5ff; --board-highlight-shadow: rgba(0, 229, 255, .48); }
     * { box-sizing: border-box; }
@@ -279,8 +279,10 @@
     .status button.side-pick:hover::before { box-shadow: inset 0 -2px 4px rgba(255, 255, 255, .08), 0 0 0 1px rgba(232, 241, 251, .4), 0 3px 8px rgba(0, 0, 0, .5); }
     .status button.side-pick:active { transform: translateY(1px); box-shadow: 0 3px 10px rgba(0, 0, 0, .25); }
     .status button.side-pick:focus-visible { outline: 2px solid var(--club-accent); outline-offset: 2px; }
-  </style>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+
+    body.club-page .premium-game > .setup.premium-toolbar { padding: var(--club-space-3, 12px); border-radius: var(--club-radius-sm, 9px); }
+</style>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="实验室 · 算法社 AI 五子棋挑战">
@@ -298,15 +300,15 @@
 <body class="club-page">
   <div class="ambient-background" aria-hidden="true"><div class="ambient-orb orb-cyan"></div><div class="ambient-orb orb-violet"></div><div class="ambient-grid"></div><canvas id="particleCanvas"></canvas></div><div class="pointer-glow" aria-hidden="true"></div>
   <div class="page-shell">
-    <header class="page-header">
+    <header class="page-header premium-head">
       <a href="../index.html" data-i18n="common.backSiteLong">← 返回算法社官网</a>
       <span class="member-identity" data-member-identity hidden></span>
       <h1 data-i18n="gomokuExp.h1">V10 自由棋实验室</h1>
       <p data-i18n="gomokuExp.lead">V10Mesa · V9Mesa · V10Exp 专家与自由网融合对比</p>
     </header>
     <div class="game-layout">
-      <main class="game-container panel">
-        <div class="setup">
+      <main class="game-container panel premium-game">
+        <div class="setup premium-toolbar">
           <label for="gameMode" data-i18n="gomoku.gameMode">对战模式</label>
           <select id="gameMode" aria-label="选择对战模式">
             <option value="human" data-i18n="gomoku.playerChallenge">玩家挑战</option>
@@ -320,7 +322,7 @@
           </select>
           <span class="hint" data-i18n="gomoku.nickSideHint">先填写昵称，再选择执子</span>
         </div>
-        <div class="setup battle-setup" id="battleSetup" hidden>
+        <div class="setup battle-setup premium-toolbar" id="battleSetup" hidden>
           <label for="blackModelVersion" data-i18n="gomoku.blackModel">黑方模型</label>
           <select id="blackModelVersion" aria-label="选择黑方模型"></select>
           <label for="whiteModelVersion" data-i18n="gomoku.whiteModel">白方模型</label>
@@ -330,20 +332,20 @@
         <div class="status" id="status"></div>
         <p style="text-align:center;color:var(--club-warn)" data-i18n="gomokuExp.noScore">自由棋实验室 · 本页所有对局不计分、不上传</p>
         <div class="ai-countdown" id="aiCountdown" hidden aria-live="polite"><span id="aiCountdownLabel"></span><div class="ai-countdown-track"><div class="ai-countdown-fill" id="aiCountdownFill"></div></div></div>
-        <div class="explain-panel">
+        <div class="explain-panel premium-analysis">
           <label class="explain-toggle"><input type="checkbox" id="explainToggle"><span data-i18n="explain.toggle">显示 AI 决策面板</span></label>
-          <div id="explainPanelBody" hidden><h3 data-i18n="explain.title">AI 决策面板</h3><div class="explain-grid"><div class="explain-stat"><span data-i18n="explain.candidates">候选动作</span><strong id="explainCandidates">—</strong></div><div class="explain-stat"><span data-i18n="explain.depth">搜索深度</span><strong id="explainDepth">—</strong></div><div class="explain-stat"><span data-i18n="explain.score">评估分</span><strong id="explainScore">—</strong></div><div class="explain-stat"><span data-i18n="explain.target">目标落点</span><strong id="explainTarget">—</strong></div></div><p class="explain-note" data-i18n="explain.modeHint">仅在 AI 正在决策或 AI 辅助运行时更新。</p></div>
+          <div id="explainPanelBody" hidden><h3 data-i18n="explain.title">AI 决策面板</h3><div class="explain-grid"><div class="explain-stat"><span data-i18n="explain.candidates">候选动作</span><strong id="explainCandidates">—</strong></div><div class="explain-stat"><span data-i18n="explain.depth">搜索深度</span><strong id="explainDepth">—</strong></div><div class="explain-stat"><span data-i18n="explain.score">评估分</span><strong id="explainScore">—</strong></div><div class="explain-stat"><span data-i18n="explain.target">目标落点</span><strong id="explainTarget">—</strong></div></div><p class="explain-note premium-inset" data-i18n="explain.modeHint">仅在 AI 正在决策或 AI 辅助运行时更新。</p></div>
         </div>
         <div class="board" id="board"></div>
         <p class="result" id="result" aria-live="polite"></p>
         <button id="gameActionButton" class="button" onclick="handleGameAction()" data-i18n="games.startGame">开始对局</button>
         <button type="button" class="button secondary" onclick="downloadExperimentRecord()" data-i18n="gomokuExp.exportRecord">导出本局棋谱</button>
       </main>
-      <aside class="leaderboard panel">
+      <aside class="leaderboard panel premium-leaderboard">
         <h2 data-i18n="gomokuExp.compareTitle">实验版本比较</h2>
         <p class="hint" data-i18n="gomokuExp.localOnlyHint">V10Exp正式挑战胜局15分并上传胜负平。本实验页仅本地测试，不计分、不上传；正式挑战请返回五子棋页面。</p>
         <ol class="leaderboard-list" id="leaderboardList"><li class="empty" data-i18n="common.loading">正在读取…</li></ol>
-        <div class="leaderboard-pagination" id="leaderboardPagination" hidden><button type="button" id="leaderboardPrev" class="button secondary" data-i18n="games.prevPage">上一页</button><span id="leaderboardPageInfo"></span><button type="button" id="leaderboardNext" class="button secondary" data-i18n="games.nextPage">下一页</button></div>
+        <div class="leaderboard-pagination premium-toolbar" id="leaderboardPagination" hidden><button type="button" id="leaderboardPrev" class="button secondary" data-i18n="games.prevPage">上一页</button><span id="leaderboardPageInfo"></span><button type="button" id="leaderboardNext" class="button secondary" data-i18n="games.nextPage">下一页</button></div>
       </aside>
     </div>
   </div>
@@ -1148,6 +1150,7 @@
       } catch (_e) {}
     });
 </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

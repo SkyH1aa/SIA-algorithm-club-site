@@ -1,0 +1,33 @@
+{
+  "date": "2026-11-01",
+  "environment": "ZCode in-app browser, local HTTP 4186, 1440x900 desktop viewport, warm load",
+  "navigationDOMContentLoadedMs": 245.1,
+  "collector": {
+    "requestedWindowMs": 330000,
+    "readAtElapsedMs": 598696,
+    "frameCount": 23244,
+    "sampleEveryFrames": 30,
+    "sampleCount": 774,
+    "hiddenSamples": 0,
+    "frameIntervalP50Ms": 4.2,
+    "frameIntervalP95Ms": 4.3,
+    "frameIntervalMaximumSampleMs": 17.3,
+    "observedLongTasks": []
+  },
+  "endState": {
+    "documentHidden": false,
+    "qualityTier": "high",
+    "pixelRatioPolicy": 1.15,
+    "algorithmSceneBackingSize": [1655, 1035],
+    "shaderFieldBackingSize": [1655, 1035],
+    "canvasClientSize": [1430, 900]
+  },
+  "limits": [
+    "Collector stops scheduling after 330000ms; later read time is not a 598696ms measurement window.",
+    "Only every 30th animation frame interval was retained; maximum is the maximum retained sample, not the maximum of every frame.",
+    "Long-task observer began after startup, around performance.now 2362.7ms; this does not certify cold-start tasks.",
+    "Animation-frame cadence is not GPU render duration or end-to-end input latency.",
+    "Quality and backing canvas sizes were observed at the end, not logged continuously.",
+    "Cannot establish the earlier affected device's five-minute freeze has been fixed."
+  ]
+}

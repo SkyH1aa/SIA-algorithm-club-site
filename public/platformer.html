@@ -2,11 +2,11 @@
 <html lang="zh-CN">
 <head>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+<link rel="stylesheet" href="club-ui.css?v=c36a4759">
 <script src="theme.js?v=1b745a4f"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<script defer src="assistant-launcher.js"></script>
+<script defer src="assistant-launcher.js?v=2e89de74"></script>
 <title>行于无垠 · 算法社横屏闯关射击</title>
 <script>
 window.__xingyuExternalScripts=[];
@@ -36,49 +36,49 @@ window.addEventListener('error',event=>{
 <style>
 /* —— 全站 token（暗色值抄 club-ui.css；本页是全屏游戏页，不挂 body.club-page，
    只复制 token 到页内 :root，避免 club-ui 的 body/main 版式全量生效）—— */
-:root{
-  --club-bg:#060a12;--club-bg-glow-a:rgba(53,208,224,.10);--club-bg-glow-b:rgba(124,92,255,.10);
-  --club-surface:#0c1320;--club-surface-2:#101a2a;--club-surface-3:#162236;
-  --club-line:rgba(132,170,214,.16);--club-line-strong:rgba(132,190,225,.32);
-  --club-text:#e8f1fb;--club-text-soft:#c2d2e4;--club-muted:#90a4bb;
+body{
+  --club-bg:#101419;--club-bg-glow-a:transparent;--club-bg-glow-b:transparent;
+  --club-surface:#191f26;--club-surface-2:#202833;--club-surface-3:#2a3441;
+  --club-line:rgba(177, 196, 216, .17);--club-line-strong:rgba(177, 196, 216, .34);
+  --club-text:#edf2f7;--club-text-soft:#cbd5df;--club-muted:#a5b1bf;
   --club-accent:#3ad4e6;--club-accent-strong:#7ce7f2;--club-accent-soft:rgba(58,212,230,.12);--club-accent-line:rgba(58,212,230,.40);
   --club-on-accent:#04141a;
   --club-ok:#56d9a0;--club-ok-soft:rgba(86,217,160,.12);
   --club-warn:#f2c66d;--club-warn-soft:rgba(242,198,109,.12);
   --club-danger:#ff8095;--club-danger-soft:rgba(255,128,149,.12);
   --club-info:#8fb4ff;--club-info-soft:rgba(143,180,255,.12);
-  --club-shadow:0 18px 48px rgba(0,0,0,.34);--club-shadow-sm:0 8px 22px rgba(0,0,0,.22);
+  --club-shadow:0 8px 24px rgba(0,0,0,.20);--club-shadow-sm:0 2px 6px rgba(0,0,0,.12);
   --club-radius:14px;--club-radius-sm:9px;--club-radius-pill:999px;
   --club-font:"Inter Variable","MiSans VF","MiSans","PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",system-ui,sans-serif;--club-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
-  --club-grad-primary:linear-gradient(180deg,color-mix(in srgb,var(--club-accent) 84%,#ffffff) 0%,var(--club-accent) 62%,color-mix(in srgb,var(--club-accent) 90%,#000000) 100%);--club-highlight-strong:rgba(255,255,255,.14);--club-glow-accent:0 6px 18px color-mix(in srgb,var(--club-accent) 26%,transparent);--club-dur-fast:140ms;--club-dur:200ms;--club-ease:cubic-bezier(.22,1,.36,1);
+  --club-grad-primary:none;--club-highlight-strong:transparent;--club-glow-accent:none;--club-dur-fast:140ms;--club-dur:200ms;--club-ease:cubic-bezier(.22,1,.36,1);
   /* 页内旧变量 → 全站 token 映射（--cyan 对齐全站青 #3ad4e6） */
   --ink:var(--club-bg);--panel:var(--club-surface);--panel-2:var(--club-surface-2);
   --line:var(--club-line-strong);--muted:var(--club-muted);
   --cyan:var(--club-accent);--gold:var(--club-warn);--coral:var(--club-danger);--violet:var(--club-info)
 }
-html[data-theme="light"]{
-  --club-bg:#f3f4f7;--club-bg-glow-a:rgba(194,65,12,.05);--club-bg-glow-b:rgba(66,78,120,.05);
-  --club-surface:#ffffff;--club-surface-2:#f8f9fb;--club-surface-3:#eef0f4;
-  --club-line:#e2e5eb;--club-line-strong:#cdd2db;
-  --club-text:#17181c;--club-text-soft:#33363d;--club-muted:#5b6069;
+html[data-theme="light"] body{
+  --club-bg:#f0f3f7;--club-bg-glow-a:transparent;--club-bg-glow-b:transparent;
+  --club-surface:#ffffff;--club-surface-2:#f5f7fa;--club-surface-3:#eaf0f6;
+  --club-line:#d9e1eb;--club-line-strong:#b9c6d5;
+  --club-text:#182330;--club-text-soft:#35465a;--club-muted:#5b6a7c;
   --club-accent:#c2410c;--club-accent-strong:#9a3412;--club-accent-soft:#fdf0ea;--club-accent-line:rgba(194,65,12,.35);
   --club-on-accent:#ffffff;
   --club-ok:#16794c;--club-ok-soft:#e8f6ef;
   --club-warn:#8a5600;--club-warn-soft:#fdf3e0;
   --club-danger:#b4233b;--club-danger-soft:#fdeef1;
   --club-info:#2f4f8f;--club-info-soft:#eef2fb;
-  --club-shadow:0 10px 30px rgba(23,24,28,.07);--club-shadow-sm:0 4px 14px rgba(23,24,28,.06)
+  --club-shadow:0 8px 24px rgba(23,24,28,.08);--club-shadow-sm:0 2px 6px rgba(23,24,28,.04)
 }
-body{background:radial-gradient(ellipse 60% 42% at 8% -4%,var(--club-bg-glow-a),transparent 60%),radial-gradient(ellipse 52% 40% at 96% 2%,var(--club-bg-glow-b),transparent 62%),var(--club-bg);color:var(--club-text)}
+body{background:var(--club-bg);color:var(--club-text)}
 .shell{padding:22px 20px 30px}
 header{min-height:52px;margin-bottom:16px;padding:0 2px 12px;border-bottom:1px solid var(--club-line)}
-header h1{letter-spacing:.04em;text-shadow:0 3px 0 var(--club-surface-3),0 0 22px var(--club-accent-soft)}
+header h1{letter-spacing:normal;text-shadow:none}
 header>div{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 header a{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid var(--club-line-strong);border-radius:var(--club-radius-sm);background:var(--club-surface-2);color:var(--club-accent);transition:background .15s,border-color .15s}
 header a:hover{background:var(--club-surface-3);border-color:var(--club-accent-line)}
-.auth-gate,.leaderboard-panel{border:1px solid var(--club-line);border-radius:var(--club-radius-sm);background:var(--club-surface);box-shadow:inset 0 1px 0 rgba(255,255,255,.055),var(--club-shadow-sm)}
+.auth-gate,.leaderboard-panel{border:1px solid var(--club-line);border-radius:var(--club-radius-sm);background:var(--club-surface);box-shadow:none}
 .auth-gate{position:relative;overflow:hidden;padding:24px 24px 22px}
-.auth-gate::before{content:"PLAYER ACCESS";position:absolute;right:22px;top:18px;color:var(--club-muted);font-size:11px;letter-spacing:.16em;opacity:.75}
+.auth-gate::before{content:none}
 .auth-gate h2{font-size:23px;letter-spacing:.02em;color:var(--club-text)}
 .auth-gate p{color:var(--club-muted)}
 .guest-tips{margin:14px 0 0;padding:10px 14px;border:1px dashed var(--club-line-strong);border-radius:var(--club-radius-sm);color:var(--club-muted);font-size:13px;line-height:1.7}
@@ -86,28 +86,28 @@ header a:hover{background:var(--club-surface-3);border-color:var(--club-accent-l
 .guest-tips ul{margin:6px 0;padding-left:18px}
 .auth-form input{height:42px;border-color:var(--club-line-strong);background:var(--club-bg);color:var(--club-text);border-radius:5px;transition:border-color .15s,box-shadow .15s}
 .auth-form input:focus{outline:none;border-color:var(--club-accent);box-shadow:0 0 0 3px var(--club-accent-soft)}
-.button{height:42px;border-radius:5px;border-color:var(--club-accent-line);background-color:var(--club-accent);background-image:var(--club-grad-primary);color:var(--club-on-accent);font-weight:600;box-shadow:inset 0 1px 0 var(--club-highlight-strong),var(--club-glow-accent);transition:transform var(--club-dur-fast) var(--club-ease),background-color var(--club-dur-fast) var(--club-ease),border-color var(--club-dur-fast) var(--club-ease)}
-.button:hover{background:var(--club-accent-strong);border-color:var(--club-accent);transform:translateY(-1px)}
-.button.secondary{border-radius:var(--club-radius-pill);background:var(--club-surface-2);border-color:var(--club-line-strong);color:var(--club-text-soft)}.button.secondary:hover{background:var(--club-surface-3);border-color:var(--club-muted);color:var(--club-text)}
-#game-wrap{border:1px solid var(--club-line-strong);border-radius:var(--club-radius-sm);background:var(--club-bg);box-shadow:var(--club-shadow);isolation:isolate}
+.button{height:42px;border-radius:5px;border-color:var(--club-accent-line);background:var(--club-accent);color:var(--club-on-accent);font-weight:600;box-shadow:none;transition:transform var(--club-dur-fast) var(--club-ease),background-color var(--club-dur-fast) var(--club-ease),border-color var(--club-dur-fast) var(--club-ease)}
+.button:hover:not(:disabled){background:var(--club-accent-strong);border-color:var(--club-accent);transform:translateY(-1px)}
+.button.secondary{border-radius:var(--club-radius-pill);background:var(--club-surface-2);border-color:var(--club-line-strong);color:var(--club-text-soft)}.button.secondary:hover:not(:disabled){background:var(--club-surface-3);border-color:var(--club-muted);color:var(--club-text)}
+#game-wrap{border:1px solid var(--club-line-strong);border-radius:var(--club-radius-sm);background:var(--club-bg);box-shadow:none;isolation:isolate}
 #game-wrap::after{content:"";position:absolute;inset:0;pointer-events:none;border:1px solid #ffffff0b;border-radius:7px;z-index:24}
 .game-loading{background:var(--club-bg);color:var(--club-text-soft);letter-spacing:.04em}
-.touch-controls{margin:14px 0 2px;padding:10px 12px;border:1px solid var(--club-line);border-radius:var(--club-radius-sm);background:var(--club-surface-2);box-shadow:inset 0 1px 0 rgba(255,255,255,.055),var(--club-shadow-sm)}
-.pk-panel{margin:12px 0;border:1px solid var(--club-line-strong);border-radius:var(--club-radius-sm);background:var(--club-surface);padding:18px 20px;box-shadow:inset 0 1px 0 rgba(255,255,255,.055),var(--club-shadow-sm)}.pk-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.pk-head h2{margin:0;color:var(--club-text);font-size:20px}.pk-form{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.pk-form input{height:38px;width:180px;border:1px solid var(--club-line-strong);border-radius:4px;background:var(--club-bg);color:var(--club-text);padding:0 10px}.pk-status{min-height:22px;margin:10px 0 0;color:var(--club-warn);font-size:13px}.pk-room{margin-top:12px;padding:12px;border:1px solid var(--club-line);border-radius:6px;background:var(--club-bg)}.pk-room-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;color:var(--club-text-soft);font-size:13px}.pk-room-code{font-size:26px;letter-spacing:.16em;color:var(--club-warn);font-weight:700}.pk-wager{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}.pk-wager input{width:150px}.pk-arena{margin-top:14px;position:relative;border:1px solid var(--club-line-strong);border-radius:6px;overflow:hidden;background:var(--club-surface-3)}.pk-arena canvas{display:block;width:100%;height:auto;aspect-ratio:16/7}.pk-arena-hud{position:absolute;left:12px;right:12px;top:8px;display:flex;justify-content:space-between;color:#fff;font-size:13px;text-shadow:0 2px 4px #000}.pk-hidden{display:none!important}
-.joystick{border-color:var(--club-line-strong);background:var(--club-surface-3);box-shadow:inset 0 0 0 1px var(--club-line),0 4px 12px rgba(0,0,0,.25)}
-.joystick-knob{background:var(--club-accent);box-shadow:0 0 0 4px var(--club-accent-soft),0 4px 16px #0008}
+.touch-controls{margin:14px 0 2px;padding:10px 12px;border:1px solid var(--club-line);border-radius:var(--club-radius-sm);background:var(--club-surface-2);box-shadow:none}
+.pk-panel{margin:12px 0;border:1px solid var(--club-line-strong);border-radius:var(--club-radius-sm);background:var(--club-surface);padding:18px 20px;box-shadow:none}.pk-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.pk-head h2{margin:0;color:var(--club-text);font-size:20px}.pk-form{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.pk-form input{height:38px;width:180px;border:1px solid var(--club-line-strong);border-radius:4px;background:var(--club-bg);color:var(--club-text);padding:0 10px}.pk-status{min-height:22px;margin:10px 0 0;color:var(--club-warn);font-size:13px}.pk-room{margin-top:12px;padding:12px;border:1px solid var(--club-line);border-radius:6px;background:var(--club-bg)}.pk-room-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;color:var(--club-text-soft);font-size:13px}.pk-room-code{font-size:26px;letter-spacing:.16em;color:var(--club-warn);font-weight:700}.pk-wager{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}.pk-wager input{width:150px}.pk-arena{margin-top:14px;position:relative;border:1px solid var(--club-line-strong);border-radius:6px;overflow:hidden;background:var(--club-surface-3)}.pk-arena canvas{display:block;width:100%;height:auto;aspect-ratio:16/7}.pk-arena-hud{position:absolute;left:12px;right:12px;top:8px;display:flex;justify-content:space-between;color:#fff;font-size:13px;text-shadow:0 2px 4px #000}.pk-hidden{display:none!important}
+.joystick{border-color:var(--club-line-strong);background:var(--club-surface-3);box-shadow:none}
+.joystick-knob{background:var(--club-accent);box-shadow:none}
 .touch-actions{gap:8px}
-.touch-button{border-radius:6px;border-color:var(--club-line-strong);background:var(--club-surface-2);color:var(--club-text);box-shadow:inset 0 -3px 0 rgba(0,0,0,.28),0 4px 10px rgba(0,0,0,.22);transition:transform .12s,filter .12s,background .12s}
+.touch-button{border-radius:6px;border-color:var(--club-line-strong);background:var(--club-surface-2);color:var(--club-text);box-shadow:none;transition:transform .12s,filter .12s,background .12s}
 .touch-button small{color:var(--club-muted)}
-.touch-button:hover{filter:brightness(1.18)}
-.touch-button:active{transform:translateY(2px);box-shadow:inset 0 -1px 0 rgba(0,0,0,.28)}
+.touch-button:hover:not(:disabled){border-color:var(--club-accent);background:var(--club-surface-3)}
+.touch-button:active:not(:disabled){transform:translateY(1px);box-shadow:none}
 #shoot-button{background:var(--club-danger-soft);border-color:var(--club-danger)}#jump-button{background:var(--club-accent-soft);border-color:var(--club-accent)}
 #dash-button{background:var(--club-info-soft);border-color:var(--club-info)}#airstrike-button{background:var(--club-warn-soft);border-color:var(--club-warn)}
 #ultimate-button{background:var(--club-ok-soft);border-color:var(--club-ok)}#switch-button{background:var(--club-surface-3);border-color:var(--club-muted)}#mode-button{background:var(--club-accent-soft);border-color:var(--club-accent-strong)}
 .help{margin:12px 2px 0;color:var(--club-muted);line-height:1.65}.help span{padding:3px 0}
 kbd{border-color:var(--club-line-strong);background:var(--club-surface-3);color:var(--club-text-soft)}
 .notice{padding:9px 11px;border-left:3px solid var(--club-warn);background:var(--club-warn-soft);color:var(--club-warn);border-radius:0 4px 4px 0}
-.password-panel{border:1px solid var(--club-line);border-radius:var(--club-radius-sm);background:var(--club-surface);box-shadow:var(--club-shadow-sm);padding:18px 20px;margin-bottom:12px}.password-panel h2{margin:0 0 8px;font-size:20px}.password-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.password-form input{height:40px;width:190px;border:1px solid var(--club-line-strong);border-radius:5px;background:var(--club-bg);color:var(--club-text);padding:0 10px}.password-message{min-height:20px;margin:10px 0 0;color:var(--club-warn);font-size:13px}
+.password-panel{border:1px solid var(--club-line);border-radius:var(--club-radius-sm);background:var(--club-surface);box-shadow:none;padding:18px 20px;margin-bottom:12px}.password-panel h2{margin:0 0 8px;font-size:20px}.password-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.password-form input{height:40px;width:190px;border:1px solid var(--club-line-strong);border-radius:5px;background:var(--club-bg);color:var(--club-text);padding:0 10px}.password-message{min-height:20px;margin:10px 0 0;color:var(--club-warn);font-size:13px}
 .leaderboard-panel{padding:18px 20px}.leaderboard-panel h2{color:var(--club-text)}.leaderboard-list li{border-bottom:1px solid var(--club-line);padding:8px 0}.leaderboard-list li:last-child{border-bottom:0}
 @media (max-width:700px){.shell{padding:14px 10px 22px}header{min-height:44px}header h1{font-size:24px}.auth-gate::before{display:none}.auth-gate{padding:18px}.auth-form input{width:100%}.auth-form .button{flex:1}.touch-controls{padding:8px}.touch-actions{grid-template-columns:repeat(3,minmax(0,1fr))}.touch-button small{font-size:10px}}
 .play-layout{display:block;min-width:0}
@@ -141,7 +141,7 @@ a{color:var(--club-accent)}
 .joystick::after{color:var(--club-muted)}
 .leaderboard-list{color:var(--club-text-soft)}
 .leaderboard-list small{color:var(--club-muted)}
-.game-admin-panel{border:1px solid var(--club-line);border-radius:var(--club-radius-sm);background:var(--club-surface);box-shadow:inset 0 1px 0 rgba(255,255,255,.055),var(--club-shadow-sm)}
+.game-admin-panel{border:1px solid var(--club-line);border-radius:var(--club-radius-sm);background:var(--club-surface);box-shadow:none}
 .game-admin-panel h2{color:var(--club-warn)}
 .game-admin-card{border:1px solid var(--club-line);background:var(--club-surface-2)}
 .game-admin-card h3{color:var(--club-text-soft)}
@@ -152,11 +152,11 @@ a{color:var(--club-accent)}
 .game-admin-message{color:var(--club-warn)}
 .game-admin-attachment{border:1px solid var(--club-warn);background:var(--club-warn-soft);color:var(--club-warn)}
 .game-announcement-modal{background:rgba(2,6,13,.8)}
-.game-announcement-card{border:1px solid var(--club-line-strong);border-radius:var(--club-radius);background:linear-gradient(160deg,var(--club-surface-2),var(--club-surface));box-shadow:var(--club-shadow);color:var(--club-text)}
+.game-announcement-card{border:1px solid var(--club-line-strong);border-radius:var(--club-radius);background:var(--club-surface);box-shadow:var(--club-shadow-sm);color:var(--club-text)}
 .game-announcement-card h2{color:var(--club-accent)}
 .game-announcement-card .announcement-content{color:var(--club-text-soft)}
 .game-announcement-attachment{border:1px solid var(--club-warn);background:var(--club-warn-soft);color:var(--club-warn)}
-.pk-bottom-hud{background:linear-gradient(180deg,var(--club-surface-2),var(--club-bg));border-top:1px solid var(--club-line-strong);color:var(--club-text-soft)}
+.pk-bottom-hud{background:var(--club-surface-2);border-top:1px solid var(--club-line-strong);color:var(--club-text-soft)}
 .pk-bottom-hud .pk-side-self{color:var(--club-accent)}
 .pk-bottom-hud .pk-side-peer{color:var(--club-danger)}
 .pk-arena{background:var(--club-surface-3)}
@@ -180,7 +180,7 @@ header .button{height:34px;font-size:13px;padding:0 12px}
 html[data-theme="light"] #game-wrap::after{border-color:rgba(23,24,28,.06)}
 html[data-theme="light"] .game-announcement-modal{background:rgba(23,24,28,.45)}
 html[data-theme="light"] .pk-bottom-hud{text-shadow:none}
-html[data-theme="light"] .touch-button{box-shadow:inset 0 -2px 0 rgba(23,24,28,.08),0 2px 6px rgba(23,24,28,.1)}
+html[data-theme="light"] .touch-button{box-shadow:none}
 /* 第五轮：选区色与滚动条（不加载 theme.css，页内自补，避免全站 !important 误伤游戏组件） */
 ::selection{background:rgba(58,212,230,.30)}
 *{scrollbar-width:thin;scrollbar-color:rgba(132,170,214,.30) transparent}
@@ -188,10 +188,167 @@ html[data-theme="light"] .touch-button{box-shadow:inset 0 -2px 0 rgba(23,24,28,.
 *::-webkit-scrollbar-thumb{background:rgba(132,170,214,.30);border-radius:999px}
 *::-webkit-scrollbar-track{background:transparent}
 html[data-theme="light"] ::selection{background:rgba(194,65,12,.18)}
-html[data-theme="light"] .joystick-knob{box-shadow:0 0 0 4px var(--club-accent-soft),0 4px 16px rgba(23,24,28,.18)}
+html[data-theme="light"] .joystick-knob{box-shadow:none}
 </style>
-<style>#pk-arena canvas{aspect-ratio:16/9}</style>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script><script src="club-common.js?v=8e9acff3"></script>
+<style>
+/* UI chrome only: canvas geometry and the landscape control grid stay intact. */
+body{color-scheme:dark}
+html[data-theme="light"] body{color-scheme:light}
+:where(button,input,select,textarea){font:inherit}
+:is(button,a,input,select,textarea,summary):focus-visible{outline:2px solid var(--club-accent);outline-offset:3px}
+:where(input,textarea){caret-color:var(--club-accent)}
+:where(input,textarea)::placeholder{color:var(--club-muted);opacity:1}
+.button:disabled,.touch-button:disabled{opacity:.45;cursor:default;transform:none}
+.button:active:not(:disabled){transform:translateY(1px)}
+.auth-form input,.password-form input,.pk-form input,.game-admin-card :is(input:not([type="checkbox"]),select){min-height:44px}
+.game-admin-card>.field-label{display:block;margin:12px 0 4px;font-size:13px;color:var(--club-text-soft)}
+.game-admin-attachment-note{margin-top:10px;color:var(--club-muted);font-size:12.5px;line-height:1.65}
+.game-admin-row{flex-wrap:wrap;overflow-wrap:anywhere}
+.game-admin-card>label:has(input[type="checkbox"]){min-height:44px}
+.game-announcement-card{overscroll-behavior:contain}
+.pk-bottom-hud{text-shadow:none}
+.leaderboard-list{font-variant-numeric:tabular-nums}
+@media (pointer:coarse){
+  .button,header a{min-height:44px}
+  .game-announcement-attachment button{height:auto;min-height:44px}
+}
+@media (max-width:720px){
+  :is(.auth-form,.password-form,.pk-form) input{max-width:100%;font-size:16px}
+  .password-form input{width:100%}
+  .game-admin-card :is(input,select,textarea){font-size:16px}
+  .auth-form,.password-form{row-gap:12px}
+  .shell{padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right));padding-bottom:max(22px,env(safe-area-inset-bottom))}
+}
+@media (max-width:900px) and (orientation:landscape){
+  /* Keep the game's fixed header/play layout; enlarge targets within its row. */
+  header a,header .button{height:30px;min-height:30px;line-height:1.1}
+}
+@media (prefers-reduced-motion:reduce){
+  .button,.touch-button,header a{transition:none}
+}
+#pk-arena canvas{aspect-ratio:16/9}
+</style>
+<style>
+/* Premium chrome only. No canvas, joystick, hit-area, or game-grid geometry changes. */
+body{
+  font-family:var(--club-font);
+  --game-material-reading:var(--club-surface);
+  --game-perimeter-bg:var(--club-bg);
+  --game-perimeter-line:var(--club-line);
+  --game-material-control:var(--club-surface-2);
+  --game-material-highlight:rgba(237,242,247,.08);
+  --game-material-shadow:0 2px 4px rgba(0,0,0,.12),0 10px 28px rgba(0,0,0,.18);
+  --game-material-floating-shadow:0 8px 20px rgba(0,0,0,.22),0 24px 56px rgba(0,0,0,.32);
+}
+html[data-theme="light"] body{
+  --game-material-reading:#fffdf8;
+  --game-material-control:#eee9e1;
+  --game-perimeter-bg:#f1ede6;
+  --game-perimeter-line:#cfc4b6;
+  --game-material-highlight:rgba(255,255,255,.95);
+  --game-material-shadow:0 2px 4px rgba(23,24,28,.03),0 10px 28px rgba(23,24,28,.07);
+  --game-material-floating-shadow:0 8px 20px rgba(23,24,28,.08),0 24px 56px rgba(23,24,28,.16);
+}
+.shell>header{box-shadow:0 1px 0 var(--game-material-highlight)}
+.shell>header h1{font-weight:750;text-wrap:balance}
+.shell :is(.auth-gate,.password-panel,.pk-panel,.leaderboard-panel,.game-admin-panel){
+  background:linear-gradient(180deg,var(--game-material-highlight),transparent 44%),var(--game-material-reading);
+  border-color:var(--game-perimeter-line);
+  box-shadow:inset 0 1px 0 var(--game-material-highlight),var(--game-material-shadow);
+}
+.shell :is(.guest-tips,.pk-room,.game-admin-card){background:var(--game-material-control);box-shadow:inset 0 1px 3px rgba(0,0,0,.10)}
+.shell :is(.auth-form input,.password-form input,.pk-form input,.game-admin-card input:not([type="checkbox"]),.game-admin-card select,.game-admin-card textarea){
+  background:var(--club-bg);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.08);
+}
+.shell :is(.button,.touch-button){box-shadow:inset 0 1px 0 var(--game-material-highlight)}
+.shell .button.secondary{background:var(--game-material-control)}
+.shell :is(.button,.touch-button):disabled{box-shadow:none}
+.shell .touch-controls{box-shadow:inset 0 1px 0 var(--game-material-highlight)}
+.shell .joystick{box-shadow:inset 0 2px 6px rgba(0,0,0,.12)}
+.shell .joystick-knob{box-shadow:inset 0 1px 0 var(--game-material-highlight),0 3px 8px rgba(0,0,0,.18)}
+.shell .leaderboard-list li{transition:background var(--club-dur-fast,140ms) var(--club-ease,ease)}
+.shell .leaderboard-list li:hover{background:var(--game-material-control)}
+.shell .leaderboard-list li::marker{color:var(--club-accent);font-weight:650}
+.shell .leaderboard-list li:first-child{color:var(--club-text)}
+.shell .leaderboard-list small{color:var(--club-muted)}
+.shell .pk-room-code{font-variant-numeric:tabular-nums}
+.shell .game-announcement-card{
+  background:var(--game-material-reading);
+  box-shadow:inset 0 1px 0 var(--game-material-highlight),var(--game-material-floating-shadow);
+}
+.shell .game-announcement-card h2{line-height:1.3;text-wrap:balance}
+.shell .game-admin-card:focus-within{border-color:var(--club-line-strong)}
+.shell :is(.game-admin-row,.game-announcement-attachment){overflow-wrap:anywhere}
+/* Precision perimeter: solid alloy task panels, inset reading, selective glass.
+   Game canvas, control geometry and HUD colors remain frozen. */
+body{
+  --game-liquid:var(--club-surface);
+  --game-liquid-rim:rgba(170,196,216,.28);
+  --game-liquid-shine:rgba(225,246,255,.13);
+  --game-liquid-rgb:115 228 244;
+  --game-depth-a:rgba(37,142,166,.10);
+  --game-depth-b:rgba(75,99,175,.06);
+  background:radial-gradient(ellipse at 10% 0%,var(--game-depth-a),transparent 58%),radial-gradient(ellipse at 96% 80%,var(--game-depth-b),transparent 60%),var(--game-perimeter-bg);
+}
+html[data-theme="light"] body{
+  --game-liquid-rim:rgba(136,112,84,.30);
+  --game-liquid-shine:rgba(255,255,255,.74);
+  --game-liquid-rgb:194 92 47;
+  --game-depth-a:rgba(191,141,92,.10);
+  --game-depth-b:rgba(141,128,110,.06);
+}
+.shell>header,
+.shell .game-announcement-card{
+  background:linear-gradient(145deg,var(--game-liquid-shine),transparent 52%),var(--game-liquid);
+  border-color:var(--game-liquid-rim);
+  box-shadow:inset 0 1px 0 var(--game-liquid-shine),var(--game-material-shadow);
+}
+.shell>header{border-radius:18px}
+.shell :is(.auth-gate,.password-panel,.pk-panel,.leaderboard-panel,.game-admin-panel){border-radius:22px}
+.shell .touch-controls{border-radius:18px}
+.shell .game-announcement-card{border-radius:26px;box-shadow:inset 0 1px 0 var(--game-liquid-shine),var(--game-material-floating-shadow)}
+/* Announcement text and leaderboard rows use solid recessed reading plates. */
+.shell :is(.announcement-content,.leaderboard-list){background:var(--game-material-control);border-radius:12px;box-shadow:inset 0 1px 3px rgba(0,0,0,.10)}
+.shell .announcement-content{padding:12px}
+.shell :is(.button,header a){border-radius:12px;box-shadow:inset 0 1px 0 var(--game-liquid-shine)}
+.shell :is(.auth-form input,.password-form input,.pk-form input,.game-admin-card input:not([type="checkbox"]),.game-admin-card select,.game-admin-card textarea){border-radius:10px}
+.shell>header.club-liquid-surface,
+.shell .game-announcement-card.club-liquid-surface{
+  background-image:radial-gradient(380px circle at var(--club-pointer-x,50%) var(--club-pointer-y,0%),rgb(var(--game-liquid-rgb) / calc(.13 * var(--club-pointer-active,0))),transparent 74%),linear-gradient(145deg,var(--game-liquid-shine),transparent 52%);
+}
+.shell :is(.button,header a).club-liquid-control{
+  background-image:radial-gradient(100px circle at var(--club-pointer-x,50%) var(--club-pointer-y,0%),rgb(var(--game-liquid-rgb) / calc(.18 * var(--club-pointer-active,0))),transparent 78%);
+}
+@supports ((backdrop-filter:blur(16px)) or (-webkit-backdrop-filter:blur(16px))){
+  body{--game-liquid:rgba(25,34,45,.84)}
+  html[data-theme="light"] body{--game-liquid:rgba(255,252,246,.86)}
+  .shell>header,
+  .shell .game-announcement-card{-webkit-backdrop-filter:blur(16px) saturate(1.15);backdrop-filter:blur(16px) saturate(1.15)}
+}
+@media (prefers-reduced-transparency:reduce){
+  .shell>header,
+  .shell .game-announcement-card{background:var(--club-surface)!important;-webkit-backdrop-filter:none;backdrop-filter:none}
+}
+@media (forced-colors:active){
+  .shell>header,
+  .shell .game-announcement-card{background:Canvas!important;border-color:CanvasText;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+}
+/* Keep the full-screen game scrim filter-free. */
+html:not([data-theme="light"]) .shell .game-announcement-modal{background:rgba(16,20,25,.76)}
+@keyframes game-announcement-appear{
+  from{opacity:.8;translate:0 6px}
+  to{opacity:1;translate:0 0}
+}
+@media (prefers-reduced-motion:no-preference){
+  .shell .game-announcement-modal:not([hidden]) .game-announcement-card{animation:game-announcement-appear 200ms var(--club-ease,ease) both}
+}
+@media (prefers-reduced-motion:reduce){
+  .shell .game-announcement-card{animation:none}
+  .shell .leaderboard-list li{transition:none}
+}
+</style>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script><script src="club-common.js?v=9e72bd40"></script>
   <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
@@ -210,12 +367,12 @@ html[data-theme="light"] .joystick-knob{box-shadow:0 0 0 4px var(--club-accent-s
 <body>
 <main class="shell">
 <header><h1>行于无垠</h1><div><span id="service-status" class="auth-user">游戏服务：正在检查</span><span id="auth-user" class="auth-user"></span><button class="button secondary" id="change-password-button" type="button" hidden>账号设置</button><button class="button secondary" id="pk-open-button" type="button" hidden>联机 PK</button><button class="button secondary" id="service-toggle" type="button" hidden>关闭游戏服务</button><button class="button secondary" id="logout-button" type="button" hidden>退出登录</button><a href="../index.html">返回官网</a></div></header>
-<section id="auth-gate" class="auth-gate"><h2>登录后开始游戏</h2><p>使用本游戏独立账号，不与社团盘登录系统关联。注册只需用户名和密码，进度、金币与排行榜成绩都会保存在你的账号下。</p><div class="guest-tips" role="note"><strong>不登录也能看：</strong><ul><li>下方<strong>总分排行榜</strong>——无需登录，实时读取。</li></ul><span>闯关挑战、金币强化、无尽模式和联机 PK 需要登录后使用。</span></div><div class="auth-form"><input id="username-input" type="text" maxlength="64" placeholder="用户名"><input id="password-input" type="password" maxlength="72" placeholder="密码"><button class="button" id="login-button" type="button">登录</button><button class="button secondary" id="register-button" type="button">注册新用户</button></div><p id="auth-message" class="auth-message" role="status"></p></section>
-<section id="password-panel" class="password-panel" hidden><h2>账号设置</h2><div class="password-form"><input id="new-username-input" type="text" maxlength="64" placeholder="新用户名（3-64位中文、英文、数字或下划线）"><button class="button" id="save-username-button" type="button">保存用户名</button></div><div class="password-form"><input id="old-password-input" type="password" maxlength="72" placeholder="当前密码"><input id="new-password-input" type="password" maxlength="72" placeholder="新密码（至少6位）"><input id="confirm-password-input" type="password" maxlength="72" placeholder="确认新密码"><button class="button" id="save-password-button" type="button">保存密码</button><button class="button secondary" id="cancel-password-button" type="button">关闭</button></div><p id="password-message" class="password-message" role="status"></p></section>
+<section id="auth-gate" class="auth-gate"><h2>登录后开始游戏</h2><p>使用本游戏独立账号，不与社团盘登录系统关联。注册只需用户名和密码，进度、金币与排行榜成绩都会保存在你的账号下。</p><div class="guest-tips" role="note"><strong>不登录也能看：</strong><ul><li>下方<strong>总分排行榜</strong>——无需登录，实时读取。</li></ul><span>闯关挑战、金币强化、无尽模式和联机 PK 需要登录后使用。</span></div><div class="auth-form"><input id="username-input" aria-label="用户名" autocomplete="username" type="text" maxlength="64" placeholder="用户名"><input id="password-input" aria-label="密码" autocomplete="current-password" type="password" maxlength="72" placeholder="密码"><button class="button" id="login-button" type="button">登录</button><button class="button secondary" id="register-button" type="button">注册新用户</button></div><p id="auth-message" class="auth-message" role="status"></p></section>
+<section id="password-panel" class="password-panel" hidden><h2>账号设置</h2><div class="password-form"><input id="new-username-input" aria-label="新用户名（3-64位中文、英文、数字或下划线）" autocomplete="username" type="text" maxlength="64" placeholder="新用户名（3-64位中文、英文、数字或下划线）"><button class="button" id="save-username-button" type="button">保存用户名</button></div><div class="password-form"><input id="old-password-input" aria-label="当前密码" autocomplete="current-password" type="password" maxlength="72" placeholder="当前密码"><input id="new-password-input" aria-label="新密码（至少6位）" autocomplete="new-password" type="password" maxlength="72" placeholder="新密码（至少6位）"><input id="confirm-password-input" aria-label="确认新密码" autocomplete="new-password" type="password" maxlength="72" placeholder="确认新密码"><button class="button" id="save-password-button" type="button">保存密码</button><button class="button secondary" id="cancel-password-button" type="button">关闭</button></div><p id="password-message" class="password-message" role="status"></p></section>
 <section id="pk-panel" class="pk-panel" hidden>
   <div class="pk-head"><h2>联机 PK · 实时对战</h2><button class="button secondary" id="pk-close-button" type="button">关闭</button></div>
   <p class="pk-status" id="pk-status">创建房间或输入邀请码加入对战。</p>
-  <div class="pk-form"><button class="button" id="pk-create-button" type="button">创建房间</button><input id="pk-code-input" maxlength="8" placeholder="输入邀请码"><button class="button secondary" id="pk-join-button" type="button">加入房间</button></div>
+  <div class="pk-form"><button class="button" id="pk-create-button" type="button">创建房间</button><input id="pk-code-input" aria-label="房间邀请码" maxlength="8" placeholder="输入邀请码"><button class="button secondary" id="pk-join-button" type="button">加入房间</button></div>
   <div class="pk-room pk-hidden" id="pk-room">
     <div class="pk-room-grid"><div>房间状态：<strong id="pk-room-state">等待对手</strong></div><div>在线成员：<strong id="pk-room-presence">1 / 2</strong></div><div>我的准备：<strong id="pk-my-ready">未准备</strong></div><div>对手准备：<strong id="pk-peer-ready">未准备</strong></div></div>
     <div style="margin-top:10px">邀请码：<span class="pk-room-code" id="pk-room-code">--------</span> <button class="button secondary" id="pk-copy-button" type="button">复制</button></div>
@@ -250,7 +407,9 @@ html[data-theme="light"] .joystick-knob{box-shadow:0 0 0 4px var(--club-accent-s
   <div class="game-admin-grid">
     <div class="game-admin-card">
       <h3>玩家金币调整</h3>
+      <label class="field-label" for="game-admin-player-select">玩家账号</label>
       <select id="game-admin-player-select"><option value="">正在读取玩家…</option></select>
+      <label class="field-label" for="game-admin-coins-input">修改后的金币数量</label>
       <input id="game-admin-coins-input" type="number" min="0" max="9223372036854775807" step="1" placeholder="修改后的金币数量">
       <div class="game-admin-actions"><button class="button" id="game-admin-save-coins" type="button">保存金币</button><button class="button secondary" id="game-admin-refresh-players" type="button">刷新玩家</button></div>
       <p class="game-admin-message" id="game-admin-player-message"></p>
@@ -258,10 +417,12 @@ html[data-theme="light"] .joystick-knob{box-shadow:0 0 0 4px var(--club-accent-s
     <div class="game-admin-card">
       <h3>编辑游戏弹窗公告</h3>
       <input id="game-admin-announcement-id" type="hidden">
+      <label class="field-label" for="game-admin-announcement-title">公告标题</label>
       <input id="game-admin-announcement-title" maxlength="120" placeholder="公告标题">
+      <label class="field-label" for="game-admin-announcement-content">公告内容</label>
       <textarea id="game-admin-announcement-content" maxlength="10000" placeholder="公告内容"></textarea>
       <label><input id="game-admin-announcement-published" type="checkbox" checked> 发布后在游戏内弹窗显示</label>
-      <div style="margin-top:10px;color:#9cb3c3;font-size:12px">金币附件（每个账号每个附件只能领取一次）</div>
+      <div class="game-admin-attachment-note">金币附件（每个账号每个附件只能领取一次）</div>
       <div id="game-admin-attachments"></div>
       <div class="game-admin-actions"><button class="button secondary" id="game-admin-add-attachment" type="button">添加金币附件</button><button class="button" id="game-admin-save-announcement" type="button">发布公告</button><button class="button secondary" id="game-admin-clear-announcement" type="button">清空</button></div>
       <p class="game-admin-message" id="game-admin-announcement-message"></p>
@@ -2704,5 +2865,6 @@ void resumeSession();
 }
 </script>
 <script src="platformer-pk.js?v=20260905-13"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

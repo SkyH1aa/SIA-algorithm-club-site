@@ -1,12 +1,11 @@
-/* 视觉令牌与 club-ui.css / chat.css 同步（2026-10 第三轮对齐）：
-   暗色本就同源；亮色由暖奶油系改为全站冷白系（accent 仍为亮色橙红）。
-   该组件注入到所有页面（含非 club-page 页），因此自带令牌而非引用 --club-*。 */
+/* Floating assistant perimeter: cold alloy / warm porcelain, with glass only
+   on the title bar and independent launcher. The iframe stays opaque. */
 #club-assistant {
-  --assistant-surface: #0c1320;
-  --assistant-head: #101a2a;
-  --assistant-text: #e8f1fb;
-  --assistant-muted: #90a4bb;
-  --assistant-border: rgba(132, 170, 214, .3);
+  --assistant-surface: #191f26;
+  --assistant-head: #25323e;
+  --assistant-text: #edf2f7;
+  --assistant-muted: #a5b1bf;
+  --assistant-border: rgba(177, 196, 216, .34);
   --assistant-accent: #3ad4e6;
   --assistant-ease: cubic-bezier(0.22, 1, 0.36, 1);
   position: fixed;
@@ -21,17 +20,21 @@
   isolation: isolate;
 }
 html[data-theme="light"] #club-assistant {
-  --assistant-surface: #ffffff;
-  --assistant-head: #f8f9fb;
-  --assistant-text: #17181c;
-  --assistant-muted: #5b6069;
-  --assistant-border: #cdd2db;
+  --assistant-surface: #fffdf8;
+  --assistant-head: #eee9e1;
+  --assistant-text: #182330;
+  --assistant-muted: #655f58;
+  --assistant-border: #b9ad9e;
   --assistant-accent: #c2410c;
 }
 #club-assistant *, #club-assistant *::before, #club-assistant *::after { box-sizing: border-box; }
 #club-assistant [hidden] { display: none !important; }
 #club-assistant button { font: inherit; cursor: pointer; margin: 0; letter-spacing: normal; text-transform: none; }
 #club-assistant :is(button,a):focus-visible { outline: 3px solid var(--assistant-accent); outline-offset: 3px; }
+
+@media (min-width: 601px) {
+  body.features-directory main { padding-right: 88px; }
+}
 
 /* ---------- 悬浮球：可自由拖动 ---------- */
 #club-assistant .club-assistant-ball {
@@ -46,20 +49,18 @@ html[data-theme="light"] #club-assistant {
   cursor: grab;
   border: 1px solid var(--assistant-border) !important;
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--assistant-accent) 26%, transparent), transparent 62%),
-    var(--assistant-head) !important;
+  background: linear-gradient(145deg, var(--assistant-specular), transparent 56%), var(--assistant-glass) !important;
   color: var(--assistant-accent) !important;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, .28), 0 0 0 1px rgba(255, 255, 255, .05) inset;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
   font-size: 26px;
   line-height: 1;
   /* 面板与球可能重叠：球始终在上层，保证收起/移动入口可达。 */
   z-index: 2;
-  transition: transform .16s var(--assistant-ease, ease), box-shadow .16s var(--assistant-ease, ease);
+  transition: transform var(--club-dur-fast, 140ms) var(--assistant-ease, ease), border-color var(--club-dur-fast, 140ms) var(--assistant-ease, ease);
 }
 /* 内联 SVG 四角星（assistant-launcher.js 注入），跨平台字体渲染一致。 */
 #club-assistant .club-assistant-ball svg { width: 14px; height: 14px; display: block; fill: currentColor; }
-#club-assistant .club-assistant-ball:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 12px 28px rgba(0, 0, 0, .32); }
+#club-assistant .club-assistant-ball:hover { border-color: var(--assistant-accent) !important; transform: translateY(-1px); }
 #club-assistant .club-assistant-ball:active,
 #club-assistant.is-dragging .club-assistant-ball { cursor: grabbing; transform: none; }
 #club-assistant.is-busy .club-assistant-ball::after {
@@ -79,22 +80,21 @@ html[data-theme="light"] #club-assistant {
   position: fixed;
   width: min(420px, calc(100vw - 24px));
   height: min(620px, calc(100dvh - 48px));
-  min-height: 260px;
+  min-height: min(260px, calc(100dvh - 24px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
   pointer-events: auto;
   z-index: 1;
   border: 1px solid var(--assistant-border);
-  border-radius: 16px;
-  background: var(--assistant-surface);
+  border-radius: 20px;
+  background: transparent;
   color: var(--assistant-text);
   /* 轻阴影与悬浮球同级：浮窗悬在密集内容上时投影不糊正文。 */
-  box-shadow: 0 16px 44px rgba(0, 0, 0, .35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .20);
 }
-html[data-theme="light"] #club-assistant .club-assistant-panel { box-shadow: 0 16px 44px rgba(23, 24, 28, .14); }
-html[data-theme="light"] #club-assistant .club-assistant-ball { box-shadow: 0 8px 22px rgba(23, 24, 28, .12), 0 0 0 1px rgba(255, 255, 255, .5) inset; }
-html[data-theme="light"] #club-assistant .club-assistant-ball:hover { box-shadow: 0 12px 28px rgba(23, 24, 28, .16); }
+html[data-theme="light"] #club-assistant .club-assistant-panel { box-shadow: 0 8px 24px rgba(23, 24, 28, .08); }
+html[data-theme="light"] #club-assistant .club-assistant-ball { box-shadow: 0 4px 12px rgba(23, 24, 28, .07); }
 #club-assistant.is-expanded .club-assistant-panel {
   /* 展开窗口约占屏幕四分之一面积（宽高各一半），居中且不覆盖整页。
      用 !important 覆盖脚本写入的内联 inset 和高度。 */
@@ -111,7 +111,8 @@ html[data-theme="light"] #club-assistant .club-assistant-ball:hover { box-shadow
   min-height: 48px;
   padding: 6px 8px 6px 12px;
   border-bottom: 1px solid var(--assistant-border);
-  background: var(--assistant-head);
+  background: linear-gradient(145deg, var(--assistant-specular), transparent 56%), var(--assistant-glass);
+  box-shadow: inset 0 1px 0 var(--assistant-highlight);
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -129,7 +130,7 @@ html[data-theme="light"] #club-assistant .club-assistant-ball:hover { box-shadow
   color: var(--assistant-border);
   opacity: .9;
 }
-#club-assistant .club-assistant-head strong { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#club-assistant .club-assistant-head strong { flex: 1; min-width: 0; font-size: 15px; font-weight: 750; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #club-assistant .club-assistant-tool,
 #club-assistant .club-assistant-stop,
 #club-assistant .club-assistant-retry {
@@ -145,9 +146,9 @@ html[data-theme="light"] #club-assistant .club-assistant-ball:hover { box-shadow
   box-shadow: none;
   transition: background .15s var(--assistant-ease, ease), color .15s var(--assistant-ease, ease), border-color .15s var(--assistant-ease, ease);
 }
-#club-assistant .club-assistant-tool:hover,
-#club-assistant .club-assistant-stop:hover,
-#club-assistant .club-assistant-retry:hover {
+#club-assistant .club-assistant-tool:hover:not(:disabled),
+#club-assistant .club-assistant-stop:hover:not(:disabled),
+#club-assistant .club-assistant-retry:hover:not(:disabled) {
   color: var(--assistant-text) !important;
   background: color-mix(in srgb, var(--assistant-text) 8%, transparent) !important;
   border-color: var(--assistant-border) !important;
@@ -195,4 +196,99 @@ html[data-theme="light"] #club-assistant .club-assistant-ball:hover { box-shadow
 }
 @media (prefers-reduced-motion: reduce) {
   #club-assistant .club-assistant-ball { transition: none; }
+}
+
+/* Scoped host materials: opaque iframe and loading canvas, translucent chrome only. */
+#club-assistant {
+  --assistant-highlight: rgba(237, 242, 247, .10);
+  --assistant-shadow: 0 8px 16px rgba(0, 0, 0, .20), 0 24px 56px rgba(0, 0, 0, .30);
+  --assistant-ball-shadow: 0 3px 6px rgba(0, 0, 0, .18), 0 10px 24px rgba(0, 0, 0, .24);
+  --assistant-glass: var(--assistant-head);
+  --assistant-rim: rgba(170, 196, 216, .34);
+  --assistant-specular: rgba(225, 246, 255, .12);
+  --assistant-glow-rgb: 115 228 244;
+}
+html[data-theme="light"] #club-assistant {
+  --assistant-highlight: rgba(255, 255, 255, .95);
+  --assistant-rim: rgba(136, 112, 84, .32);
+  --assistant-specular: rgba(255, 255, 255, .80);
+  --assistant-glow-rgb: 194 92 47;
+  --assistant-shadow: 0 8px 16px rgba(23, 24, 28, .08), 0 24px 56px rgba(23, 24, 28, .16);
+  --assistant-ball-shadow: 0 3px 6px rgba(23, 24, 28, .06), 0 10px 24px rgba(23, 24, 28, .12);
+}
+#club-assistant .club-assistant-panel,
+html[data-theme="light"] #club-assistant .club-assistant-panel {
+  box-shadow: inset 0 1px 0 var(--assistant-highlight), var(--assistant-shadow);
+}
+#club-assistant .club-assistant-ball,
+html[data-theme="light"] #club-assistant .club-assistant-ball {
+  box-shadow: inset 0 1px 0 var(--assistant-highlight), var(--assistant-ball-shadow);
+}
+#club-assistant .club-assistant-head strong { color: var(--assistant-text); }
+#club-assistant .club-assistant-tool:focus-visible { color: var(--assistant-accent) !important; }
+#club-assistant .club-assistant-loading { background: var(--assistant-surface); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .10); }
+#club-assistant ::selection { background: color-mix(in srgb, var(--assistant-accent) 20%, var(--assistant-surface)); color: var(--assistant-text); }
+#club-assistant { scrollbar-color: var(--assistant-border) var(--assistant-surface); }
+#club-assistant[data-failed="true"] .club-assistant-loading { border-top: 2px solid var(--assistant-accent); }
+#club-assistant .club-assistant-ball[aria-expanded="true"] { border-color: var(--assistant-accent) !important; }
+#club-assistant .club-assistant-ball { -webkit-backdrop-filter: none; backdrop-filter: none; }
+/* Panel reveal uses translate, leaving the script-owned inset/drag coordinates alone. */
+@keyframes assistant-panel-appear {
+  from { opacity: .8; translate: 0 6px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@media (prefers-reduced-motion: no-preference) and (min-width: 601px) {
+  #club-assistant.is-open .club-assistant-panel { animation: assistant-panel-appear 200ms var(--assistant-ease) both; }
+  #club-assistant.is-dragging .club-assistant-panel { animation: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #club-assistant :is(.club-assistant-ball, .club-assistant-tool, .club-assistant-stop, .club-assistant-retry) { transition: none; }
+  #club-assistant .club-assistant-panel { animation: none; }
+}
+
+/* The host panel never filters its iframe. Only sibling chrome samples. */
+#club-assistant .club-assistant-panel { border-color: var(--assistant-rim); }
+#club-assistant :is(.club-assistant-tool, .club-assistant-stop, .club-assistant-retry) { border-radius: 10px; }
+#club-assistant .club-assistant-head.club-liquid-surface {
+  background-image: radial-gradient(240px circle at var(--club-pointer-x, 50%) var(--club-pointer-y, 0%), rgb(var(--assistant-glow-rgb) / calc(.08 * var(--club-pointer-active, 0))), transparent 74%), linear-gradient(145deg, var(--assistant-specular), transparent 56%);
+}
+#club-assistant .club-assistant-ball.club-liquid-control {
+  background-image: radial-gradient(70px circle at var(--club-pointer-x, 50%) var(--club-pointer-y, 0%), rgb(var(--assistant-glow-rgb) / calc(.16 * var(--club-pointer-active, 0))), transparent 78%), linear-gradient(145deg, var(--assistant-specular), transparent 56%) !important;
+}
+@supports ((backdrop-filter: blur(16px)) or (-webkit-backdrop-filter: blur(16px))) {
+  #club-assistant { --assistant-glass: rgba(32, 44, 58, .82); }
+  html[data-theme="light"] #club-assistant { --assistant-glass: rgba(255, 252, 246, .86); }
+  #club-assistant :is(.club-assistant-head, .club-assistant-ball) { -webkit-backdrop-filter: blur(16px) saturate(1.15); backdrop-filter: blur(16px) saturate(1.15); }
+}
+@media (max-width: 600px) {
+  #club-assistant .club-assistant-panel { border-radius: 0; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  #club-assistant :is(.club-assistant-head, .club-assistant-ball) { background: var(--assistant-head) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (forced-colors: active) {
+  #club-assistant :is(.club-assistant-head, .club-assistant-ball) { background: Canvas !important; border-color: CanvasText !important; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* 600px matches the modal/focus boundary in assistant-launcher.js. */
+#club-assistant button:disabled { opacity: .45; cursor: default; }
+#club-assistant :is(.club-assistant-tool, .club-assistant-stop, .club-assistant-retry):active:not(:disabled) { transform: translateY(1px); }
+#club-assistant .club-assistant-loading { overflow: auto; overscroll-behavior: contain; }
+#club-assistant .club-assistant-loading a { display: inline-flex; align-items: center; min-height: 36px; text-underline-offset: 3px; }
+@media (pointer: coarse) {
+  #club-assistant :is(.club-assistant-tool, .club-assistant-stop, .club-assistant-retry, .club-assistant-loading a) { min-height: 44px; }
+  #club-assistant .club-assistant-tool { width: 44px; flex: 0 0 44px; }
+  #club-assistant .club-assistant-head { gap: 4px; }
+}
+@media (max-height: 520px) and (min-width: 601px) and (orientation: landscape) {
+  #club-assistant .club-assistant-panel { max-height: calc(100dvh - 16px); }
+  #club-assistant.is-expanded .club-assistant-panel {
+    inset: max(8px, env(safe-area-inset-top)) auto auto 10vw !important;
+    width: 80vw;
+    height: calc(100dvh - 16px - env(safe-area-inset-bottom));
+  }
+}
+@media (max-width: 600px) {
+  #club-assistant .club-assistant-panel,
+  #club-assistant.is-expanded .club-assistant-panel { max-height: 100dvh; }
 }

@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.mall.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <style>
     /* 页内微调：原内联样式收敛为类，颜色一律使用 --club-* 令牌 */
     .mall-gate-intro{margin:10px 0 18px}
@@ -11,7 +11,15 @@
     .mall-bind-link{text-decoration:underline}
     /* 商城卡片是 article.card，不吃 club-ui 的 a.card:hover：这里补齐同款悬停抬升 */
     #productGrid .card:hover{transform:translateY(-2px);border-color:var(--club-accent-line);box-shadow:var(--club-shadow);background:var(--club-surface-2)}
-  </style>
+
+    body.club-page.gallery-mall .hero { padding-bottom: var(--club-space-6); margin-bottom: var(--club-space-6); border-bottom: 1px solid var(--club-line-strong); align-items: start; }
+    body.club-page.gallery-mall .hero p { max-width: 64ch; }
+    body.club-page.gallery-mall .hero .status { padding: var(--club-space-5); min-width: 0; background: var(--club-material-inset); box-shadow: none; }
+    body.club-page.gallery-mall #content > .panel { padding: var(--club-space-6); }
+    body.club-page.gallery-mall #content > .panel > h2 { margin-bottom: var(--club-space-5); }
+    body.club-page.gallery-mall .notice { margin-block: var(--club-space-5); max-width: 68ch; }
+
+</style>
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -20,9 +28,9 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="积分商城 · 算法社">
@@ -37,7 +45,7 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body class="club-page">
+<body class="club-page gallery-mall">
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Points Mall</small></span></a>
@@ -45,14 +53,14 @@
       <a class="back" href="club-features.html" data-i18n="common.backFeatures">返回社团功能</a>
     </div>
   </header>
-  <main>
-    <section id="gate" class="panel gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="mall.gateTitle">您还不是算法社社员！</strong><p class="intro mall-gate-intro" data-i18n="mall.gateHint">请先使用受邀请码创建的社团盘账号登录。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+  <main class="premium-workspace">
+    <section id="gate" class="panel gate premium-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="mall.gateTitle">您还不是算法社社员！</strong><p class="intro mall-gate-intro" data-i18n="mall.gateHint">请先使用受邀请码创建的社团盘账号登录。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
     <div id="content" class="hidden">
-      <section class="hero">
+      <section class="hero premium-head">
         <div>
-          <p class="eyebrow">POINTS MALL</p>
           <h1 data-i18n="pages.mall.h1">积分商城</h1>
           <p class="lead" data-i18n="mall.lead">用社团积分兑换管理员上架的实物或权益。兑换会立即扣积分并减库存，管理员线下发放后会清理兑换记录。</p>
+          <p class="premium-meta">POINTS MALL</p>
         </div>
         <div class="panel status">
           <strong id="statusTitle" data-i18n="mall.loggedIn">社员已登录</strong>
@@ -61,13 +69,13 @@
         </div>
       </section>
 
-      <section id="bindNotice" class="notice">
+      <section id="bindNotice" class="notice premium-inset">
         <strong data-i18n="mall.bindTitle">兑换前请先绑定姓名与班级</strong>
         <p data-i18n="mall.bindHint" data-i18n-mode="html">积分商城按积分榜扣分。请先到<a class="link-accent mall-bind-link" href="member-center.html">个人中心</a>设置中文姓名和班级，并确认积分榜已有对应记录后再兑换。</p>
       </section>
 
       <section class="panel">
-        <div class="section-head">
+        <div class="section-head premium-section-head">
           <div>
             <h2 data-i18n="mall.products">可兑换商品</h2>
             <p class="intro" data-i18n="mall.productsIntro">仅展示已上架且有库存的商品。配图来自管理员填写的图床 URL。</p>
@@ -241,6 +249,7 @@
     supabaseClient.auth.getSession().then(({ data: { session } }) => { void updateSession(session); });
     window.addEventListener('club:langchange', () => { updateProfileUi(); void loadProducts(); if (window.ClubI18n) ClubI18n.apply(document); });
   </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

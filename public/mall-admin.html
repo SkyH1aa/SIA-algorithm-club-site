@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.mallAdmin.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -11,31 +11,40 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>
   <style>
     /* 本页专用：列表间距与商品说明文字，全部使用 club 令牌，亮暗自适应 */
     body.club-page .list-gap { margin-top: 16px; }
 
     /* 表头字号收紧：与全站管理表格保持一致的密度 */
 
-  </style>
+
+    body.club-page.gallery-catalog-admin #content > .premium-head { max-width: 68ch; margin-bottom: var(--club-space-7); }
+    body.club-page.gallery-catalog-admin :is(#productPanel, #redemptionPanel) { padding: var(--club-space-6); background: var(--club-material-read); }
+    body.club-page.gallery-catalog-admin #productForm { padding: var(--club-space-5); border: 1px solid var(--club-line); border-radius: var(--club-radius-sm); background: var(--club-material-inset); gap: var(--club-space-5); box-shadow: none; }
+    body.club-page.gallery-catalog-admin #productForm .actions { margin: 0; padding-top: var(--club-space-4); border-top: 1px solid var(--club-line); }
+    body.club-page.gallery-catalog-admin #productList { margin-top: var(--club-space-6); }
+    body.club-page.gallery-catalog-admin #redemptionList { margin-top: var(--club-space-5); font-variant-numeric: tabular-nums; }
+    body.club-page.gallery-catalog-admin .intro { max-width: 68ch; }
+
+</style>
 </head>
-<body class="club-page">
+<body class="club-page gallery-catalog-admin">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Mall Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a></div></header>
 
-  <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div><main>
-    <section id="gate" class="panel gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="admin.mallGateLead">积分商城管理需要对应权限。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
-    <section id="denied" class="panel denied hidden"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.mallDenied">无积分商城管理权限</strong><p class="intro" data-i18n="admin.mallDeniedLead">请联系超管开通「积分商城」权限。</p></div></section>
+  <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div><main class="premium-workspace">
+    <section id="gate" class="panel gate premium-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="admin.mallGateLead">积分商城管理需要对应权限。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+    <section id="denied" class="panel denied hidden premium-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.mallDenied">无积分商城管理权限</strong><p class="intro" data-i18n="admin.mallDeniedLead">请联系超管开通「积分商城」权限。</p></div></section>
     <div id="content" class="hidden">
-      <p class="eyebrow">POINTS MALL ADMIN</p>
-      <h1 data-i18n="pages.mallAdmin.h1">积分商城管理</h1>
+      <header class="premium-head"><h1 data-i18n="pages.mallAdmin.h1">积分商城管理</h1>
       <p class="lead" data-i18n="admin.mallLead">自定义商品名称、兑换积分、库存、上架状态与可选配图 URL。社员兑换后会立即扣积分并减库存；线下发货完成后点「已处理」即可删除该兑换记录。</p>
+      <p class="premium-meta">POINTS MALL ADMIN</p></header>
 
       <div class="club-tabs" data-club-tabs role="tablist" aria-label="商城管理"><button type="button" role="tab" aria-selected="true" aria-controls="productPanel" data-tab-target="productPanel" data-i18n="admin.tabProduct">商品</button><button type="button" role="tab" aria-selected="false" aria-controls="redemptionPanel" data-tab-target="redemptionPanel" data-i18n="admin.tabRedemption">兑换记录</button></div>
       <section class="panel" id="productPanel">
-        <div class="section-head">
+        <div class="section-head premium-section-head">
           <div>
             <h2 data-i18n="admin.productTitle">发布 / 编辑商品</h2>
             <p class="intro" data-i18n="admin.productIntro">配图只需填写图床图片 URL；留空表示无配图。已上架商品也可直接编辑。</p>
@@ -43,7 +52,7 @@
           <button class="button secondary" type="button" id="exportProducts" data-i18n="admin.exportCsv">导出 CSV</button>
           <button class="button secondary" type="button" id="refreshProducts" data-i18n="admin.refreshProducts">刷新商品</button>
         </div>
-        <form class="form" id="productForm">
+        <form class="form premium-form" id="productForm">
           <input type="hidden" id="productId">
           <div class="grid-2">
             <div><label class="label" for="productName" data-i18n="admin.productName">商品名称</label><input class="input" id="productName" maxlength="80" required placeholder="例如 狼蛛磁轴键盘" data-i18n-placeholder="admin.phProductName"></div>
@@ -57,7 +66,7 @@
             <div><label class="label" for="productSort" data-i18n="admin.productSort">排序（越小越靠前）</label><input class="input" id="productSort" type="number" min="0" max="100000" value="0"></div>
           </div>
           <div class="checks"><label><input type="checkbox" id="productListed"> <span data-i18n="admin.listNow">立即上架</span></label></div>
-          <div class="actions">
+          <div class="actions premium-toolbar">
             <button class="button" type="submit" id="productSaveButton" data-i18n="admin.saveProduct">保存商品</button>
             <button class="button secondary" type="button" id="resetProduct" data-i18n="common.clearForm">清空表单</button>
           </div>
@@ -67,7 +76,7 @@
       </section>
 
       <section class="panel" id="redemptionPanel">
-        <div class="section-head">
+        <div class="section-head premium-section-head">
           <div>
             <h2 data-i18n="admin.redemptionTitle">兑换记录</h2>
             <p class="intro" data-i18n="admin.redemptionIntro">展示待线下发放的兑换申请。点「已处理」会删除该条记录。</p>
@@ -347,6 +356,7 @@
       } catch (_e) {}
     });
   </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

@@ -1,10 +1,19 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.points.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <style>
-  </style>
+
+    body.club-page.gallery-points .hero { padding-bottom: var(--club-space-6); border-bottom: 1px solid var(--club-line-strong); margin-bottom: var(--club-space-6); align-items: start; }
+    body.club-page.gallery-points .hero p { max-width: 64ch; }
+    body.club-page.gallery-points #content > .panel { padding: var(--club-space-6); }
+    body.club-page.gallery-points #content > .panel > h2 { margin-bottom: var(--club-space-5); }
+    body.club-page.gallery-points .table-wrap { font-variant-numeric: tabular-nums; }
+    body.club-page.gallery-points #adminPanel { margin-top: var(--club-space-7); }
+    body.club-page.gallery-points #memberPointsForm { padding: var(--club-space-5); border: 1px solid var(--club-line); border-radius: var(--club-radius-sm); background: var(--club-material-inset); box-shadow: none; }
+
+</style>
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -12,10 +21,10 @@
   <title>社员积分 · 算法社</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="社员积分 · 算法社">
@@ -30,14 +39,14 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body class="club-page">
+<body class="club-page gallery-points">
 <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a><span class="member-identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
-<main>
-  <section id="memberGate" class="panel member-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><h2 data-i18n="points.gateTitle">您还不是算法社社员！</h2><p data-i18n="points.gateHint">请先使用受邀请码邀请创建的社团盘账号登录。</p><p><a class="button secondary" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></p></div></section>
+<main class="premium-workspace">
+  <section id="memberGate" class="panel member-gate premium-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><h2 data-i18n="points.gateTitle">您还不是算法社社员！</h2><p data-i18n="points.gateHint">请先使用受邀请码邀请创建的社团盘账号登录。</p><p><a class="button secondary" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></p></div></section>
   <div id="memberContent" class="member-content hidden">
-    <section class="hero"><div><p class="eyebrow">MEMBER POINTS</p><h1 data-i18n="pages.points.h1">社员积分</h1><p data-i18n="points.lead">公示算法社成员的当前积分。积分按从高到低排列，数据更新后可即时刷新查看。</p></div><div class="status-panel"><strong id="sessionStatus" data-i18n="points.loggedIn">社员已登录</strong><span id="sessionHint" data-i18n="points.sessionHint">积分公示仅供社团成员查看。</span></div></section>
-    <section class="panel"><div class="points-head"><div><h2 data-i18n="points.board">积分公示</h2><p class="panel-intro" data-i18n="points.boardIntro">社员名、班级与当前积分。</p></div><button class="button secondary" id="pointsRefreshButton" type="button" data-i18n="points.refreshBoard">刷新公示</button></div><div id="pointsList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="points.loading">正在读取积分公示…</span></div><p class="message" id="pointsMessage" role="status"></p></section>
-    <section id="adminPanel" class="panel admin-panel"><div class="admin-head"><div><h2 data-i18n="points.adminTitle">积分管理</h2><p class="panel-intro" data-i18n="points.adminIntro">仅社长账号可添加、修改或删除积分记录。</p></div><button class="button secondary" id="adminRefreshButton" type="button" data-i18n="points.refreshPoints">刷新积分</button></div><form class="member-form" id="memberPointsForm"><input id="memberPointId" type="hidden"><div><label class="label" for="memberName" data-i18n="points.memberName">社员名</label><input class="input" id="memberName" required maxlength="40"></div><div><label class="label" for="memberClass" data-i18n="points.memberClass">社员班级</label><input class="input" id="memberClass" required maxlength="40" placeholder="例如 高一（1）班" data-i18n-placeholder="points.classPlaceholder"></div><div><label class="label" for="memberPoints" data-i18n="points.memberPoints">社员积分</label><input class="input" id="memberPoints" type="number" min="0" max="1000000" required></div><button class="button" id="memberPointsSaveButton" type="submit" data-i18n="common.save">保存</button><button class="button secondary" id="memberPointsCancelButton" type="button" data-i18n="points.cancelEdit">取消编辑</button></form><p class="message" id="adminMessage" role="status"></p><div id="memberPointsAdminList"></div></section>
+    <section class="hero premium-head"><div><h1 data-i18n="pages.points.h1">社员积分</h1><p data-i18n="points.lead">公示算法社成员的当前积分。积分按从高到低排列，数据更新后可即时刷新查看。</p><p class="premium-meta">MEMBER POINTS</p></div><div class="status-panel"><strong id="sessionStatus" data-i18n="points.loggedIn">社员已登录</strong><span id="sessionHint" data-i18n="points.sessionHint">积分公示仅供社团成员查看。</span></div></section>
+    <section class="panel"><div class="points-head premium-section-head"><div><h2 data-i18n="points.board">积分公示</h2><p class="panel-intro" data-i18n="points.boardIntro">社员名、班级与当前积分。</p></div><button class="button secondary" id="pointsRefreshButton" type="button" data-i18n="points.refreshBoard">刷新公示</button></div><div id="pointsList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="points.loading">正在读取积分公示…</span></div><p class="message" id="pointsMessage" role="status"></p></section>
+    <section id="adminPanel" class="panel admin-panel"><div class="admin-head premium-section-head"><div><h2 data-i18n="points.adminTitle">积分管理</h2><p class="panel-intro" data-i18n="points.adminIntro">仅社长账号可添加、修改或删除积分记录。</p></div><button class="button secondary" id="adminRefreshButton" type="button" data-i18n="points.refreshPoints">刷新积分</button></div><form class="member-form premium-form" id="memberPointsForm"><input id="memberPointId" type="hidden"><div><label class="label" for="memberName" data-i18n="points.memberName">社员名</label><input class="input" id="memberName" required maxlength="40"></div><div><label class="label" for="memberClass" data-i18n="points.memberClass">社员班级</label><input class="input" id="memberClass" required maxlength="40" placeholder="例如 高一（1）班" data-i18n-placeholder="points.classPlaceholder"></div><div><label class="label" for="memberPoints" data-i18n="points.memberPoints">社员积分</label><input class="input" id="memberPoints" type="number" min="0" max="1000000" required></div><button class="button" id="memberPointsSaveButton" type="submit" data-i18n="common.save">保存</button><button class="button secondary" id="memberPointsCancelButton" type="button" data-i18n="points.cancelEdit">取消编辑</button></form><p class="message" id="adminMessage" role="status"></p><div id="memberPointsAdminList"></div></section>
   </div>
 </main>
 <script>
@@ -53,6 +62,7 @@ function resetForm(){document.getElementById('memberPointsForm').reset();documen
 document.getElementById('pointsRefreshButton').onclick=refreshMemberPoints;document.getElementById('adminRefreshButton').onclick=refreshMemberPoints;document.getElementById('memberPointsCancelButton').onclick=resetForm;document.getElementById('memberPointsForm').addEventListener('submit',async event=>{event.preventDefault();const saveButton=document.getElementById('memberPointsSaveButton');ClubCommon.setBusy(saveButton,true);try{const id=document.getElementById('memberPointId').value,memberName=document.getElementById('memberName').value,memberClass=document.getElementById('memberClass').value,points=Number(document.getElementById('memberPoints').value);await callAdmin('admin_member_points_save',{id,memberName,memberClass,points});setMessage(adminMessage,id?ClubI18n.t('points.updated'):ClubI18n.t('points.added'),'success');resetForm();await refreshMemberPoints()}catch(error){setMessage(adminMessage,error.message,'error')}finally{ClubCommon.setBusy(saveButton,false)}});supabaseClient.auth.onAuthStateChange((_event,session)=>{void updateSession(session);if(session?.user?.id)void refreshMemberPoints()});supabaseClient.auth.getSession().then(async({data:{session}})=>{await updateSession(session);if(session?.user?.id)await refreshMemberPoints()});
 window.addEventListener('club:langchange',()=>{renderPublicPoints(currentMembers);if(adminPanel.classList.contains('active'))renderAdminPoints(currentMembers);if(sessionStatusKey){sessionStatus.textContent=ClubI18n.t(sessionStatusKey);sessionHint.textContent=ClubI18n.t(sessionHintKey)}if(window.ClubI18n)ClubI18n.apply(document);});
 </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

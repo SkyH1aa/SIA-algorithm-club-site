@@ -128,8 +128,11 @@ function auditNavigation(snapshots) {
   assert(checkin.indexOf('option value="points"') < checkin.indexOf('option value="course"'));
   assert(checkin.includes("get('type')==='course')checkinType.value='course'"));
   const labs = snapshots.get('public/visualization-lab.html');
-  const labLinks = [...labs.matchAll(/<a class="choice(?: [^"]+)?" href="([^"]+)"/g)].map(match => match[1]);
+  const labLinks = [...labs.matchAll(/<a\b[^>]*href="([^"?#]+\.html)"[^>]*>[\s\S]*?<\/a>/g)]
+    .filter(match => /<h[23]\b/.test(match[0]))
+    .map(match => match[1]);
   assert.equal(labLinks.length, 8, 'Lab entry count changed; review article');
+  assert.equal(new Set(labLinks).size, 8, 'Lab destinations must remain distinct');
   for (const href of labLinks) assert(existsSync(resolve(root, 'public', href)), `Missing lab target ${href}`);
   for (const file of ['index.html', 'public/club-features.html', 'public/member-center.html']) {
     const html = snapshots.get(file);

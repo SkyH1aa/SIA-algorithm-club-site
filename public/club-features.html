@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="features.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -11,9 +11,9 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="社团功能 · 算法社">
@@ -28,25 +28,71 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 <style>
-    /* 功能卡图标体系：40px 圆角色块 + 24px 线性图标，悬停随卡片抬升 */
-    body.club-page .grid[aria-label] .card { gap: 0; }
-    body.club-page .card-icon {
-      display: inline-grid;
-      place-items: center;
-      width: 40px;
-      height: 40px;
-      margin-bottom: 12px;
-      border-radius: 11px;
-      background: var(--club-accent-soft);
-      color: var(--club-accent);
-      transition: background var(--club-dur) var(--club-ease), color var(--club-dur) var(--club-ease), transform var(--club-dur) var(--club-ease);
+    body.club-page.features-directory .directory-intro { max-width: var(--club-read); margin-bottom: var(--club-space-7); }
+    body.club-page.features-directory .feature-entry:focus-visible { outline: 2px solid var(--club-accent, var(--cyan)); outline-offset: 4px; }
+    body.club-page.features-directory .featured-lab { border-radius: var(--club-radius, 14px); overflow: hidden; }
+    body.club-page.features-directory .featured-lab .feature-copy { flex: 1 1 50%; }
+    body.club-page.features-directory .feature-preview { width: clamp(120px, 18vw, 220px); flex: 0 1 220px; color: var(--club-accent, var(--cyan)); }
+    body.club-page.features-directory .feature-preview .preview-grid { stroke: var(--club-line, var(--line)); }
+    body.club-page.features-directory .feature-preview .preview-secondary { stroke: var(--club-muted, var(--muted)); }
+    body.club-page.features-directory .directory-group > h2 { color: var(--club-text-soft, var(--text)); }
+    body.club-page.features-directory .feature-action { display: inline-flex; align-items: center; min-height: 32px; }
+    @media (max-width: 640px) { body.club-page.features-directory .feature-preview { width: 100%; max-width: 240px; flex-basis: auto; } }
+    body.club-page.features-directory .directory-intro .lead { margin: var(--club-space-4) 0 0; }
+    body.club-page.features-directory .feature-entry { display: flex; flex-direction: column; align-items: flex-start; gap: var(--club-space-4); min-width: 0; padding: var(--club-space-5); color: var(--club-text); transition: background var(--club-dur) var(--club-ease); }
+    body.club-page.features-directory .feature-entry:hover { background: var(--club-surface-2); }
+    body.club-page.features-directory .feature-entry h3 { display: flex; align-items: center; gap: var(--club-space-3); margin: 0 0 var(--club-space-2); font-size: var(--club-fs-lg); }
+    body.club-page.features-directory .feature-icon { display: inline-flex; flex: 0 0 auto; color: var(--club-muted); }
+    body.club-page.features-directory .feature-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    body.club-page.features-directory .feature-copy { min-width: 0; }
+    body.club-page.features-directory .feature-copy p { max-width: 65ch; margin: 0; font-size: var(--club-fs-md); line-height: var(--club-lh-body); }
+    body.club-page.features-directory .feature-action { margin-top: auto; color: var(--club-accent); font-size: var(--club-fs-sm); font-weight: 650; }
+    body.club-page.features-directory .feature-entry:hover .feature-action { text-decoration: underline; text-underline-offset: 4px; }
+    body.club-page.features-directory .featured-lab { margin-bottom: var(--club-space-7); background: var(--club-surface); border-block: 1px solid var(--club-line-strong); }
+    body.club-page.features-directory .featured-lab .feature-entry { flex-direction: row; justify-content: space-between; align-items: center; gap: var(--club-space-7); padding: var(--club-space-6); }
+    body.club-page.features-directory .featured-lab h2 { display: flex; align-items: center; gap: var(--club-space-3); margin-bottom: var(--club-space-3); font-size: var(--club-fs-xl); }
+    body.club-page.features-directory .featured-lab .feature-action { flex: 0 0 auto; margin: 0; }
+    body.club-page.features-directory .directory-group { display: grid; grid-template-columns: minmax(140px, .45fr) minmax(0, 1.55fr); gap: var(--club-space-7); margin-top: var(--club-space-7); padding-top: var(--club-space-6); border-top: 1px solid var(--club-line); }
+    body.club-page.features-directory .directory-group > h2 { margin: var(--club-space-5) 0 0; font-size: var(--club-fs-xl); }
+    body.club-page.features-directory .directory-entries { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--club-space-5); }
+    body.club-page.features-directory .directory-entries .feature-entry { border-bottom: 1px solid var(--club-line); }
+    body.club-page.features-directory .directory-note { max-width: var(--club-read); margin: var(--club-space-7) 0 0; font-size: var(--club-fs-sm); color: var(--club-muted); }
+    @media (max-width: 900px) {
+      body.club-page.features-directory .directory-group { grid-template-columns: 1fr; gap: var(--club-space-3); }
+      body.club-page.features-directory .directory-group > h2 { margin-top: 0; }
     }
-    body.club-page .card-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-    body.club-page a.card:hover .card-icon { background: var(--club-accent); color: var(--club-on-accent); transform: translateY(-2px); }
-    html[data-theme="light"] body.club-page a.card:hover .card-icon { color: #ffffff; }
-  </style>
+    @media (max-width: 640px) {
+      body.club-page.features-directory .featured-lab .feature-entry { flex-direction: column; align-items: flex-start; gap: var(--club-space-5); padding: var(--club-space-5); }
+      body.club-page.features-directory .directory-entries { grid-template-columns: 1fr; }
+      body.club-page.features-directory .feature-entry { padding: var(--club-space-5) var(--club-space-3); }
+    }
+
+    /* A single featured experiment, then a compact service directory. */
+    body.club-page.features-directory .directory-intro { max-width: none; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: var(--club-space-7); align-items: end; padding-block: var(--club-space-5) var(--club-space-6); margin-bottom: var(--club-space-5); border-bottom: 1px solid var(--club-line-strong); }
+    body.club-page.features-directory .directory-intro .lead { max-width: 60ch; margin: 0; }
+    body.club-page.features-directory .featured-lab { margin-bottom: var(--club-space-8); }
+    body.club-page.features-directory .featured-lab .feature-entry { display: grid; grid-template-columns: minmax(0, 1fr) minmax(160px, .42fr); gap: var(--club-space-5) var(--club-space-7); padding: var(--club-space-7); }
+    body.club-page.features-directory .feature-preview { grid-column: 2; grid-row: 1 / 3; width: 100%; max-width: 240px; justify-self: end; }
+    body.club-page.features-directory .featured-lab .feature-action { grid-column: 1; justify-self: start; }
+    body.club-page.features-directory .directory-group { grid-template-columns: minmax(140px, .3fr) minmax(0, 1.7fr); gap: var(--club-space-6); }
+    body.club-page.features-directory .directory-group > h2 { margin-top: var(--club-space-4); }
+    body.club-page.features-directory .directory-entries { grid-template-columns: 1fr; gap: 0; }
+    body.club-page.features-directory .directory-entries .feature-entry { display: grid; grid-template-columns: minmax(0, 1fr) minmax(140px, .4fr); align-items: center; gap: var(--club-space-5); padding: var(--club-space-5) var(--club-space-4); border: 0; border-bottom: 1px solid var(--club-line); border-radius: 0; background: transparent; box-shadow: none; transform: none; }
+    body.club-page.features-directory .directory-entries .feature-entry:hover { background: var(--club-material-hover); }
+    body.club-page.features-directory .directory-entries .feature-action { margin: 0; justify-self: end; text-align: end; }
+    body.club-page.features-directory .directory-note { padding-block: var(--club-space-5); border-top: 1px solid var(--club-line); background: transparent; box-shadow: none; }
+    @media (max-width: 900px) {
+      body.club-page.features-directory .directory-intro, body.club-page.features-directory .directory-group { grid-template-columns: 1fr; gap: var(--club-space-4); }
+    }
+    @media (max-width: 640px) {
+      body.club-page.features-directory .featured-lab .feature-entry { grid-template-columns: 1fr; padding: var(--club-space-5); }
+      body.club-page.features-directory .feature-preview { grid-column: 1; grid-row: auto; justify-self: start; }
+      body.club-page.features-directory .directory-entries .feature-entry { grid-template-columns: 1fr; gap: var(--club-space-3); padding-inline: 0; }
+      body.club-page.features-directory .directory-entries .feature-action { justify-self: start; text-align: start; }
+    }
+</style>
 </head>
-<body class="club-page">
+<body class="club-page features-directory">
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="../index.html">
@@ -57,118 +103,123 @@
       <a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a>
     </div>
   </header>
-  <main>
-    <p class="eyebrow">CLUB FEATURES</p>
-    <h1 data-i18n="features.h1">社团功能</h1>
-    <p class="lead" data-i18n="features.lead">把学习实验、对战挑战、教学资源、活动公告和社员日常功能集中到这里，首页顶栏只保留核心导航。</p>
-    <section class="grid" aria-label="社团功能入口">
-      <a class="card" data-reveal style="--reveal-delay:0ms" href="visualization-lab.html">
-        <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg></span>
-        <div>
-          <strong data-i18n="features.lab">算法实验室</strong>
+  <main class="premium-directory">
+    <header class="directory-intro premium-head">
+      <h1 data-i18n="features.h1">社团功能</h1>
+      <p class="lead" data-i18n="features.lead">把学习实验、对战挑战、教学资源、活动公告和社员日常功能集中到这里，首页顶栏只保留核心导航。</p>
+    </header>
+    <section class="featured-lab premium-feature" aria-labelledby="featuredLabTitle" data-reveal>
+      <a class="feature-entry premium-entry" href="visualization-lab.html">
+        <div class="feature-copy">
+          <h2 id="featuredLabTitle"><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg></span><span data-i18n="features.lab">算法实验室</span></h2>
           <p data-i18n="features.labDesc">进入排序、搜索、数据结构、图论、动态规划、二叉树与堆的可视化实验。</p>
         </div>
-        <span data-i18n="features.labGo">进入算法实验室 →</span>
-      </a>
-      <a class="card" data-reveal style="--reveal-delay:45ms" href="gomoku.html">
-        <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="3.2"/><circle cx="15.5" cy="15" r="3.2"/><path d="M3 3h18v18H3z" stroke-dasharray="2.5 2.5"/></svg></span>
-        <div>
-          <strong data-i18n="features.gomoku">五子棋</strong>
-          <p data-i18n="features.gomokuDesc">挑战浏览器端 AI 五子棋，查看对战与排行榜入口。</p>
-        </div>
-        <span data-i18n="features.gomokuGo">开始五子棋挑战 →</span>
-      </a>
-      <a class="card" data-reveal style="--reveal-delay:90ms" href="tetris.html">
-        <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h5v5H4zM9 8h5v5H9zM14 13h5v5h-5z"/></svg></span>
-        <div>
-          <strong data-i18n="features.tetris">俄罗斯方块</strong>
-          <p data-i18n="features.tetrisDesc">正常游玩、AI 演示、AI 辅助阴影与公平人机对战，查看双排行榜入口。</p>
-        </div>
-        <span data-i18n="features.tetrisGo">开始俄罗斯方块挑战 →</span>
-      </a>
-      <a class="card" data-reveal style="--reveal-delay:135ms" href="snake.html">
-        <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17c0-3 2.5-4 5-4h6c2.5 0 4-1.2 4-3s-1.5-3-4-3H8"/><circle cx="5" cy="17" r="1.6"/></svg></span>
-        <div>
-          <strong data-i18n="features.snake">贪吃蛇</strong>
-          <p data-i18n="features.snakeDesc">正常游玩、AI 演示、AI 辅助深色轨迹与转向提醒、双窗人机对战，查看双排行榜入口。</p>
-        </div>
-        <span data-i18n="features.snakeGo">开始贪吃蛇挑战 →</span>
-      </a>
-      <a class="card" data-reveal style="--reveal-delay:180ms" href="platformer.html">
-        <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 2.5 4 6 4 9l2.5 3.5-3.5-.8c-.8 1.4-1.8 2.6-3 3.3-1.2-.7-2.2-1.9-3-3.3l-3.5.8L8 12c0-3 1-6.5 4-9z"/><circle cx="12" cy="10" r="1.5"/></svg></span>
-        <div>
-          <strong data-i18n="features.platformer">行于无垠</strong>
-          <p data-i18n="features.platformerDesc">横屏闯关射击游戏，操作角色移动、瞄准、射击并强化装备。</p>
-        </div>
-        <span data-i18n="features.platformerGo">进入行于无垠 →</span>
-      </a>
-      <a class="card" data-reveal style="--reveal-delay:225ms" href="resources.html">
-        <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M5 17a3 3 0 0 1 3-3h11"/><path d="M9 8h6"/></svg></span>
-        <div>
-          <strong data-i18n="features.resources">教学资源</strong>
-          <p data-i18n="features.resourcesDesc">查看 Python / C++ 教材、答案解析与资源下载入口。</p>
-        </div>
-        <span data-i18n="features.resourcesGo">进入教学资源 →</span>
-      </a>
-      <a class="card" data-reveal style="--reveal-delay:270ms" href="member-checkin.html">
-        <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/><path d="M9 15.5l2 2 4-4"/></svg></span>
-        <div>
-          <strong data-i18n="features.checkin">签到兑换</strong>
-          <p data-i18n="features.checkinDesc">使用签到码兑换积分，或提交课程签到等待审核。</p>
-        </div>
-        <span data-i18n="features.checkinGo">进入签到兑换 →</span>
-      </a>
-      <a class="card" data-reveal style="--reveal-delay:270ms" href="points-mall.html">
-        <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 8.7l5.4-.8z"/></svg></span>
-        <div>
-          <strong data-i18n="features.mall">积分商城</strong>
-          <p data-i18n="features.mallDesc">浏览管理员上架的商品，用社团积分兑换实物或权益。</p>
-        </div>
-        <span data-i18n="features.mallGo">进入积分商城 →</span>
-      </a>
-      <a class="card" data-reveal style="--reveal-delay:270ms" href="member-messages.html">
-        <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/></svg></span>
-        <div>
-          <strong data-i18n="features.messages">社员留言箱</strong>
-          <p data-i18n="features.messagesDesc">提交建议、问题或反馈，查看社团留言内容。</p>
-        </div>
-        <span data-i18n="features.messagesGo">进入社员留言箱 →</span>
-      </a>
-      <a class="card" data-reveal style="--reveal-delay:270ms" href="events.html">
-        <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v5a2 2 0 0 0 2 2h2l7 4V5L8 9H6a2 2 0 0 0-2 2z"/><path d="M18.5 9.5a4 4 0 0 1 0 6"/></svg></span>
-        <div>
-          <strong data-i18n="features.events">活动与公告</strong>
-          <p data-i18n="features.eventsDesc">查看社团通知、课程安排、比赛信息，并报名进行中的活动。</p>
-        </div>
-        <span data-i18n="features.eventsGo">进入活动与公告 →</span>
-      </a>
-      <a class="card" data-reveal style="--reveal-delay:270ms" href="chat.html">
-        <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H9l-5 4z"/><path d="M12 8.2l.9 1.9 1.9.9-1.9.9-.9 1.9-.9-1.9-1.9-.9 1.9-.9z"/></svg></span>
-        <div>
-          <strong data-i18n="features.chat">社团 AI Chat</strong>
-          <p data-i18n="features.chatDesc">登录并绑定资料后与 AI 对话；聊天记录保存在当前浏览器。</p>
-        </div>
-        <span data-i18n="features.chatGo">进入 AI Chat →</span>
-      </a>
-      <a class="card" data-reveal style="--reveal-delay:270ms" href="donations.html">
-        <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.6-9-9c-1.2-2.7.6-6 3.8-6 2 0 3.5 1.2 5.2 3.2C13.7 6.2 15.2 5 17.2 5c3.2 0 5 3.3 3.8 6-2 4.4-9 9-9 9z"/></svg></span>
-        <div>
-          <strong data-i18n="features.donations">社团捐赠名单</strong>
-          <p data-i18n="features.donationsDesc">查看社团收到的捐赠记录，按捐赠金额从大到小排列。</p>
-        </div>
-        <span data-i18n="features.donationsGo">查看捐赠名单 →</span>
-      </a>
-      <a class="card" data-reveal style="--reveal-delay:270ms" href="drive.html">
-        <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.4-9A5.5 5.5 0 0 1 17.3 8 4 4 0 0 1 17 18z"/></svg></span>
-        <div>
-          <strong data-i18n="features.drive">社团盘</strong>
-          <p data-i18n="features.driveDesc">访问 123 云盘专属目录。请先在个人中心登录，登录后会自动连接 WebDAV。</p>
-        </div>
-        <span data-i18n="features.driveGo">进入社团盘 →</span>
+        <svg class="feature-preview" viewBox="0 0 240 104" fill="none" aria-hidden="true" focusable="false"><path class="preview-grid" d="M8 88h224M8 56h224M8 24h224"/><path d="M24 88V60m26 28V36m26 52V48m26 40V16" stroke="currentColor" stroke-width="12"/><path class="preview-secondary" d="m146 68 30-38 40 28m-40-28 10 52" stroke-width="1.5"/><g fill="var(--club-surface, var(--panel))" stroke="currentColor" stroke-width="2"><circle cx="146" cy="68" r="6"/><circle cx="176" cy="30" r="6"/><circle cx="216" cy="58" r="6"/><circle cx="186" cy="82" r="6"/></g></svg>
+        <span class="feature-action" data-i18n="features.labGo">进入算法实验室 →</span>
       </a>
     </section>
-    <p class="hint" data-i18n="features.hint">登录入口统一在个人中心；社团盘已放入本页。更新日志在个人中心内，活动管理与积分商城管理入口在管理员总览中按权限显示。</p>
+    <section class="directory-group" aria-labelledby="worksTitle">
+      <h2 id="worksTitle" data-i18n="nav.works">作品</h2>
+      <div class="directory-entries">
+        <a class="feature-entry premium-entry" href="gomoku.html">
+        <div class="feature-copy">
+          <h3><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="3.2"/><circle cx="15.5" cy="15" r="3.2"/><path d="M3 3h18v18H3z" stroke-dasharray="2.5 2.5"/></svg></span><span data-i18n="features.gomoku">五子棋</span></h3>
+          <p data-i18n="features.gomokuDesc">挑战浏览器端 AI 五子棋，查看对战与排行榜入口。</p>
+        </div>
+        <span class="feature-action" data-i18n="features.gomokuGo">开始五子棋挑战 →</span>
+      </a>
+        <a class="feature-entry premium-entry" href="tetris.html">
+        <div class="feature-copy">
+          <h3><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h5v5H4zM9 8h5v5H9zM14 13h5v5h-5z"/></svg></span><span data-i18n="features.tetris">俄罗斯方块</span></h3>
+          <p data-i18n="features.tetrisDesc">正常游玩、AI 演示、AI 辅助阴影与公平人机对战，查看双排行榜入口。</p>
+        </div>
+        <span class="feature-action" data-i18n="features.tetrisGo">开始俄罗斯方块挑战 →</span>
+      </a>
+        <a class="feature-entry premium-entry" href="snake.html">
+        <div class="feature-copy">
+          <h3><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17c0-3 2.5-4 5-4h6c2.5 0 4-1.2 4-3s-1.5-3-4-3H8"/><circle cx="5" cy="17" r="1.6"/></svg></span><span data-i18n="features.snake">贪吃蛇</span></h3>
+          <p data-i18n="features.snakeDesc">正常游玩、AI 演示、AI 辅助深色轨迹与转向提醒、双窗人机对战，查看双排行榜入口。</p>
+        </div>
+        <span class="feature-action" data-i18n="features.snakeGo">开始贪吃蛇挑战 →</span>
+      </a>
+        <a class="feature-entry premium-entry" href="platformer.html">
+        <div class="feature-copy">
+          <h3><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 2.5 4 6 4 9l2.5 3.5-3.5-.8c-.8 1.4-1.8 2.6-3 3.3-1.2-.7-2.2-1.9-3-3.3l-3.5.8L8 12c0-3 1-6.5 4-9z"/><circle cx="12" cy="10" r="1.5"/></svg></span><span data-i18n="features.platformer">行于无垠</span></h3>
+          <p data-i18n="features.platformerDesc">横屏闯关射击游戏，操作角色移动、瞄准、射击并强化装备。</p>
+        </div>
+        <span class="feature-action" data-i18n="features.platformerGo">进入行于无垠 →</span>
+      </a>
+      </div>
+    </section>
+    <section class="directory-group" aria-labelledby="resourcesTitle">
+      <h2 id="resourcesTitle" data-i18n="features.resources">教学资源</h2>
+      <div class="directory-entries">
+        <a class="feature-entry premium-entry" href="resources.html">
+        <div class="feature-copy">
+          <h3><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M5 17a3 3 0 0 1 3-3h11"/><path d="M9 8h6"/></svg></span><span data-i18n="features.resources">教学资源</span></h3>
+          <p data-i18n="features.resourcesDesc">查看 Python / C++ 教材、答案解析与资源下载入口。</p>
+        </div>
+        <span class="feature-action" data-i18n="features.resourcesGo">进入教学资源 →</span>
+      </a>
+        <a class="feature-entry premium-entry" href="drive.html">
+        <div class="feature-copy">
+          <h3><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.4-9A5.5 5.5 0 0 1 17.3 8 4 4 0 0 1 17 18z"/></svg></span><span data-i18n="features.drive">社团盘</span></h3>
+          <p data-i18n="features.driveDesc">访问 123 云盘专属目录。请先在个人中心登录，登录后会自动连接 WebDAV。</p>
+        </div>
+        <span class="feature-action" data-i18n="features.driveGo">进入社团盘 →</span>
+      </a>
+      </div>
+    </section>
+    <section class="directory-group" aria-labelledby="membersTitle">
+      <h2 id="membersTitle" data-i18n="nav.members">成员</h2>
+      <div class="directory-entries">
+        <a class="feature-entry premium-entry" href="events.html">
+        <div class="feature-copy">
+          <h3><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v5a2 2 0 0 0 2 2h2l7 4V5L8 9H6a2 2 0 0 0-2 2z"/><path d="M18.5 9.5a4 4 0 0 1 0 6"/></svg></span><span data-i18n="features.events">活动与公告</span></h3>
+          <p data-i18n="features.eventsDesc">查看社团通知、课程安排、比赛信息，并报名进行中的活动。</p>
+        </div>
+        <span class="feature-action" data-i18n="features.eventsGo">进入活动与公告 →</span>
+      </a>
+        <a class="feature-entry premium-entry" href="member-checkin.html">
+        <div class="feature-copy">
+          <h3><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/><path d="M9 15.5l2 2 4-4"/></svg></span><span data-i18n="features.checkin">签到兑换</span></h3>
+          <p data-i18n="features.checkinDesc">使用签到码兑换积分，或提交课程签到等待审核。</p>
+        </div>
+        <span class="feature-action" data-i18n="features.checkinGo">进入签到兑换 →</span>
+      </a>
+        <a class="feature-entry premium-entry" href="points-mall.html">
+        <div class="feature-copy">
+          <h3><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 8.7l5.4-.8z"/></svg></span><span data-i18n="features.mall">积分商城</span></h3>
+          <p data-i18n="features.mallDesc">浏览管理员上架的商品，用社团积分兑换实物或权益。</p>
+        </div>
+        <span class="feature-action" data-i18n="features.mallGo">进入积分商城 →</span>
+      </a>
+        <a class="feature-entry premium-entry" href="member-messages.html">
+        <div class="feature-copy">
+          <h3><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/></svg></span><span data-i18n="features.messages">社员留言箱</span></h3>
+          <p data-i18n="features.messagesDesc">提交建议、问题或反馈，查看社团留言内容。</p>
+        </div>
+        <span class="feature-action" data-i18n="features.messagesGo">进入社员留言箱 →</span>
+      </a>
+        <a class="feature-entry premium-entry" href="chat.html">
+        <div class="feature-copy">
+          <h3><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H9l-5 4z"/><path d="M12 8.2l.9 1.9 1.9.9-1.9.9-.9 1.9-.9-1.9-1.9-.9 1.9-.9z"/></svg></span><span data-i18n="features.chat">社团 AI Chat</span></h3>
+          <p data-i18n="features.chatDesc">登录并绑定资料后与 AI 对话；聊天记录保存在当前浏览器。</p>
+        </div>
+        <span class="feature-action" data-i18n="features.chatGo">进入 AI Chat →</span>
+      </a>
+        <a class="feature-entry premium-entry" href="donations.html">
+        <div class="feature-copy">
+          <h3><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.6-9-9c-1.2-2.7.6-6 3.8-6 2 0 3.5 1.2 5.2 3.2C13.7 6.2 15.2 5 17.2 5c3.2 0 5 3.3 3.8 6-2 4.4-9 9-9 9z"/></svg></span><span data-i18n="features.donations">社团捐赠名单</span></h3>
+          <p data-i18n="features.donationsDesc">查看社团收到的捐赠记录，按捐赠金额从大到小排列。</p>
+        </div>
+        <span class="feature-action" data-i18n="features.donationsGo">查看捐赠名单 →</span>
+      </a>
+      </div>
+    </section>
+    <p class="directory-note premium-inset" data-i18n="features.hint">登录入口统一在个人中心；社团盘已放入本页。更新日志在个人中心内，活动管理与积分商城管理入口在管理员总览中按权限显示。</p>
   </main>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

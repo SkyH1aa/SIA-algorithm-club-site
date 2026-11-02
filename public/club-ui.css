@@ -6,8 +6,7 @@
  *
  * 规则：
  * 1. 只定义 --club-* 令牌，不覆盖 theme.css 的全站主题变量。
- * 2. 默认暗色；亮色用 html[data-theme="light"] body.club-page 覆盖，
- *    并用 !important 压过 theme.css 的全站 !important 规则。
+ * 2. 默认暗色；亮色只切换令牌。theme.css 的旧通用组件覆盖不进入 club-page。
  * 3. 所有交互元素保证 3:1 以上对比度，主按钮亮色用 #C2410C。
  */
 
@@ -18,18 +17,19 @@
    1. 令牌
    ============================================================ */
 body.club-page,
-.club-launcher {
-  --club-bg: #060a12;
-  --club-bg-glow-a: rgba(53, 208, 224, 0.10);
-  --club-bg-glow-b: rgba(124, 92, 255, 0.10);
-  --club-surface: #0c1320;
-  --club-surface-2: #101a2a;
-  --club-surface-3: #162236;
-  --club-line: rgba(132, 170, 214, 0.16);
-  --club-line-strong: rgba(132, 190, 225, 0.32);
-  --club-text: #e8f1fb;
-  --club-text-soft: #c2d2e4;
-  --club-muted: #90a4bb;
+.club-launcher,
+.club-notify-panel {
+  --club-bg: #101419;
+  --club-bg-glow-a: transparent;
+  --club-bg-glow-b: transparent;
+  --club-surface: #191f26;
+  --club-surface-2: #202833;
+  --club-surface-3: #2a3441;
+  --club-line: rgba(177, 196, 216, 0.17);
+  --club-line-strong: rgba(177, 196, 216, 0.34);
+  --club-text: #edf2f7;
+  --club-text-soft: #cbd5df;
+  --club-muted: #a5b1bf;
   --club-accent: #3ad4e6;
   --club-accent-strong: #7ce7f2;
   --club-accent-soft: rgba(58, 212, 230, 0.12);
@@ -43,19 +43,69 @@ body.club-page,
   --club-danger-soft: rgba(255, 128, 149, 0.12);
   --club-info: #8fb4ff;
   --club-info-soft: rgba(143, 180, 255, 0.12);
-  --club-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
-  --club-shadow-sm: 0 8px 22px rgba(0, 0, 0, 0.22);
-  --club-shadow-hover: 0 22px 52px rgba(0, 0, 0, 0.42);
-  --club-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.18);
+  /* Metal roles are opaque: quiet reading, machined work panels, raised entries
+     and recessed inputs. Directional finish never substitutes for a boundary. */
+  --club-metal-read: var(--club-surface);
+  --club-metal-panel: #1c2530;
+  --club-metal-raised: #232e3b;
+  --club-metal-inset: #131a22;
+  --club-metal-control: #242f3c;
+  --club-metal-hover: #2c3a49;
+  --club-metal-finish: linear-gradient(112deg, rgba(210, 228, 245, 0.07), rgba(210, 228, 245, 0.015) 34%, rgba(5, 12, 22, 0.06) 72%, rgba(210, 228, 245, 0.025));
+  --club-metal-read-finish: linear-gradient(112deg, rgba(210, 228, 245, 0.025), transparent 45%);
+  --club-metal-control-finish: linear-gradient(180deg, rgba(221, 237, 250, 0.10), rgba(221, 237, 250, 0.015) 52%, rgba(4, 12, 24, 0.12));
+  --club-material-read: var(--club-metal-read);
+  --club-material-raised: var(--club-metal-raised);
+  --club-material-inset: var(--club-metal-inset);
+  --club-material-control: var(--club-metal-control);
+  --club-material-hover: var(--club-metal-hover);
+  --club-material-glass: rgba(25, 31, 38, 0.90);
+  --club-material-glass-fallback: #191f26;
+  --club-material-scrim: rgba(5, 10, 16, 0.68);
+  --club-material-light: var(--club-metal-finish);
+  --club-material-edge: rgba(213, 231, 248, 0.09);
+  --club-material-edge-strong: rgba(213, 231, 248, 0.15);
+  --club-material-blur: 10px;
+  --club-material-chrome: var(--club-material-glass-fallback);
+  --club-material-filter: none;
+  /* Glass is reserved for auth shells, featured exhibits and floating chrome.
+     Lighting markers alone never grant backdrop sampling to a content panel.
+     Local pointer x/y and active remain compatible with the lighting helper. */
+  --club-liquid-radius: 20px;
+  --club-liquid-control-radius: 12px;
+  --club-liquid-glass: rgba(18, 29, 44, 0.65);
+  --club-liquid-fallback: #162231;
+  --club-liquid-fill: var(--club-liquid-fallback);
+  --club-liquid-blur: 16px;
+  --club-liquid-saturation: 1.3;
+  --club-liquid-filter: none;
+  --club-liquid-line: rgba(151, 192, 218, 0.23);
+  --club-liquid-line-hover: rgba(112, 218, 234, 0.48);
+  --club-liquid-rim: rgba(224, 243, 255, 0.27);
+  --club-liquid-rim-low: rgba(8, 17, 29, 0.52);
+  --club-liquid-wash: linear-gradient(155deg, rgba(188, 220, 244, 0.11), rgba(188, 220, 244, 0) 38%, rgba(58, 212, 230, 0.025) 100%);
+  --club-liquid-control: #253546;
+  --club-liquid-control-hover: #2e4255;
+  --club-liquid-control-gloss: linear-gradient(180deg, rgba(231, 246, 255, 0.13), rgba(231, 246, 255, 0.025) 48%, rgba(4, 12, 24, 0.10) 100%);
+  --club-liquid-shadow: inset 0 1px 0 var(--club-liquid-rim), inset 0 -1px 0 var(--club-liquid-rim-low), 0 2px 5px rgba(0, 7, 18, 0.20), 0 18px 40px -18px rgba(0, 7, 18, 0.66);
+  --club-liquid-shadow-hover: inset 0 1px 0 var(--club-liquid-rim), inset 0 -1px 0 var(--club-liquid-rim-low), 0 4px 8px rgba(0, 7, 18, 0.23), 0 22px 44px -18px rgba(0, 7, 18, 0.72);
+  --club-liquid-control-shadow: inset 0 1px 0 var(--club-liquid-rim), inset 0 -1px 0 var(--club-liquid-rim-low), 0 2px 4px rgba(0, 7, 18, 0.20);
+  --club-liquid-ambient: radial-gradient(ellipse 76% 520px at 10% 0, rgba(39, 112, 139, 0.18), transparent 72%), radial-gradient(ellipse 52% 640px at 100% 38%, rgba(73, 95, 137, 0.12), transparent 74%), linear-gradient(115deg, transparent 38%, rgba(160, 197, 224, 0.025) 38.1%, transparent 38.2%);
+  --club-shadow-xs: inset 0 1px 0 var(--club-material-edge), 0 1px 2px rgba(0, 0, 0, 0.16);
+  --club-shadow-sm: inset 0 1px 0 var(--club-material-edge), 0 2px 4px rgba(0, 0, 0, 0.16), 0 8px 20px -12px rgba(0, 0, 0, 0.36);
+  --club-shadow: inset 0 1px 0 var(--club-material-edge), 0 3px 8px rgba(0, 0, 0, 0.18), 0 18px 42px -16px rgba(0, 0, 0, 0.46);
+  --club-shadow-hover: inset 0 1px 0 var(--club-material-edge-strong), 0 4px 10px rgba(0, 0, 0, 0.22), 0 20px 40px -16px rgba(0, 0, 0, 0.52);
+  --club-shadow-float: inset 0 1px 0 var(--club-material-edge-strong), 0 8px 20px rgba(0, 0, 0, 0.24), 0 28px 72px -20px rgba(0, 0, 0, 0.56);
+  --club-shadow-inset: inset 0 1px 3px rgba(0, 0, 0, 0.24), 0 1px 0 var(--club-material-edge);
+  --club-shadow-press: inset 0 2px 3px rgba(0, 0, 0, 0.22);
   --club-ring: 0 0 0 3px var(--club-accent-soft);
-  /* 质感层：顶部内高光 + 表面/主按钮渐变 + 品牌色投影（分层光） */
-  --club-highlight: rgba(255, 255, 255, 0.055);
-  --club-highlight-strong: rgba(255, 255, 255, 0.14);
-  --club-grad-surface: linear-gradient(180deg, color-mix(in srgb, var(--club-surface) 92%, #ffffff) 0%, var(--club-surface) 100%);
-  --club-grad-primary: linear-gradient(180deg, color-mix(in srgb, var(--club-accent) 84%, #ffffff) 0%, var(--club-accent) 62%, color-mix(in srgb, var(--club-accent) 90%, #000000) 100%);
-  /* display 标题渐变文字：顶部提亮、底部极轻品牌染色（第五轮） */
-  --club-grad-text: linear-gradient(180deg, color-mix(in srgb, var(--club-text) 84%, #ffffff) 0%, var(--club-text) 52%, color-mix(in srgb, var(--club-text) 88%, var(--club-accent)) 100%);
-  --club-glow-accent: 0 6px 18px color-mix(in srgb, var(--club-accent) 26%, transparent);
+  /* Legacy aliases share the material source, never a full-page glow. */
+  --club-highlight: var(--club-material-edge);
+  --club-highlight-strong: var(--club-material-edge-strong);
+  --club-grad-surface: var(--club-material-light);
+  --club-grad-primary: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0));
+  --club-grad-text: none;
+  --club-glow-accent: none;
   --club-dur-fast: 140ms;
   --club-dur: 200ms;
   --club-dur-slow: 320ms;
@@ -70,9 +120,9 @@ body.club-page,
   --club-font: "Inter Variable", "MiSans VF", "MiSans", "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", system-ui, sans-serif;
   --club-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace;
   /* 排版阶梯：全站正文/标签字号只允许取这 7 档（数据大数字除外） */
-  --club-fs-xs: 11px;
-  --club-fs-sm: 12.5px;
-  --club-fs-md: 13.5px;
+  --club-fs-xs: 12px;
+  --club-fs-sm: 13px;
+  --club-fs-md: 14px;
   --club-fs-base: 15px;
   --club-fs-lg: 17px;
   --club-fs-xl: 21px;
@@ -103,18 +153,19 @@ body.club-page,
 }
 
 html[data-theme="light"] body.club-page,
-html[data-theme="light"] .club-launcher {
-  --club-bg: #f3f4f7;
-  --club-bg-glow-a: rgba(194, 65, 12, 0.05);
-  --club-bg-glow-b: rgba(66, 78, 120, 0.05);
-  --club-surface: #ffffff;
-  --club-surface-2: #f8f9fb;
-  --club-surface-3: #eef0f4;
-  --club-line: #e2e5eb;
-  --club-line-strong: #cdd2db;
-  --club-text: #17181c;
-  --club-text-soft: #33363d;
-  --club-muted: #5b6069;
+html[data-theme="light"] .club-launcher,
+html[data-theme="light"] .club-notify-panel {
+  --club-bg: #eae7e1;
+  --club-bg-glow-a: transparent;
+  --club-bg-glow-b: transparent;
+  --club-surface: #fcfaf6;
+  --club-surface-2: #f2efe9;
+  --club-surface-3: #e6e2da;
+  --club-line: #d6d0c6;
+  --club-line-strong: #b8afa2;
+  --club-text: #282b2e;
+  --club-text-soft: #454b50;
+  --club-muted: #64645f;
   --club-accent: #c2410c;
   --club-accent-strong: #9a3412;
   --club-accent-soft: #fdf0ea;
@@ -128,16 +179,67 @@ html[data-theme="light"] .club-launcher {
   --club-danger-soft: #fdeef1;
   --club-info: #2f4f8f;
   --club-info-soft: #eef2fb;
-  --club-shadow: 0 10px 30px rgba(23, 24, 28, 0.07);
-  --club-shadow-sm: 0 4px 14px rgba(23, 24, 28, 0.06);
-  /* 亮色质感层：内高光改为纯白压在浅表面，投影更柔 */
-  --club-highlight: rgba(255, 255, 255, 0.85);
-  --club-highlight-strong: #ffffff;
-  --club-grad-surface: linear-gradient(180deg, #ffffff 0%, var(--club-surface) 100%);
-  --club-grad-primary: linear-gradient(180deg, color-mix(in srgb, var(--club-accent) 88%, #ffffff) 0%, var(--club-accent) 70%, color-mix(in srgb, var(--club-accent) 92%, #000000) 100%);
-  --club-grad-text: linear-gradient(180deg, var(--club-text) 0%, color-mix(in srgb, var(--club-text) 90%, var(--club-accent)) 100%);
-  --club-glow-accent: 0 6px 16px color-mix(in srgb, var(--club-accent) 22%, transparent);
-  --club-shadow-xs: 0 1px 2px rgba(23, 24, 28, 0.08);
+  /* Lower the primary highlight to keep white labels above 4.5:1. */
+  --club-grad-primary: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+  --club-metal-panel: #f1eee8;
+  --club-metal-raised: #f7f4ee;
+  --club-metal-inset: #e5e1d9;
+  --club-metal-control: #f7f4ee;
+  --club-metal-hover: #fffdf8;
+  --club-metal-finish: linear-gradient(112deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.08) 34%, rgba(115, 99, 77, 0.035) 72%, rgba(255, 255, 255, 0.22));
+  --club-metal-read-finish: linear-gradient(112deg, rgba(255, 255, 255, 0.38), transparent 45%);
+  --club-metal-control-finish: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.08) 52%, rgba(108, 93, 74, 0.05));
+  --club-material-glass: rgba(252, 250, 246, 0.90);
+  --club-material-glass-fallback: #fcfaf6;
+  --club-material-scrim: rgba(40, 38, 33, 0.34);
+  --club-material-light: var(--club-metal-finish);
+  --club-material-edge: rgba(255, 255, 255, 0.85);
+  --club-material-edge-strong: #ffffff;
+  /* Warm brushed alloy and porcelain reading layers share a quiet glass rim. */
+  --club-liquid-glass: rgba(255, 253, 250, 0.80);
+  --club-liquid-fallback: #fffdfa;
+  --club-liquid-line: rgba(137, 111, 89, 0.24);
+  --club-liquid-line-hover: rgba(154, 88, 53, 0.44);
+  --club-liquid-rim: rgba(255, 255, 255, 0.96);
+  --club-liquid-rim-low: rgba(114, 98, 79, 0.09);
+  --club-liquid-wash: linear-gradient(155deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0) 45%, rgba(205, 215, 229, 0.09) 100%);
+  --club-liquid-control: #f5f3ef;
+  --club-liquid-control-hover: #ffffff;
+  --club-liquid-control-gloss: linear-gradient(180deg, rgba(255, 255, 255, 0.80), rgba(255, 255, 255, 0.08) 52%, rgba(108, 93, 74, 0.035) 100%);
+  --club-liquid-shadow: inset 0 1px 0 var(--club-liquid-rim), inset 0 -1px 0 var(--club-liquid-rim-low), 0 2px 4px rgba(53, 61, 73, 0.04), 0 18px 40px -20px rgba(53, 61, 73, 0.20);
+  --club-liquid-shadow-hover: inset 0 1px 0 var(--club-liquid-rim), inset 0 -1px 0 var(--club-liquid-rim-low), 0 4px 8px rgba(53, 61, 73, 0.06), 0 22px 44px -20px rgba(53, 61, 73, 0.26);
+  --club-liquid-control-shadow: inset 0 1px 0 var(--club-liquid-rim), inset 0 -1px 0 var(--club-liquid-rim-low), 0 2px 4px rgba(53, 61, 73, 0.07);
+  --club-liquid-ambient: radial-gradient(ellipse 76% 520px at 10% 0, rgba(207, 217, 228, 0.42), transparent 72%), radial-gradient(ellipse 52% 640px at 100% 38%, rgba(225, 212, 196, 0.22), transparent 74%), linear-gradient(115deg, transparent 38%, rgba(112, 125, 142, 0.045) 38.1%, transparent 38.2%);
+  --club-shadow-xs: inset 0 1px 0 var(--club-material-edge), 0 1px 2px rgba(29, 48, 72, 0.05);
+  --club-shadow-sm: inset 0 1px 0 var(--club-material-edge), 0 2px 4px rgba(29, 48, 72, 0.04), 0 8px 20px -12px rgba(29, 48, 72, 0.16);
+  --club-shadow: inset 0 1px 0 var(--club-material-edge), 0 3px 8px rgba(29, 48, 72, 0.05), 0 18px 42px -16px rgba(29, 48, 72, 0.18);
+  --club-shadow-hover: inset 0 1px 0 var(--club-material-edge-strong), 0 4px 10px rgba(29, 48, 72, 0.07), 0 20px 40px -16px rgba(29, 48, 72, 0.23);
+  --club-shadow-float: inset 0 1px 0 var(--club-material-edge-strong), 0 8px 20px rgba(29, 48, 72, 0.08), 0 28px 72px -20px rgba(29, 48, 72, 0.24);
+  --club-shadow-inset: inset 0 1px 2px rgba(29, 48, 72, 0.06), 0 1px 0 #ffffff;
+  --club-shadow-press: inset 0 2px 3px rgba(29, 48, 72, 0.10);
+}
+
+/* Floating chrome, auth shells and explicitly selected exhibits frost once.
+   The launcher blurs its scrim once; content/control children never add blur. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  body.club-page,
+  .club-launcher,
+  .club-notify-panel {
+    --club-material-chrome: var(--club-material-glass);
+    --club-material-filter: blur(var(--club-material-blur)) saturate(1.12);
+    --club-liquid-fill: var(--club-liquid-glass);
+    --club-liquid-filter: blur(var(--club-liquid-blur)) saturate(var(--club-liquid-saturation));
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  body.club-page,
+  .club-launcher,
+  .club-notify-panel {
+    --club-material-chrome: var(--club-material-glass-fallback);
+    --club-material-filter: none;
+    --club-liquid-fill: var(--club-liquid-fallback);
+    --club-liquid-filter: none;
+  }
 }
 
 /* ============================================================
@@ -154,12 +256,9 @@ body.club-page {
   flex-direction: column;
   color: var(--club-text);
   font-family: var(--club-font);
-  font-size: 15px;
-  line-height: 1.65;
-  background:
-    radial-gradient(ellipse 60% 42% at 8% -4%, var(--club-bg-glow-a), transparent 60%),
-    radial-gradient(ellipse 52% 40% at 96% 2%, var(--club-bg-glow-b), transparent 62%),
-    var(--club-bg);
+  font-size: var(--club-fs-base);
+  line-height: var(--club-lh-body);
+  background: var(--club-bg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -206,14 +305,10 @@ body.club-page .club-topbar {
   min-height: var(--club-topbar);
   padding: 10px clamp(16px, 3vw, 30px);
   border-bottom: 1px solid var(--club-line);
-  background: color-mix(in srgb, var(--club-bg) 82%, transparent);
-  /* 第四轮降负：18px+saturate 常驻重采样在长页滚动/流式内容下成本高，
-     12px 视觉差异极小而合成开销显著更低。 */
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-}
-@supports not (background: color-mix(in srgb, red 50%, blue)) {
-  body.club-page .topbar { background: var(--club-bg); }
+  background: var(--club-material-chrome);
+  -webkit-backdrop-filter: var(--club-material-filter);
+  backdrop-filter: var(--club-material-filter);
+  box-shadow: var(--club-shadow-sm);
 }
 
 body.club-page .topbar-inner {
@@ -429,7 +524,7 @@ body.club-page .eyebrow::before {
 }
 body.club-page .lead { max-width: 760px; margin: 0 0 20px; color: var(--club-muted); line-height: 1.75; }
 body.club-page .intro { margin: 0 0 14px; color: var(--club-muted); font-size: 13.5px; line-height: 1.7; }
-body.club-page .hint { margin: 6px 0 0; color: var(--club-muted); font-size: 12px; line-height: 1.55; }
+body.club-page .hint { margin: 6px 0 0; color: var(--club-muted); font-size: var(--club-fs-sm); line-height: 1.6; }
 body.club-page .note {
   margin: 18px 0 0;
   padding: 12px 14px;
@@ -440,6 +535,87 @@ body.club-page .note {
   line-height: 1.65;
 }
 body.club-page .required { color: var(--club-danger); }
+
+/* 页面任务密度由 club-shell.js 标注；游戏 / 画布保留自己的 main 布局。 */
+body.club-page[data-club-surface="read"] main {
+  max-width: calc(var(--club-read) + 60px);
+  padding-top: clamp(28px, 4vw, 64px);
+}
+body.club-page[data-club-surface="read"] main > h1,
+body.club-page[data-club-surface="read"] .club-page-head h1 {
+  margin-bottom: var(--club-space-4);
+  font-weight: 700;
+}
+body.club-page[data-club-surface="read"] main > .lead,
+body.club-page[data-club-surface="read"] .club-page-head .lead {
+  max-width: 65ch;
+  margin-bottom: var(--club-space-6);
+  color: var(--club-text-soft);
+  font-size: var(--club-fs-lg);
+  line-height: 1.8;
+}
+body.club-page[data-club-surface="read"] .guide-grid { grid-template-columns: 1fr; }
+body.club-page[data-club-surface="read"] :is(.panel, .entry) {
+  padding: clamp(16px, 3vw, 28px);
+  border-radius: var(--club-radius-sm);
+}
+body.club-page[data-club-surface="read"] .timeline { gap: var(--club-space-5); }
+body.club-page[data-club-surface="read"] :is(.panel, .entry) :is(p, ul, ol) {
+  max-width: 70ch;
+}
+body.club-page[data-club-surface="read"] :is(.panel, .entry) :is(p, ul, ol) {
+  font-size: var(--club-fs-base);
+  line-height: 1.8;
+}
+body.club-page[data-club-surface="read"] :is(.panel, .entry) h2 {
+  font-size: var(--club-fs-xl);
+  margin-bottom: var(--club-space-3);
+}
+body.club-page[data-club-surface="operate"] main > h1,
+body.club-page[data-club-surface="operate"] .club-page-head h1 {
+  font-size: 28px;
+  font-weight: 750;
+}
+body.club-page[data-club-surface="operate"] .club-page-head {
+  gap: var(--club-space-4);
+  margin-bottom: var(--club-space-5);
+  padding-bottom: var(--club-space-5);
+  border-bottom: 1px solid var(--club-line-strong);
+}
+body.club-page[data-club-surface="operate"] .club-page-head .lead {
+  max-width: 68ch;
+  font-size: var(--club-fs-md);
+  line-height: var(--club-lh-body);
+}
+body.club-page[data-club-surface="operate"] :is(.panel, .panel-block, .club-panel) {
+  padding: var(--club-space-5);
+  box-shadow: var(--club-shadow-xs);
+}
+body.club-page[data-club-surface="operate"] :is(.panel-head, .panel-heading, .admin-head, .points-head) {
+  align-items: center;
+  padding-bottom: var(--club-space-3);
+  border-bottom: 1px solid var(--club-line);
+}
+body.club-page[data-club-surface="operate"] :is(.panel, .panel-block, .club-panel) h2 {
+  font-size: var(--club-fs-lg);
+}
+body.club-page[data-club-surface="explore"] .club-page-head {
+  margin-bottom: var(--club-space-7);
+  padding-bottom: var(--club-space-5);
+  border-bottom: 1px solid var(--club-line-strong);
+}
+body.club-page[data-club-surface="explore"] :is(.card, .resource-card) {
+  padding: var(--club-space-5);
+}
+body.club-page[data-club-surface="explore"] :is(.card strong, .resource-card h3) {
+  font-size: var(--club-fs-lg);
+  font-weight: 700;
+}
+body.club-page[data-club-surface="explore"] :is(.card, .resource-card) p {
+  color: var(--club-text-soft);
+  font-size: var(--club-fs-md);
+  line-height: 1.7;
+}
 
 /* 通用栅格 */
 body.club-page .layout { display: grid; grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr); gap: var(--club-gap); align-items: start; }
@@ -477,9 +653,9 @@ body.club-page .club-panel {
   position: relative;
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius);
-  background: var(--club-surface);
-  background-image: var(--club-grad-surface);
-  box-shadow: inset 0 1px 0 var(--club-highlight), var(--club-shadow-sm);
+  background-color: var(--club-metal-panel);
+  background-image: var(--club-metal-finish);
+  box-shadow: var(--club-shadow-xs);
 }
 body.club-page .panel,
 body.club-page .panel-block,
@@ -561,6 +737,15 @@ body.club-page .gate .gate-icon,
 body.club-page .member-gate .gate-icon,
 body.club-page .denied .gate-icon { margin-left: auto; margin-right: auto; }
 
+/* Permission content stays opaque; visibility remains owned by page state. */
+body.club-page :is(.member-gate, .gate, .denied) {
+  background-color: var(--club-material-read);
+  box-shadow: var(--club-shadow-xs);
+}
+body.club-page :is(.member-gate, .gate, .denied) .gate-icon {
+  box-shadow: inset 0 1px 0 var(--club-material-edge-strong);
+}
+
 /* 状态卡 / 概览卡 */
 body.club-page .status-panel,
 body.club-page .status-card,
@@ -569,8 +754,7 @@ body.club-page .session-card {
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius);
   background-color: var(--club-surface);
-  background-image: var(--club-grad-surface);
-  box-shadow: inset 0 1px 0 var(--club-highlight), var(--club-shadow-sm);
+  box-shadow: var(--club-shadow-xs);
 }
 body.club-page .status-panel strong,
 body.club-page .status-card strong,
@@ -587,8 +771,8 @@ body.club-page .hero-card {
   padding: 20px;
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius);
-  background: linear-gradient(140deg, var(--club-accent-soft), transparent 62%), var(--club-surface);
-  box-shadow: inset 0 1px 0 var(--club-highlight), var(--club-shadow-sm);
+  background: var(--club-surface);
+  box-shadow: var(--club-shadow-xs);
 }
 body.club-page .hero-card strong { display: block; margin-bottom: 6px; color: var(--club-accent); font-size: 16px; }
 body.club-page .hero-card span { color: var(--club-muted); font-size: 13px; line-height: 1.7; }
@@ -605,8 +789,7 @@ body.club-page .stat {
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius-sm);
   background-color: var(--club-surface);
-  background-image: var(--club-grad-surface);
-  box-shadow: inset 0 1px 0 var(--club-highlight), 0 1px 2px rgba(0, 0, 0, 0.12);
+  box-shadow: none;
 }
 body.club-page .stat small { display: block; margin-bottom: 4px; color: var(--club-muted); font-size: var(--club-fs-xs); letter-spacing: 0.02em; }
 body.club-page .stat strong { color: var(--club-text); font-size: 24px; font-weight: 750; line-height: 1.2; font-variant-numeric: tabular-nums; }
@@ -619,14 +802,17 @@ body.club-page .card {
   justify-content: space-between;
   min-height: 132px;
   padding: 18px;
+  background-color: var(--club-material-raised);
+  background-image: var(--club-material-light);
   color: var(--club-text);
   transition: transform var(--club-dur, 200ms) var(--club-ease, ease), border-color var(--club-dur, 200ms) var(--club-ease, ease), box-shadow var(--club-dur, 200ms) var(--club-ease, ease), background var(--club-dur, 200ms) var(--club-ease, ease);
 }
-body.club-page a.card:hover {
+body.club-page a.card:hover,
+body.club-page a.card:focus-visible {
   transform: translateY(-2px);
   border-color: var(--club-accent-line);
-  box-shadow: var(--club-shadow);
-  background: var(--club-surface-2);
+  box-shadow: var(--club-shadow-hover);
+  background-color: var(--club-material-hover);
 }
 body.club-page .card strong { display: block; font-size: 16px; font-weight: 700; }
 body.club-page .card p { margin: 6px 0 0; color: var(--club-muted); font-size: 13px; line-height: 1.6; }
@@ -682,7 +868,7 @@ body.club-page .row-button {
   min-height: 40px;
   padding: 8px 14px;
   border: 1px solid color-mix(in srgb, var(--club-accent) 62%, #000000 10%);
-  border-radius: var(--club-radius-sm);
+  border-radius: var(--club-liquid-control-radius);
   background-image: var(--club-grad-primary);
   background-color: var(--club-accent);
   color: var(--club-on-accent);
@@ -694,20 +880,19 @@ body.club-page .row-button {
   text-align: center;
   text-decoration: none;
   cursor: pointer;
-  box-shadow: inset 0 1px 0 var(--club-highlight-strong), 0 1px 2px rgba(0, 0, 0, 0.18), var(--club-glow-accent);
+  box-shadow: var(--club-shadow-xs);
   transition: filter var(--club-dur) var(--club-ease), background-color var(--club-dur) var(--club-ease), border-color var(--club-dur) var(--club-ease), color var(--club-dur) var(--club-ease), transform var(--club-dur) var(--club-ease), box-shadow var(--club-dur) var(--club-ease);
 }
-body.club-page .button:hover,
-body.club-page .primary-action:hover {
-  filter: brightness(1.06) saturate(1.04);
-  transform: translateY(-1px);
-  box-shadow: inset 0 1px 0 var(--club-highlight-strong), 0 2px 4px rgba(0, 0, 0, 0.2), 0 10px 24px color-mix(in srgb, var(--club-accent) 34%, transparent);
+body.club-page .button:not(.secondary):not(.danger):not(.ghost):is(:hover, :focus-visible):not(:disabled):not([aria-disabled="true"]),
+body.club-page .btn:not(.secondary):not(.danger):not(.ghost):is(:hover, :focus-visible):not(:disabled):not([aria-disabled="true"]),
+body.club-page .primary-action:is(:hover, :focus-visible):not(:disabled):not([aria-disabled="true"]) {
+  background-color: var(--club-accent-strong);
+  border-color: var(--club-accent-strong);
+  box-shadow: var(--club-liquid-control-shadow);
 }
-body.club-page .button:active,
-body.club-page .primary-action:active {
+body.club-page :is(.button, .btn, .primary-action, .secondary-action, .row-button):active:not(:disabled):not([aria-disabled="true"]) {
   transform: translateY(1px);
-  filter: brightness(0.98);
-  box-shadow: inset 0 1px 0 var(--club-highlight-strong), inset 0 2px 6px rgba(0, 0, 0, 0.22), 0 1px 3px color-mix(in srgb, var(--club-accent) 18%, transparent);
+  box-shadow: var(--club-shadow-press);
 }
 body.club-page .button:disabled,
 body.club-page .btn:disabled,
@@ -720,44 +905,45 @@ body.club-page .btn.secondary,
 body.club-page .secondary-action,
 body.club-page .row-button {
   border-color: var(--club-line-strong);
-  background-color: var(--club-surface-2);
-  background-image: var(--club-grad-surface);
+  background-color: var(--club-material-control);
+  background-image: var(--club-material-light);
   color: var(--club-text-soft);
-  box-shadow: inset 0 1px 0 var(--club-highlight), 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--club-shadow-xs);
 }
-body.club-page .button.secondary:hover,
-body.club-page .btn.secondary:hover,
-body.club-page .secondary-action:hover,
-body.club-page .row-button:hover {
+body.club-page .button.secondary:hover:not(:disabled):not([aria-disabled="true"]),
+body.club-page .btn.secondary:hover:not(:disabled):not([aria-disabled="true"]),
+body.club-page .secondary-action:hover:not(:disabled):not([aria-disabled="true"]),
+body.club-page .row-button:hover:not(:disabled):not([aria-disabled="true"]) {
   border-color: var(--club-accent-line);
   background-color: var(--club-accent-soft);
   background-image: none;
   color: var(--club-accent);
   filter: none;
-  transform: translateY(-1px);
-  box-shadow: inset 0 1px 0 var(--club-highlight), 0 6px 16px rgba(0, 0, 0, 0.16);
+  transform: none;
+  box-shadow: var(--club-shadow-sm);
 }
-body.club-page .button.secondary:active,
-body.club-page .btn.secondary:active,
-body.club-page .secondary-action:active { transform: translateY(1px); box-shadow: inset 0 1px 0 var(--club-highlight); }
+body.club-page .button.secondary:active:not(:disabled),
+body.club-page .btn.secondary:active:not(:disabled),
+body.club-page .secondary-action:active:not(:disabled) { transform: translateY(1px); box-shadow: var(--club-shadow-press); }
 body.club-page .button.danger,
+body.club-page .btn.danger,
 body.club-page .danger.button,
 body.club-page .row-button.delete {
   border-color: color-mix(in srgb, var(--club-danger) 55%, transparent);
   background-color: var(--club-danger-soft);
-  background-image: linear-gradient(180deg, color-mix(in srgb, var(--club-danger-soft) 70%, #ffffff 10%) 0%, var(--club-danger-soft) 100%);
+  background-image: none;
   color: var(--club-danger);
-  box-shadow: inset 0 1px 0 var(--club-highlight), 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
-body.club-page .button.danger:hover,
-body.club-page .row-button.delete:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 6px 16px color-mix(in srgb, var(--club-danger) 22%, transparent); }
-body.club-page .button.ghost {
+body.club-page :is(.button.danger, .btn.danger, .row-button.delete):hover:not(:disabled) { border-color: var(--club-danger); filter: none; transform: none; box-shadow: none; }
+body.club-page .button.ghost,
+body.club-page .btn.ghost {
   border-color: transparent;
   background: transparent;
   color: var(--club-muted);
   box-shadow: none;
 }
-body.club-page .button.ghost:hover { background: var(--club-surface-2); color: var(--club-text); transform: none; box-shadow: none; }
+body.club-page :is(.button.ghost, .btn.ghost):hover:not(:disabled) { background: var(--club-surface-2); color: var(--club-text); transform: none; box-shadow: none; }
 
 body.club-page .actions,
 body.club-page .form-actions,
@@ -782,8 +968,8 @@ body.club-page .field { display: grid; gap: 6px; min-width: 0; }
 body.club-page .label {
   display: block;
   margin: 0;
-  color: var(--club-muted);
-  font-size: 12.5px;
+  color: var(--club-text-soft);
+  font-size: var(--club-fs-sm);
   font-weight: 600;
   letter-spacing: 0.01em;
 }
@@ -798,13 +984,14 @@ body.club-page textarea {
   padding: 9px 12px;
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius-sm);
-  background: var(--club-surface-2);
+  background: var(--club-material-control);
   color: var(--club-text);
+  caret-color: var(--club-accent);
   font: inherit;
   font-size: 14px;
   line-height: 1.5;
   outline: none;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22);
+  box-shadow: var(--club-shadow-inset);
   transition: border-color var(--club-dur, 200ms) var(--club-ease, ease), box-shadow var(--club-dur, 200ms) var(--club-ease, ease), background var(--club-dur, 200ms) var(--club-ease, ease);
 }
 body.club-page .textarea,
@@ -812,7 +999,7 @@ body.club-page textarea { min-height: 92px; resize: vertical; }
 body.club-page .input::placeholder,
 body.club-page .textarea::placeholder,
 body.club-page input::placeholder,
-body.club-page textarea::placeholder { color: var(--club-muted); opacity: 0.85; }
+body.club-page textarea::placeholder { color: var(--club-muted); opacity: 1; }
 body.club-page .input:focus,
 body.club-page .select:focus,
 body.club-page .textarea:focus,
@@ -820,27 +1007,33 @@ body.club-page input:focus,
 body.club-page select:focus,
 body.club-page textarea:focus {
   border-color: var(--club-accent);
-  background: var(--club-surface);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18), 0 0 0 3px var(--club-accent-soft);
+  background: var(--club-material-read);
+  box-shadow: var(--club-shadow-inset), var(--club-ring);
 }
-body.club-page .input[readonly] { background: var(--club-surface-3); color: var(--club-muted); }
+body.club-page :is(.input, .select, .textarea, input, select, textarea):focus-visible {
+  outline: 2px solid var(--club-accent);
+  outline-offset: 2px;
+}
+body.club-page :is(.input, input, textarea)[readonly] { background: var(--club-surface-3); color: var(--club-muted); }
 body.club-page .input:disabled,
 body.club-page .select:disabled,
 body.club-page .textarea:disabled,
 body.club-page input:disabled,
 body.club-page select:disabled,
 body.club-page textarea:disabled {
-  opacity: 0.55;
+  opacity: 1;
   cursor: not-allowed;
-  background: var(--club-surface-3);
+  background: var(--club-material-inset);
   border-color: var(--club-line);
+  color: var(--club-muted);
+  box-shadow: none;
 }
-body.club-page .input:not(:disabled):not([readonly]):hover,
-body.club-page .select:not(:disabled):not([readonly]):hover,
-body.club-page .textarea:not(:disabled):not([readonly]):hover,
-body.club-page input:not(:disabled):not([readonly]):hover,
-body.club-page select:not(:disabled):not([readonly]):hover,
-body.club-page textarea:not(:disabled):not([readonly]):hover { border-color: var(--club-line-strong); }
+body.club-page .input:not(:disabled):not([readonly]):not(:focus):hover,
+body.club-page .select:not(:disabled):not([readonly]):not(:focus):hover,
+body.club-page .textarea:not(:disabled):not([readonly]):not(:focus):hover,
+body.club-page input:not(:disabled):not([readonly]):not(:focus):hover,
+body.club-page select:not(:disabled):not([readonly]):not(:focus):hover,
+body.club-page textarea:not(:disabled):not([readonly]):not(:focus):hover { border-color: var(--club-line-strong); }
 body.club-page select option { background: var(--club-surface); color: var(--club-text); }
 body.club-page input[type="checkbox"],
 body.club-page input[type="radio"] { accent-color: var(--club-accent); width: 15px; height: 15px; }
@@ -899,7 +1092,10 @@ body.club-page .report-table-wrap {
   overflow: auto;
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius-sm);
-  background: var(--club-surface);
+  background: var(--club-material-read);
+  box-shadow: var(--club-shadow-inset);
+  isolation: isolate;
+  scrollbar-gutter: stable;
   -webkit-overflow-scrolling: touch;
 }
 body.club-page .table,
@@ -910,7 +1106,9 @@ body.club-page table {
   border-collapse: separate;
   border-spacing: 0;
   min-width: 640px;
-  font-size: 13.5px;
+  background: var(--club-material-read);
+  font-size: var(--club-fs-sm);
+  line-height: 1.6;
 }
 body.club-page .table-wrap > .table { border: 0; }
 body.club-page .table th,
@@ -920,10 +1118,12 @@ body.club-page th {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--club-line);
-  background: var(--club-surface-2);
-  color: var(--club-muted);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--club-line-strong);
+  background-color: var(--club-metal-panel);
+  background-image: var(--club-metal-finish);
+  color: var(--club-text);
+  box-shadow: inset 0 1px 0 var(--club-material-edge);
   font-size: var(--club-fs-xs);
   font-weight: 650;
   letter-spacing: 0.03em;
@@ -934,18 +1134,20 @@ body.club-page .table td,
 body.club-page .points-table td,
 body.club-page .invite-table td,
 body.club-page td {
-  padding: 11px 12px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--club-line);
   color: var(--club-text-soft);
   text-align: left;
   vertical-align: middle;
+  transition: background-color var(--club-dur-fast) var(--club-ease);
 }
 body.club-page .table tbody tr:last-child td,
 body.club-page .points-table tbody tr:last-child td,
 body.club-page .invite-table tbody tr:last-child td { border-bottom: 0; }
-body.club-page .table tbody tr:hover td,
-body.club-page .points-table tbody tr:hover td,
-body.club-page .invite-table tbody tr:hover td { background: var(--club-surface-2); }
+body.club-page table tbody tr:nth-child(even) { background: color-mix(in srgb, var(--club-material-inset) 24%, var(--club-material-read)); }
+body.club-page table tbody tr:is(:hover, :focus-within) > td { background-color: var(--club-material-hover); }
+body.club-page table tbody tr[aria-selected="true"] > td { background-color: var(--club-accent-soft); }
+body.club-page table tbody tr:focus-within > td:first-child { box-shadow: inset 2px 0 0 var(--club-accent); }
 body.club-page td.actions { white-space: nowrap; }
 body.club-page td.actions .button,
 body.club-page td .row-button { min-height: 30px; padding: 5px 10px; font-size: 12px; }
@@ -1011,6 +1213,9 @@ body.club-page .empty {
   color: var(--club-muted);
   font-size: 13px;
   text-align: center;
+  background: var(--club-material-inset);
+  border-radius: var(--club-radius-sm);
+  box-shadow: var(--club-shadow-inset);
 }
 body.club-page .empty.loading,
 body.club-page .loading {
@@ -1101,15 +1306,16 @@ body.club-page .quick-link {
   padding: 15px;
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius-sm);
-  background: var(--club-surface-2);
-  box-shadow: inset 0 1px 0 var(--club-highlight);
+  background-color: var(--club-material-raised);
+  background-image: var(--club-material-light);
+  box-shadow: var(--club-shadow-sm);
   transition: transform var(--club-dur) var(--club-ease), border-color var(--club-dur) var(--club-ease), background var(--club-dur) var(--club-ease), box-shadow var(--club-dur) var(--club-ease);
 }
 body.club-page .quick-link:hover {
   transform: translateY(-2px);
   border-color: var(--club-accent-line);
-  background: var(--club-accent-soft);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+  background-color: var(--club-material-hover);
+  box-shadow: var(--club-shadow-hover);
 }
 body.club-page .quick-link strong { color: var(--club-text); font-size: 14px; }
 body.club-page .quick-link span { color: var(--club-muted); font-size: 12.5px; line-height: 1.55; }
@@ -1304,11 +1510,12 @@ body.club-page .resource-card {
   padding: 20px;
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius);
-  background: var(--club-surface);
+  background-color: var(--club-material-raised);
+  background-image: var(--club-material-light);
   box-shadow: var(--club-shadow-sm);
-  transition: transform var(--club-dur, 200ms) var(--club-ease, ease), border-color var(--club-dur, 200ms) var(--club-ease, ease);
+  transition: transform var(--club-dur) var(--club-ease), border-color var(--club-dur) var(--club-ease), box-shadow var(--club-dur) var(--club-ease), background-color var(--club-dur) var(--club-ease);
 }
-body.club-page .resource-card:hover { transform: translateY(-2px); border-color: var(--club-accent-line); box-shadow: var(--club-shadow); }
+body.club-page .resource-card:hover { transform: translateY(-2px); border-color: var(--club-accent-line); background-color: var(--club-material-hover); box-shadow: var(--club-shadow-hover); }
 body.club-page .resource-card p { flex: 1 1 auto; color: var(--club-muted); font-size: 13px; }
 body.club-page .resource-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 body.club-page .info-list { margin: 0 0 14px; padding: 0; list-style: none; display: grid; gap: 10px; }
@@ -1345,7 +1552,8 @@ body.club-page .club-tabs {
   margin: 0 0 20px;
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius-pill);
-  background: var(--club-surface);
+  background: var(--club-material-inset);
+  box-shadow: var(--club-shadow-inset);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -1371,6 +1579,7 @@ body.club-page .club-tabs button[aria-selected="true"] {
   background: var(--club-accent);
   border-color: var(--club-accent);
   color: var(--club-on-accent);
+  box-shadow: var(--club-shadow-xs);
 }
 body.club-page [data-club-tabpanel][hidden] { display: none !important; }
 
@@ -1385,9 +1594,10 @@ body.club-page .club-section-nav {
   margin: 0 0 18px;
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius-pill);
-  background: color-mix(in srgb, var(--club-bg) 88%, transparent);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+  background: var(--club-material-chrome);
+  -webkit-backdrop-filter: var(--club-material-filter);
+  backdrop-filter: var(--club-material-filter);
+  box-shadow: var(--club-shadow-sm);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -1459,15 +1669,16 @@ body.club-page .club-admin-rail .club-admin-rail-label {
   position: fixed;
   inset: 0;
   z-index: 900;
+  font-family: var(--club-font);
+  color: var(--club-text);
   display: none;
   align-items: flex-start;
   justify-content: center;
   padding: clamp(12px, 8vh, 90px) 16px 24px;
-  background: rgba(2, 5, 10, 0.66);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  background: var(--club-material-scrim);
+  -webkit-backdrop-filter: var(--club-material-filter);
+  backdrop-filter: var(--club-material-filter);
 }
-html[data-theme="light"] .club-launcher { background: rgba(23, 24, 28, 0.34); }
 .club-launcher.is-open { display: flex; }
 /* 出场：保留 display 播完 180ms 反向动画再隐藏（club-shell.js 定时移除 .is-closing） */
 .club-launcher.is-closing { display: flex; pointer-events: none; animation: club-fade-out 180ms var(--club-ease, ease) forwards; }
@@ -1480,8 +1691,9 @@ html[data-theme="light"] .club-launcher { background: rgba(23, 24, 28, 0.34); }
   overflow: hidden;
   border: 1px solid var(--club-line-strong);
   border-radius: 16px;
-  background: var(--club-surface);
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+  background-color: var(--club-material-raised);
+  background-image: var(--club-material-light);
+  box-shadow: var(--club-shadow-float);
   animation: club-pop var(--club-dur-fast, 140ms) var(--club-ease, ease);
 }
 @keyframes club-pop { from { opacity: 0; transform: translateY(-6px) scale(0.99); } }
@@ -1735,7 +1947,7 @@ body.club-page .club-profile-banner {
   padding: 16px 18px;
   border: 1px solid var(--club-line);
   border-radius: var(--club-radius);
-  background: linear-gradient(135deg, var(--club-accent-soft), transparent 60%), var(--club-surface);
+  background: var(--club-surface);
 }
 body.club-page .club-profile-banner .club-profile-avatar {
   display: grid;
@@ -1791,7 +2003,7 @@ body.club-page .checks { display: grid; grid-template-columns: repeat(2, minmax(
   /* 统计卡在手机上保持两列，避免一屏只放得下一张卡。 */
   body.club-page .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   body.club-page .stat { padding: 11px 12px; }
-  body.club-page .stat small { font-size: 11px; }
+  body.club-page .stat small { font-size: var(--club-fs-xs); }
   body.club-page .stat strong { font-size: 19px; }
   body.club-page .topbar,
   body.club-page .club-topbar { gap: 10px; padding: 9px 14px; }
@@ -1858,6 +2070,30 @@ body.club-page .checks { display: grid; grid-template-columns: repeat(2, minmax(
   body.club-page .brand strong { font-size: 13px; }
 }
 
+/* 触屏扩大点击区；精确指针继续保留紧凑桌面工具栏。 */
+@media (pointer: coarse) {
+  body.club-page :is(.button, .btn, .primary-action, .secondary-action, .row-button,
+    .refresh-button, .chip, .crumb, .transfer-cancel, .club-launcher-button,
+    .club-notify-button, .club-tabs button, .club-section-nav a, .club-admin-rail a,
+    .club-admin-side a, .club-site-nav a, .lang-switcher button, .theme-switcher button) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  body.club-page :is(.club-section-nav a, .club-admin-rail a, .club-admin-side a, .club-site-nav a) {
+    display: inline-flex;
+    align-items: center;
+  }
+  body.club-page .club-notify-button { width: 44px; height: 44px; }
+  body.club-page .club-topbar-utils :is(.lang-switcher, .theme-switcher) { zoom: 1; }
+  body.club-page :is(.input, .select, .textarea, select, textarea,
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"])) { min-height: 44px; }
+  .club-launcher :is(.club-launcher-item, .club-launcher-star, .club-launcher-clear),
+  body.club-page .club-footer-nav a { min-height: 44px; }
+  .club-launcher-star { min-width: 44px; }
+  body.club-page .club-footer-nav a { display: inline-flex; align-items: center; }
+  .club-to-top { width: 44px; height: 44px; }
+}
+
 /* 触屏 / 减少动效 */
 @media (hover: none) {
   body.club-page a.card:hover,
@@ -1876,193 +2112,11 @@ body.club-page .checks { display: grid; grid-template-columns: repeat(2, minmax(
 }
 
 /* ============================================================
-   20. 亮色关键覆盖（压过 theme.css 的 !important）
+   20. Theme boundary: legacy theme.css component rules exclude club-page.
+   Only the legacy page-background !important requires a scoped exception.
    ============================================================ */
-html[data-theme="light"] body.club-page .panel,
-html[data-theme="light"] body.club-page .card,
-html[data-theme="light"] body.club-page .section,
-html[data-theme="light"] body.club-page .panel-block,
-html[data-theme="light"] body.club-page .club-panel,
-html[data-theme="light"] body.club-page .resource-card,
-html[data-theme="light"] body.club-page .club-admin-side,
-html[data-theme="light"] body.club-page .table-wrap,
-html[data-theme="light"] body.club-page .club-tabs,
-html[data-theme="light"] body.club-page .club-section-nav {
-  background: var(--club-surface) !important;
-  border-color: var(--club-line) !important;
-  color: var(--club-text) !important;
-  box-shadow: inset 0 1px 0 var(--club-highlight), var(--club-shadow-sm) !important;
-}
-html[data-theme="light"] body.club-page .card-body,
-html[data-theme="light"] body.club-page .profile-item,
-html[data-theme="light"] body.club-page .quick-link,
-html[data-theme="light"] body.club-page .info-list li,
-html[data-theme="light"] body.club-page .message-card,
-html[data-theme="light"] body.club-page .checks,
-html[data-theme="light"] body.club-page .cover,
-html[data-theme="light"] body.club-page .file-row:hover,
-html[data-theme="light"] body.club-page .theme-option,
-html[data-theme="light"] body.club-page .stat {
-  background: var(--club-surface-2) !important;
-  border-color: var(--club-line) !important;
-  color: var(--club-text) !important;
-  box-shadow: inset 0 1px 0 #ffffff !important;
-}
-html[data-theme="light"] body.club-page .input,
-html[data-theme="light"] body.club-page .select,
-html[data-theme="light"] body.club-page .textarea,
-html[data-theme="light"] body.club-page input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
-html[data-theme="light"] body.club-page select,
-html[data-theme="light"] body.club-page textarea {
-  background: var(--club-surface) !important;
-  border-color: var(--club-line) !important;
-  color: var(--club-text) !important;
-  box-shadow: inset 0 1px 2px rgba(23, 24, 28, 0.05);
-}
-html[data-theme="light"] body.club-page .input::placeholder,
-html[data-theme="light"] body.club-page textarea::placeholder,
-html[data-theme="light"] body.club-page input::placeholder { color: var(--club-muted) !important; opacity: 1 !important; }
-/* 亮色下禁用输入同样要压过上面的白色 !important 覆盖 */
-html[data-theme="light"] body.club-page .input:disabled,
-html[data-theme="light"] body.club-page .select:disabled,
-html[data-theme="light"] body.club-page .textarea:disabled,
-html[data-theme="light"] body.club-page input:disabled,
-html[data-theme="light"] body.club-page select:disabled,
-html[data-theme="light"] body.club-page textarea:disabled {
-  background: var(--club-surface-3) !important;
-  border-color: var(--club-line) !important;
-  opacity: 0.6 !important;
-  cursor: not-allowed;
-}
-html[data-theme="light"] body.club-page .input:not(:disabled):hover,
-html[data-theme="light"] body.club-page select:not(:disabled):hover,
-html[data-theme="light"] body.club-page textarea:not(:disabled):hover,
-html[data-theme="light"] body.club-page input:not(:disabled):hover { border-color: var(--club-line-strong) !important; }
-html[data-theme="light"] body.club-page .button:disabled,
-html[data-theme="light"] body.club-page .btn:disabled,
-html[data-theme="light"] body.club-page .primary-action:disabled,
-html[data-theme="light"] body.club-page .secondary-action:disabled,
-html[data-theme="light"] body.club-page .row-button:disabled {
-  opacity: 0.45 !important;
-  filter: none !important;
-  transform: none !important;
-  box-shadow: inset 0 1px 0 var(--club-highlight) !important;
-  cursor: not-allowed;
-}
-html[data-theme="light"] body.club-page .button,
-html[data-theme="light"] body.club-page .primary-action {
-  background-color: var(--club-accent) !important;
-  background-image: var(--club-grad-primary) !important;
-  border-color: var(--club-accent) !important;
-  color: var(--club-on-accent) !important;
-  box-shadow: inset 0 1px 0 var(--club-highlight-strong), var(--club-glow-accent) !important;
-}
-html[data-theme="light"] body.club-page .button:hover:not(:disabled),
-html[data-theme="light"] body.club-page .primary-action:hover:not(:disabled) {
-  background-color: var(--club-accent-strong) !important;
-  background-image: none !important;
-  border-color: var(--club-accent-strong) !important;
-  transform: translateY(-1px);
-  box-shadow: inset 0 1px 0 var(--club-highlight-strong), 0 10px 22px color-mix(in srgb, var(--club-accent) 30%, transparent) !important;
-}
-html[data-theme="light"] body.club-page .button:active,
-html[data-theme="light"] body.club-page .primary-action:active {
-  transform: translateY(1px);
-  box-shadow: inset 0 1px 0 var(--club-highlight-strong), inset 0 2px 6px rgba(0, 0, 0, 0.18), 0 1px 3px color-mix(in srgb, var(--club-accent) 16%, transparent) !important;
-}
-html[data-theme="light"] body.club-page .button.secondary,
-html[data-theme="light"] body.club-page .btn.secondary,
-html[data-theme="light"] body.club-page .secondary-action,
-html[data-theme="light"] body.club-page .row-button,
-html[data-theme="light"] body.club-page .button.ghost {
-  background: var(--club-surface) !important;
-  border-color: var(--club-line-strong) !important;
-  color: var(--club-text-soft) !important;
-  box-shadow: inset 0 1px 0 var(--club-highlight), 0 1px 2px rgba(23, 24, 28, 0.06) !important;
-}
-html[data-theme="light"] body.club-page .button.secondary:hover:not(:disabled),
-html[data-theme="light"] body.club-page .btn.secondary:hover:not(:disabled),
-html[data-theme="light"] body.club-page .secondary-action:hover:not(:disabled),
-html[data-theme="light"] body.club-page .row-button:hover:not(:disabled) {
-  background: var(--club-accent-soft) !important;
-  border-color: var(--club-accent-line) !important;
-  color: var(--club-accent) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(23, 24, 28, 0.1) !important;
-}
-html[data-theme="light"] body.club-page .button.danger,
-html[data-theme="light"] body.club-page .row-button.delete {
-  background: var(--club-danger-soft) !important;
-  border-color: color-mix(in srgb, var(--club-danger) 40%, transparent) !important;
-  color: var(--club-danger) !important;
-}
-html[data-theme="light"] body.club-page .table th,
-html[data-theme="light"] body.club-page .points-table th,
-html[data-theme="light"] body.club-page .invite-table th,
-html[data-theme="light"] body.club-page th {
-  background: var(--club-surface-2) !important;
-  color: var(--club-muted) !important;
-  border-color: var(--club-line) !important;
-}
-html[data-theme="light"] body.club-page .table td,
-html[data-theme="light"] body.club-page .points-table td,
-html[data-theme="light"] body.club-page .invite-table td,
-html[data-theme="light"] body.club-page td {
-  color: var(--club-text-soft) !important;
-  border-color: var(--club-line) !important;
-}
-html[data-theme="light"] body.club-page .topbar,
-html[data-theme="light"] body.club-page .club-topbar,
-html[data-theme="light"] body.club-page .club-admin-rail {
-  background: rgba(255, 255, 255, 0.92) !important;
-  border-color: var(--club-line) !important;
-}
-html[data-theme="light"] body.club-page .club-section-nav {
-  background: rgba(243, 244, 247, 0.92) !important;
-}
-html[data-theme="light"] body.club-page .badge,
-html[data-theme="light"] body.club-page .tag,
-html[data-theme="light"] body.club-page .status-pill {
-  background: var(--club-surface-2) !important;
-  color: var(--club-muted) !important;
-  border-color: var(--club-line) !important;
-}
-html[data-theme="light"] body.club-page .badge.on,
-html[data-theme="light"] body.club-page .badge.approved,
-html[data-theme="light"] body.club-page .badge.used { background: var(--club-ok-soft) !important; color: var(--club-ok) !important; border-color: color-mix(in srgb, var(--club-ok) 30%, #ffffff) !important; }
-html[data-theme="light"] body.club-page .badge.pending { background: var(--club-warn-soft) !important; color: var(--club-warn) !important; }
-html[data-theme="light"] body.club-page .badge.warn { background: var(--club-warn-soft) !important; color: var(--club-warn) !important; border-color: color-mix(in srgb, var(--club-warn) 45%, transparent) !important; }
-html[data-theme="light"] body.club-page .badge.info { background: var(--club-info-soft) !important; color: var(--club-info) !important; border-color: color-mix(in srgb, var(--club-info) 45%, transparent) !important; }
-html[data-theme="light"] body.club-page .badge.cyan { background: var(--club-accent-soft) !important; color: var(--club-accent) !important; border-color: var(--club-accent-line) !important; }
-html[data-theme="light"] body.club-page .badge.green { background: var(--club-ok-soft) !important; color: var(--club-ok) !important; border-color: color-mix(in srgb, var(--club-ok) 45%, transparent) !important; }
-html[data-theme="light"] body.club-page .badge.cancelled,
-html[data-theme="light"] body.club-page .badge.expired,
-html[data-theme="light"] body.club-page .badge.rejected { background: var(--club-danger-soft) !important; color: var(--club-danger) !important; }
-html[data-theme="light"] body.club-page .notice { background: var(--club-warn-soft) !important; border-color: color-mix(in srgb, var(--club-warn) 38%, #ffffff) !important; }
-html[data-theme="light"] body.club-page .notice p { color: var(--club-warn) !important; }
-html[data-theme="light"] body.club-page .drive-status { background: var(--club-ok-soft) !important; border-color: color-mix(in srgb, var(--club-ok) 30%, #ffffff) !important; }
-html[data-theme="light"] body.club-page .drive-status span { color: var(--club-ok) !important; }
-html[data-theme="light"] body.club-page .drive-status.warn { background: var(--club-warn-soft) !important; border-color: color-mix(in srgb, var(--club-warn) 38%, #ffffff) !important; }
-html[data-theme="light"] body.club-page .club-admin-rail a[aria-current="page"],
-html[data-theme="light"] body.club-page .club-admin-side a[aria-current="page"],
-html[data-theme="light"] body.club-page .club-section-nav a.is-active {
-  background: var(--club-accent-soft) !important;
-  color: var(--club-accent) !important;
-  border-color: var(--club-accent-line) !important;
-}
-html[data-theme="light"] body.club-page .back:hover,
-html[data-theme="light"] body.club-page .club-launcher-button:hover { background: var(--club-accent-soft) !important; color: var(--club-accent) !important; border-color: var(--club-accent-line) !important; }
-html[data-theme="light"] body.club-page .club-launcher-panel,
-html[data-theme="light"] .club-launcher-panel { background: var(--club-surface) !important; border-color: var(--club-line-strong) !important; }
-html[data-theme="light"] .club-launcher-item:hover,
-html[data-theme="light"] .club-launcher-item.is-active { background: var(--club-accent-soft) !important; }
-html[data-theme="light"] .club-launcher-search input { color: #17181c !important; }
-html[data-theme="light"] body.club-page .code-result { background: var(--club-accent-soft) !important; }
-html[data-theme="light"] body.club-page .file-list { background: var(--club-surface) !important; border-color: var(--club-line) !important; }
-html[data-theme="light"] body.club-page .secret-box { background: var(--club-accent-soft) !important; }
-html[data-theme="light"] body.club-page .hero-card,
-html[data-theme="light"] body.club-page .club-profile-banner,
-html[data-theme="light"] body.club-page .transfer { background: var(--club-accent-soft) !important; border-color: var(--club-accent-line) !important; }
+html[data-theme="light"] body.club-page { background: var(--club-bg) !important; }
+html[data-theme="light"] body.club-page::before { background-image: none !important; }
 
 /* 兼容旧标记中的语义徽章与状态卡 */
 body.club-page .badge.cyan { border-color: var(--club-accent-line); background: var(--club-accent-soft); color: var(--club-accent); }
@@ -2363,9 +2417,7 @@ body.club-page .club-auth-aside {
   gap: 14px;
   padding: clamp(24px, 3.4vw, 40px);
   border-right: 1px solid var(--club-line);
-  background:
-    radial-gradient(ellipse 90% 70% at 0% 0%, var(--club-accent-soft), transparent 62%),
-    var(--club-surface-2);
+  background: var(--club-surface-2);
 }
 body.club-page .club-auth-aside h1 { margin: 0; font-size: clamp(26px, 3.4vw, 34px); }
 body.club-page .club-auth-lead { margin: 0; color: var(--club-muted); font-size: 14px; line-height: 1.75; }
@@ -2475,16 +2527,6 @@ html[data-theme="light"] body.club-page .club-auth-card { background: var(--club
 body.club-page main > .eyebrow:first-child,
 body.club-page main > .club-page-head .eyebrow { margin-bottom: 8px; }
 body.club-page main > h1 { margin: 0 0 8px; }
-/* display 标题质感：渐变文字（不支持 background-clip 时回退纯色，亮色由令牌保证对比度） */
-@supports ((-webkit-background-clip: text) or (background-clip: text)) {
-  body.club-page main > h1 {
-    background: var(--club-grad-text);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
-  }
-}
 body.club-page main > .lead { margin: 0 0 22px; }
 body.club-page main > .hero + .lead { margin-top: 0; }
 
@@ -2741,13 +2783,18 @@ html[data-theme="light"] body.club-page .club-feature-group > summary:hover { ba
 
 .club-notify-panel {
   position: fixed; top: 66px; right: 20px;
+  font-family: var(--club-font);
+  color: var(--club-text);
   width: min(360px, calc(100vw - 28px));
   max-height: min(70vh, 520px);
   display: none; flex-direction: column;
   border: 1px solid var(--club-line, var(--line, rgba(132,170,214,.22)));
   border-radius: var(--club-radius, 14px);
-  background: var(--club-surface, var(--panel, #0c1320));
-  box-shadow: var(--club-shadow, var(--shadow, 0 18px 48px rgba(0,0,0,.34)));
+  background-color: var(--club-material-chrome);
+  background-image: var(--club-material-light);
+  -webkit-backdrop-filter: var(--club-material-filter);
+  backdrop-filter: var(--club-material-filter);
+  box-shadow: var(--club-shadow-float);
   z-index: 900;
   overflow: hidden;
 }
@@ -3143,9 +3190,6 @@ body.club-page *::-webkit-scrollbar-thumb {
 }
 body.club-page *::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--club-muted) 55%, transparent); }
 
-/* 卡片悬停抬升统一使用新阴影令牌 */
-body.club-page a.card:hover { box-shadow: var(--club-shadow-hover); }
-
 /* 按钮：加载态 + 按压反馈 + 图标对齐 */
 body.club-page .button.is-loading,
 body.club-page .btn.is-loading,
@@ -3171,9 +3215,9 @@ body.club-page .row-button.is-loading::after {
   animation: club-spin 0.7s linear infinite;
 }
 body.club-page .button.is-loading { color: transparent; }
-body.club-page .button.secondary.is-loading::after,
-body.club-page .button.danger.is-loading::after,
-body.club-page .button.ghost.is-loading::after { color: var(--club-text-soft); }
+body.club-page :is(.button, .btn, .primary-action, .secondary-action, .row-button).is-loading::after { color: var(--club-on-accent); }
+body.club-page :is(.button.secondary, .btn.secondary, .secondary-action, .row-button, .button.ghost, .btn.ghost).is-loading::after { color: var(--club-text-soft); }
+body.club-page :is(.button.danger, .btn.danger, .row-button.delete).is-loading::after { color: var(--club-danger); }
 body.club-page .button:active:not(:disabled),
 body.club-page .btn:active:not(:disabled),
 body.club-page .row-button:active:not(:disabled) { transform: translateY(1px) scale(0.99); }
@@ -3213,11 +3257,9 @@ body.club-page .club-empty::before {
   height: 44px;
   margin-bottom: 8px;
   border-radius: 12px;
-  background:
-    radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--club-accent) 46%, transparent), transparent 60%),
-    var(--club-grad-surface), var(--club-surface-2);
+  background: var(--club-surface-2);
   border: 1px solid var(--club-line);
-  box-shadow: inset 0 1px 0 var(--club-highlight), 0 6px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
 }
 body.club-page .club-empty strong { color: var(--club-text); font-size: 14.5px; }
 body.club-page .club-empty span { max-width: 380px; color: var(--club-muted); font-size: 12.5px; line-height: 1.6; }
@@ -3240,10 +3282,10 @@ body.club-page .club-empty .button { margin-top: 10px; min-height: 34px; padding
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
 }
-body.club-page main > * { animation: club-enter var(--club-dur-slow, 320ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)) both; }
-body.club-page main > *:nth-child(2) { animation-delay: 45ms; }
-body.club-page main > *:nth-child(3) { animation-delay: 90ms; }
-body.club-page main > *:nth-child(n + 4) { animation-delay: 120ms; }
+body.club-page:not([data-club-surface="operate"]) main > * { animation: club-enter var(--club-dur-slow, 320ms) var(--club-ease, cubic-bezier(0.22, 1, 0.36, 1)) both; }
+body.club-page:not([data-club-surface="operate"]) main > *:nth-child(2) { animation-delay: 45ms; }
+body.club-page:not([data-club-surface="operate"]) main > *:nth-child(3) { animation-delay: 90ms; }
+body.club-page:not([data-club-surface="operate"]) main > *:nth-child(n + 4) { animation-delay: 120ms; }
 
 /* ============================================================
    31. 第二轮体系化升级（2026-10-25）
@@ -3305,7 +3347,7 @@ body.club-page .club-prose li + li { margin-top: 6px; }
 body.club-page .club-prose blockquote {
   margin: var(--club-space-4) 0;
   padding: 10px 14px;
-  border-left: 3px solid var(--club-accent-line);
+  border-left: 1px solid var(--club-accent-line);
   border-radius: 0 var(--club-radius-sm) var(--club-radius-sm) 0;
   background: var(--club-surface-2);
   color: var(--club-muted);
@@ -3321,7 +3363,8 @@ body.club-page .club-footer {
   margin-top: auto;
   padding-top: var(--club-space-5);
   border-top: 1px solid var(--club-line);
-  background: color-mix(in srgb, var(--club-surface) 55%, transparent);
+  background: var(--club-material-inset);
+  box-shadow: inset 0 1px 0 var(--club-material-edge);
 }
 body.club-page .club-footer-inner {
   display: flex;
@@ -3419,41 +3462,6 @@ body.club-page [role="tabpanel"]:not([hidden]) {
 body.club-page [id] { scroll-margin-top: calc(var(--club-topbar, 62px) + 12px); }
 
 /* ============================================================
-   33. 质感层补齐（第五轮）：面板级容器与瓦片统一分层光
-   目标：round1 给 .panel/.card 族加的「渐变面 + 顶缘内高光」
-   推广到漏掉的组件族；亮色令牌自动生效，无需另写覆盖。
-   ============================================================ */
-/* 亮色 §20 对这些容器用 background 简写 !important（纯白平涂），
-   渐变与内高光只在暗色补齐；亮色保持既有平面观感。 */
-html:not([data-theme="light"]) body.club-page .table-wrap,
-html:not([data-theme="light"]) body.club-page .report-table-wrap,
-html:not([data-theme="light"]) body.club-page .file-list,
-html:not([data-theme="light"]) body.club-page .club-admin-side {
-  background-image: var(--club-grad-surface);
-  box-shadow: inset 0 1px 0 var(--club-highlight);
-}
-body.club-page .resource-card {
-  background-image: var(--club-grad-surface);
-  box-shadow: var(--club-shadow-sm), inset 0 1px 0 var(--club-highlight);
-}
-body.club-page .resource-card:hover { box-shadow: var(--club-shadow), inset 0 1px 0 var(--club-highlight); }
-body.club-page .info-list li,
-body.club-page .club-feature-group,
-body.club-page .member-card-block,
-body.club-page .theme-option,
-body.club-page .event-calendar-day,
-body.club-page .site-search-group li {
-  box-shadow: inset 0 1px 0 var(--club-highlight);
-}
-/* 胶囊导航容器材质统一：.club-tabs 从平涂 surface 升级为半透明 blur
-   （与 .club-section-nav 同语言）；滚动条隐藏规则沿用原定义。 */
-body.club-page .club-tabs {
-  background: color-mix(in srgb, var(--club-bg) 88%, transparent);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-}
-
-/* ============================================================
    34. 小件基类（第五轮收编）
    ============================================================ */
 /* kbd 键帽：等宽 + 微键帽感（launcher 内的两处键帽保持原样，见下方再声明） */
@@ -3502,6 +3510,99 @@ body.club-page .badge.info {
   background: var(--club-info-soft);
   color: var(--club-info);
 }
+/* Explicit page-family material roles: finish only, never layout or state ink. */
+body.club-page :is(.premium-head, .premium-section-head) {
+  background: transparent;
+  box-shadow: 0 1px 0 var(--club-line);
+}
+body.club-page :is(.premium-read, .premium-form, .premium-table, .premium-gate, .premium-analysis, .premium-leaderboard) {
+  background-color: var(--club-material-read);
+  background-image: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: var(--club-shadow-xs);
+}
+body.club-page :is(.premium-inset, .premium-toolbar, .premium-legend, .premium-metrics) {
+  background: var(--club-material-inset);
+  box-shadow: var(--club-shadow-inset);
+}
+body.club-page .premium-meta {
+  color: var(--club-muted);
+  font-family: var(--club-font);
+  font-size: var(--club-fs-xs);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: var(--club-lh-body);
+}
+body.club-page :is(.premium-options, .premium-breadcrumbs) {
+  background: var(--club-material-inset);
+  box-shadow: var(--club-shadow-inset);
+}
+body.club-page .premium-profile {
+  background-color: var(--club-material-read);
+  box-shadow: inset 0 1px 0 var(--club-material-edge);
+}
+body.club-page :is(.premium-steps, .premium-guide) {
+  color: var(--club-text-soft);
+  background-color: var(--club-material-read);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+body.club-page :is(.premium-entry, .premium-feature, .premium-resource) {
+  background-color: var(--club-material-raised);
+  background-image: var(--club-material-light);
+  border-color: var(--club-line-strong);
+  box-shadow: var(--club-shadow-sm);
+}
+body.club-page :is(a.premium-entry, button.premium-entry, a.premium-feature, button.premium-feature) {
+  transition: background-color var(--club-dur) var(--club-ease), border-color var(--club-dur) var(--club-ease), box-shadow var(--club-dur) var(--club-ease), transform var(--club-dur-fast) var(--club-ease);
+}
+@media (hover: hover) {
+  body.club-page :is(a.premium-entry, button.premium-entry, a.premium-feature, button.premium-feature):hover:not(:disabled) {
+    background-color: var(--club-material-hover);
+    border-color: var(--club-accent-line);
+    box-shadow: var(--club-shadow-hover);
+    transform: translateY(-2px);
+  }
+}
+body.club-page :is(a.card, .quick-link, a.premium-entry, button.premium-entry, a.premium-feature, button.premium-feature):focus-visible {
+  outline: 2px solid var(--club-accent);
+  outline-offset: 3px;
+  box-shadow: var(--club-shadow-hover);
+}
+body.club-page :is(a.card, .quick-link, a.premium-entry, button.premium-entry, a.premium-feature, button.premium-feature):active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--club-shadow-press);
+}
+body.club-page :is(.button, .btn, .primary-action, .secondary-action, .row-button)[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+body.club-page :is(.club-section-nav a, .club-admin-rail a, .club-admin-side a, .club-footer-nav a),
+.club-notify-item {
+  transition: color var(--club-dur-fast, 140ms) var(--club-ease, ease), border-color var(--club-dur-fast, 140ms) var(--club-ease, ease), background-color var(--club-dur-fast, 140ms) var(--club-ease, ease);
+}
+.club-launcher-item:focus-visible,
+.club-launcher-star:focus-visible,
+.club-launcher-clear:focus-visible,
+.club-launcher-search input:focus-visible {
+  outline: 2px solid var(--club-accent);
+  outline-offset: -2px;
+}
+.club-launcher-search:focus-within { box-shadow: inset 0 -2px 0 var(--club-accent); }
+@media (prefers-reduced-motion: reduce) {
+  body.club-page :is(a.card, .quick-link, .resource-card, .premium-entry, .premium-feature):is(:hover, :focus-visible, :active) { transform: none; }
+}
+@media print {
+  body.club-page :is(.premium-head, .premium-inset, .premium-toolbar, .premium-legend, .premium-entry, .premium-feature, .premium-read, .premium-form, .premium-table, .premium-gate) {
+    background: #ffffff;
+    box-shadow: none;
+  }
+}
+
 /* chip 基类：统一两份作用域拷贝的核心观感（is-active 仍按所在组件定义） */
 body.club-page .chip {
   display: inline-flex;
@@ -3521,3 +3622,348 @@ body.club-page .chip {
 }
 body.club-page .chip:hover { border-color: var(--club-accent-line); color: var(--club-text); }
 body.club-page .chip:active { transform: translateY(1px); }
+
+/* ============================================================
+   35. Precision gallery · metal surfaces, selective glass
+   Lighting markers preserve the helper contract, not a glass entitlement.
+   Read / work / entry surfaces use opaque metal roles; only auth shells,
+   featured exhibits and floating chrome sample a backdrop. Nested surfaces,
+   dense reading, tables, forms and permission content always stay opaque.
+   ============================================================ */
+
+/* Only known shared page families receive ambient detail. Games keep their
+   own body background; no full-screen pseudo-element, filter or z-stack. */
+body.club-page:where([data-club-surface="read"], [data-club-surface="operate"], [data-club-surface="explore"]):not(:has(.premium-game, #game-wrap)) {
+  background-image: var(--club-liquid-ambient);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+html[data-theme="light"] body.club-page:where([data-club-surface="read"], [data-club-surface="operate"], [data-club-surface="explore"]):not(:has(.premium-game, #game-wrap)) {
+  /* theme.css uses an important body background shorthand. */
+  background-image: var(--club-liquid-ambient) !important;
+  background-repeat: no-repeat !important;
+  background-size: 100% 100% !important;
+}
+
+/* Static metal is available before tagging. Marked panels remain solid;
+   the directional grain is deliberately quieter than the exhibit glass. */
+body.club-page :is(.card, .resource-card, .quick-link, .lab-entry, .premium-entry, .premium-feature, .premium-resource, .premium-guide, .premium-steps),
+body.club-page .club-liquid-surface {
+  border: 1px solid var(--club-line);
+  border-radius: var(--club-radius);
+  background-color: var(--club-metal-panel);
+  background-image: var(--club-metal-finish);
+  box-shadow: var(--club-shadow-xs);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+body.club-page :is(.card, .resource-card, .quick-link, .lab-entry, .premium-entry, .premium-resource) {
+  background-color: var(--club-material-raised);
+  box-shadow: var(--club-shadow-sm);
+}
+body.club-page .club-liquid-surface {
+  --club-pointer-active: 0;
+  --club-liquid-spot: radial-gradient(ellipse 360px 240px at var(--club-pointer-x, 50%) var(--club-pointer-y, 50%), color-mix(in srgb, var(--club-text) calc(var(--club-pointer-active, 0) * 5%), transparent), transparent 74%);
+  transition: border-color var(--club-dur) var(--club-ease), box-shadow var(--club-dur) var(--club-ease), background-color var(--club-dur) var(--club-ease), transform var(--club-dur-fast) var(--club-ease);
+}
+/* These are the complete shared exhibit-glass owners. No generic premium
+   feature or lighting marker may turn an ordinary work surface translucent. */
+body.club-page :is(.club-auth-shell, .featured-lab, .premium-exhibit) {
+  border: 1px solid var(--club-liquid-line);
+  border-radius: var(--club-liquid-radius);
+  background-color: var(--club-liquid-fill);
+  background-image: var(--club-liquid-spot, linear-gradient(transparent, transparent)), var(--club-liquid-wash);
+  box-shadow: var(--club-liquid-shadow);
+  -webkit-backdrop-filter: var(--club-liquid-filter);
+  backdrop-filter: var(--club-liquid-filter);
+}
+/* The featured directory entry is one unpadded glass frame, not two cards.
+   Outrank the page's later inline stylesheet without changing its layout. */
+body.club-page.features-directory .featured-lab.club-liquid-surface {
+  background-color: var(--club-liquid-fill);
+  background-image: var(--club-liquid-spot), var(--club-liquid-wash);
+  border-radius: var(--club-liquid-radius);
+}
+body.club-page.features-directory .featured-lab.club-liquid-surface > .feature-entry {
+  background: transparent;
+  border: 0;
+  border-radius: inherit;
+  box-shadow: none;
+}
+body.club-page.features-directory .directory-entries {
+  row-gap: 0;
+  align-items: stretch;
+}
+body.club-page.features-directory .directory-entries .feature-entry.premium-entry {
+  border: 0;
+  border-bottom: 1px solid var(--club-line);
+  border-radius: 0;
+  background-color: var(--club-metal-read);
+  background-image: var(--club-metal-read-finish);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: background-color var(--club-dur) var(--club-ease), border-color var(--club-dur) var(--club-ease);
+}
+body.club-page.features-directory .directory-entries .feature-entry.premium-entry:is(:hover, :focus-visible) {
+  background-color: var(--club-material-hover);
+  background-image: var(--club-metal-read-finish);
+  border-color: var(--club-line-strong);
+  box-shadow: none;
+  transform: none;
+}
+body.club-page.features-directory .directory-group > h2 {
+  line-height: 1.4;
+  font-weight: 750;
+}
+
+/* Readable form content is an opaque island inside the frosted auth frame. */
+body.club-page .club-auth-card {
+  background-color: var(--club-material-read);
+  background-image: var(--club-metal-read-finish);
+}
+body.club-page .club-auth-aside { background: var(--club-liquid-wash); }
+html[data-theme="light"] body.club-page .club-auth-shell {
+  background: var(--club-liquid-wash) var(--club-liquid-fallback) !important;
+  border-color: var(--club-liquid-line) !important;
+}
+html[data-theme="light"] body.club-page .club-auth-shell.club-liquid-surface {
+  background: var(--club-liquid-spot), var(--club-liquid-wash) var(--club-liquid-fill) !important;
+}
+html[data-theme="light"] body.club-page .club-auth-aside {
+  background: var(--club-liquid-wash) !important;
+  border-color: var(--club-liquid-line) !important;
+}
+
+/* Chrome is one continuous glass plane; never frost each of its buttons. */
+body.club-page :is(.topbar, .club-topbar, .club-section-nav) {
+  border-color: var(--club-liquid-line);
+  background-image: var(--club-liquid-wash);
+  box-shadow: var(--club-liquid-control-shadow);
+}
+body.club-page :is(.lang-switcher, .theme-switcher) {
+  border-color: var(--club-liquid-line);
+  background-color: var(--club-material-inset);
+  box-shadow: var(--club-shadow-inset);
+}
+
+/* All control light is painted below the text. No pseudo-element sheen,
+   opacity on content, filter animation or backdrop inside a glass panel. */
+body.club-page :is(.button, .btn, .primary-action, .secondary-action, .row-button, .club-launcher-button, .club-liquid-control) {
+  border-radius: var(--club-radius-sm);
+  font-weight: 700;
+  box-shadow: var(--club-shadow-xs);
+}
+body.club-page .club-liquid-control {
+  --club-pointer-active: 0;
+  --club-liquid-control-spot: radial-gradient(ellipse 160px 90px at var(--club-pointer-x, 50%) var(--club-pointer-y, 50%), color-mix(in srgb, var(--club-text) calc(var(--club-pointer-active, 0) * 5%), transparent), transparent 76%);
+  background-color: var(--club-material-control);
+  background-image: var(--club-metal-control-finish);
+  color: var(--club-text-soft);
+  border: 1px solid var(--club-line-strong);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: color var(--club-dur-fast) var(--club-ease), background-color var(--club-dur) var(--club-ease), border-color var(--club-dur) var(--club-ease), box-shadow var(--club-dur) var(--club-ease), transform var(--club-dur-fast) var(--club-ease);
+}
+body.club-page :is(.button.secondary, .btn.secondary, .secondary-action, .row-button, .club-launcher-button) {
+  background-color: var(--club-material-control);
+  background-image: var(--club-metal-control-finish);
+  border-color: var(--club-line-strong);
+  color: var(--club-text-soft);
+}
+body.club-page :is(.button, .btn, .primary-action):not(.secondary, .danger, .ghost, .delete) {
+  background-color: var(--club-accent);
+  background-image: var(--club-grad-primary);
+  border-color: color-mix(in srgb, var(--club-accent) 78%, var(--club-text) 22%);
+  color: var(--club-on-accent);
+  box-shadow: inset 0 1px 0 var(--club-liquid-rim), inset 0 -1px 0 var(--club-liquid-rim-low), 0 3px 8px rgba(0, 8, 20, 0.16);
+}
+body.club-page :is(.button.danger, .btn.danger, .row-button.delete, .club-liquid-control.danger) {
+  background: var(--club-danger-soft);
+  border-color: color-mix(in srgb, var(--club-danger) 55%, transparent);
+  color: var(--club-danger);
+  box-shadow: inset 0 1px 0 var(--club-material-edge);
+}
+body.club-page :is(.button.ghost, .btn.ghost, .club-liquid-control.ghost) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--club-muted);
+  box-shadow: none;
+}
+/* Pills retain their navigation role; task actions use the tighter metal cut. */
+body.club-page :is(.chip, .club-tabs button, .lang-switcher button, .theme-switcher button, .club-section-nav a).club-liquid-control {
+  border-radius: var(--club-radius-pill);
+}
+body.club-page :is(.chip.is-active, .club-tabs button[aria-selected="true"], .lang-switcher button.is-active, .theme-switcher button.is-active).club-liquid-control {
+  background: var(--club-grad-primary) var(--club-accent);
+  border-color: var(--club-accent);
+  color: var(--club-on-accent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body.club-page :is(a.card, a.quick-link, .resource-card, a.lab-entry, a.premium-entry, button.premium-entry, a.premium-feature, button.premium-feature):hover:not(:disabled, [aria-disabled="true"]) {
+    border-color: var(--club-line-strong);
+    background-color: var(--club-material-hover);
+    box-shadow: var(--club-shadow-hover);
+    transform: translateY(-1px);
+  }
+  body.club-page :is(a, button, [tabindex]).club-liquid-surface:hover:not(:disabled, [aria-disabled="true"]) {
+    border-color: var(--club-line-strong);
+    background-color: var(--club-material-hover);
+    box-shadow: var(--club-shadow-hover);
+  }
+  body.club-page :is(.club-liquid-control, .button.secondary, .btn.secondary, .secondary-action, .row-button, .club-launcher-button):hover:not(:disabled, [aria-disabled="true"], .danger, .delete, .ghost) {
+    background-color: var(--club-material-hover);
+    background-image: var(--club-metal-control-finish);
+    border-color: var(--club-line-strong);
+    color: var(--club-text);
+    box-shadow: var(--club-shadow-sm);
+  }
+  body.club-page :is(.button, .btn, .primary-action):not(.secondary, .danger, .ghost, .delete):hover:not(:disabled, [aria-disabled="true"]),
+  body.club-page :is(.chip.is-active, .club-tabs button[aria-selected="true"], .lang-switcher button.is-active, .theme-switcher button.is-active).club-liquid-control:hover:not(:disabled, [aria-disabled="true"]) {
+    background-color: var(--club-accent-strong);
+    background-image: var(--club-grad-primary);
+    border-color: var(--club-accent-strong);
+    color: var(--club-on-accent);
+    box-shadow: var(--club-liquid-control-shadow);
+  }
+}
+
+/* Keyboard feedback is as legible as hover, without requiring pointer JS. */
+body.club-page :is(.club-liquid-surface, .club-liquid-control, .button, .btn, .primary-action, .secondary-action, .row-button):focus-visible {
+  outline: 2px solid var(--club-accent);
+  outline-offset: 3px;
+  box-shadow: var(--club-shadow-sm);
+}
+body.club-page :is(.button.danger, .btn.danger, .row-button.delete, .club-liquid-control.danger):is(:hover, :focus-visible):not(:disabled, [aria-disabled="true"]) {
+  background: var(--club-danger-soft);
+  border-color: var(--club-danger);
+  color: var(--club-danger);
+}
+body.club-page :is(.button.ghost, .btn.ghost, .club-liquid-control.ghost):is(:hover, :focus-visible):not(:disabled, [aria-disabled="true"]) {
+  background: var(--club-material-inset);
+  border-color: var(--club-line);
+  color: var(--club-text);
+  box-shadow: none;
+}
+body.club-page :is(.club-liquid-control, .button, .btn, .primary-action, .secondary-action, .row-button):active:not(:disabled, [aria-disabled="true"]) {
+  transform: translateY(1px);
+  box-shadow: var(--club-shadow-press);
+}
+body.club-page :is(a, button, [tabindex]).club-liquid-surface:active:not(:disabled, [aria-disabled="true"]) {
+  transform: translateY(0);
+  box-shadow: var(--club-shadow-press);
+}
+body.club-page :is(.club-liquid-control, .button, .btn, .primary-action, .secondary-action, .row-button):is(:disabled, [aria-disabled="true"]),
+body.club-page :is(.button.secondary, .btn.secondary, .button.danger, .btn.danger, .button.ghost, .btn.ghost, .row-button.delete):is(:disabled, [aria-disabled="true"]),
+body.club-page :is(.button, .btn, .primary-action):not(.secondary, .danger, .ghost, .delete):is(:disabled, [aria-disabled="true"]) {
+  background-color: var(--club-material-inset);
+  background-image: none;
+  border-color: var(--club-line);
+  color: var(--club-muted);
+  opacity: 1;
+  cursor: not-allowed;
+  filter: none;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Explicit role precedence: a second sampled backdrop is never allowed.
+   Keep opaque reading/data layers intact even if legacy markup also says card. */
+body.club-page :is(.club-liquid-surface, .club-auth-shell, .featured-lab, .premium-exhibit, .topbar, .club-topbar, .club-section-nav, .club-launcher, .club-notify-panel) .club-liquid-surface,
+body.club-page .club-liquid-surface :is(.topbar, .club-topbar, .club-section-nav, .club-auth-shell, .featured-lab, .premium-exhibit) {
+  background-color: var(--club-metal-panel);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+body.club-page[data-club-surface="read"] :is(.panel, .entry),
+body.club-page :is(.premium-read, .premium-form, .premium-table, .premium-analysis, .premium-leaderboard, .premium-guide, .premium-steps),
+body.club-page :is(.premium-read, .premium-form, .premium-table, .premium-analysis, .premium-leaderboard, .premium-guide, .premium-steps).club-liquid-surface {
+  background-color: var(--club-material-read);
+  background-image: var(--club-metal-read-finish);
+  border-color: var(--club-line);
+  box-shadow: var(--club-shadow-xs);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+/* A guide grid is a layout owner, not another card around its articles. */
+body.club-page .guide-grid.premium-guide {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+body.club-page :is(.premium-head, .premium-section-head, .premium-gate, .member-gate, .gate, .denied),
+body.club-page :is(.premium-head, .premium-section-head, .premium-gate, .member-gate, .gate, .denied).club-liquid-surface {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+/* Static sheen stays; reduced motion never follows a pointer or lifts a card. */
+@media (prefers-reduced-motion: reduce), (hover: none), (pointer: coarse) {
+  body.club-page :is(.club-liquid-surface, .club-liquid-control) {
+    --club-pointer-active: 0 !important;
+  }
+  body.club-page :is(.club-liquid-surface, .club-liquid-control, a.card, .quick-link, .resource-card, .lab-entry, .premium-entry, .premium-feature):is(:hover, :focus-visible, :active) {
+    transform: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  body.club-page :is(.club-auth-shell, .featured-lab, .premium-exhibit),
+  body.club-page.features-directory .featured-lab.club-liquid-surface {
+    background-color: var(--club-liquid-fallback);
+    background-image: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  body.club-page :is(.club-liquid-surface, .club-liquid-control) { --club-pointer-active: 0 !important; }
+  html[data-theme="light"] body.club-page .club-auth-shell {
+    background: var(--club-liquid-fallback) !important;
+  }
+}
+@media (forced-colors: active) {
+  body.club-page,
+  .club-launcher,
+  .club-notify-panel {
+    --club-metal-read: Canvas;
+    --club-metal-panel: Canvas;
+    --club-metal-raised: Canvas;
+    --club-metal-inset: Canvas;
+    --club-metal-control: ButtonFace;
+    --club-metal-hover: Canvas;
+    --club-metal-finish: none;
+    --club-metal-read-finish: none;
+    --club-metal-control-finish: none;
+    --club-liquid-fill: Canvas;
+    --club-liquid-fallback: Canvas;
+    --club-liquid-control: ButtonFace;
+    --club-liquid-control-hover: ButtonFace;
+    --club-liquid-line: CanvasText;
+    --club-liquid-line-hover: Highlight;
+    --club-liquid-wash: none;
+    --club-liquid-control-gloss: none;
+    --club-liquid-filter: none;
+    --club-material-chrome: Canvas;
+    --club-material-filter: none;
+  }
+  body.club-page :is(.club-liquid-surface, .club-liquid-control, .button, .btn, .primary-action, .secondary-action, .row-button) {
+    background-image: none;
+    border-color: ButtonText;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  body.club-page :is(.club-liquid-surface, .club-liquid-control) { --club-pointer-active: 0 !important; }
+  body.club-page :is(.club-liquid-surface, .club-liquid-control, .button, .btn):focus-visible { outline-color: Highlight; }
+}
+@media print {
+  body.club-page:where([data-club-surface="read"], [data-club-surface="operate"], [data-club-surface="explore"]):not(:has(.premium-game, #game-wrap)) {
+    background-image: none !important;
+  }
+  body.club-page :is(.card, .resource-card, .quick-link, .lab-entry, .premium-entry, .premium-feature, .premium-resource, .club-auth-shell, .premium-guide, .premium-steps, .club-liquid-surface, .club-liquid-control) {
+    background: #ffffff;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  html[data-theme="light"] body.club-page .club-auth-shell.club-liquid-surface { background: #ffffff !important; }
+}

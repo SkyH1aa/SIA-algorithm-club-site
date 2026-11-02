@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN" data-theme="dark" data-premium="legacy">
 <head>
   <meta name="robots" content="noindex, nofollow"><!-- 旧版演示页，正式版见 public/ -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script defer src="public/assistant-launcher.js"></script>
+    <script defer src="public/assistant-launcher.js?v=2e89de74"></script>
     <title>俄罗斯方块 · 核心算法</title>
     <style>
         html[data-theme="light"] body { background: #F0F2F6; }
@@ -77,8 +77,30 @@
             line-height: 1.5;
         }
     </style>
+<link rel="stylesheet" href="public/legacy-premium.css?v=fc5486ad">
+<script src="public/theme.js?v=1b745a4f"></script>
+<script defer src="public/legacy-premium.js?v=2485716f"></script>
 </head>
-<body>
+<body class="legacy-premium legacy-tetris">
+<header class="legacy-topbar">
+  <div class="legacy-topbar-inner">
+    <a class="legacy-brand" href="index.html">算法社</a>
+    <nav class="legacy-nav" aria-label="演示页导航">
+      <a class="legacy-link" href="public/tetris.html">打开正式版</a>
+      <div class="legacy-theme" data-legacy-theme role="group" aria-label="外观主题">
+        <button type="button" data-legacy-mode="auto" aria-pressed="false" disabled>自动</button>
+        <button type="button" data-legacy-mode="light" aria-pressed="false" disabled>日间</button>
+        <button type="button" data-legacy-mode="dark" aria-pressed="false" disabled>夜间</button>
+      </div>
+    </nav>
+  </div>
+</header>
+<main class="legacy-main">
+  <div class="legacy-intro">
+    <div><h1>俄罗斯方块</h1><p>手动操作 · 10 × 20 棋盘</p></div>
+    <p>经典七种方块，保留原版键盘操作与计分。</p>
+  </div>
+  <div class="legacy-stage" role="region" aria-label="游戏区域；窄屏可横向滚动" tabindex="0">
 
 <div class="game-container">
     <canvas id="board" width="300" height="600"></canvas>
@@ -97,6 +119,10 @@
     </div>
 </div>
 
+  </div>
+  <p class="legacy-footnote">画布沿用原版配色；日夜背景会在游戏下一次重绘时更新。</p>
+</main>
+<footer class="legacy-footer">旧版算法演示 · 原版游戏与模型逻辑保留</footer>
 <script>
 // ============================================================
 // 俄罗斯方块 · 纯核心算法 (无冗余外观)
@@ -479,5 +505,6 @@ document.getElementById('restartBtn').addEventListener('click', restartGame);
 restartGame();
 </script>
 
+<script src="public/club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

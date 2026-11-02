@@ -2,8 +2,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="pages.appmonitor.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8" />
@@ -11,9 +11,9 @@
   <title>APPMonitor · 软件发布页</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
 <style>
     /* 收编说明：--club-* 主题 token 唯一真源是 club-ui.css 的 body.club-page 作用域（原 :root 整套复刻已删除）；
        本块只保留页面氛围派生 token（粒子 / 网格 / 光晕；--particle-rgb 由页内 JS 读取）与版式专有样式。 */
@@ -106,9 +106,28 @@
     html[data-theme="light"] .ambient-orb, html[data-theme="light"] .ambient-grid { mix-blend-mode: multiply; opacity: .5; }
     html[data-theme="light"] #particleCanvas { opacity: .55; }
     @media (max-width:900px) { body.club-page .hero { padding-bottom:34px; } .release-head { align-items:flex-start; flex-direction:column; gap:5px; } }
-  </style>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script></head>
-<body class="club-page">
+
+    body.club-page.gallery-releases main { max-width: 1040px; background: transparent; border: 0; box-shadow: none; }
+    body.club-page.gallery-releases .hero { padding-bottom: var(--club-space-7); margin-bottom: var(--club-space-7); border-bottom: 1px solid var(--club-line-strong); }
+    body.club-page.gallery-releases .hero .lead { max-width: 65ch; }
+    body.club-page.gallery-releases .hero-status { background: var(--club-material-inset); box-shadow: none; }
+    body.club-page.gallery-releases :is(.release-list, #dynamicReleases) { gap: 0; }
+    body.club-page.gallery-releases .release-card { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: var(--club-space-4) var(--club-space-6); padding: var(--club-space-6) 0; border: 0; border-bottom: 1px solid var(--club-line); border-radius: 0; background: transparent; box-shadow: none; overflow: visible; }
+    body.club-page.gallery-releases .release-card::before { display: none; }
+    body.club-page.gallery-releases .release-head { grid-column: 1; grid-row: 1 / 3; display: flex; flex-direction: column; align-items: start; justify-content: flex-start; gap: var(--club-space-2); margin: 0; }
+    body.club-page.gallery-releases .version { font-size: var(--club-fs-xl); }
+    body.club-page.gallery-releases .date { font-family: var(--club-font); font-variant-numeric: tabular-nums; color: var(--club-muted); }
+    body.club-page.gallery-releases .release-card > :is(ul, .release-description, .download, .release-actions) { grid-column: 2; max-width: 68ch; }
+    body.club-page.gallery-releases .release-card > .download { justify-self: start; margin-top: var(--club-space-2); }
+    body.club-page.gallery-releases .release-card li + li { margin-top: var(--club-space-2); }
+    @media (max-width: 640px) {
+      body.club-page.gallery-releases .release-card { grid-template-columns: 1fr; }
+      body.club-page.gallery-releases .release-head { grid-row: auto; flex-direction: row; justify-content: space-between; }
+      body.club-page.gallery-releases .release-card > :is(ul, .release-description, .download, .release-actions) { grid-column: 1; }
+    }
+</style>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script></head>
+<body class="club-page gallery-releases">
   <div class="ambient-background" aria-hidden="true"><div class="ambient-orb orb-cyan"></div><div class="ambient-orb orb-violet"></div><div class="ambient-grid"></div><canvas id="particleCanvas"></canvas></div><div class="pointer-glow" aria-hidden="true"></div>
   <header class="topbar">
     <div class="topbar-inner">
@@ -121,17 +140,17 @@
     </div>
   </header>
 
-  <main>
-    <section class="hero">
+  <main class="premium-read">
+    <section class="hero premium-head">
       <div>
-        <p class="eyebrow">APPMonitor · WINDOWS SOFTWARE</p>
         <h1 data-i18n="pages.appmonitor.h1">APPMonitor</h1>
         <p class="lead" data-i18n="appmonitor.lead">由算法社社长鼎力开发。Windows 软件管控与网络监控工具，持续加入自律助手、使用统计、USB 管控和高级防护能力。</p>
+        <p class="premium-meta">APPMonitor · WINDOWS SOFTWARE</p>
       </div>
-      <div class="hero-status"><strong data-i18n="appmonitor.statusTitle">持续更新中</strong><span data-i18n="appmonitor.statusMeta" data-i18n-mode="html">当前发布版本：V7.0<br />更新时间：2026-08-09</span></div>
+      <div class="hero-status premium-inset"><strong data-i18n="appmonitor.statusTitle">持续更新中</strong><span data-i18n="appmonitor.statusMeta" data-i18n-mode="html">当前发布版本：V7.0<br />更新时间：2026-08-09</span></div>
     </section>
 
-    <div class="notice">
+    <div class="notice premium-inset">
       <strong data-i18n="appmonitor.installTipPrefix">首次安装提示：</strong><span data-i18n="appmonitor.installTipMid">如果 NPCAP 驱动无法自动下载，请前往</span>
       <a href="https://1828041119.share.123pan.cn/123pan/oTfUjv-t8Bv3" target="_blank" rel="noopener" data-i18n="appmonitor.installTipLink">123 云盘手动下载 NPCAP</a>
       <span data-i18n="appmonitor.installTipSuffix">并完成安装，否则将无法使用网络监控相关功能。作者微信：CHM008027</span>
@@ -143,7 +162,7 @@
       <div class="release-list">
         <div id="dynamicReleases"></div>
         <article class="release-card">
-          <div class="release-head"><span class="version">V7.0</span><span class="date">2026-08-09</span></div>
+          <div class="release-head premium-section-head"><span class="version">V7.0</span><span class="date">2026-08-09</span></div>
           <ul>
             <li data-i18n="appmonitor.v7_1">全局主题系统扩展为五套主题：深色科技、浅色卡片、蓝紫渐变、磨砂玻璃·星际、深空指挥中心。</li>
             <li data-i18n="appmonitor.v7_2">新增磨砂玻璃·星际主题与深空指挥中心主题，支持 HUD、扫描线、粒子流等动态效果。</li>
@@ -154,7 +173,7 @@
         </article>
 
         <article class="release-card">
-          <div class="release-head"><span class="version">V6.0</span><span class="date">2026-08-08</span></div>
+          <div class="release-head premium-section-head"><span class="version">V6.0</span><span class="date">2026-08-08</span></div>
           <ul>
             <li data-i18n="appmonitor.v6_1">新增家长模式，家长密码可保护软件管控、自律助手和敏感操作。</li>
             <li data-i18n="appmonitor.v6_2">专注计划升级为多计划，支持独立命名、启停和每日自动触发。</li>
@@ -165,7 +184,7 @@
         </article>
 
         <article class="release-card">
-          <div class="release-head"><span class="version">V5.0</span><span class="date">2026-08-07</span></div>
+          <div class="release-head premium-section-head"><span class="version">V5.0</span><span class="date">2026-08-07</span></div>
           <ul>
             <li data-i18n="appmonitor.v5_1">新增自律助手：休息提醒、专注挑战、使用报告导出和今日统计小窗。</li>
             <li data-i18n="appmonitor.v5_2">新增全局快捷键：Ctrl+Alt+P 显示或隐藏主界面，Ctrl+Alt+L 查看今日统计。</li>
@@ -177,7 +196,7 @@
         </article>
 
         <article class="release-card">
-          <div class="release-head"><span class="version">V4.0</span><span class="date">2026-08-06</span></div>
+          <div class="release-head premium-section-head"><span class="version">V4.0</span><span class="date">2026-08-06</span></div>
           <ul>
             <li data-i18n="appmonitor.v4_1">因版权问题移除小说阅读功能。</li>
             <li data-i18n="appmonitor.v4_2">新增软件管控模块，可读取已装软件列表并设定禁止时段规则。</li>
@@ -189,7 +208,7 @@
         </article>
 
         <article class="release-card">
-          <div class="release-head"><span class="version">V3.0</span><span class="date">2026-08-05</span></div>
+          <div class="release-head premium-section-head"><span class="version">V3.0</span><span class="date">2026-08-05</span></div>
           <ul>
             <li data-i18n="appmonitor.v3_1">修复已知 Bug。</li><li data-i18n="appmonitor.v3_2">新增 U 盘备份传输文件功能，可在设置中选择是否开启。</li><li data-i18n="appmonitor.v3_3">新增小说阅读功能，配备六个书源。</li><li data-i18n="appmonitor.v3_4">优化运行逻辑，提升流畅度。</li><li data-i18n="appmonitor.v3_5">优化网络限速功能。</li>
           </ul>
@@ -197,13 +216,13 @@
         </article>
 
         <article class="release-card">
-          <div class="release-head"><span class="version">V2.0</span><span class="date">2026-08-04</span></div>
+          <div class="release-head premium-section-head"><span class="version">V2.0</span><span class="date">2026-08-04</span></div>
           <ul><li data-i18n="appmonitor.v2_1">修复已知 bug。</li><li data-i18n="appmonitor.v2_2">新增自动更新功能。</li><li data-i18n="appmonitor.v2_3">新增网络限速功能。</li></ul>
           <a class="download" href="https://1828041119.share.123pan.cn/123pan/oTfUjv-343jd?pwd=SWsR#" target="_blank" rel="noopener" data-i18n="appmonitor.download" data-i18n-vars='{"ver":"V2.0"}'>立即下载 V2.0 →</a>
         </article>
 
         <article class="release-card">
-          <div class="release-head"><span class="version">V1.0</span><span class="date">2026-08-03</span></div>
+          <div class="release-head premium-section-head"><span class="version">V1.0</span><span class="date">2026-08-03</span></div>
           <ul><li data-i18n="appmonitor.v1_1">APPMonitor 首个公开版本。</li></ul>
           <a class="download" href="https://1828041119.share.123pan.cn/123pan/oTfUjv-DrYjd?pwd=BFrW#" target="_blank" rel="noopener" data-i18n="appmonitor.download" data-i18n-vars='{"ver":"V1.0"}'>立即下载 V1.0 →</a>
         </article>
@@ -260,6 +279,7 @@ const motionQuery=window.matchMedia('(prefers-reduced-motion: no-preference)');i
   loadReleases();
 })();
 </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

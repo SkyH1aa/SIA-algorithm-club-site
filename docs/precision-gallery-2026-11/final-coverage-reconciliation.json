@@ -1,0 +1,3171 @@
+{
+  "schemaVersion": 1,
+  "auditedAt": "2026-11-02T02:09:34.777058+00:00",
+  "status": "Bounded source-integrity evidence; NOT full final-byte browser coverage",
+  "fullFinalByteCoverage": false,
+  "scope": {
+    "workspace": "D:\\GithubRcj\\SIA-algorithm-club-site",
+    "onlyOwnedOutput": "D:\\GithubRcj\\SIA-algorithm-club-site\\docs\\precision-gallery-2026-11\\final-coverage-reconciliation.json",
+    "mode": "Read-only source audit; no browser, code edits, builds or repeated green tests. Main agent owns final acceptance."
+  },
+  "summary": {
+    "manifestEntries": 100,
+    "manifestMatchesActual": 100,
+    "manifestMismatches": [],
+    "snapshotMatches": {
+      "sourceBeforeFinalPass": 41,
+      "sourceAfterPass": 43,
+      "sourceAtCompletion": 47
+    },
+    "stableBeforeAfterCurrentCount": 41,
+    "stableRouteDocuments": [],
+    "lateSinceAfterPassCount": 57,
+    "lateHtmlCount": 49,
+    "differentFromCompletion": [
+      ".impeccable/design.json",
+      "404.html",
+      "bad-gateway.html",
+      "index.html",
+      "public/admin-hub.html",
+      "public/appmonitor.html",
+      "public/assistant-launcher.css",
+      "public/assistant-launcher.js",
+      "public/changelog.html",
+      "public/chat-admin.html",
+      "public/chat.html",
+      "public/club-features.html",
+      "public/club-shell.js",
+      "public/donations.html",
+      "public/dp-lab.html",
+      "public/drive-admin.html",
+      "public/drive.html",
+      "public/ds-lab.html",
+      "public/events-admin.html",
+      "public/events.html",
+      "public/gomoku-experiments.html",
+      "public/gomoku-satori-lab.html",
+      "public/gomoku.html",
+      "public/graph-lab.html",
+      "public/guide.html",
+      "public/heap-lab.html",
+      "public/home-showcase.css",
+      "public/join-admin.html",
+      "public/join.html",
+      "public/mall-admin.html",
+      "public/member-center.html",
+      "public/member-checkin.html",
+      "public/member-messages.html",
+      "public/member-points.html",
+      "public/member-profile.html",
+      "public/members-admin.html",
+      "public/notifications.html",
+      "public/password-reset.html",
+      "public/platformer.html",
+      "public/points-mall.html",
+      "public/resources.html",
+      "public/search-lab.html",
+      "public/search.html",
+      "public/snake.html",
+      "public/sorting-lab.html",
+      "public/tetris.html",
+      "public/tree-lab.html",
+      "public/visualization-lab.html",
+      "service-unavailable.html",
+      "俄罗斯方块.html",
+      "俄罗斯方块AI.html",
+      "贪吃蛇.html",
+      "贪吃蛇专家系统.html"
+    ],
+    "manifestMeaning": "Inventory consistency only, not final browser coverage."
+  },
+  "evidenceFiles": [
+    {
+      "path": "D:\\GithubRcj\\SIA-algorithm-club-site\\docs\\precision-gallery-2026-11\\coverage.json",
+      "sha256": "419c023f47d5a202126708273378d69ed1055fc4baddf63e574386be82d5a809"
+    },
+    {
+      "path": "D:\\GithubRcj\\SIA-algorithm-club-site\\docs\\precision-gallery-2026-11\\final-source-hashes.json",
+      "sha256": "7d5102d2e94d044bd0fdab02f949f86121205fa1d31c181c86f67dfa905770de"
+    },
+    {
+      "path": "D:\\GithubRcj\\SIA-algorithm-club-site\\docs\\precision-gallery-2026-11\\baseline.json",
+      "sha256": "a8803aee9c4225d9e6b564c1932afb306e1aec940aaad7e5eea2a1626a0e6d35"
+    },
+    {
+      "path": "D:\\GithubRcj\\SIA-algorithm-club-site\\docs\\precision-gallery-2026-11\\screenshots.json",
+      "sha256": "18cbb2e2b4e3402fa2eebaa8256e2562e0b438391f7959ec975982592a05bb63"
+    },
+    {
+      "path": "D:\\GithubRcj\\SIA-algorithm-club-site\\docs\\precision-gallery-2026-11\\code-review.md",
+      "sha256": "fb628547da288922188cbd4c232718bba9184b18d5bf6721a4ad7a847643a978"
+    }
+  ],
+  "qaEvidence": {
+    "routes": 49,
+    "fullPassVariants": 196,
+    "targetedVariants": 32,
+    "baseUrl": "http://127.0.0.1:4197/",
+    "startedAt": "2026-11-02T01:37:28.657024+00:00",
+    "completedAt": "2026-11-02T01:44:11.560240+00:00",
+    "originalStatus": "49-route verified preview pass complete; late source changes explicitly recorded, exact final-byte coverage not complete",
+    "originalLimitations": [
+      "DOM measurements do not establish screenshot visual acceptance or authenticated account workflow.",
+      "4186 served baseline club-ui CSS; its 196 variants are retained as preliminary only. Current implementation coverage uses isolated4197 and verified club-ui SHA.",
+      "Reveal animations can be frozen at currentTime0 in IAB. H1/gate opacity measurements on donations/resources/guide/satori remain inconclusive; do not call them confirmed visual failures.",
+      "Changed guide was rerun all4 variants; shared common/share/service scripts were present on targeted routes afterward, but their interactive workflows were outside read-only scope.",
+      "Home-showcase was included in final index4variant recheck; homepage screenshot review belongs to main agent.",
+      "Late asset hash rewrites and home-showcase/shared script source updates occurred after the full route pass; changedAfterFullPass lists them. Final exact-byte acceptance of all routes is not claimed. Browser was released to main for final capture/performance, so no further browser rerun was performed."
+    ],
+    "findings": {
+      "routes": 49,
+      "themeViewportVariants": 196,
+      "targetedRecheckVariants": 32,
+      "horizontalOverflowFailures": [],
+      "missingLightingFailures": [],
+      "themeApplicationFailures": [],
+      "visibleSemanticMainAbsent": [
+        "public/assistant.html",
+        "public/chat.html"
+      ],
+      "memberProfileGuestCopyMismatch": "Guest gate on member-profile refers to notifications.",
+      "duplicateH1": [
+        "贪吃蛇.html",
+        "贪吃蛇专家系统.html"
+      ]
+    },
+    "verifiedSharedCss": {
+      "clubUiSha256": "a998135f538eaea0b778678bc590741ab83355bbaf79c67728df6af8b93d3367",
+      "bytes": 165349,
+      "metalPanel": true
+    },
+    "actualBeforeToAfterChanged": [
+      "docs/design-system.md",
+      "public/club-common.js",
+      "public/club-share.js",
+      "public/guide.html",
+      "public/service-gate.js"
+    ],
+    "actualAfterToCompletionChanged": [
+      "404.html",
+      "DESIGN.md",
+      "bad-gateway.html",
+      "docs/design-system.md",
+      "index.html",
+      "public/admin-hub.html",
+      "public/appmonitor.html",
+      "public/assistant.html",
+      "public/changelog.html",
+      "public/chat-admin.html",
+      "public/chat.html",
+      "public/club-features.html",
+      "public/club-share.js",
+      "public/donations.html",
+      "public/dp-lab.html",
+      "public/drive-admin.html",
+      "public/drive.html",
+      "public/ds-lab.html",
+      "public/events-admin.html",
+      "public/events.html",
+      "public/gomoku-experiments.html",
+      "public/gomoku-satori-lab.html",
+      "public/gomoku.html",
+      "public/graph-lab.html",
+      "public/guide.html",
+      "public/heap-lab.html",
+      "public/home-showcase.css",
+      "public/join-admin.html",
+      "public/join.html",
+      "public/mall-admin.html",
+      "public/member-center.html",
+      "public/member-checkin.html",
+      "public/member-messages.html",
+      "public/member-points.html",
+      "public/member-profile.html",
+      "public/members-admin.html",
+      "public/notifications.html",
+      "public/password-reset.html",
+      "public/platformer.html",
+      "public/points-mall.html",
+      "public/resources.html",
+      "public/search-lab.html",
+      "public/search.html",
+      "public/snake.html",
+      "public/sorting-lab.html",
+      "public/tetris.html",
+      "public/tree-lab.html",
+      "public/visualization-lab.html",
+      "service-unavailable.html"
+    ],
+    "actualAfterToCurrentChanged": [
+      ".impeccable/design.json",
+      "404.html",
+      "DESIGN.md",
+      "bad-gateway.html",
+      "docs/design-system.md",
+      "index.html",
+      "public/admin-hub.html",
+      "public/appmonitor.html",
+      "public/assistant-launcher.css",
+      "public/assistant-launcher.js",
+      "public/assistant.html",
+      "public/changelog.html",
+      "public/chat-admin.html",
+      "public/chat.html",
+      "public/club-features.html",
+      "public/club-share.js",
+      "public/club-shell.js",
+      "public/donations.html",
+      "public/dp-lab.html",
+      "public/drive-admin.html",
+      "public/drive.html",
+      "public/ds-lab.html",
+      "public/events-admin.html",
+      "public/events.html",
+      "public/gomoku-experiments.html",
+      "public/gomoku-satori-lab.html",
+      "public/gomoku.html",
+      "public/graph-lab.html",
+      "public/guide.html",
+      "public/heap-lab.html",
+      "public/home-showcase.css",
+      "public/join-admin.html",
+      "public/join.html",
+      "public/mall-admin.html",
+      "public/member-center.html",
+      "public/member-checkin.html",
+      "public/member-messages.html",
+      "public/member-points.html",
+      "public/member-profile.html",
+      "public/members-admin.html",
+      "public/notifications.html",
+      "public/password-reset.html",
+      "public/platformer.html",
+      "public/points-mall.html",
+      "public/resources.html",
+      "public/search-lab.html",
+      "public/search.html",
+      "public/snake.html",
+      "public/sorting-lab.html",
+      "public/tetris.html",
+      "public/tree-lab.html",
+      "public/visualization-lab.html",
+      "service-unavailable.html",
+      "俄罗斯方块.html",
+      "俄罗斯方块AI.html",
+      "贪吃蛇.html",
+      "贪吃蛇专家系统.html"
+    ],
+    "stableCurrentFingerprintPaths": [
+      "public/SceneDirector.js",
+      "public/assistant-i18n.js",
+      "public/assistant-preset.js",
+      "public/assistant.css",
+      "public/chat-admin-i18n.js",
+      "public/chat-admin.css",
+      "public/chat-admin.js",
+      "public/chat-core.js",
+      "public/chat-file-bundle.js",
+      "public/chat-i18n.js",
+      "public/chat-math.js",
+      "public/chat-store.js",
+      "public/chat.css",
+      "public/chat.js",
+      "public/club-auth-storage.js",
+      "public/club-liquid-lighting.js",
+      "public/club-ui.css",
+      "public/data/changelog-data.js",
+      "public/data/changelog.json",
+      "public/error-page.js",
+      "public/gomoku-models/v1.html",
+      "public/gomoku-models/v2.html",
+      "public/gomoku-models/v3.html",
+      "public/gomoku-models/v6.html",
+      "public/gomoku-models/v7.html",
+      "public/gomoku-models/v8.html",
+      "public/home-capabilities.js",
+      "public/home-motion.js",
+      "public/home-showcase.js",
+      "public/i18n-dict-en.js",
+      "public/i18n-dict-zh.js",
+      "public/i18n-dict.js",
+      "public/i18n.js",
+      "public/legacy-premium.css",
+      "public/legacy-premium.js",
+      "public/member-identity.js",
+      "public/platformer-pk.js",
+      "public/service-prompts.js",
+      "public/sw.js",
+      "public/theme.css",
+      "public/theme.js"
+    ],
+    "phaseCaveat": "Endpoint hashes do not bind individual navigation/response. Completion equality cannot retroactively cover prior measurements. Original changedDuringFinalPass has51 entries but before-to-after subtraction has5, reflecting broader history. Original changedAfterFullPass has49 and equals after-to-completion. After-to-current count is calculated in summary.",
+    "excludedPreliminaryPass": "4186 served baseline club-ui CSS; its 196 variants do not establish current coverage."
+  },
+  "fingerprints": [
+    {
+      "path": ".impeccable/design.json",
+      "currentSha256": "c4914948927f63d2959dfac452635178df6462692457de263dad6002a6bb347d",
+      "bytes": 53332,
+      "finalManifestSha256": "c4914948927f63d2959dfac452635178df6462692457de263dad6002a6bb347d",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "2f6e8ad74549461acc6a54efd2fcfde1221cc0e1558c860912800bd9dd35d0c9",
+      "sourceAfterPass": "2f6e8ad74549461acc6a54efd2fcfde1221cc0e1558c860912800bd9dd35d0c9",
+      "sourceAtCompletion": "2f6e8ad74549461acc6a54efd2fcfde1221cc0e1558c860912800bd9dd35d0c9",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "404.html",
+      "currentSha256": "07b1695e088ff8da31402dd2bfba2ecf585ccac7eb472bb34e929149246d5ba2",
+      "bytes": 3298,
+      "finalManifestSha256": "07b1695e088ff8da31402dd2bfba2ecf585ccac7eb472bb34e929149246d5ba2",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "ed6318e1420f1ae781dbd780173d7b04c1bb2f5c16c909a154616e91b3a3772a",
+      "sourceAfterPass": "ed6318e1420f1ae781dbd780173d7b04c1bb2f5c16c909a154616e91b3a3772a",
+      "sourceAtCompletion": "689e682503fbbc68e6e546245b06e5cc149d7c098f85dd7931c3f89efb75a61d",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "DESIGN.md",
+      "currentSha256": "97c3dd6dd1fb8ea952b3fb9867c3a10d38f74b8ce25fb6e9004cb9e535ab6480",
+      "bytes": 19094,
+      "finalManifestSha256": "97c3dd6dd1fb8ea952b3fb9867c3a10d38f74b8ce25fb6e9004cb9e535ab6480",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "83456f6bc4df5ae4f6d9302adfa5a5d49b4780712f8e5c4b4c07cede8915730f",
+      "sourceAfterPass": "83456f6bc4df5ae4f6d9302adfa5a5d49b4780712f8e5c4b4c07cede8915730f",
+      "sourceAtCompletion": "97c3dd6dd1fb8ea952b3fb9867c3a10d38f74b8ce25fb6e9004cb9e535ab6480",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": true
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "bad-gateway.html",
+      "currentSha256": "2bde553e7643ea41f5dfcbb5cb0ce6464416ec5ddf2cf7852860da2c5753aae7",
+      "bytes": 3009,
+      "finalManifestSha256": "2bde553e7643ea41f5dfcbb5cb0ce6464416ec5ddf2cf7852860da2c5753aae7",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "e6571fe1a42a46e6498276a2f31617c52614d46804ffd4b399881e0b1ceebc62",
+      "sourceAfterPass": "e6571fe1a42a46e6498276a2f31617c52614d46804ffd4b399881e0b1ceebc62",
+      "sourceAtCompletion": "f48f913f17d94aab4414f2275237ea34fff6f2a4b5731874360b7bb67d486de3",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "docs/design-system.md",
+      "currentSha256": "52bcdde4d62b88ee6ffcdfbfa1efac68018bbe79250ea892bd9a30db87e00e35",
+      "bytes": 43569,
+      "finalManifestSha256": "52bcdde4d62b88ee6ffcdfbfa1efac68018bbe79250ea892bd9a30db87e00e35",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "a2f4c818ac9582eb132509a487009fa9360518a959d8af5ac6694abf8903d66f",
+      "sourceAfterPass": "30b72120a55fe04f9cd2c5de245914094b171c9415652fc8472b11968877b9e3",
+      "sourceAtCompletion": "52bcdde4d62b88ee6ffcdfbfa1efac68018bbe79250ea892bd9a30db87e00e35",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": true
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "index.html",
+      "currentSha256": "a62203404a21df793b5657539acb6d59e95d156010267f07f9e9f003b49d59d9",
+      "bytes": 167042,
+      "finalManifestSha256": "a62203404a21df793b5657539acb6d59e95d156010267f07f9e9f003b49d59d9",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "d2a04da6ca6b3f4b4178193d12e552fe932083577bb0c8e61a4c9a94f31bf83d",
+      "sourceAfterPass": "d2a04da6ca6b3f4b4178193d12e552fe932083577bb0c8e61a4c9a94f31bf83d",
+      "sourceAtCompletion": "82dc28c8cccb2948e17f2c5ce987aab374cd21ab4f90210b5c73b68974312f9f",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/SceneDirector.js",
+      "currentSha256": "ff0282cfdd055e27fc5f298c8f6e9f1aad755d4de4c58d399c06f85e4411bcbd",
+      "bytes": 32201,
+      "finalManifestSha256": "ff0282cfdd055e27fc5f298c8f6e9f1aad755d4de4c58d399c06f85e4411bcbd",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "ff0282cfdd055e27fc5f298c8f6e9f1aad755d4de4c58d399c06f85e4411bcbd",
+      "sourceAfterPass": "ff0282cfdd055e27fc5f298c8f6e9f1aad755d4de4c58d399c06f85e4411bcbd",
+      "sourceAtCompletion": "ff0282cfdd055e27fc5f298c8f6e9f1aad755d4de4c58d399c06f85e4411bcbd",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/admin-hub.html",
+      "currentSha256": "3a55b206c7393deb42f04aaebc5bdaaa53c09b2a2c86d942051e05a9ec9116f5",
+      "bytes": 79901,
+      "finalManifestSha256": "3a55b206c7393deb42f04aaebc5bdaaa53c09b2a2c86d942051e05a9ec9116f5",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "336022b2c4f803188ffa51f4bcf5eef2779cd91098b7d5dd5c7bb1062522431f",
+      "sourceAfterPass": "336022b2c4f803188ffa51f4bcf5eef2779cd91098b7d5dd5c7bb1062522431f",
+      "sourceAtCompletion": "93938f114b7a43857f3c1677085bd26af681b8c5c5b69834eade92f8c00ac5f5",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/appmonitor.html",
+      "currentSha256": "296f43979f7b9d2ea9177d5e587b33b411ae0e6e6fef395f58f4b9c5c86b20d8",
+      "bytes": 28025,
+      "finalManifestSha256": "296f43979f7b9d2ea9177d5e587b33b411ae0e6e6fef395f58f4b9c5c86b20d8",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "091407283b9ec8c930fb5345023183bf6dfc29b5dba717becbecd91c12eccf52",
+      "sourceAfterPass": "091407283b9ec8c930fb5345023183bf6dfc29b5dba717becbecd91c12eccf52",
+      "sourceAtCompletion": "0046fadf274341060db8c28f8d2e2e4ac855ea1a6b1f005d4f695410043a8c0a",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/assistant-i18n.js",
+      "currentSha256": "7d609fc8f01ea944a88a11b4bd0115836d29dbc74b595cff0414fee2f1b3a947",
+      "bytes": 5086,
+      "finalManifestSha256": "7d609fc8f01ea944a88a11b4bd0115836d29dbc74b595cff0414fee2f1b3a947",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "7d609fc8f01ea944a88a11b4bd0115836d29dbc74b595cff0414fee2f1b3a947",
+      "sourceAfterPass": "7d609fc8f01ea944a88a11b4bd0115836d29dbc74b595cff0414fee2f1b3a947",
+      "sourceAtCompletion": "7d609fc8f01ea944a88a11b4bd0115836d29dbc74b595cff0414fee2f1b3a947",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/assistant-launcher.css",
+      "currentSha256": "aea70fdf192084b379a137fd3b2952d071b0623e38ab44f34a3c4dc0a85a66a0",
+      "bytes": 15116,
+      "finalManifestSha256": "aea70fdf192084b379a137fd3b2952d071b0623e38ab44f34a3c4dc0a85a66a0",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "f84c71b9991f568f83e581de263d9023be76e4a8fe0f6dfad03b2e2cf26f66ca",
+      "sourceAfterPass": "f84c71b9991f568f83e581de263d9023be76e4a8fe0f6dfad03b2e2cf26f66ca",
+      "sourceAtCompletion": "f84c71b9991f568f83e581de263d9023be76e4a8fe0f6dfad03b2e2cf26f66ca",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/assistant-launcher.js",
+      "currentSha256": "6ab238ce14ccd7179a4b87d90ae288d2df9033730b3d4854f6cf19fb0265dd13",
+      "bytes": 21844,
+      "finalManifestSha256": "6ab238ce14ccd7179a4b87d90ae288d2df9033730b3d4854f6cf19fb0265dd13",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "b2600ee8ad91fc773337195698eb54ffca2eb778fae2f2a611e382f3338f75ba",
+      "sourceAfterPass": "b2600ee8ad91fc773337195698eb54ffca2eb778fae2f2a611e382f3338f75ba",
+      "sourceAtCompletion": "b2600ee8ad91fc773337195698eb54ffca2eb778fae2f2a611e382f3338f75ba",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/assistant-preset.js",
+      "currentSha256": "987625a9f5157818b7e335e159458a732274cffab844dc0d0eedc67a54fe3933",
+      "bytes": 8313,
+      "finalManifestSha256": "987625a9f5157818b7e335e159458a732274cffab844dc0d0eedc67a54fe3933",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "987625a9f5157818b7e335e159458a732274cffab844dc0d0eedc67a54fe3933",
+      "sourceAfterPass": "987625a9f5157818b7e335e159458a732274cffab844dc0d0eedc67a54fe3933",
+      "sourceAtCompletion": "987625a9f5157818b7e335e159458a732274cffab844dc0d0eedc67a54fe3933",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/assistant.css",
+      "currentSha256": "2ed77872b14dc9d2462a3cd210e4c5ad60d3c048faa238a754a0e111847d3dd4",
+      "bytes": 9402,
+      "finalManifestSha256": "2ed77872b14dc9d2462a3cd210e4c5ad60d3c048faa238a754a0e111847d3dd4",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "2ed77872b14dc9d2462a3cd210e4c5ad60d3c048faa238a754a0e111847d3dd4",
+      "sourceAfterPass": "2ed77872b14dc9d2462a3cd210e4c5ad60d3c048faa238a754a0e111847d3dd4",
+      "sourceAtCompletion": "2ed77872b14dc9d2462a3cd210e4c5ad60d3c048faa238a754a0e111847d3dd4",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/assistant.html",
+      "currentSha256": "9ce5445d338ad5d2f794af24cd50817edf861375df6ab30a75e8c2b13a1efed0",
+      "bytes": 17567,
+      "finalManifestSha256": "9ce5445d338ad5d2f794af24cd50817edf861375df6ab30a75e8c2b13a1efed0",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "d0949b827a950682ea9821ccb0aac0e36e71c8f0b1c7207473271e34019d260a",
+      "sourceAfterPass": "d0949b827a950682ea9821ccb0aac0e36e71c8f0b1c7207473271e34019d260a",
+      "sourceAtCompletion": "9ce5445d338ad5d2f794af24cd50817edf861375df6ab30a75e8c2b13a1efed0",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": true
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/changelog.html",
+      "currentSha256": "b14f1e19f100da7b80a9e693742ceae6aaa32fc59ca956977f3f8ab6f73d8d51",
+      "bytes": 9749,
+      "finalManifestSha256": "b14f1e19f100da7b80a9e693742ceae6aaa32fc59ca956977f3f8ab6f73d8d51",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "7f32f746cd56e82eb065d6c4f4c8295b3c0ca2a012f02fadb3db37b2fe66cebf",
+      "sourceAfterPass": "7f32f746cd56e82eb065d6c4f4c8295b3c0ca2a012f02fadb3db37b2fe66cebf",
+      "sourceAtCompletion": "8388712015bc90eebf324c5ac279075fdde76ec40ddeed8f15dfc798bc0fa4ab",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/chat-admin-i18n.js",
+      "currentSha256": "49188b87d18fc5f38a092719981596274426aade0f97467d5a0080754ee13627",
+      "bytes": 41942,
+      "finalManifestSha256": "49188b87d18fc5f38a092719981596274426aade0f97467d5a0080754ee13627",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "49188b87d18fc5f38a092719981596274426aade0f97467d5a0080754ee13627",
+      "sourceAfterPass": "49188b87d18fc5f38a092719981596274426aade0f97467d5a0080754ee13627",
+      "sourceAtCompletion": "49188b87d18fc5f38a092719981596274426aade0f97467d5a0080754ee13627",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/chat-admin.css",
+      "currentSha256": "701ff6d69cf67d7b1a4adb5c9adc44b96e83b42a918e7eba40fc4d09ac76ab28",
+      "bytes": 39307,
+      "finalManifestSha256": "701ff6d69cf67d7b1a4adb5c9adc44b96e83b42a918e7eba40fc4d09ac76ab28",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "701ff6d69cf67d7b1a4adb5c9adc44b96e83b42a918e7eba40fc4d09ac76ab28",
+      "sourceAfterPass": "701ff6d69cf67d7b1a4adb5c9adc44b96e83b42a918e7eba40fc4d09ac76ab28",
+      "sourceAtCompletion": "701ff6d69cf67d7b1a4adb5c9adc44b96e83b42a918e7eba40fc4d09ac76ab28",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/chat-admin.html",
+      "currentSha256": "149c14614c3144f0947a1f202d2f4b4e80c5db534535d098dbe5b8e839c1600b",
+      "bytes": 35742,
+      "finalManifestSha256": "149c14614c3144f0947a1f202d2f4b4e80c5db534535d098dbe5b8e839c1600b",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "b5a0f1d0208522a1304c5925dd61c35e7f8280463a9f8b71fbca532a0dba17f2",
+      "sourceAfterPass": "b5a0f1d0208522a1304c5925dd61c35e7f8280463a9f8b71fbca532a0dba17f2",
+      "sourceAtCompletion": "c388522ef4261133c269eb813a98a82c5644525483c3a293e6100854ba321f44",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/chat-admin.js",
+      "currentSha256": "079139723abf9e09bef6d836b6c276ee94a6f91c53b8dd8918effd9b1cc9268a",
+      "bytes": 79900,
+      "finalManifestSha256": "079139723abf9e09bef6d836b6c276ee94a6f91c53b8dd8918effd9b1cc9268a",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "079139723abf9e09bef6d836b6c276ee94a6f91c53b8dd8918effd9b1cc9268a",
+      "sourceAfterPass": "079139723abf9e09bef6d836b6c276ee94a6f91c53b8dd8918effd9b1cc9268a",
+      "sourceAtCompletion": "079139723abf9e09bef6d836b6c276ee94a6f91c53b8dd8918effd9b1cc9268a",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/chat-core.js",
+      "currentSha256": "cd53a969032501d1c4588932b782e692d1647c75fbc583677fae3efc49080966",
+      "bytes": 37168,
+      "finalManifestSha256": "cd53a969032501d1c4588932b782e692d1647c75fbc583677fae3efc49080966",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "cd53a969032501d1c4588932b782e692d1647c75fbc583677fae3efc49080966",
+      "sourceAfterPass": "cd53a969032501d1c4588932b782e692d1647c75fbc583677fae3efc49080966",
+      "sourceAtCompletion": "cd53a969032501d1c4588932b782e692d1647c75fbc583677fae3efc49080966",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/chat-file-bundle.js",
+      "currentSha256": "b92608d4613bfa5fce749f4a709bd23e11928d5989ed1228055d4e6065b7a6e1",
+      "bytes": 128961,
+      "finalManifestSha256": "b92608d4613bfa5fce749f4a709bd23e11928d5989ed1228055d4e6065b7a6e1",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "b92608d4613bfa5fce749f4a709bd23e11928d5989ed1228055d4e6065b7a6e1",
+      "sourceAfterPass": "b92608d4613bfa5fce749f4a709bd23e11928d5989ed1228055d4e6065b7a6e1",
+      "sourceAtCompletion": "b92608d4613bfa5fce749f4a709bd23e11928d5989ed1228055d4e6065b7a6e1",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/chat-i18n.js",
+      "currentSha256": "95eb56b8b6cb087ed5428b6568b1b09046063ce78faa59019ecee81c023bed22",
+      "bytes": 23264,
+      "finalManifestSha256": "95eb56b8b6cb087ed5428b6568b1b09046063ce78faa59019ecee81c023bed22",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "95eb56b8b6cb087ed5428b6568b1b09046063ce78faa59019ecee81c023bed22",
+      "sourceAfterPass": "95eb56b8b6cb087ed5428b6568b1b09046063ce78faa59019ecee81c023bed22",
+      "sourceAtCompletion": "95eb56b8b6cb087ed5428b6568b1b09046063ce78faa59019ecee81c023bed22",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/chat-math.js",
+      "currentSha256": "368cb7c5789ec1f207ebba62a9d1e0a034df8c7aacdf4aa594254249472ccd10",
+      "bytes": 8206,
+      "finalManifestSha256": "368cb7c5789ec1f207ebba62a9d1e0a034df8c7aacdf4aa594254249472ccd10",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "368cb7c5789ec1f207ebba62a9d1e0a034df8c7aacdf4aa594254249472ccd10",
+      "sourceAfterPass": "368cb7c5789ec1f207ebba62a9d1e0a034df8c7aacdf4aa594254249472ccd10",
+      "sourceAtCompletion": "368cb7c5789ec1f207ebba62a9d1e0a034df8c7aacdf4aa594254249472ccd10",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/chat-store.js",
+      "currentSha256": "3c35dd99cb52cca34ded3afd6d1aba0e981f614e68a7468ff80fd89e3d7cbd28",
+      "bytes": 1803,
+      "finalManifestSha256": "3c35dd99cb52cca34ded3afd6d1aba0e981f614e68a7468ff80fd89e3d7cbd28",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "3c35dd99cb52cca34ded3afd6d1aba0e981f614e68a7468ff80fd89e3d7cbd28",
+      "sourceAfterPass": "3c35dd99cb52cca34ded3afd6d1aba0e981f614e68a7468ff80fd89e3d7cbd28",
+      "sourceAtCompletion": "3c35dd99cb52cca34ded3afd6d1aba0e981f614e68a7468ff80fd89e3d7cbd28",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/chat.css",
+      "currentSha256": "ea14ddee812615aa2222bcefa93bf899e5a2b778f699e486249dddfc0d9fdaac",
+      "bytes": 63655,
+      "finalManifestSha256": "ea14ddee812615aa2222bcefa93bf899e5a2b778f699e486249dddfc0d9fdaac",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "ea14ddee812615aa2222bcefa93bf899e5a2b778f699e486249dddfc0d9fdaac",
+      "sourceAfterPass": "ea14ddee812615aa2222bcefa93bf899e5a2b778f699e486249dddfc0d9fdaac",
+      "sourceAtCompletion": "ea14ddee812615aa2222bcefa93bf899e5a2b778f699e486249dddfc0d9fdaac",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/chat.html",
+      "currentSha256": "aff229e3ff2c1185ec72b81f1f5e68c3bbfefd8bd39542272218fa8c87d49e87",
+      "bytes": 18562,
+      "finalManifestSha256": "aff229e3ff2c1185ec72b81f1f5e68c3bbfefd8bd39542272218fa8c87d49e87",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "4d67c82206abae249cafa9eda320ade38803b31759515fa10e332c72579b6fe7",
+      "sourceAfterPass": "4d67c82206abae249cafa9eda320ade38803b31759515fa10e332c72579b6fe7",
+      "sourceAtCompletion": "d0c5651e31f11a7f06bdb8aacf9c302fd842b8ae380969f6d091cb599828ad35",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/chat.js",
+      "currentSha256": "10d398ed490c456dcbe55670d5f7bf15984ac7f064695d906602cd5ba1ed62f5",
+      "bytes": 92515,
+      "finalManifestSha256": "10d398ed490c456dcbe55670d5f7bf15984ac7f064695d906602cd5ba1ed62f5",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "10d398ed490c456dcbe55670d5f7bf15984ac7f064695d906602cd5ba1ed62f5",
+      "sourceAfterPass": "10d398ed490c456dcbe55670d5f7bf15984ac7f064695d906602cd5ba1ed62f5",
+      "sourceAtCompletion": "10d398ed490c456dcbe55670d5f7bf15984ac7f064695d906602cd5ba1ed62f5",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/club-auth-storage.js",
+      "currentSha256": "80f52e6fe2c07d85ebaaeb9b1da2afe29515f9b204ae08fa6870c94314245581",
+      "bytes": 3930,
+      "finalManifestSha256": "80f52e6fe2c07d85ebaaeb9b1da2afe29515f9b204ae08fa6870c94314245581",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "80f52e6fe2c07d85ebaaeb9b1da2afe29515f9b204ae08fa6870c94314245581",
+      "sourceAfterPass": "80f52e6fe2c07d85ebaaeb9b1da2afe29515f9b204ae08fa6870c94314245581",
+      "sourceAtCompletion": "80f52e6fe2c07d85ebaaeb9b1da2afe29515f9b204ae08fa6870c94314245581",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/club-common.js",
+      "currentSha256": "9e72bd40ea0330483f46170c9cd5fcb820353b8fe30c10f7540267720f2b6bac",
+      "bytes": 40195,
+      "finalManifestSha256": "9e72bd40ea0330483f46170c9cd5fcb820353b8fe30c10f7540267720f2b6bac",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "092ba1dba5e3ee9e5cc6278d537e4db4769e71c893a0bcc081f34bd7c909998d",
+      "sourceAfterPass": "9e72bd40ea0330483f46170c9cd5fcb820353b8fe30c10f7540267720f2b6bac",
+      "sourceAtCompletion": "9e72bd40ea0330483f46170c9cd5fcb820353b8fe30c10f7540267720f2b6bac",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/club-features.html",
+      "currentSha256": "a2ff4fdd644f1a6cf248ef4ff3281a6891aaafe7f7ecd30dc7a8371bf720c9a8",
+      "bytes": 21041,
+      "finalManifestSha256": "a2ff4fdd644f1a6cf248ef4ff3281a6891aaafe7f7ecd30dc7a8371bf720c9a8",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "3b0095874561391d9bc0cbb5c31f86166c7411137462feb4b39f5eb14067f67f",
+      "sourceAfterPass": "3b0095874561391d9bc0cbb5c31f86166c7411137462feb4b39f5eb14067f67f",
+      "sourceAtCompletion": "a23176fb35816b1e016b28f5ef349d90772fe61b3aaf82f2663abdeedce0f9d3",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/club-liquid-lighting.js",
+      "currentSha256": "118202074bb6c0c067a8fc5648deadba69821679c356e2d9295e2bb73bf68638",
+      "bytes": 11001,
+      "finalManifestSha256": "118202074bb6c0c067a8fc5648deadba69821679c356e2d9295e2bb73bf68638",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "118202074bb6c0c067a8fc5648deadba69821679c356e2d9295e2bb73bf68638",
+      "sourceAfterPass": "118202074bb6c0c067a8fc5648deadba69821679c356e2d9295e2bb73bf68638",
+      "sourceAtCompletion": "118202074bb6c0c067a8fc5648deadba69821679c356e2d9295e2bb73bf68638",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/club-share.js",
+      "currentSha256": "47e8f1e65496ec5d263672bc91fcdaf1db37e02300191d5a7bbec6bda13832cb",
+      "bytes": 24080,
+      "finalManifestSha256": "47e8f1e65496ec5d263672bc91fcdaf1db37e02300191d5a7bbec6bda13832cb",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "252ce3db37ac637534746a664a2a54be4e7d15b48da68e6ccf7776dea4201a8e",
+      "sourceAfterPass": "ce31b9a576628c87dff5496b37a146307bdf9a5c587d0d5328093e1eb0d7f498",
+      "sourceAtCompletion": "47e8f1e65496ec5d263672bc91fcdaf1db37e02300191d5a7bbec6bda13832cb",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": true
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/club-shell.js",
+      "currentSha256": "e169caddbb4f5e3fbb3805fa0d07e9c08c16198b9ea28be253928db9710d05bd",
+      "bytes": 78791,
+      "finalManifestSha256": "e169caddbb4f5e3fbb3805fa0d07e9c08c16198b9ea28be253928db9710d05bd",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "b3039f3ca938d3111f8268c5c364e8ab7b96d3d76064b5a66b532474fe02060c",
+      "sourceAfterPass": "b3039f3ca938d3111f8268c5c364e8ab7b96d3d76064b5a66b532474fe02060c",
+      "sourceAtCompletion": "b3039f3ca938d3111f8268c5c364e8ab7b96d3d76064b5a66b532474fe02060c",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/club-ui.css",
+      "currentSha256": "a998135f538eaea0b778678bc590741ab83355bbaf79c67728df6af8b93d3367",
+      "bytes": 165349,
+      "finalManifestSha256": "a998135f538eaea0b778678bc590741ab83355bbaf79c67728df6af8b93d3367",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "a998135f538eaea0b778678bc590741ab83355bbaf79c67728df6af8b93d3367",
+      "sourceAfterPass": "a998135f538eaea0b778678bc590741ab83355bbaf79c67728df6af8b93d3367",
+      "sourceAtCompletion": "a998135f538eaea0b778678bc590741ab83355bbaf79c67728df6af8b93d3367",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/data/changelog-data.js",
+      "currentSha256": "66ba1d5371e948d453b333a587de66c8d65f7fd569006af9949d26587be9f125",
+      "bytes": 79444,
+      "finalManifestSha256": "66ba1d5371e948d453b333a587de66c8d65f7fd569006af9949d26587be9f125",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "66ba1d5371e948d453b333a587de66c8d65f7fd569006af9949d26587be9f125",
+      "sourceAfterPass": "66ba1d5371e948d453b333a587de66c8d65f7fd569006af9949d26587be9f125",
+      "sourceAtCompletion": "66ba1d5371e948d453b333a587de66c8d65f7fd569006af9949d26587be9f125",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/data/changelog.json",
+      "currentSha256": "4e9c808f096eb98378cf0f50e0474ea428504059b671e970d9db68491e98601b",
+      "bytes": 80201,
+      "finalManifestSha256": "4e9c808f096eb98378cf0f50e0474ea428504059b671e970d9db68491e98601b",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "4e9c808f096eb98378cf0f50e0474ea428504059b671e970d9db68491e98601b",
+      "sourceAfterPass": "4e9c808f096eb98378cf0f50e0474ea428504059b671e970d9db68491e98601b",
+      "sourceAtCompletion": "4e9c808f096eb98378cf0f50e0474ea428504059b671e970d9db68491e98601b",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/donations.html",
+      "currentSha256": "7e86b93ed59f63ecaa2bd44d1f2a9ce170d2650107116e5120e4a22c60a5dcf9",
+      "bytes": 32903,
+      "finalManifestSha256": "7e86b93ed59f63ecaa2bd44d1f2a9ce170d2650107116e5120e4a22c60a5dcf9",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "89805ca18021d4933d4bfd937280fe05b74a1942bfe9db062e64c414b3678bd3",
+      "sourceAfterPass": "89805ca18021d4933d4bfd937280fe05b74a1942bfe9db062e64c414b3678bd3",
+      "sourceAtCompletion": "73845debf683a8783e107ef91c8d04bf82493a53863361a151926476c1f178e1",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/dp-lab.html",
+      "currentSha256": "e4ac22e4f4fe53e16b9c8b66053c99508e486615ee1d4f17dc3dcfeb1c60ba96",
+      "bytes": 43836,
+      "finalManifestSha256": "e4ac22e4f4fe53e16b9c8b66053c99508e486615ee1d4f17dc3dcfeb1c60ba96",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "ba948b0cc087e3377315259ad3a1090f27f5259dd58f4876a1de7e9829405d81",
+      "sourceAfterPass": "ba948b0cc087e3377315259ad3a1090f27f5259dd58f4876a1de7e9829405d81",
+      "sourceAtCompletion": "dc9be1aa84f6f20b871c7bb4f6a861e4474d4a92bfc39897751b46491552af6b",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/drive-admin.html",
+      "currentSha256": "468d21867fb34edc382240948e549553b8dbfac8ba07b1645e42ecd6e910ab66",
+      "bytes": 30213,
+      "finalManifestSha256": "468d21867fb34edc382240948e549553b8dbfac8ba07b1645e42ecd6e910ab66",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "4ac7a69e0fe8e2acb53927646fdf3c5620b2d2d1cc9b8e20db7b856caeb93b45",
+      "sourceAfterPass": "4ac7a69e0fe8e2acb53927646fdf3c5620b2d2d1cc9b8e20db7b856caeb93b45",
+      "sourceAtCompletion": "65b0573ba2d613464faf9869810ca3c43f9e2e386236aaccdc97a5f00be96586",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/drive.html",
+      "currentSha256": "00b980da679610966f863f28e87f8d346a6a1e477d0890551060e8dc24518ef3",
+      "bytes": 24886,
+      "finalManifestSha256": "00b980da679610966f863f28e87f8d346a6a1e477d0890551060e8dc24518ef3",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "062faa0d1b98d11978db212ecd3a96fd595539a67a5b113a5fe04f7999743ec6",
+      "sourceAfterPass": "062faa0d1b98d11978db212ecd3a96fd595539a67a5b113a5fe04f7999743ec6",
+      "sourceAtCompletion": "bf37d03d0a2c542640e17e60b90b534786f17f028fad88945a2455ad9e2aabb3",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/ds-lab.html",
+      "currentSha256": "638dd46f56a4576d5bf6eff848fffee12a1ca9375b5d50cda01c7fac46503a95",
+      "bytes": 50177,
+      "finalManifestSha256": "638dd46f56a4576d5bf6eff848fffee12a1ca9375b5d50cda01c7fac46503a95",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "7e68e568187158f4a1fed7ff59d631cc9495534ff3e0dab221ea4e99f25612f0",
+      "sourceAfterPass": "7e68e568187158f4a1fed7ff59d631cc9495534ff3e0dab221ea4e99f25612f0",
+      "sourceAtCompletion": "57d230d1360475be3e88cd45358eda3be8a2f24a236693b5ca61a00e8aed3eea",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/error-page.js",
+      "currentSha256": "59618b5d36e858af743bf7faa535fc123972ec9fdb90eb8124fc1ca79a9588c2",
+      "bytes": 9787,
+      "finalManifestSha256": "59618b5d36e858af743bf7faa535fc123972ec9fdb90eb8124fc1ca79a9588c2",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "59618b5d36e858af743bf7faa535fc123972ec9fdb90eb8124fc1ca79a9588c2",
+      "sourceAfterPass": "59618b5d36e858af743bf7faa535fc123972ec9fdb90eb8124fc1ca79a9588c2",
+      "sourceAtCompletion": "59618b5d36e858af743bf7faa535fc123972ec9fdb90eb8124fc1ca79a9588c2",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/events-admin.html",
+      "currentSha256": "0614ed3e07514bc0a29423f9d794901bf67313ca9ba5b7d8436dfd5655b1c003",
+      "bytes": 38655,
+      "finalManifestSha256": "0614ed3e07514bc0a29423f9d794901bf67313ca9ba5b7d8436dfd5655b1c003",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "ba797aec7b486cc2f733fa3a9c83e7a3fe26ccca78768a4d2cb5d21281acb208",
+      "sourceAfterPass": "ba797aec7b486cc2f733fa3a9c83e7a3fe26ccca78768a4d2cb5d21281acb208",
+      "sourceAtCompletion": "84f8af9c30ce524a4b832aa47e75368d4948fcdfae26130a29a5e2e6266a170c",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/events.html",
+      "currentSha256": "8a8b638ac3b174f9fa53f5739f62a7b3aeedd07354ab2fccb4ce2c0f9130c54e",
+      "bytes": 20464,
+      "finalManifestSha256": "8a8b638ac3b174f9fa53f5739f62a7b3aeedd07354ab2fccb4ce2c0f9130c54e",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "e4a57ddd3ea9331f3c855c6f04565fd5929a5f3e0c72dd3645a5cac97b9aec9b",
+      "sourceAfterPass": "e4a57ddd3ea9331f3c855c6f04565fd5929a5f3e0c72dd3645a5cac97b9aec9b",
+      "sourceAtCompletion": "cd295fa1931ea43c6b1991f0736250a5bd177cadfa262cd0fafc676cddd1b0bc",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/gomoku-experiments.html",
+      "currentSha256": "96016f7f30d6c3c98152223ac82b238ffe6f79528168c2b17382334c055fb6bd",
+      "bytes": 62132,
+      "finalManifestSha256": "96016f7f30d6c3c98152223ac82b238ffe6f79528168c2b17382334c055fb6bd",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "88ef8b62f0b3e4cdf2a1a754774c9bab16528017793732465d57ea1f5774331c",
+      "sourceAfterPass": "88ef8b62f0b3e4cdf2a1a754774c9bab16528017793732465d57ea1f5774331c",
+      "sourceAtCompletion": "581c6925e359c8334e23da4d25eaef8fa1817230923863d8b28f3c68fbdd440f",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/gomoku-models/v1.html",
+      "currentSha256": "1067fd20149959ab796ede6ed81e9a3aa57962e29f6163f29cd2514318aa9457",
+      "bytes": 10187,
+      "finalManifestSha256": "1067fd20149959ab796ede6ed81e9a3aa57962e29f6163f29cd2514318aa9457",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "1067fd20149959ab796ede6ed81e9a3aa57962e29f6163f29cd2514318aa9457",
+      "sourceAfterPass": "1067fd20149959ab796ede6ed81e9a3aa57962e29f6163f29cd2514318aa9457",
+      "sourceAtCompletion": "1067fd20149959ab796ede6ed81e9a3aa57962e29f6163f29cd2514318aa9457",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/gomoku-models/v2.html",
+      "currentSha256": "2dbb10d5932b01eac7d54c23c87634250fdbe753959999eb5bc7502ca42d2f81",
+      "bytes": 16017,
+      "finalManifestSha256": "2dbb10d5932b01eac7d54c23c87634250fdbe753959999eb5bc7502ca42d2f81",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "2dbb10d5932b01eac7d54c23c87634250fdbe753959999eb5bc7502ca42d2f81",
+      "sourceAfterPass": "2dbb10d5932b01eac7d54c23c87634250fdbe753959999eb5bc7502ca42d2f81",
+      "sourceAtCompletion": "2dbb10d5932b01eac7d54c23c87634250fdbe753959999eb5bc7502ca42d2f81",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/gomoku-models/v3.html",
+      "currentSha256": "87a064eab5be1303d5f5c09cf0a30cc40556421176e470ea4eb0f4d322032ef1",
+      "bytes": 16212,
+      "finalManifestSha256": "87a064eab5be1303d5f5c09cf0a30cc40556421176e470ea4eb0f4d322032ef1",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "87a064eab5be1303d5f5c09cf0a30cc40556421176e470ea4eb0f4d322032ef1",
+      "sourceAfterPass": "87a064eab5be1303d5f5c09cf0a30cc40556421176e470ea4eb0f4d322032ef1",
+      "sourceAtCompletion": "87a064eab5be1303d5f5c09cf0a30cc40556421176e470ea4eb0f4d322032ef1",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/gomoku-models/v6.html",
+      "currentSha256": "236c05f4813552a5313bcf152f4fe23361cfe6469893f53b1d4583bfdf721f39",
+      "bytes": 25082,
+      "finalManifestSha256": "236c05f4813552a5313bcf152f4fe23361cfe6469893f53b1d4583bfdf721f39",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "236c05f4813552a5313bcf152f4fe23361cfe6469893f53b1d4583bfdf721f39",
+      "sourceAfterPass": "236c05f4813552a5313bcf152f4fe23361cfe6469893f53b1d4583bfdf721f39",
+      "sourceAtCompletion": "236c05f4813552a5313bcf152f4fe23361cfe6469893f53b1d4583bfdf721f39",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/gomoku-models/v7.html",
+      "currentSha256": "114816c9490ab56598bfee9c6d8a67938fa2bec47aaee53f9d7b42066a9e49fc",
+      "bytes": 25269,
+      "finalManifestSha256": "114816c9490ab56598bfee9c6d8a67938fa2bec47aaee53f9d7b42066a9e49fc",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "114816c9490ab56598bfee9c6d8a67938fa2bec47aaee53f9d7b42066a9e49fc",
+      "sourceAfterPass": "114816c9490ab56598bfee9c6d8a67938fa2bec47aaee53f9d7b42066a9e49fc",
+      "sourceAtCompletion": "114816c9490ab56598bfee9c6d8a67938fa2bec47aaee53f9d7b42066a9e49fc",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/gomoku-models/v8.html",
+      "currentSha256": "bdc8eec5923142dcd63ff6c73b78fc030247d6dbdd48b164b8fb41acc4e9271c",
+      "bytes": 26300,
+      "finalManifestSha256": "bdc8eec5923142dcd63ff6c73b78fc030247d6dbdd48b164b8fb41acc4e9271c",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "bdc8eec5923142dcd63ff6c73b78fc030247d6dbdd48b164b8fb41acc4e9271c",
+      "sourceAfterPass": "bdc8eec5923142dcd63ff6c73b78fc030247d6dbdd48b164b8fb41acc4e9271c",
+      "sourceAtCompletion": "bdc8eec5923142dcd63ff6c73b78fc030247d6dbdd48b164b8fb41acc4e9271c",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/gomoku-satori-lab.html",
+      "currentSha256": "3141cb23c309dd0bad410ac2d8a2713c01aa9e7edb1030e970671303bbbbb84d",
+      "bytes": 57420,
+      "finalManifestSha256": "3141cb23c309dd0bad410ac2d8a2713c01aa9e7edb1030e970671303bbbbb84d",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "d4d3a4c74fa2f329b0d13ce179f282a0e639a35c697054f6e95ee674398267e0",
+      "sourceAfterPass": "d4d3a4c74fa2f329b0d13ce179f282a0e639a35c697054f6e95ee674398267e0",
+      "sourceAtCompletion": "5e9bcf18b362d946077510be3dfbc42c722fc35553314d8eeaa08d9df67498d8",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/gomoku.html",
+      "currentSha256": "60270494e7ee13bc553e3887ec02e99ae89d737d3007aaa9d65fd9b0f70114e9",
+      "bytes": 94950,
+      "finalManifestSha256": "60270494e7ee13bc553e3887ec02e99ae89d737d3007aaa9d65fd9b0f70114e9",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "a87c0cdb7fc3085c2ad72417b2de342dc591a054d25bb5089a69c93f2d54e834",
+      "sourceAfterPass": "a87c0cdb7fc3085c2ad72417b2de342dc591a054d25bb5089a69c93f2d54e834",
+      "sourceAtCompletion": "f40a9b2ee61828738934bbf6c865b663a39806cf67368813c342ad4cbbc3f243",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/graph-lab.html",
+      "currentSha256": "58d222b279ba57d142eb6bd11fc2a31feda6f43990b52905bac41ba45727de5e",
+      "bytes": 66164,
+      "finalManifestSha256": "58d222b279ba57d142eb6bd11fc2a31feda6f43990b52905bac41ba45727de5e",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "38010cf55b536f0622ecefac8eb389154ce43334ad313a610ed8a511eeaa2829",
+      "sourceAfterPass": "38010cf55b536f0622ecefac8eb389154ce43334ad313a610ed8a511eeaa2829",
+      "sourceAtCompletion": "42226ebf6b8180b114110342173adf638ae735d1432cda9f05f75cb47c5b015d",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/guide.html",
+      "currentSha256": "9d6ed9dedb5a90764ccc2d8af77f5c9083049ab618e8679f1b25408665637ab3",
+      "bytes": 13743,
+      "finalManifestSha256": "9d6ed9dedb5a90764ccc2d8af77f5c9083049ab618e8679f1b25408665637ab3",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "88408009e284f88858703c98c3a2cb38ef8696decfbb58e85b6f2178596dc3a2",
+      "sourceAfterPass": "da3a6d2a4c940fdf53af5e326fa013a19147eba7adc1d7d2fd6be1b3fb05767d",
+      "sourceAtCompletion": "7091a4b5f6e505dbc9d7ecc384e419b270d5e03c1e6fa0cfe63352e09d83ca58",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/heap-lab.html",
+      "currentSha256": "06e32ac7d1091897f34a34a26bf899b4f56351b34d0ac61c43f6a8b3d4fa3574",
+      "bytes": 62969,
+      "finalManifestSha256": "06e32ac7d1091897f34a34a26bf899b4f56351b34d0ac61c43f6a8b3d4fa3574",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "343b9dd36c1906553ceb9e349690f5691f0cccbe43e958bc295b97764f2fc040",
+      "sourceAfterPass": "343b9dd36c1906553ceb9e349690f5691f0cccbe43e958bc295b97764f2fc040",
+      "sourceAtCompletion": "2dd83a72784c056ab64c48b5bdefde5783bcc4c61e36d68ca1e4941302b889e2",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/home-capabilities.js",
+      "currentSha256": "348980fe78b008299beaf1654e89c08fda5aa7c2eb91d5035da652e66c66d40c",
+      "bytes": 21188,
+      "finalManifestSha256": "348980fe78b008299beaf1654e89c08fda5aa7c2eb91d5035da652e66c66d40c",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "348980fe78b008299beaf1654e89c08fda5aa7c2eb91d5035da652e66c66d40c",
+      "sourceAfterPass": "348980fe78b008299beaf1654e89c08fda5aa7c2eb91d5035da652e66c66d40c",
+      "sourceAtCompletion": "348980fe78b008299beaf1654e89c08fda5aa7c2eb91d5035da652e66c66d40c",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/home-motion.js",
+      "currentSha256": "624a6078c333cb658231b7f75aaf89ca6568afaf33238fdf93b662a809052700",
+      "bytes": 2480,
+      "finalManifestSha256": "624a6078c333cb658231b7f75aaf89ca6568afaf33238fdf93b662a809052700",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "624a6078c333cb658231b7f75aaf89ca6568afaf33238fdf93b662a809052700",
+      "sourceAfterPass": "624a6078c333cb658231b7f75aaf89ca6568afaf33238fdf93b662a809052700",
+      "sourceAtCompletion": "624a6078c333cb658231b7f75aaf89ca6568afaf33238fdf93b662a809052700",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/home-showcase.css",
+      "currentSha256": "6d2336462fa5c534c5ec4536d998dc1455ea6591443d9bb712a367de7a0e2c51",
+      "bytes": 74624,
+      "finalManifestSha256": "6d2336462fa5c534c5ec4536d998dc1455ea6591443d9bb712a367de7a0e2c51",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "c062be4b0f58f2ef74919484e6e0695f70f9c48af2abc8a1ed22048012cdeeab",
+      "sourceAfterPass": "c062be4b0f58f2ef74919484e6e0695f70f9c48af2abc8a1ed22048012cdeeab",
+      "sourceAtCompletion": "d1ddfbc54ba2a40f4046b92c1359aa3ce8db80c88fd986eac767f0e298255743",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/home-showcase.js",
+      "currentSha256": "8187bdf0a4e1e7b363cfe4ef7a38850e24139d2994e5f9089e8e062f3d4b7524",
+      "bytes": 3130,
+      "finalManifestSha256": "8187bdf0a4e1e7b363cfe4ef7a38850e24139d2994e5f9089e8e062f3d4b7524",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "8187bdf0a4e1e7b363cfe4ef7a38850e24139d2994e5f9089e8e062f3d4b7524",
+      "sourceAfterPass": "8187bdf0a4e1e7b363cfe4ef7a38850e24139d2994e5f9089e8e062f3d4b7524",
+      "sourceAtCompletion": "8187bdf0a4e1e7b363cfe4ef7a38850e24139d2994e5f9089e8e062f3d4b7524",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/i18n-dict-en.js",
+      "currentSha256": "60b2a66e14e5e9125b55a2c5bb8b6e688129c2d9ef92c9494c7831e37c6ef820",
+      "bytes": 134366,
+      "finalManifestSha256": "60b2a66e14e5e9125b55a2c5bb8b6e688129c2d9ef92c9494c7831e37c6ef820",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "60b2a66e14e5e9125b55a2c5bb8b6e688129c2d9ef92c9494c7831e37c6ef820",
+      "sourceAfterPass": "60b2a66e14e5e9125b55a2c5bb8b6e688129c2d9ef92c9494c7831e37c6ef820",
+      "sourceAtCompletion": "60b2a66e14e5e9125b55a2c5bb8b6e688129c2d9ef92c9494c7831e37c6ef820",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/i18n-dict-zh.js",
+      "currentSha256": "bf3f057031f9e37a41a4fd9f9ea34e1cd56562b274fe88be2986818a476975f8",
+      "bytes": 138340,
+      "finalManifestSha256": "bf3f057031f9e37a41a4fd9f9ea34e1cd56562b274fe88be2986818a476975f8",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "bf3f057031f9e37a41a4fd9f9ea34e1cd56562b274fe88be2986818a476975f8",
+      "sourceAfterPass": "bf3f057031f9e37a41a4fd9f9ea34e1cd56562b274fe88be2986818a476975f8",
+      "sourceAtCompletion": "bf3f057031f9e37a41a4fd9f9ea34e1cd56562b274fe88be2986818a476975f8",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/i18n-dict.js",
+      "currentSha256": "f66c88d19f2e071fe306054128548ddfac9ab0650f3b363fdeb02efc58243048",
+      "bytes": 139825,
+      "finalManifestSha256": "f66c88d19f2e071fe306054128548ddfac9ab0650f3b363fdeb02efc58243048",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "f66c88d19f2e071fe306054128548ddfac9ab0650f3b363fdeb02efc58243048",
+      "sourceAfterPass": "f66c88d19f2e071fe306054128548ddfac9ab0650f3b363fdeb02efc58243048",
+      "sourceAtCompletion": "f66c88d19f2e071fe306054128548ddfac9ab0650f3b363fdeb02efc58243048",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/i18n.js",
+      "currentSha256": "ba66328e540973d97ed80cbc2693a6f8269dca8e72d46e1e1c9f734b72c69b15",
+      "bytes": 9075,
+      "finalManifestSha256": "ba66328e540973d97ed80cbc2693a6f8269dca8e72d46e1e1c9f734b72c69b15",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "ba66328e540973d97ed80cbc2693a6f8269dca8e72d46e1e1c9f734b72c69b15",
+      "sourceAfterPass": "ba66328e540973d97ed80cbc2693a6f8269dca8e72d46e1e1c9f734b72c69b15",
+      "sourceAtCompletion": "ba66328e540973d97ed80cbc2693a6f8269dca8e72d46e1e1c9f734b72c69b15",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/join-admin.html",
+      "currentSha256": "579f87661783793ce42bdbf5d71f7904f74347eda2469661a7a4f90c3df0eae8",
+      "bytes": 16973,
+      "finalManifestSha256": "579f87661783793ce42bdbf5d71f7904f74347eda2469661a7a4f90c3df0eae8",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "2d95f283d94bd410e618801ab5726c828c6b6875a1df0d4a6938cadbc7c15754",
+      "sourceAfterPass": "2d95f283d94bd410e618801ab5726c828c6b6875a1df0d4a6938cadbc7c15754",
+      "sourceAtCompletion": "36237d211e165f427893cec1da1be57c07653c4c2c4840f009e88cac0c5bd2e8",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/join.html",
+      "currentSha256": "72e0970a245c04fc1eda29b39de2eec2d3e19c3a5b309e13c76843e51b370b16",
+      "bytes": 15379,
+      "finalManifestSha256": "72e0970a245c04fc1eda29b39de2eec2d3e19c3a5b309e13c76843e51b370b16",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "1cb8968a39b12631dc2f827962252f2d89c08c39993a948e9d5cce3c83e9a595",
+      "sourceAfterPass": "1cb8968a39b12631dc2f827962252f2d89c08c39993a948e9d5cce3c83e9a595",
+      "sourceAtCompletion": "4af790594856ff0a4fcde4017c3eef659c105e47342333c736afc9c748fd954d",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/legacy-premium.css",
+      "currentSha256": "ddbf1691467f039c4f9f52e84f43ccdb58f54e3c7634f81c895081d429528f24",
+      "bytes": 19036,
+      "finalManifestSha256": "ddbf1691467f039c4f9f52e84f43ccdb58f54e3c7634f81c895081d429528f24",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "ddbf1691467f039c4f9f52e84f43ccdb58f54e3c7634f81c895081d429528f24",
+      "sourceAfterPass": "ddbf1691467f039c4f9f52e84f43ccdb58f54e3c7634f81c895081d429528f24",
+      "sourceAtCompletion": "ddbf1691467f039c4f9f52e84f43ccdb58f54e3c7634f81c895081d429528f24",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/legacy-premium.js",
+      "currentSha256": "2485716f301300f7f4b92fd2fce363dfb68a3ea5ba9be80c286bc011d2092d0d",
+      "bytes": 1930,
+      "finalManifestSha256": "2485716f301300f7f4b92fd2fce363dfb68a3ea5ba9be80c286bc011d2092d0d",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "2485716f301300f7f4b92fd2fce363dfb68a3ea5ba9be80c286bc011d2092d0d",
+      "sourceAfterPass": "2485716f301300f7f4b92fd2fce363dfb68a3ea5ba9be80c286bc011d2092d0d",
+      "sourceAtCompletion": "2485716f301300f7f4b92fd2fce363dfb68a3ea5ba9be80c286bc011d2092d0d",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/mall-admin.html",
+      "currentSha256": "b901fa8a6313810a389192b681636c02abe90705d8f98b4eef900ae2cc2aa0f0",
+      "bytes": 23039,
+      "finalManifestSha256": "b901fa8a6313810a389192b681636c02abe90705d8f98b4eef900ae2cc2aa0f0",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "23024274ba892688ae26b65e6848eb482c69c811654fab71215844aaf1d9af58",
+      "sourceAfterPass": "23024274ba892688ae26b65e6848eb482c69c811654fab71215844aaf1d9af58",
+      "sourceAtCompletion": "4eca3552e42f4c65a41b0b0db0d06bf24229861f0fe10884a00ebd9c4fe5fc97",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/member-center.html",
+      "currentSha256": "1229a1c324890d93c43d7d7a962d8a4e97b469d204345d4bcaea170596415c80",
+      "bytes": 42794,
+      "finalManifestSha256": "1229a1c324890d93c43d7d7a962d8a4e97b469d204345d4bcaea170596415c80",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "52ae19727ed62c77e5db0caa086a18a4af63f3fad126ec22ecec99a31df3af24",
+      "sourceAfterPass": "52ae19727ed62c77e5db0caa086a18a4af63f3fad126ec22ecec99a31df3af24",
+      "sourceAtCompletion": "f41765d7191acf4d6e29af817285a411d2b26ad00b5b23171a8d2cf12f6d7f7e",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/member-checkin.html",
+      "currentSha256": "4943d35f70c44a96bb11221194c2155d734f9ce40d2700a8e833ac34d5f82530",
+      "bytes": 30324,
+      "finalManifestSha256": "4943d35f70c44a96bb11221194c2155d734f9ce40d2700a8e833ac34d5f82530",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "15f25a005ad8aca2f5db8c87ddd8bcea22c5c3dd995abff3113f08dbe8bed044",
+      "sourceAfterPass": "15f25a005ad8aca2f5db8c87ddd8bcea22c5c3dd995abff3113f08dbe8bed044",
+      "sourceAtCompletion": "6095b10bb5599e83135592007ffcd62fec1619563d887795d19bb36ea7b08144",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/member-identity.js",
+      "currentSha256": "0af7f54072f4793f41e4f3260943f42e736990eb7d8b4a7e883c14aef817e270",
+      "bytes": 7057,
+      "finalManifestSha256": "0af7f54072f4793f41e4f3260943f42e736990eb7d8b4a7e883c14aef817e270",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "0af7f54072f4793f41e4f3260943f42e736990eb7d8b4a7e883c14aef817e270",
+      "sourceAfterPass": "0af7f54072f4793f41e4f3260943f42e736990eb7d8b4a7e883c14aef817e270",
+      "sourceAtCompletion": "0af7f54072f4793f41e4f3260943f42e736990eb7d8b4a7e883c14aef817e270",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/member-messages.html",
+      "currentSha256": "805c7c13eec642f7a08292cc532b68f061c944ee4b66ead34cbcdbc72e9eb39a",
+      "bytes": 16209,
+      "finalManifestSha256": "805c7c13eec642f7a08292cc532b68f061c944ee4b66ead34cbcdbc72e9eb39a",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "a77fb311889246fd16326efa11290da447a85e813df78b79b2a2ce2eee37ed26",
+      "sourceAfterPass": "a77fb311889246fd16326efa11290da447a85e813df78b79b2a2ce2eee37ed26",
+      "sourceAtCompletion": "0bce88b8af66a558ecea980e613ea77613904a02978e8b6c0ad5de07ee5ed5a1",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/member-points.html",
+      "currentSha256": "e965852c00071aefcdee433481edfef018960fc90bb77bdba61c8a8b366c8c37",
+      "bytes": 15962,
+      "finalManifestSha256": "e965852c00071aefcdee433481edfef018960fc90bb77bdba61c8a8b366c8c37",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "ad20d650de84d7541f5970f1cbbf406d8a51ecced26576ac6f1a393a8e32db1e",
+      "sourceAfterPass": "ad20d650de84d7541f5970f1cbbf406d8a51ecced26576ac6f1a393a8e32db1e",
+      "sourceAtCompletion": "c3fd8487d38d79d9867fd3dbc36caf72313dd1dcc55a1ac4de4058a0e2e64c28",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/member-profile.html",
+      "currentSha256": "905dbdd6442ab2b42b83194bb4ad7917e1d337674d772a8d03dfbae92d5e555f",
+      "bytes": 18728,
+      "finalManifestSha256": "905dbdd6442ab2b42b83194bb4ad7917e1d337674d772a8d03dfbae92d5e555f",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "d746ff3677c196df6912f64bff1227bfa61b2ed28bab9c9a11136f2022e95123",
+      "sourceAfterPass": "d746ff3677c196df6912f64bff1227bfa61b2ed28bab9c9a11136f2022e95123",
+      "sourceAtCompletion": "57924e90e6292520c6e32938a4135bf0a49f87f09f3600368d25b2f01051f2aa",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/members-admin.html",
+      "currentSha256": "bb493d2e72bf93c1d7edd1a65f3cc99d9abf78b30b1b7c6c25f5af75ccda91da",
+      "bytes": 21540,
+      "finalManifestSha256": "bb493d2e72bf93c1d7edd1a65f3cc99d9abf78b30b1b7c6c25f5af75ccda91da",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "45114f4284469dd7ce724f1343d339ebd06a7cf3b6c2bf545a20611ad6152d0a",
+      "sourceAfterPass": "45114f4284469dd7ce724f1343d339ebd06a7cf3b6c2bf545a20611ad6152d0a",
+      "sourceAtCompletion": "8900f7ce1bf21ad688d2be89483298d2882c9e9c0e253d872f77ff2bf1128683",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/notifications.html",
+      "currentSha256": "2943fdb051407c970a52f16836d14707b381ca170ecb8a07cb777e7c25d00476",
+      "bytes": 11507,
+      "finalManifestSha256": "2943fdb051407c970a52f16836d14707b381ca170ecb8a07cb777e7c25d00476",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "205fe915d4d985fd7ed35116ddca848a6cf2250f6c00643c94116ea054d812cc",
+      "sourceAfterPass": "205fe915d4d985fd7ed35116ddca848a6cf2250f6c00643c94116ea054d812cc",
+      "sourceAtCompletion": "363365e4f4f0176f56a2646643eba7415a120c1f7c399c18e88cc66bf5527f5a",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/password-reset.html",
+      "currentSha256": "06387e3c2ed60c871063cbc620baed13fac3987f079159af340e79cee3b73502",
+      "bytes": 11398,
+      "finalManifestSha256": "06387e3c2ed60c871063cbc620baed13fac3987f079159af340e79cee3b73502",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "18ace2f5f14e0f04c50560ef9b44df881af1511a40fe7ce4d5b9726b8494431c",
+      "sourceAfterPass": "18ace2f5f14e0f04c50560ef9b44df881af1511a40fe7ce4d5b9726b8494431c",
+      "sourceAtCompletion": "d66942efd75b9477896bbce9e3147b31e87042e9552ec4ca8b761953b506b5cb",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/platformer-pk.js",
+      "currentSha256": "42cc7697aa39e99e7482db628f4e888b8b9a20c3eda0b0ae85f8e75477a19911",
+      "bytes": 30278,
+      "finalManifestSha256": "42cc7697aa39e99e7482db628f4e888b8b9a20c3eda0b0ae85f8e75477a19911",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "42cc7697aa39e99e7482db628f4e888b8b9a20c3eda0b0ae85f8e75477a19911",
+      "sourceAfterPass": "42cc7697aa39e99e7482db628f4e888b8b9a20c3eda0b0ae85f8e75477a19911",
+      "sourceAtCompletion": "42cc7697aa39e99e7482db628f4e888b8b9a20c3eda0b0ae85f8e75477a19911",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/platformer.html",
+      "currentSha256": "88c6a88edd461d9565bcd14d4f48fb7fd5bdeb0a0bbfea846d4184fb2b7f8832",
+      "bytes": 246138,
+      "finalManifestSha256": "88c6a88edd461d9565bcd14d4f48fb7fd5bdeb0a0bbfea846d4184fb2b7f8832",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "269bc3a755d55fde0210c518d463c0eb9c57ae62aa0b654f8bbfadbacb377186",
+      "sourceAfterPass": "269bc3a755d55fde0210c518d463c0eb9c57ae62aa0b654f8bbfadbacb377186",
+      "sourceAtCompletion": "035a5f4bd5a354486c89cdcb9b9384a35c9057d3934faf6236430e8bf9448056",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/points-mall.html",
+      "currentSha256": "6caf70f3742e036f5265a197bf5b646fb943715c1efc2de88ed0531d3314998c",
+      "bytes": 15060,
+      "finalManifestSha256": "6caf70f3742e036f5265a197bf5b646fb943715c1efc2de88ed0531d3314998c",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "feb99d5f286a72227ad10a1f70cbcfbc4b69e5af646e841be3918c58e35f0c4c",
+      "sourceAfterPass": "feb99d5f286a72227ad10a1f70cbcfbc4b69e5af646e841be3918c58e35f0c4c",
+      "sourceAtCompletion": "b01746d2fba3e93fe154f4b56e3a6ac48a166ff2720bbc57b751303abdcdff55",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/resources.html",
+      "currentSha256": "cc65b1e937d51ebc1d6ad3857485af89c6d90cadae6f3a3def568ce6cb01f520",
+      "bytes": 14396,
+      "finalManifestSha256": "cc65b1e937d51ebc1d6ad3857485af89c6d90cadae6f3a3def568ce6cb01f520",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "e20c05102ce26ea2bb0c8c821e92f586554ab21e4333457d3796b2720d3c6ff0",
+      "sourceAfterPass": "e20c05102ce26ea2bb0c8c821e92f586554ab21e4333457d3796b2720d3c6ff0",
+      "sourceAtCompletion": "8d664c7fa7a9f524996bfdb8582325d348e3f2015fdf1e6dba4c51f43af16fe6",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/search-lab.html",
+      "currentSha256": "f2102395e958d7a5f4dac2ed59b73e549437240d4ea72fc78c71d5d7fda6f772",
+      "bytes": 34610,
+      "finalManifestSha256": "f2102395e958d7a5f4dac2ed59b73e549437240d4ea72fc78c71d5d7fda6f772",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "b5a86e25821d5e64b72e5e4f1f74ca28c76d2a2909e32f8ed968d6b5462b75e1",
+      "sourceAfterPass": "b5a86e25821d5e64b72e5e4f1f74ca28c76d2a2909e32f8ed968d6b5462b75e1",
+      "sourceAtCompletion": "c116aab90af8c8e1d498cf328c88db59b8db50779fa35406aa88091e3b795d25",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/search.html",
+      "currentSha256": "e6c7dc28c9f9439945ee3087cb19f0b4a951efc6bc8c03e4f3ce106150f024b3",
+      "bytes": 9336,
+      "finalManifestSha256": "e6c7dc28c9f9439945ee3087cb19f0b4a951efc6bc8c03e4f3ce106150f024b3",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "76dbae8feefb43ec700056f1f1be0777f41168f82fc6b8dc6b159db29a0ae9af",
+      "sourceAfterPass": "76dbae8feefb43ec700056f1f1be0777f41168f82fc6b8dc6b159db29a0ae9af",
+      "sourceAtCompletion": "30d562d9fa99fe7ea03a2136d27e9478439f99586e81b937618db01f0b57e6e6",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/service-gate.js",
+      "currentSha256": "fbbccf1bd5b4de7c4e170391a750410f5624aed0c3b61dab81c6977e01af7c57",
+      "bytes": 41036,
+      "finalManifestSha256": "fbbccf1bd5b4de7c4e170391a750410f5624aed0c3b61dab81c6977e01af7c57",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "9f5eff89aef0ef7fa2cd036315371a7af6d29effd6648f82354f9cb8e48d84c5",
+      "sourceAfterPass": "fbbccf1bd5b4de7c4e170391a750410f5624aed0c3b61dab81c6977e01af7c57",
+      "sourceAtCompletion": "fbbccf1bd5b4de7c4e170391a750410f5624aed0c3b61dab81c6977e01af7c57",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/service-prompts.js",
+      "currentSha256": "1cfff2ab9add8485f9b1b53abac65d05a88f18a44e8ea2d37389761a8c4fc95e",
+      "bytes": 13145,
+      "finalManifestSha256": "1cfff2ab9add8485f9b1b53abac65d05a88f18a44e8ea2d37389761a8c4fc95e",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "1cfff2ab9add8485f9b1b53abac65d05a88f18a44e8ea2d37389761a8c4fc95e",
+      "sourceAfterPass": "1cfff2ab9add8485f9b1b53abac65d05a88f18a44e8ea2d37389761a8c4fc95e",
+      "sourceAtCompletion": "1cfff2ab9add8485f9b1b53abac65d05a88f18a44e8ea2d37389761a8c4fc95e",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/snake.html",
+      "currentSha256": "fab50a98a41b75a17549c16acb0989882ef82cf14129e256e938f94efc43366f",
+      "bytes": 64150,
+      "finalManifestSha256": "fab50a98a41b75a17549c16acb0989882ef82cf14129e256e938f94efc43366f",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "037fb4b6aebbdf11be1192be3fc6d819c8d0654f23c1e4deba713656a93e1113",
+      "sourceAfterPass": "037fb4b6aebbdf11be1192be3fc6d819c8d0654f23c1e4deba713656a93e1113",
+      "sourceAtCompletion": "a758fecfa9fe4806780b40883cafe343dbecefc020fc5879d8b10bed6bbd44ed",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/sorting-lab.html",
+      "currentSha256": "cea2a229621bdd34c018db0f68cc21ed3f51a7b74f5db982e7b56802e4f0dff7",
+      "bytes": 36496,
+      "finalManifestSha256": "cea2a229621bdd34c018db0f68cc21ed3f51a7b74f5db982e7b56802e4f0dff7",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "5728990344a40073deb530feea2a29a93ecedac9a3fa05927ec2afa8b807cd9b",
+      "sourceAfterPass": "5728990344a40073deb530feea2a29a93ecedac9a3fa05927ec2afa8b807cd9b",
+      "sourceAtCompletion": "56580b3e5675a43424de58add76accb54ed9fbedf01b3ccdd31eeb108c8aff85",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/sw.js",
+      "currentSha256": "da2ec1da638258dad712a3a354424dfb6d6b792f30050b2777fb4c91d3c13edd",
+      "bytes": 3950,
+      "finalManifestSha256": "da2ec1da638258dad712a3a354424dfb6d6b792f30050b2777fb4c91d3c13edd",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "da2ec1da638258dad712a3a354424dfb6d6b792f30050b2777fb4c91d3c13edd",
+      "sourceAfterPass": "da2ec1da638258dad712a3a354424dfb6d6b792f30050b2777fb4c91d3c13edd",
+      "sourceAtCompletion": "da2ec1da638258dad712a3a354424dfb6d6b792f30050b2777fb4c91d3c13edd",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/tetris.html",
+      "currentSha256": "d27029e05bed8d6d60f131252c7df1b2cf2c8165d23871bc006856b0f090711d",
+      "bytes": 97459,
+      "finalManifestSha256": "d27029e05bed8d6d60f131252c7df1b2cf2c8165d23871bc006856b0f090711d",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "91f2ab42265b15e90c60253ffc729daaf03935258aea38ec517e4daaf9148028",
+      "sourceAfterPass": "91f2ab42265b15e90c60253ffc729daaf03935258aea38ec517e4daaf9148028",
+      "sourceAtCompletion": "af8bd871e0538869d6a47e73ced5a1f65725d99845f81529280b23690cfc0837",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/theme.css",
+      "currentSha256": "d03273fb10fba42a74e127ceca8e41a927e160ade6b66821608d3378b352c9f4",
+      "bytes": 68706,
+      "finalManifestSha256": "d03273fb10fba42a74e127ceca8e41a927e160ade6b66821608d3378b352c9f4",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "d03273fb10fba42a74e127ceca8e41a927e160ade6b66821608d3378b352c9f4",
+      "sourceAfterPass": "d03273fb10fba42a74e127ceca8e41a927e160ade6b66821608d3378b352c9f4",
+      "sourceAtCompletion": "d03273fb10fba42a74e127ceca8e41a927e160ade6b66821608d3378b352c9f4",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/theme.js",
+      "currentSha256": "1b745a4f31a04a9036da08313be2f0506da06439010ab98326861ca46ee7fd18",
+      "bytes": 16617,
+      "finalManifestSha256": "1b745a4f31a04a9036da08313be2f0506da06439010ab98326861ca46ee7fd18",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "1b745a4f31a04a9036da08313be2f0506da06439010ab98326861ca46ee7fd18",
+      "sourceAfterPass": "1b745a4f31a04a9036da08313be2f0506da06439010ab98326861ca46ee7fd18",
+      "sourceAtCompletion": "1b745a4f31a04a9036da08313be2f0506da06439010ab98326861ca46ee7fd18",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": true,
+        "sourceAfterPass": true,
+        "sourceAtCompletion": true
+      },
+      "status": "stable asset/document fingerprint; per-response use not established",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/tree-lab.html",
+      "currentSha256": "aca721304a7b41a0a6c86ad25092599410d4095e8d511ed3c18077a493e45159",
+      "bytes": 75278,
+      "finalManifestSha256": "aca721304a7b41a0a6c86ad25092599410d4095e8d511ed3c18077a493e45159",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "0b72b0ca32bf1f6f95ea002b2b7d48b7320c15997d1fbad6107e88ec2c73fc75",
+      "sourceAfterPass": "0b72b0ca32bf1f6f95ea002b2b7d48b7320c15997d1fbad6107e88ec2c73fc75",
+      "sourceAtCompletion": "bfd671f4f2d567b53a416124adb85f33a34044ab0ddfd9364271ce43195222cd",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "public/visualization-lab.html",
+      "currentSha256": "708d46167bd7a5e1968df2b8862deea8275ddca71e7a5643096f9aa9833321c3",
+      "bytes": 20134,
+      "finalManifestSha256": "708d46167bd7a5e1968df2b8862deea8275ddca71e7a5643096f9aa9833321c3",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "4abbb5188a26df82e45d67b35bbb64155ac1b82573b001891100ea64d6f5590c",
+      "sourceAfterPass": "4abbb5188a26df82e45d67b35bbb64155ac1b82573b001891100ea64d6f5590c",
+      "sourceAtCompletion": "0c03d5f1bab6fbe2807d3eb70cbb4cdbfb481b2be1090516ea929bb0d7c5751d",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "service-unavailable.html",
+      "currentSha256": "e23a4b0c411e4d2dd814f7f27d63c2542f512e507f0549708a6e5a4f3654e666",
+      "bytes": 2767,
+      "finalManifestSha256": "e23a4b0c411e4d2dd814f7f27d63c2542f512e507f0549708a6e5a4f3654e666",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "adfc1975301c3238a3a277870e7116ffa3c65bd9a86433282aa8b549405afb46",
+      "sourceAfterPass": "adfc1975301c3238a3a277870e7116ffa3c65bd9a86433282aa8b549405afb46",
+      "sourceAtCompletion": "771c8449c1067ffac51abd2dc457d49b23d7a66c96cb3d3ab2f8f07083505545",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "俄罗斯方块.html",
+      "currentSha256": "45e547ca1ccda421e2a2e40fe1aad61f748ac715c2fc988a820ea98ee476bf4f",
+      "bytes": 15602,
+      "finalManifestSha256": "45e547ca1ccda421e2a2e40fe1aad61f748ac715c2fc988a820ea98ee476bf4f",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "f2f771140f44d88888dfbf646008b116b62cd67fcd2e592633e592df008bfad6",
+      "sourceAfterPass": "f2f771140f44d88888dfbf646008b116b62cd67fcd2e592633e592df008bfad6",
+      "sourceAtCompletion": "f2f771140f44d88888dfbf646008b116b62cd67fcd2e592633e592df008bfad6",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "俄罗斯方块AI.html",
+      "currentSha256": "f6dbe04e4a46db1a309d85295754c801fb22f7ee908237bf3d8a82b7cece1ecc",
+      "bytes": 21092,
+      "finalManifestSha256": "f6dbe04e4a46db1a309d85295754c801fb22f7ee908237bf3d8a82b7cece1ecc",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "c72d274c833f4db33280e3274e47fd47f70d7ddf54b5b802c14a08b909f6e964",
+      "sourceAfterPass": "c72d274c833f4db33280e3274e47fd47f70d7ddf54b5b802c14a08b909f6e964",
+      "sourceAtCompletion": "c72d274c833f4db33280e3274e47fd47f70d7ddf54b5b802c14a08b909f6e964",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "贪吃蛇.html",
+      "currentSha256": "d72a7a4a13f66458fe02613c9aaeca5bfb9ee9a37f696f92d5946a5d1c02d481",
+      "bytes": 27661,
+      "finalManifestSha256": "d72a7a4a13f66458fe02613c9aaeca5bfb9ee9a37f696f92d5946a5d1c02d481",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "8412773536440acf88d7de30bee0c726b6023118c0df17a278bbffe4e469709a",
+      "sourceAfterPass": "8412773536440acf88d7de30bee0c726b6023118c0df17a278bbffe4e469709a",
+      "sourceAtCompletion": "8412773536440acf88d7de30bee0c726b6023118c0df17a278bbffe4e469709a",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    },
+    {
+      "path": "贪吃蛇专家系统.html",
+      "currentSha256": "f85d2dd1ed2758c26aef564ad2576ea5aa9479dfb584ad9d77de5d4345e7fe0e",
+      "bytes": 27552,
+      "finalManifestSha256": "f85d2dd1ed2758c26aef564ad2576ea5aa9479dfb584ad9d77de5d4345e7fe0e",
+      "matchesFinalManifest": true,
+      "sourceBeforeFinalPass": "de39e7aff17d67c74a3c9f1e7d3651a5fb75aee018a565b6aaabbd1939e34903",
+      "sourceAfterPass": "de39e7aff17d67c74a3c9f1e7d3651a5fb75aee018a565b6aaabbd1939e34903",
+      "sourceAtCompletion": "de39e7aff17d67c74a3c9f1e7d3651a5fb75aee018a565b6aaabbd1939e34903",
+      "matchesQaSnapshots": {
+        "sourceBeforeFinalPass": false,
+        "sourceAfterPass": false,
+        "sourceAtCompletion": false
+      },
+      "status": "late fingerprint; targeted evidence only or uncovered by full-pass final bytes",
+      "fullFinalByteCoverageEstablished": false
+    }
+  ],
+  "currentVsPrecisionBaseline": {
+    "backup": "C:\\Users\\ASUS\\AppData\\Local\\Temp\\sia-precision-gallery-_xaz8_8q",
+    "verifiedBackupFiles": 100,
+    "pages": 49,
+    "inlineScriptCount": 56,
+    "pageChecks": [
+      {
+        "path": "index.html",
+        "currentSha256": "a62203404a21df793b5657539acb6d59e95d156010267f07f9e9f003b49d59d9",
+        "baselineSha256": "905c0d446a72bad58499c15b95eee2523fefdbf02fb63d2f6a80e920a93493e4",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 2,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "a382cb9d5aa35c575da74e9560584f3edaac2ab6c55c1edbcd22761aef1f04bf"
+      },
+      {
+        "path": "404.html",
+        "currentSha256": "07b1695e088ff8da31402dd2bfba2ecf585ccac7eb472bb34e929149246d5ba2",
+        "baselineSha256": "99405c064433ebe05efbcc46407647ee59a0ecffc223de29e14f5fdc5614c269",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 2,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "689e682503fbbc68e6e546245b06e5cc149d7c098f85dd7931c3f89efb75a61d"
+      },
+      {
+        "path": "bad-gateway.html",
+        "currentSha256": "2bde553e7643ea41f5dfcbb5cb0ce6464416ec5ddf2cf7852860da2c5753aae7",
+        "baselineSha256": "f1f870fb0b351150651d07b217938036027d47f4a83650748bd959e7d0daae96",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 2,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "f48f913f17d94aab4414f2275237ea34fff6f2a4b5731874360b7bb67d486de3"
+      },
+      {
+        "path": "service-unavailable.html",
+        "currentSha256": "e23a4b0c411e4d2dd814f7f27d63c2542f512e507f0549708a6e5a4f3654e666",
+        "baselineSha256": "6e8985b8aaeb720c0c3133babde835cd134464fc9aacb66686dc3be6498e92fd",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 2,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "771c8449c1067ffac51abd2dc457d49b23d7a66c96cb3d3ab2f8f07083505545"
+      },
+      {
+        "path": "public/admin-hub.html",
+        "currentSha256": "3a55b206c7393deb42f04aaebc5bdaaa53c09b2a2c86d942051e05a9ec9116f5",
+        "baselineSha256": "620398ef379a783d36be6127cf4bcdd354ba7cb1c8e467e83aba5a5747374be0",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "93938f114b7a43857f3c1677085bd26af681b8c5c5b69834eade92f8c00ac5f5"
+      },
+      {
+        "path": "public/appmonitor.html",
+        "currentSha256": "296f43979f7b9d2ea9177d5e587b33b411ae0e6e6fef395f58f4b9c5c86b20d8",
+        "baselineSha256": "4beae138249b637998395f3a3abf2f598dec6c3366796d5cdbe4e73bdc071fa9",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 2,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "0046fadf274341060db8c28f8d2e2e4ac855ea1a6b1f005d4f695410043a8c0a"
+      },
+      {
+        "path": "public/assistant.html",
+        "currentSha256": "9ce5445d338ad5d2f794af24cd50817edf861375df6ab30a75e8c2b13a1efed0",
+        "baselineSha256": "82628fef426775d086417cce923ae91b6582df5bdf384641cd407054ddf59636",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "9ce5445d338ad5d2f794af24cd50817edf861375df6ab30a75e8c2b13a1efed0"
+      },
+      {
+        "path": "public/changelog.html",
+        "currentSha256": "b14f1e19f100da7b80a9e693742ceae6aaa32fc59ca956977f3f8ab6f73d8d51",
+        "baselineSha256": "5e7837b8edd3bac18c09e7b486296f97dd31b11f197b3c95344e128a33537304",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "8388712015bc90eebf324c5ac279075fdde76ec40ddeed8f15dfc798bc0fa4ab"
+      },
+      {
+        "path": "public/chat-admin.html",
+        "currentSha256": "149c14614c3144f0947a1f202d2f4b4e80c5db534535d098dbe5b8e839c1600b",
+        "baselineSha256": "81509e8682291765158e3a5997d9b3e3aed328adfb8f3801ca39638ab377c41e",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 0,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "c388522ef4261133c269eb813a98a82c5644525483c3a293e6100854ba321f44"
+      },
+      {
+        "path": "public/chat.html",
+        "currentSha256": "aff229e3ff2c1185ec72b81f1f5e68c3bbfefd8bd39542272218fa8c87d49e87",
+        "baselineSha256": "c90d500ef91f4f99d2b3035da9f7d066cb2b36783a2d350166cd495be56b24e9",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 2,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "d0c5651e31f11a7f06bdb8aacf9c302fd842b8ae380969f6d091cb599828ad35"
+      },
+      {
+        "path": "public/club-features.html",
+        "currentSha256": "a2ff4fdd644f1a6cf248ef4ff3281a6891aaafe7f7ecd30dc7a8371bf720c9a8",
+        "baselineSha256": "e5c74148fe2becb64ceaa0eb510aa7dacab2ee0a90d6e0e42a31236b37c414ee",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 0,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "a23176fb35816b1e016b28f5ef349d90772fe61b3aaf82f2663abdeedce0f9d3"
+      },
+      {
+        "path": "public/donations.html",
+        "currentSha256": "7e86b93ed59f63ecaa2bd44d1f2a9ce170d2650107116e5120e4a22c60a5dcf9",
+        "baselineSha256": "56f0332c580eb862799ddc51fdf4ccc0c0c73e8961d23de3906c8518ed427278",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "73845debf683a8783e107ef91c8d04bf82493a53863361a151926476c1f178e1"
+      },
+      {
+        "path": "public/dp-lab.html",
+        "currentSha256": "e4ac22e4f4fe53e16b9c8b66053c99508e486615ee1d4f17dc3dcfeb1c60ba96",
+        "baselineSha256": "e4965b43f20d7b448c1e274e5300324b23d75ea438e428ebc0da042da135db73",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "dc9be1aa84f6f20b871c7bb4f6a861e4474d4a92bfc39897751b46491552af6b"
+      },
+      {
+        "path": "public/drive-admin.html",
+        "currentSha256": "468d21867fb34edc382240948e549553b8dbfac8ba07b1645e42ecd6e910ab66",
+        "baselineSha256": "0e4dde19f8f0bad130c25877452b3334f57574ded3cc9438e5b68c852ba7dbb8",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "65b0573ba2d613464faf9869810ca3c43f9e2e386236aaccdc97a5f00be96586"
+      },
+      {
+        "path": "public/drive.html",
+        "currentSha256": "00b980da679610966f863f28e87f8d346a6a1e477d0890551060e8dc24518ef3",
+        "baselineSha256": "8af8e2be5c62cf045ad57d71cf48ab6803d5730bf330228cff6cd90f119f8af0",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "bf37d03d0a2c542640e17e60b90b534786f17f028fad88945a2455ad9e2aabb3"
+      },
+      {
+        "path": "public/ds-lab.html",
+        "currentSha256": "638dd46f56a4576d5bf6eff848fffee12a1ca9375b5d50cda01c7fac46503a95",
+        "baselineSha256": "525103d95a1e5135bc131c9dbbed087fa4bad3558fb6e7fd34e92c476a8bb179",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "57d230d1360475be3e88cd45358eda3be8a2f24a236693b5ca61a00e8aed3eea"
+      },
+      {
+        "path": "public/events-admin.html",
+        "currentSha256": "0614ed3e07514bc0a29423f9d794901bf67313ca9ba5b7d8436dfd5655b1c003",
+        "baselineSha256": "da21050b2affa19d881135edd7e44822cf556bfa11074ff9e0286fff469d3505",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "84f8af9c30ce524a4b832aa47e75368d4948fcdfae26130a29a5e2e6266a170c"
+      },
+      {
+        "path": "public/events.html",
+        "currentSha256": "8a8b638ac3b174f9fa53f5739f62a7b3aeedd07354ab2fccb4ce2c0f9130c54e",
+        "baselineSha256": "c000e22b7e6276e3628e8ea84a9e0d3bc6af8285e1bb119c24327a010cf87637",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "cd295fa1931ea43c6b1991f0736250a5bd177cadfa262cd0fafc676cddd1b0bc"
+      },
+      {
+        "path": "public/gomoku-experiments.html",
+        "currentSha256": "96016f7f30d6c3c98152223ac82b238ffe6f79528168c2b17382334c055fb6bd",
+        "baselineSha256": "372cc3b2a6ba0d9922658c70a88425b06e68eeaea1609526d4b4ae1a0105b97a",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 2,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "581c6925e359c8334e23da4d25eaef8fa1817230923863d8b28f3c68fbdd440f"
+      },
+      {
+        "path": "public/gomoku-satori-lab.html",
+        "currentSha256": "3141cb23c309dd0bad410ac2d8a2713c01aa9e7edb1030e970671303bbbbb84d",
+        "baselineSha256": "7f02eef8f747c633a6fd931e8a401e1b90f2fdc1929ec98d19e35b33afb777c4",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "5e9bcf18b362d946077510be3dfbc42c722fc35553314d8eeaa08d9df67498d8"
+      },
+      {
+        "path": "public/gomoku.html",
+        "currentSha256": "60270494e7ee13bc553e3887ec02e99ae89d737d3007aaa9d65fd9b0f70114e9",
+        "baselineSha256": "c565fcfd8a0e9aa59a764d2e6683a23d20c0c10e9fc403e8e2a18de4c2704037",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 2,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "f40a9b2ee61828738934bbf6c865b663a39806cf67368813c342ad4cbbc3f243"
+      },
+      {
+        "path": "public/graph-lab.html",
+        "currentSha256": "58d222b279ba57d142eb6bd11fc2a31feda6f43990b52905bac41ba45727de5e",
+        "baselineSha256": "ba6f054a3fdaa20a8bb99554fba318a9b3247bfc07a67e7c32c3956a2af9b0b4",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "42226ebf6b8180b114110342173adf638ae735d1432cda9f05f75cb47c5b015d"
+      },
+      {
+        "path": "public/guide.html",
+        "currentSha256": "9d6ed9dedb5a90764ccc2d8af77f5c9083049ab618e8679f1b25408665637ab3",
+        "baselineSha256": "804c87c2052bbfe78c7c3eae569fc745ffe2b3651038227cce5a7a16aaa9f0ef",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "7091a4b5f6e505dbc9d7ecc384e419b270d5e03c1e6fa0cfe63352e09d83ca58"
+      },
+      {
+        "path": "public/heap-lab.html",
+        "currentSha256": "06e32ac7d1091897f34a34a26bf899b4f56351b34d0ac61c43f6a8b3d4fa3574",
+        "baselineSha256": "4a46af02b24557761d823dd19b81cb83e89f806657f76c6af36065c594b04fcb",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "2dd83a72784c056ab64c48b5bdefde5783bcc4c61e36d68ca1e4941302b889e2"
+      },
+      {
+        "path": "public/join-admin.html",
+        "currentSha256": "579f87661783793ce42bdbf5d71f7904f74347eda2469661a7a4f90c3df0eae8",
+        "baselineSha256": "95b7ad0203575179a0b1fbcbdad30f7e6e0feb3dd71f65f3b01a5f5f59690e2d",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "36237d211e165f427893cec1da1be57c07653c4c2c4840f009e88cac0c5bd2e8"
+      },
+      {
+        "path": "public/join.html",
+        "currentSha256": "72e0970a245c04fc1eda29b39de2eec2d3e19c3a5b309e13c76843e51b370b16",
+        "baselineSha256": "7b590f1d563d861e32ba8b8c89692b0185a390bad2c8b171ab5b2df829823d02",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "4af790594856ff0a4fcde4017c3eef659c105e47342333c736afc9c748fd954d"
+      },
+      {
+        "path": "public/mall-admin.html",
+        "currentSha256": "b901fa8a6313810a389192b681636c02abe90705d8f98b4eef900ae2cc2aa0f0",
+        "baselineSha256": "b3a6f1bc43b9aa7784a451f42e6c8b8e9b3d4999f1ea08733ad7aaaadfb5a6a3",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "4eca3552e42f4c65a41b0b0db0d06bf24229861f0fe10884a00ebd9c4fe5fc97"
+      },
+      {
+        "path": "public/member-center.html",
+        "currentSha256": "1229a1c324890d93c43d7d7a962d8a4e97b469d204345d4bcaea170596415c80",
+        "baselineSha256": "84b3f43cc9ac7a88154183df310f7cb94a37e07d56da26def9c11f2cdb01c53a",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "f41765d7191acf4d6e29af817285a411d2b26ad00b5b23171a8d2cf12f6d7f7e"
+      },
+      {
+        "path": "public/member-checkin.html",
+        "currentSha256": "4943d35f70c44a96bb11221194c2155d734f9ce40d2700a8e833ac34d5f82530",
+        "baselineSha256": "f6eb3e51547d27b9a197dfd56bf7355a0e0e8846e83ed8fa1bab5a61de5bac4b",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "6095b10bb5599e83135592007ffcd62fec1619563d887795d19bb36ea7b08144"
+      },
+      {
+        "path": "public/member-messages.html",
+        "currentSha256": "805c7c13eec642f7a08292cc532b68f061c944ee4b66ead34cbcdbc72e9eb39a",
+        "baselineSha256": "85bfa6fac4a66ea6e6128f571f82f173c1814d3154fbb9db02c307f10cfb2b44",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "0bce88b8af66a558ecea980e613ea77613904a02978e8b6c0ad5de07ee5ed5a1"
+      },
+      {
+        "path": "public/member-points.html",
+        "currentSha256": "e965852c00071aefcdee433481edfef018960fc90bb77bdba61c8a8b366c8c37",
+        "baselineSha256": "bf090988e40f256448d4ed1bfac763972002d0e8c7b59ccad99186b1cdf92e2e",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "c3fd8487d38d79d9867fd3dbc36caf72313dd1dcc55a1ac4de4058a0e2e64c28"
+      },
+      {
+        "path": "public/member-profile.html",
+        "currentSha256": "905dbdd6442ab2b42b83194bb4ad7917e1d337674d772a8d03dfbae92d5e555f",
+        "baselineSha256": "0c9c8cc4331800f43d2a960f478a5030f2654bd944c600b44d1fa07e157430b3",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "57924e90e6292520c6e32938a4135bf0a49f87f09f3600368d25b2f01051f2aa"
+      },
+      {
+        "path": "public/members-admin.html",
+        "currentSha256": "bb493d2e72bf93c1d7edd1a65f3cc99d9abf78b30b1b7c6c25f5af75ccda91da",
+        "baselineSha256": "3b038a863d002e3db2c4d7e186660fe617a51edb14b713853cbfe2dd645c7420",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "8900f7ce1bf21ad688d2be89483298d2882c9e9c0e253d872f77ff2bf1128683"
+      },
+      {
+        "path": "public/notifications.html",
+        "currentSha256": "2943fdb051407c970a52f16836d14707b381ca170ecb8a07cb777e7c25d00476",
+        "baselineSha256": "6fe7151d08918e2a988369d6cf049ee63f3dd85ed7facf3f7b7a4faea2de27df",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "363365e4f4f0176f56a2646643eba7415a120c1f7c399c18e88cc66bf5527f5a"
+      },
+      {
+        "path": "public/password-reset.html",
+        "currentSha256": "06387e3c2ed60c871063cbc620baed13fac3987f079159af340e79cee3b73502",
+        "baselineSha256": "1af2d53e086dc4245d0a3851e490cc8b8f9ea21234dad7756d2ded5091a4d81c",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "d66942efd75b9477896bbce9e3147b31e87042e9552ec4ca8b761953b506b5cb"
+      },
+      {
+        "path": "public/platformer.html",
+        "currentSha256": "88c6a88edd461d9565bcd14d4f48fb7fd5bdeb0a0bbfea846d4184fb2b7f8832",
+        "baselineSha256": "15b944545cd2ccdbeac1cbbf699379f79226015317f2c28fce16e1f14529d0d3",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 2,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "035a5f4bd5a354486c89cdcb9b9384a35c9057d3934faf6236430e8bf9448056"
+      },
+      {
+        "path": "public/points-mall.html",
+        "currentSha256": "6caf70f3742e036f5265a197bf5b646fb943715c1efc2de88ed0531d3314998c",
+        "baselineSha256": "fbfaa8bf594896fc8683f6ba79d3e9261edbed53fd9df259729a33cbbe281784",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "b01746d2fba3e93fe154f4b56e3a6ac48a166ff2720bbc57b751303abdcdff55"
+      },
+      {
+        "path": "public/resources.html",
+        "currentSha256": "cc65b1e937d51ebc1d6ad3857485af89c6d90cadae6f3a3def568ce6cb01f520",
+        "baselineSha256": "e09c5c2b53251ac5dc8e8084b861fb00ce62f115f64eabe7e5f07acfc20b926e",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "8d664c7fa7a9f524996bfdb8582325d348e3f2015fdf1e6dba4c51f43af16fe6"
+      },
+      {
+        "path": "public/search-lab.html",
+        "currentSha256": "f2102395e958d7a5f4dac2ed59b73e549437240d4ea72fc78c71d5d7fda6f772",
+        "baselineSha256": "b4e301ceb3395f4c079704ec94e8599fc758927670846c59211c69cc70850abd",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "c116aab90af8c8e1d498cf328c88db59b8db50779fa35406aa88091e3b795d25"
+      },
+      {
+        "path": "public/search.html",
+        "currentSha256": "e6c7dc28c9f9439945ee3087cb19f0b4a951efc6bc8c03e4f3ce106150f024b3",
+        "baselineSha256": "e649f7dd01c3bb2f2dda9f33cd212f3e1fd20ec9da05c74c1111a2e851da9e22",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "30d562d9fa99fe7ea03a2136d27e9478439f99586e81b937618db01f0b57e6e6"
+      },
+      {
+        "path": "public/snake.html",
+        "currentSha256": "fab50a98a41b75a17549c16acb0989882ef82cf14129e256e938f94efc43366f",
+        "baselineSha256": "926a02ed5d01d1c54fc8e2fe69263aba9545f8b27422a82c3fea2bb278868356",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "a758fecfa9fe4806780b40883cafe343dbecefc020fc5879d8b10bed6bbd44ed"
+      },
+      {
+        "path": "public/sorting-lab.html",
+        "currentSha256": "cea2a229621bdd34c018db0f68cc21ed3f51a7b74f5db982e7b56802e4f0dff7",
+        "baselineSha256": "10971a585ca263aa4b56311e85307c7b5b7f031a90a77c363b5d20e24fdadef2",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "56580b3e5675a43424de58add76accb54ed9fbedf01b3ccdd31eeb108c8aff85"
+      },
+      {
+        "path": "public/tetris.html",
+        "currentSha256": "d27029e05bed8d6d60f131252c7df1b2cf2c8165d23871bc006856b0f090711d",
+        "baselineSha256": "fb68599a60a8ab74ec7f5bfb3e1f7e1f1045e48b7bc4d6c0a824cdebcbf47d70",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 2,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "af8bd871e0538869d6a47e73ced5a1f65725d99845f81529280b23690cfc0837"
+      },
+      {
+        "path": "public/tree-lab.html",
+        "currentSha256": "aca721304a7b41a0a6c86ad25092599410d4095e8d511ed3c18077a493e45159",
+        "baselineSha256": "49e8605d560509713a63b0d8cecda04fd569ed174aae3b0508ca34dc7946cc3a",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "bfd671f4f2d567b53a416124adb85f33a34044ab0ddfd9364271ce43195222cd"
+      },
+      {
+        "path": "public/visualization-lab.html",
+        "currentSha256": "708d46167bd7a5e1968df2b8862deea8275ddca71e7a5643096f9aa9833321c3",
+        "baselineSha256": "fe502ebc87a10b5e192db9db8f33fb4b6ccecc806fb16ec409ac3d2cbb37bb8b",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 0,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "0c03d5f1bab6fbe2807d3eb70cbb4cdbfb481b2be1090516ea929bb0d7c5751d"
+      },
+      {
+        "path": "俄罗斯方块.html",
+        "currentSha256": "45e547ca1ccda421e2a2e40fe1aad61f748ac715c2fc988a820ea98ee476bf4f",
+        "baselineSha256": "94cbe2c430a3a22c45d1718608c42543988c7ad7b8f804c7d93d61fff4a74d6e",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "f2f771140f44d88888dfbf646008b116b62cd67fcd2e592633e592df008bfad6"
+      },
+      {
+        "path": "俄罗斯方块AI.html",
+        "currentSha256": "f6dbe04e4a46db1a309d85295754c801fb22f7ee908237bf3d8a82b7cece1ecc",
+        "baselineSha256": "bfedfbcd975db0d22be05554515621ad6ef7cbd55b54c04a76d7698d3771b0fa",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "c72d274c833f4db33280e3274e47fd47f70d7ddf54b5b802c14a08b909f6e964"
+      },
+      {
+        "path": "贪吃蛇.html",
+        "currentSha256": "d72a7a4a13f66458fe02613c9aaeca5bfb9ee9a37f696f92d5946a5d1c02d481",
+        "baselineSha256": "ebb3403fabd00e5db62d782feac7595485e2a709c5a43e9a24c2fb1125ee7a4f",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "8412773536440acf88d7de30bee0c726b6023118c0df17a278bbffe4e469709a"
+      },
+      {
+        "path": "贪吃蛇专家系统.html",
+        "currentSha256": "f85d2dd1ed2758c26aef564ad2576ea5aa9479dfb584ad9d77de5d4345e7fe0e",
+        "baselineSha256": "a4a5bd9ec2a6d371e9bac6c721a88526b12d3d68b5a8352fd16f8a35e3d06d8e",
+        "checks": {
+          "inlineScriptsAndAttributes": true,
+          "idMultisets": true,
+          "hrefMultisetsVersionNormalized": true,
+          "staticText": true,
+          "styleClassVersionNormalizedHtml": true
+        },
+        "inlineScriptCount": 1,
+        "changedSinceQaAfterPass": true,
+        "historicalBytesAvailableInInspectedStores": false,
+        "qaToCurrentQueryVersionOnly": null,
+        "previousAuditSha256": "de39e7aff17d67c74a3c9f1e7d3651a5fb75aee018a565b6aaabbd1939e34903"
+      }
+    ],
+    "normalization": "First normalize CRLF to LF. Strip v query versions with existing contract convention. For structural comparison only remove style blocks and quoted class attributes. Independently compare scripts/attributes, ID/href multiplicities, and static text after script/style/comment removal and whitespace collapse.",
+    "indexEqualAfterOnlyVersionAndEolNormalization": true,
+    "frozenFiles": [
+      {
+        "path": "public/SceneDirector.js",
+        "sha256": "ff0282cfdd055e27fc5f298c8f6e9f1aad755d4de4c58d399c06f85e4411bcbd",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "ff0282cfdd055e27fc5f298c8f6e9f1aad755d4de4c58d399c06f85e4411bcbd"
+      },
+      {
+        "path": "public/home-showcase.js",
+        "sha256": "8187bdf0a4e1e7b363cfe4ef7a38850e24139d2994e5f9089e8e062f3d4b7524",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "8187bdf0a4e1e7b363cfe4ef7a38850e24139d2994e5f9089e8e062f3d4b7524"
+      },
+      {
+        "path": "public/home-motion.js",
+        "sha256": "624a6078c333cb658231b7f75aaf89ca6568afaf33238fdf93b662a809052700",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "624a6078c333cb658231b7f75aaf89ca6568afaf33238fdf93b662a809052700"
+      },
+      {
+        "path": "public/home-capabilities.js",
+        "sha256": "348980fe78b008299beaf1654e89c08fda5aa7c2eb91d5035da652e66c66d40c",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "348980fe78b008299beaf1654e89c08fda5aa7c2eb91d5035da652e66c66d40c"
+      },
+      {
+        "path": "public/club-shell.js",
+        "sha256": "e169caddbb4f5e3fbb3805fa0d07e9c08c16198b9ea28be253928db9710d05bd",
+        "byteIdenticalToPrecisionBaseline": false,
+        "previousAuditSha256": "b3039f3ca938d3111f8268c5c364e8ab7b96d3d76064b5a66b532474fe02060c"
+      },
+      {
+        "path": "public/club-liquid-lighting.js",
+        "sha256": "118202074bb6c0c067a8fc5648deadba69821679c356e2d9295e2bb73bf68638",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "118202074bb6c0c067a8fc5648deadba69821679c356e2d9295e2bb73bf68638"
+      },
+      {
+        "path": "public/theme.js",
+        "sha256": "1b745a4f31a04a9036da08313be2f0506da06439010ab98326861ca46ee7fd18",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "1b745a4f31a04a9036da08313be2f0506da06439010ab98326861ca46ee7fd18"
+      },
+      {
+        "path": "public/theme.css",
+        "sha256": "d03273fb10fba42a74e127ceca8e41a927e160ade6b66821608d3378b352c9f4",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "d03273fb10fba42a74e127ceca8e41a927e160ade6b66821608d3378b352c9f4"
+      },
+      {
+        "path": "public/i18n.js",
+        "sha256": "ba66328e540973d97ed80cbc2693a6f8269dca8e72d46e1e1c9f734b72c69b15",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "ba66328e540973d97ed80cbc2693a6f8269dca8e72d46e1e1c9f734b72c69b15"
+      },
+      {
+        "path": "public/i18n-dict.js",
+        "sha256": "f66c88d19f2e071fe306054128548ddfac9ab0650f3b363fdeb02efc58243048",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "f66c88d19f2e071fe306054128548ddfac9ab0650f3b363fdeb02efc58243048"
+      },
+      {
+        "path": "public/i18n-dict-en.js",
+        "sha256": "60b2a66e14e5e9125b55a2c5bb8b6e688129c2d9ef92c9494c7831e37c6ef820",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "60b2a66e14e5e9125b55a2c5bb8b6e688129c2d9ef92c9494c7831e37c6ef820"
+      },
+      {
+        "path": "public/i18n-dict-zh.js",
+        "sha256": "bf3f057031f9e37a41a4fd9f9ea34e1cd56562b274fe88be2986818a476975f8",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "bf3f057031f9e37a41a4fd9f9ea34e1cd56562b274fe88be2986818a476975f8"
+      },
+      {
+        "path": "public/sw.js",
+        "sha256": "da2ec1da638258dad712a3a354424dfb6d6b792f30050b2777fb4c91d3c13edd",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "da2ec1da638258dad712a3a354424dfb6d6b792f30050b2777fb4c91d3c13edd"
+      },
+      {
+        "path": "public/gomoku-models/v1.html",
+        "sha256": "1067fd20149959ab796ede6ed81e9a3aa57962e29f6163f29cd2514318aa9457",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "1067fd20149959ab796ede6ed81e9a3aa57962e29f6163f29cd2514318aa9457"
+      },
+      {
+        "path": "public/gomoku-models/v2.html",
+        "sha256": "2dbb10d5932b01eac7d54c23c87634250fdbe753959999eb5bc7502ca42d2f81",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "2dbb10d5932b01eac7d54c23c87634250fdbe753959999eb5bc7502ca42d2f81"
+      },
+      {
+        "path": "public/gomoku-models/v3.html",
+        "sha256": "87a064eab5be1303d5f5c09cf0a30cc40556421176e470ea4eb0f4d322032ef1",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "87a064eab5be1303d5f5c09cf0a30cc40556421176e470ea4eb0f4d322032ef1"
+      },
+      {
+        "path": "public/gomoku-models/v6.html",
+        "sha256": "236c05f4813552a5313bcf152f4fe23361cfe6469893f53b1d4583bfdf721f39",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "236c05f4813552a5313bcf152f4fe23361cfe6469893f53b1d4583bfdf721f39"
+      },
+      {
+        "path": "public/gomoku-models/v7.html",
+        "sha256": "114816c9490ab56598bfee9c6d8a67938fa2bec47aaee53f9d7b42066a9e49fc",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "114816c9490ab56598bfee9c6d8a67938fa2bec47aaee53f9d7b42066a9e49fc"
+      },
+      {
+        "path": "public/gomoku-models/v8.html",
+        "sha256": "bdc8eec5923142dcd63ff6c73b78fc030247d6dbdd48b164b8fb41acc4e9271c",
+        "byteIdenticalToPrecisionBaseline": true,
+        "previousAuditSha256": "bdc8eec5923142dcd63ff6c73b78fc030247d6dbdd48b164b8fb41acc4e9271c"
+      }
+    ],
+    "sceneCssPrefix": {
+      "boundary": "File start to, excluding, /* Homepage content composition.",
+      "byteIdentical": true,
+      "bytes": 19647,
+      "sha256": "92f4b62d468e495af917e26300047a52e410b99a6aecd8065e4a75a74e126039",
+      "lfSha256": "d3a80df9cf9fb009d0a625e59d5edcd55b19410bb84df561a5ca2efc83326cd1"
+    },
+    "runtimeCssExceptions": [
+      {
+        "path": "public/club-common.js",
+        "templateTargets": [
+          "style.textContent ="
+        ],
+        "nonCssSourceEqual": true,
+        "baselineNonCssLfSha256": "7a01595a2260177dfb41383faa563708632d3bcd2a6eb5b84dc145248eb8d16e",
+        "currentNonCssLfSha256": "7a01595a2260177dfb41383faa563708632d3bcd2a6eb5b84dc145248eb8d16e"
+      },
+      {
+        "path": "public/service-gate.js",
+        "templateTargets": [
+          "pillStyle.textContent =",
+          "style.textContent ="
+        ],
+        "nonCssSourceEqual": true,
+        "baselineNonCssLfSha256": "949cf474f076f0cc26d7e6f569adf8ed2d2aa227b7c778f5f9fd2f837a1d66e6",
+        "currentNonCssLfSha256": "949cf474f076f0cc26d7e6f569adf8ed2d2aa227b7c778f5f9fd2f837a1d66e6"
+      },
+      {
+        "path": "public/club-share.js",
+        "templateTargets": [
+          "style.textContent ="
+        ],
+        "nonCssSourceEqual": false,
+        "baselineNonCssLfSha256": "4731c12a7175d012c1d31e456415ad9af7cd08acc5f80932942243aac8e1434b",
+        "currentNonCssLfSha256": "090443020252779f22bc2c997504c42caff641230a4d61a234f94076f9775f05"
+      }
+    ],
+    "shareFocusException": [
+      "Add panelOpener and named keydown handler.",
+      "Escape/Tab only while open; cycle enabled non-hidden buttons both directions.",
+      "Retain opener on repeated open; restore only connected opener with guarded focus.",
+      "Close and remove named keydown listener before language rebuild.",
+      "Inspected non-CSS diff confined to focus lifecycle; share destinations, copy/native paths, strings, trigger bindings and public API preserved."
+    ],
+    "limits": "Source integrity relative to precision backup, not behavior/appearance equivalence of removed CSS/classes/versions. Premium activity-renderer exception already in baseline; no new inline exception in this round.",
+    "lateShellException": {
+      "path": "public/club-shell.js",
+      "currentSha256": "e169caddbb4f5e3fbb3805fa0d07e9c08c16198b9ea28be253928db9710d05bd",
+      "change": "mountAssistantLauncher now copies shellScriptURL query string to assistant-launcher.js URL before assigning script.src.",
+      "status": "Concurrent behavior change inspected; shell no longer byte-frozen. Not covered by prior GUI evidence.",
+      "boundedScope": "Diff confined to launcher URL version propagation; not classified runtimeCSS-only."
+    },
+    "preservationStatus": "All49 HTML integrity checks /56 inline scripts preserved after EOL and version normalization. Original scene CSS and listed frozen files remain byte-identical EXCEPT club-shell.js, whose late loader exception is recorded separately.",
+    "assistantPlacementAndCacheExceptions": {
+      "path": "public/assistant-launcher.js",
+      "currentSha256": "6ab238ce14ccd7179a4b87d90ae288d2df9033730b3d4854f6cf19fb0265dd13",
+      "sourceDiffInspected": true,
+      "changes": [
+        "Mobile or features-directory uses clamped default ball position; desktop non-directory retains stored draggable position.",
+        "While mobile pcTipModal is open, move ball above its measured top; observe notice class/aria-hidden changes, disconnect/reconnect on pagehide/pageshow.",
+        "Disable ball dragging on features-directory as well as mobile.",
+        "Propagate loader query string to assistant-launcher.css URL; club-shell separately propagates its query string to assistant-launcher.js."
+      ],
+      "limits": "Narrow placement/dynamic-cache exception, not runtimeCSS-only and not byte-frozen. No final browser interaction claimed for these late bytes."
+    }
+  },
+  "lateHtmlAssessment": {
+    "changedCount": 49,
+    "versionOnlyProvedCount": 0,
+    "conclusion": "Current changed QA HTML lacks historical QA bytes; query-version-only UNPROVEN. Baseline style/class/version-normalized integrity remains green for49 pages/56 inline scripts. Subsequent query rewrites detected by changed fingerprints are not retroactively included in prior screenshots.",
+    "searchScope": "Verified all100 precision baseline files and current files; inspected named local precision/gallery snapshot artifacts. QA phases store hashes only. No dedicated QA-era HTML snapshot found; not an exhaustive machine-wide search."
+  },
+  "targetedCurrentEvidence": {
+    "hero": {
+      "status": "Four screenshots were current-source at explicit peer confirmation. Subsequent HTML/shell/launcher edits mean they cannot claim the latest full render bytes; unchanged Hero CSS remains confirmed.",
+      "captures": [
+        {
+          "file": "after/home-dark-1440.png",
+          "origin": "C:/Users/ASUS/.zcode/cli/artifacts/session_afd87cffd30dc76487d925d9bb460e9f/call_a6866de146ee4c90890d963b7fef343c-tool-result-80233549-3a92-421e-ad45-0a393710f3ee.png",
+          "status": "final source",
+          "exists": true,
+          "imageSha256": "d16f1b79fdc471d706d213fa2935225489dd6723cc25446b9b0b0d517985b553",
+          "imageBytes": 1045520
+        },
+        {
+          "file": "after/home-light-390.png",
+          "origin": "C:/Users/ASUS/.zcode/cli/artifacts/session_afd87cffd30dc76487d925d9bb460e9f/call_37660397c10c4da496a600febfc7ee72-tool-result-384fbcd3-e55e-45da-94ab-01501e073dc9.png",
+          "status": "final source; actual mobile notice retained",
+          "exists": true,
+          "imageSha256": "3e8dd9a329cb08350c970061fc1eecec94c074371ffc890202f9b3bb8305bcc3",
+          "imageBytes": 310798
+        },
+        {
+          "file": "after/home-light-1440.png",
+          "origin": "C:/Users/ASUS/.zcode/cli/artifacts/session_afd87cffd30dc76487d925d9bb460e9f/call_4b672c46c75743c1a1b4fbae34e103d8-tool-result-46a1e4a5-df6a-48b6-b7d0-8af771906808.png",
+          "status": "final source",
+          "exists": true,
+          "imageSha256": "45aaf4fd6aea9467edb143a539af4eacb3a247c27f590190649139034ccaaef1",
+          "imageBytes": 1007004
+        },
+        {
+          "file": "after/home-dark-390.png",
+          "origin": "C:/Users/ASUS/.zcode/cli/artifacts/session_afd87cffd30dc76487d925d9bb460e9f/call_8499d91ff5c44c47b68f73416d5ed7c0-tool-result-7ad72979-7dd3-4272-95c4-553966889f44.png",
+          "status": "final source; actual mobile notice retained",
+          "exists": true,
+          "imageSha256": "308264eaa7cbb87cb925b0009ec8b2d7fcea961081c82ad06c3e640eec514213",
+          "imageBytes": 338895
+        }
+      ],
+      "limits": "Current-source attribution uses peer confirmation; metadata has no per-navigation response hashes. Four Hero captures do not cover other routes.",
+      "confirmedSourceFingerprints": {
+        "index.html": "a382cb9d5aa35c575da74e9560584f3edaac2ab6c55c1edbcd22761aef1f04bf",
+        "public/home-showcase.css": "6d2336462fa5c534c5ec4536d998dc1455ea6591443d9bb712a367de7a0e2c51",
+        "public/club-ui.css": "a998135f538eaea0b778678bc590741ab83355bbaf79c67728df6af8b93d3367"
+      },
+      "latestSourceFingerprints": {
+        "index.html": "a62203404a21df793b5657539acb6d59e95d156010267f07f9e9f003b49d59d9",
+        "public/home-showcase.css": "6d2336462fa5c534c5ec4536d998dc1455ea6591443d9bb712a367de7a0e2c51",
+        "public/club-ui.css": "a998135f538eaea0b778678bc590741ab83355bbaf79c67728df6af8b93d3367"
+      }
+    },
+    "guide": {
+      "status": "All four theme/viewport variants rerun after guide change, recorded by QA and explicitly peer confirmed.",
+      "matchesQaCompletion": false,
+      "limits": "Targeted confirmation; no per-navigation source hashes or account workflow acceptance.",
+      "peerConfirmedSha256": "7091a4b5f6e505dbc9d7ecc384e419b270d5e03c1e6fa0cfe63352e09d83ca58",
+      "currentSha256": "9d6ed9dedb5a90764ccc2d8af77f5c9083049ab618e8679f1b25408665637ab3",
+      "peerConfirmedFingerprintStillCurrent": false,
+      "lateQualification": "Guide4 rerun remains real; latest query-rewritten HTML bytes are not the same fingerprint. Baseline integrity does not promote it to exact final-byte coverage."
+    },
+    "share": {
+      "status": "Real GUI peer verification explicitly confirmed by coordinator/user, separate from prior QA-pass uncertainty.",
+      "matchesQaCompletion": true,
+      "priorQaCaveat": "focus fix may have landed after targeted recheck; not claimed verified",
+      "offlineEvidence": "code-review.md reports focus tests on the same current SHA; not repeated here.",
+      "limits": "Peer confirmation resolves the narrow focus interaction only. No unavailable peer transcript, response hash, native share-sheet result, or logged-in workflow invented.",
+      "peerConfirmedSha256": "47e8f1e65496ec5d263672bc91fcdaf1db37e02300191d5a7bbec6bda13832cb",
+      "currentSha256": "47e8f1e65496ec5d263672bc91fcdaf1db37e02300191d5a7bbec6bda13832cb",
+      "peerConfirmedFingerprintStillCurrent": true
+    },
+    "otherScreenshots": "Member dark1280/light390 explicitly predate small mobile spacing tighten. Features composition/capability desk claims stay scoped to their recorded captures."
+  },
+  "remainingLimitations": [
+    "Full final-byte 49-route acceptance remains incomplete. Historical196+32 measurements span source changes, not one frozen final tree.",
+    "Snapshot/manifest matches establish byte identity only, not individual load, execution, appearance or workflow success.",
+    "Preserve QA semantic-main/profile-copy/duplicate-H1 findings and inconclusive animation-clock/gate observations with original scope; no authenticated/backend acceptance.",
+    "Guide4 rerun, realGUI share peer confirmation and four current Hero screenshots support bounded targeted acceptance, not other routes/states/themes/devices.",
+    "Point-in-time evidence only. Later edits require renewed reconciliation. No browser or repeated green test suite run in this audit.",
+    "All49 current route HTML hashes now differ from QA-after-pass; unavailable QA byte snapshots prevent query-only equivalence assertions.",
+    "Hero captures and guide rerun were current when peer confirmed. Later edits must be qualified; share peer-confirmed exact bytes remain current only when its fingerprint flag says so.",
+    "Final manifest refreshed and all100 hashes match disk. QA counts remain41/43/47, all49 HTML differ afterpass, and no final GUI rerun of late launcher/shell bytes is established by this audit."
+  ],
+  "checksPerformedNow": [
+    "Recomputed exact current SHA256/sizes and compared three QA phases plus final manifest.",
+    "Verified all100 precision baseline hashes before comparing source.",
+    "Compared49 pages/56 scripts with attributes, ID/href multiplicities, normalized static text and style/class/version-normalized integrity.",
+    "Verified original scene prefix and frozen files; inspected runtimeCSS-only common/gate exceptions and narrow share focus diff.",
+    "Verified four Hero screenshot existence/hash without opening browser/images."
+  ],
+  "tests": "No already-green suite repeated. Coordinator reports latest asset check PASS38 assets/587 references; recorded as peer report only, not independently rerun here. Read-only source/hash comparisons and JSON validation performed by this auditor.",
+  "concurrency": {
+    "initialObservation": "All100 final manifest entries matched disk before concurrent launcher changes.",
+    "finalObservation": "Coordinator refreshed final-source-hashes.json after launcher/shell/version rewrites. Stable completion snapshot now matches all100 actual files. Earlier concurrent mismatches are historical observations; latest manifest and recorded source fingerprints agree."
+  },
+  "sourceStabilityAtValidation": {
+    "allRecordedFingerprintsStillMatchDisk": true,
+    "changedAgain": [],
+    "finalManifestMatchesDisk": true
+  },
+  "additionalToolFingerprints": [
+    {
+      "path": "tools/version-static-assets.mjs",
+      "sha256": "d10134abc96c4cb8dc696fa16d69800692cc89a08fd30e0f5e6c276bf979fca7",
+      "qaSnapshotCoverage": "Not present in QA100-file hash dictionaries; fingerprint only, no test rerun here."
+    },
+    {
+      "path": "tools/test-asset-versions.mjs",
+      "sha256": "9f05372f3e3a65fbc5e227770919a7f019b770ef5f3a783c85a81ba2cef94cf6",
+      "qaSnapshotCoverage": "Not present in QA100-file hash dictionaries; fingerprint only, no test rerun here."
+    },
+    {
+      "path": "tools/test-club-shell-interactions.mjs",
+      "sha256": "4ac26e2a333b2d057f94a1d39716d2067f27055705cd0b3ad8dcffd9aa46eac9",
+      "qaSnapshotCoverage": "Not present in QA100-file hash dictionaries; fingerprint only, no test rerun here."
+    },
+    {
+      "path": "tools/test-club-share.mjs",
+      "sha256": "ab4da14fce5cec2f15fd210e48a15989c6a1a058983558f80421a4ece59186ef",
+      "qaSnapshotCoverage": "Not present in QA100-file hash dictionaries; fingerprint only, no test rerun here."
+    },
+    {
+      "path": "tools/test-assistant-knowledge.mjs",
+      "sha256": "c39c1deed26cff882b78a3021aa8dd65a8aa09e444e28168484cd300b1a9b529",
+      "qaSnapshotCoverage": "Not present in QA100-file hash dictionaries; fingerprint only, no test rerun here."
+    },
+    {
+      "path": "tools/test-club-donations-page.mjs",
+      "sha256": "ec68efde5fbb12185c6fdcd50a8500ce3070dac93753dbe77fde1635a06d1972",
+      "qaSnapshotCoverage": "Not present in QA100-file hash dictionaries; fingerprint only, no test rerun here."
+    }
+  ],
+  "acceptedAdditionalScope": "Coordinator authorized narrow share focus, assistant positioning/dynamic cache and fixture-test updates. This report records hashes and inspected runtime deltas; it does not broadly declare tool-source equivalence or browser coverage.",
+  "manifestAtValidation": {
+    "sha256": "7d5102d2e94d044bd0fdab02f949f86121205fa1d31c181c86f67dfa905770de",
+    "matchesActual": 100,
+    "differsFromReportManifestEvidence": false
+  }
+}

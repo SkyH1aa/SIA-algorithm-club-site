@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.joinAdmin.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -11,9 +11,9 @@
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
 
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>
   <style>
     /* 本页专用：搜索工具栏与单元格内间距，全部使用 club 令牌，亮暗自适应 */
 
@@ -21,21 +21,28 @@
     body.club-page .cell-gap { margin-top: 6px; }
     /* 表头字号收紧：与全站管理表格保持一致的密度 */
 
-  </style>
+
+    body.club-page.gallery-applications #content > .premium-head { max-width: 68ch; margin-bottom: var(--club-space-7); }
+    body.club-page.gallery-applications #content > .panel { padding: var(--club-space-6); background: var(--club-material-read); }
+    body.club-page.gallery-applications .list-toolbar { padding-block: var(--club-space-4); border-block: 1px solid var(--club-line); align-items: end; }
+    body.club-page.gallery-applications #applicationList { margin-top: var(--club-space-5); }
+    body.club-page.gallery-applications .intro { max-width: 68ch; }
+
+</style>
 </head>
-<body class="club-page">
+<body class="club-page gallery-applications">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Join Admin</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="admin-hub.html" data-i18n="common.backAdmin">返回管理员总览</a></div></header>
 
-  <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div><main>
-    <section id="gate" class="panel gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="admin.joinGateLead">报名管理需要对应权限。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
-    <section id="denied" class="panel denied hidden"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.joinDenied">无报名管理权限</strong><p class="intro" data-i18n="admin.joinDeniedLead">请联系超管开通「报名管理」权限。</p></div></section>
+  <div class="club-admin-rail" data-club-admin-rail aria-label="管理模块"></div><main class="premium-workspace">
+    <section id="gate" class="panel gate premium-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="common.loginFirst">请先登录</strong><p class="intro" data-i18n="admin.joinGateLead">报名管理需要对应权限。</p><a class="button" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></div></section>
+    <section id="denied" class="panel denied hidden premium-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><strong data-i18n="admin.joinDenied">无报名管理权限</strong><p class="intro" data-i18n="admin.joinDeniedLead">请联系超管开通「报名管理」权限。</p></div></section>
     <div id="content" class="hidden">
-      <p class="eyebrow">JOIN APPLICATIONS ADMIN</p>
-      <h1 data-i18n="pages.joinAdmin.h1">报名管理</h1>
+      <header class="premium-head"><h1 data-i18n="pages.joinAdmin.h1">报名管理</h1>
       <p class="lead" data-i18n="admin.joinLead">查看官网「立即加入」提交的报名信息。确认学生已加入或无需保留后，可直接删除对应记录。</p>
+      <p class="premium-meta">JOIN APPLICATIONS ADMIN</p></header>
 
       <section class="panel">
-        <div class="section-head">
+        <div class="section-head premium-section-head">
           <div>
             <h2 data-i18n="admin.joinListTitle">报名列表</h2>
             <p class="intro" data-i18n="admin.joinListIntro">仅超管与拥有报名管理权限的账号可见。删除后不可恢复，请确认后再操作。</p>
@@ -43,11 +50,12 @@
           <button class="button secondary" type="button" id="exportApplications" data-i18n="admin.exportCsv">导出 CSV</button>
           <button class="button secondary" type="button" id="refreshApplications" data-i18n="admin.refreshList">刷新列表</button>
         </div>
-        <div class="stats">
+        <div class="stats premium-metrics">
           <div class="stat"><strong id="statTotal">0</strong><span data-i18n="admin.joinTotal">报名总数</span></div>
         </div>
         <p class="message" id="joinAdminMessage" role="status"></p>
-        <div class="list-toolbar">
+        <div class="list-toolbar premium-toolbar">
+          <label class="label" for="joinSearch" data-i18n="admin.searchJoin">搜索姓名、班级或联系方式…</label>
           <input class="input" id="joinSearch" type="search" placeholder="搜索姓名、班级或联系方式…" data-i18n-placeholder="admin.searchJoin">
         </div>
         <div class="table-wrap list-gap" id="applicationList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="admin.loadingJoin">正在读取报名列表…</span></div>
@@ -273,6 +281,7 @@
       } catch (_e) {}
     });
   </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark" data-premium="legacy">
 <head>
   <meta name="robots" content="noindex, nofollow"><!-- 旧版演示页，正式版见 public/ -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script defer src="public/assistant-launcher.js"></script>
+<script defer src="public/assistant-launcher.js?v=2e89de74"></script>
 <title>贪吃蛇 · 专家系统 AI v17 (当前苹果生存前瞻)</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -44,8 +44,30 @@
   #resetBtn:hover { box-shadow: 0 4px 16px #FF6F00; }
   #pauseBtn { background: #334155; color: #e2e8f0; }
 </style>
+<link rel="stylesheet" href="public/legacy-premium.css?v=fc5486ad">
+<script src="public/theme.js?v=1b745a4f"></script>
+<script defer src="public/legacy-premium.js?v=2485716f"></script>
 </head>
-<body>
+<body class="legacy-premium legacy-snake">
+<header class="legacy-topbar">
+  <div class="legacy-topbar-inner">
+    <a class="legacy-brand" href="index.html">算法社</a>
+    <nav class="legacy-nav" aria-label="演示页导航">
+      <a class="legacy-link" href="public/snake.html">打开正式版</a>
+      <div class="legacy-theme" data-legacy-theme role="group" aria-label="外观主题">
+        <button type="button" data-legacy-mode="auto" aria-pressed="false" disabled>自动</button>
+        <button type="button" data-legacy-mode="light" aria-pressed="false" disabled>日间</button>
+        <button type="button" data-legacy-mode="dark" aria-pressed="false" disabled>夜间</button>
+      </div>
+    </nav>
+  </div>
+</header>
+<main class="legacy-main">
+  <div class="legacy-intro">
+    <div><h1>贪吃蛇专家系统</h1><p>专家系统 · 当前苹果生存前瞻</p></div>
+    <p>观察路径选择、逃生检测与逐步决策记录。</p>
+  </div>
+  <div class="legacy-stage" role="region" aria-label="游戏区域；窄屏可横向滚动" tabindex="0">
 <div class="container">
   <div class="board-area">
     <canvas id="board" width="432" height="432"></canvas>
@@ -69,6 +91,10 @@
     <div class="log-box" id="logBox"><div class="info">AI 就绪</div></div>
   </div>
 </div>
+  </div>
+  <p class="legacy-footnote">棋盘保留原版深色网格、蛇与苹果配色；日夜主题仅调整外围界面。</p>
+</main>
+<footer class="legacy-footer">旧版算法演示 · 原版游戏与模型逻辑保留</footer>
 <script>
 // ============================================================
 // 贪吃蛇 · 专家系统 AI v16 (统一逃生检测)
@@ -581,5 +607,6 @@ started = false;
 initGame();
 started = false;
 </script>
+<script src="public/club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

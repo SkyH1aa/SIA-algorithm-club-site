@@ -46,7 +46,7 @@ html[data-theme="light"] {
   --green: #1f9d63;
   --danger: #d6455d;
   --warn: #c98900;
-  --shadow: 0 2px 16px rgba(224, 122, 95, 0.08);
+  --shadow: 0 2px 6px rgba(70, 47, 35, 0.05);
 }
 
 /* 主页文字层的纸张 / 深空底色，保持 3D 背景可见但提升阅读对比。 */
@@ -313,20 +313,23 @@ html[data-theme="light"] #join::after {
   }
 }
 
+/* Legacy non-club components only: club-ui.css owns its materials and states.
+   Keep game boards/cells and algorithm-state colors independent. */
 /* 顶栏：细分割线，去掉橙红横杠 */
-html[data-theme="light"] .topbar,
-html[data-theme="light"] header.topbar {
+html[data-theme="light"] :where(body:not(.club-page)) .topbar,
+html[data-theme="light"] :where(body:not(.club-page)) header.topbar {
   position: sticky;
-  background: rgba(255, 255, 255, 0.92) !important;
-  border-bottom-color: #E5E5EA !important;
-  box-shadow: 0 4px 18px rgba(28, 28, 30, 0.04) !important;
-  backdrop-filter: saturate(1.1) blur(10px);
+  background: var(--panel) !important;
+  border-bottom-color: var(--line) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
-html[data-theme="light"] .panel,
-html[data-theme="light"] .card,
-html[data-theme="light"] .session-card,
-html[data-theme="light"] .panel-block,
+html[data-theme="light"] :where(body:not(.club-page)) .panel,
+html[data-theme="light"] :where(body:not(.club-page)) .card,
+html[data-theme="light"] :where(body:not(.club-page)) .session-card,
+html[data-theme="light"] :where(body:not(.club-page)) .panel-block,
 html[data-theme="light"] .feature-card,
 html[data-theme="light"] .home-feed-item,
 html[data-theme="light"] .member-card,
@@ -383,53 +386,53 @@ html[data-theme="light"] .pc-tip-dismiss:hover {
   background: rgba(224, 122, 95, 0.14) !important;
 }
 
-html[data-theme="light"] .input,
-html[data-theme="light"] input,
-html[data-theme="light"] textarea,
-html[data-theme="light"] select {
+html[data-theme="light"] :where(body:not(.club-page)) .input,
+html[data-theme="light"] :where(body:not(.club-page)) input,
+html[data-theme="light"] :where(body:not(.club-page)) textarea,
+html[data-theme="light"] :where(body:not(.club-page)) select {
   color: var(--text) !important;
   background: #FFFFFF !important;
   border-color: var(--line) !important;
 }
 
-html[data-theme="light"] .button,
-html[data-theme="light"] button.button,
-html[data-theme="light"] .btn {
+html[data-theme="light"] :where(body:not(.club-page)) .button,
+html[data-theme="light"] :where(body:not(.club-page)) button.button,
+html[data-theme="light"] :where(body:not(.club-page)) .btn {
   color: var(--text);
 }
 
-html[data-theme="light"] .button:not(.secondary):not(.danger),
-html[data-theme="light"] button.button:not(.secondary):not(.danger) {
+html[data-theme="light"] :where(body:not(.club-page)) .button:not(.secondary):not(.danger),
+html[data-theme="light"] :where(body:not(.club-page)) button.button:not(.secondary):not(.danger) {
   background: rgba(224, 122, 95, 0.12);
   border-color: rgba(224, 122, 95, 0.45);
   color: #D65A31;
 }
 
-html[data-theme="light"] .quick-link,
-html[data-theme="light"] .profile-item {
-  background: linear-gradient(145deg, rgba(224, 122, 95, 0.06), rgba(214, 90, 49, 0.05)) !important;
+html[data-theme="light"] :where(body:not(.club-page)) .quick-link,
+html[data-theme="light"] :where(body:not(.club-page)) .profile-item {
+  background: var(--panel) !important;
   border-color: var(--line) !important;
 }
 
-html[data-theme="light"] .notice {
+html[data-theme="light"] :where(body:not(.club-page)) .notice {
   background: rgba(201, 137, 0, 0.1) !important;
   border-color: rgba(201, 137, 0, 0.35) !important;
 }
 
-html[data-theme="light"] .notice p,
-html[data-theme="light"] .drive-status.warn span {
+html[data-theme="light"] :where(body:not(.club-page)) .notice p,
+html[data-theme="light"] :where(body:not(.club-page)) .drive-status.warn span {
   color: #7a5a10 !important;
 }
 
-html[data-theme="light"] .drive-status {
+html[data-theme="light"] :where(body:not(.club-page)) .drive-status {
   background: rgba(31, 157, 99, 0.08) !important;
 }
 
-html[data-theme="light"] .drive-status span {
+html[data-theme="light"] :where(body:not(.club-page)) .drive-status span {
   color: #2d5a48 !important;
 }
 
-html[data-theme="light"] .drive-status.warn {
+html[data-theme="light"] :where(body:not(.club-page)) .drive-status.warn {
   background: rgba(201, 137, 0, 0.08) !important;
 }
 
@@ -440,11 +443,11 @@ html[data-theme="light"] .hero-orb {
   opacity: 0.28;
 }
 
-html[data-theme="light"] .brand-mark,
-html[data-theme="light"] .identity {
+html[data-theme="light"] :where(body:not(.club-page)) .brand-mark,
+html[data-theme="light"] :where(body:not(.club-page)) .identity {
   color: var(--cyan) !important;
 }
-html[data-theme="light"] .brand small {
+html[data-theme="light"] :where(body:not(.club-page)) .brand small {
   color: #48484A !important;
 }
 
@@ -532,26 +535,26 @@ html[data-theme="light"] .hero-text {
 html[data-theme="light"] .club-affiliation {
   color: #48484A !important;
 }
-html[data-theme="light"] .eyebrow {
+html[data-theme="light"] :where(body:not(.club-page)) .eyebrow {
   color: #D65A31 !important;
 }
 html[data-theme="light"] .hero-copy::before {
   opacity: 0.35 !important;
   background: linear-gradient(90deg, #E07A5F, transparent) !important;
 }
-html[data-theme="light"] .panel-foot {
+html[data-theme="light"] :where(body:not(.club-page)) .panel-foot {
   color: #48484A !important;
 }
 html[data-theme="light"] .panel-row span {
   color: #48484A !important;
 }
-html[data-theme="light"] .panel-head span {
+html[data-theme="light"] :where(body:not(.club-page)) .panel-head span {
   color: #48484A !important;
 }
 html[data-theme="light"] .panel-row strong {
   color: #1C1C1E !important;
 }
-html[data-theme="light"] .panel-foot a {
+html[data-theme="light"] :where(body:not(.club-page)) .panel-foot a {
   color: #E07A5F !important;
 }
 
@@ -580,22 +583,22 @@ html[data-theme="light"] .title-sub {
 }
 
 /* 主/次按钮 — 陶土橙 */
-html[data-theme="light"] .primary-action {
+html[data-theme="light"] :where(body:not(.club-page)) .primary-action {
   border: 1px solid rgba(214, 90, 49, 0.55) !important;
-  background: linear-gradient(135deg, #E07A5F, #D65A31) !important;
+  background: var(--day-brand, #C2410C) !important;
   color: #FFFFFF !important;
-  box-shadow: 0 10px 24px rgba(224, 122, 95, 0.22) !important;
+  box-shadow: none !important;
 }
-html[data-theme="light"] .primary-action:hover {
+html[data-theme="light"] :where(body:not(.club-page)) .primary-action:hover {
   filter: brightness(1.05) !important;
-  box-shadow: 0 14px 30px rgba(214, 90, 49, 0.28) !important;
+  box-shadow: none !important;
 }
-html[data-theme="light"] .secondary-action {
+html[data-theme="light"] :where(body:not(.club-page)) .secondary-action {
   border: 1px solid var(--line) !important;
   background: #FFFFFF !important;
   color: #1C1C1E !important;
 }
-html[data-theme="light"] .secondary-action:hover {
+html[data-theme="light"] :where(body:not(.club-page)) .secondary-action:hover {
   border-color: rgba(224, 122, 95, 0.5) !important;
   background: rgba(224, 122, 95, 0.08) !important;
   color: #D65A31 !important;
@@ -609,9 +612,9 @@ html[data-theme="light"] .feed-modal-type,
 html[data-theme="light"] .feed-modal-close:hover,
 html[data-theme="light"] .home-feed-item:focus-visible h3,
 html[data-theme="light"] .section-kicker,
-html[data-theme="light"] .tag,
-html[data-theme="light"] .chip,
-html[data-theme="light"] .link-accent {
+html[data-theme="light"] :where(body:not(.club-page)) .tag,
+html[data-theme="light"] :where(body:not(.club-page)) .chip,
+html[data-theme="light"] :where(body:not(.club-page)) .link-accent {
   color: #E07A5F !important;
 }
 html[data-theme="light"] .home-feed-item:focus-visible {
@@ -640,22 +643,22 @@ html[data-theme="light"] .flagship-card,
 html[data-theme="light"] .home-feed-item {
   border-color: #E5E5EA !important;
 }
-html[data-theme="light"] h1,
-html[data-theme="light"] h2,
-html[data-theme="light"] h3,
+html[data-theme="light"] :where(body:not(.club-page)) h1,
+html[data-theme="light"] :where(body:not(.club-page)) h2,
+html[data-theme="light"] :where(body:not(.club-page)) h3,
 html[data-theme="light"] .section-title {
   color: #1C1C1E;
 }
-html[data-theme="light"] p,
-html[data-theme="light"] .muted,
-html[data-theme="light"] .desc,
+html[data-theme="light"] :where(body:not(.club-page)) p,
+html[data-theme="light"] :where(body:not(.club-page)) .muted,
+html[data-theme="light"] :where(body:not(.club-page)) .desc,
 html[data-theme="light"] .section-desc {
   color: #48484A;
 }
 
 /* 顶栏品牌与常用 cyan 引用 */
-html[data-theme="light"] .brand,
-html[data-theme="light"] .brand strong {
+html[data-theme="light"] :where(body:not(.club-page)) .brand,
+html[data-theme="light"] :where(body:not(.club-page)) .brand strong {
   color: #1C1C1E !important;
 }
 
@@ -666,13 +669,13 @@ html[data-theme="light"] .accent-line {
 }
 
 /* 顶栏品牌框 A / 社团功能高光 / 中英切换 — 去掉亮蓝 */
-html[data-theme="light"] .brand-mark {
+html[data-theme="light"] :where(body:not(.club-page)) .brand-mark {
   border-color: rgba(224, 122, 95, 0.45) !important;
-  background: linear-gradient(135deg, rgba(224, 122, 95, 0.14), rgba(214, 90, 49, 0.12)) !important;
+  background: var(--day-brand-soft, #F7E8E2) !important;
   color: #D65A31 !important;
-  box-shadow: inset 0 0 14px rgba(224, 122, 95, 0.08), 0 0 0 4px rgba(224, 122, 95, 0.04) !important;
+  box-shadow: none !important;
 }
-html[data-theme="light"] .member-identity {
+html[data-theme="light"] :where(body:not(.club-page)) .member-identity {
   border-color: rgba(224, 122, 95, 0.35) !important;
   color: #D65A31 !important;
 }
@@ -685,21 +688,21 @@ html[data-theme="light"] .nav a.is-active {
 }
 html[data-theme="light"] .nav a.nav-emphasis {
   border-color: rgba(224, 122, 95, 0.35) !important;
-  background: linear-gradient(135deg, rgba(224, 122, 95, 0.12), rgba(214, 90, 49, 0.08)) !important;
+  background: var(--day-brand-soft, #F7E8E2) !important;
   color: #1C1C1E !important;
 }
-html[data-theme="light"] .lang-switcher,
-html[data-theme="light"] .theme-switcher {
+html[data-theme="light"] :where(body:not(.club-page)) .lang-switcher,
+html[data-theme="light"] :where(body:not(.club-page)) .theme-switcher {
   border-color: #E5E5EA !important;
   background: #FFFFFF !important;
 }
-html[data-theme="light"] .lang-switcher button,
-html[data-theme="light"] .theme-switcher button {
+html[data-theme="light"] :where(body:not(.club-page)) .lang-switcher button,
+html[data-theme="light"] :where(body:not(.club-page)) .theme-switcher button {
   color: #48484A !important;
 }
-html[data-theme="light"] .lang-switcher button.is-active,
-html[data-theme="light"] .theme-switcher button.is-active {
-  background: linear-gradient(135deg, #E07A5F, #D65A31) !important;
+html[data-theme="light"] :where(body:not(.club-page)) .lang-switcher button.is-active,
+html[data-theme="light"] :where(body:not(.club-page)) .theme-switcher button.is-active {
+  background: var(--day-brand, #C2410C) !important;
   color: #FFFFFF !important;
 }
 html[data-theme="light"] .menu-button {
@@ -748,7 +751,7 @@ html[data-theme="light"] .timeline-item,
 html[data-theme="light"] .flagship-card,
 html[data-theme="light"] .home-feed-item,
 html[data-theme="light"] .hero-panel,
-html[data-theme="light"] .quick-link {
+html[data-theme="light"] :where(body:not(.club-page)) .quick-link {
   box-shadow: 0 2px 16px rgba(224, 122, 95, 0.08) !important;
 }
 html[data-theme="light"] .info-card:hover,
@@ -757,7 +760,7 @@ html[data-theme="light"] .member-card:hover,
 html[data-theme="light"] .join-card:hover,
 html[data-theme="light"] .timeline-item:hover,
 html[data-theme="light"] .flagship-card:hover,
-html[data-theme="light"] .quick-link:hover {
+html[data-theme="light"] :where(body:not(.club-page)) .quick-link:hover {
   box-shadow: 0 8px 28px rgba(224, 122, 95, 0.14) !important;
 }
 html[data-theme="light"] .info-card::before,
@@ -772,14 +775,14 @@ html[data-theme="light"] .flagship-card::before {
 /* 旗舰 / 项目 / 活动 tag：紫色浅字 → 橙红可读 */
 html[data-theme="light"] .lab-tags span,
 html[data-theme="light"] .step-list span,
-html[data-theme="light"] .tag,
-html[data-theme="light"] .status-pill {
+html[data-theme="light"] :where(body:not(.club-page)) .tag,
+html[data-theme="light"] :where(body:not(.club-page)) .status-pill {
   border: 1px solid rgba(224, 122, 95, 0.28) !important;
   background: rgba(224, 122, 95, 0.1) !important;
   color: #D65A31 !important;
   text-shadow: none !important;
 }
-html[data-theme="light"] .status-pill {
+html[data-theme="light"] :where(body:not(.club-page)) .status-pill {
   font-weight: 700;
 }
 html[data-theme="light"] .route-strip span {
@@ -792,13 +795,13 @@ html[data-theme="light"] .route-strip span.is-active {
   color: #D65A31 !important;
   background: rgba(224, 122, 95, 0.1) !important;
 }
-html[data-theme="light"] .timeline-date {
+html[data-theme="light"] :where(body:not(.club-page)) .timeline-date {
   color: #D65A31 !important;
 }
-html[data-theme="light"] .panel-head strong {
+html[data-theme="light"] :where(body:not(.club-page)) .panel-head strong {
   color: #D65A31 !important;
 }
-html[data-theme="light"] .panel-head strong::before {
+html[data-theme="light"] :where(body:not(.club-page)) .panel-head strong::before {
   background: #E07A5F !important;
   box-shadow: 0 0 8px rgba(224, 122, 95, 0.35) !important;
 }
@@ -843,7 +846,7 @@ html[data-theme="light"] .footer {
   white-space: nowrap;
 }
 .theme-switcher button.is-active {
-  background: linear-gradient(135deg, var(--cyan, #00e5ff), var(--violet, #7c4dff));
+  background: var(--cyan, #3ad4e6);
   color: #04141a;
 }
 .nav .theme-switcher {
@@ -884,7 +887,7 @@ html[data-theme="light"] .footer {
   transition: border-color var(--club-dur, 0.2s) var(--club-ease, ease), background var(--club-dur, 0.2s) var(--club-ease, ease), transform var(--club-dur, 0.2s) var(--club-ease, ease);
 }
 
-html[data-theme="light"] .theme-option {
+html[data-theme="light"] :where(body:not(.club-page)) .theme-option {
   background: #FFFFFF;
   border-color: #E5E5EA;
 }
@@ -894,7 +897,7 @@ html[data-theme="light"] .theme-option {
   border-color: rgba(0, 229, 255, 0.55);
 }
 
-html[data-theme="light"] .theme-option:hover {
+html[data-theme="light"] :where(body:not(.club-page)) .theme-option:hover {
   border-color: rgba(224, 122, 95, 0.55);
 }
 
@@ -904,7 +907,7 @@ html[data-theme="light"] .theme-option:hover {
   background: rgba(0, 229, 255, 0.1);
 }
 
-html[data-theme="light"] .theme-option.is-active {
+html[data-theme="light"] :where(body:not(.club-page)) .theme-option.is-active {
   border-color: #E07A5F;
   box-shadow: 0 0 0 2px rgba(224, 122, 95, 0.18);
   background: rgba(224, 122, 95, 0.1);
@@ -984,7 +987,7 @@ html[data-theme="light"] .qr-tip {
 
 /* —— 全站大标题：清蓝色光晕，日间改深色 —— */
 html[data-theme="light"] .hero h1,
-html[data-theme="light"] .intro h1,
+html[data-theme="light"] :where(body:not(.club-page)) .intro h1,
 html[data-theme="light"] .page-header h1,
 html[data-theme="light"] .hero-copy h1 .title-glow,
 html[data-theme="light"] .section-heading h2,
@@ -993,12 +996,12 @@ html[data-theme="light"] .controls h2 {
   color: #1C1C1E !important;
   text-shadow: none !important;
 }
-html[data-theme="light"] .eyebrow {
+html[data-theme="light"] :where(body:not(.club-page)) .eyebrow {
   color: #D65A31 !important;
 }
 
 /* —— 个人中心顶栏品牌框：蓝框蓝光改浅 —— */
-html[data-theme="light"] .brand-mark {
+html[data-theme="light"] :where(body:not(.club-page)) .brand-mark {
   background: #FFFFFF !important;
   border-color: rgba(224, 122, 95, 0.45) !important;
   color: #E07A5F !important;
@@ -1035,7 +1038,7 @@ html[data-theme="light"] .choice p {
 }
 
 /* —— 实验室内部：面板/控件亮色，文本深色，主按钮橙 —— */
-html[data-theme="light"] .panel,
+html[data-theme="light"] :where(body:not(.club-page)) .panel,
 html[data-theme="light"] .algorithm-note,
 html[data-theme="light"] .metric {
   background: #FFFFFF !important;
@@ -1056,29 +1059,29 @@ html[data-theme="light"] .hint {
   color: #48484A !important;
 }
 html[data-theme="light"] .field,
-html[data-theme="light"] select.field,
-html[data-theme="light"] textarea {
+html[data-theme="light"] :where(body:not(.club-page)) select.field,
+html[data-theme="light"] :where(body:not(.club-page)) textarea {
   background: #FFFFFF !important;
   border-color: #E5E5EA !important;
   color: #1C1C1E !important;
 }
-html[data-theme="light"] select,
-html[data-theme="light"] textarea {
+html[data-theme="light"] :where(body:not(.club-page)) select,
+html[data-theme="light"] :where(body:not(.club-page)) textarea {
   background: #FFFFFF !important;
   border-color: #E5E5EA !important;
   color: #1C1C1E !important;
 }
 /* —— 各实验室文本框/数字输入：日间必须白底深字，避免页面内嵌灰底 —— */
-html[data-theme="light"] input:not([type="radio"]):not([type="checkbox"]):not([type="range"]),
-html[data-theme="light"] input[type="text"],
-html[data-theme="light"] input[type="number"],
-html[data-theme="light"] textarea {
+html[data-theme="light"] :where(body:not(.club-page)) input:not([type="radio"]):not([type="checkbox"]):not([type="range"]),
+html[data-theme="light"] :where(body:not(.club-page)) input[type="text"],
+html[data-theme="light"] :where(body:not(.club-page)) input[type="number"],
+html[data-theme="light"] :where(body:not(.club-page)) textarea {
   background: #FFFFFF !important;
   border-color: #E5E5EA !important;
   color: #1C1C1E !important;
 }
-html[data-theme="light"] input:not([type="radio"]):not([type="checkbox"]):not([type="range"])::placeholder,
-html[data-theme="light"] textarea::placeholder {
+html[data-theme="light"] :where(body:not(.club-page)) input:not([type="radio"]):not([type="checkbox"]):not([type="range"])::placeholder,
+html[data-theme="light"] :where(body:not(.club-page)) textarea::placeholder {
   color: #8A8F98 !important;
   opacity: 1 !important;
 }
@@ -1111,7 +1114,7 @@ html[data-theme="light"] table.dp td:first-child {
   background: #E4E7EC !important;
   color: #1C1C1E !important;
 }
-html[data-theme="light"] .table-wrap {
+html[data-theme="light"] :where(body:not(.club-page)) .table-wrap {
   background: #FFFFFF !important;
   border-color: #E5E5EA !important;
 }
@@ -1129,12 +1132,12 @@ html[data-theme="light"] .radio-row input:checked + span {
   background: rgba(224, 122, 95, 0.1) !important;
   color: #D65A31 !important;
 }
-html[data-theme="light"] .btn {
+html[data-theme="light"] :where(body:not(.club-page)) .btn {
   background: #FFFFFF !important;
   color: #1C1C1E !important;
   border-color: #E5E5EA !important;
 }
-html[data-theme="light"] .btn:hover:not(:disabled) {
+html[data-theme="light"] :where(body:not(.club-page)) .btn:hover:not(:disabled) {
   border-color: rgba(224, 122, 95, 0.55) !important;
   color: #D65A31 !important;
 }
@@ -1147,7 +1150,7 @@ html[data-theme="light"] .btn-warn {
   color: #D65A31 !important;
   border-color: rgba(224, 122, 95, 0.45) !important;
 }
-html[data-theme="light"] .status {
+html[data-theme="light"] .status:not(.panel) {
   color: #D65A31 !important;
   border-color: rgba(224, 122, 95, 0.4) !important;
   background: rgba(224, 122, 95, 0.08) !important;
@@ -1169,7 +1172,7 @@ html[data-theme="light"] .result {
 }
 html[data-theme="light"] .board-card,
 html[data-theme="light"] .game-panel,
-html[data-theme="light"] .panel {
+html[data-theme="light"] :where(body:not(.club-page)) .panel {
   background: #FFFFFF !important;
   border-color: #E5E5EA !important;
 }
@@ -1245,8 +1248,8 @@ html[data-theme="light"] .next-box .label {
 }
 
 /* —— 积分商城：深色卡片改白 —— */
-html[data-theme="light"] .card,
-html[data-theme="light"] .card-body,
+html[data-theme="light"] :where(body:not(.club-page)) .card,
+html[data-theme="light"] :where(body:not(.club-page)) .card-body,
 html[data-theme="light"] .goods-card {
   background: #FFFFFF !important;
   border-color: #E5E5EA !important;
@@ -1258,15 +1261,15 @@ html[data-theme="light"] .cover {
 }
 
 /* —— 社团盘/商城按钮：主按钮橙，行操作白 —— */
-html[data-theme="light"] .button:not(.secondary):not(.danger) {
+html[data-theme="light"] :where(body:not(.club-page)) .button:not(.secondary):not(.danger) {
   background: rgba(224, 122, 95, 0.12) !important;
   border-color: rgba(224, 122, 95, 0.45) !important;
   color: #D65A31 !important;
 }
-html[data-theme="light"] .button:hover:not(.secondary):not(.danger) {
+html[data-theme="light"] :where(body:not(.club-page)) .button:hover:not(.secondary):not(.danger) {
   background: rgba(224, 122, 95, 0.22) !important;
 }
-html[data-theme="light"] .row-button {
+html[data-theme="light"] :where(body:not(.club-page)) .row-button {
   background: #FFFFFF !important;
   border-color: #E5E5EA !important;
   color: #1C1C1E !important;
@@ -1325,7 +1328,7 @@ html[data-theme="light"] canvas.board {
 }
 html[data-theme="light"] .board-wrapper,
 html[data-theme="light"] .game-container,
-html[data-theme="light"] .panel {
+html[data-theme="light"] :where(body:not(.club-page)) .panel {
   background: #FFFFFF !important;
   color: #1C1C1E !important;
   border-color: #D7DCE4 !important;
@@ -1348,7 +1351,7 @@ html[data-theme="light"] .tree-label,
 html[data-theme="light"] .stage-slot,
 html[data-theme="light"] .tree-svg .node-text,
 html[data-theme="light"] .tree-svg .status,
-html[data-theme="light"] .status,
+html[data-theme="light"] .status:not(.panel),
 html[data-theme="light"] .node-value,
 html[data-theme="light"] .node-index {
   fill: #1C1C1E !important;
@@ -1372,13 +1375,13 @@ html[data-theme="light"] .control-group textarea,
 html[data-theme="light"] .control-group input,
 html[data-theme="light"] .control-group select,
 html[data-theme="light"] .field,
-html[data-theme="light"] textarea {
+html[data-theme="light"] :where(body:not(.club-page)) textarea {
   background: #FFFFFF !important;
   border-color: #D7DCE4 !important;
   color: #1C1C1E !important;
 }
 html[data-theme="light"] .stage-label,
-html[data-theme="light"] .status,
+html[data-theme="light"] .status:not(.panel),
 html[data-theme="light"] .op-log,
 html[data-theme="light"] .log {
   background: #F7F8FA !important;
@@ -1553,19 +1556,19 @@ html[data-theme="light"] .edge-path.is-active {
   stroke: #E07A5F !important;
 }
 
-/* ================= 朱砂日间 V2：暖白工程纸 =================
- * 日间不再把所有信息都染成同一种橙色：朱砂用于行动与当前状态，
+/* ================= 精密算法展厅：明亮工程纸 =================
+ * 中性冷白建立精密对比；朱砂只用于行动与当前状态，
  * 靛蓝用于算法信息，绿色/金色/红色维持各自状态语义。
  */
 html[data-theme="light"] {
-  --bg: #F8F5F0;
-  --bg-elevated: #FFFDFC;
-  --panel: #FFFDFC;
-  --white: #2A2421;
-  --text: #493F39;
-  --muted: #6D6058;
-  --line: #E7DDD5;
-  --cyan: #C54A34;
+  --bg: #F0F3F7;
+  --bg-elevated: #FFFFFF;
+  --panel: #FFFFFF;
+  --white: #182330;
+  --text: #35465A;
+  --muted: #5B6A7C;
+  --line: #D9E1EB;
+  --cyan: #C2410C;
   --violet: #424E78;
   --pink: #A74E67;
   --gold: #A66B17;
@@ -1573,14 +1576,14 @@ html[data-theme="light"] {
   --green: #287A5B;
   --danger: #B4404B;
   --warn: #A66B17;
-  --shadow: 0 10px 30px rgba(70, 47, 35, 0.08), 0 1px 2px rgba(70, 47, 35, 0.05);
-  --day-paper: #FFFDFC;
-  --day-paper-muted: #F2EDE7;
-  --day-ink: #2A2421;
-  --day-ink-soft: #6D6058;
-  --day-brand: #C54A34;
-  --day-brand-strong: #A73A29;
-  --day-brand-soft: #F7E8E2;
+  --shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 2px 4px rgba(29,48,72,.04), 0 8px 20px -12px rgba(29,48,72,.16);
+  --day-paper: #FFFFFF;
+  --day-paper-muted: #F5F7FA;
+  --day-ink: #182330;
+  --day-ink-soft: #5B6A7C;
+  --day-brand: #C2410C;
+  --day-brand-strong: #9A3412;
+  --day-brand-soft: #FDF0EA;
   --day-indigo: #424E78;
   --day-indigo-soft: #EBEDF5;
 }
@@ -1597,15 +1600,15 @@ html[data-theme="light"] body::before {
   background-size: 84px 84px !important;
 }
 
-html[data-theme="light"] .topbar,
-html[data-theme="light"] header.topbar {
-  background: rgba(255, 253, 252, 0.9) !important;
+html[data-theme="light"] :where(body:not(.club-page)) .topbar,
+html[data-theme="light"] :where(body:not(.club-page)) header.topbar {
+  background: var(--day-paper) !important;
   border-bottom-color: var(--line) !important;
-  box-shadow: 0 1px 0 rgba(70, 47, 35, 0.04), 0 8px 24px rgba(70, 47, 35, 0.045) !important;
+  box-shadow: none !important;
 }
 
-html[data-theme="light"] .panel,
-html[data-theme="light"] .card,
+html[data-theme="light"] :where(body:not(.club-page)) .panel,
+html[data-theme="light"] :where(body:not(.club-page)) .card,
 html[data-theme="light"] .hero-panel,
 html[data-theme="light"] .flagship-main,
 html[data-theme="light"] .info-card,
@@ -1614,8 +1617,8 @@ html[data-theme="light"] .member-card,
 html[data-theme="light"] .join-card,
 html[data-theme="light"] .timeline-item,
 html[data-theme="light"] .flagship-card,
-html[data-theme="light"] .quick-link,
-html[data-theme="light"] .profile-item {
+html[data-theme="light"] :where(body:not(.club-page)) .quick-link,
+html[data-theme="light"] :where(body:not(.club-page)) .profile-item {
   background: var(--day-paper) !important;
   border-color: var(--line) !important;
   box-shadow: var(--shadow) !important;
@@ -1627,9 +1630,9 @@ html[data-theme="light"] .member-card:hover,
 html[data-theme="light"] .join-card:hover,
 html[data-theme="light"] .timeline-item:hover,
 html[data-theme="light"] .flagship-card:hover,
-html[data-theme="light"] .quick-link:hover {
+html[data-theme="light"] :where(body:not(.club-page)) .quick-link:hover {
   border-color: rgba(197, 74, 52, 0.46) !important;
-  box-shadow: 0 16px 34px rgba(70, 47, 35, 0.11), 0 1px 2px rgba(70, 47, 35, 0.06) !important;
+  box-shadow: 0 4px 12px rgba(70, 47, 35, 0.08) !important;
 }
 
 html[data-theme="light"] .proof-band,
@@ -1644,74 +1647,74 @@ html[data-theme="light"] .next-preview {
   border-color: var(--line) !important;
 }
 
-html[data-theme="light"] h1,
-html[data-theme="light"] h2,
-html[data-theme="light"] h3,
+html[data-theme="light"] :where(body:not(.club-page)) h1,
+html[data-theme="light"] :where(body:not(.club-page)) h2,
+html[data-theme="light"] :where(body:not(.club-page)) h3,
 html[data-theme="light"] .section-title,
-html[data-theme="light"] .brand,
-html[data-theme="light"] .brand strong {
+html[data-theme="light"] :where(body:not(.club-page)) .brand,
+html[data-theme="light"] :where(body:not(.club-page)) .brand strong {
   color: var(--day-ink) !important;
 }
 
-html[data-theme="light"] p,
-html[data-theme="light"] .muted,
-html[data-theme="light"] .desc,
+html[data-theme="light"] :where(body:not(.club-page)) p,
+html[data-theme="light"] :where(body:not(.club-page)) .muted,
+html[data-theme="light"] :where(body:not(.club-page)) .desc,
 html[data-theme="light"] .section-desc,
 html[data-theme="light"] .hero-text,
 html[data-theme="light"] .club-affiliation,
 html[data-theme="light"] .panel-row span,
-html[data-theme="light"] .panel-head span {
+html[data-theme="light"] :where(body:not(.club-page)) .panel-head span {
   color: var(--day-ink-soft) !important;
 }
 
-html[data-theme="light"] .eyebrow,
+html[data-theme="light"] :where(body:not(.club-page)) .eyebrow,
 html[data-theme="light"] .section-kicker,
 html[data-theme="light"] .member-meta,
-html[data-theme="light"] .timeline-date,
+html[data-theme="light"] :where(body:not(.club-page)) .timeline-date,
 html[data-theme="light"] .hero-metrics strong,
-html[data-theme="light"] .link-accent {
+html[data-theme="light"] :where(body:not(.club-page)) .link-accent {
   color: var(--day-brand) !important;
 }
 
-html[data-theme="light"] .primary-action,
-html[data-theme="light"] .button:not(.secondary):not(.danger),
-html[data-theme="light"] button.button:not(.secondary):not(.danger) {
+html[data-theme="light"] :where(body:not(.club-page)) .primary-action,
+html[data-theme="light"] :where(body:not(.club-page)) .button:not(.secondary):not(.danger),
+html[data-theme="light"] :where(body:not(.club-page)) button.button:not(.secondary):not(.danger) {
   background: var(--day-brand) !important;
   border-color: var(--day-brand) !important;
   color: #FFFFFF !important;
-  box-shadow: 0 8px 18px rgba(197, 74, 52, 0.18) !important;
+  box-shadow: none !important;
 }
 
-html[data-theme="light"] .primary-action:hover,
-html[data-theme="light"] .button:hover:not(.secondary):not(.danger),
-html[data-theme="light"] button.button:hover:not(.secondary):not(.danger) {
+html[data-theme="light"] :where(body:not(.club-page)) .primary-action:hover,
+html[data-theme="light"] :where(body:not(.club-page)) .button:hover:not(.secondary):not(.danger),
+html[data-theme="light"] :where(body:not(.club-page)) button.button:hover:not(.secondary):not(.danger) {
   background: var(--day-brand-strong) !important;
   border-color: var(--day-brand-strong) !important;
-  box-shadow: 0 12px 24px rgba(167, 58, 41, 0.22) !important;
+  box-shadow: none !important;
 }
 
-html[data-theme="light"] .secondary-action,
-html[data-theme="light"] .button.secondary,
-html[data-theme="light"] button.button.secondary,
-html[data-theme="light"] .row-button {
+html[data-theme="light"] :where(body:not(.club-page)) .secondary-action,
+html[data-theme="light"] :where(body:not(.club-page)) .button.secondary,
+html[data-theme="light"] :where(body:not(.club-page)) button.button.secondary,
+html[data-theme="light"] :where(body:not(.club-page)) .row-button {
   background: var(--day-paper) !important;
   border-color: rgba(66, 78, 120, 0.34) !important;
   color: var(--day-indigo) !important;
   box-shadow: none !important;
 }
 
-html[data-theme="light"] .secondary-action:hover,
-html[data-theme="light"] .button.secondary:hover,
-html[data-theme="light"] button.button.secondary:hover,
-html[data-theme="light"] .row-button:hover {
+html[data-theme="light"] :where(body:not(.club-page)) .secondary-action:hover,
+html[data-theme="light"] :where(body:not(.club-page)) .button.secondary:hover,
+html[data-theme="light"] :where(body:not(.club-page)) button.button.secondary:hover,
+html[data-theme="light"] :where(body:not(.club-page)) .row-button:hover {
   background: var(--day-indigo-soft) !important;
   border-color: var(--day-indigo) !important;
   color: var(--day-indigo) !important;
 }
 
-html[data-theme="light"] .tag,
-html[data-theme="light"] .chip:not(.is-active),
-html[data-theme="light"] .status-pill,
+html[data-theme="light"] :where(body:not(.club-page)) .tag,
+html[data-theme="light"] :where(body:not(.club-page)) .chip:not(.is-active),
+html[data-theme="light"] :where(body:not(.club-page)) .status-pill,
 html[data-theme="light"] .lab-tags span,
 html[data-theme="light"] .step-list span {
   background: var(--day-brand-soft) !important;
@@ -1734,11 +1737,11 @@ html[data-theme="light"] .panel-row.focus {
   box-shadow: inset 3px 0 0 var(--day-brand) !important;
 }
 
-html[data-theme="light"] .brand-mark {
+html[data-theme="light"] :where(body:not(.club-page)) .brand-mark {
   background: var(--day-brand-soft) !important;
   border-color: rgba(197, 74, 52, 0.4) !important;
   color: var(--day-brand-strong) !important;
-  box-shadow: 0 0 0 4px rgba(197, 74, 52, 0.045) !important;
+  box-shadow: none !important;
 }
 
 html[data-theme="light"] .official-link-reminder {
@@ -1818,35 +1821,35 @@ html[data-theme="light"] body:has(.timeline) {
   background-image: radial-gradient(circle at 1px 1px, rgba(197, 74, 52, 0.045) 1px, transparent 0) !important;
   background-size: 40px 40px !important;
 }
-html[data-theme="light"] .topbar {
+html[data-theme="light"] :where(body:not(.club-page)) .topbar {
   border-color: rgba(197, 74, 52, 0.25) !important;
-  background: rgba(255, 252, 249, 0.9) !important;
+  background: var(--day-paper) !important;
 }
-html[data-theme="light"] .panel {
+html[data-theme="light"] :where(body:not(.club-page)) .panel {
   border-color: rgba(197, 74, 52, 0.24) !important;
-  background: rgba(255, 255, 255, 0.92) !important;
-  box-shadow: 0 12px 30px rgba(67, 44, 35, 0.08) !important;
+  background: var(--day-paper) !important;
+  box-shadow: var(--shadow) !important;
 }
-html[data-theme="light"] .eyebrow,
-html[data-theme="light"] .date,
-html[data-theme="light"] .button {
+html[data-theme="light"] :where(body:not(.club-page)) .eyebrow,
+html[data-theme="light"] :where(body:not(.club-page)) .date,
+html[data-theme="light"] :where(body:not(.club-page)) .button {
   color: var(--day-brand-strong) !important;
 }
-html[data-theme="light"] .lead,
-html[data-theme="light"] .panel p,
-html[data-theme="light"] .entry ul,
-html[data-theme="light"] .back,
-html[data-theme="light"] .brand small {
+html[data-theme="light"] :where(body:not(.club-page)) .lead,
+html[data-theme="light"] :where(body:not(.club-page)) .panel p,
+html[data-theme="light"] :where(body:not(.club-page)) .entry ul,
+html[data-theme="light"] :where(body:not(.club-page)) .back,
+html[data-theme="light"] :where(body:not(.club-page)) .brand small {
   color: var(--day-ink-soft) !important;
 }
-html[data-theme="light"] .button {
+html[data-theme="light"] :where(body:not(.club-page)) .button {
   border-color: rgba(197, 74, 52, 0.42) !important;
   background: var(--day-brand-soft) !important;
 }
-html[data-theme="light"] .button:hover {
+html[data-theme="light"] :where(body:not(.club-page)) .button:hover {
   background: #f2d9d1 !important;
 }
-html[data-theme="light"] .button.secondary {
+html[data-theme="light"] :where(body:not(.club-page)) .button.secondary {
   border-color: rgba(66, 78, 120, 0.34) !important;
   background: var(--day-paper) !important;
   color: var(--day-indigo) !important;
@@ -1884,22 +1887,23 @@ html[data-theme="light"] #chapterParticleCanvas {
   opacity: .74;
 }
 
-/* Match the capability matrix's translucent blueprint panels on day mode. */
+/* Content cards use an opaque reading surface in day mode. */
 html[data-theme="light"] .member-card,
 html[data-theme="light"] .project-card,
 html[data-theme="light"] .timeline-item,
 html[data-theme="light"] .join-card .qr-box {
-  background: rgba(255, 255, 255, .66) !important;
-  border-color: rgba(194, 65, 12, .20) !important;
-  box-shadow: 0 10px 26px rgba(70, 47, 35, .055) !important;
-  backdrop-filter: blur(10px);
+  background: var(--day-paper) !important;
+  border-color: var(--line) !important;
+  box-shadow: var(--shadow) !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 html[data-theme="light"] .member-card:hover,
 html[data-theme="light"] .project-card:hover,
 html[data-theme="light"] .timeline-item:hover,
 html[data-theme="light"] .join-card .qr-box:hover {
-  background: rgba(255, 255, 255, .74) !important;
+  background: var(--day-paper) !important;
   border-color: rgba(194, 65, 12, .34) !important;
 }
 
@@ -1941,17 +1945,3 @@ html[data-theme="light"] :where(a, button, input, select, textarea, summary, [ta
 }
 ::selection { background: rgba(0, 229, 255, 0.26); }
 html[data-theme="light"] ::selection { background: rgba(194, 65, 12, 0.18); }
-
-/* ---------- 第五轮 · 亮色主按钮质感补齐 ----------
-   上方亮色覆盖是纯平涂（background !important），夜间主按钮的三段渐变 +
-   顶缘高光在日间丢失。这里在文件尾用 background-image 补回渐变层
-   （background-image 与 background-color 分离，不会被上面的平涂清掉）。 */
-html[data-theme="light"] .primary-action,
-html[data-theme="light"] .button:not(.secondary):not(.danger),
-html[data-theme="light"] button.button:not(.secondary):not(.danger) {
-  background-image: linear-gradient(180deg,
-    color-mix(in srgb, var(--day-brand) 84%, #ffffff) 0%,
-    var(--day-brand) 62%,
-    color-mix(in srgb, var(--day-brand) 90%, #000000) 100%) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 8px 18px rgba(197, 74, 52, 0.18) !important;
-}

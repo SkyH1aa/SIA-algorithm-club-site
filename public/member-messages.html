@@ -1,14 +1,23 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="pages.messages.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <style>
     /* 管理员内联编辑表单（替代 prompt 弹窗）：展开在留言卡片内部 */
     .message-edit-form{display:grid;gap:12px;margin-top:14px;padding-top:14px;border-top:1px dashed var(--club-line)}
     .message-edit-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
     .message-edit-form .form-actions{margin:0}
-  </style>
+
+    body.club-page.gallery-messages .hero { padding-bottom: var(--club-space-6); border-bottom: 1px solid var(--club-line-strong); margin-bottom: var(--club-space-6); align-items: start; }
+    body.club-page.gallery-messages .hero p { max-width: 64ch; }
+    body.club-page.gallery-messages #messageForm { padding: 0; gap: var(--club-space-5); border: 0; box-shadow: none; }
+    body.club-page.gallery-messages #messageForm .form-actions { border-top: 1px solid var(--club-line); padding-top: var(--club-space-4); }
+    body.club-page.gallery-messages .panel:has(#messageList) { margin-top: var(--club-space-7); }
+    body.club-page.gallery-messages .message-list { margin-top: var(--club-space-5); }
+    body.club-page.gallery-messages .panel-head .intro { max-width: 68ch; }
+
+</style>
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
@@ -16,10 +25,10 @@
   <title>社员留言箱 · 算法社</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="社员留言箱 · 算法社">
@@ -34,16 +43,16 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <style>
-      </style>
+</style>
 </head>
-<body class="club-page">
+<body class="club-page gallery-messages">
 <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a><span class="member-identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
-<main>
-  <section id="memberGate" class="panel member-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><h2 data-i18n="messages.gateTitle">您还不是算法社社员！</h2><p data-i18n="messages.gateHint">请先使用受邀请码邀请创建的社团盘账号登录。</p><p><a class="button secondary" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></p></div></section>
+<main class="premium-workspace">
+  <section id="memberGate" class="panel member-gate premium-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><h2 data-i18n="messages.gateTitle">您还不是算法社社员！</h2><p data-i18n="messages.gateHint">请先使用受邀请码邀请创建的社团盘账号登录。</p><p><a class="button secondary" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></p></div></section>
   <div id="memberContent" class="member-content hidden">
-    <section class="hero"><div><p class="eyebrow">MEMBER MESSAGE BOX</p><h1 data-i18n="pages.messages.h1">社员留言箱</h1><p data-i18n="messages.lead">记录社员的建议、想法与日常留言。全部内容仅对已登录的算法社成员开放。</p></div><div class="status-panel"><strong id="sessionStatus" data-i18n="messages.loggedIn">社员已登录</strong><span id="sessionHint" data-i18n="messages.sessionHint">你可以浏览留言并提交自己的内容。</span></div></section>
-    <section class="panel"><div class="panel-head"><div><h2 data-i18n="messages.leave">留下留言</h2><p class="panel-intro" data-i18n="messages.leaveIntro">请留下姓名、班级和想说的话。</p></div></div><form id="messageForm" class="message-form"><div><label class="label" for="memberName" data-i18n="messages.name">姓名</label><input class="input" id="memberName" type="text" required maxlength="40" autocomplete="name"></div><div><label class="label" for="memberClass" data-i18n="messages.className">班级</label><input class="input" id="memberClass" type="text" required maxlength="40" placeholder="例如 高一（1）班" data-i18n-placeholder="messages.classPlaceholder"></div><div class="form-wide"><label class="label" for="messageContent" data-i18n="messages.content">留言内容</label><textarea class="input" id="messageContent" required maxlength="1000" placeholder="写下你的建议或想法…" data-i18n-placeholder="messages.contentPlaceholder"></textarea></div><div class="form-wide form-actions"><span class="message" id="formMessage" role="status"></span><button class="button" type="submit" data-i18n="messages.submit">提交留言</button></div></form></section>
-    <section class="panel"><div class="panel-head"><div><h2 data-i18n="messages.all">全部留言</h2><p class="panel-intro" data-i18n="messages.allIntro">按最新提交时间排序。</p></div><button id="refreshButton" class="button secondary" type="button" data-i18n="messages.refresh">刷新留言</button></div><div id="messageList" class="message-list"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="messages.loading">正在读取留言…</span></div><p id="listMessage" class="message" role="status"></p></section>
+    <section class="hero premium-head"><div><h1 data-i18n="pages.messages.h1">社员留言箱</h1><p data-i18n="messages.lead">记录社员的建议、想法与日常留言。全部内容仅对已登录的算法社成员开放。</p><p class="premium-meta">MEMBER MESSAGE BOX</p></div><div class="status-panel"><strong id="sessionStatus" data-i18n="messages.loggedIn">社员已登录</strong><span id="sessionHint" data-i18n="messages.sessionHint">你可以浏览留言并提交自己的内容。</span></div></section>
+    <section class="panel"><div class="panel-head premium-section-head"><div><h2 data-i18n="messages.leave">留下留言</h2><p class="panel-intro" data-i18n="messages.leaveIntro">请留下姓名、班级和想说的话。</p></div></div><form id="messageForm" class="message-form premium-form"><div><label class="label" for="memberName" data-i18n="messages.name">姓名</label><input class="input" id="memberName" type="text" required maxlength="40" autocomplete="name"></div><div><label class="label" for="memberClass" data-i18n="messages.className">班级</label><input class="input" id="memberClass" type="text" required maxlength="40" placeholder="例如 高一（1）班" data-i18n-placeholder="messages.classPlaceholder"></div><div class="form-wide"><label class="label" for="messageContent" data-i18n="messages.content">留言内容</label><textarea class="input" id="messageContent" required maxlength="1000" placeholder="写下你的建议或想法…" data-i18n-placeholder="messages.contentPlaceholder"></textarea></div><div class="form-wide form-actions premium-toolbar"><span class="message" id="formMessage" role="status"></span><button class="button" type="submit" data-i18n="messages.submit">提交留言</button></div></form></section>
+    <section class="panel"><div class="panel-head premium-section-head"><div><h2 data-i18n="messages.all">全部留言</h2><p class="panel-intro" data-i18n="messages.allIntro">按最新提交时间排序。</p></div><button id="refreshButton" class="button secondary" type="button" data-i18n="messages.refresh">刷新留言</button></div><div id="messageList" class="message-list"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="messages.loading">正在读取留言…</span></div><p id="listMessage" class="message" role="status"></p></section>
   </div>
 </main>
 <script>
@@ -108,6 +117,7 @@ async function updateSession(session){const member=Boolean(session?.user?.id);me
 document.getElementById('refreshButton').onclick=refreshMessages;document.getElementById('messageForm').addEventListener('submit',async event=>{event.preventDefault();const memberName=document.getElementById('memberName').value,memberClass=document.getElementById('memberClass').value,messageContent=document.getElementById('messageContent').value;try{await callMember('member_messages_create',{memberName,memberClass,messageContent});event.target.reset();applyBoundProfile();setMessage(formMessage,ClubI18n.t('messages.submitted'),'success');await refreshMessages()}catch(error){setMessage(formMessage,error.message,'error')}});supabaseClient.auth.onAuthStateChange((_event,session)=>{void updateSession(session);if(session?.user?.id)void refreshMessages()});supabaseClient.auth.getSession().then(async({data:{session}})=>{await updateSession(session);if(session?.user?.id)await refreshMessages()});
 window.addEventListener('club:langchange',()=>{renderMessages();if(window.ClubI18n)ClubI18n.apply(document);});
 </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

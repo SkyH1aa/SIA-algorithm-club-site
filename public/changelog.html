@@ -1,19 +1,19 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.changelog.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>更新维护日志 · 算法社</title>
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
   <!-- 内置快照：file:// 与离线时兜底渲染，网络可用时仍以 fetch 到的 changelog.json 为准 -->
   <script src="data/changelog-data.js"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="更新维护日志 · 算法社">
@@ -28,12 +28,12 @@
   <meta itemprop="image" content="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
   <link rel="image_src" href="https://skyh1aa.github.io/SIA-algorithm-club-site/public/assets/og-cover.png">
 </head>
-<body class="club-page">
+<body class="club-page gallery-changelog">
   <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Changelog</small></span></a><span class="identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
-  <main>
-    <p class="eyebrow">SITE CHANGELOG</p>
-    <h1 data-i18n="pages.changelog.h1">更新维护日志</h1>
+  <main class="premium-read">
+    <header class="premium-head"><h1 data-i18n="pages.changelog.h1">更新维护日志</h1>
     <p class="lead" data-i18n="changelog.lead">记录算法社官网的功能更新与维护内容，对所有访客开放。</p>
+    <p class="premium-meta">SITE CHANGELOG</p></header>
     <section id="logList" class="timeline"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="changelog.loading">正在读取更新日志…</span></section>
   </main>
   <style>
@@ -53,7 +53,18 @@
     body.club-page #logList .entry h2 { margin: 0 0 10px; }
     /* 长列表渲染成本：53 条 × 双层阴影/圆角，滚出视口的条目跳过布局与绘制 */
     body.club-page #logList .entry { content-visibility: auto; contain-intrinsic-size: auto 220px; }
-  </style>
+
+    body.club-page.gallery-changelog main { max-width: var(--club-read); background: transparent; border: 0; box-shadow: none; }
+    body.club-page.gallery-changelog main > .premium-head { margin-bottom: var(--club-space-7); padding-bottom: var(--club-space-6); border-bottom: 1px solid var(--club-line-strong); }
+    body.club-page.gallery-changelog #logList { gap: 0; }
+    body.club-page.gallery-changelog .log-year { position: static; margin: var(--club-space-7) 0 var(--club-space-3); padding: 0; background: transparent; border: 0; border-radius: 0; color: var(--club-text); font-family: var(--club-font); font-size: var(--club-fs-xl); letter-spacing: 0; }
+    body.club-page.gallery-changelog #logList .entry { padding: var(--club-space-6) 0; border: 0; border-bottom: 1px solid var(--club-line); border-radius: 0; background: transparent; box-shadow: none; }
+    body.club-page.gallery-changelog #logList .entry h2 { margin-block: var(--club-space-3) var(--club-space-4); font-size: var(--club-fs-xl); line-height: var(--club-lh-tight); }
+    body.club-page.gallery-changelog .timeline-date { font-family: var(--club-font); font-size: var(--club-fs-sm); letter-spacing: 0; color: var(--club-muted); font-variant-numeric: tabular-nums; }
+    body.club-page.gallery-changelog #logList .entry ul { max-width: 68ch; margin: 0; padding-inline-start: var(--club-space-5); line-height: 1.8; }
+    body.club-page.gallery-changelog #logList .entry li + li { margin-top: var(--club-space-3); }
+    @media (max-width: 640px) { body.club-page.gallery-changelog #logList .entry { padding-block: var(--club-space-5); } }
+</style>
   <script>
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -119,6 +130,7 @@
     loadChangelog();
     window.addEventListener('club:langchange', () => { void loadChangelog(); });
   </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

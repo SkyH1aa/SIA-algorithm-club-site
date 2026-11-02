@@ -16,10 +16,12 @@ const check = process.argv.includes('--check');
 
 // 只版本化这些共享资源；页面私有脚本由页面自身控制。
 const VERSIONED = [
-  'theme.css', 'club-ui.css', 'club-shell.js', 'theme.js', 'i18n.js', 'i18n-dict.js', 'i18n-dict-zh.js', 'i18n-dict-en.js',
+  'theme.css', 'club-ui.css', 'club-shell.js', 'club-liquid-lighting.js', 'theme.js', 'i18n.js', 'i18n-dict.js', 'i18n-dict-zh.js', 'i18n-dict-en.js',
   'club-common.js', 'club-share.js', 'chat-i18n.js', 'assistant-i18n.js', 'member-identity.js',
   'club-auth-storage.js', 'service-gate.js', 'service-prompts.js', 'error-page.js',
   'chat-core.js', 'chat.js', 'chat-file-bundle.js', 'chat.css', 'assistant.css',
+  'home-showcase.css', 'home-showcase.js', 'home-capabilities.js', 'home-motion.js',
+  'legacy-premium.css', 'legacy-premium.js', 'vendor/gsap/gsap.min.js', 'assistant-launcher.css', 'assistant-launcher.js', 'chat-admin.css',
   'vendor/supabase/supabase.min.js', 'vendor/three/three.min.js', 'vendor/three/three.module.js', 'SceneDirector.js', 'sw.js'
 ];
 

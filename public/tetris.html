@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-i18n-title-key="tetris.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8">
@@ -10,9 +10,9 @@
   <title>算法社 · 俄罗斯方块多模式</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
 <style>
     /* 俄罗斯方块页样式：2026-10 起接入全站 club-ui 令牌（body.club-page）。
        本块只覆盖本页特有组件；按钮、表单、排版等通用样式来自 club-ui.css。 */
@@ -751,8 +751,10 @@
     @media (prefers-reduced-motion: reduce) {
       .ambient-orb, .ambient-grid { animation: none; }
     }
-  </style>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+
+    body.club-page .premium-game .control-strip.premium-toolbar { padding: var(--club-space-1, 4px) var(--club-space-2, 8px); border-radius: var(--club-radius-sm, 9px); }
+</style>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="算法社 · 俄罗斯方块多模式">
@@ -774,7 +776,7 @@
     <div class="ambient-grid"></div>
   </div>
   <div class="page-shell">
-    <header class="page-header">
+    <header class="page-header premium-head">
       <a href="../index.html" data-i18n="common.backSiteArrow">← 返回官网</a>
       <span class="member-identity" data-member-identity hidden></span>
       <h1 title="Dellacherie 专家系统 AI · 四模式 · 双排行榜" data-i18n="tetris.h1">俄罗斯方块</h1>
@@ -782,15 +784,15 @@
     </header>
 
     <div class="layout">
-      <main class="panel">
-        <div class="toolbar">
+      <main class="panel premium-game">
+        <div class="toolbar premium-toolbar">
           <div class="setup">
             <label for="nickname" data-i18n="tetris.nickLabel">昵称</label>
             <input id="nickname" maxlength="20" placeholder="计分模式需填写" data-i18n-placeholder="tetris.nickPh" autocomplete="nickname" />
             <span class="hint" id="nickHint" data-i18n="tetris.nickHint">普通 / 对战需昵称；AI 演示免昵称不存档</span>
           </div>
 
-          <div class="control-strip" id="modeRow">
+          <div class="control-strip premium-toolbar" id="modeRow">
             <button type="button" class="mode-btn active" data-mode="normal" data-i18n="games.modeNormal">正常游玩</button>
             <button type="button" class="mode-btn" data-mode="ai" data-i18n="games.modeAi">AI 游玩</button>
             <button type="button" class="mode-btn" data-mode="assist" data-i18n="games.modeAssist">AI 辅助</button>
@@ -804,7 +806,7 @@
             <label class="control-method"><span data-i18n="games.controlMethod">操作方式</span><select id="controlMethod"><option value="keyboard" data-i18n="games.keyboardControl">键盘操作</option><option value="buttons" data-i18n="games.buttonControl">按钮操作</option></select></label>
           </div>
 
-          <div class="assist-opts" id="assistOpts">
+          <div class="assist-opts premium-options" id="assistOpts">
             <label>
               <input type="checkbox" id="optColumnBeams" checked />
               <span><span data-i18n="tetris.beams">左右列光束</span><span class="opt-desc" data-i18n="tetris.beamsDesc"> · 落点通道</span></span>
@@ -815,7 +817,7 @@
             </label>
           </div>
 
-          <div class="ai-play-opts" id="aiPlayOpts">
+          <div class="ai-play-opts premium-options" id="aiPlayOpts">
             <span class="opts-title" data-i18n="tetris.aiPlayOpts">AI 游玩展示</span>
             <label>
               <input type="checkbox" id="optAiPlayHardDrop" />
@@ -823,7 +825,7 @@
             </label>
           </div>
 
-          <div class="versus-ai-opts" id="versusAiOpts">
+          <div class="versus-ai-opts premium-options" id="versusAiOpts">
             <span class="opts-title" data-i18n="tetris.versusAiOpts">对战 AI 增强</span>
             <label>
               <input type="checkbox" id="optAiSoftDrop" />
@@ -845,7 +847,7 @@
                 <div class="overlay" id="playerOverlay"><h2>GAME OVER</h2><p id="playerOverlayText" data-i18n="tetris.topped">顶到最上</p></div>
               </div>
               <div class="board-meta">
-                <div class="stats">
+                <div class="stats premium-metrics">
                   <div><span data-i18n="snake.score">得分</span><strong id="playerScore">0</strong></div>
                   <div><span data-i18n="tetris.lines">行数</span><strong id="playerLines">0</strong></div>
                   <div><span data-i18n="tetris.level">等级</span><strong id="playerLevel">0</strong></div>
@@ -864,7 +866,7 @@
                 <div class="overlay" id="aiOverlay"><h2>GAME OVER</h2><p data-i18n="tetris.overlayTop">顶到最上</p></div>
               </div>
               <div class="board-meta">
-                <div class="stats">
+                <div class="stats premium-metrics">
                   <div><span data-i18n="snake.score">得分</span><strong id="aiScore">0</strong></div>
                   <div><span data-i18n="tetris.lines">行数</span><strong id="aiLines">0</strong></div>
                   <div><span data-i18n="tetris.level">等级</span><strong id="aiLevel">0</strong></div>
@@ -885,19 +887,19 @@
         </div>
       </main>
 
-      <aside class="leaderboard panel">
+      <aside class="leaderboard panel premium-leaderboard">
         <h2 data-i18n="games.leaderboard">排行榜</h2>
-        <div class="lb-tabs">
+        <div class="lb-tabs premium-toolbar">
           <button type="button" class="lb-tab active" data-lb="normal" data-i18n="games.normalLb">普通榜</button>
           <button type="button" class="lb-tab" data-lb="versus" data-i18n="games.versusLb">人机对战榜</button>
         </div>
         <p class="hint" id="lbHint" data-i18n="games.lbNormalHint">普通：昵称 / 局数 / 最高分 · 按最高分降序</p>
-        <div class="explain-panel" id="explainPanel">
+        <div class="explain-panel premium-analysis" id="explainPanel">
           <label class="explain-toggle"><input type="checkbox" id="explainToggle"><span data-i18n="explain.toggle">显示 AI 决策面板</span></label>
           <div id="explainPanelBody" hidden><h3 data-i18n="explain.title">AI 决策面板</h3><div class="explain-grid"><div><span data-i18n="explain.target">目标落点</span><strong id="explainTarget">—</strong></div><div><span data-i18n="explain.rotation">旋转</span><strong id="explainRotation">—</strong></div><div><span data-i18n="explain.score">评估分</span><strong id="explainScore">—</strong></div></div><p data-i18n="explain.modeHint">仅在 AI 正在决策或 AI 辅助运行时更新。</p></div>
         </div>
         <ol class="leaderboard-list" id="leaderboardList"><li class="empty" data-i18n="common.loading">正在读取…</li></ol>
-        <div class="leaderboard-pagination" id="leaderboardPagination" hidden><button type="button" id="leaderboardPrev" class="button secondary" data-i18n="games.prevPage">上一页</button><span id="leaderboardPageInfo"></span><button type="button" id="leaderboardNext" class="button secondary" data-i18n="games.nextPage">下一页</button></div>
+        <div class="leaderboard-pagination premium-toolbar" id="leaderboardPagination" hidden><button type="button" id="leaderboardPrev" class="button secondary" data-i18n="games.prevPage">上一页</button><span id="leaderboardPageInfo"></span><button type="button" id="leaderboardNext" class="button secondary" data-i18n="games.nextPage">下一页</button></div>
       </aside>
     </div>
   </div>
@@ -2539,6 +2541,7 @@
   loadLeaderboard();
 })();
 </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

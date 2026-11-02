@@ -50,6 +50,9 @@ jobs:
         run: |
           node tools/test-club-common.mjs
           node tools/test-club-launcher-favorites.mjs
+          node tools/test-club-shell-interactions.mjs
+          node tools/test-club-reveal-lifecycle.mjs
+          node tools/test-club-liquid-lighting.mjs
           node tools/test-club-donations-page.mjs
           node tools/test-club-donations-ui.mjs
 
@@ -70,6 +73,8 @@ jobs:
           node tools/test-home-scene-startup.mjs
           node tools/test-scene-lifecycle.mjs
           node tools/test-scene-field-equivalence.mjs
+          node tools/test-home-capabilities.mjs
+          node tools/test-premium-page-contracts.mjs
 
       - name: Gomoku package integrity
         run: |

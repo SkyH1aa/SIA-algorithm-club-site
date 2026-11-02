@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="zh-CN" data-i18n-title-key="pages.resources.title">
 <head>
-  <link rel="stylesheet" href="theme.css?v=b8a5b0c9">
-  <link rel="stylesheet" href="club-ui.css?v=ecf6e1b3">
+  <link rel="stylesheet" href="theme.css?v=44ec1583">
+  <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="theme.js?v=1b745a4f"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta charset="UTF-8" />
@@ -10,10 +10,10 @@
   <title>教学资源中心 · 算法社</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=f75071ae"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
-  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=8e9acff3"></script>
-<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=6acc9c5f"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
+  <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
+<script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>  <meta name="description" content="算法社官网：算法训练、可视化实验室、AI 五子棋与社团管理系统。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="算法社 · Algorithm Club">
   <meta property="og:title" content="教学资源中心 · 算法社">
@@ -44,19 +44,36 @@
     body.club-page .resource-cover .cover-tag.python { border: 1px solid color-mix(in srgb, var(--club-warn) 50%, transparent); background: var(--club-warn-soft); color: var(--club-warn); }
     body.club-page .resource-cover .cover-tag.cpp { border: 1px solid color-mix(in srgb, var(--club-info) 50%, transparent); background: var(--club-info-soft); color: var(--club-info); }
     body.club-page .resource-cover .cover-kind { margin-left: auto; color: var(--club-muted); font: 600 11px/1.4 var(--club-mono); letter-spacing: .08em; }
-  </style>
+
+    body.club-page.gallery-resources main { max-width: 1100px; background: transparent; border: 0; box-shadow: none; }
+    body.club-page.gallery-resources .hero { grid-template-columns: minmax(0, 1.8fr) minmax(220px, 1fr); gap: var(--club-space-7); align-items: start; margin-bottom: var(--club-space-7); padding-bottom: var(--club-space-6); border-bottom: 1px solid var(--club-line-strong); }
+    body.club-page.gallery-resources .hero p { max-width: 64ch; }
+    body.club-page.gallery-resources .hero-card { padding: var(--club-space-5); background: var(--club-material-inset); border: 1px solid var(--club-line); box-shadow: none; }
+    body.club-page.gallery-resources .section-head { margin-block: var(--club-space-6) var(--club-space-5); align-items: baseline; }
+    body.club-page.gallery-resources .resource-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--club-space-6); }
+    body.club-page.gallery-resources .resource-card { padding: var(--club-space-6); background: var(--club-material-read); box-shadow: none; transform: none; }
+    body.club-page.gallery-resources .resource-cover { min-height: 0; height: auto; justify-content: flex-start; gap: var(--club-space-3); padding: 0 0 var(--club-space-5); margin-bottom: var(--club-space-5); border: 0; border-bottom: 1px solid var(--club-line); border-radius: 0; background: transparent; }
+    body.club-page.gallery-resources .resource-cover svg { width: 24px; height: 24px; }
+    body.club-page.gallery-resources .cover-kind { margin-inline-start: auto; }
+    body.club-page.gallery-resources .resource-card h3 { font-size: var(--club-fs-xl); }
+    body.club-page.gallery-resources .resource-card p { max-width: 60ch; line-height: 1.8; }
+    body.club-page.gallery-resources .resource-meta { font-variant-numeric: tabular-nums; }
+    body.club-page.gallery-resources .resource-actions { padding-top: var(--club-space-4); margin-top: auto; }
+    @media (max-width: 900px) { body.club-page.gallery-resources .hero { grid-template-columns: 1fr; } }
+    @media (max-width: 640px) { body.club-page.gallery-resources .resource-grid { grid-template-columns: 1fr; } body.club-page.gallery-resources .resource-card { padding: var(--club-space-5); } }
+</style>
 </head>
-<body class="club-page">
+<body class="club-page gallery-resources">
 <header class="topbar"><div class="topbar-inner"><a class="brand" href="../index.html"><span class="brand-mark">A</span><span><strong data-i18n="common.brand">算法社</strong><small>Algorithm Club</small></span></a><span class="member-identity" data-member-identity hidden></span><a class="back" href="../index.html" data-i18n="common.backSite">返回官网</a></div></header>
-<main>
-  <section id="memberGate" class="member-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><h2 data-i18n="resources.gateLoggedOut">登录后查看社员资源</h2><p data-i18n="resources.gateHint">请先使用受邀请码邀请创建的社团盘账号登录。</p><p><a class="button secondary" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></p></div></section>
+<main class="premium-read">
+  <section id="memberGate" class="member-gate premium-gate"><div><span class="gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></svg></span><h2 data-i18n="resources.gateLoggedOut">登录后查看社员资源</h2><p data-i18n="resources.gateHint">请先使用受邀请码邀请创建的社团盘账号登录。</p><p><a class="button secondary" href="member-center.html" data-i18n="common.loginCenter">前往个人中心登录</a></p></div></section>
   <div id="memberContent" class="member-content hidden">
-    <section class="hero"><div><p class="eyebrow">LEARNING RESOURCE SYSTEM · 2026—2027</p><h1 data-i18n="pages.resources.h1">教学资源中心</h1><p data-i18n="resources.lead">算法社本学期教学资料，覆盖 Python 与 C++ 两条学习路线。支持按章节在线浏览，也可以下载完整教材和答案解析。</p></div><div class="hero-card"><strong data-i18n="resources.heroCardTitle">四份核心资料</strong><span data-i18n="resources.heroCardBody" data-i18n-mode="html">Python 教材 / Python 答案<br>C++ 教材 / C++ 答案</span></div></section>
-    <section><div class="section-head"><h2 data-i18n="resources.browse">按路线浏览</h2><span>CHAPTER BROWSER</span></div><div class="resource-grid">
-      <article class="resource-card" data-reveal style="--reveal-delay:0ms"><div class="resource-cover"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4.5 4.5V19a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h4.5"/><path d="M9 13h6M9 16.5h4"/></svg><span class="cover-tag python">PYTHON</span><span class="cover-kind" data-i18n="resources.kindBook">教材</span></div><h3 data-i18n="resources.pyBook">Python 教材</h3><p data-i18n="resources.pyBookDesc">从基础语法、函数与数据结构开始，逐步进入算法与程序设计练习。</p><p class="resource-meta" data-i18n="resources.metaSize" data-i18n-vars='{"size":"5.9 MB","date":"2026-08"}'>约 5.9 MB · 更新于 2026-08</p><div class="resource-actions"><a class="button" href="resources/python-textbook.pdf" target="_blank" rel="noopener" data-i18n="resources.readOnline">在线阅读</a><a class="button secondary" href="https://1828041119.share.123pan.cn/123pan/oTfUjv-TSm33" target="_blank" rel="noopener" data-i18n="resources.download123">123云盘下载</a></div></article>
-      <article class="resource-card" data-reveal style="--reveal-delay:45ms"><div class="resource-cover"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4.5 4.5V19a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h4.5"/><path d="M9 13h6M9 16.5h4"/></svg><span class="cover-tag python">PYTHON</span><span class="cover-kind" data-i18n="resources.kindAns">答案解析</span></div><h3 data-i18n="resources.pyAns">Python 答案</h3><p data-i18n="resources.pyAnsDesc">配套练习的参考答案与解题思路，建议完成练习后再查看。</p><p class="resource-meta" data-i18n="resources.metaSize" data-i18n-vars='{"size":"3.7 MB","date":"2026-08"}'>约 3.7 MB · 更新于 2026-08</p><div class="resource-actions"><a class="button" href="resources/python-solutions.pdf" target="_blank" rel="noopener" data-i18n="resources.readOnline">在线阅读</a><a class="button secondary" href="https://1828041119.share.123pan.cn/123pan/oTfUjv-TSm33" target="_blank" rel="noopener" data-i18n="resources.download123">123云盘下载</a></div></article>
-      <article class="resource-card" data-reveal style="--reveal-delay:90ms"><div class="resource-cover"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4.5 4.5V19a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h4.5"/><path d="M9 13h6M9 16.5h4"/></svg><span class="cover-tag cpp">C++</span><span class="cover-kind" data-i18n="resources.kindBook">教材</span></div><h3 data-i18n="resources.cppBook">C++ 教材</h3><p data-i18n="resources.cppBookDesc">覆盖 C++ 基础、常用容器、算法库与竞赛程序设计的核心知识。</p><p class="resource-meta" data-i18n="resources.metaSize" data-i18n-vars='{"size":"7.0 MB","date":"2026-08"}'>约 7.0 MB · 更新于 2026-08</p><div class="resource-actions"><a class="button" href="resources/cpp-textbook.pdf" target="_blank" rel="noopener" data-i18n="resources.readOnline">在线阅读</a><a class="button secondary" href="https://1828041119.share.123pan.cn/123pan/oTfUjv-TSm33" target="_blank" rel="noopener" data-i18n="resources.download123">123云盘下载</a></div></article>
-      <article class="resource-card" data-reveal style="--reveal-delay:135ms"><div class="resource-cover"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4.5 4.5V19a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h4.5"/><path d="M9 13h6M9 16.5h4"/></svg><span class="cover-tag cpp">C++</span><span class="cover-kind" data-i18n="resources.kindAns">答案解析</span></div><h3 data-i18n="resources.cppAns">C++ 答案</h3><p data-i18n="resources.cppAnsDesc">提供 C++ 路线练习题的参考实现，便于复盘与查缺补漏。</p><p class="resource-meta" data-i18n="resources.metaSize" data-i18n-vars='{"size":"4.4 MB","date":"2026-08"}'>约 4.4 MB · 更新于 2026-08</p><div class="resource-actions"><a class="button" href="resources/cpp-solutions.pdf" target="_blank" rel="noopener" data-i18n="resources.readOnline">在线阅读</a><a class="button secondary" href="https://1828041119.share.123pan.cn/123pan/oTfUjv-TSm33" target="_blank" rel="noopener" data-i18n="resources.download123">123云盘下载</a></div></article>
+    <section class="hero premium-head"><div><h1 data-i18n="pages.resources.h1">教学资源中心</h1><p data-i18n="resources.lead">算法社本学期教学资料，覆盖 Python 与 C++ 两条学习路线。支持按章节在线浏览，也可以下载完整教材和答案解析。</p><p class="premium-meta">LEARNING RESOURCE SYSTEM · 2026—2027</p></div><div class="hero-card premium-inset"><strong data-i18n="resources.heroCardTitle">四份核心资料</strong><span data-i18n="resources.heroCardBody" data-i18n-mode="html">Python 教材 / Python 答案<br>C++ 教材 / C++ 答案</span></div></section>
+    <section><div class="section-head premium-section-head"><h2 data-i18n="resources.browse">按路线浏览</h2><span>CHAPTER BROWSER</span></div><div class="resource-grid">
+      <article class="resource-card premium-resource" data-reveal style="--reveal-delay:0ms"><div class="resource-cover"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4.5 4.5V19a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h4.5"/><path d="M9 13h6M9 16.5h4"/></svg><span class="cover-tag python">PYTHON</span><span class="cover-kind" data-i18n="resources.kindBook">教材</span></div><h3 data-i18n="resources.pyBook">Python 教材</h3><p data-i18n="resources.pyBookDesc">从基础语法、函数与数据结构开始，逐步进入算法与程序设计练习。</p><p class="resource-meta" data-i18n="resources.metaSize" data-i18n-vars='{"size":"5.9 MB","date":"2026-08"}'>约 5.9 MB · 更新于 2026-08</p><div class="resource-actions premium-toolbar"><a class="button" href="resources/python-textbook.pdf" target="_blank" rel="noopener" data-i18n="resources.readOnline">在线阅读</a><a class="button secondary" href="https://1828041119.share.123pan.cn/123pan/oTfUjv-TSm33" target="_blank" rel="noopener" data-i18n="resources.download123">123云盘下载</a></div></article>
+      <article class="resource-card premium-resource" data-reveal style="--reveal-delay:45ms"><div class="resource-cover"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4.5 4.5V19a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h4.5"/><path d="M9 13h6M9 16.5h4"/></svg><span class="cover-tag python">PYTHON</span><span class="cover-kind" data-i18n="resources.kindAns">答案解析</span></div><h3 data-i18n="resources.pyAns">Python 答案</h3><p data-i18n="resources.pyAnsDesc">配套练习的参考答案与解题思路，建议完成练习后再查看。</p><p class="resource-meta" data-i18n="resources.metaSize" data-i18n-vars='{"size":"3.7 MB","date":"2026-08"}'>约 3.7 MB · 更新于 2026-08</p><div class="resource-actions premium-toolbar"><a class="button" href="resources/python-solutions.pdf" target="_blank" rel="noopener" data-i18n="resources.readOnline">在线阅读</a><a class="button secondary" href="https://1828041119.share.123pan.cn/123pan/oTfUjv-TSm33" target="_blank" rel="noopener" data-i18n="resources.download123">123云盘下载</a></div></article>
+      <article class="resource-card premium-resource" data-reveal style="--reveal-delay:90ms"><div class="resource-cover"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4.5 4.5V19a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h4.5"/><path d="M9 13h6M9 16.5h4"/></svg><span class="cover-tag cpp">C++</span><span class="cover-kind" data-i18n="resources.kindBook">教材</span></div><h3 data-i18n="resources.cppBook">C++ 教材</h3><p data-i18n="resources.cppBookDesc">覆盖 C++ 基础、常用容器、算法库与竞赛程序设计的核心知识。</p><p class="resource-meta" data-i18n="resources.metaSize" data-i18n-vars='{"size":"7.0 MB","date":"2026-08"}'>约 7.0 MB · 更新于 2026-08</p><div class="resource-actions premium-toolbar"><a class="button" href="resources/cpp-textbook.pdf" target="_blank" rel="noopener" data-i18n="resources.readOnline">在线阅读</a><a class="button secondary" href="https://1828041119.share.123pan.cn/123pan/oTfUjv-TSm33" target="_blank" rel="noopener" data-i18n="resources.download123">123云盘下载</a></div></article>
+      <article class="resource-card premium-resource" data-reveal style="--reveal-delay:135ms"><div class="resource-cover"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4.5 4.5V19a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h4.5"/><path d="M9 13h6M9 16.5h4"/></svg><span class="cover-tag cpp">C++</span><span class="cover-kind" data-i18n="resources.kindAns">答案解析</span></div><h3 data-i18n="resources.cppAns">C++ 答案</h3><p data-i18n="resources.cppAnsDesc">提供 C++ 路线练习题的参考实现，便于复盘与查缺补漏。</p><p class="resource-meta" data-i18n="resources.metaSize" data-i18n-vars='{"size":"4.4 MB","date":"2026-08"}'>约 4.4 MB · 更新于 2026-08</p><div class="resource-actions premium-toolbar"><a class="button" href="resources/cpp-solutions.pdf" target="_blank" rel="noopener" data-i18n="resources.readOnline">在线阅读</a><a class="button secondary" href="https://1828041119.share.123pan.cn/123pan/oTfUjv-TSm33" target="_blank" rel="noopener" data-i18n="resources.download123">123云盘下载</a></div></article>
     </div></section>
   </div>
 </main>
@@ -77,6 +94,7 @@ document.addEventListener('DOMContentLoaded',mergePageDict);
 window.addEventListener('club:langchange',()=>{mergePageDict();if(memberGate.classList.contains('active'))renderGate()});
 supabaseClient.auth.onAuthStateChange((_event,session)=>updateMemberAccess(session));supabaseClient.auth.getSession().then(({data:{session}})=>updateMemberAccess(session));
 </script>
-  <script src="club-shell.js?v=9b6a29db"></script>
+  <script src="club-shell.js?v=b2a8c524"></script>
+<script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>
 </html>

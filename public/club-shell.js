@@ -24,7 +24,9 @@
   function mountAssistantLauncher() {
     if (!shellScriptURL || document.querySelector('script[data-club-assistant-loader]')) return;
     var script = document.createElement('script');
-    script.src = new URL('assistant-launcher.js', shellScriptURL).href;
+    var launcherURL = new URL('assistant-launcher.js', shellScriptURL);
+    launcherURL.search = new URL(shellScriptURL).search;
+    script.src = launcherURL.href;
     script.setAttribute('data-club-assistant-loader', '');
     document.head.appendChild(script);
   }
@@ -155,6 +157,27 @@
 
   function currentFile() {
     return (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+  }
+
+  // 只标记已知路由；首页与未来页面不按文件名猜测，保留各自的界面模式。
+  var SURFACE_ROUTES = {
+    read: ['guide', 'changelog', 'resources', 'appmonitor', 'join', 'donations'],
+    operate: ['member-center', 'member-profile', 'member-points', 'member-checkin',
+      'member-messages', 'admin-hub', 'members-admin', 'events-admin', 'mall-admin',
+      'join-admin', 'drive-admin', 'chat-admin', 'drive', 'events', 'notifications',
+      'search', 'points-mall', 'password-reset', 'chat', 'assistant'],
+    explore: ['club-features', 'visualization-lab', 'search-lab', 'sorting-lab',
+      'dp-lab', 'ds-lab', 'graph-lab', 'heap-lab', 'tree-lab', 'gomoku-satori-lab',
+      'gomoku', 'gomoku-experiments', 'tetris', 'snake', 'platformer']
+  };
+
+  function markSurface() {
+    var route = currentFile().replace(/\.html$/, '');
+    Object.keys(SURFACE_ROUTES).some(function (surface) {
+      if (SURFACE_ROUTES[surface].indexOf(route) < 0) return false;
+      document.body.dataset.clubSurface = surface;
+      return true;
+    });
   }
 
   function hrefFor(item) {
@@ -513,6 +536,8 @@
     launcher.className = 'club-launcher';
     launcher.setAttribute('role', 'dialog');
     launcher.setAttribute('aria-modal', 'true');
+    launcher.setAttribute('aria-hidden', 'true');
+    launcher.setAttribute('inert', '');
     launcher.setAttribute('aria-label', en ? 'Jump to a club module' : '跳转到社团模块');
     launcher.innerHTML =
       '<div class="club-launcher-panel" role="document">' +
@@ -536,6 +561,12 @@
     });
     launcherInput.addEventListener('input', function () { renderLauncher(launcherInput.value); });
     launcherInput.addEventListener('keydown', onLauncherKeydown);
+    // 仅启动器是真正的模态框；通知弹出层和注入的辅助控件不做全页 inert。
+    document.addEventListener('keydown', containLauncherTab, true);
+    document.addEventListener('focusin', function (event) {
+      if (!isLauncherOpen() || launcher.contains(event.target)) return;
+      launcherInput.focus({ preventScroll: true });
+    });
     launcherResults.addEventListener('click', function (event) {
       var clear = event.target.closest('[data-launcher-clear]');
       if (clear) {
@@ -608,6 +639,8 @@
   }
 
   function renderLauncher(query) {
+    // 同步/语言刷新会替换“清除”按钮，不能把键盘焦点遗落在 body。
+    var hadResultFocus = launcherResults.contains(document.activeElement);
     var en = lang() === 'en';
     var needle = String(query || '').trim().toLowerCase();
     visibleItems = [];
@@ -671,6 +704,24 @@
     launcherResults.innerHTML = html;
     activeIndex = visibleItems.length ? 0 : -1;
     setActive(activeIndex);
+    if (hadResultFocus && isLauncherOpen()) launcherInput.focus({ preventScroll: true });
+  }
+
+  function containLauncherTab(event) {
+    if (event.key !== 'Tab' || !isLauncherOpen()) return;
+    var focusable = Array.prototype.slice.call(launcher.querySelectorAll(
+      'input, button, a[href], select, textarea, [tabindex]'
+    )).filter(function (node) {
+      return !node.disabled && node.tabIndex >= 0 &&
+        !node.closest('[hidden], [inert], [aria-hidden="true"]') && node.getClientRects().length > 0;
+    });
+    var first = focusable[0] || launcherInput;
+    var last = focusable[focusable.length - 1] || first;
+    var active = document.activeElement;
+    if (!launcher.contains(active) || (event.shiftKey ? active === first : active === last)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus({ preventScroll: true });
+    }
   }
 
   function setActive(index) {
@@ -691,7 +742,6 @@
   }
 
   function onLauncherKeydown(event) {
-    if (event.key === 'Escape') { closeLauncher(); return; }
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       if (!visibleItems.length) return;
@@ -734,7 +784,8 @@
   function openLauncher() {
     buildLauncher();
     syncAccess();
-    lastTrigger = document.activeElement;
+    // 重复 open 或出场中重开时，不把恢复目标改成对话框内的搜索框。
+    if (!launcher.contains(document.activeElement)) lastTrigger = document.activeElement;
     // 语言可能在打开前切换过，重建文案
     if (launcher.dataset.lang !== lang()) {
       launcher.dataset.lang = lang();
@@ -748,6 +799,8 @@
     cancelLayerClose(launcher);
     launcher.classList.remove('is-closing');
     launcher.classList.add('is-open');
+    launcher.removeAttribute('aria-hidden');
+    launcher.removeAttribute('inert');
     launcherInput.value = '';
     renderLauncher('');
     document.body.classList.add('club-launcher-open');
@@ -787,20 +840,20 @@
   }
 
   function closeLauncher() {
-    if (!launcher) return;
-    var wasOpen = launcher.classList.contains('is-open');
-    if (!wasOpen) {
-      launcher.classList.remove('is-open', 'is-closing');
-      document.body.classList.remove('club-launcher-open');
-      return;
-    }
+    if (!isLauncherOpen()) return;
     document.body.classList.remove('club-launcher-open');
-    var target = lastTrigger && document.contains(lastTrigger)
-      ? lastTrigger
-      : document.querySelector('.club-launcher-button');
-    closeLayerWithAnimation(launcher, 'is-closing', 'is-open', function () {
-      if (target) target.focus({ preventScroll: true });
-    });
+    // 恢复焦点与结束模态同步进行：出场动画期间也能继续 Tab，不等定时器抢焦点。
+    closeLayerWithAnimation(launcher, 'is-closing', 'is-open');
+    var target = lastTrigger;
+    if (!target || !document.contains(target) || typeof target.focus !== 'function' ||
+        target.disabled || target.closest('[hidden], [inert], [aria-hidden="true"]') ||
+        !target.getClientRects().length) {
+      target = document.querySelector('.club-launcher-button');
+    }
+    if (target) target.focus({ preventScroll: true });
+    if (launcher.contains(document.activeElement)) document.activeElement.blur();
+    launcher.setAttribute('aria-hidden', 'true');
+    launcher.setAttribute('inert', '');
   }
 
   function isLauncherOpen() {
@@ -1310,7 +1363,7 @@
     button.setAttribute('aria-label', lang() === 'en' ? 'Back to top' : '回到顶部');
     button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>';
     button.addEventListener('click', function () {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     });
     document.body.appendChild(button);
 
@@ -1409,53 +1462,73 @@
      仅在 JS 成功启动后（html.club-reveal-ready）才隐藏元素，
      无 JS / 减少动效 / 不支持 IO 时内容始终可见。
      ------------------------------------------------------------ */
+  var revealObserver = null;
   var revealWatcher = null;
-  function setupReveal() {
+  var revealMedia = null;
+  var revealBound = false;
+  var revealSuspended = false;
+
+  function stopReveal() {
+    if (revealObserver) revealObserver.disconnect();
+    if (revealWatcher) revealWatcher.disconnect();
+    revealObserver = null;
+    revealWatcher = null;
+    document.documentElement.classList.remove('club-reveal-ready');
+  }
+
+  function refreshReveal() {
+    stopReveal();
+    if (revealSuspended) return;
     var items = document.querySelectorAll('[data-reveal]');
-    var reduced = false;
-    try { reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_error) { reduced = false; }
-    if (reduced || !('IntersectionObserver' in global)) {
+    if ((revealMedia && revealMedia.matches) || !('IntersectionObserver' in global)) {
       items.forEach(function (node) { node.classList.add('is-revealed'); });
       return;
     }
-    document.documentElement.classList.add('club-reveal-ready');
-    var observer = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add('is-revealed');
-        observer.unobserve(entry.target);
-      });
-    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
-    function watch(node) {
-      if (node.dataset && node.dataset.revealReady) return;
-      if (node.dataset) { node.dataset.revealReady = '1'; observer.observe(node); }
-      if (node.querySelectorAll) {
-        node.querySelectorAll('[data-reveal]').forEach(function (child) {
-          if (child.dataset.revealReady) return;
-          child.dataset.revealReady = '1';
-          observer.observe(child);
+    var watched = new WeakSet();
+    try {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('is-revealed');
+          observer.unobserve(entry.target);
         });
+      }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+      revealObserver = observer;
+      function watchOne(node) {
+        if (watched.has(node) || node.classList.contains('is-revealed')) return;
+        watched.add(node);
+        observer.observe(node);
       }
-    }
-    items.forEach(watch);
-    // JS 渲染的列表（更新日志、动态面板）会在启动后才插入 [data-reveal]：
-    // 用 MutationObserver 接管后加入的节点，否则它们永远停在透明态。
-    if (!revealWatcher && 'MutationObserver' in global) {
-      revealWatcher = new MutationObserver(function (mutations) {
-        mutations.forEach(function (mutation) {
-          mutation.addedNodes.forEach(function (node) {
-            if (node.nodeType !== 1) return;
-            if (node.hasAttribute && node.hasAttribute('data-reveal')) watch(node);
-            else if (node.querySelectorAll) node.querySelectorAll('[data-reveal]').forEach(function (child) {
-              if (child.dataset.revealReady) return;
-              child.dataset.revealReady = '1';
-              observer.observe(child);
-            });
-          });
+      function watchTree(node) {
+        if (node.nodeType !== 1) return;
+        if (node.hasAttribute && node.hasAttribute('data-reveal')) watchOne(node);
+        if (node.querySelectorAll) node.querySelectorAll('[data-reveal]').forEach(watchOne);
+      }
+      items.forEach(watchOne);
+      // 空集也要接管之后插入的内容；页面恢复时只观察尚未展示的节点。
+      if ('MutationObserver' in global) {
+        revealWatcher = new MutationObserver(function (mutations) {
+          mutations.forEach(function (mutation) { mutation.addedNodes.forEach(watchTree); });
         });
-      });
-      revealWatcher.observe(document.body, { childList: true, subtree: true });
+        revealWatcher.observe(document.body, { childList: true, subtree: true });
+      }
+      document.documentElement.classList.add('club-reveal-ready');
+    } catch (_error) {
+      stopReveal();
+      items.forEach(function (node) { node.classList.add('is-revealed'); });
     }
+  }
+
+  function setupReveal() {
+    if (!revealBound) {
+      revealBound = true;
+      try { revealMedia = window.matchMedia('(prefers-reduced-motion: reduce)'); } catch (_error) { revealMedia = null; }
+      if (revealMedia && revealMedia.addEventListener) revealMedia.addEventListener('change', refreshReveal);
+      else if (revealMedia && revealMedia.addListener) revealMedia.addListener(refreshReveal);
+      window.addEventListener('pagehide', function () { revealSuspended = true; stopReveal(); });
+      window.addEventListener('pageshow', function () { revealSuspended = false; refreshReveal(); });
+    }
+    refreshReveal();
   }
 
   /* ------------------------------------------------------------
@@ -1558,6 +1631,7 @@
 
   function boot() {
     // 主页保留自己的 3D / 滚动样式；只有显式标记 body.club-page 的页面才套用共享外观。
+    markSurface();
     normalizeTopbar();
     mountSiteNav();
     mountLanguageSwitcher();

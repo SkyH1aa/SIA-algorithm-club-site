@@ -6,12 +6,12 @@ import {fileURLToPath} from 'node:url';
 
 const rootPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const source = fs.readFileSync(path.join(rootPath,'public/assistant-launcher.js'),'utf8');
-function fixture({file = false, embedded = false, mobile = false} = {}) {
+function fixture({file = false, embedded = false, mobile = false, directory = false, noticeOpen = false} = {}) {
   const listeners = new Map(), elements = [], messages = [], navigations = [], timers = new Map();
   let id = 0;
   class Element {
     constructor(tag) {
-      this.tagName = tag.toUpperCase(); this.children = []; this.attributes = {}; this.dataset = {}; this.events = new Map(); this.hidden = false; this.inert = false; this.isConnected = true;
+      this.tagName = tag.toUpperCase(); this.children = []; this.attributes = {}; this.dataset = {}; this.events = new Map(); this.hidden = false; this.inert = false; this.isConnected = true; this.style = {};
       const classes = new Set();
       this.classList = {add:(...values) => values.forEach(value => classes.add(value)),remove:(...values) => values.forEach(value => classes.delete(value)),contains:value => classes.has(value),toggle:(value,on = !classes.has(value)) => on ? classes.add(value) : classes.delete(value)};
       if (tag === 'iframe') this.contentWindow = {postMessage:(message,origin) => messages.push({message,origin})};
@@ -29,6 +29,11 @@ function fixture({file = false, embedded = false, mobile = false} = {}) {
   document.head = new Element('head'); document.body = new Element('body'); document.documentElement = new Element('html'); document.documentElement.lang = 'zh-CN'; document.documentElement.dataset.theme = 'dark';
   document.activeElement = document.body;
   const host = new Element('main'); document.body.append(host);
+  if (directory) document.body.classList.add('features-directory');
+  const notice = new Element('div'); notice.id = 'pcTipModal';
+  notice.getBoundingClientRect = () => ({top:650, height:170});
+  if (noticeOpen) notice.classList.add('is-open');
+  document.body.append(notice);
   const location = {protocol:file ? 'file:' : 'http:',origin:file ? 'null' : 'http://localhost:4193',pathname:file ? '/D:/site/public/guide.html' : '/project/public/guide.html',assign:url => navigations.push(url)};
   const window = {addEventListener:(type,listener) => listeners.set(type,[...(listeners.get(type)||[]),listener])};
   window.parent = embedded ? {} : window;
@@ -80,6 +85,16 @@ const css = fs.readFileSync(path.join(rootPath, 'public/assistant-launcher.css')
 assert.match(css, /is-expanded \.club-assistant-panel \{[^}]*width: 50vw;[^}]*height: 50vh;/s, 'expanded panel uses half the viewport width and height');
 assert.match(css, /is-expanded \.club-assistant-panel \{[^}]*inset: 25vh auto auto 25vw !important;/s, 'expanded panel is centered at quarter-screen size');
 const modal = fixture({mobile:true}); modal.window.ClubAssistant.open(); assert.equal(modal.host.inert,true); modal.window.ClubAssistant.close(); assert.equal(modal.host.inert,false);
+const noticeFixture = fixture({mobile:true, noticeOpen:true});
+const noticeBall = noticeFixture.elements.find(element => element.className === 'club-assistant-ball');
+assert.equal(Number.parseInt(noticeBall.style.inset), 590, 'mobile assistant clears the visible notice by twelve pixels');
+noticeFixture.document.getElementById('pcTipModal').classList.remove('is-open');
+noticeFixture.emit('resize');
+assert.equal(Number.parseInt(noticeBall.style.inset), 692, 'dismissed notice restores the mobile edge position');
+const directoryFixture = fixture({directory:true});
+const directoryBall = directoryFixture.elements.find(element => element.className === 'club-assistant-ball');
+assert.match(directoryBall.style.inset, /686px auto auto 958px/, 'directory assistant docks at the viewport edge');
+assert.match(css, /body\.features-directory main\s*\{\s*padding-right: 88px;/, 'directory reserves a lane outside content for the assistant');
 const nested = fixture({embedded:true}); assert.equal(nested.window.ClubAssistant,undefined,'nested frames never mount launcher');
 const pages = fs.readdirSync(path.join(rootPath,'public')).filter(name => name.endsWith('.html') && name !== 'assistant.html');
 for (const name of pages) {

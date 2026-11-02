@@ -1,0 +1,36 @@
+{
+  "scope": "Current premium frontend, foreground homepage steady-state observation; not affected-device acceptance or a GPU benchmark",
+  "url": "http://127.0.0.1:4186/index.html",
+  "startedAt": "2026-11-01T16:28:16.743Z",
+  "viewport": {"width":1440,"height":900},
+  "theme":"dark",
+  "chapter":"home",
+  "requestedWindowMs":330000,
+  "actualWindowMs":330002.5,
+  "elapsedAtReadMs":341493.6,
+  "finished":true,
+  "frames":79153,
+  "sampleEveryNFrames":30,
+  "sampleCount":2638,
+  "sampledFrameIntervalMs":{"p50":4.2,"p95":4.3,"p99":4.4,"max":6.6},
+  "longTasksObservedDuringWindow":[],
+  "hiddenEvents":0,
+  "quality":{"particleCount":1536,"pixelRatio":1.15,"postprocessing":false,"tier":"high"},
+  "canvasAtEnd":[
+    {"id":"particleCanvas","width":300,"height":150,"clientWidth":1430,"clientHeight":900},
+    {"id":"algorithmScene","width":1440,"height":900,"clientWidth":1430,"clientHeight":900},
+    {"id":"shaderField","width":1440,"height":900,"clientWidth":1430,"clientHeight":900},
+    {"id":"chapterParticleCanvas","width":2160,"height":1350,"clientWidth":1440,"clientHeight":900}
+  ],
+  "navigation":{"domContentLoadedMs":570,"loadMs":696.7},
+  "runtime":"ZCode 3.16.3 / Chromium 146.0.7680.80 / Electron 41.0.3 / Windows x64",
+  "method":"requestAnimationFrame intervals, every 30th interval retained; PerformanceObserver longtask installed at sample start. Scene canvases confirmed is-live and visually rendered. No navigation or theme/viewport change during the window.",
+  "limitations":[
+    "Frame callback intervals are not GPU presentation times, device responsiveness, or end-to-end input latency.",
+    "Only every 30th interval is stored; maximum is sampled maximum, not maximum of every frame.",
+    "Long-task observation starts after initial navigation and cannot characterize shader startup blocking.",
+    "The original affected device was unavailable; its five-minute lag has not been independently reproduced or cleared.",
+    "No same-device pre-upgrade baseline was measured in this round; this does not prove a relative speedup.",
+    "Quality API remains high. Actual algorithm and field buffers are 1440x900; API pixelRatio must not be presented as the measured canvas ratio."
+  ]
+}

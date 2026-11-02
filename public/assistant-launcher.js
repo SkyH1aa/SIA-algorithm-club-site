@@ -58,8 +58,14 @@
   }
   function applyBall() {
     if (!ball) return;
-    const position = clampBall(ballPosition || defaultBall());
-    ballPosition = position;
+    const docked = document.body.classList.contains('features-directory');
+    const position = clampBall(mobile.matches || docked ? defaultBall() : (ballPosition || defaultBall()));
+    const notice = document.getElementById('pcTipModal');
+    if (mobile.matches && notice?.classList.contains('is-open')) {
+      const rect = notice.getBoundingClientRect?.();
+      if (rect?.height > 0) position.y = Math.max(6, rect.top - ballSize() - BALL_GAP);
+    }
+    if (!mobile.matches && !docked) ballPosition = position;
     if (!ball.style) return;
     ball.style.inset = `${Math.round(position.y)}px auto auto ${Math.round(position.x)}px`;
   }
@@ -149,7 +155,7 @@
   }
 
   function dragBall(event) {
-    if (mobile.matches) return;
+    if (mobile.matches || document.body.classList.contains('features-directory')) return;
     beginDrag(event, ball, {
       measure: () => clampBall(ballPosition || defaultBall()),
       apply: (dx, dy, origin) => { ballPosition = clampBall({x:origin.x + dx, y:origin.y + dy}); applyBall(); },
@@ -294,7 +300,9 @@
   }
   function mount() {
     if (document.getElementById('club-assistant')) return;
-    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = new URL('assistant-launcher.css',base).href; document.head.appendChild(css);
+    const cssURL = new URL('assistant-launcher.css',base);
+    cssURL.search = new URL(scriptURL).search;
+    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = cssURL.href; document.head.appendChild(css);
     root = document.createElement('div'); root.id = 'club-assistant';
     if (/\/(?:platformer|snake|tetris)\.html$/i.test(location.pathname)) root.classList.add('club-assistant-game');
     ball = button('club-assistant-ball','');
@@ -330,6 +338,14 @@
     ballPosition = clampBall(readStored(BALL_KEY) || defaultBall());
     panelPosition = readStored(PANEL_KEY);
     applyBall();
+    const notice = document.getElementById('pcTipModal');
+    if (notice && typeof MutationObserver === 'function') {
+      const noticeObserver = new MutationObserver(applyBall);
+      const observeNotice = () => noticeObserver.observe(notice, {attributes:true, attributeFilter:['class','aria-hidden']});
+      observeNotice();
+      window.addEventListener('pagehide', () => noticeObserver.disconnect());
+      window.addEventListener('pageshow', () => { observeNotice(); applyBall(); });
+    }
     if (panelPosition) applyPanel();
 
     panel.addEventListener('keydown',event => {

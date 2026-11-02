@@ -1,0 +1,21 @@
+{
+  "status": "diagnostic-only; replaced by isolated final sample",
+  "startedAt": "2026-11-02T01:32:41.155Z",
+  "finishedAt": "2026-11-02T01:38:29.401Z",
+  "requestedDurationMs": 330000,
+  "actualDurationMs": 348241.50000000076,
+  "frames": 19117,
+  "sampleCount": 637,
+  "sampleEveryFrames": 30,
+  "sampleIntervalMs": {"p50": 4.2, "p95": 8.3, "p99": 8.5, "max": 10459.1},
+  "hiddenEvents": 0,
+  "longTasksMs": [294,407,52,50,80,422,51],
+  "phases": [
+    {"name":"settle-and-idle","startMs":0.1},
+    {"name":"real-pointer-movement","startMs":41507.1},
+    {"name":"rapid-chapters","startMs":111772.9}
+  ],
+  "viewport": [1440,900],
+  "canvasBacking": {"algorithmScene":[1655,1035],"shaderField":[1655,1035],"chapterParticleCanvas":[2160,1350]},
+  "limitations": ["Concurrent browser agents and foreground contention; cannot certify responsiveness from this sample.","RAF callback intervals are not GPU presentation times.","Final CSS revisions were not all loaded; this is not final implementation acceptance."]
+}
