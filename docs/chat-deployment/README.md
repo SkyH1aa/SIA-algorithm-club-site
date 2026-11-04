@@ -253,6 +253,16 @@ JSON 必须是对象，未知键拒绝。只有 enabled 可以有 `budget_tokens
 
 本次新增数据库 `api_protocol` 字段，专用 `claude_thinking` 迁移也必须先运行目录完整 SQL，再部署新版 `chat-dashboard-index.ts`，最后发布管理页与成员页静态资源（包括 file bundle 和 i18n）。只更新前端会导致旧后端拒绝新字段；只更新函数而未运行 SQL 会导致模型读取失败。`chat-api-proxy` 原生转发行为未改变，仅因本次 thinking 字段不必重部署代理。
 
+## 对外代理模型发现更新
+
+此项升级必须按 **完整 Chat SQL → 两个 Edge 函数 `chat` 与 `chat-api-proxy` → 前端** 的顺序进行，不适用上文仅升级 usage90day 的单函数例外。先暂停新请求并等待在途请求结束；执行完整 `supabase/club-chat-schema.sql` 或其经同步核对的目录副本之一，再分别全文部署两个函数，最后发布管理前端。维护者在网页粘贴前须用项目构建流程同步并核对 SQL 副本与两个 standalone bundle 已含本功能；本次 mock 和文档修改不会自动生成这些副本，也没有执行线上部署。
+
+在 Chat 管理页创建或编辑对外代理路由时，在“可发现模型 ID”中每行填写一个供应商实际支持的 ID，保存路由并创建或安全分发其一次明文 `cap_` 访问密钥。`exposed_model_ids` 最多 100 项，每项 1–200 字符，匹配 `^[A-Za-z0-9][A-Za-z0-9._:/-]*$`，完全相同的重复项会拒绝。新建省略时为空，旧客户端更新省略时保留原值，提交空数组可清空；更新须使用当前 `expected_version`。
+
+使用该路由的 OpenAI 客户端将 baseURL 配到 `<路由UUID>/v1`，`models.list()` 访问 `GET <路由UUID>/v1/models`。也可直接请求该地址，使用绑定此路由的 `Authorization: Bearer cap_...` 或 `x-api-key: cap_...`；两者同时提供时必须一致。key 和路由必须启用、未撤销。返回 OpenAI 风格的 `{object:"list",data:[{id,object:"model",created:0,owned_by:"club"}]}`；没有配置时返回空 `data`。只返回管理员配置，不访问上游，也不是 Anthropic 原生列表格式。
+
+这只是发现列表，不是生成接口的模型白名单。模型 ID 和具体协议是否真正可用仍须向供应商确认；已有 Responses、Messages 和 Chat Completions 调用行为不因此改变。保存和查询列表不会调用供应商；真实生成测试可能收费，须先获得单独授权。
+
 ## 对外代理
 
 路由中填供应商 HTTPS 版本根地址（例如 `https://api.anthropic.com/v1`）及 Secret 引用名。对外使用以下接口，模型 ID 和请求格式由客户端按原生协议提供：

@@ -511,6 +511,25 @@ try {
     conflict=true; await expectStatus({...save,id:PID,expected_version:1},409);
     assert.equal(upstreamBodies.length,0);
   });
+  await test('proxy exposed model IDs validate without normalization before RPC', async () => {
+    const save = { action: 'admin_proxy_save', id: null, name: 'proxy', base_url: 'https://provider.example.com/v1', secret_name: 'CHAT_KEY_MOCK', enabled: true, expected_version: 0 };
+    for (const ids of [[], ['A', 'a', 'openai/gpt-4.1:latest', 'a_b-c'], ['x'.repeat(200)], Array.from({ length: 100 }, (_, i) => `model-${i}`)]) {
+      const response = await expectStatus({ ...save, exposed_model_ids: ids }, 200);
+      assert.deepEqual((await response.json()).route.exposed_model_ids, ids);
+      assert.deepEqual((rpcCalls.at(-1)!.body.p_data as Row).exposed_model_ids, ids);
+    }
+    await expectStatus({ ...save, id: PID, expected_version: 1 }, 200);
+    assert.equal(Object.hasOwn(rpcCalls.at(-1)!.body.p_data as Row, 'exposed_model_ids'), false);
+    const count = rpcCalls.length;
+    for (const ids of [null, {}, 'model', 1, [null], [1], [true], [''], ['-model'], [' model'], ['model '], ['model\n'], ['é'], ['x'.repeat(201)], ['same', 'same'], Array.from({ length: 101 }, (_, i) => `model-${i}`)]) {
+      await expectStatus({ ...save, exposed_model_ids: ids }, 400);
+    }
+    assert.equal(rpcCalls.length, count);
+    await expectStatus({ action: 'admin_proxy_route_state', id: PID, enabled: true, expected_version: 1, exposed_model_ids: [] }, 400);
+    admin = false;
+    await expectStatus({ ...save, exposed_model_ids: ['model'] }, 403);
+    assert.equal(rpcCalls.length, count);
+  });
   await test('hard-delete actions authenticate and recheck dynamic admin without RPC', async () => {
     for (const [action, id] of [['admin_proxy_route_hard_delete', PID], ['admin_proxy_key_hard_delete', MID]]) {
       const body = { action, id, expected_version: 1 };

@@ -1,5 +1,18 @@
 [
   {
+    "date": "2026-11-04",
+    "title": "社团代理支持模型列表发现",
+    "enTitle": "Club proxy model discovery",
+    "items": [
+      "管理员可为每条社团代理路由配置可发现的上游模型 ID；Agent 等兼容客户端可使用路由访问密钥拉取模型列表。",
+      "模型列表仅用于发现，不限制生成请求；空列表表示未配置可发现模型，原有代理、密钥权限和转发行为保持不变。"
+    ],
+    "enItems": [
+      "Administrators can configure discoverable upstream model IDs for each club proxy route; compatible clients can fetch the list with a route access key.",
+      "The list is for discovery only and does not restrict generation; an empty list means no discoverable models are configured. Existing proxy forwarding and access controls remain intact."
+    ]
+  },
+  {
     "date": "2026-11-02",
     "title": "算法精密展馆：构图、金属与局部玻璃的双主题升级",
     "enTitle": "Precision algorithm gallery: composition, metal and selective glass in both themes",

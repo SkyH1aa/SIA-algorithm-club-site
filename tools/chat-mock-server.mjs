@@ -26,7 +26,7 @@ const ACCOUNTS = {
 const SCENARIOS = ['completed','incomplete','interrupted','failed','slow','cancel','thinking','thinking-only','thinking-interrupted'];
 const PROXY_INPUTS = {
   admin_proxy_list: [],
-  admin_proxy_save: ['id','name','base_url','secret_name','enabled','expected_version'],
+  admin_proxy_save: ['id','name','base_url','secret_name','enabled','expected_version','exposed_model_ids'],
   admin_proxy_route_state: ['id','enabled','expected_version'],
   admin_proxy_route_delete: ['id','expected_version'],
   admin_proxy_route_hard_delete: ['id','expected_version'],
@@ -292,7 +292,11 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
         requireThat(!/(^|\/)(response|models)\/?$/i.test(new URL(config.base_url).pathname),'provider_url');
         const current = payload.id === null ? {version:0} : proxyRow(proxyRoutes,payload.id);
         requireThat(!current.deleted_at,'deleted',409); checkVersion(payload,current);
-        const route = {id:config.id,name:config.name,base_url:config.base_url,secret_name:config.secret_name,enabled:config.enabled,deleted_at:null,version:current.version+1,created_at:current.created_at || timestamp,updated_at:timestamp};
+        const exposed_model_ids = payload.exposed_model_ids === undefined ? current.exposed_model_ids ?? [] : payload.exposed_model_ids;
+        requireThat(Array.isArray(exposed_model_ids) && exposed_model_ids.length <= 100 &&
+          exposed_model_ids.every(id => typeof id === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$(?![\s\S])/.test(id)) &&
+          new Set(exposed_model_ids).size === exposed_model_ids.length);
+        const route = {id:config.id,name:config.name,base_url:config.base_url,secret_name:config.secret_name,enabled:config.enabled,exposed_model_ids:[...exposed_model_ids],deleted_at:null,version:current.version+1,created_at:current.created_at || timestamp,updated_at:timestamp};
         upsert(proxyRoutes,route); return {route};
       }
       case 'admin_proxy_route_state':
@@ -392,11 +396,11 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
   async function proxy(req,res,routeId,protocol) {
     const meta = {mock:true,request_id:randomUUID(),endpoint:'chat-api-proxy',protocol,route_id:routeId,outcome:'received'}; record(meta);
     try {
-      requireThat(req.method === 'POST','method',405);
+      requireThat(req.method === (protocol === 'models' ? 'GET' : 'POST'),'method',405);
       const authorization = req.headers.authorization, nativeKey = req.headers['x-api-key'];
       const bearerKey = typeof authorization === 'string' && /^Bearer cap_[A-Za-z0-9_-]{43}$/.test(authorization) ? authorization.slice(7) : null;
       requireThat(authorization === undefined || bearerKey,'proxy_key',401);
-      requireThat(nativeKey === undefined || (protocol === 'messages' && typeof nativeKey === 'string' && /^cap_[A-Za-z0-9_-]{43}$/.test(nativeKey)),'proxy_key',401);
+      requireThat(nativeKey === undefined || (['messages','models'].includes(protocol) && typeof nativeKey === 'string' && /^cap_[A-Za-z0-9_-]{43}$/.test(nativeKey)),'proxy_key',401);
       requireThat(bearerKey || nativeKey,'proxy_key',401);
       requireThat(!bearerKey || !nativeKey || bearerKey === nativeKey,'proxy_key',401);
       const candidate = digest(bearerKey || nativeKey);
@@ -405,6 +409,11 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
       const route = proxyRoutes.find(item => item.id === routeId);
       requireThat(route && !route.deleted_at,'proxy_key',401);
       requireThat(route.enabled,'route_disabled',403);
+      if (protocol === 'models') {
+        meta.outcome = 'ok';
+        json(res,{object:'list',data:route.exposed_model_ids.map(id => ({id,object:'model',created:0,owned_by:'club'}))});
+        return;
+      }
       // Record only the resolved path; no host, credentials, request body, or upstream fetch.
       meta.upstream_path = new URL(endpointURL(route.base_url,protocol)).pathname;
       if (protocol === 'messages') {
@@ -727,8 +736,8 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
       const pathname = decodeURIComponent(new URL(req.url,origin).pathname);
       if (req.method === 'OPTIONS') { res.writeHead(204,{'allow':'GET, HEAD, POST, OPTIONS'}); res.end(); return; }
       if (pathname === '/') { res.writeHead(302,{location:'/setup'}); res.end(); return; }
-      const proxyPath = pathname.match(/^\/(?:functions\/v1|mock)\/chat-api-proxy\/([0-9a-f-]+)\/v1\/(responses|messages|message|chat\/completions)$/i);
-      if (proxyPath && uuid(proxyPath[1])) { await proxy(req,res,proxyPath[1],endpointProtocol(proxyPath[2])); return; }
+      const proxyPath = pathname.match(/^\/(?:functions\/v1|mock)\/chat-api-proxy\/([0-9a-f-]+)\/v1\/(responses|messages|message|chat\/completions|models)$/i);
+      if (proxyPath && uuid(proxyPath[1])) { await proxy(req,res,proxyPath[1],proxyPath[2].toLowerCase() === 'models' ? 'models' : endpointProtocol(proxyPath[2])); return; }
       if (/^\/(?:functions\/v1|mock)\/chat-api-proxy(?:\/|$)/.test(pathname)) throw new MockError('not_found',404);
       if (pathname === '/mock/chat') { await chat(req,res); return; }
       if (pathname === '/mock/session' && req.method === 'GET') { json(res,publicState()); return; }
@@ -772,6 +781,62 @@ export function createMockServer({testPort = false, now = () => new Date(), usag
   retentionTimer.unref();
   server.on('close',() => { clearInterval(retentionTimer); for (const lease of [...leases.values(),...proxyLeases.values()]) lease.cancel(); });
   return server;
+}
+
+async function discoverySelfTest() {
+  const clock = new Date('2026-10-18T12:34:56Z');
+  const server = createMockServer({testPort:true,now:() => clock});
+  await new Promise((resolve,reject) => { server.once('error',reject); server.listen(0,'127.0.0.1',resolve); });
+  try {
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const local = (resource,options) => { const url = new URL(resource,base); assert.equal(url.origin,base); return fetch(url,options); };
+    const setup = await (await local('/mock/setup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({account:'admin',scenario:'completed',theme:'dark'})})).json();
+    const post = payload => local('/mock/chat',{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${setup.session.access_token}`},body:JSON.stringify(payload)});
+    const input = {action:'admin_proxy_save',id:null,name:'discovery',base_url:'https://mock-provider.example.com/v1',secret_name:'CHAT_KEY_MOCK',enabled:true,expected_version:0};
+    let route = (await (await post(input)).json()).route;
+    assert.deepEqual(route.exposed_model_ids,[]);
+    const issued = await (await post({action:'admin_proxy_key_create',route_id:route.id,label:'discovery'})).json();
+    const models = (id = route.id,headers = {authorization:`Bearer ${issued.api_key}`},prefix = '/functions/v1') => local(`${prefix}/chat-api-proxy/${id}/v1/models`,{headers});
+    let response = await models();
+    assert.equal(response.status,200); assert.deepEqual(await response.json(),{object:'list',data:[]});
+    const ids = ['a','A','vendor/model:1.0-_','x'.repeat(200)];
+    route = (await (await post({...input,id:route.id,expected_version:route.version,exposed_model_ids:ids})).json()).route;
+    assert.deepEqual(route.exposed_model_ids,ids);
+    route = (await (await post({...input,id:route.id,expected_version:route.version})).json()).route;
+    assert.deepEqual(route.exposed_model_ids,ids,'old client updates preserve the list');
+    response = await models(route.id,{'x-api-key':issued.api_key},'/mock');
+    assert.equal(response.status,200);
+    assert.deepEqual(await response.json(),{object:'list',data:ids.map(id => ({id,object:'model',created:0,owned_by:'club'}))});
+    assert.equal((await models(route.id,{})).status,401);
+    assert.equal((await models(route.id,{authorization:'Bearer cap_'+'x'.repeat(43)})).status,401);
+    assert.equal((await models(route.id,{authorization:`Bearer ${issued.api_key}`,'x-api-key':'cap_'+'x'.repeat(43)})).status,401);
+    const other = (await (await post({...input,name:'other',exposed_model_ids:['other']})).json()).route;
+    assert.equal((await models(other.id)).status,401,'keys are route-bound');
+    const max = Array.from({length:100},(_,index) => `model-${index}`);
+    route = (await (await post({...input,id:route.id,expected_version:route.version,exposed_model_ids:max})).json()).route;
+    assert.deepEqual(route.exposed_model_ids,max);
+    const invalid = [null,{},'model',Array(101).fill('a'),[''],['x'.repeat(201)],[' a'],['a '],['a\n'],['_a'],['a?b'],[1],['same','same']];
+    for (const exposed_model_ids of invalid) {
+      assert.equal((await post({...input,exposed_model_ids})).status,400);
+      assert.equal((await post({...input,id:route.id,expected_version:route.version,exposed_model_ids})).status,400);
+      const stored = (await (await post({action:'admin_proxy_list'})).json()).routes.find(item => item.id === route.id);
+      assert.deepEqual(stored,route,'invalid saves must not mutate route or version');
+    }
+    const generation = await local(`/functions/v1/chat-api-proxy/${route.id}/v1/responses`,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${issued.api_key}`},body:JSON.stringify({model:'not-in-list',input:'fixture'})});
+    assert.equal(generation.status,200); assert.equal((await generation.json()).model,'not-in-list');
+    let key = (await (await post({action:'admin_proxy_key_state',id:issued.key.id,enabled:false,revoked:false,expected_version:1})).json()).key;
+    assert.equal((await models()).status,401);
+    key = (await (await post({action:'admin_proxy_key_state',id:key.id,enabled:true,revoked:false,expected_version:key.version})).json()).key;
+    route = (await (await post({action:'admin_proxy_route_state',id:route.id,enabled:false,expected_version:route.version})).json()).route;
+    assert.equal((await models()).status,403);
+    route = (await (await post({action:'admin_proxy_route_state',id:route.id,enabled:true,expected_version:route.version})).json()).route;
+    key = (await (await post({action:'admin_proxy_key_state',id:key.id,enabled:false,revoked:true,expected_version:key.version})).json()).key;
+    assert.equal((await models()).status,401);
+    const fresh = await (await post({action:'admin_proxy_key_create',route_id:route.id,label:'fresh'})).json();
+    await post({action:'admin_proxy_route_delete',id:route.id,expected_version:route.version});
+    assert.equal((await models(route.id,{authorization:`Bearer ${fresh.api_key}`})).status,401);
+    console.log('Chat model discovery self-test passed: validation, preservation, empty and populated lists, auth, route/key states and non-allowlist behavior; loopback only.');
+  } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
 }
 
 async function usageSelfTest() {
@@ -836,6 +901,7 @@ async function usageSelfTest() {
 }
 
 async function selfTest() {
+  await discoverySelfTest();
   await usageSelfTest();
   const providerBase = 'https://mock-provider.example.com';
   for (const [suffix,protocol] of [['','responses'],['/v1','responses'],['/responses','responses'],['/messages','messages'],['/message','messages'],['/chat/completions','chat-completions']]) {
@@ -1162,7 +1228,7 @@ async function selfTest() {
     const routeInput = {action:'admin_proxy_save',id:null,name:'MOCK external',base_url:'https://mock-provider.example.com/v1',secret_name:'CHAT_KEY_MOCK_PROXY',enabled:true,expected_version:0};
     for (const patch of [{expected_version:1},{secret_name:'sk-native'},{enabled:'true'},{base_url:'https://mock-provider.example.com/v1/response'}]) assert.ok((await post({...routeInput,...patch})).status >= 400);
     let route = (await (await post(routeInput)).json()).route;
-    assert.deepEqual(Object.keys(route).sort(),['id','name','base_url','secret_name','enabled','deleted_at','version','created_at','updated_at'].sort());
+    assert.deepEqual(Object.keys(route).sort(),['id','name','base_url','secret_name','enabled','exposed_model_ids','deleted_at','version','created_at','updated_at'].sort());
     assert.equal(route.deleted_at,null);
     assert.equal(route.version,1);
     assert.equal((await post({...routeInput,id:route.id,expected_version:0})).status,400);
@@ -1175,7 +1241,8 @@ async function selfTest() {
     const proxyRequest = (payload = {model:'client-model-unchanged',input:'mock only'}, apiKey = issued.api_key, resource = endpoint, options = {}) => localFetch(base+resource,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${apiKey}`},body:JSON.stringify(payload),...options});
     assert.equal((await proxyRequest(undefined,'cap_'+'x'.repeat(43))).status,401);
     assert.equal((await proxyRequest(undefined,state.session.access_token)).status,401);
-    for (const suffix of ['models','responses/id','response','messages/id','chat/completions/id','v1/responses']) assert.equal((await proxyRequest(undefined,issued.api_key,endpoint.replace(/responses$/,suffix))).status,404);
+    for (const suffix of ['responses/id','response','messages/id','chat/completions/id','v1/responses']) assert.equal((await proxyRequest(undefined,issued.api_key,endpoint.replace(/responses$/,suffix))).status,404);
+    assert.equal((await proxyRequest(undefined,issued.api_key,endpoint.replace(/responses$/,'models'))).status,405);
     assert.equal((await localFetch(base+endpoint)).status,405);
     let proxyResult = await (await proxyRequest()).json(); assert.equal(proxyResult.model,'client-model-unchanged');
     assert.equal((await proxyRequest(undefined,issued.api_key,endpoint.replace('/functions/v1/','/mock/'))).status,200);

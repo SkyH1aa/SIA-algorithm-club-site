@@ -1692,8 +1692,14 @@ class ProxyError extends Error {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ROUTE_FIELDS = 'id,name,base_url,secret_name,enabled,deleted_at,version,created_at,updated_at';
 const KEY_FIELDS = 'id,route_id,label,key_prefix,key_last4,enabled,revoked_at,version,created_at';
-type ProxyEndpoint = 'responses' | 'messages' | 'chat/completions';
+type ProxyEndpoint = 'responses' | 'messages' | 'chat/completions' | 'models';
 function proxyAllowedHeaders(endpoint: ProxyEndpoint): string[] {
+  if (endpoint === 'models') return [
+    'authorization', 'x-api-key', 'content-type', 'openai-beta', 'anthropic-version', 'anthropic-beta',
+    'anthropic-dangerous-direct-browser-access', 'x-stainless-lang', 'x-stainless-package-version',
+    'x-stainless-os', 'x-stainless-arch', 'x-stainless-runtime', 'x-stainless-runtime-version',
+    'x-stainless-retry-count', 'x-stainless-timeout', 'x-app', 'user-agent'
+  ];
   return endpoint === 'messages'
     ? ['authorization', 'content-type', 'x-api-key', 'anthropic-version', 'anthropic-beta']
     : ['authorization', 'content-type', 'openai-beta'];
@@ -1704,7 +1710,7 @@ function proxyKey(request: Request, endpoint: ProxyEndpoint): string {
   const bearer = authorization?.match(/^Bearer (cap_[A-Za-z0-9_-]{43})$/)?.[1];
   // A second credential must be valid and identical; never silently prefer one.
   if ((authorization !== null && !bearer) || (apiKey !== null &&
-      (endpoint !== 'messages' || !/^cap_[A-Za-z0-9_-]{43}$/.test(apiKey))) ||
+      ((endpoint !== 'messages' && endpoint !== 'models') || !/^cap_[A-Za-z0-9_-]{43}$/.test(apiKey))) ||
       (bearer && apiKey !== null && bearer !== apiKey) || (!bearer && apiKey === null)) {
     throw new ProxyError('invalid_key', 401);
   }
@@ -2984,6 +2990,10 @@ async function proxyAdmin(request: Request, action: string, payload: Json): Prom
       if (typeof data.enabled !== 'boolean') throw new HttpError('input', 400);
     }
     if (action === 'admin_proxy_save') {
+      if ('exposed_model_ids' in data && (!Array.isArray(data.exposed_model_ids)
+        || data.exposed_model_ids.length > 100
+        || data.exposed_model_ids.some((id: unknown) => typeof id !== 'string' || id.length > 200 || !/^[A-Za-z0-9]/.test(id) || /[^A-Za-z0-9._:/-]/.test(id))
+        || new Set(data.exposed_model_ids).size !== data.exposed_model_ids.length)) throw new HttpError('input', 400);
       data.name = text(data.name, 80, true);
       data.base_url = await proxyBase(data.base_url);
       data.secret_name = proxySecret(data.secret_name);
@@ -3122,7 +3132,7 @@ async function main(request: Request, payload: Json): Promise<Response> {
     assistant_admin_publish: ['expected_version'], assistant_admin_rollback: ['expected_version','release_id'],
     assistant_admin_import: ['expected_version','documents'],
     admin_proxy_list: [],
-    admin_proxy_save: ['id', 'name', 'base_url', 'secret_name', 'enabled', 'expected_version'],
+    admin_proxy_save: ['id', 'name', 'base_url', 'secret_name', 'enabled', 'expected_version', 'exposed_model_ids'],
     admin_proxy_route_state: ['id', 'enabled', 'expected_version'],
     admin_proxy_route_delete: ['id', 'expected_version'],
     admin_proxy_route_hard_delete: ['id', 'expected_version'],

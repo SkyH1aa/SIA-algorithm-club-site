@@ -332,7 +332,7 @@ API action 契约：`quota {}` 仅查询本人；`admin_user_directory {}` 返�
 | action | 请求 | 返回 |
 | --- | --- | --- |
 | `admin_proxy_list` | `{}` | `{routes,keys}` |
-| `admin_proxy_save` | `{id:null或UUID,name,base_url,secret_name,enabled,expected_version:0或n}` | `{route}` |
+| `admin_proxy_save` | `{id:null或UUID,name,base_url,secret_name,enabled,expected_version:0或n,exposed_model_ids?:string[]}` | `{route}` |
 | `admin_proxy_route_state` | `{id,enabled,expected_version}` | `{route}` |
 | `admin_proxy_route_delete` | `{id,expected_version}` | `{route}`；不可逆撤销路由（保留失效记录），同时撤销该路由下的访问密钥 |
 | `admin_proxy_route_hard_delete` | `{id,expected_version}` | `{deleted_route_id}`；仅限已撤销路由，物理删除路由、全部关联密钥和租约 |
@@ -340,7 +340,7 @@ API action 契约：`quota {}` 仅查询本人；`admin_user_directory {}` 返�
 | `admin_proxy_key_state` | `{id,enabled,revoked:boolean,expected_version}` | `{key}` |
 | `admin_proxy_key_hard_delete` | `{id,expected_version}` | `{deleted_key_id}`；仅限已撤销密钥，物理删除密钥和关联租约 |
 
-route 字段包括 `id,name,base_url,secret_name,enabled,deleted_at,version,created_at,updated_at`。安全 key metadata 仅为 `id,route_id,label,key_prefix,key_last4,enabled,revoked_at,version,created_at`，不含 hash 或完整 key。新 route 的 `expected_version` 为 0；更新或彻底删除均带读取时版本，陈旧版本返回 `409 conflict`，刷新核对后再操作。
+route 字段包括 `id,name,base_url,secret_name,enabled,exposed_model_ids,deleted_at,version,created_at,updated_at`。安全 key metadata 仅为 `id,route_id,label,key_prefix,key_last4,enabled,revoked_at,version,created_at`，不含 hash 或完整 key。新 route 的 `expected_version` 为 0；更新或彻底删除均带读取时版本，陈旧版本返回 `409 conflict`，刷新核对后再操作。
 
 撤销路由会保留失效记录，立即停用路由、撤销全部旗下 key、清理活动 lease；撤销不可恢复。管理页为 `deleted_at` 非空的路由及 `revoked_at` 非空的密钥提供“彻底删除”按钮，确认后通过数据库事务实际删除记录，刷新列表也不会再显示。路由彻底删除会一起清除旗下所有密钥及关联租约；单独删除密钥只清除该密钥及其租约。仅停用的记录不符合彻底删除条件，服务端也会拒绝该操作（`409 not_revoked`）。执行完整 SQL、部署函数或打开代理列表均不会自动清除代理路由/密钥；usage 的定时保留任务按第 9 节独立执行。
 
@@ -356,7 +356,17 @@ proxy key 格式为 `cap_` 加 **32 随机字节的 base64url**（43 字符，�
 https://<project-ref>.supabase.co/functions/v1/chat-api-proxy/<route-uuid>/v1
 ```
 
-代理提供三个原生 POST 接口：`<route-base>/v1/responses`、`<route-base>/v1/messages`、`<route-base>/v1/chat/completions`；`<route-base>/v1/message` 规范到 `/v1/messages`。`/models`、`/response` 和 `/responses/<id>` 等路径仍不开放。每种接口均支持 `Authorization: Bearer cap_...`；Messages 还支持 Anthropic SDK 的 `x-api-key: cap_...`，同时携带两种凭证时必须完全一致。客户端 key 仅用于社团代理准入；上游认证始终替换为路由 Secret，不转发客户端 key 或 Supabase 凭证。Messages 默认版本为 `2023-06-01`，支持显式合法日期版本及受限的 `anthropic-beta` 头。代理不把一种原生协议转换成另一种，上游必须实际提供所请求的接口。
+代理提供三个原生 POST 接口：`<route-base>/v1/responses`、`<route-base>/v1/messages`、`<route-base>/v1/chat/completions`；`<route-base>/v1/message` 规范到 `/v1/messages`。另提供 `GET <route-base>/v1/models`，`/response` 和 `/responses/<id>` 等路径仍不开放。各接口均支持 `Authorization: Bearer cap_...`；Messages 和模型列表也支持 `x-api-key: cap_...`，同时携带两种凭证时必须完全一致。客户端 key 仅用于社团代理准入；上游认证始终替换为路由 Secret，不转发客户端 key 或 Supabase 凭证。Messages 默认版本为 `2023-06-01`，支持显式合法日期版本及受限的 `anthropic-beta` 头。代理不把一种原生协议转换成另一种，上游必须实际提供所请求的接口。
+
+### 路由模型发现
+
+在管理页的对外代理路由创建或编辑表单中填写“可发现模型 ID”，每行一个供应商实际支持的 ID，保存后为该路由创建或分发对应 `cap_` 密钥。`exposed_model_ids` 最多 100 项，每项 1–200 字符，必须匹配 `^[A-Za-z0-9][A-Za-z0-9._:/-]*$`，不允许完全相同的重复项（大小写不同为不同 ID）。新路由省略字段为空列表；旧管理客户端更新时省略字段保留原列表，显式提交 `[]` 才清空。更新仍须携带当前 `expected_version`。
+
+OpenAI 兼容客户端的 baseURL 填上面的 `/v1` 地址，调用 `models.list()` 会请求 `GET /v1/models`；直接请求需使用绑定该路由、已启用且未撤销的 `cap_` key。路由必须已启用且未撤销。响应是 OpenAI 风格的 `{object:"list",data:[{id,object:"model",created:0,owned_by:"club"}]}`；空配置返回 `{object:"list",data:[]}`。列表只来自管理员配置，不查询上游，不代表实际可用，也不转换为 Anthropic 原生列表格式。不同客户端的列表格式要求可能不同。
+
+列表是发现信息，**不是生成模型白名单**，未列出的 ID 仍可由生成接口提交。管理员必须先向实际供应商确认 ID 和所需 Responses、Messages 或 Chat Completions 接口能力；列出来不证明任何模型或协议可用。查询列表和保存配置不发起上游请求，真实生成测试可能收费，须另获授权。
+
+此项升级和已有安装均按 **完整 Chat SQL → 两个 Edge 函数 `chat` 与 `chat-api-proxy` → 前端** 执行。Dashboard 手动部署前，维护者须先通过项目构建流程同步 SQL 副本和两个 standalone bundle，并核对它们确实包含本功能；本次文档与 mock 修改不自动更新生成副本，也未执行任何线上操作。旧的 usage90day 单函数例外不适用于此项。
 
 示例使用标准客户端 SDK 的 `responses.create`：
 

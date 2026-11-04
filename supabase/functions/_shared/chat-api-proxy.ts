@@ -5,8 +5,14 @@ export class ProxyError extends Error {
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const ROUTE_FIELDS = 'id,name,base_url,secret_name,enabled,deleted_at,version,created_at,updated_at';
 export const KEY_FIELDS = 'id,route_id,label,key_prefix,key_last4,enabled,revoked_at,version,created_at';
-export type ProxyEndpoint = 'responses' | 'messages' | 'chat/completions';
+export type ProxyEndpoint = 'responses' | 'messages' | 'chat/completions' | 'models';
 export function proxyAllowedHeaders(endpoint: ProxyEndpoint): string[] {
+  if (endpoint === 'models') return [
+    'authorization', 'x-api-key', 'content-type', 'openai-beta', 'anthropic-version', 'anthropic-beta',
+    'anthropic-dangerous-direct-browser-access', 'x-stainless-lang', 'x-stainless-package-version',
+    'x-stainless-os', 'x-stainless-arch', 'x-stainless-runtime', 'x-stainless-runtime-version',
+    'x-stainless-retry-count', 'x-stainless-timeout', 'x-app', 'user-agent'
+  ];
   return endpoint === 'messages'
     ? ['authorization', 'content-type', 'x-api-key', 'anthropic-version', 'anthropic-beta']
     : ['authorization', 'content-type', 'openai-beta'];
@@ -17,7 +23,7 @@ export function proxyKey(request: Request, endpoint: ProxyEndpoint): string {
   const bearer = authorization?.match(/^Bearer (cap_[A-Za-z0-9_-]{43})$/)?.[1];
   // A second credential must be valid and identical; never silently prefer one.
   if ((authorization !== null && !bearer) || (apiKey !== null &&
-      (endpoint !== 'messages' || !/^cap_[A-Za-z0-9_-]{43}$/.test(apiKey))) ||
+      ((endpoint !== 'messages' && endpoint !== 'models') || !/^cap_[A-Za-z0-9_-]{43}$/.test(apiKey))) ||
       (bearer && apiKey !== null && bearer !== apiKey) || (!bearer && apiKey === null)) {
     throw new ProxyError('invalid_key', 401);
   }

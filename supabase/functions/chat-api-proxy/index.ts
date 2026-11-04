@@ -8,8 +8,9 @@ function configuredProxyOrigins(): Set<string> {
 function cors(request?: Request): Headers {
   const origin = request?.headers.get('origin');
   const configured = configuredProxyOrigins();
-  const endpoint = request && /\/v1\/messages?$/.test(new URL(request.url).pathname) ? 'messages' : 'responses';
-  const headers = new Headers({ 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': proxyAllowedHeaders(endpoint).join(', '), 'access-control-max-age': '600', 'cache-control': 'no-store', 'vary': 'Origin' });
+  const path = request ? new URL(request.url).pathname : '';
+  const endpoint = /\/v1\/messages?$/.test(path) ? 'messages' : /\/v1\/models$/.test(path) ? 'models' : 'responses';
+  const headers = new Headers({ 'access-control-allow-methods': endpoint === 'models' ? 'GET, OPTIONS' : 'POST, OPTIONS', 'access-control-allow-headers': proxyAllowedHeaders(endpoint).join(', '), 'access-control-max-age': '600', 'cache-control': 'no-store', 'vary': 'Origin' });
   if (configured.size === 0) headers.set('access-control-allow-origin', '*');
   else if (origin && configured.has(origin)) headers.set('access-control-allow-origin', origin);
   return headers;
@@ -35,11 +36,11 @@ export async function handler(request: Request): Promise<Response> {
   // Match the deployed prefix or local function prefix, never arbitrary suffixes.
   const url = new URL(request.url);
   try { assertProxyOrigin(request); } catch (error) { return failure(error instanceof ProxyError ? error.code : 'cors', error instanceof ProxyError ? error.status : 403, request); }
-  const match = url.pathname.match(/^\/(?:functions\/v1\/)?chat-api-proxy\/([^/]+)\/v1\/(responses|messages|message|chat\/completions)$/);
-  if (!match || !UUID.test(match[1]) || url.search) return failure('path', 404, request);
+  const match = url.pathname.match(/^\/(?:functions\/v1\/)?chat-api-proxy\/([^/]+)\/v1\/(responses|messages|message|chat\/completions|models)$/);
+  if (!match || !UUID.test(match[1]) || url.search || (match[2] === 'models' && url.href.includes('?'))) return failure('path', 404, request);
   const endpoint = (match[2] === 'message' ? 'messages' : match[2]) as ProxyEndpoint;
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(request) });
-  if (request.method !== 'POST') return failure('method', 405, request);
+  if (request.method !== (endpoint === 'models' ? 'GET' : 'POST')) return failure('method', 405, request);
   const controller = new AbortController();
   const requestId = crypto.randomUUID();
   let admitted = false, released = false, ended = false;
@@ -80,10 +81,12 @@ export async function handler(request: Request): Promise<Response> {
     request.signal.addEventListener('abort', abort, { once: true });
     if (request.signal.aborted) abort();
     const key = proxyKey(request, endpoint);
-    if (request.headers.has('content-encoding')) throw new ProxyError('encoding', 415);
-    if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(request.headers.get('content-type') || '')) throw new ProxyError('content_type', 415);
-    const declared = request.headers.get('content-length');
-    if (declared && (!/^\d+$/.test(declared) || Number(declared) > MAX_BYTES)) throw new ProxyError('request_too_large', 413);
+    if (endpoint !== 'models') {
+      if (request.headers.has('content-encoding')) throw new ProxyError('encoding', 415);
+      if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(request.headers.get('content-type') || '')) throw new ProxyError('content_type', 415);
+      const declared = request.headers.get('content-length');
+      if (declared && (!/^\d+$/.test(declared) || Number(declared) > MAX_BYTES)) throw new ProxyError('request_too_large', 413);
+    }
     const digest = await bounded(hashKey(key));
     // Do not cancel admission transport: if timeout races DB commit, its eventual
     // result still triggers release. An unreachable response relies on lease expiry.
@@ -94,6 +97,15 @@ export async function handler(request: Request): Promise<Response> {
     const result = await bounded(admission);
     if (!result.route) throw new ProxyError(result.code === 'busy' ? 'busy' : 'invalid_key', result.code === 'busy' ? 429 : 401);
     const route = result.route as Record<string, unknown>;
+    if (endpoint === 'models') {
+      const ids = route.exposed_model_ids;
+      if (!Array.isArray(ids) || ids.length > 100 || ids.some(id => typeof id !== 'string' || !id)) throw new ProxyError('server_config', 503);
+      const headers = cors(request); headers.set('content-type', 'application/json');
+      // No creation timestamps are stored; zero is a neutral SDK-compatible placeholder.
+      const payload = JSON.stringify({ object: 'list', data: ids.map(id => ({ id, object: 'model', created: 0, owned_by: 'club' })) });
+      finish(); await cleanup();
+      return new Response(payload, { headers });
+    }
     const base = await bounded(proxyBase(route.base_url));
     const secret = Deno.env.get(proxySecret(route.secret_name))!;
     const upstreamHeaders = proxyHeaders(request, secret, endpoint);

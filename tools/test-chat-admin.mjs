@@ -240,7 +240,7 @@ console.log('PASS management 403/session 401 revoke access and clear sensitive s
 const proxyHandlersStart = source.indexOf("$('refreshProxyButton').onclick");
 const proxyHandlersEnd = source.indexOf("$('quotaUserForm').addEventListener");
 run(source.slice(proxyHandlersStart, proxyHandlersEnd));
-const route = {id: '22222222-2222-4222-8222-222222222222', name: '<route>', base_url: 'https://example.com/v1', secret_name: 'CHAT_KEY_TEST', enabled: true, version: 1, created_at: '2026-10-16T00:00:00Z', updated_at: '2026-10-16T00:00:00Z'};
+const route = {id: '22222222-2222-4222-8222-222222222222', name: '<route>', base_url: 'https://example.com/v1', secret_name: 'CHAT_KEY_TEST', exposed_model_ids: ['OpenAI/model-1', 'model:v2'], enabled: true, version: 1, created_at: '2026-10-16T00:00:00Z', updated_at: '2026-10-16T00:00:00Z'};
 const key = {id: '33333333-3333-4333-8333-333333333333', route_id: route.id, label: '<access>', key_prefix: 'test-prefix', key_last4: '1234', enabled: true, revoked_at: null, version: 1, created_at: route.created_at};
 sandbox.routeFixture = route; sandbox.keyFixture = key;
 run("authorized=true;active=null;const proxyRun={epoch,controller:new AbortController()};active=proxyRun");
@@ -249,8 +249,30 @@ await run('loadProxy(proxyRun)');
 assert.deepEqual(calls.at(-1), {action: 'admin_proxy_list'});
 assert.equal(run('JSON.stringify(proxyKeys).includes("MUST_NOT_RETAIN")'), false);
 assert(node('proxyRoutesList').innerHTML.includes('&lt;route&gt;'));
-run('fillProxyRoute(routeFixture)');
+assert(node('proxyRoutesList').innerHTML.includes('OpenAI/model-1, model:v2'));
+run("proxyRoutes=[{...routeFixture,exposed_model_ids:['<img src=x onerror=alert(1)>']}];renderProxy()");
+assert(node('proxyRoutesList').innerHTML.includes('&lt;img src=x onerror=alert(1)&gt;'));
+assert(!node('proxyRoutesList').innerHTML.includes('<img src=x'));
+run('proxyRoutes=[routeFixture];renderProxy();fillProxyRoute(routeFixture)');
+assert.equal(node('proxyModelIds').value, 'OpenAI/model-1\nmodel:v2');
 assert.equal(run('proxyRouteInput().expected_version'), 1);
+node('proxyModelIds').value = '  OpenAI/model-1  \r\n\r\n model:v2 \rmodel:V2\n';
+assert.deepEqual(JSON.parse(run('JSON.stringify(proxyRouteInput().exposed_model_ids)')), ['OpenAI/model-1', 'model:v2', 'model:V2']);
+node('proxyModelIds').value = ' \n\t';
+assert.deepEqual(JSON.parse(run('JSON.stringify(proxyRouteInput().exposed_model_ids)')), []);
+for (const invalid of ['-model', '.model', 'model space', 'model,other', 'm<bad>', 'é', 'a'.repeat(201)]) {
+  node('proxyModelIds').value = invalid;
+  assert.throws(() => run('proxyRouteInput()'), /proxy_model_ids_invalid/);
+}
+node('proxyModelIds').value = 'same\n same ';
+assert.throws(() => run('proxyRouteInput()'), /proxy_model_ids_duplicate/);
+node('proxyModelIds').value = Array.from({length: 100}, (_, i) => `id-${i}`).join('\n');
+assert.equal(run('proxyRouteInput().exposed_model_ids.length'), 100);
+node('proxyModelIds').value += '\nid-100';
+assert.throws(() => run('proxyRouteInput()'), /proxy_model_ids_limit/);
+node('proxyModelIds').value = 'a'.repeat(200) + '\nA._:/-9';
+assert.equal(run('proxyRouteInput().exposed_model_ids[0].length'), 200);
+node('proxyModelIds').value = 'OpenAI/model-1\nmodel:v2';
 for (const url of ['https://example.com/response', 'https://example.com/responses/v1', 'https://example.com/%72esponses', 'https://example.com/v1/messages/extra', 'https://example.com/v1/chat/completions/extra', 'http://example.com/v1', 'https://x:y@example.com/v1', 'https://example.com/v1?q=1', 'https://example.com:8443/v1']) {
   node('proxyBaseUrl').value = url;
   assert.throws(() => run('proxyRouteInput()'), /proxy_url/);
@@ -268,22 +290,28 @@ node('proxySecretName').value = route.secret_name;
 reply('admin_proxy_save', {route: {...route, version: 2}});
 await run("proxyMutation(proxyRun,'admin_proxy_save',proxyRouteInput())");
 assert.equal(calls.at(-1).expected_version, 1);
+assert.deepEqual(calls.at(-1).exposed_model_ids, route.exposed_model_ids);
 assert.equal(run('proxyEditingVersion'), 0);
 assert.equal(node('proxyRouteId').value, '');
+assert.equal(node('proxyModelIds').value, '');
 run('clearProxyRoute()'); node('proxyRouteName').value = 'New'; node('proxyBaseUrl').value = route.base_url; node('proxySecretName').value = route.secret_name;
 assert.equal(run('proxyRouteInput().id'), null);
 assert.equal(run('proxyRouteInput().expected_version'), 0);
+assert.deepEqual(JSON.parse(run('JSON.stringify(proxyRouteInput().exposed_model_ids)')), []);
 reply('admin_proxy_route_state', {route: {...route, enabled: false, version: 3}});
 await run("proxyMutation(proxyRun,'admin_proxy_route_state',{id:routeFixture.id,enabled:false,expected_version:2})");
 assert.equal(run('proxyRoutes[0].enabled'), false);
   run('fillProxyRoute(proxyRoutes[0])');
   reply('admin_proxy_save', {error: 'conflict'}, 409);
-  reply('admin_proxy_list', {routes: [{...route, version: 4, name: 'Server changed'}], keys: [key]});
+  node('proxyModelIds').value = 'unsaved-model';
+  reply('admin_proxy_list', {routes: [{...route, version: 4, name: 'Server changed', exposed_model_ids: ['server/model']}], keys: [key]});
   const writesBefore = calls.filter(item => item.action === 'admin_proxy_save').length;
   await run("proxyMutation(proxyRun,'admin_proxy_save',proxyRouteInput())");
   assert.equal(calls.filter(item => item.action === 'admin_proxy_save').length, writesBefore + 1);
   assert.equal(run('proxyEditingVersion'), 4);
   assert.equal(node('proxyRouteName').value, 'Server changed');
+  assert.equal(node('proxyModelIds').value, 'server/model');
+  assert(node('proxyRoutesList').innerHTML.includes('server/model'));
   assert.equal(run("messages.get('proxyMessage').key"), 'proxyConflict');
 console.log('PASS proxy safe metadata, escaped routes, base/secret validation, create/edit/state and conflict reload without retry');
 
@@ -299,12 +327,14 @@ assert.equal(run('proxyKeys.length'), 2, 'Multiple keys per route must be retain
 node('proxyKeyRoute').value = route.id;
 node('proxyKeyLabel').value = 'unsaved label';
 node('proxyRouteName').value = 'unsaved route';
+node('proxyModelIds').value = 'draft/model\nDraft/model';
 const priorProxyLanguage = node('proxyKeysList').innerHTML;
 language = language === 'en' ? 'zh' : 'en';
 run("setMessage('proxyMessage','proxySaved','success');refreshLocalizedUi()");
 assert.notEqual(node('proxyKeysList').innerHTML, priorProxyLanguage);
 assert.equal(node('proxyKeyLabel').value, 'unsaved label');
 assert.equal(node('proxyRouteName').value, 'unsaved route');
+assert.equal(node('proxyModelIds').value, 'draft/model\nDraft/model');
 assert.equal(node('proxyKeyRoute').value, route.id);
 assert.equal(node('proxyOneTimeKey').textContent, 'MOCK_ONE_TIME_2');
 assert(node('proxyMessage').textContent.startsWith(language + ':'));
@@ -517,6 +547,9 @@ const usedProxyKeys = new Set([...source.matchAll(/['"](proxy[A-Z]\w*)['"]/g)].m
 for (const lang of ['zh', 'en']) {
   const dict = dictionaries[lang].chatAdmin;
   for (const key of usedProxyKeys) assert.equal(typeof dict[key], 'string', `${lang} is missing ${key}`);
+  for (const key of ['proxyModelIds', 'proxyModelIdsHelp', 'proxyModelIdsInvalid', 'proxyModelIdsDuplicate', 'proxyModelIdsLimit']) assert.equal(typeof dict[key], 'string');
+  assert.match(dict.proxyModelIdsHelp, /真实上游模型 ID|actual upstream model ID/);
+  assert.match(dict.proxyModelIdsHelp, /不是请求白名单|not a request allowlist/);
   assert(dict.proxyHardDeleteRouteConfirm.includes('{name}'));
   assert(dict.proxyHardDeleteKeyConfirm.includes('{label}'));
   assert.match(dict.proxyDeleteConfirm, /撤销路由|Revoke route/);
@@ -614,6 +647,25 @@ const translatedCopy = new Map();
       node(id).textContent = sandbox.window.ClubI18n.t(tag[2]);
     }
   };
+  run('authorized=true;active=null;fillProxyRoute(routeFixture)');
+  for (const [value, key] of [['bad id', 'proxyModelIdsInvalid'], ['same\nsame', 'proxyModelIdsDuplicate'], [Array.from({length: 101}, (_, i) => `id-${i}`).join('\n'), 'proxyModelIdsLimit']]) {
+    node('proxyModelIds').value = value;
+    const requestsBefore = calls.length;
+    node('proxyRouteForm').listeners.submit({preventDefault() {}});
+    assert.equal(calls.length, requestsBefore, 'Invalid model IDs must not trigger a save');
+    assert.equal(run("messages.get('proxyMessage').key"), key);
+    for (const lang of ['zh', 'en']) {
+      language = lang;
+      windowListeners.get('club:langchange')();
+      assert.equal(node('proxyMessage').textContent, dictionaries[lang].chatAdmin[key]);
+      assert.equal(node('proxyModelIds').value, value);
+      assert.equal(translatedCopy.get('chatAdmin.proxyModelIdsHelp'), dictionaries[lang].chatAdmin.proxyModelIdsHelp);
+      assert.equal(translatedCopy.get('chatAdmin.proxyModelIds'), dictionaries[lang].chatAdmin.proxyModelIds);
+    }
+  }
+  node('clearProxyRouteButton').onclick();
+  assert.equal(node('proxyModelIds').value, '');
+  assert.equal(node('proxyRouteId').value, '');
   const provider = {id: 'protocol-provider', name: 'protocol-test', label: 'Protocol test', base_url: 'https://example.com/v1/messages', secret_name: 'CHAT_KEY_TEST', auth_header: 'x-api-key', enabled: true};
   const model = {id: 'protocol-model', provider_id: provider.id, model_key: 'test-model', display_name: 'Test model', introduction: 'Keep this draft', context_window: 8192, max_output_tokens: 8192, default_max_output_tokens: 4096, reasoning_efforts: ['low', 'high'], default_reasoning_effort: 'high', preserve_reasoning: true, supports_images: true, supports_pdf: false, enabled: true};
   sandbox.protocolProvider = provider; sandbox.protocolModel = model;

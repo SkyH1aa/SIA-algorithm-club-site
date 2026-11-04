@@ -53,6 +53,12 @@ def main():
             db.execute("create schema auth; create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb default '{}'::jsonb)")
             db.execute('create table club_super_admins(user_id uuid primary key references auth.users(id)); create table club_member_profiles(user_id uuid primary key,username text,member_name text)')
             db.execute(source)
+            # Simulate an existing deployment that predates exposed_model_ids.
+            db.execute('alter table chat_proxy_routes drop column exposed_model_ids')
+            legacy_id = uuid.uuid4()
+            db.execute("insert into chat_proxy_routes(id,name,base_url,secret_name) values(%s,'legacy','https://provider.example/v1','CHAT_KEY_TEST')", (legacy_id,))
+            db.execute(source)
+            assert db.execute('select exposed_model_ids from chat_proxy_routes where id=%s', (legacy_id,)).fetchone()[0] == []
             db.execute(source)
             actor, member = uuid.uuid4(), uuid.uuid4()
             db.execute('insert into auth.users(id) values (%s),(%s)', (actor, member))
@@ -81,7 +87,39 @@ def main():
             except psycopg.errors.InsufficientPrivilege:
                 pass
             r = manage('admin_proxy_save', create)['route']
+            assert r['exposed_model_ids'] == []
             rid = uuid.UUID(r['id'])
+            ids = ['A', 'a', 'openai/gpt-4.1:latest', 'a_b-c', 'x' * 200]
+            configured = manage('admin_proxy_save', {**create, 'id': str(legacy_id), 'expected_version': 1, 'exposed_model_ids': ids})['route']
+            assert configured['exposed_model_ids'] == ids and configured['version'] == 2
+            assert manage('admin_proxy_save', {**create, 'id': str(legacy_id), 'expected_version': 1, 'exposed_model_ids': []}) == {'code': 'conflict'}
+            preserved = manage('admin_proxy_save', {**create, 'id': str(legacy_id), 'expected_version': 2})['route']
+            assert preserved['exposed_model_ids'] == ids and preserved['version'] == 3
+            assert next(route for route in manage('admin_proxy_list', {})['routes'] if route['id'] == str(legacy_id))['exposed_model_ids'] == ids
+            manage('admin_proxy_key_create', dict(route_id=str(legacy_id), label='legacy', key_hash='d'*64, key_prefix='cap_test1234', key_last4='1234'))
+            legacy_req = uuid.uuid4()
+            assert rpc('chat_proxy_admit', legacy_id, 'd'*64, legacy_req, 2, 20, 1000)['route']['exposed_model_ids'] == ids
+            rpc('chat_proxy_release', legacy_req)
+            state = manage('admin_proxy_route_state', dict(id=str(legacy_id), enabled=True, expected_version=3))['route']
+            assert state['exposed_model_ids'] == ids and state['version'] == 4
+            db.execute(source)
+            assert db.execute('select exposed_model_ids from chat_proxy_routes where id=%s', (legacy_id,)).fetchone()[0] == ids
+            max_ids = [f'model-{i}' for i in range(100)]
+            max_route = manage('admin_proxy_save', {**create, 'exposed_model_ids': max_ids})['route']
+            assert max_route['exposed_model_ids'] == max_ids
+            for invalid in (None, {}, 'model', 1, [None], [1], [True], [''], ['-model'], [' model'], ['model '], ['model\n'], ['é'], ['x' * 201], ['same', 'same'], [f'model-{i}' for i in range(101)]):
+                try:
+                    manage('admin_proxy_save', {**create, 'exposed_model_ids': invalid})
+                    raise AssertionError(f'invalid exposed_model_ids accepted: {invalid!r}')
+                except psycopg.errors.RaiseException as error:
+                    assert 'invalid data' in str(error)
+            cleared = manage('admin_proxy_save', {**create, 'id': str(legacy_id), 'expected_version': 4, 'exposed_model_ids': []})['route']
+            assert cleared['exposed_model_ids'] == [] and cleared['version'] == 5
+            for fixture in (cleared, max_route):
+                deleted_fixture = manage('admin_proxy_route_delete', dict(id=fixture['id'], expected_version=fixture['version']))['route']
+                assert manage('admin_proxy_route_hard_delete', dict(id=fixture['id'], expected_version=deleted_fixture['version'])) == {'deleted_route_id': fixture['id']}
+            remaining = manage('admin_proxy_list', {})
+            assert [route['id'] for route in remaining['routes']] == [str(rid)] and remaining['keys'] == []
             data = dict(route_id=str(rid), label='test', key_hash='a'*64, key_prefix='cap_test1234', key_last4='1234')
             k = manage('admin_proxy_key_create', data)['key']
             assert set(k) == set('id route_id label key_prefix key_last4 enabled revoked_at version created_at'.split())

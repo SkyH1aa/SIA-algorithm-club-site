@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>把算法训练做成作品 · 算法社 2026 招新</title>
+<style>
+@import url("../../public/assets/fonts/misans/MiSansVF.min.css");
+@font-face{font-family:'Inter VF';src:url('../../public/assets/fonts/inter/inter-latin-wght-normal.woff2') format('woff2');font-weight:100 900;font-display:swap}
+@font-face{font-family:'JBM';src:url('../../public/assets/fonts/jetbrains-mono/jetbrains-mono-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'JBM';src:url('../../public/assets/fonts/jetbrains-mono/jetbrains-mono-latin-700-normal.woff2') format('woff2');font-weight:700;font-display:swap}
+
+:root{
+  --paper:#fbfaf7; --ink:#1b1f24; --ink-2:#3d454e; --muted:#6b7480;
+  --line:#e2ded6; --cyan:#0e7c8c; --cyan-bg:#eaf6f7;
+  --orange:#b8461f; --card:#ffffff;
+  --sans:'Inter VF','MiSans VF','MiSans','PingFang SC','HarmonyOS Sans SC','Microsoft YaHei',sans-serif;
+  --mono:'JBM',ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#e9e6df;
+  font-family:var(--sans);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  padding:40px 16px 80px;
+  display:flex;flex-direction:column;align-items:center;gap:0;
+}
+.toolbar{
+  width:100%;max-width:760px;display:flex;align-items:center;justify-content:space-between;gap:16px;
+  margin-bottom:18px;font-size:13px;color:#5c646e;
+}
+.toolbar .label{font-family:var(--mono);letter-spacing:.12em;font-size:11px;text-transform:uppercase}
+.toolbar .hint{color:#8b939c}
+.article{
+  width:100%;max-width:760px;background:var(--paper);border:1px solid var(--line);
+  border-radius:4px;overflow:hidden;box-shadow:0 20px 60px rgba(30,35,40,.10);
+}
+.cover{display:block;width:100%;height:auto;background:#0b1016}
+.inner{padding:44px 52px 56px}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan);margin-bottom:16px}
+h1{font-size:34px;line-height:1.24;font-weight:760;letter-spacing:-.01em;margin-bottom:18px}
+h1 em{font-style:normal;color:var(--cyan)}
+.dek{font-size:16px;line-height:1.75;color:var(--ink-2);padding-bottom:26px;border-bottom:1px solid var(--line);margin-bottom:34px}
+h2{font-size:23px;line-height:1.35;font-weight:740;margin:42px 0 16px;letter-spacing:-.005em}
+h2 .idx{font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:400;letter-spacing:.1em;margin-right:10px}
+h3{font-size:17px;font-weight:720;margin:26px 0 8px}
+p{font-size:15.5px;line-height:1.85;color:var(--ink-2);margin-bottom:14px}
+strong{color:var(--ink);font-weight:700}
+a{color:var(--cyan);text-decoration:none;border-bottom:1px solid rgba(14,124,140,.35)}
+figure{margin:26px 0 30px}
+figure img{display:block;width:100%;height:auto;border-radius:8px;border:1px solid var(--line)}
+figcaption{font-size:12.5px;color:var(--muted);margin-top:9px;text-align:center;line-height:1.6}
+.paths{display:flex;flex-direction:column;gap:12px;margin:20px 0 8px}
+.path{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:18px 20px}
+.path .t{font-size:16px;font-weight:730;margin-bottom:6px}
+.path .t span{font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:.12em;margin-right:9px;font-weight:400}
+.path p{font-size:14.5px;margin:0;line-height:1.75}
+.callout{border-left:3px solid var(--cyan);background:var(--cyan-bg);border-radius:0 8px 8px 0;padding:18px 22px;margin:24px 0}
+.callout p{margin:0;font-size:14.5px;line-height:1.8}
+.callout .k{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.16em;color:#0a5c69;text-transform:uppercase;display:block;margin-bottom:7px}
+.steps{counter-reset:s;margin:20px 0}
+.step{position:relative;padding:0 0 22px 46px;border-left:1px solid var(--line);margin-left:13px}
+.step:last-child{border-left-color:transparent;padding-bottom:0}
+.step::before{counter-increment:s;content:counter(s,decimal-leading-zero);position:absolute;left:-14px;top:0;width:28px;height:28px;border-radius:50%;background:var(--paper);border:1px solid var(--line);display:grid;place-items:center;font-family:var(--mono);font-size:11px;color:var(--cyan)}
+.step .t{font-size:16px;font-weight:720;margin-bottom:5px}
+.step p{font-size:14.5px;margin:0;line-height:1.75}
+.tiers{display:flex;flex-direction:column;gap:12px;margin:20px 0}
+.tier{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:18px 20px}
+.tier .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--muted)}
+.tier .t{font-size:16px;font-weight:730;margin:7px 0 8px}
+.tier ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+.tier li{font-size:14.5px;color:var(--ink-2);line-height:1.7;padding-left:15px;position:relative}
+.tier li::before{content:"";position:absolute;left:0;top:10px;width:5px;height:5px;border-radius:50%;background:var(--cyan)}
+.faq{margin:16px 0}
+.faq dt{font-size:15.5px;font-weight:710;margin:20px 0 6px;color:var(--ink)}
+.faq dd{font-size:14.8px;line-height:1.8;color:var(--ink-2);margin:0}
+.end{margin-top:44px;padding:26px 28px;border:1px solid var(--line);border-radius:12px;background:var(--card);text-align:center}
+.end .big{font-size:20px;font-weight:740;line-height:1.5;margin-bottom:10px}
+.end p{font-size:14.5px;margin-bottom:6px}
+.end .url{font-family:var(--mono);font-size:19px;color:var(--cyan);letter-spacing:.01em;display:block;margin:14px 0 6px}
+.footnote{margin-top:34px;padding-top:20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);line-height:1.75}
+@media (max-width:640px){
+  body{padding:16px 0 48px}
+  .article{border-radius:0;border-left:0;border-right:0}
+  .inner{padding:30px 22px 40px}
+  h1{font-size:27px}
+  h2{font-size:20px;margin-top:34px}
+  .toolbar{padding:0 20px}
+}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="label">WeChat Article Preview</span>
+  <span class="hint">760px 阅读宽度 · 可直接框选复制到公众号编辑器</span>
+</div>
+
+<article class="article">
+  <img class="cover" src="images/cover.png" alt="算法社 2026 招新">
+  <div class="inner">
+    <div class="kicker">SIA Algorithm Club · 2026 招新</div>
+    <h1>把算法训练<br>做成<em>作品</em></h1>
+    <p class="dek">零基础可加入，一周出勤一天。C++ / Python、算法竞赛、AI 博弈与前端工程——三条路径任选，训练最终落到能跑、能玩、能用的东西上。</p>
+
+    <h2><span class="idx">01</span>我们是谁</h2>
+    <p>新哲文院·科创未来 · 算法社（Algorithm Club），一个把算法训练做成<strong>可运行产品与系统</strong>的社团。</p>
+    <p>我们不只刷题。我们相信训练最终要落到作品上——所以你在这里看到的不是课程大纲，而是已经上线、可以直接点开玩的东西：AI 五子棋、AI 俄罗斯方块、AI 贪吃蛇、七大算法可视化实验室，以及社长持续迭代到 V7.0 的 Windows 软件管控工具 APPMonitor。</p>
+    <p>社团主要教学 <strong>C++ 与 Python</strong>，兼顾竞赛培训与软件项目开发维护。无论你是零基础新手，还是已经接触过竞赛的同学，只要对算法、编程、AI 或网页开发感兴趣，这里都有你的位置。</p>
+
+    <figure>
+      <img src="images/square.png" alt="算法社 2026 招新主视觉">
+      <figcaption>算法社 2026 招新主视觉 · 也可单独用于朋友圈</figcaption>
+    </figure>
+
+    <h2><span class="idx">02</span>三条成长路径，总有一条适合你</h2>
+    <p>加入后可以选一条主线，也可以先都试试。三条路径共用同一套训练与作品体系。</p>
+    <div class="paths">
+      <div class="path"><div class="t"><span>TRACK A</span>算法组</div><p>题单训练、专题讲解、模拟赛与训练路线规划。围绕基础语法、数据结构、搜索、图论与动态规划，服务校内竞赛与长期能力建设。</p></div>
+      <div class="path"><div class="t"><span>TRACK B</span>前端组</div><p>维护官网视觉、交互页面与算法可视化。把排序、搜索、图论、DP 做成能点、能拖、能单步推演的演示页面。</p></div>
+      <div class="path"><div class="t"><span>TRACK C</span>项目组</div><p>建立模型、训练 AI、开发软件。参与五子棋引擎、俄罗斯方块与贪吃蛇 AI、APPMonitor 与社团管理系统的长期迭代。</p></div>
+    </div>
+
+    <figure>
+      <img src="images/paths.png" alt="三条成长路径">
+      <figcaption>三条路径 · 算法组 / 前端组 / 项目组</figcaption>
+    </figure>
+
+    <h2><span class="idx">03</span>已经上线，可以直接体验</h2>
+    <p>这些不是课程作业，是正在被真实使用的系统。</p>
+
+    <h3>AI 五子棋</h3>
+    <p>浏览器端人机对战，经历多代模型迭代，支持昵称提交与排行榜。从搜索、评估到开局先验，完整走通一条 AI 工程链路。目前共有 <strong>18 个可挑战版本</strong>，从铭星 V1 一路到 V10 系列，还有完全自研的展示版 Gomoku-Satori。</p>
+
+    <h3>AI 俄罗斯方块</h3>
+    <p>正常游玩、AI 演示、AI 辅助阴影与公平人机对战四种模式。双方使用同一序列，AI 只做自然降落，成绩可上榜。</p>
+
+    <h3>AI 贪吃蛇</h3>
+    <p>AI 演示、AI 辅助深色轨迹与转向提醒、双窗人机对战，普通榜与对战榜双榜记录。</p>
+
+    <h3>算法可视化实验室</h3>
+    <p>排序、搜索、数据结构、图论最短路、动态规划、二叉树、堆——七大入口，支持连续演示与单步推演。</p>
+
+    <h3>APPMonitor</h3>
+    <p>由社长开发的 Windows 软件管控与自律助手，持续迭代至 V7.0。</p>
+
+    <h3>社团管理系统</h3>
+    <p>签到兑积分、积分商城、活动公告、留言箱、社团盘等，已投入日常使用。</p>
+
+    <figure>
+      <img src="images/works.png" alt="已上线的作品">
+      <figcaption>部分已上线作品 · 全部可在官网直接体验</figcaption>
+    </figure>
+
+    <h2><span class="idx">04</span>时间安排：一周出勤一天即可</h2>
+    <p>社团活动在<strong>每周二、周四下午的 ECA 时间（15:45–17:10）</strong>，两天任选一天参加即可，不额外占用你的时间。</p>
+    <p>其余时间，教材、算法实验室、AI 对战与积分系统都在线上长期开放。</p>
+
+    <figure>
+      <img src="images/schedule.png" alt="活动时间安排">
+      <figcaption>每周二、周四 15:45–17:10 · 任选一天</figcaption>
+    </figure>
+
+    <h2><span class="idx">05</span>三步加入</h2>
+    <div class="steps">
+      <div class="step"><div class="t">填写报名表</div><p>打开算法社官网，点击「立即加入」，填写中文姓名、班级和联系方式。也可以顺便写写你是谁、算法社哪里吸引了你、你想在这里获得什么。</p></div>
+      <div class="step"><div class="t">等待联系</div><p>管理员会查看申请并尽快联系你，确认方向与第一次活动时间。</p></div>
+      <div class="step"><div class="t">来一次 ECA</div><p>周二或周四 15:45–17:10，任选一天。不需要提前准备，直接来就好。</p></div>
+    </div>
+
+    <div class="callout">
+      <span class="k">报名入口</span>
+      <p>官网快捷地址：<strong>ada.nz/r/sfs</strong> → 点击「立即加入」<br>也可以扫描下方二维码添加负责人微信，备注「算法社」。</p>
+    </div>
+
+    <figure>
+      <img src="images/join.png" alt="报名方式与负责人微信二维码">
+      <figcaption>三步加入 · 扫码添加负责人微信，备注「算法社」</figcaption>
+    </figure>
+
+    <h2><span class="idx">06</span>寻找同行者：赞助与合作</h2>
+    <p>算法社面向校内外的企业、机构与校友开放合作。我们需要的不只是资金，也包括设备、场地、课程与导师资源。</p>
+    <div class="tiers">
+      <div class="tier"><div class="k">TIER 01</div><div class="t">赛事与奖品支持</div><ul><li>校内算法竞赛的奖品与纪念品</li><li>活动场地与设备支持</li><li>品牌出现在活动物料与现场</li></ul></div>
+      <div class="tier"><div class="k">TIER 02</div><div class="t">联合出品</div><ul><li>共建 AI 或前端项目并联合署名</li><li>技术分享、工作坊与课程共建</li><li>合作方在官网与作品页长期展示</li></ul></div>
+      <div class="tier"><div class="k">TIER 03</div><div class="t">长期共建</div><ul><li>企业导师与真实项目课题</li><li>社员参观与实习通道</li><li>年度合作与定制方案</li></ul></div>
+    </div>
+    <p>具体权益与金额可协商，所有合作以不影响教学与社员权益为前提。</p>
+    <p><strong>合作联系</strong>：［请填写负责老师 / 指导单位联系人姓名、职务、电话或邮箱］</p>
+
+    <figure>
+      <img src="images/sponsor.png" alt="赞助合作方向">
+      <figcaption>三个合作方向 · 具体权益可协商</figcaption>
+    </figure>
+
+    <h2><span class="idx">07</span>常见问题</h2>
+    <dl class="faq">
+      <dt>Q：我完全零基础，能加入吗？</dt>
+      <dd>能。社团主要教学从 C++ 与 Python 基础开始，欢迎所有零基础同学。已经接触过竞赛的同学也可以直接进入算法组的训练路线。</dd>
+      <dt>Q：会不会很占时间？</dt>
+      <dd>每周二、周四下午 ECA 时间活动，<strong>两天任选一天</strong>即可。其余训练与项目按自己的节奏推进。</dd>
+      <dt>Q：一定要会写代码才能报名吗？</dt>
+      <dd>不需要。报名只填写中文姓名、班级和联系方式，没有笔试和面试。</dd>
+      <dt>Q：报名之后多久会收到联系？</dt>
+      <dd>管理员会尽快查看并联系你。如果长时间没有收到回复，可以直接扫码添加负责人微信。</dd>
+      <dt>Q：社团和竞赛是什么关系？</dt>
+      <dd>算法组会围绕竞赛组织训练，但社团不只服务竞赛——前端组和项目组同样有完整的作品线。</dd>
+    </dl>
+
+    <div class="end">
+      <div class="big">从一道题，到一个能跑、能玩、能用的作品。</div>
+      <p>算法社正在把「学算法」变成「做出东西」。<br>如果你也想让自己的训练留下痕迹，欢迎加入我们。</p>
+      <span class="url">ada.nz/r/sfs</span>
+      <p>扫码添加负责人微信，备注「算法社」</p>
+    </div>
+
+    <div class="footnote">
+      新哲文院 · 科创未来 · 算法社（Algorithm Club）<br>
+      活动时间：每周二、周四 ECA 15:45–17:10（任选一天）<br>
+      官网：ada.nz/r/sfs
+    </div>
+  </div>
+</article>
+
+</body>
+</html>

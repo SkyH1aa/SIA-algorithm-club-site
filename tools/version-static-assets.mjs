@@ -21,7 +21,7 @@ const VERSIONED = [
   'club-auth-storage.js', 'service-gate.js', 'service-prompts.js', 'error-page.js',
   'chat-core.js', 'chat.js', 'chat-file-bundle.js', 'chat.css', 'assistant.css',
   'home-showcase.css', 'home-showcase.js', 'home-capabilities.js', 'home-motion.js',
-  'legacy-premium.css', 'legacy-premium.js', 'vendor/gsap/gsap.min.js', 'assistant-launcher.css', 'assistant-launcher.js', 'chat-admin.css',
+  'legacy-premium.css', 'legacy-premium.js', 'vendor/gsap/gsap.min.js', 'assistant-launcher.css', 'assistant-launcher.js', 'chat-admin.css', 'chat-admin.js', 'chat-admin-i18n.js',
   'vendor/supabase/supabase.min.js', 'vendor/three/three.min.js', 'vendor/three/three.module.js', 'SceneDirector.js', 'sw.js'
 ];
 

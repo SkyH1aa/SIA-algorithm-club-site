@@ -8,14 +8,19 @@ Deno.env.set('CHAT_KEY_TEST', 'upstream-secret');
 const { handler } = await import('../supabase/functions/chat-api-proxy/index.ts');
 const { newKey, hashKey, proxyBase } = await import('../supabase/functions/_shared/chat-api-proxy.ts');
 const RID = '11111111-1111-4111-8111-111111111111';
+const RID2 = '22222222-2222-4222-8222-222222222222';
 const key = newKey(), digest = await hashKey(key);
+const key2 = newKey(), digest2 = await hashKey(key2);
 assert.match(key, /^cap_[A-Za-z0-9_-]{43}$/); assert.match(digest, /^[a-f0-9]{64}$/);
 let status = 200, contentType = 'application/json', admission = 'ok', base = 'https://vendor.example.com/v1', dns = 'public';
 let calls = 0, releases = 0, admissions = 0, body: Uint8Array, signal: AbortSignal | undefined, hang = false, delayAdmission = 0, networkError = false;
 let endpoint = 'responses', expectedUrl = '', expectedVersion = '2023-06-01', expectedBeta: string | null = null;
+let modelIds: unknown = ['alpha', 'vendor/beta'], modelIds2: unknown = ['other'];
+let listMode = false, dnsCalls = 0, failRelease = false, failAdmission = false;
 let responseBytes = new TextEncoder().encode('{ "output": [], "opaque": "你好" }');
 const fetchOriginal = globalThis.fetch, dnsOriginal = Deno.resolveDns;
 Deno.resolveDns = ((_: string, family: string) => {
+  dnsCalls++;
   if (dns === 'hang') return new Promise(() => {});
   if (dns === 'failure') return Promise.reject(new Deno.errors.PermissionDenied());
   return Promise.resolve(family === 'A' ? dns === 'private' ? ['127.0.0.1'] : dns === 'mixed' ? ['8.8.8.8', '10.0.0.1'] : ['8.8.8.8'] : []);
@@ -26,10 +31,17 @@ globalThis.fetch = (async (input: string | URL | Request, init: RequestInit = {}
   if (u.hostname === 'db.example.com') {
     assert.equal(new Headers(init.headers).get('authorization'), 'Bearer service-secret');
     const data = JSON.parse(String(init.body));
-    if (u.pathname.endsWith('chat_proxy_release')) { releases++; return Response.json(null); }
-    assert.equal(data.p_key_hash, digest); assert.equal(data.p_route_id, RID); admissions++;
+    if (u.pathname.endsWith('chat_proxy_release')) { releases++; return failRelease ? new Response(null, { status: 500 }) : Response.json(null); }
+    admissions++;
     assert.equal(data.p_key_limit, 2); assert.equal(data.p_route_limit, 20);
     if (delayAdmission) await new Promise(resolve => setTimeout(resolve, delayAdmission));
+    if (failAdmission) return new Response(null, { status: 500 });
+    if (listMode) {
+      assert.deepEqual([...new Headers(init.headers).keys()].sort(), ['apikey', 'authorization', 'content-type']);
+      const valid = (data.p_route_id === RID && data.p_key_hash === digest) || (data.p_route_id === RID2 && data.p_key_hash === digest2);
+      return Response.json(admission === 'ok' && valid ? { route: { exposed_model_ids: data.p_route_id === RID ? modelIds : modelIds2, base_url: 'private-route', secret_name: 'CHAT_KEY_MISSING', name: 'private-name' } } : { code: admission === 'ok' ? 'invalid_key' : admission });
+    }
+    assert.equal(data.p_key_hash, digest); assert.equal(data.p_route_id, RID);
     return Response.json(admission === 'ok' ? { route: { base_url: base, secret_name: 'CHAT_KEY_TEST' } } : { code: admission });
   }
   assert.equal(u.href, expectedUrl || `https://vendor.example.com/v1/${endpoint}`);
@@ -59,6 +71,7 @@ let n=0;
 async function test(name: string, run: () => Promise<void>) {
   calls=0; releases=0; admissions=0; status=200; contentType='application/json'; admission='ok'; base='https://vendor.example.com/v1'; dns='public'; hang=false; delayAdmission=0; networkError=false;
   endpoint='responses'; expectedUrl=''; expectedVersion='2023-06-01'; expectedBeta=null;
+  listMode=false; dnsCalls=0; failRelease=false; failAdmission=false; modelIds=['alpha', 'vendor/beta']; modelIds2=['other'];
   responseBytes = new TextEncoder().encode('{ "output": [], "opaque": "你好" }');
   Deno.env.delete('CHAT_PROXY_TIMEOUT_MS'); Deno.env.delete('CHAT_PROXY_KEY_CONCURRENCY'); Deno.env.delete('CHAT_PROXY_CORS_ORIGINS');
   await run(); n++; console.log(`PASS ${name}`);
@@ -87,7 +100,7 @@ try {
     assert.equal(calls,0); assert.equal(releases,0);
   });
   await test('strict path, methods and bearer format', async () => {
-    for (const path of [`/${RID}/v1/responses/`,`/${RID}/v1/models`,`/${RID}/v1/responses?target=x`,`/not-uuid/v1/responses`]) assert.equal((await handler(request('{}',{},path))).status,404);
+    for (const path of [`/${RID}/v1/responses/`,`/${RID}/v1/responses?target=x`,`/not-uuid/v1/responses`]) assert.equal((await handler(request('{}',{},path))).status,404);
     assert.equal((await handler(request('{}',{},`/${RID}/v1/responses`,'GET'))).status,405);
     assert.equal((await handler(request('{}',{},`/${RID}/v1/responses`,'OPTIONS'))).status,204);
     assert.equal((await handler(request('{}',{authorization:'Bearer invalid'}))).status,401); assert.equal(calls,0);
@@ -308,6 +321,98 @@ try {
     assert.equal((await handler(request(input, { authorization: 'Bearer invalid' }))).status, 401);
     assert.equal(reads, 0); assert.equal(input.locked, false); assert.equal(admissions, 0); assert.equal(calls, 0);
     await input.cancel();
+  });
+  await test('model lists are route isolated and never access provider or secrets', async () => {
+    listMode = true; dns = 'hang';
+    for (const [rid, capability, ids] of [[RID, key, ['alpha', 'vendor/beta']], [RID2, key2, ['other']]] as const) {
+      const r = await handler(request('{}', { authorization: `Bearer ${capability}`, 'content-type': null }, `/${rid}/v1/models`, 'GET'));
+      assert.equal(r.status, 200);
+      assert.deepEqual(await r.json(), { object: 'list', data: ids.map(id => ({ id, object: 'model', created: 0, owned_by: 'club' })) });
+      assert.equal(r.headers.get('cache-control'), 'no-store');
+    }
+    for (const [rid, capability] of [[RID, key2], [RID2, key]]) {
+      const r = await handler(request('{}', { authorization: `Bearer ${capability}` }, `/${rid}/v1/models`, 'GET'));
+      assert.equal(r.status, 401); assert.doesNotMatch(await r.text(), /private|secret|alpha|other/);
+    }
+    assert.equal(calls, 0); assert.equal(dnsCalls, 0); assert.equal(admissions, 4); assert.equal(releases, 2);
+  });
+  await test('model list handles empty, maximum and malformed stored arrays', async () => {
+    listMode = true;
+    for (const ids of [[], Array.from({ length: 100 }, (_, i) => `model-${i}`)]) {
+      modelIds = ids;
+      const r = await handler(request('{}', {}, `/${RID}/v1/models`, 'GET'));
+      assert.equal(r.status, 200); assert.deepEqual((await r.json()).data.map((item: { id: string }) => item.id), ids);
+    }
+    for (const ids of [undefined, null, 'bad', [''], ['ok', 42], Array(101).fill('x')]) {
+      modelIds = ids;
+      const r = await handler(request('{}', {}, `/${RID}/v1/models`, 'GET'));
+      assert.equal(r.status, 503); assert.doesNotMatch(await r.text(), /private|secret/);
+    }
+    assert.equal(admissions, 8); assert.equal(releases, 8); assert.equal(calls, 0); assert.equal(dnsCalls, 0);
+  });
+  await test('model list credentials, denied routes and busy leases', async () => {
+    listMode = true;
+    for (const headers of [{}, { authorization: null, 'x-api-key': key }, { 'x-api-key': key }]) {
+      const r = await handler(request('{}', headers, `/${RID}/v1/models`, 'GET'));
+      assert.equal(r.status, 200); await r.text();
+    }
+    for (const headers of [
+      { authorization: null }, { authorization: 'Bearer invalid' }, { authorization: null, 'x-api-key': 'invalid' },
+      { 'x-api-key': key2 }, { authorization: 'Bearer invalid', 'x-api-key': key },
+      { authorization: `Bearer ${key}, Bearer ${key}` }, { authorization: null, 'x-api-key': `${key}, ${key}` }
+    ]) assert.equal((await handler(request('{}', headers, `/${RID}/v1/models`, 'GET'))).status, 401);
+    assert.equal(admissions, 3);
+    for (const code of ['invalid_key', 'disabled', 'revoked', 'busy']) {
+      admission = code;
+      assert.equal((await handler(request('{}', {}, `/${RID}/v1/models`, 'GET'))).status, code === 'busy' ? 429 : 401);
+    }
+    assert.equal(releases, 3); assert.equal(calls, 0); assert.equal(dnsCalls, 0);
+  });
+  await test('model list path, method and CORS preflight', async () => {
+    listMode = true; Deno.env.set('CHAT_PROXY_CORS_ORIGINS', 'https://allowed.example');
+    const path = `/${RID}/v1/models`;
+    const sdkHeaders = [
+      'authorization', 'x-api-key', 'content-type', 'openai-beta', 'anthropic-version', 'anthropic-beta',
+      'anthropic-dangerous-direct-browser-access', 'x-stainless-lang', 'x-stainless-package-version',
+      'x-stainless-os', 'x-stainless-arch', 'x-stainless-runtime', 'x-stainless-runtime-version',
+      'x-stainless-retry-count', 'x-stainless-timeout', 'x-app', 'user-agent'
+    ];
+    const preflightHeaders = { 'access-control-request-method': 'GET', 'access-control-request-headers': sdkHeaders.join(', ') };
+    const preflight = await handler(request('{}', { ...preflightHeaders, origin: 'https://allowed.example' }, path, 'OPTIONS'));
+    assert.equal(preflight.status, 204); assert.equal(preflight.headers.get('access-control-allow-origin'), 'https://allowed.example');
+    assert.equal(preflight.headers.get('access-control-allow-methods'), 'GET, OPTIONS');
+    assert.deepEqual(preflight.headers.get('access-control-allow-headers')!.split(', ').sort(), [...sdkHeaders].sort());
+    assert.equal(preflight.headers.get('access-control-allow-credentials'), null);
+    const deniedPreflight = await handler(request('{}', { ...preflightHeaders, origin: 'https://evil.example' }, path, 'OPTIONS'));
+    assert.equal(deniedPreflight.status, 403); assert.equal(deniedPreflight.headers.get('access-control-allow-origin'), null);
+    assert.equal((await handler(request('{}', { origin: 'https://evil.example' }, path, 'GET'))).status, 403);
+    for (const suffix of ['/', '?x=1', '?']) for (const method of ['GET', 'OPTIONS']) assert.equal((await handler(request('{}', {}, path + suffix, method))).status, 404);
+    for (const method of ['POST', 'PUT', 'DELETE', 'HEAD']) assert.equal((await handler(request('{}', {}, path, method))).status, 405);
+    const metadata = Object.fromEntries(sdkHeaders.filter(name => name !== 'authorization' && name !== 'x-api-key').map(name => [name, 'sdk-metadata']));
+    const allowed = await handler(request('{}', { ...metadata, origin: 'https://allowed.example' }, path, 'GET'));
+    assert.equal(allowed.status, 200); assert.equal(allowed.headers.get('access-control-allow-origin'), 'https://allowed.example');
+    assert.equal(admissions, 1); assert.equal(releases, 1); assert.equal(calls, 0);
+  });
+  await test('model list releases on failures, timeout and client cancellation', async () => {
+    listMode = true;
+    failAdmission = true;
+    assert.equal((await handler(request('{}', {}, `/${RID}/v1/models`, 'GET'))).status, 503);
+    assert.equal(releases, 0); failAdmission = false;
+    failRelease = true;
+    assert.equal((await handler(request('{}', {}, `/${RID}/v1/models`, 'GET'))).status, 200);
+    assert.equal(releases, 1); failRelease = false;
+    Deno.env.set('CHAT_PROXY_TIMEOUT_MS', '20'); delayAdmission = 60;
+    assert.equal((await handler(request('{}', {}, `/${RID}/v1/models`, 'GET'))).status, 504);
+    await new Promise(resolve => setTimeout(resolve, 90)); assert.equal(releases, 2);
+    Deno.env.delete('CHAT_PROXY_TIMEOUT_MS');
+    const abort = new AbortController();
+    const pending = handler(request('{}', {}, `/${RID}/v1/models`, 'GET', abort.signal));
+    await new Promise(resolve => setTimeout(resolve, 10)); abort.abort();
+    assert.equal((await pending).status, 504);
+    await new Promise(resolve => setTimeout(resolve, 90)); assert.equal(releases, 3);
+    const pre = new AbortController(); pre.abort();
+    assert.equal((await handler(request('{}', {}, `/${RID}/v1/models`, 'GET', pre.signal))).status, 504);
+    assert.equal(releases, 3); assert.equal(calls, 0); assert.equal(dnsCalls, 0);
   });
   console.log(`${n} proxy groups passed; no real network calls.`);
 } finally { globalThis.fetch=fetchOriginal; Deno.resolveDns=dnsOriginal; }

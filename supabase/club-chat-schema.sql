@@ -1113,12 +1113,14 @@ create table if not exists public.chat_proxy_routes (
   base_url text not null check (char_length(base_url) between 10 and 2048),
   secret_name text not null check (secret_name ~ '^CHAT_KEY_[A-Z0-9_]{1,80}$'),
   enabled boolean not null default true,
+  exposed_model_ids jsonb not null default '[]'::jsonb,
   deleted_at timestamptz,
   version bigint not null default 1 check (version > 0),
   created_by uuid references auth.users(id), updated_by uuid references auth.users(id),
   created_at timestamptz not null default now(), updated_at timestamptz not null default now()
 );
 alter table public.chat_proxy_routes add column if not exists deleted_at timestamptz;
+alter table public.chat_proxy_routes add column if not exists exposed_model_ids jsonb not null default '[]'::jsonb;
 create table if not exists public.chat_proxy_keys (
   id uuid primary key default gen_random_uuid(),
   route_id uuid not null references public.chat_proxy_routes(id),
@@ -1165,7 +1167,7 @@ begin
   if exists (
     select 1 from jsonb_object_keys(p_data) as key
     where (p_action = 'admin_proxy_list')
-       or (p_action = 'admin_proxy_save' and key not in ('id','name','base_url','secret_name','enabled','expected_version'))
+       or (p_action = 'admin_proxy_save' and key not in ('id','name','base_url','secret_name','enabled','expected_version','exposed_model_ids'))
        or (p_action = 'admin_proxy_route_state' and key not in ('id','enabled','expected_version'))
        or (p_action in ('admin_proxy_route_delete','admin_proxy_route_hard_delete','admin_proxy_key_hard_delete') and key not in ('id','expected_version'))
        or (p_action = 'admin_proxy_key_create' and key not in ('route_id','label','key_hash','key_prefix','key_last4'))
@@ -1185,6 +1187,17 @@ begin
       or (p_data->>'expected_version')::numeric > 9007199254740991
       or (p_data->'id' <> 'null'::jsonb and (p_data->>'expected_version')::numeric < 1) then
       raise exception 'invalid data';
+    end if;
+    if p_data ? 'exposed_model_ids' then
+      if jsonb_typeof(p_data->'exposed_model_ids') <> 'array' then raise exception 'invalid data'; end if;
+      if jsonb_array_length(p_data->'exposed_model_ids') > 100
+        or exists (select 1 from jsonb_array_elements(p_data->'exposed_model_ids') as e(value)
+          where jsonb_typeof(value) <> 'string' or length(value #>> '{}') not between 1 and 200
+            or (value #>> '{}') collate "C" !~ '^[A-Za-z0-9][A-Za-z0-9._:/-]*$')
+        or (select count(*) <> count(distinct (value #>> '{}') collate "C")
+          from jsonb_array_elements(p_data->'exposed_model_ids') as e(value)) then
+        raise exception 'invalid data';
+      end if;
     end if;
   elsif p_action = 'admin_proxy_route_state' then
     if not (p_data ?& array['id','enabled','expected_version'])
@@ -1220,8 +1233,8 @@ begin
   end if;
   if p_action = 'admin_proxy_save' and p_data->>'id' is null then
     if (p_data->>'expected_version')::bigint <> 0 then return '{"code":"conflict"}'; end if;
-    insert into public.chat_proxy_routes(name,base_url,secret_name,enabled,created_by,updated_by)
-      values(p_data->>'name',p_data->>'base_url',p_data->>'secret_name',(p_data->>'enabled')::boolean,p_actor,p_actor) returning * into r;
+    insert into public.chat_proxy_routes(name,base_url,secret_name,enabled,exposed_model_ids,created_by,updated_by)
+      values(p_data->>'name',p_data->>'base_url',p_data->>'secret_name',(p_data->>'enabled')::boolean,coalesce(p_data->'exposed_model_ids','[]'::jsonb),p_actor,p_actor) returning * into r;
     return jsonb_build_object('route',to_jsonb(r)-'created_by'-'updated_by');
   end if;
   if p_action in ('admin_proxy_save','admin_proxy_route_state','admin_proxy_route_delete','admin_proxy_route_hard_delete') then rid := (p_data->>'id')::uuid;
@@ -1254,6 +1267,7 @@ begin
       name=case when p_action='admin_proxy_save' then p_data->>'name' else name end,
       base_url=case when p_action='admin_proxy_save' then p_data->>'base_url' else base_url end,
       secret_name=case when p_action='admin_proxy_save' then p_data->>'secret_name' else secret_name end,
+      exposed_model_ids=case when p_action='admin_proxy_save' and p_data ? 'exposed_model_ids' then p_data->'exposed_model_ids' else exposed_model_ids end,
       version=version+1,updated_at=now(),updated_by=p_actor where id=rid returning * into r;
     return jsonb_build_object('route',to_jsonb(r)-'created_by'-'updated_by');
   end if;

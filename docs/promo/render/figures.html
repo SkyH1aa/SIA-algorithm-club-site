@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>算法社招新推文配图</title>
+<link rel="stylesheet" href="http://127.0.0.1:4173/public/assets/fonts/misans/MiSansVF.min.css">
+<style>
+@font-face{font-family:'Inter VF';src:url('../../../public/assets/fonts/inter/inter-latin-wght-normal.woff2') format('woff2');font-weight:100 900;font-display:block}
+@font-face{font-family:'JBM';src:url('../../../public/assets/fonts/jetbrains-mono/jetbrains-mono-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:'JBM';src:url('../../../public/assets/fonts/jetbrains-mono/jetbrains-mono-latin-700-normal.woff2') format('woff2');font-weight:700;font-display:block}
+:root{
+  --bg:#0b1016; --panel:#131b24; --panel2:#18222d;
+  --line:rgba(160,190,220,.16); --line2:rgba(160,190,220,.28);
+  --text:#eef3f8; --soft:#c2cedb; --muted:#93a2b3;
+  --cyan:#3ad4e6; --cyan2:#8ef0fa; --orange:#f08a68;
+  --sans:'Inter VF','MiSans VF','MiSans','PingFang SC','Microsoft YaHei',sans-serif;
+  --mono:'JBM',ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#2a2f36;font-family:var(--sans);-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;align-items:center;gap:40px;padding:40px}
+.fig{position:relative;overflow:hidden;background:var(--bg);color:var(--text);isolation:isolate}
+.fig::before{content:"";position:absolute;inset:0;z-index:-2;
+  background-image:linear-gradient(rgba(120,170,210,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(120,170,210,.055) 1px,transparent 1px);
+  background-size:48px 48px;mask-image:radial-gradient(ellipse at 30% 0%,#000 10%,transparent 78%)}
+.glow{position:absolute;border-radius:50%;filter:blur(70px);z-index:-1;pointer-events:none}
+.mono{font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;font-size:13px;color:var(--cyan)}
+.num{font-family:var(--mono);font-size:13px;color:var(--muted);letter-spacing:.1em}
+.rule{height:1px;background:var(--line);width:100%}
+.hl{color:var(--cyan)}
+.ora{color:var(--orange)}
+.brandmark{width:44px;height:44px;border-radius:12px;background:#0e1620;border:1px solid var(--line2);display:grid;place-items:center;flex:0 0 auto}
+.brandmark svg{width:26px;height:26px}
+.tag{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--line2);border-radius:999px;font-size:13px;color:var(--soft);background:rgba(20,30,40,.6)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+
+/* ---------- COVER 900x383 ---------- */
+#fig-cover{width:900px;height:383px;padding:34px 40px;display:flex;flex-direction:column;justify-content:space-between}
+#fig-cover .top{display:flex;align-items:center;gap:12px}
+#fig-cover .top .name{font-size:15px;font-weight:650;letter-spacing:.02em}
+#fig-cover .top .en{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.16em}
+#fig-cover h1{font-size:62px;line-height:1.08;font-weight:760;letter-spacing:-.01em}
+#fig-cover h1 em{font-style:normal;color:var(--cyan)}
+#fig-cover .bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:20px}
+#fig-cover .sub{font-size:16px;color:var(--soft);line-height:1.5;max-width:430px}
+#fig-cover .year{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.2em;text-align:right;line-height:1.9}
+#fig-cover .grid-motif{position:absolute;right:-40px;top:-30px;width:420px;height:420px;opacity:.5}
+
+/* ---------- generic section head ---------- */
+.head{display:flex;align-items:baseline;gap:14px;margin-bottom:10px}
+.head h2{font-size:40px;font-weight:750;letter-spacing:-.01em}
+.head .en{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.18em}
+.lead{font-size:17px;color:var(--muted);line-height:1.6}
+
+/* ---------- PATHS 1080x760 ---------- */
+#fig-paths{width:1080px;min-height:760px;padding:56px 60px;display:flex;flex-direction:column}
+#fig-paths .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;flex:1;margin-top:34px}
+#fig-paths .card{position:relative;flex:1 1 auto;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,var(--panel2),var(--panel));padding:26px 24px;display:flex;flex-direction:column}
+#fig-paths .card .idx{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.16em}
+#fig-paths .card h3{font-size:27px;margin:16px 0 6px;font-weight:740}
+#fig-paths .card .en{font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:.16em;margin-bottom:18px}
+#fig-paths .card p{font-size:15.5px;line-height:1.75;color:var(--soft)}
+#fig-paths .card .bar{height:3px;width:42px;border-radius:2px;background:var(--cyan);margin-top:auto;margin-bottom:16px}
+#fig-paths .card:nth-child(2) .bar{background:var(--orange)}
+#fig-paths .card:nth-child(3) .bar{background:#9db4ff}
+
+/* ---------- WORKS 1080x1080 ---------- */
+#fig-works{width:1080px;min-height:1080px;padding:56px 60px;display:flex;flex-direction:column}
+#fig-works .hero{display:flex;gap:26px;align-items:center;flex:0 0 auto;border:1px solid var(--line2);border-radius:18px;background:linear-gradient(180deg,var(--panel2),var(--panel));padding:28px 30px;margin-top:26px}
+#fig-works .hero .txt{flex:1;display:flex;flex-direction:column;gap:10px}
+#fig-works .hero .k{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.14em}
+#fig-works .hero h3{font-size:34px;font-weight:740}
+#fig-works .hero p{font-size:15px;color:var(--soft);line-height:1.65}
+#fig-works .hero .stat{display:flex;gap:30px;margin-top:4px}
+#fig-works .hero .stat b{font-family:var(--mono);font-size:28px;color:var(--cyan);font-weight:700;display:block;line-height:1.15}
+#fig-works .hero .stat span{font-size:12px;color:var(--muted)}
+#fig-works .hero .thumb{width:250px;height:250px;flex:0 0 auto;border-radius:14px;overflow:hidden;border:1px solid var(--line2)}
+#fig-works .hero .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+#fig-works .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;flex:1}
+#fig-works .w{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:18px 20px;display:flex;align-items:center;gap:16px;overflow:hidden}
+#fig-works .w .txt{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0}
+#fig-works .w .k{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.12em}
+#fig-works .w h3{font-size:20px;font-weight:720}
+#fig-works .w p{font-size:13px;color:var(--muted);line-height:1.5}
+#fig-works .w .mini{width:88px;height:88px;flex:0 0 auto;border-radius:11px;overflow:hidden;border:1px solid var(--line)}
+#fig-works .w .mini img{width:100%;height:100%;object-fit:cover;display:block}
+#fig-works .w .glyph{width:88px;height:88px;flex:0 0 auto;border-radius:11px;border:1px solid var(--line);display:grid;place-items:center;font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:.08em;text-align:center;line-height:1.5;background:rgba(58,212,230,.06)}
+
+/* ---------- SCHEDULE 1080x640 ---------- */
+#fig-schedule{width:1080px;min-height:560px;padding:56px 60px;display:flex;gap:44px}
+#fig-schedule .left{flex:1.05;display:flex;flex-direction:column;justify-content:center}
+#fig-schedule .time{font-family:var(--mono);font-size:76px;font-weight:700;color:var(--text);letter-spacing:-.03em;line-height:1;margin-top:26px}
+#fig-schedule .time span{color:var(--cyan);font-size:34px}
+#fig-schedule .right{flex:.95;display:flex;flex-direction:column;gap:14px;justify-content:center}
+#fig-schedule .row{display:flex;gap:16px;align-items:flex-start;flex:0 0 auto;border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:18px 20px}
+#fig-schedule .row b{font-family:var(--mono);font-size:12px;color:var(--cyan);padding-top:2px;min-width:52px;letter-spacing:.1em}
+#fig-schedule .row p{font-size:15px;color:var(--soft);line-height:1.6}
+#fig-schedule .row p strong{color:var(--text);font-weight:700}
+
+/* ---------- JOIN 1080x1080 ---------- */
+#fig-join{width:1080px;min-height:1080px;padding:56px 60px;display:flex;flex-direction:column}
+#fig-join .body{display:flex;gap:36px;margin-top:28px;flex:1}
+#fig-join .steps{flex:1;display:flex;flex-direction:column;gap:16px}
+#fig-join .step{display:flex;gap:18px;flex:0 0 auto;border-bottom:1px solid var(--line);padding-bottom:18px}
+#fig-join .step:last-child{border-bottom:0}
+#fig-join .step .n{font-family:var(--mono);font-size:13px;color:var(--cyan);border:1px solid var(--line2);width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto}
+#fig-join .step h3{font-size:21px;margin-bottom:6px;font-weight:720}
+#fig-join .step p{font-size:14.5px;color:var(--muted);line-height:1.65}
+#fig-join .qrbox{width:330px;flex:0 0 auto;border:1px solid var(--line2);border-radius:20px;background:var(--panel);padding:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+#fig-join .qrbox img{width:250px;height:250px;object-fit:contain;background:#fff;border-radius:10px;padding:8px}#fig-join .qrbox p{font-size:13px;color:var(--muted);text-align:center;line-height:1.5}
+#fig-join .url{margin-top:22px;display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line2);border-radius:14px;background:rgba(58,212,230,.07);padding:16px 22px}
+#fig-join .url span{font-size:13px;color:var(--muted)}
+#fig-join .url b{font-family:var(--mono);font-size:20px;color:var(--cyan);letter-spacing:.02em}
+
+/* ---------- SPONSOR 1080x760 ---------- */
+#fig-sponsor{width:1080px;min-height:760px;padding:56px 60px;display:flex;flex-direction:column}
+#fig-sponsor .tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:30px;flex:1}
+#fig-sponsor .tier{flex:1 1 auto;border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:24px;display:flex;flex-direction:column}
+#fig-sponsor .tier.mid{background:linear-gradient(180deg,rgba(58,212,230,.10),var(--panel));border-color:rgba(58,212,230,.42)}
+#fig-sponsor .tier .lvl{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--muted)}
+#fig-sponsor .tier h3{font-size:23px;margin:12px 0 4px;font-weight:730}
+#fig-sponsor .tier .sub{font-size:13px;color:var(--orange);margin-bottom:18px}
+#fig-sponsor .tier ul{list-style:none;display:flex;flex-direction:column;gap:10px}
+#fig-sponsor .tier li{font-size:14px;color:var(--soft);line-height:1.55;padding-left:16px;position:relative}
+#fig-sponsor .tier li::before{content:"";position:absolute;left:0;top:9px;width:5px;height:5px;border-radius:50%;background:var(--cyan)}
+#fig-sponsor .foot{margin-top:20px;font-size:13.5px;color:var(--muted)}
+
+/* ---------- SQUARE 1080x1080 ---------- */
+#fig-square{width:1080px;height:1080px;padding:70px 66px;display:flex;flex-direction:column;justify-content:space-between}
+#fig-square h1{font-size:88px;line-height:1.06;font-weight:770;letter-spacing:-.02em}
+#fig-square h1 em{font-style:normal;color:var(--cyan)}
+#fig-square .sub{font-size:20px;color:var(--soft);line-height:1.65;max-width:640px}
+#fig-square .meta{display:flex;justify-content:space-between;align-items:flex-end}
+#fig-square .meta div{font-family:var(--mono);font-size:13px;color:var(--muted);letter-spacing:.16em;line-height:2}
+#fig-square .lineart{position:absolute;right:-60px;top:120px;width:520px;height:520px;opacity:.55}
+</style>
+</head>
+<body>
+
+<!-- ================= COVER 900x383 ================= -->
+<section class="fig" id="fig-cover">
+  <div class="glow" style="width:420px;height:420px;background:rgba(58,212,230,.22);right:-80px;top:-140px"></div>
+  <svg class="grid-motif" viewBox="0 0 200 200" fill="none" aria-hidden="true">
+    <g stroke="rgba(58,212,230,.28)" stroke-width=".6">
+      <path d="M20 60 70 30 120 60 120 120 70 150 20 120Z"/>
+      <path d="M70 30v120M20 60l100 60M120 60 20 120"/>
+      <path d="M120 60 170 90 170 150 120 180M70 150l50 30"/>
+    </g>
+    <g fill="#3ad4e6">
+      <circle cx="20" cy="60" r="2.6"/><circle cx="70" cy="30" r="2.6"/><circle cx="120" cy="60" r="3.2"/>
+      <circle cx="120" cy="120" r="2.6"/><circle cx="70" cy="150" r="2.6"/><circle cx="20" cy="120" r="2.6"/>
+      <circle cx="170" cy="90" r="2.6"/><circle cx="170" cy="150" r="2.6"/><circle cx="120" cy="180" r="2.6"/>
+    </g>
+    <circle cx="120" cy="60" r="7" fill="none" stroke="#3ad4e6" stroke-width="1"/>
+  </svg>
+  <div class="top">
+    <span class="brandmark">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 13 15 51h8.4l3.3-8h10.6l3.3 8H49L32 13zm0 12.6 4.4 10.6h-8.8L32 25.6z" fill="#4fd1e8"/><circle cx="50" cy="16" r="5" fill="#f08a68"/></svg>
+    </span>
+    <div>
+      <div class="name">新哲文院 · 科创未来 · 算法社</div>
+      <div class="en">SIA ALGORITHM CLUB</div>
+    </div>
+    <div style="margin-left:auto"><span class="tag"><i class="dot"></i>2026 招新</span></div>
+  </div>
+  <div>
+    <h1>把算法训练<br>做成<em>作品</em></h1>
+  </div>
+  <div class="bottom">
+    <div class="sub">C++ / Python · 算法竞赛 · AI 博弈 · 前端与工程<br>零基础也能加入，一周出勤一天即可。</div>
+    <div class="year">2026–2027 学年<br>ada.nz/r/sfs</div>
+  </div>
+</section>
+
+<!-- ================= SQUARE 1080x1080 ================= -->
+<section class="fig" id="fig-square">
+  <div class="glow" style="width:560px;height:560px;background:rgba(58,212,230,.20);right:-160px;top:-120px"></div>
+  <svg class="lineart" viewBox="0 0 200 200" fill="none" aria-hidden="true">
+    <g stroke="rgba(58,212,230,.30)" stroke-width=".7">
+      <path d="M100 20 170 58 170 138 100 176 30 138 30 58Z"/>
+      <path d="M100 20v156M30 58l140 80M170 58 30 138M30 98h140M100 58l70 40-70 40-70-40Z"/>
+    </g>
+    <g fill="#3ad4e6"><circle cx="100" cy="20" r="3"/><circle cx="170" cy="58" r="3"/><circle cx="170" cy="138" r="3"/><circle cx="100" cy="176" r="3"/><circle cx="30" cy="138" r="3"/><circle cx="30" cy="58" r="3"/><circle cx="100" cy="98" r="4.5"/></g>
+    <circle cx="100" cy="98" r="12" stroke="#3ad4e6" stroke-width="1"/>
+  </svg>
+  <div class="top" style="display:flex;align-items:center;gap:14px">
+    <span class="brandmark" style="width:56px;height:56px;border-radius:15px">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 13 15 51h8.4l3.3-8h10.6l3.3 8H49L32 13zm0 12.6 4.4 10.6h-8.8L32 25.6z" fill="#4fd1e8"/><circle cx="50" cy="16" r="5" fill="#f08a68"/></svg>
+    </span>
+    <div>
+      <div style="font-size:19px;font-weight:680">新哲文院 · 科创未来 · 算法社</div>
+      <div class="en" style="font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.18em">SIA ALGORITHM CLUB · 2026 RECRUITMENT</div>
+    </div>
+  </div>
+  <div>
+    <h1>把算法训练<br>做成<em>作品</em></h1>
+    <div class="sub" style="margin-top:34px">从竞赛基础、算法可视化，到 AI 五子棋与社团管理系统——<br>我们相信，训练最终要落到能跑、能玩、能用的东西上。</div>
+  </div>
+  <div>
+    <div class="rule" style="margin-bottom:22px"></div>
+    <div class="meta">
+      <div>零基础可加入<br>每周二 / 周四 ECA</div>
+      <div style="text-align:right">官网 ada.nz/r/sfs<br>扫码报名 · 备注「算法社」</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PATHS 1080x760 ================= -->
+<section class="fig" id="fig-paths">
+  <div class="glow" style="width:400px;height:400px;background:rgba(58,212,230,.14);left:-140px;bottom:-160px"></div>
+  <div class="head"><span class="num">01 / 方向</span></div>
+  <div class="head"><h2>三条路径，总有一条适合你</h2><span class="en">THREE TRACKS</span></div>
+  <p class="lead">加入后可以选一条主线，也可以先都试试。三条路径共用同一套训练与作品体系。</p>
+  <div class="cards">
+    <div class="card">
+      <div class="idx">TRACK A</div>
+      <h3>算法组</h3>
+      <div class="en">ALGORITHM</div>
+      <p>题单训练、专题讲解、模拟赛与训练路线规划。围绕基础语法、数据结构、搜索、图论与动态规划，服务校内竞赛与长期能力建设。</p>
+      <div class="bar"></div>
+    </div>
+    <div class="card">
+      <div class="idx">TRACK B</div>
+      <h3>前端组</h3>
+      <div class="en">FRONTEND</div>
+      <p>维护官网视觉、交互页面与算法可视化。把排序、搜索、图论、DP 做成能点、能拖、能单步推演的演示页面。</p>
+      <div class="bar"></div>
+    </div>
+    <div class="card">
+      <div class="idx">TRACK C</div>
+      <h3>项目组</h3>
+      <div class="en">PROJECT</div>
+      <p>建立模型、训练 AI、开发软件。参与五子棋引擎、俄罗斯方块与贪吃蛇 AI、APPMonitor 与社团管理系统的长期迭代。</p>
+      <div class="bar"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= WORKS 1080x1080 ================= -->
+<section class="fig" id="fig-works">
+  <div class="glow" style="width:460px;height:460px;background:rgba(240,138,104,.10);right:-160px;top:-120px"></div>
+  <div class="head"><span class="num">02 / 作品</span></div>
+  <div class="head"><h2>已经上线，可以直接体验</h2><span class="en">SHIPPED</span></div>
+  <p class="lead">不是课程作业，是正在被真实使用的系统。</p>
+  <div class="hero">
+    <div class="txt">
+      <div class="k">AI / GOMOKU</div>
+      <h3>AI 五子棋</h3>
+      <p>浏览器端人机对战，多代模型迭代，支持昵称提交与排行榜。从搜索、评估到开局先验，完整走通一条 AI 工程链路。</p>
+      <div class="stat"><div><b>18</b><span>个可挑战版本</span></div><div><b>7</b><span>大算法实验室</span></div></div>
+    </div>
+    <div class="thumb"><img src="../../../public/assets/showcase/gomoku-match.webp" alt=""></div>
+  </div>
+  <div class="grid">
+    <div class="w">
+      <div class="txt"><div class="k">AI / TETRIS</div><h3>AI 俄罗斯方块</h3><p>正常游玩、AI 演示、AI 辅助与公平人机对战四种模式。</p></div>
+      <div class="mini"><img src="../../../public/assets/showcase/tetris.webp" alt=""></div>
+    </div>
+    <div class="w">
+      <div class="txt"><div class="k">AI / SNAKE</div><h3>AI 贪吃蛇</h3><p>AI 演示、辅助轨迹与双窗人机对战，双榜可记录。</p></div>
+      <div class="mini"><img src="../../../public/assets/showcase/snake.webp" alt=""></div>
+    </div>
+    <div class="w">
+      <div class="txt"><div class="k">LAB / 7 MODULES</div><h3>算法可视化实验室</h3><p>排序、搜索、数据结构、图论、DP、二叉树、堆七大入口，支持连续演示与单步推演。</p></div>
+      <div class="glyph">7<br>LABS</div>
+    </div>
+    <div class="w">
+      <div class="txt"><div class="k">DESKTOP / V7.0</div><h3>APPMonitor</h3><p>Windows 软件管控与自律助手，持续迭代至 V7.0。</p></div>
+      <div class="glyph">V7<br>APP</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SCHEDULE 1080x640 ================= -->
+<section class="fig" id="fig-schedule">
+  <div class="glow" style="width:380px;height:380px;background:rgba(58,212,230,.16);left:-120px;top:-140px"></div>
+  <div class="left">
+    <div class="num">03 / 节奏</div>
+    <h2 style="font-size:38px;margin-top:14px;font-weight:750">不占用额外时间</h2>
+    <div class="time">15:45<span> — 17:10</span></div>
+    <p class="lead" style="margin-top:18px">每周二、周四下午 ECA 时间。<br>一周出勤一天即可，其余时间自由安排。</p>
+  </div>
+  <div class="right">
+    <div class="row"><b>TUE</b><p><strong>周二 · ECA</strong><br>15:45–17:10，算法训练与专题讲解。</p></div>
+    <div class="row"><b>THU</b><p><strong>周四 · ECA</strong><br>15:45–17:10，两天任选一天参加即可。</p></div>
+    <div class="row"><b>ANY</b><p><strong>线上 · 随时</strong><br>教材、实验室、对战与积分系统长期开放。</p></div>
+  </div>
+</section>
+
+<!-- ================= JOIN 1080x1080 ================= -->
+<section class="fig" id="fig-join">
+  <div class="glow" style="width:440px;height:440px;background:rgba(58,212,230,.18);right:-140px;bottom:-160px"></div>
+  <div class="head"><span class="num">04 / 报名</span></div>
+  <div class="head"><h2>三步加入算法社</h2><span class="en">HOW TO JOIN</span></div>
+  <p class="lead">零基础也欢迎。报名不需要考试，也不需要作品集。</p>
+  <div class="body">
+    <div class="steps">
+      <div class="step"><div class="n">01</div><div><h3>填写报名表</h3><p>打开官网，点击「立即加入」，填写中文姓名、班级和联系方式。可选填：你是谁、算法社哪里吸引你、你想获得什么。</p></div></div>
+      <div class="step"><div class="n">02</div><div><h3>等待联系</h3><p>管理员会查看申请并尽快联系你，确认方向与第一次活动时间。</p></div></div>
+      <div class="step"><div class="n">03</div><div><h3>来一次 ECA</h3><p>周二或周四 15:45–17:10，任选一天。不需要提前准备，直接来就好。</p></div></div>
+    </div>
+    <div class="qrbox">
+      <img src="../images/qr-square.png" alt="负责人微信二维码">
+      <p>扫码添加负责人微信<br>备注「算法社」</p>
+    </div>
+  </div>
+  <div class="url"><span>官网快捷地址</span><b>ada.nz/r/sfs</b></div>
+</section>
+
+<!-- ================= SPONSOR 1080x760 ================= -->
+<section class="fig" id="fig-sponsor">
+  <div class="glow" style="width:420px;height:420px;background:rgba(240,138,104,.12);left:-150px;bottom:-170px"></div>
+  <div class="head"><span class="num">05 / 合作</span></div>
+  <div class="head"><h2>寻找同行者</h2><span class="en">SPONSORSHIP</span></div>
+  <p class="lead">我们面向校内外的企业、机构与校友开放合作，也欢迎设备、场地、课程与导师资源。</p>
+  <div class="tiers">
+    <div class="tier">
+      <div class="lvl">TIER 01</div>
+      <h3>赛事与奖品支持</h3>
+      <div class="sub">实物 / 奖品 / 场地</div>
+      <ul><li>校内算法竞赛奖品与纪念品</li><li>活动场地、设备与网络支持</li><li>品牌出现在活动物料与现场</li></ul>
+    </div>
+    <div class="tier mid">
+      <div class="lvl">TIER 02</div>
+      <h3>联合出品</h3>
+      <div class="sub">项目 / 内容 / 传播</div>
+      <ul><li>共建 AI 或前端项目，联合署名</li><li>技术分享、工作坊与课程共建</li><li>官网与作品页长期展示合作方</li></ul>
+    </div>
+    <div class="tier">
+      <div class="lvl">TIER 03</div>
+      <h3>长期共建</h3>
+      <div class="sub">导师 / 实习 / 资源</div>
+      <ul><li>企业导师与真实项目课题</li><li>社员参观、实习与成长通道</li><li>年度合作与定制方案</li></ul>
+    </div>
+  </div>
+  <div class="foot">具体权益与金额可协商 · 联系方式见文末 · 所有合作以不影响教学与社员权益为前提</div>
+</section>
+
+</body>
+</html>
