@@ -92,6 +92,7 @@
         </div>
         <div class="club-tabs" data-club-tabs role="tablist" aria-label="超管工具">
           <button type="button" role="tab" aria-selected="true" aria-controls="siteServiceSection" data-tab-target="siteServiceSection" data-i18n="admin.tabService">站点服务</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="errorPagesSection" data-tab-target="errorPagesSection" data-i18n="admin.errorPagesTitle">故障页内容（502 / 503 / 404）</button>
           <button type="button" role="tab" aria-selected="false" aria-controls="permissionsSection" data-tab-target="permissionsSection" data-i18n="admin.permTitle">权限下放</button>
           <button type="button" role="tab" aria-selected="false" aria-controls="superAdminsSection" data-tab-target="superAdminsSection" data-i18n="admin.superTitle">超管交接</button>
           <button type="button" role="tab" aria-selected="false" aria-controls="bindingsSection" data-tab-target="bindingsSection" data-i18n="admin.bindingsTitle">姓名绑定</button>
@@ -253,7 +254,6 @@
         </form>
         <p class="message" id="directResetMessage" role="status"></p>
       </section>
-      </section>
 
       <section class="panel section" id="bindingsSection">
         <div class="section-head premium-section-head">
@@ -280,6 +280,7 @@
         </form>
         <p class="message" id="bindingsMessage" role="status"></p>
         <div class="table-wrap list-gap" id="bindingsList"><div class="club-skeleton-rows" aria-hidden="true"><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div><div class="club-skeleton"></div></div><span class="club-sr-only" data-i18n="admin.loadingBindings">正在读取绑定资料…</span></div>
+      </section>
       </section>
     </div>
   </main>
@@ -810,7 +811,7 @@
       // 超管工具由 ClubShell 的标签页托管显隐：
       // 这里只负责「整个超管工具区」是否出现，绝不逐个写面板的 hidden，
       // 否则一次权限刷新就会把全部面板重新摊开，越切越长。
-      const tabPanelIds = ['siteServiceSection', 'permissionsSection', 'superAdminsSection', 'bindingsSection', 'resetsSection', 'appMonitorReleasesSection'];
+      const tabPanelIds = ['siteServiceSection', 'errorPagesSection', 'permissionsSection', 'superAdminsSection', 'bindingsSection', 'resetsSection', 'appMonitorReleasesSection'];
       tabPanelIds.forEach(id => {
         const node = $(id);
         if (!node) return;
