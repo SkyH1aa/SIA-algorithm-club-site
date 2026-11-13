@@ -1,6 +1,7 @@
 (() => {
   const zh = {
     title: 'AI 对话',
+    desktopDownload: '下载 Windows 桌面端',
     new: '新对话',
     back: '返回个人中心',
     language: '切换语言',
@@ -183,6 +184,7 @@
 
   const en = {
     title: 'AI Chat',
+    desktopDownload: 'Download Windows app',
     new: 'New chat',
     back: 'Back to member center',
     language: 'Switch language',

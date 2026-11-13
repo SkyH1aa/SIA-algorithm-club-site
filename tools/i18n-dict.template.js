@@ -31,7 +31,7 @@
     if (en) return Promise.resolve();
     return new Promise(function (resolve) {
       var script = document.createElement('script');
-      script.src = BASE + 'i18n-dict-en.js';
+      script.src = BASE + 'i18n-dict-en.js?v=__EN_DICT_HASH__';
       script.onload = function () {
         en = window.ClubI18nDictEn || null;
         publish();

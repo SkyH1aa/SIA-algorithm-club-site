@@ -1,6 +1,39 @@
 // 中文词典（按需加载：默认语言为中文时只加载本文件）。
 (() => {
   window.ClubI18nDictZh = {
+    harness: {
+      pageTitle: 'Mingshen Harness · 本地 AI 编程与工作 Agent',
+      navWorkspace: '工作台', navFeatures: '能力', navDownload: '下载', backChat: '返回 AI Chat',
+      heroTitle: '让目标，成为完成的工作。', heroLead: '不止对话。把模型、代码、文档与并行 Agent，带进你自己的 Windows 工作台。',
+      download: '下载 Windows 最新版', starButton: 'GitHub · 给个 Star', platform: 'Windows 10 / 11 · x64 · 自选模型服务',
+      openScreenshot: '在新标签中查看客户端大图', screenshotAlt: 'Mingshen Harness 光轨界面：工作区会话、对话与代码模式、模型选择及任务输入', screenshotCaption: '真实客户端 · 光轨界面', screenshotHint: '点击查看大图；界面中的模型仅作示例。',
+      trackGoal: '从目标出发', trackWork: '让协作展开', trackResult: '向完成推进', stageHint: '你的项目，是工作的中心。',
+      viewTabs: '查看客户端细节', viewOverview: '完整工作台', viewProjects: '项目与会话', viewInput: '从目标开始', enlarge: '查看原图 ↗',
+      projectsAlt: '真实客户端截图的项目侧栏局部放大', inputAlt: '真实客户端截图的模型选择与任务输入局部放大',
+      projectsCaption: '同一张真实截图的局部放大 · 按项目组织会话，让上下文各归其位。', inputCaption: '同一张真实截图的局部放大 · 选择模型与角色，描述目标、约束和完成标准。',
+      introTitle: '一个工作台。<br>不止一种可能。', introLead: '从一句目标出发，在同一个窗口里理解项目、拆分任务、修改代码、制作文档。模型由你选择，工作围绕你的项目展开。',
+      agentsTitle: '把复杂目标，<br>交给协作。', agentsBody: '内置 Agent 与自建角色各司其职。先用只读 Plan 理清路径，再通过并行任务、任务树和可编辑计划推进工作；需要时暂停，准备好再继续。', readGuide: '阅读使用手册 ↗',
+      flowPlan: '先规划', flowPlanBody: '明确目标、约束与完成标准', flowWork: '再协作', flowWorkBody: '拆分任务，按角色推进', flowReview: '看结果', flowReviewBody: '检查变更，保留你的判断', flowNote: '工作方式示意；任务执行仍受权限与环境约束。',
+      chapterNav: '产品导览', chapterFlow: '协作流程', chapterCraft: '代码与文档', chapterModels: '模型与扩展',
+      flowTabs: '探索协作阶段', goalArtifact: '目标与约束', reviewArtifact: '变更与交付',
+      planTitle: '把方向说清，再开始。', planDetail: '用只读 Plan 梳理项目与约束，把完成标准写进可编辑计划。先检查路径，再决定如何执行。', planArtifact: '目标 → 约束 → 可编辑计划',
+      workTitle: '让任务沿着各自的路径推进。', workDetail: '按角色拆分工作，通过并行任务和任务树组织协作。需要调整时暂停，把新的判断带回计划。', workArtifact: '任务树 → 并行 Agent → 汇合',
+      reviewTitle: '把最后的判断，留给你。', reviewDetail: '回到文件、差异和文档检查结果。是否满足完成标准，由你审阅；需要时继续修改或使用恢复工具。', reviewArtifactLine: '文件与差异 → 检查 → 下一步',
+      codeTabs: '探索代码能力', codeContext: '上下文', codeDiff: '检查差异', codeRestore: '撤销恢复',
+      contextTitle: '修改之前，先理解关系。', contextDetail: '本地代码索引与 LSP 帮助提供项目上下文，让编辑围绕相关文件展开。',
+      diffTitle: '每一次变更，都能回看。', diffDetail: '通过 diff 检查增删与修改内容，再判断是否保留。示意中的代码行不代表真实任务结果。',
+      restoreTitle: '为尝试，留出回来的路。', restoreDetail: '结合 Git 撤销恢复、快照与 worktree 管理变更。恢复前仍需检查工作区和所选范围。', codeDemoNote: '能力示意 · Editor / Diff / Git / LSP',
+      docsTabs: '探索文档能力', docsRead: '读取材料', docsCompose: '组织内容', docsExport: '交付格式',
+      readTitle: '让散落的材料，进入上下文。', readDetail: '读取 Office 与 PDF 附件，使用中英文 OCR 提取内容。识别结果仍需核对原文。',
+      composeTitle: '从结构开始，组织表达。', composeDetail: '结合 Markdown、模板、图表与 Word 原生可编辑公式组织内容，再检查文字、数据与排版。',
+      exportTitle: '按交付需要，选择格式。', exportDetail: '制作 DOCX、PPTX 或 PDF，让内容进入下一步工作。成品仍需按实际用途审阅。', docsDemoNote: '能力示意 · DOCX / PPTX / PDF / OCR',
+      codeTitle: '代码与变更，<br>看得清。', codeBody: '文件编辑、diff、本地代码索引与 LSP，让修改有上下文。结合 Git 撤销恢复、快照与 worktree，审视每一次变更。',
+      docsTitle: '从材料，<br>到可交付的文档。', docsBody: '读取 Office 与 PDF 附件，使用中英文 OCR 提取内容，制作 DOCX、PPTX 和 PDF。支持 Markdown、模板、图表与 Word 原生可编辑公式。',
+      modelsTitle: '模型自选。<br>工作流，也是。', modelsBody: '连接自己的供应商，选择适合任务的模型。通过 Skills、插件、MCP 和内嵌浏览器拓展工作流，不把每一种任务都挤进同一种工具。', modelsNote: '模型调用与扩展可能产生各自的费用，兼容性取决于供应商与配置。', extensions: '扩展工作流',
+      localTitle: '本地优先，<br>边界也要说清楚。', localBody: '会话、草稿和项目记忆默认保存在本机。模型调用、上下文压缩与记忆分析等功能，会按你的配置向对应供应商发送所需内容。', localNote: '本地优先不等于完全离线。操作审批不替代进程隔离；请按任务配置权限，并了解外部服务的数据边界。', security: '了解数据与安全边界 ↗',
+      downloadTitle: '下一件事，<br>在你的桌面上完成。', downloadBody: '安装 Windows 版，连接模型供应商，选择工作文件夹。然后，从一句目标开始。', downloadFallback: '未配置下载直链时，将前往 GitHub 仓库。', downloadReady: '下载按钮已连接最新配置的 Windows 下载地址。', setupNote: 'Windows 10 / 11 x64。需自行配置模型服务，不附赠模型订阅或 API 额度。隔离环境与外部工具按需配置。',
+      starTitle: '好用的话，<br>留一颗 Star 吧。', starBody: '一个独立开发的工作台，靠一次次真实使用继续生长。你的 Star，是让下一次更新继续发生的小小动力。', starLink: '去 GitHub 支持一下 ↗'
+    },
   labView: {
     inorder: '中序遍历',
     dijkstraHint: '优先扩展当前距离最小的节点，仅适用于非负权图。',
@@ -2089,6 +2122,11 @@
       notFound: { title: '页面不存在 · 算法社', h1: '这个页面不存在' }
     },
     admin: {
+      harnessTab: 'Mingshen Harness', harnessTitle: 'Mingshen Harness 下载配置',
+      harnessIntro: '仅超管可编辑。为作品页设置下载直链；留空时访客将前往 GitHub 仓库。',
+      harnessDownloadUrl: '下载直链', harnessUrlHint: '请使用无需登录即可访问的 HTTPS 公开下载直链。', harnessFallbackHint: '留空或清空后使用默认仓库：',
+      harnessSave: '保存下载直链', harnessClear: '清空并使用仓库', harnessLoading: '正在读取下载配置…', harnessSaving: '正在保存下载配置…', harnessLoaded: '已读取当前下载配置。', harnessSaved: '下载直链已保存。', harnessCleared: '下载直链已清空；作品页将使用默认仓库。', harnessDraft: '有未保存的修改。',
+      harnessInvalidUrl: '请输入不超过 2048 字符、不含账号密码、控制字符或反斜杠的 HTTPS 公开直链，或留空使用默认仓库。', harnessLoadFailed: '下载配置读取失败。请刷新概览重试；当前编辑不会丢失。', harnessSaveFailed: '下载配置保存失败。当前编辑已保留，请重试。', harnessPermissionRequired: '仅当前已登录的超管可管理下载配置。',
       tabProduct: '商品',
       tabRedemption: '兑换记录',
       tabAnnouncement: '公告',

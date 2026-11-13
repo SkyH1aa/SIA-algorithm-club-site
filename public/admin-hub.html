@@ -10,7 +10,7 @@
   <title>管理员总览 · 算法社</title>
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
-  <script src="i18n-dict.js?v=f66c88d1"></script><script src="member-identity.js?v=ad75d585" defer></script>
+  <script src="i18n-dict.js?v=73eb4356"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
   <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
 <script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script>
@@ -40,6 +40,7 @@
     body.club-page.gallery-admin #superToolsSection > .panel { padding: var(--club-space-6); margin-top: var(--club-space-5); background: var(--club-material-read); }
     body.club-page.gallery-admin .form { padding: var(--club-space-5); background: var(--club-material-inset); border: 1px solid var(--club-line); border-radius: var(--club-radius-sm); box-shadow: none; }
     body.club-page.gallery-admin .intro { max-width: 68ch; }
+    body.club-page.gallery-admin #mingshenHarnessFallbackHint { overflow-wrap: anywhere; }
     @media (max-width: 640px) { body.club-page.gallery-admin #entryGrid { grid-template-columns: 1fr; } body.club-page.gallery-admin #superToolsSection > .panel { padding: var(--club-space-5); } }
 
 </style>
@@ -98,6 +99,7 @@
           <button type="button" role="tab" aria-selected="false" aria-controls="bindingsSection" data-tab-target="bindingsSection" data-i18n="admin.bindingsTitle">姓名绑定</button>
           <button type="button" role="tab" aria-selected="false" aria-controls="resetsSection" data-tab-target="resetsSection" data-i18n="admin.resetsTitle">密码重置</button>
           <button type="button" role="tab" aria-selected="false" aria-controls="appMonitorReleasesSection" data-tab-target="appMonitorReleasesSection" data-i18n="admin.tabReleases">版本发布</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="mingshenHarnessSection" data-tab-target="mingshenHarnessSection" data-i18n="admin.harnessTab">Mingshen Harness</button>
         </div>
 
       <section class="panel section" id="superAdminsSection">
@@ -223,6 +225,21 @@
         <div class="table-wrap list-gap" id="appMonitorReleasesList"></div>
       </section>
 
+      <section class="panel section" id="mingshenHarnessSection" hidden>
+        <div class="section-head premium-section-head"><div><h2 data-i18n="admin.harnessTitle">Mingshen Harness 下载配置</h2><p class="intro" data-i18n="admin.harnessIntro">仅超管可编辑。为作品页设置下载直链；留空时访客将前往 GitHub 仓库。</p></div></div>
+        <form class="form premium-form" id="mingshenHarnessForm" novalidate>
+          <label class="label" for="mingshenHarnessDownloadUrl" data-i18n="admin.harnessDownloadUrl">下载直链</label>
+          <input class="input" id="mingshenHarnessDownloadUrl" type="url" maxlength="2048" placeholder="https://..." inputmode="url" autocomplete="off" spellcheck="false" aria-describedby="mingshenHarnessUrlHint mingshenHarnessFallbackHint mingshenHarnessMessage" disabled>
+          <p class="hint" id="mingshenHarnessUrlHint" data-i18n="admin.harnessUrlHint">请使用无需登录即可访问的 HTTPS 公开下载直链。</p>
+          <p class="hint" id="mingshenHarnessFallbackHint"><span data-i18n="admin.harnessFallbackHint">留空或清空后使用默认仓库：</span> <a href="https://github.com/SkyH1aa/MingshenHarness" target="_blank" rel="noopener noreferrer">https://github.com/SkyH1aa/MingshenHarness</a></p>
+          <div class="actions premium-toolbar">
+            <button class="button" id="mingshenHarnessSave" type="submit" data-i18n="admin.harnessSave" disabled>保存下载直链</button>
+            <button class="button secondary" id="mingshenHarnessClear" type="button" data-i18n="admin.harnessClear" disabled>清空并使用仓库</button>
+          </div>
+        </form>
+        <p class="message" id="mingshenHarnessMessage" role="status" aria-live="polite" aria-atomic="true"></p>
+      </section>
+
       <section class="panel section" id="resetsSection">
         <div class="section-head premium-section-head">
           <div>
@@ -314,6 +331,8 @@
     }
     document.addEventListener('DOMContentLoaded', mergeAdminHubPageDict);
     let currentSession = null;
+    let sessionRevision = 0;
+    let overviewRevision = 0;
     // file:// 下浏览器按 origin 隔离登录态：提示用户在本页登录一次，
     // 而不是让管理请求静默失败后显示一堆「请求失败」。
     if (location.protocol === 'file:') {
@@ -423,6 +442,107 @@
       document.querySelectorAll('[data-appmonitor-delete]').forEach(button => button.onclick = async () => { if (!(await ClubCommon.confirm({ message: t('admin.appmonitorDeleteConfirm') }))) return; try { await call('admin_appmonitor_releases_delete', { id: button.dataset.appmonitorDelete }); setMessage($('appMonitorReleaseMessage'), t('admin.appmonitorDeleted'), 'success'); await refreshAppMonitorReleases(); } catch (error) { setMessage($('appMonitorReleaseMessage'), error.message, 'error'); } });
     }
     async function refreshAppMonitorReleases() { const result = await call('admin_appmonitor_releases_list'); renderAppMonitorReleases(result.releases); }
+    // ---- Mingshen Harness 下载配置 -------------------------------------
+    // 文案只存 key，语言切换只重绘状态；绝不重填正在编辑的输入框。
+    const harnessState = { request: 0, edit: 0, dirty: false, writeToken: null, messageKey: '', messageType: '' };
+    function requireSuperAdmin() {
+      if (!currentSession?.user?.id || !currentAccess.isSuperAdmin) throw new Error(t('admin.harnessPermissionRequired'));
+    }
+    function refreshMingshenHarness() {
+      const allowed = Boolean(currentSession?.user?.id && currentAccess.isSuperAdmin);
+      $('mingshenHarnessDownloadUrl').disabled = !allowed;
+      $('mingshenHarnessSave').disabled = !allowed || Boolean(harnessState.writeToken);
+      $('mingshenHarnessClear').disabled = !allowed || Boolean(harnessState.writeToken);
+      $('mingshenHarnessForm').setAttribute('aria-busy', String(Boolean(harnessState.writeToken)));
+      $('mingshenHarnessDownloadUrl').setAttribute('aria-invalid', String(harnessState.messageKey === 'admin.harnessInvalidUrl'));
+      setMessage($('mingshenHarnessMessage'), harnessState.messageKey ? t(harnessState.messageKey) : '', harnessState.messageType);
+    }
+    function setHarnessMessage(key, type = '') {
+      harnessState.messageKey = key;
+      harnessState.messageType = type;
+      refreshMingshenHarness();
+    }
+    function resetMingshenHarness() {
+      harnessState.request++;
+      harnessState.edit++;
+      harnessState.dirty = false;
+      // 已发送的写入无法取消；跨退出/换账号继续持锁，直到该请求 settle。
+      harnessState.messageKey = '';
+      harnessState.messageType = '';
+      $('mingshenHarnessDownloadUrl').value = '';
+      refreshMingshenHarness();
+    }
+    function harnessRequestIsCurrent(request, revision) {
+      return request === harnessState.request && revision === sessionRevision && Boolean(currentSession?.user?.id && currentAccess.isSuperAdmin);
+    }
+    async function loadMingshenHarness() {
+      // 概览/语言刷新不覆盖草稿，也不能使正在保存的请求失效。
+      if (harnessState.dirty || harnessState.writeToken) return;
+      requireSuperAdmin();
+      const request = ++harnessState.request;
+      const revision = sessionRevision;
+      const edit = harnessState.edit;
+      setHarnessMessage('admin.harnessLoading');
+      try {
+        const result = await call('mingshen_harness_download_get');
+        if (!harnessRequestIsCurrent(request, revision) || edit !== harnessState.edit) return;
+        if (typeof result.downloadUrl !== 'string') throw new Error('Invalid download settings');
+        $('mingshenHarnessDownloadUrl').value = result.downloadUrl;
+        setHarnessMessage('admin.harnessLoaded');
+      } catch (_) {
+        if (harnessRequestIsCurrent(request, revision) && edit === harnessState.edit) setHarnessMessage('admin.harnessLoadFailed', 'error');
+      }
+    }
+    function isHarnessDownloadUrlValid(value) {
+      if (value.length > 2048 || /[\u0000-\u001f\u007f-\u009f\\]/u.test(value)) return false;
+      value = value.trim();
+      if (!value) return true;
+      if (/\s/u.test(value) || !/^https:\/\/[^/\s?#]+(?:[/?#]|$)/i.test(value)) return false;
+      try {
+        const url = new URL(value);
+        return url.protocol === 'https:' && Boolean(url.hostname) && !url.username && !url.password && !value.slice(8).split(/[/?#]/, 1)[0].includes('@');
+      } catch (_) { return false; }
+    }
+    async function saveMingshenHarness(clear = false) {
+      try { requireSuperAdmin(); } catch (_) { setHarnessMessage('admin.harnessPermissionRequired', 'error'); return; }
+      if (harnessState.writeToken) return;
+      const rawUrl = clear ? '' : $('mingshenHarnessDownloadUrl').value;
+      if (!isHarnessDownloadUrlValid(rawUrl)) { setHarnessMessage('admin.harnessInvalidUrl', 'error'); $('mingshenHarnessDownloadUrl').focus(); return; }
+      const downloadUrl = rawUrl.trim();
+      if (clear) {
+        $('mingshenHarnessDownloadUrl').value = '';
+        harnessState.edit++;
+        harnessState.dirty = true;
+      }
+      const request = ++harnessState.request;
+      const revision = sessionRevision;
+      const edit = harnessState.edit;
+      const writeToken = {};
+      harnessState.writeToken = writeToken;
+      setHarnessMessage('admin.harnessSaving');
+      try {
+        const result = await call('admin_mingshen_harness_download_set', { downloadUrl });
+        if (!harnessRequestIsCurrent(request, revision)) return;
+        if (typeof result.downloadUrl !== 'string') throw new Error('Invalid download settings');
+        if (edit === harnessState.edit) {
+          $('mingshenHarnessDownloadUrl').value = result.downloadUrl;
+          harnessState.dirty = false;
+          setHarnessMessage(result.downloadUrl ? 'admin.harnessSaved' : 'admin.harnessCleared', 'success');
+        }
+      } catch (_) {
+        if (harnessRequestIsCurrent(request, revision) && edit === harnessState.edit) setHarnessMessage('admin.harnessSaveFailed', 'error');
+      } finally {
+        // 响应是否过期只决定是否应用，不决定锁的寿命；只有锁的主人可释放。
+        if (harnessState.writeToken === writeToken) { harnessState.writeToken = null; refreshMingshenHarness(); }
+      }
+    }
+    $('mingshenHarnessDownloadUrl').addEventListener('input', () => {
+      harnessState.edit++;
+      harnessState.dirty = true;
+      setHarnessMessage('admin.harnessDraft');
+    });
+    $('mingshenHarnessForm').addEventListener('submit', event => { event.preventDefault(); void saveMingshenHarness(); });
+    $('mingshenHarnessClear').addEventListener('click', () => { void saveMingshenHarness(true); });
     // ---- 故障页内容编辑 --------------------------------------------------
     let errorPages = [];
     function fillErrorPageForm(code) {
@@ -808,10 +928,12 @@
 
     function applySectionVisibility() {
       const superAdmin = Boolean(currentAccess.isSuperAdmin);
+      if (!superAdmin) resetMingshenHarness();
+      else refreshMingshenHarness();
       // 超管工具由 ClubShell 的标签页托管显隐：
       // 这里只负责「整个超管工具区」是否出现，绝不逐个写面板的 hidden，
       // 否则一次权限刷新就会把全部面板重新摊开，越切越长。
-      const tabPanelIds = ['siteServiceSection', 'errorPagesSection', 'permissionsSection', 'superAdminsSection', 'bindingsSection', 'resetsSection', 'appMonitorReleasesSection'];
+      const tabPanelIds = ['siteServiceSection', 'errorPagesSection', 'permissionsSection', 'superAdminsSection', 'bindingsSection', 'resetsSection', 'appMonitorReleasesSection', 'mingshenHarnessSection'];
       tabPanelIds.forEach(id => {
         const node = $(id);
         if (!node) return;
@@ -857,6 +979,8 @@
     }
 
     async function refreshOverview(options = {}) {
+      const revision = sessionRevision;
+      const refresh = ++overviewRevision;
       applySectionVisibility();
       if (!options.keepSecret) {
         $('secretBox').classList.remove('active');
@@ -878,9 +1002,10 @@
           call('admin_super_admins_list'),
           call('admin_site_service_get'),
           call('admin_error_pages_get'),
-          call('admin_appmonitor_releases_list')
+          call('admin_appmonitor_releases_list'),
+          loadMingshenHarness()
         );
-        labels.push('profiles', 'resets', 'permissions', 'superAdmins', 'siteService', 'errorPages', 'appmonitorReleases');
+        labels.push('profiles', 'resets', 'permissions', 'superAdmins', 'siteService', 'errorPages', 'appmonitorReleases', 'mingshenHarness');
       }
       if (permOn('checkin')) {
         tasks.push(call('admin_checkin_list'), call('admin_course_checkin_list'));
@@ -893,6 +1018,7 @@
 
       try {
         const results = await runSequentially(tasks);
+        if (revision !== sessionRevision || refresh !== overviewRevision || !currentSession?.user?.id) return;
         const byLabel = Object.fromEntries(labels.map((label, index) => [label, results[index]]));
         let hintParts = [t('admin.accountLabel', { username: usernameFromSession(currentSession) })];
         if (currentAccess.isSuperAdmin) hintParts.push(t('admin.roleSuper'));
@@ -972,12 +1098,23 @@
 
         $('statusHint').textContent = hintParts.join(' · ');
       } catch (error) {
-        $('statusHint').textContent = error.message;
+        if (revision === sessionRevision && refresh === overviewRevision && currentSession?.user?.id) $('statusHint').textContent = error.message;
       }
     }
 
     async function updateSession(session) {
+      const revision = ++sessionRevision;
+      const sameUser = Boolean(session?.user?.id && session.user.id === currentSession?.user?.id);
       currentSession = session;
+      if (!sameUser) {
+        currentAccess = { isSuperAdmin: false, permissions: emptyPermissions() };
+        resetMingshenHarness();
+        applySectionVisibility();
+      } else {
+        // token 刷新也让旧响应失效，但保留草稿和未完成写入的独立互斥锁。
+        harnessState.request++;
+        if (['admin.harnessLoading', 'admin.harnessSaving'].includes(harnessState.messageKey)) setHarnessMessage(harnessState.dirty ? 'admin.harnessDraft' : '');
+      }
       const logged = Boolean(session?.user?.id);
       $('gate').classList.toggle('hidden', logged);
       if (!logged) {
@@ -988,13 +1125,18 @@
 
       // 同一原因：defer 脚本可能尚未就绪。等待它就绪，而不是直接抛错。
       await whenStaffAccessReady();
-      currentAccess = await window.ClubStaffAccess.fetchStaffAccess(session);
+      if (revision !== sessionRevision) return;
+      const access = await window.ClubStaffAccess.fetchStaffAccess(session);
+      if (revision !== sessionRevision) return;
+      currentAccess = access;
+      applySectionVisibility();
       let siteEnabled = true;
       try {
         const serviceResponse = await fetch(FUNCTION_URL, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ action: 'site_service_status' }) });
         const serviceState = await serviceResponse.json().catch(() => ({}));
         siteEnabled = serviceState.enabled !== false;
       } catch (_) { /* 状态接口异常时不阻断管理员登录 */ }
+      if (revision !== sessionRevision) return;
       const debugOnly = new URLSearchParams(location.search).get('serviceDebug') === '1';
       if ((!siteEnabled || debugOnly) && !currentAccess.isSuperAdmin) {
         $('denied').classList.remove('hidden');
@@ -1164,6 +1306,7 @@
 
     window.addEventListener('club:langchange', () => {
       if (window.ClubI18n) ClubI18n.apply(document);
+      refreshMingshenHarness();
       if (currentSession && window.ClubStaffAccess?.hasStaffAccess(currentAccess)) {
         renderEntries();
         void refreshOverview({ keepSecret: true });
@@ -1172,6 +1315,7 @@
 
     setTimeout(() => {
       if (window.ClubI18n) ClubI18n.apply(document);
+      refreshMingshenHarness();
       if (currentSession && window.ClubStaffAccess?.hasStaffAccess(currentAccess)) renderEntries();
     }, 0);
 

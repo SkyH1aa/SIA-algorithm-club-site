@@ -1,6 +1,39 @@
 // English dictionary (loaded on demand when the language is English).
 (() => {
   window.ClubI18nDictEn = {
+    harness: {
+      pageTitle: 'Mingshen Harness · Local-first AI coding & work agent',
+      navWorkspace: 'Workspace', navFeatures: 'Capabilities', navDownload: 'Download', backChat: 'Back to AI Chat',
+      heroTitle: 'Turn a goal into work done.', heroLead: 'Beyond conversation. Bring models, code, documents and parallel agents into your own Windows workspace.',
+      download: 'Download latest for Windows', starButton: 'GitHub · Leave a Star', platform: 'Windows 10 / 11 · x64 · Bring your own models',
+      openScreenshot: 'Open the full-size client screenshot in a new tab', screenshotAlt: 'Mingshen Harness Light Trail interface with workspace sessions, chat and code modes, model selection and task input', screenshotCaption: 'Actual client · Light Trail interface', screenshotHint: 'Click to enlarge. Models shown are examples only.',
+      trackGoal: 'Start with a goal', trackWork: 'Let collaboration unfold', trackResult: 'Move toward done', stageHint: 'Your project is the center of the work.',
+      viewTabs: 'Explore client details', viewOverview: 'Full workspace', viewProjects: 'Projects & sessions', viewInput: 'Start with a goal', enlarge: 'View original ↗',
+      projectsAlt: 'Enlarged project sidebar from the actual client screenshot', inputAlt: 'Enlarged model selection and task input from the actual client screenshot',
+      projectsCaption: 'Detail of the same actual screenshot · Organize sessions by project and keep context in place.', inputCaption: 'Detail of the same actual screenshot · Choose a model and role, then describe the goal, constraints and done.',
+      introTitle: 'One workspace.<br>More possibilities.', introLead: 'Start with a goal. Understand a project, split tasks, edit code and create documents in one window. You choose the models; the work stays centered on your project.',
+      agentsTitle: 'Complex goals.<br>Shared work.', agentsBody: 'Built-in agents and custom roles work together. Start with a read-only Plan, then move forward with parallel tasks, a task tree and editable plans. Pause when needed and resume when ready.', readGuide: 'Read the user guide ↗',
+      flowPlan: 'Plan first', flowPlanBody: 'Define the goal, constraints and done', flowWork: 'Work together', flowWorkBody: 'Split tasks and assign roles', flowReview: 'Review results', flowReviewBody: 'Inspect changes. Keep your judgment.', flowNote: 'Illustrative workflow. Execution remains subject to permissions and environment.',
+      chapterNav: 'Product tour', chapterFlow: 'Collaboration', chapterCraft: 'Code & documents', chapterModels: 'Models & extensions',
+      flowTabs: 'Explore collaboration stages', goalArtifact: 'Goal & constraints', reviewArtifact: 'Changes & deliverables',
+      planTitle: 'Set the direction before you start.', planDetail: 'Use read-only Plan to understand the project and its constraints. Put the definition of done into an editable plan, then review the approach before execution.', planArtifact: 'Goal → Constraints → Editable plan',
+      workTitle: 'Give each task a path forward.', workDetail: 'Split work by role and organize collaboration with parallel tasks and a task tree. Pause to adjust, then bring your decisions back into the plan.', workArtifact: 'Task tree → Parallel agents → Rejoin',
+      reviewTitle: 'Keep the final judgment yours.', reviewDetail: 'Inspect files, diffs and documents against your definition of done. Continue editing or use recovery tools when needed.', reviewArtifactLine: 'Files & diffs → Review → Next step',
+      codeTabs: 'Explore coding capabilities', codeContext: 'Context', codeDiff: 'Inspect diff', codeRestore: 'Undo & restore',
+      contextTitle: 'Understand the connections first.', contextDetail: 'Local code indexing and LSP help provide project context, keeping edits connected to the relevant files.',
+      diffTitle: 'See what changed, every time.', diffDetail: 'Review additions, removals and edits in a diff before deciding what to keep. The illustrated lines are not a real task result.',
+      restoreTitle: 'Leave room to find your way back.', restoreDetail: 'Manage changes with Git undo and restore, snapshots and worktrees. Check the workspace and selected scope before restoring.', codeDemoNote: 'Capability illustration · Editor / Diff / Git / LSP',
+      docsTabs: 'Explore document capabilities', docsRead: 'Read sources', docsCompose: 'Compose', docsExport: 'Deliver',
+      readTitle: 'Bring source material into context.', readDetail: 'Read Office and PDF attachments and extract content with Chinese and English OCR. Check recognition results against the source.',
+      composeTitle: 'Start with structure. Shape the content.', composeDetail: 'Work with Markdown, templates, charts and native editable Word equations. Review the text, data and layout.',
+      exportTitle: 'Choose the format for the handoff.', exportDetail: 'Create DOCX, PPTX or PDF files for the next step in your work. Review the finished document for its intended use.', docsDemoNote: 'Capability illustration · DOCX / PPTX / PDF / OCR',
+      codeTitle: 'Code and changes.<br>In clear view.', codeBody: 'File editing, diffs, local code indexing and LSP give changes context. Review your work with Git undo and restore, snapshots and worktrees.',
+      docsTitle: 'From source material<br>to deliverables.', docsBody: 'Read Office and PDF attachments, extract text with Chinese and English OCR, and create DOCX, PPTX and PDF files. Work with Markdown, templates, charts and native editable Word equations.',
+      modelsTitle: 'Your models.<br>Your workflow.', modelsBody: 'Connect your own providers and choose a model for the task. Extend your workflow with Skills, plugins, MCP and an embedded browser, rather than fitting every task into one tool.', modelsNote: 'Model calls and extensions may carry separate costs. Compatibility depends on providers and configuration.', extensions: 'Workflow extensions',
+      localTitle: 'Local-first.<br>Clear about boundaries.', localBody: 'Sessions, drafts and project memory are stored locally by default. Model calls, context compression and memory analysis send the required content to the providers you configure.', localNote: 'Local-first does not mean fully offline. Operation approval is not process isolation. Set permissions for the task and understand the data boundaries of external services.', security: 'Read about data and security ↗',
+      downloadTitle: 'Your next task.<br>On your desktop.', downloadBody: 'Install the Windows app, connect a model provider and choose a working folder. Then start with a goal.', downloadFallback: 'Without a configured direct URL, download buttons open the GitHub repository.', downloadReady: 'Download buttons now use the latest configured Windows download URL.', setupNote: 'Windows 10 / 11 x64. Configure your own model service; no model subscription or API credits are included. Set up isolation and external tools as needed.',
+      starTitle: 'Find it useful?<br>Leave a Star.', starBody: 'An independently built workspace grows through real use. Your Star is a small encouragement to keep the next update coming.', starLink: 'Support the project on GitHub ↗'
+    },
   labView: {
     inorder: 'In-order traversal',
     dijkstraHint: 'Expands the node with the smallest current distance; only valid for non-negative weights.',
@@ -2089,6 +2122,11 @@
       notFound: { title: 'Page not found · Algorithm Club', h1: 'Page not found' }
     },
     admin: {
+      harnessTab: 'Mingshen Harness', harnessTitle: 'Mingshen Harness download settings',
+      harnessIntro: 'Super admins only. Set the project page’s direct download URL; leave it blank to send visitors to the GitHub repository.',
+      harnessDownloadUrl: 'Direct download URL', harnessUrlHint: 'Use a public HTTPS direct download URL that does not require sign-in.', harnessFallbackHint: 'When blank or cleared, use the default repository:',
+      harnessSave: 'Save download URL', harnessClear: 'Clear and use repository', harnessLoading: 'Loading download settings…', harnessSaving: 'Saving download settings…', harnessLoaded: 'Current download settings loaded.', harnessSaved: 'Download URL saved.', harnessCleared: 'Download URL cleared; the project page will use the default repository.', harnessDraft: 'You have unsaved changes.',
+      harnessInvalidUrl: 'Enter a public HTTPS direct URL of at most 2048 characters, without credentials, control characters or backslashes, or leave it blank to use the default repository.', harnessLoadFailed: 'Could not load download settings. Refresh the overview to retry; your edits are kept.', harnessSaveFailed: 'Could not save download settings. Your edits are kept; please try again.', harnessPermissionRequired: 'Only a signed-in super admin can manage download settings.',
       tabProduct: 'Products',
       tabRedemption: 'Redemptions',
       tabAnnouncement: 'Announcements',

@@ -37,12 +37,14 @@ for (const [name, output] of entries) {
   }
 }
 
-const sqlSource = fs.readFileSync(path.join(root, 'supabase/club-chat-schema.sql'), 'utf8').replace(/\r\n/g, '\n');
-const sqlDestination = path.join(root, 'docs/chat-deployment/club-chat-schema.sql');
-if (check) {
-  if (fs.readFileSync(sqlDestination, 'utf8').replace(/\r\n/g, '\n') !== sqlSource) throw new Error('Dashboard SQL copy is stale');
-  console.log('PASS Dashboard SQL copy matches the complete main script');
-} else {
-  fs.writeFileSync(sqlDestination, sqlSource);
-  console.log('Copied complete club-chat-schema.sql for Dashboard SQL Editor');
+for (const name of ['club-chat-schema.sql', 'site-service-control.sql']) {
+  const sqlSource = fs.readFileSync(path.join(root, 'supabase', name), 'utf8').replace(/\r\n/g, '\n');
+  const sqlDestination = path.join(root, 'docs/chat-deployment', name);
+  if (check) {
+    if (fs.readFileSync(sqlDestination, 'utf8').replace(/\r\n/g, '\n') !== sqlSource) throw new Error(`Dashboard SQL copy ${name} is stale`);
+    console.log(`PASS ${name} Dashboard SQL copy matches the complete main script`);
+  } else {
+    fs.writeFileSync(sqlDestination, sqlSource);
+    console.log(`Copied complete ${name} for Dashboard SQL Editor`);
+  }
 }

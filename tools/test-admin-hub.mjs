@@ -34,8 +34,8 @@ const readyFn = page.slice(page.indexOf('function whenStaffAccessReady()')).slic
 assert.match(readyFn, /window\.ClubStaffAccess/, 'waits for the global to appear');
 assert.match(readyFn, /setTimeout\(tick, 25\)/, 'polls instead of assuming it is loaded');
 assert.match(readyFn, /3000/, 'gives up after a bounded wait');
-assert.match(page, /await whenStaffAccessReady\(\);\s*\n\s*currentAccess = await window\.ClubStaffAccess\.fetchStaffAccess\(session\);/,
-  'the wait happens before fetchStaffAccess');
+assert.match(page, /await whenStaffAccessReady\(\);\s*if \(revision !== sessionRevision\) return;\s*const access = await window\.ClubStaffAccess\.fetchStaffAccess\(session\);/,
+  'the wait and stale-session check happen before fetchStaffAccess');
 
 // 3) Behavioural: simulate the deferred-script ordering (ClubStaffAccess absent
 //    during parse, present later) and make sure the page reaches the content.
@@ -89,6 +89,214 @@ function sourceBetween(source, start, end) {
 }
 const setupTabsSource = sourceBetween(shell, '  function setupTabs(scope) {', '\n  // 外部可在数据加载完成后');
 const visibilitySource = sourceBetween(page, '    function applySectionVisibility() {', '\n    // Supabase 网关');
+
+// Harness tests execute the production inline script with a small DOM/auth facade.
+// Every request is held until the test releases it, so races are deterministic.
+const script = [...page.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(match => match[1]).find(source => source.includes('const SUPABASE_URL'));
+assert.ok(script, 'admin inline script exists');
+const nodes = new Map();
+const nodeFor = id => {
+  if (!nodes.has(id)) {
+    const classes = new Set();
+    nodes.set(id, { value: '', textContent: '', className: '', disabled: false, hidden: false, dataset: {},
+      attributes: {}, listeners: {}, classList: { add: value => classes.add(value), remove: value => classes.delete(value),
+        toggle: (value, force) => force ? classes.add(value) : classes.delete(value), contains: value => classes.has(value) },
+      setAttribute(name, value) { this.attributes[name] = value; },
+      addEventListener(name, handler) { this.listeners[name] = handler; }, focus() {}, reset() {}, querySelector() { return null; } });
+  }
+  return nodes.get(id);
+};
+const auth = { onAuthStateChange() {}, getSession: () => new Promise(() => {}) };
+const events = new Map();
+const requests = [];
+let lang = 'zh';
+const fixtureWindow = {
+  supabase: { createClient: () => ({ auth }) },
+  ClubI18n: { t: key => `${lang}:${key}`, apply() {} },
+  ClubStaffAccess: { emptyPermissions: () => ({}), hasStaffAccess: access => access.isSuperAdmin,
+    fetchStaffAccess: async () => ({ isSuperAdmin: true, permissions: {} }) },
+  addEventListener: (name, handler) => events.set(name, handler)
+};
+const fixture = vm.createContext({ window: fixtureWindow, ClubI18n: fixtureWindow.ClubI18n,
+  document: { getElementById: nodeFor, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [] },
+  location: { protocol: 'https:', search: '' }, URL, URLSearchParams, console, Date, Promise,
+  setTimeout() {}, fetch: async (_url, options) => {
+    const body = JSON.parse(options.body);
+    if (!['mingshen_harness_download_get', 'admin_mingshen_harness_download_set'].includes(body.action)) return { ok: true, json: async () => ({}) };
+    return new Promise(resolve => requests.push({ body, resolve: payload => resolve({ ok: true, json: async () => payload }),
+      reject: () => resolve({ ok: false, status: 500, json: async () => ({ error: 'backend detail' }) }) }));
+  }
+});
+vm.runInContext(`${script}\nglobalThis.probe = { loadMingshenHarness, saveMingshenHarness, refreshMingshenHarness, resetMingshenHarness, isHarnessDownloadUrlValid, updateSession,
+  state: harnessState, access(value) { currentAccess = { isSuperAdmin: value, permissions: {} }; },
+  session(value) { currentSession = value; }, applySectionVisibility, refreshOverview };`, fixture);
+const harness = fixture.probe;
+const adminSession = { user: { id: 'super' }, access_token: 'token' };
+const input = nodeFor('mingshenHarnessDownloadUrl');
+const message = nodeFor('mingshenHarnessMessage');
+const edit = value => { input.value = value; input.listeners.input(); };
+harness.session(adminSession);
+harness.access(true);
+assert.match(page, /id="mingshenHarnessDownloadUrl"[^>]*maxlength="2048"/, 'URL input enforces agreed length');
+assert.match(page, /https:\/\/github\.com\/SkyH1aa\/MingshenHarness/, 'fallback repository is visible');
+for (const value of ['', ' https://example.org/a.zip?download=1&name=test#release ', `https://example.org/${'a'.repeat(2028)}`]) {
+  assert.equal(harness.isHarnessDownloadUrlValid(value), true, `valid URL: ${value.slice(0, 80)}`);
+}
+for (const value of ['http://example.org/a.zip', '/a.zip', '//example.org/a.zip', 'https:example.org/a.zip', 'javascript:alert(1)',
+  'https://name:password@example.org/a.zip', 'https://name@example.org/a.zip', 'https://@example.org/a.zip', 'https:///example.org/a.zip', 'https://example.org/a b', 'https://example.org/a\\b', 'https://example.org/a\nb', '\thttps://example.org/a', 'https://example.org/a\u0085b',
+  `https://example.org/${'a'.repeat(2048)}`]) {
+  assert.equal(harness.isHarnessDownloadUrlValid(value), false, `invalid URL: ${JSON.stringify(value.slice(0, 80))}`);
+}
+let work = harness.loadMingshenHarness();
+assert.equal(requests.at(-1).body.action, 'mingshen_harness_download_get');
+requests.at(-1).resolve({ downloadUrl: 'https://example.org/old.zip' });
+await work;
+assert.equal(input.value, 'https://example.org/old.zip');
+work = harness.loadMingshenHarness();
+edit('https://example.org/draft.zip?token=abc');
+requests.at(-1).resolve({ downloadUrl: 'https://example.org/stale.zip' });
+await work;
+assert.equal(input.value, 'https://example.org/draft.zip?token=abc', 'late GET preserves draft');
+const beforeLanguage = requests.length;
+lang = 'en';
+events.get('club:langchange')();
+await Promise.resolve();
+assert.equal(input.value, 'https://example.org/draft.zip?token=abc', 'language refresh preserves draft');
+assert.equal(message.textContent, 'en:admin.harnessDraft', 'status is retranslated from its key');
+assert.equal(requests.length, beforeLanguage, 'language overview does not fetch over dirty draft');
+work = harness.saveMingshenHarness();
+assert.deepEqual(JSON.parse(JSON.stringify(requests.at(-1).body)), { action: 'admin_mingshen_harness_download_set', downloadUrl: input.value });
+assert.equal(nodeFor('mingshenHarnessSave').disabled, true, 'save is disabled while saving');
+edit('https://example.org/newer.zip');
+requests.at(-1).resolve({ downloadUrl: 'https://example.org/draft.zip?token=abc' });
+await work;
+assert.equal(input.value, 'https://example.org/newer.zip', 'save response preserves newer edits');
+assert.equal(harness.state.dirty, true);
+work = harness.saveMingshenHarness();
+requests.at(-1).resolve({ downloadUrl: 'https://example.org/newer.zip' });
+await work;
+assert.equal(harness.state.dirty, false);
+assert.equal(message.textContent, 'en:admin.harnessSaved');
+work = harness.saveMingshenHarness(true);
+assert.equal(requests.at(-1).body.downloadUrl, '', 'clear persists an empty config');
+requests.at(-1).resolve({ downloadUrl: '' });
+await work;
+assert.equal(input.value, '');
+assert.equal(message.textContent, 'en:admin.harnessCleared');
+edit('http://example.org/insecure.zip');
+const beforeInvalid = requests.length;
+await harness.saveMingshenHarness();
+assert.equal(requests.length, beforeInvalid, 'invalid input never reaches backend');
+assert.equal(input.attributes['aria-invalid'], 'true');
+edit('https://example.org/retry.zip');
+work = harness.saveMingshenHarness();
+requests.at(-1).reject();
+await work;
+assert.equal(input.value, 'https://example.org/retry.zip', 'failed save preserves edits');
+lang = 'zh';
+harness.refreshMingshenHarness();
+assert.equal(message.textContent, 'zh:admin.harnessSaveFailed', 'failure status also retranslates');
+// P2: a real same-account token refresh must not unlock write A. Otherwise B
+// can commit first and A can later overwrite it while the UI claims B is saved.
+edit('https://example.org/write-a.zip');
+const writeA = harness.saveMingshenHarness();
+const requestA = requests.at(-1);
+const tokenA = harness.state.writeToken;
+assert.ok(tokenA, 'write A owns an independent lock');
+await harness.updateSession({ ...adminSession, access_token: 'refreshed-token' });
+assert.equal(harness.state.writeToken, tokenA, 'same-account refresh retains write lock');
+assert.equal(nodeFor('mingshenHarnessSave').disabled, true);
+assert.equal(nodeFor('mingshenHarnessClear').disabled, true);
+assert.equal(input.disabled, false, 'draft stays editable during old write');
+edit('https://example.org/write-b.zip');
+const duringA = requests.length;
+await harness.saveMingshenHarness();
+await harness.saveMingshenHarness(true);
+assert.equal(requests.length, duringA, 'neither B nor clear can overtake in-flight A after token refresh');
+assert.equal(input.value, 'https://example.org/write-b.zip', 'blocked clear does not discard draft B');
+let databaseUrl = requestA.body.downloadUrl;
+requestA.resolve({ downloadUrl: databaseUrl });
+await writeA;
+assert.equal(harness.state.writeToken, null, 'stale A response still releases its own lock');
+assert.equal(nodeFor('mingshenHarnessSave').disabled, false);
+assert.equal(nodeFor('mingshenHarnessForm').attributes['aria-busy'], 'false');
+assert.equal(input.value, 'https://example.org/write-b.zip', 'stale A response leaves draft B intact');
+const writeB = harness.saveMingshenHarness();
+const requestB = requests.at(-1);
+assert.equal(requestB.body.downloadUrl, 'https://example.org/write-b.zip');
+databaseUrl = requestB.body.downloadUrl;
+requestB.resolve({ downloadUrl: databaseUrl });
+await writeB;
+assert.equal(input.value, databaseUrl, 'serialized last commit matches displayed saved URL');
+assert.equal(message.textContent, 'zh:admin.harnessSaved');
+// Signout and a different account must also retain the old request's lock.
+edit('https://example.org/previous-account.zip');
+const previousWork = harness.saveMingshenHarness();
+const previousRequest = requests.at(-1);
+const previousToken = harness.state.writeToken;
+await harness.updateSession(null);
+assert.equal(harness.state.writeToken, previousToken, 'signout retains in-flight write lock');
+await harness.updateSession({ user: { id: 'other-super' }, access_token: 'other-token' });
+assert.equal(harness.state.writeToken, previousToken, 'account switch retains in-flight write lock');
+assert.equal(nodeFor('mingshenHarnessSave').disabled, true);
+assert.equal(input.disabled, false);
+edit('https://example.org/other-account.zip');
+const duringPrevious = requests.length;
+await harness.saveMingshenHarness();
+assert.equal(requests.length, duringPrevious, 'new account cannot overtake previous account write');
+previousRequest.reject();
+await previousWork;
+assert.equal(harness.state.writeToken, null, 'failed stale write also releases its lock');
+assert.equal(input.value, 'https://example.org/other-account.zip');
+assert.equal(message.textContent, 'zh:admin.harnessDraft', 'old account failure does not replace new account status');
+const otherWork = harness.saveMingshenHarness();
+const otherToken = harness.state.writeToken;
+assert.ok(otherToken && otherToken !== previousToken, 'new request owns a distinct lock');
+assert.equal(nodeFor('mingshenHarnessSave').disabled, true, 'new write stays locked until its own settlement');
+requests.at(-1).resolve({ downloadUrl: 'https://example.org/other-account.zip' });
+await otherWork;
+assert.equal(harness.state.writeToken, null);
+work = harness.saveMingshenHarness();
+const oldWrite = requests.at(-1);
+await harness.updateSession(null);
+oldWrite.resolve({ downloadUrl: 'https://example.org/retry.zip' });
+await work;
+assert.equal(input.value, '', 'late save cannot refill signed-out form');
+assert.equal(message.textContent, '', 'late save cannot repopulate signed-out status');
+assert.equal(input.disabled, true);
+harness.session(adminSession);
+harness.access(true);
+work = harness.loadMingshenHarness();
+const oldRead = requests.at(-1);
+harness.access(false);
+harness.applySectionVisibility();
+oldRead.resolve({ downloadUrl: 'https://example.org/private.zip' });
+await work;
+assert.equal(input.value, '', 'permission loss clears and invalidates read');
+const beforeDenied = requests.length;
+await harness.saveMingshenHarness();
+assert.equal(requests.length, beforeDenied, 'non-super-admin cannot save');
+assert.equal(message.textContent, 'zh:admin.harnessPermissionRequired');
+harness.access(true);
+work = harness.loadMingshenHarness();
+requests.at(-1).reject();
+await work;
+assert.equal(message.textContent, 'zh:admin.harnessLoadFailed');
+lang = 'en';
+harness.refreshMingshenHarness();
+assert.equal(message.textContent, 'en:admin.harnessLoadFailed');
+// A pending staff-access lookup must not resurrect super-admin UI after signout.
+let grantAccess;
+fixtureWindow.ClubStaffAccess.fetchStaffAccess = () => new Promise(resolve => { grantAccess = resolve; });
+work = harness.updateSession(adminSession);
+await new Promise(resolve => setImmediate(resolve));
+assert.equal(typeof grantAccess, 'function');
+await harness.updateSession(null);
+grantAccess({ isSuperAdmin: true, permissions: {} });
+await work;
+assert.equal(nodeFor('content').classList.contains('hidden'), true, 'stale login cannot reopen signed-out content');
+assert.equal(input.disabled, true, 'stale permissions cannot re-enable Harness form');
+console.log('Admin Harness: validation, GET/save/clear, translated states, draft races, cross-session write serialization, signout and permission loss passed.');
 
 const browser = [process.env.CHROME_PATH,
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
@@ -184,9 +392,9 @@ try {
     // are supplied here. This keeps the regression independent of login/backend.
     const setupTabs = new Function(`${setupSource}\nreturn setupTabs;`)();
     const access = { isSuperAdmin: true };
-    const makeVisibility = new Function('currentAccess', '$', 'permOn', 'renderEntries',
+    const makeVisibility = new Function('currentAccess', '$', 'permOn', 'renderEntries', 'resetMingshenHarness', 'refreshMingshenHarness',
       `let adminTabsReady = false;\n${visibilitySource}\nreturn applySectionVisibility;`);
-    const applyVisibility = makeVisibility(access, id => document.getElementById(id), () => false, () => {});
+    const applyVisibility = makeVisibility(access, id => document.getElementById(id), () => false, () => {}, () => {}, () => {});
     const assertActive = (button, context) => {
       const target = button.dataset.tabTarget;
       check(tabs.dataset.activeTab === target, `${context}: active target`);

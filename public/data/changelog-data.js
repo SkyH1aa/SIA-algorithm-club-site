@@ -3,6 +3,51 @@
 // fetch('data/changelog.json') 的最新数据为准。
 window.CLUB_CHANGELOG_SNAPSHOT = Object.freeze([
   {
+    "date": "2026-11-13",
+    "title": "Mingshen Harness：可探索的产品导览",
+    "enTitle": "Mingshen Harness: an interactive product tour",
+    "items": [
+      "协作流程、代码能力与文档制作新增可选择的演示阶段，图示和说明随操作同步，支持键盘与手机。",
+      "增加章节导览、阅读进度、截图标签移动反馈与局部指针光；保留真实截图，能力图示明确标注。",
+      "功能交互与可选动效分开管理，切换反馈按组件取消；减少动态效果、隐藏页及离屏时保留可读与可操作的页面。"
+    ],
+    "enItems": [
+      "Explore collaboration, coding and document creation through selectable stages with coordinated illustrations and explanations, including keyboard and mobile support.",
+      "Add chapter navigation, reading progress, a moving screenshot-tab indicator and local pointer light. Retain the actual screenshot and clearly label capability illustrations.",
+      "Separate functional interactions from optional motion and cancel transitions per component, keeping the page readable and operable with reduced motion or while effects are suspended."
+    ]
+  },
+  {
+    "date": "2026-11-13",
+    "title": "Mingshen Harness：光轨产品展台与交互动效",
+    "enTitle": "Mingshen Harness: Light Trail product exhibit and motion",
+    "items": [
+      "重编品牌首屏与真实工作台展台，以光轨路径串起目标、协作与交付；可切换查看完整截图及明确标注的局部细节。",
+      "协作区增加分支汇合示意，代码、文档和模型连接各有展示构图；支持键盘操作、双语、双主题与手机布局。",
+      "专属动效与下载加载器隔离，尊重减少动态效果偏好；离屏和隐藏时停止相关更新，不劫持滚动。"
+    ],
+    "enItems": [
+      "Recompose the brand hero and actual workspace exhibit, connecting goals, collaboration and delivery with a Light Trail; switch between the full screenshot and clearly labeled details.",
+      "Add a branching collaboration illustration and distinct compositions for code, documents and model connections, with keyboard support, two languages, both themes and mobile layouts.",
+      "Keep authored motion separate from download loading, respect reduced motion, stop related updates offscreen or when hidden, and preserve native scrolling."
+    ]
+  },
+  {
+    "date": "2026-11-13",
+    "title": "Mingshen Harness 桌面工作台官网与下载入口",
+    "enTitle": "Mingshen Harness product page and desktop download",
+    "items": [
+      "AI Chat 顶栏新增 Windows 桌面端入口，新产品页以真实客户端截图介绍并行 Agent、代码与文档工作流，支持中英切换和日夜主题。",
+      "提供 Windows 最新版下载与 GitHub Star 入口；超管可在管理员总览维护 HTTPS 下载直链，留空或读取失败时回退项目仓库。",
+      "新增独立下载配置接口与安全校验，并同步 Supabase 网页部署所需的 club-drive 副本、站点配置 SQL 和部署说明。"
+    ],
+    "enItems": [
+      "AI Chat now links to the Windows desktop app. A bilingual, dual-theme product page uses an actual client screenshot to introduce parallel agents, coding and document workflows.",
+      "Download the latest Windows app or support it on GitHub. Super admins can maintain an HTTPS direct download URL; blank settings and failed reads fall back to the repository.",
+      "Add dedicated download configuration endpoints and validation, with an updated club-drive web-editor bundle, site settings SQL and deployment instructions."
+    ]
+  },
+  {
     "date": "2026-11-04",
     "title": "社团代理支持模型列表发现",
     "enTitle": "Club proxy model discovery",

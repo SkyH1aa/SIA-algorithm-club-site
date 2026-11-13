@@ -651,6 +651,40 @@ async function rpcRequest(url: string, serviceKey: string, name: string, body: R
   return { response, payload };
 }
 
+// 专用下载契约：只接受 action / downloadUrl，禁止客户端指定审计身份或站点设置。
+function validateMingshenDownloadPayload(payload: Record<string, unknown>, saving: boolean) {
+  const allowed = saving ? ['action', 'downloadUrl'] : ['action'];
+  if (Object.keys(payload).some(key => !allowed.includes(key))) throw new Error('下载配置包含不支持的字段。');
+  if (!saving) return '';
+  const raw = payload.downloadUrl;
+  // 在 trim / URL 解析前拒绝控制字符，避免解析器悄悄吞掉换行或制表符。
+  if (typeof raw !== 'string' || raw.length > 2048 || /[\u0000-\u001f\u007f-\u009f\\]/u.test(raw)) {
+    throw new Error('下载链接必须是至多 2048 字符的字符串，且不能包含控制字符或反斜杠。');
+  }
+  const value = raw.trim();
+  if (!value) return '';
+  let parsed: URL;
+  try { parsed = new URL(value); } catch { throw new Error('下载链接必须是 HTTPS 绝对地址。'); }
+  // URL 构造器会容忍 https:host / https:///host；显式要求完整 authority。
+  if (/\s/u.test(value) || !/^https:\/\/[^/\s?#]+(?:[/?#]|$)/i.test(value) || parsed.protocol !== 'https:' || !parsed.hostname ||
+      parsed.username || parsed.password || value.slice(8).split(/[/?#]/, 1)[0].includes('@')) {
+    throw new Error('下载链接必须是无凭据的 HTTPS 绝对地址。');
+  }
+  return value;
+}
+
+async function mingshenDownloadConfig(downloadUrl?: string, userId?: string) {
+  const { url, serviceKey } = supabaseConfig();
+  const saving = downloadUrl !== undefined;
+  const { response, payload } = await rpcRequest(url, serviceKey,
+    saving ? 'club_mingshen_harness_download_set' : 'club_mingshen_harness_download_get',
+    saving ? { p_download_url: downloadUrl, p_updated_by: userId } : {});
+  if (!response.ok || typeof payload !== 'string' || saving && payload !== downloadUrl) {
+    throw new Error(saving ? '保存下载配置失败。' : '读取下载配置失败。');
+  }
+  return { downloadUrl: payload };
+}
+
 async function reserveInvite(url: string, serviceKey: string, inviteCode: string) {
   const { response, payload } = await rpcRequest(
     url,
@@ -3860,6 +3894,16 @@ Deno.serve(async request => {
     if (payload.action === 'staff_access_get') {
       if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
       return json(await getUserAccess(user));
+    }
+    if (payload.action === 'mingshen_harness_download_get') {
+      validateMingshenDownloadPayload(payload, false);
+      return json(await mingshenDownloadConfig());
+    }
+    if (payload.action === 'admin_mingshen_harness_download_set') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      if (!user?.id) return json({ error: '请先登录。' }, 403);
+      const downloadUrl = validateMingshenDownloadPayload(payload, true);
+      return json(await mingshenDownloadConfig(downloadUrl, user.id));
     }
     if (payload.action === 'site_service_status') {
       const { url, serviceKey } = supabaseConfig();

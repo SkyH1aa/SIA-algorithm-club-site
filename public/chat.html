@@ -6,9 +6,9 @@
 <script defer src="assistant-launcher.js?v=2e89de74"></script>
 <meta name="color-scheme" content="dark light">
 <title>AI 对话</title>
-<link rel="stylesheet" href="theme.css?v=44ec1583"><link rel="stylesheet" href="vendor/chat/katex/katex.min.css"><link rel="stylesheet" href="chat.css?v=472b51b7">
+<link rel="stylesheet" href="theme.css?v=44ec1583"><link rel="stylesheet" href="vendor/chat/katex/katex.min.css"><link rel="stylesheet" href="chat.css?v=7060f0cd">
 <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
-  <script src="club-auth-storage.js?v=5469c150"></script><script src="theme.js?v=1b745a4f"></script><script src="i18n-dict.js?v=f66c88d1"></script><script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script><script src="chat-i18n.js?v=95eb56b8"></script><script src="vendor/chat/marked.js"></script><script src="vendor/chat/purify.js"></script><script src="vendor/chat/katex/katex.min.js"></script><script src="chat-math.js"></script><script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script><script>
+  <script src="club-auth-storage.js?v=5469c150"></script><script src="theme.js?v=1b745a4f"></script><script src="i18n-dict.js?v=73eb4356"></script><script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script><script src="chat-i18n.js?v=43846d9e"></script><script src="vendor/chat/marked.js"></script><script src="vendor/chat/purify.js"></script><script src="vendor/chat/katex/katex.min.js"></script><script src="chat-math.js"></script><script src="service-prompts.js?v=1cfff2ab"></script><script src="service-gate.js?v=fbbccf1b"></script><script>
     /* file:// 下浏览器会按 CORS 拦截 ES module 的 import，页面会整页不执行（黑屏）。
        HTTP(S) 仍用原生 module；本地文件改用等价的单文件包（逻辑相同，仅加载方式不同）。 */
     (function () {
@@ -49,6 +49,7 @@
   <span class="chat-topbar-divider" aria-hidden="true"></span>
   <span id="headerChatTitle" class="chat-header-chat-title"></span>
   <div class="chat-topbar-actions">
+    <a class="chat-desktop-download" href="mingshen-harness.html" target="_blank" rel="noopener noreferrer" data-i18n-aria="chat.desktopDownload" data-i18n-title="chat.desktopDownload"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg><span data-i18n="chat.desktopDownload">下载 Windows 桌面端</span></a>
     <button id="language" class="chat-lang-button" type="button" data-i18n-aria="chat.language" data-i18n-title="chat.language">
       <span class="chat-lang-option" data-lang-option="zh">中文</span>
       <span class="chat-lang-option" data-lang-option="en">EN</span>

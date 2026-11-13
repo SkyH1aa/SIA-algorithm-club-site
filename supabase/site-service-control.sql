@@ -6,6 +6,7 @@ create table if not exists public.club_site_service_settings (
   report_zh text not null default '',
   report_en text not null default '',
   feature_settings jsonb not null default '{}'::jsonb,
+  mingshen_harness_windows_download_url text not null default '',
   title_zh text not null default '网站暂不可用',
   subtitle_zh text not null default '网站暂不可用',
   title_en text not null default 'Website temporarily unavailable',
@@ -20,6 +21,7 @@ alter table public.club_site_service_settings add column if not exists report_zh
 alter table public.club_site_service_settings add column if not exists report_en text not null default '';
 alter table public.club_site_service_settings add column if not exists feature_settings jsonb not null default '{}'::jsonb;
 alter table public.club_site_service_settings add column if not exists display_mode text not null default 'overlay';
+alter table public.club_site_service_settings add column if not exists mingshen_harness_windows_download_url text not null default '';
 alter table public.club_site_service_settings enable row level security;
 revoke all on table public.club_site_service_settings from anon, authenticated;
 
@@ -64,6 +66,32 @@ end $$;
 revoke execute on function public.club_site_service_status() from public;
 grant execute on function public.club_site_service_status() to anon, authenticated;
 revoke execute on function public.club_site_service_set(boolean,boolean,text,text,text,text,text,text,jsonb,uuid,text) from public, anon, authenticated;
+
+-- Mingshen Harness 下载配置：独立读写，不触碰服务开关或广播。
+-- 匿名公开读取由 Edge Function 提供；RPC 只授予 service_role，避免绕过 handler 校验。
+create or replace function public.club_mingshen_harness_download_get()
+returns text language sql stable security definer set search_path = public
+as $$ select coalesce((select mingshen_harness_windows_download_url
+                       from public.club_site_service_settings where singleton), '') $$;
+
+create or replace function public.club_mingshen_harness_download_set(p_download_url text, p_updated_by uuid)
+returns text language plpgsql security definer set search_path = public
+as $$
+begin
+  -- 原子补种：仅列出下载字段与审计信息，冲突时绝不覆盖其它设置。
+  insert into public.club_site_service_settings
+    (singleton, mingshen_harness_windows_download_url, updated_at, updated_by)
+  values (true, p_download_url, now(), p_updated_by)
+  on conflict (singleton) do update set
+    mingshen_harness_windows_download_url = excluded.mingshen_harness_windows_download_url,
+    updated_at = excluded.updated_at, updated_by = excluded.updated_by;
+  return p_download_url;
+end $$;
+
+revoke execute on function public.club_mingshen_harness_download_get() from public, anon, authenticated;
+revoke execute on function public.club_mingshen_harness_download_set(text,uuid) from public, anon, authenticated;
+grant execute on function public.club_mingshen_harness_download_get() to service_role;
+grant execute on function public.club_mingshen_harness_download_set(text,uuid) to service_role;
 
 -- APPMonitor V7.5+ 发布版本（仅超管可通过 Edge Function 管理）
 create table if not exists public.appmonitor_releases (

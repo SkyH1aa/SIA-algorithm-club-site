@@ -190,6 +190,15 @@ html[data-theme="light"] body.chat-page textarea#prompt {
   font-size: 13px;
 }
 .chat-topbar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.chat-page .chat-desktop-download { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 40px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--chat-line-strong); border-radius: 10px; background: var(--chat-surface); color: var(--chat-text); font-size: 12px; font-weight: 650; white-space: nowrap; text-decoration: none; }
+.chat-page .chat-desktop-download:hover { color: var(--chat-accent); border-color: var(--chat-accent); }
+@media (max-width: 760px) {
+  .chat-page .chat-desktop-download { width: 40px; padding: 8px; }
+  .chat-page .chat-desktop-download span { display: none; }
+}
+@media (pointer: coarse) {
+  .chat-page .chat-desktop-download { min-width: 44px; min-height: 44px; }
+}
 
 .chat-icon-button {
   display: inline-grid;

@@ -108,6 +108,105 @@ async function putChatArchiveFile(path: string, directories: string[], body: Bod
   return response;
 }
 
+// ---- 社团盘容量配额 ------------------------------------------------------
+// 配额只存上限；实际用量在每次写入前实时遍历该用户的目录统计，
+// 避免缓存与实际文件不一致。递归深度限制在 6 层，防止异常目录结构拖垮请求。
+
+const DRIVE_QUOTA_MAX_DEPTH = 6;
+
+function quotaBytes(value: unknown): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  // -1 是哨兵值，表示禁止使用；0 表示不限制；其余按正数取整。
+  if (n === -1) return -1;
+  return n > 0 ? Math.floor(n) : 0;
+}
+
+async function driveQuotaFor(userId: string) {
+  const { url, serviceKey } = supabaseConfig();
+  const { response, payload } = await rpcRequest(url, serviceKey, 'get_club_drive_quota', { p_user_id: userId });
+  if (!response.ok) return { maxBytes: 0, source: 'none', note: '' };
+  const row = (payload || {}) as Record<string, unknown>;
+  return { maxBytes: quotaBytes(row.max_bytes), source: String(row.source || 'none'), note: String(row.note || '') };
+}
+
+// 递归统计某个目录下的总字节数；读不到的分支按 0 计，不阻塞写入。
+async function driveUsageBytes(path: string, depth = 0): Promise<number> {
+  if (depth > DRIVE_QUOTA_MAX_DEPTH) return 0;
+  const response = await webdavRequest('PROPFIND', path, {
+    headers: { depth: '1', 'content-type': 'application/xml; charset=utf-8' },
+    body: '<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/><d:getcontentlength/></d:prop></d:propfind>'
+  });
+  if (!response.ok && response.status !== 207) return 0;
+  const files = parseXmlFiles(await response.text());
+  let total = 0;
+  const self = path.replace(/\/+$/, '');
+  for (const file of files) {
+    const filePath = file.path || '';
+    const normalized = filePath.replace(/\/+$/, '');
+    // PROPFIND depth:1 会返回自身条目，跳过。
+    if (!normalized || normalized === self) continue;
+    const isDir = /\/$/.test(filePath) || file.type === 'folder';
+    if (isDir) total += await driveUsageBytes(filePath, depth + 1);
+    else total += Number(file.bytes) || 0;
+  }
+  return total;
+}
+
+async function driveUsageFor(userId: string) {
+  const root = userRoot(userId);
+  const used = await driveUsageBytes(root);
+  const quota = await driveQuotaFor(userId);
+  const blocked = quota.maxBytes === -1;
+  return {
+    usedBytes: used,
+    maxBytes: quota.maxBytes,
+    source: quota.source,
+    note: quota.note,
+    blocked,
+    unlimited: quota.maxBytes === 0,
+    remainingBytes: quota.maxBytes <= 0 ? null : Math.max(0, quota.maxBytes - used)
+  };
+}
+
+// 写入前检查：新内容是否仍在上限内。incoming 为本次要新增的字节数。
+// 已存在的同名文件按覆盖处理（不重复计入），因此这里用「现状 + incoming」估算，
+// 偏保守但不会放过超限写入。
+async function assertDriveQuota(userId: string, incoming: number) {
+  const usage = await driveUsageFor(userId);
+  if (usage.blocked) throw new Error('社团盘已被管理员停用，请联系超级管理员。');
+  if (usage.maxBytes === 0) return usage;
+  if (usage.usedBytes + Math.max(0, incoming) > usage.maxBytes) {
+    throw new Error(`社团盘空间不足：已用 ${(usage.usedBytes / 1048576).toFixed(1)} MiB，上限 ${(usage.maxBytes / 1048576).toFixed(1)} MiB。`);
+  }
+  return usage;
+}
+
+// 服务开关变更后，向全体在线页面广播一个「有变化」信号。
+// 广播本身不携带状态：客户端收到后一律回源查询，所以伪造广播无法解锁任何功能。
+// 发送失败不影响保存结果，客户端最长 30 秒的心跳轮询仍会收敛。
+const SITE_SERVICE_CHANNEL = 'club-site-service-live-v1';
+
+async function broadcastServiceChange() {
+  const { url, serviceKey } = supabaseConfig();
+  try {
+    const response = await fetch(`${url}/realtime/v1/api/broadcast`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        apikey: serviceKey,
+        authorization: `Bearer ${serviceKey}`
+      },
+      body: JSON.stringify({
+        messages: [{ topic: SITE_SERVICE_CHANNEL, event: 'service-changed', payload: { at: Date.now() } }]
+      })
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function chatArchiveIdentity(user: { id: string; email?: string; user_metadata?: unknown }) {
   const { url, serviceKey } = supabaseConfig();
   let username = '', memberName = '';
@@ -193,7 +292,11 @@ async function chatArchiveRequest(request: Request, user: { id: string; email?: 
   snapshot.user_id = user.id;
   snapshot.account = { username: identity.username, member_name: identity.memberName };
   snapshot.server = { received_at: new Date().toISOString(), generated_at_beijing: stamp.iso, timezone: 'Asia/Shanghai', source, trigger };
-  const payload = chatArchiveEncoder.encode(JSON.stringify(snapshot));
+  // 以 2 空格缩进写出，方便在云盘里直接打开阅读；紧凑 JSON 只在传输时用。
+  const payload = chatArchiveEncoder.encode(JSON.stringify(snapshot, null, 2));
+  // 聊天归档也占用社团盘容量，同样受配额限制。
+  try { await assertDriveQuota(user.id, payload.byteLength); }
+  catch (error) { return json({ error: error instanceof Error ? error.message : '社团盘空间不足。' }, 413); }
   const response = await putChatArchiveFile(`${dateRoot}${filename}`, [CHAT_ARCHIVE_ROOT, identity.userRoot, dateRoot], payload, {
     'content-type': 'application/json; charset=utf-8',
     'content-length': String(payload.byteLength)
@@ -550,6 +653,40 @@ async function rpcRequest(url: string, serviceKey: string, name: string, body: R
   return { response, payload };
 }
 
+// 专用下载契约：只接受 action / downloadUrl，禁止客户端指定审计身份或站点设置。
+function validateMingshenDownloadPayload(payload: Record<string, unknown>, saving: boolean) {
+  const allowed = saving ? ['action', 'downloadUrl'] : ['action'];
+  if (Object.keys(payload).some(key => !allowed.includes(key))) throw new Error('下载配置包含不支持的字段。');
+  if (!saving) return '';
+  const raw = payload.downloadUrl;
+  // 在 trim / URL 解析前拒绝控制字符，避免解析器悄悄吞掉换行或制表符。
+  if (typeof raw !== 'string' || raw.length > 2048 || /[\u0000-\u001f\u007f-\u009f\\]/u.test(raw)) {
+    throw new Error('下载链接必须是至多 2048 字符的字符串，且不能包含控制字符或反斜杠。');
+  }
+  const value = raw.trim();
+  if (!value) return '';
+  let parsed: URL;
+  try { parsed = new URL(value); } catch { throw new Error('下载链接必须是 HTTPS 绝对地址。'); }
+  // URL 构造器会容忍 https:host / https:///host；显式要求完整 authority。
+  if (/\s/u.test(value) || !/^https:\/\/[^/\s?#]+(?:[/?#]|$)/i.test(value) || parsed.protocol !== 'https:' || !parsed.hostname ||
+      parsed.username || parsed.password || value.slice(8).split(/[/?#]/, 1)[0].includes('@')) {
+    throw new Error('下载链接必须是无凭据的 HTTPS 绝对地址。');
+  }
+  return value;
+}
+
+async function mingshenDownloadConfig(downloadUrl?: string, userId?: string) {
+  const { url, serviceKey } = supabaseConfig();
+  const saving = downloadUrl !== undefined;
+  const { response, payload } = await rpcRequest(url, serviceKey,
+    saving ? 'club_mingshen_harness_download_set' : 'club_mingshen_harness_download_get',
+    saving ? { p_download_url: downloadUrl, p_updated_by: userId } : {});
+  if (!response.ok || typeof payload !== 'string' || saving && payload !== downloadUrl) {
+    throw new Error(saving ? '保存下载配置失败。' : '读取下载配置失败。');
+  }
+  return { downloadUrl: payload };
+}
+
 async function reserveInvite(url: string, serviceKey: string, inviteCode: string) {
   const { response, payload } = await rpcRequest(
     url,
@@ -611,6 +748,22 @@ async function assertUsernameAvailable(url: string, serviceKey: string, username
   })) {
     throw new Error('用户名已存在。');
   }
+}
+
+// 按 uuid 取 auth 用户（只用于管理页显示账号名）。
+async function findAuthUserById(userId: string) {
+  if (!validUuid(userId)) return null;
+  const { url, serviceKey } = supabaseConfig();
+  const response = await fetch(`${url}/auth/v1/admin/users/${userId}`, {
+    headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` }
+  });
+  if (!response.ok) return null;
+  const payload = await response.json().catch(() => null);
+  if (!payload || typeof payload !== 'object') return null;
+  const record = payload as Record<string, unknown>;
+  // GoTrue 可能直接返回用户，也可能包在 user 字段里。
+  const user = record.user && typeof record.user === 'object' ? record.user as Record<string, unknown> : record;
+  return typeof user.id === 'string' ? { id: user.id, email: typeof user.email === 'string' ? user.email : '' } : null;
 }
 
 async function deleteAuthUser(url: string, serviceKey: string, userId: string) {
@@ -827,6 +980,115 @@ async function pushNotifications(
   });
   if (!response.ok) return { inserted: 0 };
   return { inserted: clean.length };
+}
+
+// ---- 模块启动器收藏 / 最近使用 -------------------------------------------
+// 数据归属账号：所有函数都显式接收已鉴权的 user.id，前端无法指定别人的 user_id。
+const LAUNCHER_MAX_FAVORITES = 24;
+const LAUNCHER_MAX_RECENTS = 6;
+
+function launcherKeyList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const out: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== 'string') continue;
+    const key = entry.trim();
+    if (!key || key.length > 200 || out.includes(key)) continue;
+    out.push(key);
+  }
+  return out;
+}
+
+function launcherKey(value: unknown, label: string): string {
+  const key = typeof value === 'string' ? value.trim() : '';
+  if (!key) throw new Error(`${label}不能为空。`);
+  if (key.length > 200) throw new Error(`${label}过长。`);
+  return key;
+}
+
+function launcherResult(payload: unknown): { favorites: string[]; recents: string[] } {
+  const row = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? payload as Record<string, unknown>
+    : {};
+  return {
+    favorites: launcherKeyList(row.favorites).slice(0, LAUNCHER_MAX_FAVORITES),
+    recents: launcherKeyList(row.recents).slice(0, LAUNCHER_MAX_RECENTS)
+  };
+}
+
+async function getLauncherItems(userId: string) {
+  const { url, serviceKey } = supabaseConfig();
+  const { response, payload } = await rpcRequest(url, serviceKey, 'get_club_launcher_items', {
+    p_user_id: userId
+  });
+  if (!response.ok) {
+    const detail = JSON.stringify(payload || {});
+    throw new Error(/Could not find the function|PGRST202|42883|does not exist|schema cache/i.test(detail)
+      ? '收藏数据表尚未创建，请先执行 club-launcher-schema.sql。'
+      : '读取收藏与最近使用失败。');
+  }
+  return launcherResult(payload);
+}
+
+// 写入后立即回读，让前端拿到权威顺序。回读失败时不假装失败：
+// 数据已保存，返回 null 列表由前端保留本地结果。
+async function launcherAfterWrite(userId: string) {
+  try {
+    return { ok: true, ...(await getLauncherItems(userId)) };
+  } catch (_error) {
+    return { ok: true, favorites: null, recents: null };
+  }
+}
+
+async function setLauncherFavorite(userId: string, itemKey: unknown, favorite: unknown) {
+  const key = launcherKey(itemKey, '收藏项');
+  const { url, serviceKey } = supabaseConfig();
+  const { response } = await rpcRequest(url, serviceKey, 'set_club_launcher_favorite', {
+    p_user_id: userId,
+    p_item_key: key,
+    p_favorite: favorite !== false
+  });
+  if (!response.ok) throw new Error('保存收藏失败。');
+  return launcherAfterWrite(userId);
+}
+
+async function pushLauncherRecent(userId: string, itemKey: unknown) {
+  const key = launcherKey(itemKey, '最近使用项');
+  const { url, serviceKey } = supabaseConfig();
+  const { response } = await rpcRequest(url, serviceKey, 'push_club_launcher_recent', {
+    p_user_id: userId,
+    p_item_key: key
+  });
+  if (!response.ok) throw new Error('记录最近使用失败。');
+  return launcherAfterWrite(userId);
+}
+
+async function clearLauncherRecents(userId: string) {
+  const { url, serviceKey } = supabaseConfig();
+  const { response } = await rpcRequest(url, serviceKey, 'clear_club_launcher_recents', {
+    p_user_id: userId
+  });
+  if (!response.ok) throw new Error('清除最近使用失败。');
+  return launcherAfterWrite(userId);
+}
+
+async function mergeLauncherItems(userId: string, favorites: unknown, recents: unknown) {
+  const favoriteList = launcherKeyList(favorites).slice(0, LAUNCHER_MAX_FAVORITES);
+  const recentList = launcherKeyList(recents).slice(0, LAUNCHER_MAX_RECENTS);
+  const { url, serviceKey } = supabaseConfig();
+  const { response, payload } = await rpcRequest(url, serviceKey, 'merge_club_launcher_items', {
+    p_user_id: userId,
+    p_favorites: favoriteList,
+    p_recents: recentList
+  });
+  if (!response.ok) throw new Error('同步本机收藏失败。');
+  const row = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? payload as Record<string, unknown>
+    : {};
+  if (!Array.isArray(row.favorites) || !Array.isArray(row.recents)) {
+    return launcherAfterWrite(userId);
+  }
+  return { ok: true, ...launcherResult(row) };
 }
 
 // 通知所有已绑定社团账号的社员。广播型事件（公告/活动）用它。
@@ -3413,6 +3675,8 @@ Deno.serve(async request => {
       const length = contentLength(request);
       if (length !== null && length > MAX_FILE_BYTES) return json({ error: '单个文件不能超过 100 MiB。' }, 413);
       if (!request.body) return json({ error: '上传内容不完整。' }, 400);
+      try { await assertDriveQuota(user.id, length || 0); }
+      catch (error) { return json({ error: error instanceof Error ? error.message : '社团盘空间不足。' }, 413); }
       const response = await webdavRequest('PUT', filePathFor(userRoot(user.id), headerPath(request)), { headers: { 'content-type': request.headers.get('x-drive-content-type') || 'application/octet-stream', ...(length === null ? {} : { 'content-length': String(length) }) }, body: request.body });
       if (!response.ok) return json({ error: `上传失败（${response.status}）。` }, 502);
       return json({ ok: true, bytes: length });
@@ -3521,6 +3785,52 @@ Deno.serve(async request => {
       }
     }
 
+    // ---- 模块启动器收藏 / 最近使用：全部要求登录，用户身份只取 token ----
+    if (payload.action === 'launcher_items_get') {
+      if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
+      try {
+        return json(await getLauncherItems(user.id));
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '读取收藏与最近使用失败。' }, 400);
+      }
+    }
+
+    if (payload.action === 'launcher_favorite_set') {
+      if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
+      try {
+        return json(await setLauncherFavorite(user.id, payload.itemKey, payload.favorite));
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '保存收藏失败。' }, 400);
+      }
+    }
+
+    if (payload.action === 'launcher_recent_push') {
+      if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
+      try {
+        return json(await pushLauncherRecent(user.id, payload.itemKey));
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '记录最近使用失败。' }, 400);
+      }
+    }
+
+    if (payload.action === 'launcher_recents_clear') {
+      if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
+      try {
+        return json(await clearLauncherRecents(user.id));
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '清除最近使用失败。' }, 400);
+      }
+    }
+
+    if (payload.action === 'launcher_items_merge') {
+      if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
+      try {
+        return json(await mergeLauncherItems(user.id, payload.favorites, payload.recents));
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '同步本机收藏失败。' }, 400);
+      }
+    }
+
     if (payload.action === 'search_all') {
       // 站内搜索只覆盖已发布内容，未登录也能用。
       try {
@@ -3587,6 +3897,16 @@ Deno.serve(async request => {
       if (!user?.id) return json({ error: '您还不是算法社社员！' }, 401);
       return json(await getUserAccess(user));
     }
+    if (payload.action === 'mingshen_harness_download_get') {
+      validateMingshenDownloadPayload(payload, false);
+      return json(await mingshenDownloadConfig());
+    }
+    if (payload.action === 'admin_mingshen_harness_download_set') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      if (!user?.id) return json({ error: '请先登录。' }, 403);
+      const downloadUrl = validateMingshenDownloadPayload(payload, true);
+      return json(await mingshenDownloadConfig(downloadUrl, user.id));
+    }
     if (payload.action === 'site_service_status') {
       const { url, serviceKey } = supabaseConfig();
       const { response, payload: result } = await rpcRequest(url, serviceKey, 'club_site_service_status', {});
@@ -3619,11 +3939,52 @@ Deno.serve(async request => {
       }
       const { response, payload: result } = await rpcRequest(url, serviceKey, 'club_site_service_set', {
         p_enabled: Boolean(payload.enabled), p_random_enabled: Boolean(payload.randomEnabled), p_title_zh: payload.titleZh, p_subtitle_zh: payload.subtitleZh,
-        p_title_en: payload.titleEn, p_subtitle_en: payload.subtitleEn, p_report_zh: payload.reportZh, p_report_en: payload.reportEn, p_feature_settings: payload.featureSettings || null, p_updated_by: user?.id || null
+        p_title_en: payload.titleEn, p_subtitle_en: payload.subtitleEn, p_report_zh: payload.reportZh, p_report_en: payload.reportEn, p_feature_settings: payload.featureSettings || null, p_updated_by: user?.id || null,
+        p_display_mode: payload.displayMode || null
       });
       if (!response.ok) throw new Error('保存网站服务状态失败。');
-      return json({ ok: Array.isArray(result) ? result[0] : result });
+      // 先把结果返回给管理页，再尽力广播给其它在线页面；广播失败不算保存失败。
+      const broadcast = await broadcastServiceChange();
+      return json({ ok: Array.isArray(result) ? result[0] : result, broadcast });
     }
+    if (payload.action === 'admin_error_pages_get') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      const { url, serviceKey } = supabaseConfig();
+      const response = await fetch(`${url}/rest/v1/rpc/club_error_pages_get`, {
+        method: 'POST',
+        headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}`, 'content-type': 'application/json' },
+        body: '{}'
+      });
+      if (!response.ok) return json({ error: '读取故障页内容失败。' }, 400);
+      return json({ pages: await response.json().catch(() => []) });
+    }
+    if (payload.action === 'admin_error_pages_set') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      const code = Number(payload.code);
+      if (![502, 503, 404].includes(code)) return json({ error: '只支持 502 / 503 / 404。' }, 400);
+      const { url, serviceKey } = supabaseConfig();
+      const { response } = await rpcRequest(url, serviceKey, 'club_error_pages_set', {
+        p_code: code,
+        p_title_zh: payload.titleZh || '', p_title_en: payload.titleEn || '',
+        p_subtitle_zh: payload.subtitleZh || '', p_subtitle_en: payload.subtitleEn || '',
+        p_body_zh: payload.bodyZh || '', p_body_en: payload.bodyEn || '',
+        p_action_label_zh: payload.actionLabelZh || '', p_action_label_en: payload.actionLabelEn || '',
+        p_action_href: payload.actionHref || '',
+        p_updated_by: user?.id || null
+      });
+      if (!response.ok) return json({ error: '保存故障页内容失败。' }, 400);
+      return json({ ok: true });
+    }
+    if (payload.action === 'admin_error_pages_reset') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      const code = Number(payload.code);
+      if (![502, 503, 404].includes(code)) return json({ error: '只支持 502 / 503 / 404。' }, 400);
+      const { url, serviceKey } = supabaseConfig();
+      const { response } = await rpcRequest(url, serviceKey, 'club_error_pages_reset', { p_code: code });
+      if (!response.ok) return json({ error: '恢复默认失败。' }, 400);
+      return json({ ok: true });
+    }
+
     if (payload.action === 'admin_staff_permissions_list') {
       try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
       return json({ permissions: await listStaffPermissions() });
@@ -3796,6 +4157,116 @@ Deno.serve(async request => {
       try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
       return json({ settings: await saveDonationSettings(user, payload) });
     }
+    if (payload.action === 'drive_quota_get') {
+      // 普通社员只能看自己的用量；超管可传 userId 查别人。
+      if (!user?.id) return json({ error: '请先登录社团盘。' }, 401);
+      let target = user.id;
+      if (payload.username) {
+        try {
+          const found = await findAuthUserByUsername(String(payload.username).trim().toLowerCase());
+          target = found.id;
+        } catch (error) {
+          return json({ error: error instanceof Error ? error.message : '账号不存在。' }, 400);
+        }
+      } else if (payload.userId && String(payload.userId) !== user.id) {
+        try { await requireSuperAdmin(user); } catch { return json({ error: '无权限查看其他用户的社团盘用量。' }, 403); }
+        target = String(payload.userId);
+      }
+      try {
+        return json({ quota: await driveUsageFor(target), userId: target });
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : '读取社团盘用量失败。' }, 400);
+      }
+    }
+
+    if (payload.action === 'admin_drive_members') {
+      // 配额管理页的成员下拉：只返回账号名 + 中文姓名，不含邮箱等隐私字段。
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      const { url, serviceKey } = supabaseConfig();
+      const response = await fetch(
+        `${url}/rest/v1/club_member_profiles?select=user_id,username,member_name&order=username.asc&limit=1000`,
+        { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` } }
+      );
+      if (!response.ok) return json({ error: '读取社员列表失败。' }, 400);
+      const rows = await response.json().catch(() => []);
+      const list = (Array.isArray(rows) ? rows : []).map((row: Record<string, unknown>) => ({
+        userId: typeof row.user_id === 'string' ? row.user_id : '',
+        username: typeof row.username === 'string' ? row.username : '',
+        memberName: typeof row.member_name === 'string' ? row.member_name : ''
+      })).filter(row => row.userId && row.username);
+      return json({ members: list });
+    }
+
+    if (payload.action === 'admin_drive_quota_list') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      const { url, serviceKey } = supabaseConfig();
+      const response = await fetch(
+        `${url}/rest/v1/club_drive_quotas?select=user_id,max_bytes,note,updated_at&order=user_id.nullsfirst`,
+        { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` } }
+      );
+      if (!response.ok) {
+        const detail = await response.text().catch(() => '');
+        return json({ error: detail.includes('Could not find the table') || detail.includes('relation')
+          ? '社团盘配额表尚未创建，请先执行 club-drive-quota-schema.sql。'
+          : '读取配额列表失败。' }, 400);
+      }
+      const rows = await response.json().catch(() => []);
+      const quotas = Array.isArray(rows) ? rows : [];
+      // 补上账号名，便于管理页显示与按名查找；查不到就留空。
+      const resolved = await Promise.all(quotas.map(async row => {
+        const record = row as Record<string, unknown>;
+        let username = '';
+        if (record.user_id) {
+          try {
+            const found = await findAuthUserById(String(record.user_id));
+            username = found?.email ? String(found.email).split('@')[0] : '';
+          } catch { username = ''; }
+        }
+        return { ...record, username };
+      }));
+      return json({ quotas: resolved });
+    }
+
+    if (payload.action === 'admin_drive_quota_set') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      let targetId = payload.userId ? String(payload.userId) : null;
+      // 管理页允许直接填账号名；这里统一解析成 uuid。
+      if (!targetId && payload.username) {
+        try { targetId = (await findAuthUserByUsername(String(payload.username).trim().toLowerCase())).id; }
+        catch (error) { return json({ error: error instanceof Error ? error.message : '账号不存在。' }, 400); }
+      }
+      if (targetId && !validUuid(targetId)) return json({ error: '用户标识不合法。' }, 400);
+      const maxBytes = Number(payload.maxBytes);
+      // -1 是「禁止使用」哨兵值；其余必须是非负整数。
+      if (!Number.isSafeInteger(maxBytes) || maxBytes < -1) return json({ error: '容量上限必须 ≥ -1（-1 表示禁止使用）。' }, 400);
+      const { url, serviceKey } = supabaseConfig();
+      const { response, payload: result } = await rpcRequest(url, serviceKey, 'set_club_drive_quota', {
+        p_user_id: targetId,
+        p_max_bytes: maxBytes,
+        p_note: String(payload.note || ''),
+        p_updated_by: user?.id || null
+      });
+      if (!response.ok) {
+        const row = (result || {}) as Record<string, unknown>;
+        return json({ error: String(row.message || row.error || '保存配额失败。') }, 400);
+      }
+      return json({ quota: result });
+    }
+
+    if (payload.action === 'admin_drive_quota_clear') {
+      try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
+      let targetId = payload.userId ? String(payload.userId) : null;
+      if (!targetId && payload.username) {
+        try { targetId = (await findAuthUserByUsername(String(payload.username).trim().toLowerCase())).id; }
+        catch (error) { return json({ error: error instanceof Error ? error.message : '账号不存在。' }, 400); }
+      }
+      if (!validUuid(targetId)) return json({ error: '用户标识不合法。' }, 400);
+      const { url, serviceKey } = supabaseConfig();
+      const { response, payload: result } = await rpcRequest(url, serviceKey, 'clear_club_drive_quota', { p_user_id: targetId });
+      if (!response.ok) return json({ error: '清除配额失败。' }, 400);
+      return json({ quota: result });
+    }
+
     if (payload.action === 'admin_donations_delete') {
       try { await requireSuperAdmin(user); } catch (error) { return json({ error: error instanceof Error ? error.message : '无权限。' }, 403); }
       return json(await deleteDonation(payload.id));

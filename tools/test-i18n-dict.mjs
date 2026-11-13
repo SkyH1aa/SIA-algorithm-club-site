@@ -10,7 +10,10 @@
 // The Chinese dictionary must therefore be physically inline in i18n-dict.js;
 // English may stay a lazily loaded add-on.
 import assert from 'node:assert/strict';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, stat, mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
@@ -65,6 +68,76 @@ const en = enCtx.window.ClubI18nDictEn;
 assert.ok(en, 'English bundle defines its global');
 assert.equal(typeof en.guide?.h1, 'string', 'English guide.h1 exists');
 assert.equal(typeof en.common?.confirm, 'string', 'English common.confirm exists');
+
+// 3b) Version the actual lazy request, not just HTML references to the loader.
+// Otherwise a fresh loader can still fetch an old cached English dictionary and
+// newly added keys silently fall back to Chinese. Match the static versioner's
+// SHA-256/8 convention, including CRLF normalization.
+const englishHash = text => createHash('sha256').update(text.replace(/\r\n/g, '\n'), 'utf8').digest('hex').slice(0, 8);
+const enHash = englishHash(enFile);
+async function assertLazyEnglish(code, expectedHash, label) {
+  for (const base of ['https://example.test/public/', 'file:///C:/club/public/']) {
+    const requests = [];
+    const runtime = {
+      window: {},
+      document: {
+        currentScript: { src: base + 'i18n-dict.js?v=loaderhash' },
+        createElement(tag) { assert.equal(tag, 'script'); return {}; },
+        head: { appendChild(script) { requests.push(script); } }
+      }
+    };
+    vm.runInNewContext(code, runtime, { filename: label, timeout: 1000 });
+    const api = runtime.window.ClubI18nDictLoader;
+    assert.equal(runtime.window.ClubI18nDict.zh.common.confirm, '确定', label + ': Chinese works immediately under ' + base);
+    assert.equal(requests.length, 0, label + ': no startup dictionary request');
+    await api.load('zh');
+    assert.equal(requests.length, 0, label + ': Chinese remains inline');
+    const loading = api.load('en');
+    assert.equal(requests.length, 1, label + ': English loads only on demand');
+    assert.equal(requests[0].src, base + 'i18n-dict-en.js?v=' + expectedHash,
+      label + ': actual lazy URL must contain the current English content hash');
+    assert.equal(api.loaded.en, false, label + ': wait for the English script');
+    vm.runInNewContext(enFile, runtime, { filename: 'i18n-dict-en.js', timeout: 1000 });
+    requests[0].onload();
+    await loading;
+    assert.equal(api.loaded.en, true, label + ': publish English after load');
+    assert.equal(JSON.stringify(runtime.window.ClubI18nDict.en), JSON.stringify(en), label + ': publish the complete English dictionary');
+    await api.load('en');
+    assert.equal(requests.length, 1, label + ': already loaded English is reused');
+  }
+}
+
+// Run the real builder against disposable copies: this test must not regenerate
+// repository assets or alter their versions. Exercise LF/CRLF and an English-only
+// edit so hardcoded/stale digests and hashing the wrong input cannot pass.
+const buildSource = await read('tools/build-i18n-dict.mjs');
+const template = await read('tools/i18n-dict.template.js');
+const fixture = await mkdtemp(path.join(tmpdir(), 'club-i18n-dict-'));
+try {
+  await mkdir(path.join(fixture, 'tools'));
+  await mkdir(path.join(fixture, 'public'));
+  await writeFile(path.join(fixture, 'tools/build-i18n-dict.mjs'), buildSource);
+  await writeFile(path.join(fixture, 'tools/i18n-dict.template.js'), template);
+  await writeFile(path.join(fixture, 'public/i18n-dict-zh.js'), zhFile);
+  const lfEnglish = enFile.replace(/\r\n/g, '\n');
+  let lfOutput;
+  for (const [label, input] of [['LF', lfEnglish], ['CRLF', lfEnglish.replace(/\n/g, '\r\n')],
+    ['English-only change', lfEnglish + '\n// Cache invalidation regression probe.\n']]) {
+    await writeFile(path.join(fixture, 'public/i18n-dict-en.js'), input);
+    execFileSync(process.execPath, [path.join(fixture, 'tools/build-i18n-dict.mjs')],
+      { cwd: fixture, encoding: 'utf8', timeout: 10000 });
+    const generated = await readFile(path.join(fixture, 'public/i18n-dict.js'), 'utf8');
+    assert.doesNotMatch(generated, /__EN_DICT_HASH__|__ZH_DICT__/, label + ': all template placeholders are resolved');
+    if (label === 'LF') lfOutput = generated;
+    if (label === 'CRLF') assert.equal(generated, lfOutput, 'LF/CRLF English inputs generate the same cache key and loader');
+    if (label === 'English-only change') assert.notEqual(englishHash(input), enHash, 'English-only changes invalidate the URL');
+    await assertLazyEnglish(generated, englishHash(input), 'builder ' + label);
+  }
+} finally {
+  await rm(fixture, { recursive: true, force: true });
+}
+console.log('Dictionary builder: normalized SHA-256/8, LF/CRLF stability, English-only cache invalidation and actual HTTPS/file:// lazy URLs passed.');
+await assertLazyEnglish(loader, enHash, 'public/i18n-dict.js (run build-i18n-dict.mjs if stale)');
 
 // 4) The inline copy must match i18n-dict-zh.js (single source of truth).
 //    Reuse the standalone evaluation: i18n-dict-zh.js only defines a global,
@@ -126,4 +199,4 @@ assert.ok(loaderSize > zhSize * 0.9, 'inline zh is present');
 assert.ok(loaderSize < zhSize + 20000, 'English is not inlined (stays lazy)');
 
 console.log(`i18n dictionary: ${sections.length} zh sections inline (${(loaderSize / 1024).toFixed(0)} KiB), `
-  + 'English lazy, ClubCommon labels resolve without boot.');
+  + `English lazy (?v=${enHash}), ClubCommon labels resolve without boot.`);

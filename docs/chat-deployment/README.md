@@ -1,21 +1,48 @@
 # Supabase 网页手动粘贴部署
 
-此目录包含 Chat 三协议支持、供应商 API 协议配置、已撤销代理路由/密钥彻底删除以及 usage90day 所需的完整后端文件。你不需要安装或运行 PowerShell、Supabase CLI、Deno 或构建命令。以下操作均在 Supabase 网页 Dashboard 完成。
+此目录包含 Chat 三协议支持、供应商 API 协议配置、已撤销代理路由/密钥彻底删除、usage90day 及 Mingshen Harness 下载配置所需的完整后端文件。执行网页部署不需要安装或运行 PowerShell、Supabase CLI、Deno 或构建命令；维护者已生成可全文粘贴的文件。SQL 和函数操作在 Supabase 网页 Dashboard 完成，静态前端另按网站原有方式发布。
 
 ## 文件对应关系
 
 | 本目录文件 | 粘贴位置 |
 | --- | --- |
-| `club-chat-schema.sql` | SQL Editor → 新建查询 → 全文粘贴 → Run |
+| `club-chat-schema.sql` | SQL Editor → 新建查询 → 全文粘贴 → Run，Chat 数据库更新使用 |
+| `site-service-control.sql` | SQL Editor → 新建查询 → 全文粘贴 → Run，Mingshen Harness 下载配置先执行此脚本 |
 | `chat-dashboard-index.ts` | Edge Functions → `chat` → Code → `index.ts`，全文替换后 Deploy updates |
 | `chat-api-proxy-dashboard-index.ts` | Edge Functions → `chat-api-proxy` → Code → `index.ts`，全文替换后 Deploy updates |
-| `club-drive-dashboard-index.ts` | Edge Functions → `club-drive` → Code → `index.ts`，模型只读工具更新需要全文替换并部署 |
+| `club-drive-dashboard-index.ts` | Edge Functions → `club-drive` → Code → `index.ts`，模型只读工具或 Mingshen Harness 下载配置更新需要全文替换并部署 |
 
-三份 TypeScript 文件都是独立的单文件版本，Chat/代理的共享代码及协议适配器已内联，club-drive 为完整函数源码副本。不要改粘带相对 import 的开发源文件，也不要把不同函数文件拼在一起。只替换一小段旧函数会漏掉其他依赖，必须全文替换。不同升级需要的文件见各节；本轮模型只读工具不改 SQL。
+三份 TypeScript 文件都是独立的单文件版本，Chat/代理的共享代码及协议适配器已内联，club-drive 为完整函数源码副本。不要改粘带相对 import 的开发源文件，也不要把不同函数文件拼在一起。只替换一小段旧函数会漏掉其他依赖，必须全文替换。不同升级需要的文件见各节；历史模型只读工具升级不改 SQL，新增 Mingshen Harness 下载配置则必须先执行站点 SQL。
 
 `club-chat-schema.sql` 是完整主脚本 `supabase/club-chat-schema.sql` 的同步副本，不是另一套迁移。只执行其中一份，不需要把两个路径的文件各执行一次。已有安装也需要执行新版完整脚本，以更新供应商协议字段、自定义模型地址约束、90 天 usage 报告/清理 RPC 和定时任务；不要删除重建已有表。配置、额度设置和 quota buckets 保留；超过 90 天且符合安全条件的 usage 将按下节自动物理删除，不能承诺永久保留全部历史记录。
 
-## 网页操作顺序
+`site-service-control.sql` 同样是完整真源 `supabase/site-service-control.sql` 的同步副本，两条路径只执行其中一份。它与 Chat SQL 是不同脚本，不能用 Chat SQL 代替；仅上线 Mingshen Harness 下载配置不需要额外执行 Chat SQL。站点脚本幂等新增默认空的下载字段与专用读写 RPC，重复执行不会重置已有下载地址或服务设置，不要删除重建配置表。
+
+维护者更新真源后运行 `node tools/build-chat-dashboard-bundles.mjs`，统一重建三份函数 bundle 和两份 SQL 副本，再运行 `node tools/build-chat-dashboard-bundles.mjs --check` 核对。副本不是独立修改入口；这些命令只生成或校验本地文件，不会部署。
+
+## Mingshen Harness 产品页与下载配置（本次交付）
+
+部署顺序固定为 **站点 SQL → `club-drive` → 网站前端 → 超管设置下载地址**。这是本次功能的完整范围，不适用后文历史更新中的“不改 SQL”说明；无需仅为本功能重新部署 `chat` 或 `chat-api-proxy`。
+
+1. 在正确项目的 **SQL Editor → 新建查询**，全文粘贴本目录 [site-service-control.sql](site-service-control.sql)，点击 Run。已有站点保留原表、原配置和已有下载地址；若报错，保留错误信息并先解决，不通过删表重建绕过。
+2. 在 **Edge Functions → Secrets** 核实 `CLUB_SERVICE_ROLE_KEY` 已配置，及平台已有 `SUPABASE_URL`、`SUPABASE_ANON_KEY`。不能只配置名称不同的 `SUPABASE_SERVICE_ROLE_KEY`，也不要把服务端密钥放入前端或下载地址字段。将完整 [club-drive-dashboard-index.ts](club-drive-dashboard-index.ts) 全文替换到 **Edge Functions → `club-drive` → Code → `index.ts`**，点击 Deploy updates。
+3. 在 **`club-drive` 的函数配置**中关闭网关 JWT 验证（通常显示为 **Verify JWT with legacy secret** / **Verify JWT**），保存。产品页公开读必须允许未登录访客进入 handler；若保持网关验证开启，无有效成员 JWT 的公开读取可能在进入函数前被拒绝。关闭的是网关预校验，不是保存权限：handler 仍通过 Auth 验证用户，再调用 `requireSuperAdmin()`；成员、普通管理员与未登录用户均不能写入。不要为此开放浏览器对配置表或下载 RPC 的直接写权限。
+4. 按网站原有网页发布方式发布前端资源：新增 `public/mingshen-harness.html`、`public/mingshen-harness.css`、`public/mingshen-harness.js`、`public/assets/mingshen-harness/workspace.webp`，以及本轮更新的 `public/admin-hub.html`、`public/chat.html`、`public/chat.css`、`public/chat-i18n.js`、两份 `public/i18n-dict-*.js` 和重建的 `public/i18n-dict.js` 等关联静态资源。本轮 Chat 仅更新静态入口与词典，没有控制器变化，不需要重建 `public/chat-file-bundle.js`。建议完整发布这一轮站点资源，保留目录和版本化引用，避免遗漏共享依赖。Supabase 函数部署不会自动更新网站。
+5. 用超级管理员账号登录网站，打开 **`public/admin-hub.html` → Mingshen Harness** 标签，填入无需登录可访问的 Windows HTTPS 下载直链并保存；点击“清空并使用仓库”则清空配置。地址只允许完整 HTTPS 绝对 URL，最长 2048 字符，不允许凭据、控制字符、反斜杠或内部空白；纯空白 trim 后清空。不要把这项配置填进“网站服务运行”表单，两者独立保存。
+6. 退出登录或使用隐身窗口，打开 **`public/mingshen-harness.html`**，确认公开读取后的下载按钮目标正确；只检查链接与响应，无需下载安装包。未配置、读取失败、旧后端或非法返回时，按钮回退到 [GitHub 仓库](https://github.com/SkyH1aa/MingshenHarness)。保存地址不会探测资源、转存文件或强制下载；实际下载行为由资源服务器的响应头决定。
+
+接口均为向 `https://<项目>.supabase.co/functions/v1/club-drive` 发起 JSON POST：
+
+| 用途 | 请求体 | 权限与成功响应 |
+| --- | --- | --- |
+| 公开读取 | `{"action":"mingshen_harness_download_get"}` | 无需登录，`{"downloadUrl":"..."}`；未配置或配置行缺失时为空字符串 |
+| 保存 / 清空 | `{"action":"admin_mingshen_harness_download_set","downloadUrl":"https://..."}`；清空传 `""` | 有效登录且为超级管理员，成功返回 `{"downloadUrl":"..."}`；未登录/非超管为 403，非法字段或 URL 为 400 |
+
+公开读取不返回审计身份或其它站点设置；公开请求只带 `action`，保存只带 `action` 与 `downloadUrl`，额外字段拒绝。保存只更新下载字段及服务端审计时间/已验证用户 ID，不改服务开关，不发送停服广播；缺行时原子补种默认配置。下载 RPC 仅授予 `service_role`，浏览器经 Edge Function 读取，不应直接调用数据库 RPC。若匿名读仍报网关 401，先核对 `club-drive` 的 Verify JWT 开关；若进入 handler 后报读取失败，核对站点 SQL、函数版本和 Secrets，不要扩大数据库权限。
+
+本地已通过真实 Deno handler mock 的 10 项测试（无网络权限）、生产 handler 类型检查及 pglast SQL / PL/pgSQL 解析。它们不能证明目标项目已执行迁移或已正确配置网关；本次只交付本地文件，未执行线上 SQL、部署、真实下载或供应商调用。
+
+## 网页操作顺序（Chat 完整安装）
 
 1. 确认打开的是正确的 Supabase 项目。更新已有服务时，先暂停新请求并等待当前生成结束。
 2. 打开 SQL Editor，新建查询，将本目录 `club-chat-schema.sql` 的全部内容粘贴进去并运行。项目需已有社团账号和成员资料表；若 SQL 报错，保留错误信息，不要用删表来解决。

@@ -1,4 +1,4 @@
-// 从 tools/i18n-dict.template.js + public/i18n-dict-zh.js 生成 public/i18n-dict.js。
+// 从 template + 中文词典 + 英文内容哈希生成 public/i18n-dict.js。
 //   node tools/build-i18n-dict.mjs
 //
 // 为什么是「整文件生成」而不是原地替换：
@@ -10,6 +10,7 @@
 // file:// 下浏览器拒绝同步 XHR，defer 阶段也不执行 document.write，于是全站
 // 显示 guide.h1、common.confirm 这类原始 key，必须手动点语言切换才恢复。
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
@@ -18,13 +19,17 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const publicDir = path.join(root, 'public');
 const templateFile = path.join(root, 'tools/i18n-dict.template.js');
 const zhFile = path.join(publicDir, 'i18n-dict-zh.js');
+const enFile = path.join(publicDir, 'i18n-dict-en.js');
 const target = path.join(publicDir, 'i18n-dict.js');
 const PLACEHOLDER = '/*__ZH_DICT__*/ {}';
+const EN_HASH_PLACEHOLDER = '__EN_DICT_HASH__';
 
 const template = fs.readFileSync(templateFile, 'utf8');
-if (!template.includes(PLACEHOLDER)) {
-  console.error('FAIL template is missing the zh dictionary placeholder');
-  process.exit(1);
+for (const placeholder of [PLACEHOLDER, EN_HASH_PLACEHOLDER]) {
+  if (template.split(placeholder).length !== 2) {
+    console.error(`FAIL template must contain exactly one ${placeholder} placeholder`);
+    process.exit(1);
+  }
 }
 
 const zhSource = fs.readFileSync(zhFile, 'utf8');
@@ -51,7 +56,11 @@ for (const required of ['common', 'guide', 'theme', 'notify', 'memberProfile']) 
   }
 }
 
-const output = template.replace(PLACEHOLDER, objectLiteral);
+// Match version-static-assets.mjs: normalize Windows CRLF before SHA-256 so
+// lazy English requests invalidate the same cache entry on Windows and Linux.
+const enSource = fs.readFileSync(enFile, 'utf8').replace(/\r\n/g, '\n');
+const enHash = createHash('sha256').update(enSource, 'utf8').digest('hex').slice(0, 8);
+const output = template.replace(EN_HASH_PLACEHOLDER, enHash).replace(PLACEHOLDER, () => objectLiteral);
 fs.writeFileSync(target, output, 'utf8');
 
 // 生成物必须自洽：语法正确、能产出有内容的 ClubI18nDict。
@@ -69,4 +78,4 @@ if (dict.zh.common?.confirm !== '确定') {
   process.exit(1);
 }
 
-console.log(`Built public/i18n-dict.js: ${sections.length} zh sections inline (${(Buffer.byteLength(output) / 1024).toFixed(1)} KiB); English stays lazy.`);
+console.log(`Built public/i18n-dict.js: ${sections.length} zh sections inline (${(Buffer.byteLength(output) / 1024).toFixed(1)} KiB); English stays lazy (?v=${enHash}).`);
