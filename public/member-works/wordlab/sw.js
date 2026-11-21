@@ -1,6 +1,6 @@
 /* WordLab 离线外壳；仅管理本作品目录的公开资源。 */
 const CACHE_PREFIX = `wordlab-${self.registration.scope}-`;
-const CACHE = `${CACHE_PREFIX}v2`;
+const CACHE = `${CACHE_PREFIX}v3`;
 const SHELL = ['./WordLab.html', './manifest.webmanifest', './pwa/icon-192.png', './pwa/icon-512.png'];
 
 self.addEventListener('install', event => {

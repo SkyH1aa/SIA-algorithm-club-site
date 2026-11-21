@@ -28,6 +28,8 @@ assert.ok(scripts >= 2, 'compile the original inline application without executi
 
 const defaultsSource = page.slice(page.indexOf('/* ===== ng-defaults.js ===== */'), page.indexOf('/* ===== ng-sitecfg.js ===== */'));
 assert.ok(defaultsSource.length > 0, 'updated member defaults are present');
+assert.match(page, /<meta name="wordlab-source" content="1121-e86470c4021d4a7b">/);
+assert.ok(!/(?:["']wordlab_aiKey["']|\bwordlab_aiKey)\s*:\s*["'][^"']+/.test(defaultsSource), 'factory settings contain no default AI key');
 function defaults(initial = {}, session = new Map()) {
   const data = new Map(Object.entries(initial)), reloads = [];
   const storage = map => ({
@@ -90,6 +92,12 @@ assert.equal(Object.hasOwn(sanitized.ai, 'key'), false, 'remote credentials are 
 const restored = defaults(Object.fromEntries(migrated.data), migrated.session);
 assert.equal(restored.data.get('wordlab_v1'), migrated.data.get('wordlab_v1'), 'reload does not duplicate vocabulary');
 assert.equal(restored.reloads.length, 0, 'completed migration does not reload again');
+const updated = defaults({
+  ...Object.fromEntries(migrated.data), wordlab_pwdhash: 'existing-password-hash'
+});
+assert.equal(updated.data.get('wordlab_v1'), migrated.data.get('wordlab_v1'), '1121 retains the existing vocabulary migration marker');
+assert.equal(updated.data.get('wordlab_pwdhash'), 'existing-password-hash', '1121 does not repeat factory password clearing');
+assert.equal(updated.reloads.length, 0, '1121 does not require a new defaults reload');
 const corrupt = defaults({ wordlab_v1: '{incomplete', wordlab_log: prior.wordlab_log });
 assert.equal(corrupt.data.get('wordlab_v1'), '{incomplete', 'invalid existing vocabulary remains recoverable');
 assert.equal(corrupt.data.get('wordlab_log'), prior.wordlab_log);
@@ -153,10 +161,10 @@ function worker(source, scope, cacheNames, offline = false) {
 const scope = 'https://example.test/SIA-algorithm-club-site/public/member-works/wordlab/';
 const prefix = `wordlab-${scope}-`;
 const wordlabSource = await read('public/member-works/wordlab/sw.js');
-const cacheNames = ['club-shell-old', 'club-runtime-old', 'unrelated-app', 'wordlab-v2', `${prefix}v1`, `${prefix}v2`];
+const cacheNames = ['club-shell-old', 'club-runtime-old', 'unrelated-app', 'wordlab-v2', `${prefix}v1`, `${prefix}v2`, `${prefix}v3`];
 const app = worker(wordlabSource, scope, cacheNames);
 await app.activate();
-assert.deepEqual(app.deleted, [`${prefix}v1`], 'WordLab deletes only its own obsolete cache');
+assert.deepEqual(app.deleted, [`${prefix}v1`, `${prefix}v2`], 'WordLab deletes only its own obsolete caches');
 for (const file of ['WordLab.html', 'manifest.webmanifest', 'pwa/icon-192.png', 'pwa/icon-512.png']) {
   assert.equal(await (await app.request(scope + file)).text(), 'online');
 }

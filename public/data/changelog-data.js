@@ -3,6 +3,19 @@
 // fetch('data/changelog.json') 的最新数据为准。
 window.CLUB_CHANGELOG_SNAPSHOT = Object.freeze([
   {
+    "date": "2026-11-21",
+    "title": "WordLab 1121 版接入",
+    "enTitle": "WordLab 1121 integration",
+    "items": [
+      "核对并接入社员提供的 WordLab 1121 版，保留原生界面、社团功能入口和返回主页按钮；本版界面、玩法及预置词库与上一版一致。",
+      "公开版继续移除默认 AI 凭据，保留个人配置与已有学习进度；离线缓存升级到 v3。"
+    ],
+    "enItems": [
+      "Verify and integrate the member's WordLab 1121 release, retaining its original interface, project directory entry and homepage link. The interface, games and bundled vocabulary are unchanged from the previous release.",
+      "Keep default AI credentials out of the public copy while preserving personal configuration and learning progress. Update the offline cache to v3."
+    ]
+  },
+  {
     "date": "2026-11-20",
     "title": "WordLab 社员新版同步",
     "enTitle": "WordLab member project update",
