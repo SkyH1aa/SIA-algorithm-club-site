@@ -5730,12 +5730,12 @@ body[data-bgfx="off"] [class*="bg-anim"]{animation:none!important}
           <div class="row" style="gap:8px;margin-top:7px;flex-wrap:wrap">
             <button class="btn" onclick="aiCfgSave()">保存</button>
             <button class="btn g" onclick="aiCfgTest()">🔌 测试连接</button>
-            <button class="btn g" onclick="aiCfgClear()">清除密钥</button>
+            <button class="btn g" onclick="aiCfgClear()">恢复默认</button>
             <span class="hint" id="aiCfgMsg"></span>
           </div>
           <div class="hint" style="margin-top:6px">
-            ⚠️ 密钥只存在<b>你自己浏览器</b>里（localStorage），不会上传任何服务器。
-            但共用电脑时建议用完点「清除密钥」。</div>
+            默认使用 DeepSeek 文本 AI；图片识别需要支持视觉的个人接口。
+            个人密钥保存在<b>当前浏览器</b>，调用时发送至配置的接口；共用电脑时建议用完点「恢复默认」。</div>
         </div>
         <div class="row" style="gap:8px;margin-top:9px;flex-wrap:wrap">
           <div class="up-simple" style="flex:0 0 auto;padding:8px 12px"
@@ -7568,6 +7568,63 @@ body[data-bgfx="off"] [class*="bg-anim"]{animation:none!important}
 </script>
 
 <script>
+/* ===== wordlab-ai-config.js ===== */
+/* 1121 默认接口与 Key 成组使用，个人配置优先；默认 Key 不写入本机设置。 */
+(function () {
+  var DEFAULT_KEY = "sk-b0eeaec3d931408cabb1d4258265a506";
+  var DEFAULT_URL = 'https://api.deepseek.com/chat/completions';
+  var DEFAULT_MODEL = 'deepseek-chat';
+  function read(key) {
+    try { return (localStorage.getItem('wordlab_' + key) || '').trim(); } catch (e) { return ''; }
+  }
+  function ownKey() {
+    var key = read('aiKey');
+    return key === DEFAULT_KEY ? '' : key;
+  }
+  function normUrl(u) {
+    var s = String(u || '').trim();
+    if (!s) return DEFAULT_URL;
+    if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
+    s = s.replace(/\/+$/, '');
+    if (/\/chat\/completions$/i.test(s)) return s;
+    var host = ''; try { host = new URL(s).host.toLowerCase(); } catch (e) { return DEFAULT_URL; }
+    if (/\/v\d+$/.test(s)) return s + '/chat/completions';
+    if (/\/v\d+\//.test(s)) return s + '/chat/completions';
+    if (host.indexOf('deepseek') >= 0) return DEFAULT_URL;
+    if (host.indexOf('bigmodel') >= 0 || host.indexOf('zhipu') >= 0) return 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+    if (host.indexOf('openai') >= 0) return 'https://api.openai.com/v1/chat/completions';
+    return s + '/chat/completions';
+  }
+  function cfg() {
+    var key = ownKey();
+    if (!key) return { url: DEFAULT_URL, key: DEFAULT_KEY, model: DEFAULT_MODEL, vision: 'auto', builtin: true };
+    return {
+      url: normUrl(read('aiUrl')), key: key,
+      model: read('aiModel') || DEFAULT_MODEL, vision: read('aiVision') || 'auto', builtin: false
+    };
+  }
+  function setCfg(u, k, m) {
+    var key = String(k || '').trim();
+    var builtin = !key || key === DEFAULT_KEY;
+    if (builtin && (normUrl(u) !== DEFAULT_URL || String(m || DEFAULT_MODEL).trim() !== DEFAULT_MODEL)) {
+      throw new Error('使用其他接口或模型时，请填写对应的个人 API Key。');
+    }
+    if (builtin) localStorage.removeItem('wordlab_aiKey');
+    else localStorage.setItem('wordlab_aiKey', key);
+    localStorage.setItem('wordlab_aiUrl', builtin ? DEFAULT_URL : normUrl(u));
+    localStorage.setItem('wordlab_aiModel', builtin ? DEFAULT_MODEL : String(m || DEFAULT_MODEL).trim());
+    window.dispatchEvent(new Event('wordlab:aichange'));
+    return cfg();
+  }
+  function reset() {
+    localStorage.removeItem('wordlab_aiKey');
+    window.dispatchEvent(new Event('wordlab:aichange'));
+    return cfg();
+  }
+  window.WordLabAI = { cfg: cfg, setCfg: setCfg, reset: reset, ownKey: ownKey, normUrl: normUrl };
+})();
+/* ===== wordlab-ai-config-end ===== */
+
 /* ==================== 语言配置 ==================== */
 /* d=词典API代码  w=Wiktionary子域  t=TTS语言码  o=OCR语言包  f=旗标 */
 const LANGS={
@@ -9458,35 +9515,29 @@ const AI_PRESETS={
 };
 let aiImgFile=null, aiImgDataUrl='';
 
-function aiCfgGet(){
-  try{ return {
-    url : localStorage.getItem(NS+'aiUrl')||'',
-    key : localStorage.getItem(NS+'aiKey')||'',
-    model: localStorage.getItem(NS+'aiModel')||''
-  }; }catch(e){ return {url:'',key:'',model:''}; }
+function aiCfgGet(){ return window.WordLabAI.cfg(); }
+function aiCfgFields(){
+  const c=aiCfgGet();
+  $('aiUrl').value=c.url; $('aiKey').value=window.WordLabAI.ownKey(); $('aiModel').value=c.model;
+  $('aiKey').placeholder=c.builtin?'使用默认 Key；可填写个人 Key':'API Key';
 }
 function aiCfgSave(){
   const u=($('aiUrl').value||'').trim(), k=($('aiKey').value||'').trim(),
         m=($('aiModel').value||'').trim();
-  if(!u||!k){ $('aiCfgMsg').innerHTML='<span style="color:var(--bad)">地址和密钥都要填</span>'; return; }
-  try{
-    localStorage.setItem(NS+'aiUrl',u); localStorage.setItem(NS+'aiKey',k);
-    localStorage.setItem(NS+'aiModel',m);
-  }catch(e){}
-  aiCfgState(); $('aiCfgMsg').innerHTML='<span style="color:var(--good)">已保存到本机 ✓</span>';
+  if(!u){ $('aiCfgMsg').textContent='请填写接口地址'; return; }
+  try{ window.WordLabAI.setCfg(u,k,m); }
+  catch(e){ $('aiCfgMsg').textContent=e.message||'保存失败'; return; }
+  aiCfgFields(); aiCfgState(); $('aiCfgMsg').innerHTML='<span style="color:var(--good)">已保存到本机 ✓</span>';
   toast('已保存','ok');
 }
 function aiCfgClear(){
-  try{ localStorage.removeItem(NS+'aiKey'); }catch(e){}
-  $('aiKey').value=''; aiCfgState();
-  $('aiCfgMsg').innerHTML='密钥已清除';
+  try{ window.WordLabAI.reset(); }catch(e){ $('aiCfgMsg').textContent='清除失败，请重试'; return; }
+  aiCfgFields(); aiCfgState();
+  $('aiCfgMsg').textContent='已清除个人 Key，恢复默认 DeepSeek 配置';
 }
 function aiCfgToggle(){
   const b=$('aiCfg'); b.classList.toggle('hide');
-  if(!b.classList.contains('hide')){
-    const c=aiCfgGet();
-    $('aiUrl').value=c.url; $('aiKey').value=c.key; $('aiModel').value=c.model;
-  }
+  if(!b.classList.contains('hide')) aiCfgFields();
 }
 function aiPresetPick(){
   const k=$('aiPreset').value; if(!k) return;
@@ -9502,24 +9553,14 @@ function aiPresetPick(){
   $('aiKey').focus();
   aiCfgState();
 }
-/* 首次进入时若从未配置，默认预填智谱 GLM-OCR，省得对着三个空格发呆 */
-function aiCfgInit(){
-  const c=aiCfgGet();
-  if(c.url||c.model) return;              // 已配过就不动
-  const p=AI_PRESETS.zhipu; if(!p) return;   /* 跟随预设表，默认 glm-4.6v-flash（免费） */
-  try{
-    localStorage.setItem(NS+'aiUrl',p.url);
-    localStorage.setItem(NS+'aiModel',p.model);
-  }catch(e){}
-  if($('aiUrl')) $('aiUrl').value=p.url;
-  if($('aiModel')) $('aiModel').value=p.model;
-  if($('aiPreset')) $('aiPreset').value='zhipu';
-}
+/* 默认配置只在读取时生效，不覆盖已有个人接口或模型。 */
+function aiCfgInit(){ aiCfgState(); }
+window.addEventListener('wordlab:aichange',function(){ aiCfgFields(); aiCfgState(); });
 function aiCfgState(){
   const c=aiCfgGet();
   const el=$('aiCfgState'); if(!el) return;
   el.innerHTML = c.url&&c.key
-    ? '<span style="color:var(--good)">● 已配置：'+esc(c.model||'未指定模型')+'</span>'
+    ? '<span style="color:var(--good)">● '+(c.builtin?'默认配置：':'个人配置：')+esc(c.model||'未指定模型')+'</span>'
     : '<span style="color:var(--warn)">○ 未配置（只能用「复制提示词」方式）</span>';
 }
 async function aiCfgTest(){
@@ -9587,6 +9628,7 @@ async function aiSend(){
   const _kw=aiKeyWarn(c);
   if(_kw){ $('aiResult').innerHTML='<span style="color:var(--warn)">'+esc(_kw)+'</span>'; toast('Key 格式可能不对'); return; }
   if(!aiImgDataUrl){ toast('先选一张图'); return; }
+  if(c.builtin){ $('aiResult').textContent='默认 DeepSeek 配置用于文本 AI。图片识别请配置支持视觉的个人接口，或使用本页 OCR。'; return; }
   const prompt=aiPromptBuild();
   $('aiSendBtn').disabled=true; $('aiBar').style.width='8%';
   $('aiResult').textContent='正在识别…（图片越大越慢，请稍候）';
@@ -39446,53 +39488,14 @@ try { renderHome(); } catch (e) { }
    复用原站的 wordlab_aiUrl / wordlab_aiKey / wordlab_aiModel 三个配置键，
    这样「AI 词表」和原来的「拍照识字（视觉模型）」共用同一套接口设置。 */
 (function () {
-  var U = 'wordlab_aiUrl', K = 'wordlab_aiKey', M = 'wordlab_aiModel';
   var DEF_URL = 'https://api.deepseek.com/chat/completions';
   var DEF_MODEL = 'deepseek-chat';
   var MAX_WORDS = 30;
 
-  /* 公开托管版不内置 API Key；保留用户自行配置的功能。 */
-  var BUILTIN = '';
-  function ownKey() { return (localStorage.getItem(K) || '').trim(); }
-
+  /* 与拍照识字共用配置解析，默认 Key 始终绑定默认接口与模型。 */
+  var cfg = window.WordLabAI.cfg, setCfg = window.WordLabAI.setCfg;
   function $(id) { return document.getElementById(id); }
-  /* 把「只填了域名」这类地址自动补全成真正的接口地址 */
-  function normUrl(u) {
-    var s = String(u || '').trim();
-    if (!s) return DEF_URL;
-    if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
-    s = s.replace(/\/+$/, '');
-    if (/\/chat\/completions$/i.test(s)) return s;
-    var host = ''; try { host = new URL(s).host.toLowerCase(); } catch (e) { return DEF_URL; }
-    if (/\/v\d+$/.test(s)) return s + '/chat/completions';          /* https://x.com/api/v4 → /chat/completions */
-    if (/\/v\d+\//.test(s)) return s.replace(/\/+$/, '') + 'chat/completions';
-    if (host.indexOf('deepseek') >= 0) return 'https://api.deepseek.com/chat/completions';
-    if (host.indexOf('bigmodel') >= 0 || host.indexOf('zhipu') >= 0) return 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-    if (host.indexOf('openai') >= 0) return 'https://api.openai.com/v1/chat/completions';
-    return s + '/chat/completions';
-  }
   function isDeepSeek(u) { return /deepseek/i.test(String(u || '')); }
-
-  function cfg() {
-    var own = ownKey();
-    /* 未配置 Key 时显示默认接口；调用前仍检查用户 Key。 */
-    var raw = (localStorage.getItem(U) || '').trim();
-    /* 自定义接口与模型沿用原页面的本机配置。 */
-    var userCfg = !!own;
-    return {
-      url: userCfg ? normUrl(raw) : DEF_URL,
-      key: own || BUILTIN,
-      model: userCfg ? ((localStorage.getItem(M) || DEF_MODEL).trim()) : DEF_MODEL,
-      builtin: !own
-    };
-  }
-  function setCfg(u, k, m) {
-    localStorage.setItem(U, (u || '').trim() || DEF_URL);
-    var kk = (k || '').trim();
-    if (kk === BUILTIN || !kk) localStorage.removeItem(K);   /* 空 Key 不写本地 */
-    else localStorage.setItem(K, kk);
-    localStorage.setItem(M, (m || '').trim() || DEF_MODEL);
-  }
 
   function status(msg, bad) {
     var el = $('aiStatus'); if (!el) return;
@@ -39714,7 +39717,7 @@ try { renderHome(); } catch (e) { }
     if (lock) {
       lock.textContent = open
         ? '已解锁：可修改接口与 Key（默认不显示明文）'
-        : '已锁定：使用 AI 前，请先输入密码进入「词库与设置」配置自己的 API Key';
+        : '已锁定：可使用默认 AI；输入密码进入「词库与设置」可修改个人配置';
       lock.className = 'ai-lock' + (open ? ' open' : '');
     }
     ['aiCurl', 'aiCmodel', 'aiSave', 'aiReset', 'aiDefault', 'aiEye'].forEach(function (id) {
@@ -39730,7 +39733,7 @@ try { renderHome(); } catch (e) { }
     var st = document.getElementById('aiStatus');
     if (st && !st.textContent) {
       var c = cfg();
-      st.textContent = c.builtin ? '尚未配置 API Key，请先解锁「词库与设置」填写' : '当前使用：你自己的 Key';
+      st.textContent = c.builtin ? '当前使用：默认 DeepSeek 配置' : '当前使用：你自己的 Key';
       st.style.color = 'var(--sub)';
     }
   }
@@ -39745,7 +39748,7 @@ try { renderHome(); } catch (e) { }
     d.id = 'aiCard';
     d.innerHTML =
       '<div class="ai-eyebrow">AI 助手</div>' +
-      '<div class="ai-head"><b>🤖 AI 词表 / 讲解</b><span class="hint">粘贴一段课文，自动生成词表；也能讲解单个单词。用你自己的 API Key，只在浏览器里调用。</span></div>' +
+      '<div class="ai-head"><b>🤖 AI 词表 / 讲解</b><span class="hint">粘贴一段课文，自动生成词表；也能讲解单个单词。默认使用 DeepSeek，也可配置个人 API Key。</span></div>' +
       '<div class="ai-lock" id="aiLock"></div>' +
       '<div class="ai-cfg">' +
       '<input class="inp" id="aiCurl" style="flex:1 1 240px" placeholder="接口地址，默认 ' + DEF_URL + '">' +
@@ -39755,7 +39758,7 @@ try { renderHome(); } catch (e) { }
       '<button class="btn" id="aiSave">保存</button>' +
       '<button class="btn g" id="aiTest">测试</button>' +
       '<button class="btn g" id="aiDefault" title="填入 DeepSeek 官方地址与模型">用 DeepSeek 默认</button>' +
-      '<button class="btn g" id="aiReset" title="清除本机保存的 API Key">清除 Key</button>' +
+      '<button class="btn g" id="aiReset" title="清除个人 API Key 并恢复默认配置">恢复默认</button>' +
       '</div>' +
       '<textarea class="inp ai-ta" id="aiText" rows="4" placeholder="把课文、词汇表或一段英文粘贴到这里 —— 点「生成词表」会自动挑词、注音标、写释义和例句。"></textarea>' +
       '<div class="ai-row">' +
@@ -39774,39 +39777,55 @@ try { renderHome(); } catch (e) { }
     if (pg && pg.nextSibling && pg.nextSibling.nextSibling) host.insertBefore(d, pg.nextSibling.nextSibling);
     if ($('aiCurl')) $('aiCurl').value = c.url;
     if ($('aiCmodel')) $('aiCmodel').value = c.model;
-    var realKey = c.key, revealed = false;
+    var realKey = window.WordLabAI.ownKey(), revealed = false;
     function paintKey() {
       var el = $('aiCkey'); if (!el) return;
       el.value = realKey ? (revealed ? realKey : '••••••••••••••••') : '';
       el.type = revealed ? 'text' : 'password';
+      el.placeholder = cfg().builtin ? '使用默认 Key；可填写个人 Key' : 'API Key（sk-…）';
       var b = $('aiEye'); if (b) b.textContent = revealed ? '隐藏' : '显示';
     }
     paintKey();
     if ($('aiEye')) $('aiEye').onclick = function () {
+      if (!realKey) { status('默认 Key 不在输入框中显示；可填写个人 Key。'); return; }
       if (!bankOpen()) { status('先解锁「词库与设置」，才能查看完整 Key。', true); return; }
       revealed = !revealed; paintKey();
       status(revealed ? '已显示完整 Key（离开这个页面会重新隐藏）' : '已隐藏');
     };
     syncLock();
+    function refreshCfg() {
+      var current = cfg();
+      $('aiCurl').value = current.url; $('aiCmodel').value = current.model;
+      realKey = window.WordLabAI.ownKey(); revealed = false; paintKey();
+      syncLock();
+      status(current.builtin ? '当前使用：默认 DeepSeek 配置' : '当前使用：你自己的 Key');
+    }
+    window.addEventListener('wordlab:aichange', refreshCfg);
     $('aiSave').onclick = function () {
       if (!bankOpen()) { status('先解锁「词库与设置」，才能修改 API 设置。', true); return; }
       var k = ($('aiCkey').value || '').trim();
       if (!revealed && k.indexOf('•') === 0) k = realKey;   /* 没揭开就保存 = 保持原 Key */
-      setCfg($('aiCurl').value, k, $('aiCmodel').value);
-      realKey = cfg().key; revealed = false; paintKey(); syncLock();
-      status('已保存（只存在这台设备的浏览器里）');
+      try { setCfg($('aiCurl').value, k, $('aiCmodel').value); }
+      catch (e) { status(e.message || '保存失败', true); return; }
+      refreshCfg();
+      status(cfg().builtin ? '已保存，当前使用默认 DeepSeek 配置' : '已保存个人配置（只存在这台设备的浏览器里）');
     };
     if ($('aiReset')) $('aiReset').onclick = function () {
       if (!bankOpen()) { status('先解锁「词库与设置」，才能修改 API 设置。', true); return; }
-      localStorage.removeItem(K);
-      realKey = cfg().key; revealed = false; paintKey(); syncLock();
-      status('已清除 Key，使用 AI 前请填写自己的 API Key');
+      try { window.WordLabAI.reset(); }
+      catch (e) { status('恢复默认失败，请重试', true); return; }
+      refreshCfg();
+      status('已清除个人 Key，恢复默认 DeepSeek 配置');
     };
     $('aiTest').onclick = testCfg;
     if ($('aiDefault')) $('aiDefault').onclick = function () {
-      $('aiCurl').value = DEF_URL; $('aiCmodel').value = DEF_MODEL;
-      setCfg(DEF_URL, $('aiCkey').value, DEF_MODEL);
-      status('已填入 DeepSeek 默认配置（地址 + deepseek-chat），再点「测试」验证。');
+      if (!bankOpen()) { status('先解锁「词库与设置」，才能修改 API 设置。', true); return; }
+      var k = ($('aiCkey').value || '').trim();
+      if (!revealed && k.indexOf('•') === 0) k = realKey;
+      try { setCfg(DEF_URL, k, DEF_MODEL); }
+      catch (e) { status(e.message || '保存失败', true); return; }
+      refreshCfg();
+      status('已使用 DeepSeek 配置，可点「测试」验证；「恢复默认」会清除个人 Key。');
     };
     $('aiGen').onclick = genWords;
     $('aiExp').onclick = explain;
@@ -40362,6 +40381,7 @@ try { renderHome(); } catch (e) { }
     try { return String(localStorage.getItem('wordlab_aiVision') || 'auto'); } catch (e) { return 'auto'; }
   }
   function isVisionModel() {
+    if (window.WordLabAI.cfg().builtin) return false;
     var mode = visionMode();
     if (mode === 'ocr') return false;
     if (mode === 'vision') return true;
@@ -40746,7 +40766,7 @@ try { renderHome(); } catch (e) { }
       sec.innerHTML =
         '<div class="card chat-card">' +
         '<div class="mhead"><div class="ic">🤖</div><div><h3>AI 助手</h3>' +
-        '<p class="hint">对话 · 图片取词 · 一键导入词表 —— 用你自己的 API Key，数据只在本机浏览器</p></div></div>' +
+        '<p class="hint">对话 · 图片取词 · 一键导入词表 —— 默认 DeepSeek，可用个人 Key；发送内容会提交至 AI 接口</p></div></div>' +
         '<div class="chat-presets" id="chatPresets"></div>' +
         '<div class="chat-gen" id="chatGen" style="display:none">' +
         '<input class="inp" id="genTopic" style="flex:1 1 280px" placeholder="生成什么学科的词库？比如：国际学校经济学 / IGCSE 生物·细胞 / AP 微积分">' +
@@ -44151,7 +44171,7 @@ try { renderHome(); } catch (e) { }
 
   var CLEAR = ['wordlab_pwdhash', 'wordlab_pwdlock', 'wordlab_pwdfail', 'wordlab_password'];
 
-  /* 公开托管版：个人 AI 配置可保存，站点只提供无凭据的默认值。 */
+  /* 个人 AI 配置可保存；内置默认配置由 WordLabAI 成组解析，远程配置仍过滤 Key。 */
   var PERSONAL = {
     wordlab_aiUrl: FIX.wordlab_aiUrl,
     wordlab_aiModel: FIX.wordlab_aiModel,
