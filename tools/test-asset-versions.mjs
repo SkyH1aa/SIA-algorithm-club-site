@@ -60,6 +60,16 @@ for (const file of htmlFiles) {
 }
 assert.ok(checked >= 30, `expected many versioned references, saw ${checked}`);
 
+const imagePage = await readFile(path.join(publicDir, 'chat-images.html'), 'utf8');
+for (const name of ['chat-images.js', 'chat-images-file-bundle.js']) {
+  assert.ok(imagePage.includes(`${name}?v=${hashes[name]}`), `${name} dynamic entry uses current hash`);
+}
+const imageApp = await readFile(path.join(publicDir, 'chat-images.js'), 'utf8');
+for (const name of ['chat-images-core.js', 'chat-images-store.js']) {
+  assert.ok(imageApp.includes(`./${name}?v=${hashes[name]}`), `${name} module dependency uses current hash`);
+}
+execFileSync(process.execPath, [path.join(root, 'tools/build-chat-images-file-bundle.mjs'), '--check'], { cwd: root, stdio: 'pipe' });
+
 // Running --check must not rewrite anything.
 const before = await readFile(path.join(publicDir, 'donations.html'), 'utf8');
 execFileSync(process.execPath, [path.join(root, 'tools/version-static-assets.mjs'), '--check'], { cwd: root, stdio: 'pipe' });

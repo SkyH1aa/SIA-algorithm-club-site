@@ -1278,7 +1278,8 @@ try {
         method: 'POST', headers: declared ? { 'content-length': declared } : {}, body
       }));
       assert.equal(response.status, 413); assert.deepEqual(await response.json(), { error: 'request_too_large' });
-      assert.equal(reads, 193); assert.equal(cancelled, true); assert.equal(body.locked, false);
+      // Image actions share this route, so the pre-parse hard ceiling is 32 MiB.
+      assert.equal(reads, 513); assert.equal(cancelled, true); assert.equal(body.locked, false);
     }
     assert.equal(requests.length, 0); assert.equal(upstreamBodies.length, 0); assert.equal(rpcCalls.length, 0);
   });
@@ -1303,10 +1304,11 @@ try {
     assert.equal(requests.length, 0); assert.equal(audits.length, 0); assert.equal(upstreamBodies.length, 0);
   });
   await test('declared body bounds, invalid UTF-8 and valid small fragments are handled safely', async () => {
-    for (const length of ['12582913', '-1', 'NaN', '1.5']) {
+    for (const length of ['33554433', '-1', 'NaN', '1.5']) {
       const response = await handler(new Request('http://localhost/chat', { method: 'POST', headers: { 'content-length': length }, body: '{}' }));
       assert.equal(response.status, 413);
     }
+    assert.equal((await handler(new Request('http://localhost/chat', { method: 'POST', body: JSON.stringify({action:'catalog', padding:'x'.repeat(12 * 1024 * 1024)}) }))).status, 413);
     assert.equal((await handler(new Request('http://localhost/chat', { method: 'POST', body: Uint8Array.of(255) }))).status, 400);
     assert.equal(requests.length, 0);
     for (const declared of [null, '1']) {

@@ -493,3 +493,12 @@ html body.chat-admin-page .chat-admin-form label { min-width: 0; }
 @media (prefers-reduced-motion: reduce) {
   html body.chat-admin-page :is(button, a, input, select, textarea, .chat-admin-table tbody tr) { transition: none; }
 }
+
+.chat-admin-image-config { grid-column: 1 / -1; min-width: 0; margin: 4px 0; padding: 16px; border: 1px solid var(--chat-admin-line); border-radius: 9px; }
+.chat-admin-image-config legend { padding: 0 6px; color: var(--chat-admin-text); font-weight: 700; }
+.chat-admin-image-config code { color: var(--chat-admin-text); overflow-wrap: anywhere; }
+.chat-admin-image-wide { grid-column: 1 / -1; min-width: 0; overflow-wrap: anywhere; }
+.chat-admin-image-filter { display: grid; gap: 7px; max-width: 280px; margin-top: 20px; color: var(--chat-admin-muted); font-size: 13px; }
+#imageResolveForm { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--chat-admin-line); }
+#imageResolveTarget { color: var(--chat-admin-text); }
+@media (max-width: 720px) { .chat-admin-image-wide { grid-column: auto; } .chat-admin-image-config { padding: 12px; } }

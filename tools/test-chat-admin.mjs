@@ -111,6 +111,9 @@ assert(start >= 0 && end > start, 'Management function boundaries changed; updat
 vm.runInContext(source.slice(start, end), sandbox, {filename: 'chat-admin.js'});
 const run = code => vm.runInContext(code, sandbox);
 function reply(action, payload, status = 200, beforeReply) { queue.push({action, payload, status, beforeReply}); }
+function replyImageAdmin() {
+  reply('image_admin_get', {total_images: 0, records: [], total: 0, page: 1, page_size: 20, quota: {global: {limit: null, generated: 0, reserved: 0, remaining: null}, user: null, resets_at: null}, settings: {global_daily_limit: null, default_user_daily_limit: null}, overrides: []});
+}
 const userId = '11111111-1111-4111-8111-111111111111';
 const snapshot = {
   global: {daily_limit: null, version: 1, used: 4, remaining: null, resets_at: '2026-10-17T00:00:00Z'},
@@ -596,6 +599,7 @@ console.log('PASS bilingual revoke/permanent-removal copy, confirmation variable
   reply('admin_delete_model', {result: {deleted: true, id: modelA.id}}, 200);
   reply('admin_get', {providers: [providerFixture], models: [modelB]});
   reply('admin_proxy_list', {routes: [], keys: []});
+  reply('admin_user_directory', {users: [], blacklist: []}); reply('admin_quota_get', snapshot); replyImageAdmin(); reply('usage', {rows: [], total: 0});
   await run('removeModel(modelA)');
   while (run('Boolean(active || assistantLoad)')) await new Promise(resolve => setTimeout(resolve, 0));
   const deleteCall = calls.find(call => call.action === 'admin_delete_model');
@@ -606,6 +610,7 @@ console.log('PASS bilingual revoke/permanent-removal copy, confirmation variable
   reply('admin_delete_provider', {result: {deleted: true, id: providerFixture.id, models: 1}}, 200);
   reply('admin_get', {providers: [], models: []});
   reply('admin_proxy_list', {routes: [], keys: []});
+  reply('admin_user_directory', {users: [], blacklist: []}); reply('admin_quota_get', snapshot); replyImageAdmin(); reply('usage', {rows: [], total: 0});
   run(`document.getElementById('providerId').value = ${JSON.stringify(providerFixture.id)}`);
   await run('removeProvider(providerFixture)');
   while (run('Boolean(active || assistantLoad)')) await new Promise(resolve => setTimeout(resolve, 0));
@@ -678,6 +683,7 @@ const translatedCopy = new Map();
     reply('admin_proxy_list', {routes: [], keys: []});
     reply('admin_user_directory', {users: [], blacklist: []});
     reply('admin_quota_get', snapshot);
+    replyImageAdmin();
     reply('usage', {rows: [], total: 0});
   }
   assert.deepEqual(node('providerApiProtocol').options.map(option => option.value), ['auto', 'responses', 'messages', 'chat']);
@@ -777,7 +783,7 @@ const translatedCopy = new Map();
   const beforeModelSave = calls.length;
   reply('save_model', {}); refreshReplies({...provider, api_protocol: 'messages'});
   submit('modelForm'); await settleProxy();
-  assert.deepEqual(calls[beforeModelSave], {action: 'save_model', ...model, claude_thinking: {mode: 'omit'}}, 'Legacy Messages save defaults to omit while retaining generic drafts');
+  assert.deepEqual(calls[beforeModelSave], {action: 'save_model', ...model, purpose: 'chat', claude_thinking: {mode: 'omit'}}, 'Legacy Messages save defaults to chat purpose and omit thinking while retaining generic drafts');
   assert.equal(run("errorKey({message:'api_protocol',status:400})"), 'invalidApiProtocol');
   for (const lang of ['zh', 'en']) {
     assert.match(dictionaries[lang].chatAdmin.apiProtocolHelp, /覆盖 URL 后缀|overrides the URL suffix/);
@@ -893,6 +899,7 @@ const translatedCopy = new Map();
     reply('admin_proxy_list', {routes: [], keys: []});
     reply('admin_user_directory', {users: [], blacklist: []});
     reply('admin_quota_get', snapshot);
+    replyImageAdmin();
   };
   run("clearSensitive();session={user:{id:'admin'},access_token:'mock-token'};authorized=true;active=null");
   assert.deepEqual(summaryValues(), ['--', '--']);
@@ -1120,6 +1127,7 @@ const translatedCopy = new Map();
     reply('admin_proxy_list',{routes:[],keys:[]});
     reply('admin_user_directory',{users:[],blacklist:[]});
     reply('admin_quota_get',snapshot);
+    replyImageAdmin();
     reply('usage',{rows:[],total:0});
   };
   const tab = () => windowListeners.get('club:tabchange')({detail:{target:'assistantSection'}});
@@ -1154,7 +1162,7 @@ const translatedCopy = new Map();
   // Legacy global refresh also preserves the loaded assistant and all its drafts.
   reply('admin_get',{providers:[sandbox.protocolProvider],models:[{...sandbox.protocolModel,visibility:'all'}]});
   reply('admin_proxy_list',{routes:[],keys:[]});reply('admin_user_directory',{users:[],blacklist:[]});
-  reply('admin_quota_get',snapshot);reply('usage',{rows:[],total:0});
+  reply('admin_quota_get',snapshot);replyImageAdmin();reply('usage',{rows:[],total:0});
   node('refreshButton').onclick(); await settleProxy();
   assert.equal(assistantReads(),loadedReads);
   assert.equal(node('assistantSupplement').value,'My unsaved instruction');
@@ -1244,6 +1252,41 @@ const translatedCopy = new Map();
   }
   assert(!calls.slice(beforeLogin).some(call=>['test','admin_test','assistant_ask'].includes(call.action)),'Automatic lifecycle never calls a paid upstream');
   console.log('PASS automatic assistant lifecycle: bootstrap/auth race, first login, tab fallback/coalescing, token refresh, drafts, conflict lock, isolated failure/explicit retry, concurrent legacy load, stale account/signout responses and explicit local Bru preset');
+}
+// Image admin handlers: exact server contract, null/zero limits, filtered audit, and confirmed reconciliation.
+{
+  const record = {request_id: '55555555-5555-4555-8555-555555555555', slot: 0, user_id: userId, model_id: 'image-id', status: 'uncertain', generated: 0, created_at: '2026-10-17T00:00:00Z'};
+  const imageReply = (overrides = {}) => reply('image_admin_get', {total_images: 9, records: [record], total: 1, page: 1, page_size: 20, quota: {global: {limit: null, generated: 3, reserved: 1, remaining: null}, user: {limit: 0, generated: 0, reserved: 0, remaining: 0}, resets_at: '2026-10-18T00:00:00Z'}, settings: {global_daily_limit: null, default_user_daily_limit: 0}, overrides: [{user_id: userId, user_daily_limit: 0}], ...overrides});
+  run("session={user:{id:'admin'},access_token:'mock-token'};authorized=true;active=null;directory=[{user_id:userId,username:'alice',member_name:'Alice'}];directoryLoaded=true;imageUser=userId");
+  imageReply(); node('imageRefresh').onclick(); await settleProxy();
+  assert.equal(node('imageTotal').textContent, '9');
+  assert.equal(node('imageUserLimit').value, '0');
+  assert(node('imageGlobalSummary').textContent.includes('3') && node('imageGlobalSummary').textContent.includes('1'));
+  assert.equal(calls.at(-1).action, 'image_admin_get'); assert.equal(calls.at(-1).user_id, userId);
+  node('imageGlobalLimit').value = ''; node('imageDefaultLimit').value = '0';
+  reply('image_admin_save', {}); imageReply();
+  node('imageSettingsForm').listeners.submit({preventDefault(){}}); await settleProxy();
+  assert.deepEqual(calls.at(-2), {action: 'image_admin_save', settings: {global_daily_limit: null, default_user_daily_limit: 0}});
+  node('imageUserLimit').value = '';
+  reply('image_admin_save', {}); imageReply();
+  node('imageUserForm').listeners.submit({preventDefault(){}}); await settleProxy();
+  assert.deepEqual(calls.at(-2), {action: 'image_admin_save', settings: {user_id: userId, user_daily_limit: null}});
+  confirmResult = false; const beforeCancel = calls.length;
+  await node('imageResetUser').onclick(); assert.equal(calls.length, beforeCancel);
+  confirmResult = true; reply('image_admin_save', {}); imageReply({overrides: []});
+  await node('imageResetUser').onclick(); await settleProxy();
+  assert.deepEqual(calls.at(-2), {action: 'image_admin_save', settings: {user_id: userId, reset_user_override: true}});
+  node('imageRecords').listeners.click({target: {closest: () => ({dataset: {imageResolve: '0'}})}});
+  assert.equal(node('imageResolveForm').hidden, false);
+  node('imageResolveResult').value = '1'; node('imageResolveNote').value = 'verified';
+  confirmResult = false; const beforeResolve = calls.length;
+  await node('imageResolveForm').listeners.submit({preventDefault(){}}); assert.equal(calls.length, beforeResolve);
+  confirmResult = true; reply('image_admin_resolve', {}); imageReply({records: [{...record, status: 'generated', generated: 1}]});
+  await node('imageResolveForm').listeners.submit({preventDefault(){}}); await settleProxy();
+  assert.deepEqual(calls.at(-2), {action: 'image_admin_resolve', request_id: record.request_id, slot: 0, generated: 1, note: 'verified'});
+  assert.equal(node('imageResolveForm').hidden, true);
+  assert(!node('imageRecords').innerHTML.includes('data-image-resolve='), 'Resolved records cannot be reconciled again');
+  console.log('PASS image admin handlers: quota saves, nullable overrides, explicit resets, and confirmed uncertain reconciliation');
 }
 assert.equal(queue.length, 0, 'All queued responses must be consumed');
 console.log(`Chat admin VM regression passed (${calls.length} mocked requests; zero network or paid calls).`);

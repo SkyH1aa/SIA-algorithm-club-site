@@ -5,7 +5,7 @@
 // * HTML 走 network-first，保证公告与活动不陈旧；离线时回退到缓存的壳。
 // * CSS/JS/字体走 cache-first，文件名带内容哈希，天然可长期缓存。
 // * 版本号来自 asset-versions.json，构建时写死；改共享资源后重新生成即可。
-const VERSION = 'b525095a89';
+const VERSION = 'd8fea51aa8';
 const SHELL_CACHE = `club-shell-${VERSION}`;
 const RUNTIME_CACHE = `club-runtime-${VERSION}`;
 
@@ -21,6 +21,19 @@ const SHELL_ASSETS = [
   './public/club-shell.js',
   './public/favicon.svg',
   './public/manifest.webmanifest',
+  // 生图工作台仅预缓存静态壳；生成与留档均需在线认证，图片不进入 SW 缓存。
+  './public/chat-images.html',
+  './public/chat.css',
+  './public/chat-images.css',
+  './public/chat-images.js',
+  './public/chat-images-core.js',
+  './public/chat-images-store.js',
+  './public/chat-images-i18n.js',
+  './public/chat-images-file-bundle.js',
+  './public/vendor/supabase/supabase.min.js',
+  './public/club-auth-storage.js',
+  './public/service-prompts.js',
+  './public/service-gate.js',
   // 品牌字体：字体 CSS 与 Inter 拉丁块离线可用；MiSans 的 56 个分块走
   // 运行时 cache-first，浏览到哪块缓存哪块，不把 4.6MB 全塞进安装包。
   './public/assets/fonts/club-fonts.css',
@@ -49,12 +62,33 @@ function isPrivate(url) {
   return /supabase\.co|\/functions\/v1\/|\/auth\/v1\/|\/rest\/v1\//.test(url);
 }
 
+function cacheableResponse(response) {
+  return response && response.ok && !/\b(?:private|no-store|no-cache)\b/i.test(response.headers.get('cache-control') || '')
+    && !/^image\//i.test(response.headers.get('content-type') || '')
+    && !/(?:\bcookie\b|\bauthorization\b|\*)/i.test(response.headers.get('vary') || '');
+}
+
+// 只让预先声明的静态壳用无查询串的预缓存兜底，绝不匹配任意私有 URL。
+const shellUrls = new Set(SHELL_ASSETS.map(asset => new URL(asset, self.registration.scope).href));
+async function shellFallback(url) {
+  if ([...url.searchParams.keys()].some(key => key !== 'v')) return undefined;
+  const clean = new URL(url.href); clean.search = ''; clean.hash = '';
+  if (!shellUrls.has(clean.href)) return undefined;
+  const cache = await caches.open(SHELL_CACHE);
+  return cache.match(clean.href);
+}
+
 self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (isPrivate(request.url)) return;
+  // 认证请求、Blob、图片及带业务参数的请求完全绕过 Cache Storage。
+  if (!/^https?:$/.test(url.protocol) || request.headers.has('authorization') || request.destination === 'image'
+    || /\b(?:no-store|no-cache)\b/i.test(request.headers.get('cache-control') || '')
+    || [...url.searchParams.keys()].some(key => key !== 'v')) return;
+  if (!/\.(?:html|css|js|json|woff2?|ttf|webmanifest)$/i.test(url.pathname) && !url.pathname.endsWith('/')) return;
 
   const acceptsHtml = request.headers.get('accept')?.includes('text/html');
   if (acceptsHtml) {
@@ -62,7 +96,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(request)
         .then(response => {
-          if (response && response.ok) {
+          if (cacheableResponse(response)) {
             const copy = response.clone();
             caches.open(RUNTIME_CACHE).then(cache => cache.put(request, copy)).catch(() => undefined);
           }
@@ -70,7 +104,7 @@ self.addEventListener('fetch', event => {
         })
         .catch(async () => {
           const cached = await caches.match(request);
-          return cached || caches.match('./index.html');
+          return cached || await shellFallback(url) || caches.match('./index.html');
         })
     );
     return;
@@ -82,7 +116,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(request)
         .then(response => {
-          if (response && response.ok) {
+          if (cacheableResponse(response)) {
             const copy = response.clone();
             caches.open(RUNTIME_CACHE).then(cache => cache.put(request, copy)).catch(() => undefined);
           }
@@ -98,12 +132,12 @@ self.addEventListener('fetch', event => {
     caches.match(request).then(cached => {
       if (cached) return cached;
       return fetch(request).then(response => {
-        if (response && response.ok) {
+        if (cacheableResponse(response)) {
           const copy = response.clone();
           caches.open(RUNTIME_CACHE).then(cache => cache.put(request, copy)).catch(() => undefined);
         }
         return response;
-      }).catch(() => cached);
+      }).catch(async () => cached || await shellFallback(url) || Response.error());
     })
   );
 });

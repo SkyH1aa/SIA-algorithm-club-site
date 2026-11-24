@@ -330,6 +330,136 @@ async function chatAttachmentRequest(request: Request, user: { id: string; email
   return json({ ok: true, bytes: bytes.byteLength, sha256: actual });
 }
 
+// Image archives are isolated from the legacy chat attachment limits and paths.
+const IMAGE_ARCHIVE_MAX_BYTES = 256 * 1024;
+const IMAGE_ATTACHMENT_MAX_BYTES = 16 * 1024 * 1024;
+const IMAGE_TYPES: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+
+type ImageArchiveUser = { id: string; email?: string; user_metadata?: unknown };
+function imageArchiveJson(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'content-type': 'application/json; charset=utf-8', 'cache-control': 'private, no-store' } });
+}
+function imageDimensions(bytes: Uint8Array): { mime: string; width: number; height: number } | null {
+  const n = bytes.length;
+  const ascii = (at: number, text: string) => at >= 0 && at + text.length <= n && [...text].every((c, i) => bytes[at + i] === c.charCodeAt(0));
+  const be16 = (i: number) => bytes[i] * 256 + bytes[i + 1];
+  const be32 = (i: number) => (bytes[i] * 0x1000000 + bytes[i + 1] * 0x10000 + bytes[i + 2] * 256 + bytes[i + 3]);
+  const le24 = (i: number) => bytes[i] + bytes[i + 1] * 256 + bytes[i + 2] * 65536;
+  const le32 = (i: number) => le24(i) + bytes[i + 3] * 0x1000000;
+  let mime = '', width = 0, height = 0;
+  if (n >= 33 && bytes[0] === 0x89 && ascii(1, 'PNG\r\n\x1a\n') && be32(8) === 13 && ascii(12, 'IHDR')) {
+    mime = 'image/png'; width = be32(16); height = be32(20);
+  } else if (n >= 12 && bytes[0] === 0xff && bytes[1] === 0xd8) {
+    let pos = 2;
+    while (pos + 4 <= n) {
+      if (bytes[pos++] !== 0xff) return null;
+      while (pos < n && bytes[pos] === 0xff) pos++;
+      const marker = bytes[pos++];
+      if (marker === 0xd9 || marker === 0xda || marker === 0 || marker === 0xd8) break;
+      if (marker === 0x01 || marker >= 0xd0 && marker <= 0xd7) continue;
+      if (pos + 2 > n) return null;
+      const length = be16(pos);
+      if (length < 2 || pos + length > n) return null;
+      if ([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(marker)) {
+        if (length < 8 || length !== 8 + 3 * bytes[pos + 7]) return null;
+        mime = 'image/jpeg'; height = be16(pos + 3); width = be16(pos + 5); break;
+      }
+      pos += length;
+    }
+  } else if (n >= 20 && ascii(0, 'RIFF') && ascii(8, 'WEBP') && le32(4) + 8 === n) {
+    const chunkSize = le32(16);
+    if (20 + chunkSize + (chunkSize % 2) > n) return null;
+    if (ascii(12, 'VP8X') && chunkSize >= 10) {
+      width = le24(24) + 1; height = le24(27) + 1; mime = 'image/webp';
+    } else if (ascii(12, 'VP8 ') && chunkSize >= 10 && bytes[23] === 0x9d && bytes[24] === 0x01 && bytes[25] === 0x2a && !(bytes[20] & 1)) {
+      width = (bytes[26] + bytes[27] * 256) & 0x3fff; height = (bytes[28] + bytes[29] * 256) & 0x3fff; mime = 'image/webp';
+    } else if (ascii(12, 'VP8L') && chunkSize >= 5 && bytes[20] === 0x2f && !(bytes[24] & 0xe0)) {
+      width = 1 + bytes[21] + ((bytes[22] & 0x3f) << 8); height = 1 + (bytes[22] >> 6) + (bytes[23] << 2) + ((bytes[24] & 0x0f) << 10); mime = 'image/webp';
+    }
+  }
+  return mime && width > 0 && height > 0 && width <= 4096 && height <= 4096 && width * height <= 16777216 ? { mime, width, height } : null;
+}
+function imageFilePath(root: string, hash: string, mime: string) {
+  return `${root}attachments/${hash.slice(0, 2)}/${hash}.${IMAGE_TYPES[mime]}`;
+}
+async function imageStored(path: string, bytes: number) {
+  const response = await webdavRequest('HEAD', path);
+  const length = response.headers.get('content-length');
+  return response.ok && length !== null && /^\d+$/.test(length) && Number(length) === bytes;
+}
+async function imageAttachmentRequest(request: Request, user: ImageArchiveUser) {
+  const hash = (request.headers.get('x-chat-attachment-hash') || '').toLowerCase();
+  const ext = (request.headers.get('x-chat-attachment-ext') || '').toLowerCase();
+  const mime = (request.headers.get('x-chat-attachment-type') || '').toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(hash) || !IMAGE_TYPES[mime] || !(ext === IMAGE_TYPES[mime] || mime === 'image/jpeg' && ext === 'jpeg')) return imageArchiveJson({ error: '图片类型或指纹不合法。' }, 400);
+  let bytes: Uint8Array<ArrayBuffer>;
+  try { bytes = await readLimitedBody(request, IMAGE_ATTACHMENT_MAX_BYTES); }
+  catch (error) { return imageArchiveJson({ error: '图片内容过大。' }, (error as { status?: number }).status === 413 ? 413 : 400); }
+  const dimensions = imageDimensions(bytes);
+  if (!dimensions || dimensions.mime !== mime) return imageArchiveJson({ error: '图片格式或尺寸不合法。' }, 400);
+  const actual = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  if (hash !== actual) return imageArchiveJson({ error: '图片指纹不匹配。' }, 400);
+  const identity = await chatArchiveUserRoot(user);
+  const root = `${identity.userRoot}images/`, attachmentRoot = `${root}attachments/`, prefixRoot = `${attachmentRoot}${hash.slice(0, 2)}/`;
+  const path = imageFilePath(root, hash, mime);
+  await ensureChatArchiveDirectory(root); await ensureChatArchiveDirectory(attachmentRoot); await ensureChatArchiveDirectory(prefixRoot);
+  const exists = await imageStored(path, bytes.byteLength);
+  try { await assertDriveQuota(user.id, exists ? 0 : bytes.byteLength); }
+  catch { return imageArchiveJson({ error: '社团盘空间不足或已停用。' }, 413); }
+  if (!exists) {
+    const response = await putChatArchiveFile(path, [CHAT_ARCHIVE_ROOT, identity.userRoot, root, attachmentRoot, prefixRoot], bytes, { 'content-type': mime, 'content-length': String(bytes.byteLength), 'if-none-match': '*' });
+    if (!response.ok && response.status !== 412) return imageArchiveJson({ error: '图片归档上传失败。' }, 502);
+    if (!await imageStored(path, bytes.byteLength)) return imageArchiveJson({ error: '图片归档验证失败。' }, 502);
+  }
+  return imageArchiveJson({ ok: true });
+}
+function imageRecordObject(value: unknown): value is Record<string, unknown> { return !!value && typeof value === 'object' && !Array.isArray(value); }
+function imageString(value: unknown, max: number, empty = false): value is string { return typeof value === 'string' && value.length <= max && (empty || value.length > 0); }
+function imageTimestamp(value: unknown): value is string | number {
+  if (typeof value === 'number') return Number.isSafeInteger(value) && value >= 0 && value <= 8640000000000000;
+  return typeof value === 'string' && value.length <= 40 && /^\d{4}-\d\d-\d\dT/.test(value) && Number.isFinite(Date.parse(value));
+}
+async function imageArchiveRequest(request: Request, user: ImageArchiveUser) {
+  let parsed: unknown;
+  try { parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await readLimitedBody(request, IMAGE_ARCHIVE_MAX_BYTES))); }
+  catch (error) { return imageArchiveJson({ error: '图片归档内容不合法。' }, (error as { status?: number }).status === 413 ? 413 : 400); }
+  if (!imageRecordObject(parsed) || parsed.schema !== 'club-ai-image-archive/1') return imageArchiveJson({ error: '图片归档版本不合法。' }, 400);
+  if (parsed.user_id !== user.id) return imageArchiveJson({ error: '图片归档用户不匹配。' }, 403);
+  const r = parsed.record;
+  if (!imageRecordObject(r) || !imageString(r.id, 36) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r.id) || !imageString(r.prompt, 12000, true) || !imageString(r.model_id, 200) || !imageString(r.model_name, 200) || !imageTimestamp(r.createdAt) || !imageString(r.status, 40) || !imageRecordObject(r.options)) return imageArchiveJson({ error: '图片归档记录不合法。' }, 400);
+  const options = r.options;
+  if (!imageString(options.size, 80, true) || !imageString(options.quality, 80, true) || !imageString(options.background, 80, true) || !Array.isArray(r.references) || r.references.length > 32 || !Array.isArray(r.images) || r.images.length > 32) return imageArchiveJson({ error: '图片归档选项不合法。' }, 400);
+  const entries: Array<{ sha256: string; mime: string; bytes: number }> = [];
+  const validateMedia = (value: unknown, reference: boolean) => {
+    if (!imageRecordObject(value) || !imageString(value.sha256, 64) || !/^[0-9a-f]{64}$/.test(value.sha256) || !imageString(value.mime, 30) || !IMAGE_TYPES[value.mime] || !Number.isSafeInteger(value.bytes) || Number(value.bytes) < 1 || Number(value.bytes) > IMAGE_ATTACHMENT_MAX_BYTES || typeof value.archived !== 'boolean') return null;
+    const base = { sha256: value.sha256, mime: value.mime, bytes: Number(value.bytes), archived: value.archived };
+    if (reference) {
+      if (!imageString(value.name, 255, true)) return null;
+      entries.push(base); return { ...base, name: value.name };
+    }
+    if (!Number.isSafeInteger(value.slot) || Number(value.slot) < 0 || Number(value.slot) > 31 || !Number.isSafeInteger(value.width) || !Number.isSafeInteger(value.height) || Number(value.width) < 1 || Number(value.height) < 1 || Number(value.width) > 4096 || Number(value.height) > 4096 || Number(value.width) * Number(value.height) > 16777216) return null;
+    entries.push(base); return { slot: value.slot, ...base, width: value.width, height: value.height };
+  };
+  const references = r.references.map(value => validateMedia(value, true));
+  const images = r.images.map(value => validateMedia(value, false));
+  if (references.includes(null) || images.includes(null)) return imageArchiveJson({ error: '图片归档附件不合法。' }, 400);
+  const record: Record<string, unknown> = { id: r.id, prompt: r.prompt, model_id: r.model_id, model_name: r.model_name, options: { size: options.size, quality: options.quality, background: options.background }, createdAt: r.createdAt, references, images, status: r.status };
+  if (r.finishedAt !== undefined && r.finishedAt !== null) { if (!imageTimestamp(r.finishedAt)) return imageArchiveJson({ error: '图片归档时间不合法。' }, 400); record.finishedAt = r.finishedAt; }
+  if (r.count !== undefined) { if (!Number.isSafeInteger(r.count) || Number(r.count) < 1 || Number(r.count) > 32) return imageArchiveJson({ error: '图片归档数量不合法。' }, 400); record.count = r.count; }
+  if (r.request_id !== undefined && r.request_id !== null) { if (!imageString(r.request_id, 200)) return imageArchiveJson({ error: '图片归档请求标识不合法。' }, 400); record.request_id = r.request_id; }
+  const identity = await chatArchiveUserRoot(user), root = `${identity.userRoot}images/`;
+  for (const entry of entries) if (!await imageStored(imageFilePath(root, entry.sha256, entry.mime), entry.bytes)) return imageArchiveJson({ error: '图片归档附件未确认存储。' }, 409);
+  const stamp = chatArchiveStamp(), dateRoot = `${root}${stamp.date}/`;
+  await ensureChatArchiveDirectory(root); await ensureChatArchiveDirectory(dateRoot);
+  const payload = chatArchiveEncoder.encode(JSON.stringify({ schema: 'club-ai-image-archive/1', user_id: user.id, record, server: { received_at: new Date().toISOString(), generated_at_beijing: stamp.iso, timezone: 'Asia/Shanghai' } }, null, 2));
+  try { await assertDriveQuota(user.id, payload.byteLength); }
+  catch { return imageArchiveJson({ error: '社团盘空间不足或已停用。' }, 413); }
+  const path = `${dateRoot}${stamp.time}_${stamp.millis}_${crypto.randomUUID()}.json`;
+  const response = await putChatArchiveFile(path, [CHAT_ARCHIVE_ROOT, identity.userRoot, root, dateRoot], payload, { 'content-type': 'application/json; charset=utf-8', 'content-length': String(payload.byteLength), 'if-none-match': '*' });
+  if (!response.ok) return imageArchiveJson({ error: '图片归档上传失败。' }, 502);
+  return imageArchiveJson({ ok: true });
+}
+
 function parseXmlFiles(xml: string) {
   const files: Array<{ name: string; type: string; size: string; bytes?: number; path: string }> = [];
   for (const match of xml.matchAll(/<d:response\b[\s\S]*?<d:href>([\s\S]*?)<\/d:href>[\s\S]*?<d:resourcetype>([\s\S]*?)<\/d:resourcetype>[\s\S]*?(?:<d:getcontentlength>([\s\S]*?)<\/d:getcontentlength>)?[\s\S]*?<\/d:response>/gi)) {
@@ -3662,11 +3792,22 @@ async function artcAssistantReadQuery(input: unknown, requestSignal: AbortSignal
 }
 
 Deno.serve(async request => {
-  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
-  if (!['GET', 'POST'].includes(request.method)) return json({ error: '只支持 GET、POST 请求。' }, 405);
+  const isImageAction = ['image-archive', 'image-attachment'].includes(request.headers.get('x-drive-action') || '');
+  if (request.method === 'OPTIONS') return new Response('ok', { headers: isImageAction ? { ...corsHeaders, 'cache-control': 'private, no-store' } : corsHeaders });
+  if (!['GET', 'POST'].includes(request.method)) return isImageAction ? imageArchiveJson({ error: '只支持 POST 请求。' }, 405) : json({ error: '只支持 GET、POST 请求。' }, 405);
 
   try {
     const streamAction = request.headers.get('x-drive-action');
+    if (streamAction === 'image-archive' || streamAction === 'image-attachment') {
+      try {
+        if (request.method !== 'POST') return imageArchiveJson({ error: '只支持 POST 请求。' }, 405);
+        const user = await getUser(request);
+        if (!user?.id) return imageArchiveJson({ error: '请先登录。' }, 401);
+        return streamAction === 'image-archive' ? await imageArchiveRequest(request, user) : await imageAttachmentRequest(request, user);
+      } catch {
+        return imageArchiveJson({ error: '图片归档服务不可用。' }, 502);
+      }
+    }
     if (request.method === 'POST' && streamAction === 'upload') {
       const user = await getUser(request);
       if (!user?.id) return json({ error: '请先登录社团盘。' }, 401);

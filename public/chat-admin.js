@@ -14,6 +14,7 @@ let usage = emptyUsage();
 let directory = [], blacklist = [], directoryLoaded = false, selectedUser = '', selectionEpoch = 0;
 let modelAccess = null, modelAccessDraft = null, modelAccessModelId = '', modelAccessEpoch = 0;
 let globalQuota = null, userQuota = null;
+let imageState = {loaded: false, records: [], total: 0, page: 1, pageSize: 20, quota: null, settings: null, overrides: []}, imageUser = '', imageResolveTarget = null;
 let assistantState = {config: null, documents: [], releases: []};
 let assistantImportDocuments = [];
 let assistantFormHydrated = false, assistantConfigBaseline = '';
@@ -33,12 +34,20 @@ function resolvedProviderProtocol(item) {
 }
 function modelUsesMessages(item) { return resolvedProviderProtocol(providers.find(row => row.id === item?.provider_id)) === 'messages'; }
 function refreshThinkingControls() {
-  const messages = modelUsesMessages({provider_id: $('modelProvider').value});
+  const image = $('modelPurpose').value === 'image';
+  const messages = !image && modelUsesMessages({provider_id: $('modelProvider').value});
+  for (const field of document.querySelectorAll('[data-chat-field]')) {
+    field.hidden = image;
+    for (const control of field.querySelectorAll('input, select, textarea')) control.disabled = Boolean(active) || !authorized || image;
+  }
+  $('imageConfigFields').hidden = !image;
+  $('imageConfigFields').disabled = image ? Boolean(active) || !authorized : true;
+  $('modelApiProtocolHelp').hidden = image;
   const mode = $('modelClaudeThinkingMode').value;
   const busy = Boolean(active) || !authorized;
   for (const id of ['reasoningEfforts', 'defaultReasoning']) {
-    $(`${id}Field`).hidden = messages;
-    $(id).disabled = busy || messages;
+    $(`${id}Field`).hidden = image || messages;
+    $(id).disabled = busy || image || messages;
   }
   for (const [id, visible] of [['modelClaudeThinkingMode', messages], ['modelClaudeThinkingBudget', messages && mode === 'enabled'], ['modelClaudeThinkingEfforts', messages && mode === 'adaptive'], ['modelClaudeDefaultEffort', messages && mode === 'adaptive']]) {
     $(`${id}Field`).hidden = !visible;
@@ -151,6 +160,7 @@ function controls() {
   $('accessSelectAll').disabled = disabled || !directoryLoaded || !modelAccess;
   document.querySelectorAll('[data-access-user]').forEach(node => { node.disabled = disabled || !modelAccess; });
   refreshThinkingControls();
+  imageControls();
   assistantControls();
 }
 function current(run) { return (active === run || assistantLoad === run) && run.epoch === epoch && !run.controller.signal.aborted; }
@@ -182,6 +192,7 @@ async function request(run, action, body = {}, stream = false) {
 }
 function blockedTest(error) { return error.status === 403 && error.message === 'blacklisted' && ['test', 'admin_test'].includes(error.action); }
 function errorKey(error) {
+  if (error.message === 'image_config') return 'imageConfigInvalid';
   if (error.message === 'assistantInput') return 'assistantInvalidInput';
   if (error.message === 'assistantFile') return 'assistantInvalidFile';
   if (error.message === 'assistant_model') return 'assistantUnavailableModel';
@@ -225,7 +236,9 @@ function renderProviderOptions() {
   if (!providers.length) $('modelProvider').add(new Option(t('noProvider'), ''));
   if (providers.some(item => item.id === previous)) $('modelProvider').value = previous;
 }
-function availableModels() { return models.filter(item => item.enabled !== false && providers.some(row => row.id === item.provider_id && row.enabled !== false)); }
+function modelPurpose(item) { return item?.purpose === 'image' ? 'image' : 'chat'; }
+function purposeLabel(item) { return t(modelPurpose(item) === 'image' ? 'purposeImage' : 'purposeChat'); }
+function availableModels() { return models.filter(item => modelPurpose(item) === 'chat' && item.enabled !== false && providers.some(row => row.id === item.provider_id && row.enabled !== false)); }
 let testBudgetModelId = '';
 function configureTestBudget(reset = false) {
   const item = models.find(row => row.id === $('testModel').value);
@@ -261,13 +274,15 @@ function renderProviders() {
   $('providersList').innerHTML = providers.length ? table(['providerId', 'providerLabel', 'baseUrl', 'apiProtocol', 'secretName', 'authHeader', 'enabled', 'actions'], providers.map(item => `<tr>${cells([item.name, first(item.label, '-'), item.base_url, t(API_PROTOCOL_LABELS[providerApiProtocol(item)]), item.secret_name, item.auth_header || 'authorization'])}<td>${badge(item.enabled !== false)}</td><td>${rowActions('provider', item.id, 'deleteProvider')}</td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t('noProvider'))}</div>`;
 }
 function renderModels() {
-  $('modelsList').innerHTML = models.length ? table(['modelId', 'modelLabel', 'modelIntroduction', 'modelProvider', 'contextWindow', 'maxOutput', 'enabled', 'actions'], models.map(item => `<tr>${cells([modelKey(item), first(item.display_name, '-'), first(item.introduction, '-'), providerLabel(item.provider_id), item.context_window, item.max_output_tokens])}<td>${badge(item.enabled !== false)}</td><td>${rowActions('model', item.id, 'deleteModel')}</td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t('noModel'))}</div>`;
+  const filter = $('modelPurposeFilter').value || 'all';
+  const filtered = models.filter(item => filter === 'all' || modelPurpose(item) === filter);
+  $('modelsList').innerHTML = filtered.length ? table(['modelId', 'modelLabel', 'modelPurpose', 'modelIntroduction', 'modelProvider', 'contextWindow', 'maxOutput', 'enabled', 'actions'], filtered.map(item => `<tr>${cells([modelKey(item), first(item.display_name, '-')])}<td><span class="chat-admin-badge">${escapeHtml(purposeLabel(item))}</span></td>${cells([first(item.introduction, '-'), providerLabel(item.provider_id), modelPurpose(item) === 'chat' ? item.context_window : '—', modelPurpose(item) === 'chat' ? item.max_output_tokens : '—'])}<td>${badge(item.enabled !== false)}</td><td>${rowActions('model', item.id, 'deleteModel')}</td></tr>`).join('')) : `<div class="chat-admin-empty">${escapeHtml(t('imageNoModels'))}</div>`;
   renderAccessModels();
 }
 function renderAccessModels() {
   const previous = $('accessModel').value;
   $('accessModel').replaceChildren(new Option(t('selectModel'), ''));
-  for (const item of models) $('accessModel').add(new Option(`${first(item.display_name, modelKey(item))} · ${modelKey(item)}`, item.id));
+  for (const item of models) $('accessModel').add(new Option(`${first(item.display_name, modelKey(item))} · ${modelKey(item)} · ${purposeLabel(item)}`, item.id));
   if (models.some(item => item.id === previous)) $('accessModel').value = previous;
   renderAccessUsers();
 }
@@ -366,7 +381,7 @@ async function loadQuotaDirectory(run) {
   if (selectedUser && !directory.some(item => item.user_id === selectedUser)) {
     selectedUser = ''; selectionEpoch++; userQuota = null; fillUserQuota();
   }
-  renderQuotaDirectory(); renderQuota();
+  renderQuotaDirectory(); renderQuota(); renderImageAdmin();
   await loadQuota(run);
   setMessage('quotaMessage');
 }
@@ -415,7 +430,7 @@ async function refreshTestQuota(run, userId, revision) {
 }
 function refreshLocalizedUi() {
   window.ClubI18n?.apply(document);
-  renderProviderOptions(); renderModelOptions(); renderProviders(); renderModels(); renderUsage(); renderQuotaDirectory(); renderQuota(); renderProxy(); renderAssistant();
+  renderProviderOptions(); renderModelOptions(); renderProviders(); renderModels(); renderUsage(); renderQuotaDirectory(); renderQuota(); renderProxy(); renderAssistant(); renderImageAdmin();
   for (const id of messages.keys()) renderMessage(id);
   renderTestOutput(); controls();
 }
@@ -448,7 +463,7 @@ function assistantConfigInput() {
   return {expected_version: Number(assistantState.config?.version) || 0, enabled: $('assistantEnabled').checked, model_id, system_prompt, welcome, suggestions};
 }
 function assistantEligibleModels() {
-  return models.filter(item => item.enabled === true && !item.deleted_at && item.visibility === 'all' && providers.some(provider => provider.id === item.provider_id && provider.enabled === true && !provider.deleted_at));
+  return models.filter(item => modelPurpose(item) === 'chat' && item.enabled === true && !item.deleted_at && item.visibility === 'all' && providers.some(provider => provider.id === item.provider_id && provider.enabled === true && !provider.deleted_at));
 }
 function assistantControls() {
   const disabled = Boolean(active || assistantLoad) || !authorized;
@@ -562,6 +577,64 @@ async function assistantMutation(run, action, body, messageId) {
     throw error;
   }
 }
+function imagePages() { return Math.max(1, Math.ceil(imageState.total / imageState.pageSize)); }
+function imageControls() {
+  const disabled = Boolean(active) || !authorized;
+  for (const id of ['imageSettingsForm', 'imageUserForm', 'imageFilter', 'imageResolveForm']) {
+    for (const node of $(id).elements) node.disabled = disabled || (id === 'imageSettingsForm' && !imageState.loaded) || (id === 'imageUserForm' && (!imageState.loaded || (node.id !== 'imageUser' && !imageUser)));
+    $(id).setAttribute('aria-busy', String(Boolean(active)));
+  }
+  $('imageUser').disabled = disabled || !directoryLoaded;
+  $('imageRefresh').disabled = disabled;
+  $('imagePrev').disabled = disabled || !imageState.loaded || imageState.page <= 1;
+  $('imageNext').disabled = disabled || !imageState.loaded || imageState.page >= imagePages();
+  document.querySelectorAll('[data-image-resolve]').forEach(node => { node.disabled = disabled; });
+}
+function imageSummary(item) {
+  return item ? t('imageQuotaSummary', {limit: quotaValue(item.limit), generated: item.generated ?? '—', reserved: item.reserved ?? '—', remaining: quotaValue(item.remaining), reset: formatTime(imageState.quota?.resets_at)}) : t('quotaNotLoaded');
+}
+function imageOverride() { return asArray(imageState.overrides).find(item => item.user_id === imageUser); }
+function fillImageUser() { $('imageUserLimit').value = imageOverride()?.user_daily_limit ?? ''; }
+function renderImageAdmin() {
+  $('imageUser').replaceChildren(new Option(t(directoryLoaded && !directory.length ? 'noUsers' : 'selectUser'), ''));
+  for (const item of directory) $('imageUser').add(new Option(userLabel(item), item.user_id));
+  $('imageUser').value = imageUser;
+  $('imageTotal').textContent = imageState.loaded ? formatUsageTokens(imageState.totalImages) : '--';
+  $('imageGlobalSummary').textContent = imageSummary(imageState.quota?.global);
+  $('imageUserSummary').textContent = imageUser ? imageSummary(imageState.quota?.user) : t('selectUser');
+  $('imageOverrideState').textContent = imageUser ? t(imageOverride() ? 'imageOverrideActive' : 'imageOverrideDefault') : '';
+  $('imageRecords').innerHTML = imageState.records.length ? table(['startedAt', 'quotaUser', 'model', 'requestId', 'imageSlot', 'status', 'imageGenerated', 'imageAuditDetail', 'actions'], imageState.records.map(item => {
+    const user = directory.find(row => row.user_id === item.user_id);
+    const model = models.find(row => row.id === item.model_id);
+    const index = imageState.records.indexOf(item);
+    const action = item.status === 'uncertain' ? `<button type="button" class="chat-admin-button chat-admin-secondary" data-image-resolve="${index}">${escapeHtml(t('imageResolve'))}</button>` : '';
+    return `<tr>${cells([formatTime(item.created_at), user ? userLabel(user) : first(item.audit?.username, item.user_id), model ? modelKey(model) : first(item.audit?.model_key, item.model_id), item.request_id, item.slot, item.status, item.generated ?? '—', [item.error_code, item.resolution_note].filter(Boolean).join(' · ') || '—'])}<td>${action}</td></tr>`;
+  }).join('')) : `<div class="chat-admin-empty">${escapeHtml(t(imageState.loaded ? 'imageNoRecords' : 'quotaNotLoaded'))}</div>`;
+  $('imagePageLabel').textContent = t('page', {page: imageState.page, pages: imagePages()});
+  $('imageResolveTarget').textContent = imageResolveTarget ? t('imageResolveTarget', {request: imageResolveTarget.request_id, slot: imageResolveTarget.slot}) : '';
+}
+function imageQuery(page = imageState.page) {
+  const from = $('imageFrom').value ? new Date($('imageFrom').value) : null, to = $('imageTo').value ? new Date($('imageTo').value) : null;
+  if ((from && Number.isNaN(from.getTime())) || (to && Number.isNaN(to.getTime())) || (from && to && from > to)) throw new Error('date');
+  return {user_id: imageUser || undefined, page, page_size: Number($('imagePageSize').value), from: from?.toISOString() || null, to: to?.toISOString() || null};
+}
+async function loadImageAdmin(run, query = imageQuery()) {
+  const payload = await request(run, 'image_admin_get', query); assertCurrent(run);
+  imageState = {loaded: true, records: asArray(payload.records), total: Number(payload.total) || 0, totalImages: payload.total_images, page: Number(payload.page) || query.page, pageSize: Number(payload.page_size) || query.page_size, quota: payload.quota, settings: payload.settings, overrides: asArray(payload.overrides)};
+  $('imageGlobalLimit').value = imageState.settings?.global_daily_limit ?? '';
+  $('imageDefaultLimit').value = imageState.settings?.default_user_daily_limit ?? '';
+  fillImageUser(); renderImageAdmin();
+}
+function refreshImageAdmin(page = imageState.page) {
+  if (active || !authorized) return;
+  let query; try { query = imageQuery(page); } catch { return setMessage('imageMessage', 'invalidDates', 'error'); }
+  void operation('imageMessage', async run => { setMessage('imageMessage', 'loading'); await loadImageAdmin(run, query); setMessage('imageMessage'); });
+}
+async function saveImageSettings(run, settings) {
+  setMessage('imageMessage', 'saving');
+  await request(run, 'image_admin_save', {settings}); assertCurrent(run);
+  await loadImageAdmin(run); setMessage('imageMessage', 'quotaSaved', 'success');
+}
 function usageQuery(page = usage.page) {
   const from = $('usageFrom').value ? new Date($('usageFrom').value) : null;
   const to = $('usageTo').value ? new Date($('usageTo').value) : null;
@@ -610,6 +683,12 @@ async function loadAdmin(run) {
       setMessage('modelAccessMessage', errorKey(error), 'error');
     }
   }
+  try { await loadImageAdmin(run); setMessage('imageMessage'); }
+  catch (error) {
+    assertCurrent(run);
+    if (error.status === 401 || error.status === 403) throw error;
+    setMessage('imageMessage', errorKey(error), 'error');
+  }
   try { await loadUsage(run); setMessage('usageMessage'); }
   catch (error) {
     assertCurrent(run);
@@ -619,7 +698,42 @@ async function loadAdmin(run) {
 }
 function clearProvider() { $('providerForm').reset(); $('providerId').value = ''; $('providerApiProtocol').value = 'auto'; }
 function syncDefaultOutputMax() { $('defaultOutputTokens').max = String(Math.min(131072, Math.max(1, Number($('maxOutputTokens').value) || 1))); }
-function clearModel() { $('modelForm').reset(); $('modelConfigId').value = ''; syncDefaultOutputMax(); fillClaudeThinking(null); }
+const imageDefaults = {api: 'images', request_format: 'images', endpoint: '', edit_endpoint: '', responses_tool: false, qualities: ['auto'], sizes: ['auto', '1024x1024', '1024x1536', '1536x1024'], custom_size: false, max_dimension: 4096, max_pixels: 16777216, supports_references: false, supports_transparency: false, max_batch: 10, media_hosts: [], field_map: {}, fixed_parameters: {}, result_path: ''};
+const imageFields = {api: 'imageApi', request_format: 'imageRequestFormat', endpoint: 'imageEndpoint', edit_endpoint: 'imageEditEndpoint', responses_tool: 'imageResponsesTool', qualities: 'imageQualities', sizes: 'imageSizes', custom_size: 'imageCustomSize', max_dimension: 'imageMaxDimension', max_pixels: 'imageMaxPixels', supports_references: 'imageReferences', supports_transparency: 'imageTransparency', max_batch: 'imageMaxBatch', media_hosts: 'imageMediaHosts', field_map: 'imageFieldMap', fixed_parameters: 'imageFixedParameters', result_path: 'imageResultPath'};
+function previewImageEndpoint() { $('imageEndpointPreview').textContent = $('imageEndpoint').value || '—'; }
+function fillImageConfig(config) {
+  const values = {...imageDefaults, ...(config || {})};
+  if (config?.request_format == null && ['images', 'responses', 'chat'].includes(config?.api)) values.request_format = config.api;
+  for (const [key, id] of Object.entries(imageFields)) {
+    const node = $(id), value = values[key];
+    if (node.type === 'checkbox') node.checked = value === true;
+    else if (Array.isArray(imageDefaults[key])) node.value = asArray(value).join(',');
+    else if (typeof imageDefaults[key] === 'object') node.value = JSON.stringify(value || {}, null, 2);
+    else node.value = value ?? '';
+  }
+  previewImageEndpoint();
+}
+function imageConfigInput() {
+  const result = {};
+  for (const [key, id] of Object.entries(imageFields)) {
+    const node = $(id), template = imageDefaults[key];
+    if (node.type === 'checkbox') result[key] = node.checked;
+    else if (Array.isArray(template)) result[key] = node.value.split(',').map(value => value.trim()).filter(Boolean);
+    else if (typeof template === 'object') {
+      try { result[key] = JSON.parse(node.value || '{}'); } catch { throw new Error('image_config'); }
+      if (!result[key] || Array.isArray(result[key]) || typeof result[key] !== 'object') throw new Error('image_config');
+    } else if (typeof template === 'number') result[key] = Number(node.value);
+    else result[key] = node.value.trim();
+  }
+  const fields = ['model', 'prompt', 'size', 'quality', 'background', 'n'];
+  const optionListValid = list => list.length > 0 && list.length <= 32 && new Set(list).size === list.length && list.every(value => /^[a-zA-Z0-9_-]{1,40}$/.test(value));
+  const map = Object.entries(result.field_map), fixed = Object.entries(result.fixed_parameters);
+  const requestFields = result.request_format === 'images' ? fields : result.request_format === 'responses' ? ['model', 'input', 'size', 'quality', 'background', 'tools', 'tool_choice', 'store'] : ['model', 'messages', 'size', 'quality', 'background', 'stream'];
+  const effective = requestFields.map(key => result.field_map[key] || key);
+  if (!['images', 'responses', 'chat', 'custom'].includes(result.api) || !['images', 'responses', 'chat'].includes(result.request_format) || (result.api !== 'custom' && result.api !== result.request_format) || (result.api === 'custom' && !result.endpoint) || [result.endpoint, result.edit_endpoint].some(value => value.length > 2048 || (value && !value.startsWith('https://'))) || !optionListValid(result.qualities) || !optionListValid(result.sizes) || !validInteger(result.max_dimension, 1, 4096) || !validInteger(result.max_pixels, 1, 16777216) || !validInteger(result.max_batch, 1, 10) || result.media_hosts.length > 32 || result.media_hosts.some(value => !/^(?=.{1,253}$)[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(value)) || (result.result_path && !/^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+){0,8}$/.test(result.result_path)) || map.some(([key, value]) => !fields.includes(key) || typeof value !== 'string' || !/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/.test(value)) || new Set(map.map(([, value]) => value)).size !== map.length || fixed.length > 16 || fixed.some(([key, value]) => !/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/.test(key) || !['string', 'number', 'boolean'].includes(typeof value) || (typeof value === 'string' && value.length > 500) || (typeof value === 'number' && !Number.isFinite(value)) || effective.includes(key) || requestFields.includes(key) || fields.includes(key)) || new Set(effective).size !== effective.length || (result.api !== 'custom' && (map.length || fixed.length || result.result_path))) throw new Error('image_config');
+  return result;
+}
+function clearModel() { $('modelForm').reset(); $('modelConfigId').value = ''; fillImageConfig(null); syncDefaultOutputMax(); fillClaudeThinking(null); }
 function clearSensitive() {
   assistantLoad?.controller.abort(); assistantLoad = null; assistantLoadStatus = 'idle';
   assistantState = {config: null, documents: [], releases: []}; assistantImportDocuments = []; assistantFormHydrated = false;
@@ -630,10 +744,13 @@ function clearSensitive() {
   directory = []; blacklist = []; directoryLoaded = false; selectedUser = ''; selectionEpoch++;
   modelAccess = null; modelAccessDraft = null; modelAccessModelId = ''; modelAccessEpoch++;
   globalQuota = null; userQuota = null; fillGlobalQuota(); fillUserQuota();
+  imageState = {loaded: false, records: [], total: 0, page: 1, pageSize: 20, quota: null, settings: null, overrides: []}; imageUser = ''; imageResolveTarget = null;
+  $('imageSettingsForm').reset(); $('imageUserForm').reset(); $('imageFilter').reset(); $('imageResolveForm').reset(); $('imageResolveForm').hidden = true;
   $('quotaUser').replaceChildren();
   clearProvider(); clearModel(); $('testForm').reset(); $('usageFilter').reset();
   $('modelProvider').replaceChildren(); $('testModel').replaceChildren();
   messages.clear();
+  setMessage('imageMessage');
   for (const id of ['statusHint', 'gateMessage', 'providerMessage', 'modelMessage', 'testMessage', 'usageMessage', 'quotaMessage', 'globalQuotaMessage', 'userQuotaMessage', 'blacklistMessage', 'proxyMessage', 'proxyCopyMessage', 'assistantConfigMessage', 'assistantDocumentMessage', 'assistantReleaseMessage']) setMessage(id);
   for (const id of ['providerCount', 'modelCount', 'usageCount', 'totalTokens']) $(id).textContent = '--';
   refreshLocalizedUi();
@@ -888,6 +1005,61 @@ $('assistantRollbackButton').onclick = async () => {
   if (active || assistantLoad || !authorized || !assistantState.config || !assistantState.releases.some(item => item.id === release_id) || !(await ClubCommon.confirm({ message: t('rollbackConfirm', {release: release_id}) }))) return;
   assistantOperation('assistantReleaseMessage', run => assistantMutation(run, assistantActions.rollback, {release_id, expected_version: assistantState.config.version}, 'assistantReleaseMessage'));
 };
+$('modelPurpose').addEventListener('change', refreshThinkingControls);
+$('modelPurposeFilter').addEventListener('change', renderModels);
+$('imageEndpoint').addEventListener('input', previewImageEndpoint);
+$('imageApi').addEventListener('change', () => { if ($('imageApi').value !== 'custom') $('imageRequestFormat').value = $('imageApi').value; });
+$('imageRefresh').onclick = () => refreshImageAdmin();
+$('imageFilter').addEventListener('submit', event => { event.preventDefault(); refreshImageAdmin(1); });
+$('imagePrev').onclick = () => { if (imageState.page > 1) refreshImageAdmin(imageState.page - 1); };
+$('imageNext').onclick = () => { if (imageState.page < imagePages()) refreshImageAdmin(imageState.page + 1); };
+$('imageUser').addEventListener('change', () => {
+  if (active || !authorized) { $('imageUser').value = imageUser; return; }
+  imageUser = $('imageUser').value; imageResolveTarget = null; $('imageResolveForm').hidden = true;
+  imageState = {...imageState, loaded: false, records: [], quota: imageState.quota ? {...imageState.quota, user: null} : null};
+  fillImageUser(); renderImageAdmin(); refreshImageAdmin(1);
+});
+$('imageSettingsForm').addEventListener('submit', event => {
+  event.preventDefault();
+  if (active || !authorized || !imageState.loaded || !$('imageSettingsForm').reportValidity()) return;
+  let settings; try { settings = {global_daily_limit: quotaInput('imageGlobalLimit'), default_user_daily_limit: quotaInput('imageDefaultLimit')}; }
+  catch { return setMessage('imageMessage', 'invalidQuota', 'error'); }
+  void operation('imageMessage', run => saveImageSettings(run, settings));
+});
+$('imageUserForm').addEventListener('submit', event => {
+  event.preventDefault();
+  if (active || !authorized || !imageState.loaded || !imageUser || !$('imageUserForm').reportValidity()) return;
+  let limit; try { limit = quotaInput('imageUserLimit'); } catch { return setMessage('imageMessage', 'invalidQuota', 'error'); }
+  void operation('imageMessage', run => saveImageSettings(run, {user_id: imageUser, user_daily_limit: limit}));
+});
+$('imageResetUser').onclick = async () => {
+  if (active || !authorized || !imageState.loaded || !imageUser) return;
+  const user = imageUser, revision = epoch;
+  if (!(await ClubCommon.confirm({message: t('imageResetConfirm', {user: userLabel(directory.find(item => item.user_id === user) || {user_id: user})})})) || revision !== epoch || imageUser !== user) return;
+  void operation('imageMessage', run => saveImageSettings(run, {user_id: user, reset_user_override: true}));
+};
+$('imageRecords').addEventListener('click', event => {
+  if (active || !authorized) return;
+  const button = event.target.closest('[data-image-resolve]');
+  if (!button) return;
+  const item = imageState.records[Number(button.dataset.imageResolve)];
+  if (!item || item.status !== 'uncertain') return;
+  imageResolveTarget = {request_id: item.request_id, slot: item.slot}; $('imageResolveForm').reset(); $('imageResolveForm').hidden = false; renderImageAdmin(); $('imageResolveNote').focus();
+});
+$('imageResolveCancel').onclick = () => { imageResolveTarget = null; $('imageResolveForm').hidden = true; };
+$('imageResolveForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (active || !authorized || !imageResolveTarget || !$('imageResolveForm').reportValidity()) return;
+  const target = {...imageResolveTarget}, generated = Number($('imageResolveResult').value), note = $('imageResolveNote').value.trim(), revision = epoch;
+  if (!note || ![0, 1].includes(generated)) return setMessage('imageMessage', 'invalidInput', 'error');
+  if (!(await ClubCommon.confirm({message: t('imageResolveConfirm', {request: target.request_id, slot: target.slot, result: t(generated ? 'imageGenerated' : 'imageNotGenerated')})})) || revision !== epoch || !imageResolveTarget || imageResolveTarget.request_id !== target.request_id || imageResolveTarget.slot !== target.slot) return;
+  void operation('imageMessage', async run => {
+    setMessage('imageMessage', 'saving');
+    await request(run, 'image_admin_resolve', {...target, generated, note}); assertCurrent(run);
+    imageResolveTarget = null; $('imageResolveForm').hidden = true;
+    await loadImageAdmin(run); setMessage('imageMessage', 'imageResolved', 'success');
+  });
+});
 $('refreshQuotaButton').onclick = () => void operation('quotaMessage', loadQuotaDirectory);
 $('refreshProxyButton').onclick = () => void operation('proxyMessage', async run => { await loadProxy(run); setMessage('proxyMessage'); });
 $('clearProxyRouteButton').onclick = () => { if (!active) clearProxyRoute(); };
@@ -1043,6 +1215,7 @@ $('modelsList').addEventListener('click', event => {
   const item = models.find(row => row.id === button?.dataset.editModel);
   if (!item) return;
   $('modelConfigId').value = item.id; $('modelId').value = modelKey(item);
+  $('modelPurpose').value = modelPurpose(item); fillImageConfig(item.image_config);
   $('modelLabel').value = item.display_name; $('modelIntroduction').value = item.introduction || ''; $('modelProvider').value = item.provider_id;
   $('contextWindow').value = item.context_window; $('maxOutputTokens').value = item.max_output_tokens;
   $('defaultOutputTokens').value = item.default_max_output_tokens; syncDefaultOutputMax();
@@ -1075,10 +1248,19 @@ $('modelForm').addEventListener('submit', event => {
   const efforts = $('reasoningEfforts').value.split(',').map(value => value.trim()).filter(Boolean);
   const body = {id: $('modelConfigId').value || null, model_key: $('modelId').value.trim(), display_name: $('modelLabel').value.trim(), introduction: $('modelIntroduction').value.trim() || null, provider_id: $('modelProvider').value, context_window: Number($('contextWindow').value), max_output_tokens: Number($('maxOutputTokens').value), default_max_output_tokens: Number($('defaultOutputTokens').value), reasoning_efforts: efforts, default_reasoning_effort: $('defaultReasoning').value.trim() || null, supports_images: $('supportsImages').checked, supports_pdf: $('supportsPdf').checked, preserve_reasoning: $('preserveReasoning').checked, enabled: $('modelEnabled').checked};
   if (!body.model_key || body.model_key.length > 160 || !body.display_name || body.display_name.length > 120 || (body.introduction && body.introduction.length > 1000) || !body.provider_id) return setMessage('modelMessage', 'modelRequired', 'error');
-  if (!validInteger(body.context_window, 256, 1000000) || !validInteger(body.max_output_tokens, 1, 131072) || !validInteger(body.default_max_output_tokens, 1, body.max_output_tokens)) return setMessage('modelMessage', 'invalidLimits', 'error');
-  if (!modelUsesMessages(body) && (efforts.length > 12 || efforts.some(value => value.length > 40) || (body.default_reasoning_effort?.length || 0) > 40)) return setMessage('modelMessage', 'invalidReasoning', 'error');
-  try { body.claude_thinking = claudeThinkingInput(body.default_max_output_tokens); }
-  catch (error) { return setMessage('modelMessage', errorKey(error), 'error'); }
+  body.purpose = $('modelPurpose').value;
+  if (body.purpose === 'image') {
+    try { body.image_config = imageConfigInput(); }
+    catch { return setMessage('modelMessage', 'imageConfigInvalid', 'error'); }
+    // Preserve valid legacy columns without applying hidden chat-only drafts.
+    const prior = models.find(item => item.id === body.id);
+    Object.assign(body, {context_window: prior?.context_window || 8192, max_output_tokens: prior?.max_output_tokens || 2048, default_max_output_tokens: prior?.default_max_output_tokens || 1024, reasoning_efforts: [], default_reasoning_effort: null, supports_images: false, supports_pdf: false, preserve_reasoning: false, claude_thinking: {mode: 'omit'}});
+  } else {
+    if (!validInteger(body.context_window, 256, 1000000) || !validInteger(body.max_output_tokens, 1, 131072) || !validInteger(body.default_max_output_tokens, 1, body.max_output_tokens)) return setMessage('modelMessage', 'invalidLimits', 'error');
+    if (!modelUsesMessages(body) && (efforts.length > 12 || efforts.some(value => value.length > 40) || (body.default_reasoning_effort?.length || 0) > 40)) return setMessage('modelMessage', 'invalidReasoning', 'error');
+    try { body.claude_thinking = claudeThinkingInput(body.default_max_output_tokens); }
+    catch (error) { return setMessage('modelMessage', errorKey(error), 'error'); }
+  }
   void operation('modelMessage', async run => {
     setMessage('modelMessage', 'saving');
     await request(run, 'save_model', body); assertCurrent(run);

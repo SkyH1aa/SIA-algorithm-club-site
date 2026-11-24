@@ -14,12 +14,28 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const publicDir = path.join(root, 'public');
 const check = process.argv.includes('--check');
 
+// ES module 依赖与运行时选择的 file:// 包不经过 HTML 的静态标签，需显式版本化。
+const imageAppFile = path.join(publicDir, 'chat-images.js');
+const imageAppBefore = fs.readFileSync(imageAppFile, 'utf8');
+const digestFor = relative => {
+  const file = path.join(publicDir, relative);
+  if (!fs.existsSync(file)) return null;
+  const normalized = fs.readFileSync(file).toString('utf8').replace(/\r\n/g, '\n');
+  return crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 8);
+};
+const imageAppPlanned = imageAppBefore.replace(/(from\s+['"]\.\/)(chat-images-core\.js|chat-images-store\.js)(\?v=[a-f0-9]{8})?(['"])/g, (whole, pre, name, oldVersion, post) => {
+  const digest = digestFor(name);
+  return digest ? `${pre}${name}?v=${digest}${post}` : whole;
+});
+if (imageAppPlanned !== imageAppBefore && !check) fs.writeFileSync(imageAppFile, imageAppPlanned, 'utf8');
+
 // 只版本化这些共享资源；页面私有脚本由页面自身控制。
 const VERSIONED = [
   'theme.css', 'club-ui.css', 'club-shell.js', 'club-liquid-lighting.js', 'theme.js', 'i18n.js', 'i18n-dict.js', 'i18n-dict-zh.js', 'i18n-dict-en.js',
   'club-common.js', 'club-share.js', 'chat-i18n.js', 'assistant-i18n.js', 'member-identity.js',
   'club-auth-storage.js', 'service-gate.js', 'service-prompts.js', 'error-page.js',
   'chat-core.js', 'chat.js', 'chat-file-bundle.js', 'chat.css', 'assistant.css',
+  'chat-images.css', 'chat-images.js', 'chat-images-core.js', 'chat-images-store.js', 'chat-images-i18n.js', 'chat-images-file-bundle.js',
   'home-showcase.css', 'home-showcase.js', 'home-capabilities.js', 'home-motion.js',
   'mingshen-harness.css', 'mingshen-harness.js', 'mingshen-harness-interactions.js', 'mingshen-harness-motion.js',
   'legacy-premium.css', 'legacy-premium.js', 'vendor/gsap/gsap.min.js', 'assistant-launcher.css', 'assistant-launcher.js', 'chat-admin.css', 'chat-admin.js', 'chat-admin-i18n.js',
@@ -35,7 +51,8 @@ const normalizeEol = buffer => Buffer.from(buffer.toString('utf8').replace(/\r\n
 const hashOf = relative => {
   const file = path.join(publicDir, relative);
   if (!fs.existsSync(file)) return null;
-  return crypto.createHash('sha256').update(normalizeEol(fs.readFileSync(file))).digest('hex').slice(0, 8);
+  const content = relative === 'chat-images.js' ? imageAppPlanned : fs.readFileSync(file);
+  return crypto.createHash('sha256').update(normalizeEol(content)).digest('hex').slice(0, 8);
 };
 
 const hashes = {};
@@ -99,11 +116,16 @@ const apply = (source, isRoot) => {
     if (next !== url) { changed++; return `${pre}${next}${post}`; }
     return whole;
   });
+  source = source.replace(/(['"])(chat-images(?:-file-bundle)?\.js)(?:\?v=[a-f0-9]{8})?\1/g, (whole, quote, name) => {
+    const next = `${quote}${withVersion(name, hashes[name])}${quote}`;
+    if (next !== whole) changed++;
+    return next;
+  });
   return { source, changed };
 };
 
-let total = 0;
-const stale = [];
+let total = imageAppPlanned === imageAppBefore ? 0 : 2;
+const stale = imageAppPlanned === imageAppBefore ? [] : ['public/chat-images.js (module dependency versions)'];
 for (const file of htmlFiles) {
   const before = fs.readFileSync(file, 'utf8');
   const { source, changed } = apply(before, file === path.join(root, 'index.html'));

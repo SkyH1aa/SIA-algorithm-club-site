@@ -3,6 +3,8 @@ import { ASSISTANT_READ_TOOLS, executeAssistantReadTool } from '../_shared/chat-
 import { assistantPlanBudget, runAssistantPlan, AssistantPlanError } from '../_shared/chat-assistant-plan.ts';
 import { hashKey, newKey, proxyBase, proxySecret, ProxyError, ROUTE_FIELDS } from '../_shared/chat-api-proxy.ts';
 import { ChatBodyError, readChatBody } from '../_shared/chat-body.ts';
+import { ImageError, type ImageMedia } from '../_shared/chat-image-media.ts';
+import { imageConfig, imageCapabilities, imageInput, imageFingerprint, generateImage, imageOutput } from '../_shared/chat-images.ts';
 import { chatEndpoint, ChatProtocolError, parseProtocolSse, protocolEvents, protocolRequest, normalizeClaudeThinking, validateProtocolCapabilities, type ChatProtocol, type ChatProtocolSetting } from '../_shared/chat-protocol.ts';
 
 type Json = Record<string, unknown>;
@@ -35,6 +37,8 @@ type Model = {
   enabled: boolean;
   visibility: 'all' | 'assigned';
   updated_at?: string;
+  purpose?: 'chat' | 'image';
+  image_config?: unknown;
 };
 
 type RequestContext = {
@@ -67,6 +71,7 @@ const ACTIONS = new Set([
   'assistant_catalog', 'assistant_respond', 'assistant_compact',
   'assistant_admin_get', 'assistant_admin_config_save', 'assistant_admin_document_save', 'assistant_admin_document_archive',
   'assistant_admin_publish', 'assistant_admin_rollback', 'assistant_admin_import',
+  'image_catalog', 'image_begin', 'image_generate', 'image_cancel', 'image_admin_get', 'image_admin_save', 'image_admin_resolve',
   'catalog', 'respond', 'generation_recover', 'admin_get', 'admin_save_provider', 'admin_save_model',
   'admin_delete_provider', 'admin_delete_model',
   'admin_usage', 'admin_test', 'quota', 'admin_quota_get', 'admin_quota_save',
@@ -112,6 +117,7 @@ function corsHeaders(request: Request): Headers {
 function json(request: Request, body: unknown, status = 200): Response {
   const headers = corsHeaders(request);
   headers.set('content-type', 'application/json; charset=utf-8');
+  headers.set('cache-control', 'private, no-store');
   return new Response(JSON.stringify(body), { status, headers });
 }
 
@@ -410,7 +416,7 @@ async function providers(): Promise<Provider[]> {
 }
 
 async function models(): Promise<Model[]> {
-  return await restJson<Model[]>('chat_models?deleted_at=is.null&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,claude_thinking,supports_images,supports_pdf,preserve_reasoning,enabled,visibility,updated_at&order=display_name.asc');
+  return await restJson<Model[]>('chat_models?deleted_at=is.null&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,claude_thinking,supports_images,supports_pdf,preserve_reasoning,enabled,visibility,purpose,image_config,updated_at&order=display_name.asc');
 }
 
 async function modelAccess(modelId: string, userId: string): Promise<boolean> {
@@ -450,7 +456,7 @@ function effectiveReasoning(model: Model, protocol: ChatProtocol) {
 async function catalogPayload(items: Model[], providerRows: Provider[], userId: string) {
   const enabledProviders = new Map(providerRows.filter(x => x.enabled).map(x => [x.id, x]));
   const visible = await visibleModelIds(items, userId);
-  return items.filter(x => x.enabled && enabledProviders.has(x.provider_id) && visible.has(x.id)).map(x => {
+  return items.filter(x => (x.purpose ?? 'chat') === 'chat' && x.enabled && enabledProviders.has(x.provider_id) && visible.has(x.id)).map(x => {
     const provider = enabledProviders.get(x.provider_id)!;
     const protocol = chatEndpoint(provider.base_url, provider.api_protocol).protocol;
     return {
@@ -462,19 +468,20 @@ async function catalogPayload(items: Model[], providerRows: Provider[], userId: 
   });
 }
 
-async function modelWithProvider(modelId: unknown, enabledOnly = true, userId?: string, admin = false): Promise<{ model: Model; provider: Provider }> {
+async function modelWithProvider(modelId: unknown, enabledOnly = true, userId?: string, admin = false, purpose: 'chat' | 'image' = 'chat'): Promise<{ model: Model; provider: Provider }> {
   if (!isUuid(modelId)) throw new HttpError('model', 400);
   const [modelRows, providerRows] = await Promise.all([
-    restJson<Model[]>(`chat_models?id=eq.${encodeURIComponent(modelId)}&deleted_at=is.null&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,claude_thinking,supports_images,supports_pdf,preserve_reasoning,enabled,visibility&limit=1`),
+    restJson<Model[]>(`chat_models?id=eq.${encodeURIComponent(modelId)}&deleted_at=is.null&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,claude_thinking,supports_images,supports_pdf,preserve_reasoning,enabled,visibility,purpose,image_config&limit=1`),
     providers()
   ]);
   const model = modelRows[0];
   const provider = model && providerRows.find(x => x.id === model.provider_id);
-  if (!model || !provider || (enabledOnly && (!model.enabled || !provider.enabled))) throw new HttpError('model', 400);
+  if (!model || !provider || (model.purpose ?? 'chat') !== purpose || (enabledOnly && (!model.enabled || !provider.enabled))) throw new HttpError('model', 400);
   if (!admin && userId && !(await modelAccess(model.id, userId))) throw new HttpError('model', 403);
   validateModel(model);
   provider.base_url = await publicHttpsUrl(provider.base_url);
-  validateProtocolCapabilities(chatEndpoint(provider.base_url, provider.api_protocol).protocol, model, model.claude_thinking);
+  if (purpose === 'chat') validateProtocolCapabilities(chatEndpoint(provider.base_url, provider.api_protocol).protocol, model, model.claude_thinking);
+  else imageConfig(model.image_config);
   secretName(provider.secret_name);
   return { model, provider };
 }
@@ -502,8 +509,8 @@ async function saveProvider(payload: Json) {
     updated_at: new Date().toISOString()
   };
   if (id) {
-    const attached = await restJson<Model[]>(`chat_models?provider_id=eq.${encodeURIComponent(String(id))}&deleted_at=is.null&select=preserve_reasoning,reasoning_efforts,default_max_output_tokens,claude_thinking`);
-    for (const model of attached) validateProtocolCapabilities(chatEndpoint(body.base_url, body.api_protocol).protocol, model, model.claude_thinking);
+    const attached = await restJson<Model[]>(`chat_models?provider_id=eq.${encodeURIComponent(String(id))}&deleted_at=is.null&select=purpose,preserve_reasoning,reasoning_efforts,default_max_output_tokens,claude_thinking`);
+    for (const model of attached.filter(x => (x.purpose ?? 'chat') === 'chat')) validateProtocolCapabilities(chatEndpoint(body.base_url, body.api_protocol).protocol, model, model.claude_thinking);
   }
   const rows = await restJson<Provider[]>('chat_providers?on_conflict=id', { method: 'POST', headers: { 'content-type': 'application/json', prefer: 'resolution=merge-duplicates,return=representation' }, body: JSON.stringify(body) });
   return rows[0] ? { id: rows[0].id, name: rows[0].name, label: rows[0].label, base_url: rows[0].base_url, api_protocol: rows[0].api_protocol, secret_name: rows[0].secret_name, auth_header: rows[0].auth_header, enabled: rows[0].enabled } : null;
@@ -522,12 +529,20 @@ async function saveModel(payload: Json) {
   if (!Array.isArray(efforts) || efforts.length > 12 || efforts.some(x => typeof x !== 'string' || x.length < 1 || x.length > MAX_REASONING_EFFORT)) throw new HttpError('input', 400);
   let visibility: 'all' | 'assigned' = 'all';
   let claudeThinking = payload.claude_thinking;
-  if (id && (payload.visibility === undefined || payload.claude_thinking === undefined)) {
-    const existing = await restJson<Array<{ visibility?: string; claude_thinking?: unknown }>>(`chat_models?id=eq.${encodeURIComponent(id)}&select=visibility,claude_thinking&limit=1`);
+  let purpose = payload.purpose;
+  let config = payload.image_config;
+  if (id && (payload.visibility === undefined || payload.claude_thinking === undefined || purpose === undefined || config === undefined)) {
+    const existing = await restJson<Array<{ visibility?: string; claude_thinking?: unknown; purpose?: string; image_config?: unknown }>>(`chat_models?id=eq.${encodeURIComponent(id)}&select=visibility,claude_thinking,purpose,image_config&limit=1`);
     const value = existing[0]?.visibility;
     if (value === 'all' || value === 'assigned') visibility = value;
     if (payload.claude_thinking === undefined) claudeThinking = existing[0]?.claude_thinking;
+    if (purpose === undefined) purpose = existing[0]?.purpose;
+    if (config === undefined) config = existing[0]?.image_config;
   }
+  purpose ??= 'chat';
+  if (purpose !== 'chat' && purpose !== 'image') throw new HttpError('input', 400);
+  const validatedImageConfig = imageConfig(config);
+  for (const endpoint of [validatedImageConfig.endpoint, validatedImageConfig.edit_endpoint]) if (endpoint) await publicHttpsUrl(endpoint);
   if (payload.visibility !== undefined) visibility = payload.visibility as 'all' | 'assigned';
   const body = {
     ...(id ? { id } : {}), provider_id: payload.provider_id, model_key: modelKey, display_name: displayName, introduction,
@@ -536,7 +551,7 @@ async function saveModel(payload: Json) {
     default_reasoning_effort: payload.default_reasoning_effort == null ? null : text(payload.default_reasoning_effort, MAX_REASONING_EFFORT, true),
     supports_images: boolean(payload.supports_images), supports_pdf: boolean(payload.supports_pdf),
     preserve_reasoning: boolean(payload.preserve_reasoning), enabled: payload.enabled === undefined ? true : boolean(payload.enabled, true),
-    visibility,
+    visibility, purpose, image_config: config ?? {},
     updated_at: new Date().toISOString()
   };
   if (body.visibility !== 'all' && body.visibility !== 'assigned') throw new HttpError('input', 400);
@@ -545,7 +560,7 @@ async function saveModel(payload: Json) {
   const provider = providerRows.find(x => x.id === body.provider_id);
   if (!provider) throw new HttpError('input', 400);
   const protocol = chatEndpoint(provider.base_url, provider.api_protocol).protocol;
-  validateProtocolCapabilities(protocol, body, body.claude_thinking);
+  if (purpose === 'chat') validateProtocolCapabilities(protocol, body, body.claude_thinking);
   const rows = await restJson<Model[]>('chat_models?on_conflict=id', { method: 'POST', headers: { 'content-type': 'application/json', prefer: 'resolution=merge-duplicates,return=representation' }, body: JSON.stringify(body) });
   return rows[0] || null;
 }
@@ -1252,6 +1267,118 @@ async function assistantAdmin(request: Request, action: string, payload: Json): 
   const output = json(request, result); output.headers.set('cache-control', 'no-store'); return output;
 }
 
+// Image generation is admitted by SQL before dispatch; all post-dispatch errors are
+// uncertain because the provider may already have charged or generated an image.
+async function imageRpc(name: string, body: Json, signal: AbortSignal): Promise<Json> {
+  const response = await rest(`rpc/${name}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal });
+  const result = await response.json().catch(() => null);
+  if (!response.ok || !result || typeof result !== 'object' || Array.isArray(result)) throw new HttpError('database', 503);
+  const value = result as Json;
+  if (value.allowed === false || (value.code && value.code !== 'ok')) throw new HttpError(String(value.code || 'image_unavailable'), ['conflict','request_conflict','slot_unavailable'].includes(String(value.code)) ? 409 : value.code === 'blacklisted' ? 403 : ['global_quota','user_quota'].includes(String(value.code)) ? 429 : 400);
+  return value;
+}
+async function imageArchive(request: Request, userId: string, model: Model, requestId: string, slot: number, input: Awaited<ReturnType<typeof imageInput>>, image: ImageMedia, signal: AbortSignal): Promise<boolean> {
+  const { url, anon } = requireConfig();
+  const authorization = `Bearer ${authToken(request)!}`;
+  const endpoint = `${url}/functions/v1/club-drive`;
+  async function attachment(media: ImageMedia): Promise<boolean> {
+    const ext = media.mime === 'image/jpeg' ? 'jpg' : media.mime.slice(6);
+    try {
+      const response = await fetch(`${endpoint}?action=image-attachment`, { method:'POST', signal, redirect:'error', headers: { apikey:anon, authorization, 'x-drive-action':'image-attachment', 'content-type':'application/octet-stream', 'x-chat-attachment-hash':media.sha256, 'x-chat-attachment-ext':ext, 'x-chat-attachment-type':media.mime }, body:media.bytes });
+      return response.ok;
+    } catch { return false; }
+  }
+  const referenceRows = [];
+  for (const ref of input.references) referenceRows.push({ name:ref.name, sha256:ref.media.sha256, mime:ref.media.mime, bytes:ref.media.bytes.length, archived:await attachment(ref.media) });
+  const archived = await attachment(image);
+  const record = { id:requestId, prompt:input.prompt, model_id:model.id, model_name:model.display_name, options:input.options, createdAt:new Date().toISOString(), references:referenceRows, images:[{ slot, sha256:image.sha256, mime:image.mime, bytes:image.bytes.length, width:image.width, height:image.height, archived }], status:'succeeded' };
+  try {
+    const response = await fetch(`${endpoint}?action=image-archive`, { method:'POST', signal, redirect:'error', headers:{ apikey:anon, authorization, 'x-drive-action':'image-archive', 'content-type':'application/json' }, body:JSON.stringify({ schema:'club-ai-image-archive/1', user_id:userId, record }) });
+    return response.ok && archived && referenceRows.every(x => x.archived);
+  } catch { return false; }
+}
+async function imageAction(request: Request, action: string, payload: Json): Promise<Response> {
+  const isAdmin = action.startsWith('image_admin_');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 110_000);
+  const stop = () => controller.abort();
+  request.signal.addEventListener('abort', stop, { once:true });
+  const bounded = <T>(promise: Promise<T>): Promise<T> => new Promise((resolve, reject) => {
+    const abort = () => reject(new HttpError('timeout', 504));
+    if (controller.signal.aborted) return abort();
+    controller.signal.addEventListener('abort', abort, {once:true});
+    promise.then(resolve, reject).finally(() => controller.signal.removeEventListener('abort', abort));
+  });
+  const call = (name: string, body: Json) => bounded(imageRpc(name, body, controller.signal));
+  try {
+    const ctx = await bounded(context(request, isAdmin));
+    if (isAdmin) {
+      if (action === 'image_admin_get') return json(request, await call('chat_image_admin_get', { p_actor_user_id:ctx.user.id, p_user_id:quotaUserId(payload.user_id), p_page:integer(payload.page,1,100000,1), p_page_size:integer(payload.page_size,1,100,20), p_from:payload.from ?? null, p_to:payload.to ?? null }));
+      if (action === 'image_admin_save') {
+        const settings = object(payload.settings); allowKeys(settings, ['global_daily_limit','default_user_daily_limit','user_id','user_daily_limit','reset_user_override']);
+        for (const name of ['global_daily_limit','default_user_daily_limit','user_daily_limit']) if (name in settings) quotaLimit(settings[name]);
+        if ('user_id' in settings) quotaUserId(settings.user_id);
+        if ('reset_user_override' in settings) boolean(settings.reset_user_override);
+        return json(request, await call('chat_image_admin_save', { p_actor_user_id:ctx.user.id, p_settings:settings }));
+      }
+      if (!isUuid(payload.request_id)) throw new HttpError('input',400);
+      return json(request, await call('chat_image_admin_resolve', { p_actor_user_id:ctx.user.id, p_request_id:payload.request_id, p_slot:integer(payload.slot,0,9), p_generated:integer(payload.generated,0,1), p_note:text(payload.note,500,true) }));
+    }
+    if (action === 'image_catalog') {
+      const [quota, all, providerRows] = await bounded(Promise.all([call('chat_image_quota_get', {p_user_id:ctx.user.id}), models(), providers()]));
+      if (quota.blacklisted === true) throw new HttpError('blacklisted',403);
+      const visible = await bounded(visibleModelIds(all, ctx.user.id)), enabled = new Set(providerRows.filter(x => x.enabled).map(x => x.id));
+      const items = all.filter(x => x.purpose === 'image' && x.enabled && enabled.has(x.provider_id) && visible.has(x.id)).map(x => ({ id:x.id, display_name:x.display_name, introduction:x.introduction, image_config:imageCapabilities(imageConfig(x.image_config)) }));
+      return json(request, {models:items, quota});
+    }
+    if (!isUuid(payload.request_id)) throw new HttpError('input',400);
+    if (action === 'image_cancel') return json(request, await call('chat_image_cancel', {p_user_id:ctx.user.id,p_request_id:payload.request_id}));
+    const { model, provider } = await bounded(modelWithProvider(payload.model_id, true, ctx.user.id, false, 'image'));
+    const config = imageConfig(model.image_config), input = await bounded(imageInput(payload, config));
+    const fingerprint = await bounded(imageFingerprint(model.id, input));
+    if (action === 'image_begin') {
+      const count = integer(payload.count,1,config.max_batch);
+      return json(request, await call('chat_image_begin', { p_user_id:ctx.user.id, p_request_id:payload.request_id, p_model_id:model.id, p_count:count, p_fingerprint:fingerprint, p_audit:{ member_name:ctx.profile?.member_name, username:ctx.profile?.username, provider_name:provider.label || provider.name, model_name:model.display_name, provider_id:provider.id, model_key:model.model_key, ...input.options } }));
+    }
+    const slot = integer(payload.slot,0,config.max_batch - 1);
+    await call('chat_image_claim', {p_user_id:ctx.user.id,p_request_id:payload.request_id,p_slot:slot,p_fingerprint:fingerprint});
+    await call('chat_image_dispatch', {p_user_id:ctx.user.id,p_request_id:payload.request_id,p_slot:slot});
+    let image: ImageMedia;
+    const upstream = new AbortController();
+    const upstreamTimer = setTimeout(() => upstream.abort(), 80_000);
+    const abortUpstream = () => upstream.abort(); controller.signal.addEventListener('abort', abortUpstream, {once:true});
+    try {
+      const headers = new Headers(); headers.set(provider.auth_header, provider.auth_header === 'authorization' ? `Bearer ${Deno.env.get(provider.secret_name)!}` : Deno.env.get(provider.secret_name)!);
+      const upstreamWork = generateImage({config,baseUrl:provider.base_url,modelKey:model.model_key,input,headers,signal:upstream.signal,validateUrl:publicHttpsUrl});
+      image = await new Promise<ImageMedia>((resolve, reject) => {
+        const aborted = () => reject(new HttpError('image_upstream_uncertain', 504));
+        if (upstream.signal.aborted) return aborted();
+        upstream.signal.addEventListener('abort', aborted, {once:true});
+        upstreamWork.then(resolve,reject).finally(() => upstream.signal.removeEventListener('abort', aborted));
+      });
+    } catch (error) {
+      await call('chat_image_finish', {p_user_id:ctx.user.id,p_request_id:payload.request_id,p_slot:slot,p_status:'uncertain',p_generated:0,p_error_code:'upstream_uncertain',p_archive_ok:false}).catch(() => {});
+      throw new HttpError('image_upstream_uncertain', error instanceof HttpError && error.status === 504 ? 504 : 502);
+    } finally { clearTimeout(upstreamTimer); controller.signal.removeEventListener('abort', abortUpstream); }
+    const archive = await bounded(imageArchive(request,ctx.user.id,model,payload.request_id,slot,input,image,controller.signal)).catch(() => false);
+    // Once image bytes exist, settlement must not inherit a disconnected client or
+    // the archive deadline. Exact finish retries are idempotent in SQL; a lost
+    // response may otherwise leave a successful call permanently uncertain.
+    const finishBody = {p_user_id:ctx.user.id,p_request_id:payload.request_id,p_slot:slot,p_status:'succeeded',p_generated:1,p_error_code:null,p_archive_ok:archive};
+    let finished: Json | null = null;
+    for (let attempt = 0; attempt < 2 && !finished; attempt++) {
+      const signal = AbortSignal.timeout(5_000);
+      try {
+        finished = await Promise.race([
+          imageRpc('chat_image_finish', finishBody, signal),
+          new Promise<never>((_, reject) => signal.addEventListener('abort', () => reject(new HttpError('timeout', 504)), {once:true}))
+        ]);
+      } catch { /* Leave the dispatched slot reserved for expiry/admin resolution. */ }
+    }
+    return json(request, {image:imageOutput(image),archive:{ok:archive},quota:finished?.quota ?? null,status:finished ? 'succeeded' : 'uncertain'});
+  } finally { clearTimeout(timer); request.signal.removeEventListener('abort', stop); }
+}
+
 async function main(request: Request, payload: Json): Promise<Response> {
   const action = ({ save_provider: 'admin_save_provider', save_model: 'admin_save_model', usage: 'admin_usage', test: 'admin_test' } as Record<string, string>)[String(payload.action)] || payload.action;
   if (typeof action !== 'string' || !ACTIONS.has(action)) throw new HttpError('action', 400);
@@ -1274,12 +1401,16 @@ async function main(request: Request, payload: Json): Promise<Response> {
     catalog: [], quota: [], admin_quota_get: ['user_id'],
     admin_quota_save: ['user_id', 'daily_limit', 'weekly_limit', 'monthly_limit', 'expected_version'],
     admin_user_directory: [], admin_blacklist_list: [], admin_set_blacklist: ['user_id', 'blocked', 'reason'],
+    image_catalog: [], image_begin: ['request_id','model_id','prompt','options','references','count'],
+    image_generate: ['request_id','model_id','prompt','options','references','slot'], image_cancel: ['request_id'],
+    image_admin_get: ['user_id','page','page_size','from','to'], image_admin_save: ['settings'],
+    image_admin_resolve: ['request_id','slot','generated','note'],
     admin_get: [], respond: ['model_id', 'input', 'max_output_tokens', 'reasoning_effort'],
     generation_recover: [],
     admin_test: ['model_id', 'prompt', 'max_output_tokens', 'reasoning_effort'],
     admin_usage: ['page', 'pageSize', 'limit', 'from', 'to'],
     admin_save_provider: ['id', 'name', 'label', 'base_url', 'api_protocol', 'secret_name', 'auth_header', 'enabled'],
-    admin_save_model: ['id', 'provider_id', 'model_key', 'model_id', 'display_name', 'introduction', 'context_window', 'max_output_tokens', 'default_max_output_tokens', 'reasoning_efforts', 'default_reasoning_effort', 'claude_thinking', 'supports_images', 'supports_pdf', 'preserve_reasoning', 'enabled', 'visibility'],
+    admin_save_model: ['id', 'provider_id', 'model_key', 'model_id', 'display_name', 'introduction', 'context_window', 'max_output_tokens', 'default_max_output_tokens', 'reasoning_efforts', 'default_reasoning_effort', 'claude_thinking', 'supports_images', 'supports_pdf', 'preserve_reasoning', 'enabled', 'visibility', 'purpose', 'image_config'],
     admin_delete_provider: ['id'],
     admin_delete_model: ['id', 'expected_version'],
     admin_model_access_get: ['model_id'],
@@ -1289,6 +1420,7 @@ async function main(request: Request, payload: Json): Promise<Response> {
     custom_model_delete: ['id', 'expected_version']
   };
   allowKeys(payload, ['action', ...allowed[action]]);
+  if (action.startsWith('image_')) return await imageAction(request, action, payload);
   if (action.startsWith('assistant_admin_')) return await assistantAdmin(request, action, payload);
   if (action.startsWith('assistant_')) return await assistantAction(request, action, payload);
   if (action.startsWith('admin_proxy_')) return await proxyAdmin(request, action, payload);
@@ -1362,12 +1494,14 @@ async function handle(request: Request): Promise<Response> {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(request) });
   if (request.method !== 'POST') return errorResponse(request, 'method', 405);
   try {
-    const bytes = await readChatBody(request, { maxBytes: MAX_REQUEST_BYTES, timeoutMs: 10000 });
+    const bytes = await readChatBody(request, { maxBytes: 32 * 1024 * 1024, timeoutMs: 10000 });
     let parsed: unknown;
     try { parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); } catch { throw new HttpError('input', 400); }
-    return await main(request, object(parsed));
+    const payload = object(parsed);
+    if (bytes.byteLength > MAX_REQUEST_BYTES && payload.action !== 'image_begin' && payload.action !== 'image_generate') throw new HttpError('request_too_large', 413);
+    return await main(request, payload);
   } catch (error) {
-    if (error instanceof ChatBodyError) return errorResponse(request, error.code, error.status);
+    if (error instanceof ChatBodyError || error instanceof ImageError) return errorResponse(request, error.code, error.status);
     if (error instanceof AssistantError) return errorResponse(request, error.message, error.status);
     if (error instanceof HttpError || error instanceof ProxyError || error instanceof ChatProtocolError) return errorResponse(request, error.message, error.status);
     return errorResponse(request, 'server', 500);

@@ -12,12 +12,13 @@ const entries = [
 const check = process.argv.includes('--check');
 for (const [name, output] of entries) {
   const sourcePath = path.join(root, 'supabase/functions', name, 'index.ts');
+  const sharedRoot = path.resolve(root, 'supabase/functions/_shared');
   const helpers = new Map();
   function inline(file) {
     const source = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
     return source.replace(/^import\s+[^;]+\s+from\s+['"]([^'"]+)['"];?\s*$/gm, (statement, relative) => {
-      if (!relative.startsWith('../_shared/')) throw new Error(`Unsupported import in ${file}: ${statement}`);
       const helper = path.resolve(path.dirname(file), relative);
+      if (!helper.startsWith(sharedRoot + path.sep)) throw new Error(`Unsupported import in ${file}: ${statement}`);
       if (!helpers.has(helper)) {
         helpers.set(helper, '');
         helpers.set(helper, inline(helper).replace(/^export\s+(?=(?:async\s+)?(?:class|function|const|let|type|interface)\b)/gm, '').trim());

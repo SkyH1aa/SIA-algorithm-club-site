@@ -20,7 +20,23 @@
 
 维护者更新真源后运行 `node tools/build-chat-dashboard-bundles.mjs`，统一重建三份函数 bundle 和两份 SQL 副本，再运行 `node tools/build-chat-dashboard-bundles.mjs --check` 核对。副本不是独立修改入口；这些命令只生成或校验本地文件，不会部署。
 
-## Mingshen Harness 产品页与下载配置（本次交付）
+## AIChat 在线生图上线（当前交付）
+
+本节覆盖本次生图升级，优先于下方各历史更新中“无需 SQL / 只部署某函数”的增量说明。上线顺序为 **完整 Chat 主 SQL → `chat` → `club-drive` → 网站前端 → 超管配置与核对**；不因生图单独重部署 `chat-api-proxy`。暂停旧版本接收新生成并等待在途请求，先确认动态超管名单与现有表、备份策略；不删除重建表。执行 [club-chat-schema.sql](club-chat-schema.sql) 或真源 `supabase/club-chat-schema.sql` 之一，不要重复当成两套迁移。网页粘贴前维护者须统一重建并检查 SQL 副本及两个对应 Dashboard bundle，确认均包含生图代码；仓库源码变更不会自动更新这些产物。
+
+1. 完整执行主 SQL，核对无错误；按原有配置保留 `SUPABASE_URL`、`SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY`、`CHAT_CORS_ORIGINS` 和引用的 `CHAT_KEY_*`，同时确认 `club-drive` 的 `CLUB_SERVICE_ROLE_KEY`、`WEBDAV_BASE_URL`、`WEBDAV_USERNAME`、`WEBDAV_PASSWORD`。密钥只存服务端 Secrets。将最新 `chat-dashboard-index.ts`、`club-drive-dashboard-index.ts` 分别全文替换到对应 Edge Function 并部署，维持函数自身鉴权；网关 JWT 设置按原有网页部署步骤核对。
+2. 发布本轮所有前端及版本化引用，至少包括 `chat-images.html`、`chat-images.css`、`chat-images.js`、`chat-images-core.js`、`chat-images-store.js`、`chat-images-i18n.js`、重建的 `chat-images-file-bundle.js`、Chat 入口与管理页 HTML/CSS/JS/i18n、相关共享资源及 Service Worker。`file://` 包不消除认证、存储和 Origin 限制；离线壳不提供离线生成，认证接口和图片结果不缓存。
+3. 动态超级管理员在 Chat 管理页配置 provider 与 **用途为 image 的 model**，填写供应商真实 model ID、启用状态、成员可见范围及 image 配置；文本 Chat/助手只使用 `chat` 用途，生图只使用 `image` 用途，猜 UUID 不能跨用途或越权调用。图片输入能力 `supports_images` 指的是聊天附件，不等同生图模型。供应商凭据只填写 `CHAT_KEY_*` Secret 名称。按供应商实际接口选择 images、responses、chat 或 custom 的请求格式及能力（尺寸、质量、参考图、透明背景、单批上限等），不要假定所有供应商支持。
+4. 地址须为公网 HTTPS 且符合服务端校验。可用供应商精确 endpoint，或版本根 `/v1` 按所选格式追加 `/images/generations`、`/responses` 或 `/chat/completions`；编辑图片可单独配置 edit endpoint。生图 Responses 兼容供应商**明确配置的单数 `/v1/response`**，会原样请求，不自动改成复数；这不改变下文普通文本 Chat/对外代理仅支持标准复数 `/responses` 的规则。自定义 URL、返回路径/字段映射、远程媒体主机白名单均须按实际供应商核实，不能据此声称兼容所有接口。为关闭 DNS 校验与实际连接解析之间的 rebinding 窗口，远程图片 URL 当前只接受白名单中的公网 HTTPS IPv4 字面地址；域名/CDN 图片 URL 会失败关闭，且上游 TLS 证书须匹配该 IP。优先使用 Base64 图像结果；图片抓取不转发供应商认证头。
+5. 在生图额度区设置全站每日与成员默认每日按张上限，必要时按 UUID 配个人覆盖。两项默认均为 **0（禁止生成）**，`null` 为不限；每天北京时间 00:00 重置。它独立于聊天 token 日/周/月额度，不是金额硬上限。批量先按张预留，逐张请求，成功按张计数；未派发而取消的可释放，已派发后失败、超时、取消或结算不明为 `uncertain`，保守占用，不自动重试或退款。超管必须核对上游账单/实际结果后，带说明逐槽人工确认生成 0 或 1 张，不能仅凭断线认定未收费。
+
+提示词最多 12000 字符；每批最多 10 张且受模型配置限制；参考图最多 4 张、单张 5 MiB；生成图片单张最多 16 MiB，PNG/JPEG/WebP，最大边 4096、最多 16777216 像素且可被模型配置收紧；请求体上限 32 MiB、读取限时 10 秒，上游约 80 秒与整次约 110 秒限制以及平台限制均可能更早终止。供应商账单与自身限额才是费用核对依据，取消不保证上游停止。
+
+生成记录及**真实图片 Blob**按账号保存在本机 IndexedDB，提示词、参考图与生成图也经 `club-drive` 留档至社团 123 云盘 `Chatdata/<用户目录>/images/`，二进制按哈希保存，JSON 为快照；仅删除本机不删除云盘。留档受存储、网络、权限与配额影响，失败显示待留档并可重试，不应承诺必达或跨设备自动恢复。服务端也尝试留档；敏感内容不应提交。生图管理统计窗口为最近 90 天，**只是统计/查询窗口，不自动删除生图记录、额度历史或云盘文件**；下文历史文本 Chat usage 的 pg_cron 物理清理是独立策略，不能套用到生图。
+
+上线后先用 mock 核对隔离、额度、媒体及留档，再在获得单独费用授权后进行最小真实生图并核对供应商账单、图片和 123 盘；本文不声明已经在线执行 SQL、部署、调用真实供应商或确认真实云盘留档。
+
+## Mingshen Harness 产品页与下载配置（历史交付）
 
 部署顺序固定为 **站点 SQL → `club-drive` → 网站前端 → 超管设置下载地址**。这是本次功能的完整范围，不适用后文历史更新中的“不改 SQL”说明；无需仅为本功能重新部署 `chat` 或 `chat-api-proxy`。
 

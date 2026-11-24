@@ -41,6 +41,12 @@ const authFetch = (async (input: string | URL | Request, init: RequestInit = {})
     assert.equal(url.searchParams.get('user_id'), `eq.${userId}`);
     return profileOk ? json([profile]) : json({ message: 'profile failed' }, 500);
   }
+  if (url.pathname === '/rest/v1/rpc/get_club_drive_quota') {
+    assert.equal(init.method, 'POST');
+    assert.equal(new Headers(init.headers).get('authorization'), 'Bearer mock-service');
+    assert.deepEqual(JSON.parse(String(init.body)), { p_user_id: userId });
+    return json({ max_bytes: 0, source: 'none', note: '' });
+  }
   throw new Error(`unexpected fetch ${url}`);
 }) as typeof fetch;
 const davFetch = (async (input: string | URL | Request, init: RequestInit = {}) => {

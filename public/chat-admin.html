@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Chat 管理 · 算法社</title>
   <link rel="stylesheet" href="theme.css?v=44ec1583">
-  <link rel="stylesheet" href="chat-admin.css?v=891afa9e">
+  <link rel="stylesheet" href="chat-admin.css?v=5e54f94a">
   <link rel="stylesheet" href="club-ui.css?v=c36a4759">
   <script src="vendor/supabase/supabase.min.js?v=8596965f"></script>
   <script src="club-auth-storage.js?v=5469c150"></script>
@@ -14,7 +14,7 @@
   <script src="i18n-dict.js?v=b6524a80"></script><script src="member-identity.js?v=ad75d585" defer></script>
 
   <script src="i18n.js?v=ba66328e"></script><script src="club-common.js?v=9e72bd40"></script>
-  <script src="chat-admin-i18n.js?v=2faaeb54"></script>
+  <script src="chat-admin-i18n.js?v=3ce2fbef"></script>
 </head>
 <body class="chat-admin-page club-page">
   <header class="chat-admin-header">
@@ -70,6 +70,7 @@
         <button type="button" role="tab" aria-selected="false" aria-controls="modelsSection" data-tab-target="modelsSection" data-i18n="chatAdmin.tabModels">模型</button>
         <button type="button" role="tab" aria-selected="false" aria-controls="proxySection" data-tab-target="proxySection" data-i18n="chatAdmin.tabProxy">代理</button>
         <button type="button" role="tab" aria-selected="false" aria-controls="quotaSection" data-tab-target="quotaSection" data-i18n="chatAdmin.tabQuota">配额与黑名单</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="imageSection" data-tab-target="imageSection" data-i18n="chatAdmin.tabImages">图片配额与记录</button>
         <button type="button" role="tab" aria-selected="false" aria-controls="modelAccessSection" data-tab-target="modelAccessSection" data-i18n="chatAdmin.tabAccess">模型授权</button>
         <button type="button" role="tab" aria-selected="false" aria-controls="testSection" data-tab-target="testSection" data-i18n="chatAdmin.tabTest">测试调用</button>
         <button type="button" role="tab" aria-selected="false" aria-controls="usageSection" data-tab-target="usageSection" data-i18n="chatAdmin.tabUsage">使用记录</button>
@@ -102,24 +103,50 @@
           <label><span data-i18n="chatAdmin.modelLabel">显示名称</span><input id="modelLabel" class="chat-admin-input" required maxlength="120" placeholder="例如 GPT-4.1 mini" data-i18n-placeholder="chatAdmin.modelLabelPlaceholder"></label>
           <label class="chat-admin-model-introduction"><span data-i18n="chatAdmin.modelIntroduction">模型介绍</span><textarea id="modelIntroduction" class="chat-admin-input" rows="3" maxlength="1000" placeholder="介绍模型特点、适用场景或限制" data-i18n-placeholder="chatAdmin.modelIntroductionPlaceholder"></textarea></label>
           <label><span data-i18n="chatAdmin.modelProvider">供应商</span><select id="modelProvider" class="chat-admin-input" required aria-describedby="modelApiProtocolHelp"></select></label>
-          <label><span data-i18n="chatAdmin.contextWindow">上下文窗口</span><input id="contextWindow" class="chat-admin-input" type="number" min="256" max="1000000" step="1" value="8192" required></label>
-          <label><span data-i18n="chatAdmin.maxOutput">最大输出 token</span><input id="maxOutputTokens" class="chat-admin-input" type="number" min="1" max="131072" step="1" value="2048" required></label>
-          <label><span data-i18n="chatAdmin.defaultOutput">默认输出 token</span><input id="defaultOutputTokens" class="chat-admin-input" type="number" min="1" max="2048" step="1" value="1024" required></label>
+          <label><span data-i18n="chatAdmin.modelPurpose">模型用途</span><select id="modelPurpose" class="chat-admin-input"><option value="chat" data-i18n="chatAdmin.purposeChat">对话</option><option value="image" data-i18n="chatAdmin.purposeImage">图片生成</option></select></label>
+          <label data-chat-field><span data-i18n="chatAdmin.contextWindow">上下文窗口</span><input id="contextWindow" class="chat-admin-input" type="number" min="256" max="1000000" step="1" value="8192" required></label>
+          <label data-chat-field><span data-i18n="chatAdmin.maxOutput">最大输出 token</span><input id="maxOutputTokens" class="chat-admin-input" type="number" min="1" max="131072" step="1" value="2048" required></label>
+          <label data-chat-field><span data-i18n="chatAdmin.defaultOutput">默认输出 token</span><input id="defaultOutputTokens" class="chat-admin-input" type="number" min="1" max="2048" step="1" value="1024" required></label>
           <label id="reasoningEffortsField"><span data-i18n="chatAdmin.reasoningEfforts">思考强度（逗号分隔）</span><input id="reasoningEfforts" class="chat-admin-input" maxlength="491" placeholder="low,medium,high" data-i18n-placeholder="chatAdmin.reasoningPlaceholder" data-i18n-title="chatAdmin.reasoningHelp" title="最多 12 项，每项最多 40 个字符。"></label>
           <label id="defaultReasoningField"><span data-i18n="chatAdmin.defaultReasoning">默认思考强度</span><input id="defaultReasoning" class="chat-admin-input" maxlength="40"></label>
           <label id="modelClaudeThinkingModeField" hidden><span data-i18n="chatAdmin.claudeThinkingMode">Claude 思考配置</span><select id="modelClaudeThinkingMode" class="chat-admin-input" aria-describedby="modelClaudeThinkingHelp"><option value="omit" selected data-i18n="chatAdmin.claudeThinkingOmit">不发送思考参数（兼容中转）</option><option value="disabled" data-i18n="chatAdmin.claudeThinkingDisabled">关闭思考</option><option value="enabled" data-i18n="chatAdmin.claudeThinkingEnabled">手动预算</option><option value="adaptive" data-i18n="chatAdmin.claudeThinkingAdaptive">自适应</option></select></label>
           <label id="modelClaudeThinkingBudgetField" hidden><span data-i18n="chatAdmin.claudeThinkingBudget">思考预算 token</span><input id="modelClaudeThinkingBudget" class="chat-admin-input" type="number" min="1024" step="1" value="1024" aria-describedby="modelClaudeThinkingHelp"></label>
           <label id="modelClaudeThinkingEffortsField" hidden><span data-i18n="chatAdmin.claudeThinkingEfforts">Claude effort（逗号分隔）</span><input id="modelClaudeThinkingEfforts" class="chat-admin-input" maxlength="100" placeholder="low,medium,high" aria-describedby="modelClaudeThinkingHelp"></label>
           <label id="modelClaudeDefaultEffortField" hidden><span data-i18n="chatAdmin.claudeDefaultEffort">默认 Claude effort（留空使用供应商默认值）</span><input id="modelClaudeDefaultEffort" class="chat-admin-input" maxlength="6" aria-describedby="modelClaudeThinkingHelp"></label>
-          <label class="chat-admin-check"><input id="preserveReasoning" type="checkbox"><span data-i18n="chatAdmin.preserveReasoning">保留加密思考内容</span></label>
-          <label class="chat-admin-check"><input id="supportsImages" type="checkbox"><span data-i18n="chatAdmin.supportsImages">支持图片</span></label>
-          <label class="chat-admin-check"><input id="supportsPdf" type="checkbox"><span data-i18n="chatAdmin.supportsPdf">支持原生 PDF</span></label>
+          <label class="chat-admin-check" data-chat-field><input id="preserveReasoning" type="checkbox"><span data-i18n="chatAdmin.preserveReasoning">保留加密思考内容</span></label>
+          <label class="chat-admin-check" data-chat-field><input id="supportsImages" type="checkbox"><span data-i18n="chatAdmin.supportsImages">支持图片</span></label>
+          <label class="chat-admin-check" data-chat-field><input id="supportsPdf" type="checkbox"><span data-i18n="chatAdmin.supportsPdf">支持原生 PDF</span></label>
+          <fieldset id="imageConfigFields" class="chat-admin-image-config" hidden>
+            <legend data-i18n="chatAdmin.imageConfig">图片 API 配置</legend>
+            <p class="chat-admin-quota-help" data-i18n="chatAdmin.imageConfigHelp">使用所选供应商的 Secret 和认证配置，不输入密钥。自定义端点按原样发送，不自动改写路径。</p>
+            <div class="chat-admin-form">
+              <label><span data-i18n="chatAdmin.imageApi">API 类型</span><select id="imageApi" class="chat-admin-input"><option value="images">images</option><option value="responses">responses</option><option value="chat">chat</option><option value="custom">custom</option></select></label>
+              <label><span data-i18n="chatAdmin.imageRequestFormat">请求格式</span><select id="imageRequestFormat" class="chat-admin-input"><option value="images">images</option><option value="responses">responses</option><option value="chat">chat</option></select></label>
+              <label><span data-i18n="chatAdmin.imageEndpoint">生成端点（可留空）</span><input id="imageEndpoint" class="chat-admin-input" placeholder="https://api.example.com/v1/response"></label>
+              <label><span data-i18n="chatAdmin.imageEditEndpoint">编辑端点（可留空）</span><input id="imageEditEndpoint" class="chat-admin-input"></label>
+              <p class="chat-admin-image-wide chat-admin-quota-help"><span data-i18n="chatAdmin.imageEndpointPreview">端点预览（原样）</span> <code id="imageEndpointPreview">—</code></p>
+              <label><span data-i18n="chatAdmin.imageQualities">质量（逗号分隔）</span><input id="imageQualities" class="chat-admin-input" value="auto"></label>
+              <label><span data-i18n="chatAdmin.imageSizes">尺寸（逗号分隔）</span><input id="imageSizes" class="chat-admin-input" value="auto,1024x1024,1024x1536,1536x1024"></label>
+              <label><span data-i18n="chatAdmin.imageMaxDimension">最大边长</span><input id="imageMaxDimension" class="chat-admin-input" type="number" min="1" max="4096" step="1" value="4096"></label>
+              <label><span data-i18n="chatAdmin.imageMaxPixels">最大像素</span><input id="imageMaxPixels" class="chat-admin-input" type="number" min="1" max="16777216" step="1" value="16777216"></label>
+              <label><span data-i18n="chatAdmin.imageMaxBatch">每批最大张数</span><input id="imageMaxBatch" class="chat-admin-input" type="number" min="1" max="10" step="1" value="10"></label>
+              <label><span data-i18n="chatAdmin.imageMediaHosts">媒体主机（逗号分隔）</span><input id="imageMediaHosts" class="chat-admin-input"></label>
+              <label class="chat-admin-check"><input id="imageResponsesTool" type="checkbox"><span data-i18n="chatAdmin.imageResponsesTool">使用 Responses 图片工具</span></label>
+              <label class="chat-admin-check"><input id="imageCustomSize" type="checkbox"><span data-i18n="chatAdmin.imageCustomSize">允许自定义尺寸</span></label>
+              <label class="chat-admin-check"><input id="imageReferences" type="checkbox"><span data-i18n="chatAdmin.imageReferences">支持参考图</span></label>
+              <label class="chat-admin-check"><input id="imageTransparency" type="checkbox"><span data-i18n="chatAdmin.imageTransparency">支持透明背景</span></label>
+              <label><span data-i18n="chatAdmin.imageFieldMap">字段映射（JSON 对象）</span><textarea id="imageFieldMap" class="chat-admin-input" rows="3">{}</textarea></label>
+              <label><span data-i18n="chatAdmin.imageFixedParameters">固定参数（JSON 对象）</span><textarea id="imageFixedParameters" class="chat-admin-input" rows="3">{}</textarea></label>
+              <label><span data-i18n="chatAdmin.imageResultPath">结果路径</span><input id="imageResultPath" class="chat-admin-input"></label>
+            </div>
+          </fieldset>
           <label class="chat-admin-check"><input id="modelEnabled" type="checkbox" checked><span data-i18n="chatAdmin.enabled">启用</span></label>
           <div class="chat-admin-actions"><button class="chat-admin-button" type="submit" data-i18n="chatAdmin.saveModel">保存模型</button><button id="clearModelButton" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="common.clearForm">清空表单</button></div>
         </form>
         <p id="modelApiProtocolHelp" class="chat-admin-quota-help" data-i18n="chatAdmin.modelApiProtocolHelp">模型继承所选供应商的 API 协议；请在供应商配置中修改。切换协议不会自动修改模型的思考配置或供应商的认证头。</p>
         <p id="modelClaudeThinkingHelp" class="chat-admin-quota-help" hidden data-i18n="chatAdmin.claudeThinkingHelp">新配置默认不发送思考参数，以兼容中转与历史重放。思考计入输出预算；手动预算须为至少 1024 的整数，严格小于默认及测试输出预算。自适应只适用于供应商和模型明确支持的情况；effort 原样发送至 output_config.effort，不映射为思考预算。可选 low、medium、high、xhigh、max，各值由模型决定，max/xhigh 尤须上游支持；未知模型别名不能据此判断支持。默认 effort 留空使用供应商原生默认值。</p>
         <p id="modelMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+        <label class="chat-admin-image-filter"><span data-i18n="chatAdmin.modelFilter">按用途筛选</span><select id="modelPurposeFilter" class="chat-admin-input"><option value="all" data-i18n="chatAdmin.allPurposes">全部用途</option><option value="chat" data-i18n="chatAdmin.purposeChat">对话</option><option value="image" data-i18n="chatAdmin.purposeImage">图片生成</option></select></label>
         <div id="modelsList" class="chat-admin-table-wrap"></div>
       </section>
 
@@ -188,6 +215,41 @@
         <h3 data-i18n="chatAdmin.blacklistTitle">黑名单用户</h3>
         <div id="blacklistList" class="chat-admin-table-wrap"></div>
         <p id="quotaMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="chat-admin-panel chat-admin-section" id="imageSection">
+        <div class="chat-admin-section-head"><div><h2 data-i18n="chatAdmin.imageAdminTitle">图片配额与使用记录</h2><p data-i18n="chatAdmin.imageAdminLead">按生成张数计量；留空表示不限，0 表示禁止生成。已预留但结果不确定的张数需核对后处理。</p></div><button id="imageRefresh" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="common.refresh">刷新数据</button></div>
+        <div class="chat-admin-quota-period"><strong data-i18n="chatAdmin.imageTotal">90天生成总张数</strong><span id="imageTotal">--</span></div>
+        <h3 data-i18n="chatAdmin.imageLimits">每日图片上限</h3>
+        <form id="imageSettingsForm" class="chat-admin-form">
+          <label><span data-i18n="chatAdmin.imageGlobalLimit">全站每日上限</span><input id="imageGlobalLimit" class="chat-admin-input" type="number" min="0" max="1000000000000" step="1"></label>
+          <label><span data-i18n="chatAdmin.imageDefaultLimit">默认用户每日上限</span><input id="imageDefaultLimit" class="chat-admin-input" type="number" min="0" max="1000000000000" step="1"></label>
+          <div class="chat-admin-actions"><button class="chat-admin-button" type="submit" data-i18n="chatAdmin.imageSaveSettings">保存每日上限</button></div>
+        </form>
+        <div id="imageGlobalSummary" class="chat-admin-quota-summary" aria-live="polite"></div>
+        <hr class="chat-admin-divider">
+        <form id="imageUserForm" class="chat-admin-form">
+          <label><span data-i18n="chatAdmin.quotaUser">用户账号 · 社员姓名</span><select id="imageUser" class="chat-admin-input"></select></label>
+          <label><span data-i18n="chatAdmin.imageUserLimit">用户覆盖上限</span><input id="imageUserLimit" class="chat-admin-input" type="number" min="0" max="1000000000000" step="1"></label>
+          <div class="chat-admin-actions"><button class="chat-admin-button" type="submit" data-i18n="chatAdmin.imageSaveUser">保存用户覆盖</button><button id="imageResetUser" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.imageResetUser">恢复默认</button></div>
+        </form>
+        <p id="imageOverrideState" class="chat-admin-quota-help"></p><div id="imageUserSummary" class="chat-admin-quota-summary" aria-live="polite"></div>
+        <hr class="chat-admin-divider"><h3 data-i18n="chatAdmin.imageAudit">图片使用审计</h3>
+        <form id="imageFilter" class="chat-admin-filter-form">
+          <label><span data-i18n="chatAdmin.from">开始时间</span><input id="imageFrom" class="chat-admin-input" type="datetime-local"></label>
+          <label><span data-i18n="chatAdmin.to">结束时间</span><input id="imageTo" class="chat-admin-input" type="datetime-local"></label>
+          <label><span data-i18n="chatAdmin.pageSize">每页条数</span><select id="imagePageSize" class="chat-admin-input"><option value="20">20</option><option value="50">50</option><option value="100">100</option></select></label>
+          <button class="chat-admin-button" type="submit" data-i18n="chatAdmin.applyFilter">应用筛选</button>
+        </form>
+        <p id="imageMessage" class="chat-admin-message" role="status" aria-live="polite"></p>
+        <div id="imageRecords" class="chat-admin-table-wrap"></div>
+        <div class="chat-admin-pagination"><button id="imagePrev" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.previous">上一页</button><span id="imagePageLabel"></span><button id="imageNext" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="chatAdmin.next">下一页</button></div>
+        <form id="imageResolveForm" class="chat-admin-form" hidden>
+          <p id="imageResolveTarget" class="chat-admin-image-wide"></p>
+          <label><span data-i18n="chatAdmin.imageResolveResult">核实结果</span><select id="imageResolveResult" class="chat-admin-input"><option value="1" data-i18n="chatAdmin.imageGenerated">已生成</option><option value="0" data-i18n="chatAdmin.imageNotGenerated">未生成</option></select></label>
+          <label><span data-i18n="chatAdmin.imageResolveNote">核对说明</span><input id="imageResolveNote" class="chat-admin-input" required maxlength="500"></label>
+          <div class="chat-admin-actions"><button class="chat-admin-button chat-admin-danger" type="submit" data-i18n="chatAdmin.imageResolve">确认核对</button><button id="imageResolveCancel" class="chat-admin-button chat-admin-secondary" type="button" data-i18n="common.cancel">取消</button></div>
+        </form>
       </section>
 
       <section class="chat-admin-panel chat-admin-section" id="modelAccessSection">
@@ -262,7 +324,7 @@
       </section>
     </div>
   </main>
-  <script type="module" src="chat-admin.js?v=8f549bb9"></script>
+  <script type="module" src="chat-admin.js?v=2f60c5be"></script>
   <script src="club-shell.js?v=b2a8c524"></script>
 <script src="club-liquid-lighting.js?v=2d2e5783" defer></script>
 </body>

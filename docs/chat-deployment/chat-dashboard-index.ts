@@ -1873,6 +1873,190 @@ async function readChatBody(request: Request, options: ChatBodyOptions): Promise
   }
 }
 
+class ImageError extends Error {
+  constructor(public code: string, public status = 400) { super(code); this.name = 'ImageError'; }
+}
+const IMAGE_BYTES = 16 * 1024 * 1024;
+type ImageMedia = { bytes: Uint8Array<ArrayBuffer>; mime: 'image/png' | 'image/jpeg' | 'image/webp'; width: number; height: number; sha256: string };
+
+async function inspectImage(bytes: Uint8Array, maxBytes = IMAGE_BYTES, maxDimension = 4096, maxPixels = 16777216): Promise<ImageMedia> {
+  if (!bytes.length || bytes.length > maxBytes) throw new ImageError('image_size', 413);
+  const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const ascii = (at: number, n: number) => String.fromCharCode(...bytes.subarray(at, at + n));
+  let width = 0, height = 0, mime: ImageMedia['mime'];
+  if (bytes.length >= 33 && ascii(0, 8) === '\x89PNG\r\n\x1a\n' && ascii(12, 4) === 'IHDR' && v.getUint32(8) === 13) {
+    mime = 'image/png'; width = v.getUint32(16); height = v.getUint32(20);
+  } else if (bytes.length >= 12 && bytes[0] === 0xff && bytes[1] === 0xd8) {
+    mime = 'image/jpeg'; let p = 2;
+    while (p + 4 <= bytes.length) {
+      if (bytes[p++] !== 0xff) break;
+      while (p < bytes.length && bytes[p] === 0xff) p++;
+      const marker = bytes[p++];
+      if (marker === 0xd9 || marker === 0xda) break;
+      if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+      if (p + 2 > bytes.length) break;
+      const len = v.getUint16(p);
+      if (len < 2 || p + len > bytes.length) break;
+      if ((marker >= 0xc0 && marker <= 0xc3) || (marker >= 0xc5 && marker <= 0xc7) || (marker >= 0xc9 && marker <= 0xcb) || (marker >= 0xcd && marker <= 0xcf)) {
+        if (len < 8 || len !== 8 + 3 * bytes[p + 7]) break;
+        height = v.getUint16(p + 3); width = v.getUint16(p + 5); break;
+      }
+      p += len;
+    }
+  } else if (bytes.length >= 30 && ascii(0, 4) === 'RIFF' && ascii(8, 4) === 'WEBP' && v.getUint32(4, true) + 8 === bytes.length) {
+    mime = 'image/webp'; const kind = ascii(12, 4);
+    const chunkSize = v.getUint32(16, true);
+    if (20 + chunkSize + (chunkSize % 2) > bytes.length) throw new ImageError('image_format');
+    if (kind === 'VP8X' && v.getUint32(16, true) >= 10) {
+      width = 1 + bytes[24] + (bytes[25] << 8) + (bytes[26] << 16);
+      height = 1 + bytes[27] + (bytes[28] << 8) + (bytes[29] << 16);
+    } else if (kind === 'VP8 ' && chunkSize >= 10 && !(bytes[20] & 1) && bytes.length >= 30 && ascii(23, 3) === '\x9d\x01\x2a') {
+      width = v.getUint16(26, true) & 0x3fff; height = v.getUint16(28, true) & 0x3fff;
+    } else if (kind === 'VP8L' && chunkSize >= 5 && bytes.length >= 25 && bytes[20] === 0x2f && !(bytes[24] & 0xe0)) {
+      const bits = v.getUint32(21, true); width = (bits & 0x3fff) + 1; height = ((bits >>> 14) & 0x3fff) + 1;
+    }
+  } else throw new ImageError('image_format');
+  if (!width || !height || width > maxDimension || height > maxDimension || width * height > maxPixels) throw new ImageError('image_dimensions');
+  const owned = new Uint8Array(bytes);
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', owned));
+  const sha256 = Array.from(digest, b => b.toString(16).padStart(2, '0')).join('');
+  return { bytes: owned, mime, width, height, sha256 };
+}
+
+function decodeImageBase64(value: string, maxBytes: number): { bytes: Uint8Array; declaredMime?: string } {
+  const match = /^(?:data:(image\/(?:png|jpeg|webp));base64,)?([A-Za-z0-9+/]+={0,2})$/.exec(value);
+  if (!match || match[2].length % 4 || match[2].length > Math.ceil(maxBytes / 3) * 4) throw new ImageError('image_format');
+  let binary: string;
+  try { binary = atob(match[2]); } catch { throw new ImageError('image_format'); }
+  if (!binary.length || binary.length > maxBytes) throw new ImageError('image_size', 413);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return { bytes, declaredMime: match[1] };
+}
+function encodeImageBase64(bytes: Uint8Array): string {
+  let result = '';
+  // Chunks are multiples of three so padding occurs only at the end.
+  for (let i = 0; i < bytes.length; i += 49152) result += btoa(String.fromCharCode(...bytes.subarray(i, i + 49152)));
+  return result;
+}
+async function readImageResponse(response: Response, maxBytes: number, signal: AbortSignal): Promise<Uint8Array> {
+  return await readChatBody(new Request('https://bounded.invalid/', { method: 'POST', headers: response.headers, body: response.body, signal, duplex: 'half' } as RequestInit), { maxBytes, signal });
+}
+
+type Json = Record<string, unknown>;
+type ImageConfig = { api: 'images'|'responses'|'chat'|'custom'; request_format: 'images'|'responses'|'chat'; endpoint: string; edit_endpoint: string; responses_tool: boolean; qualities: string[]; sizes: string[]; custom_size: boolean; max_dimension: number; max_pixels: number; supports_references: boolean; supports_transparency: boolean; max_batch: number; media_hosts: string[]; field_map: Record<string,string>; fixed_parameters: Json; result_path: string };
+const defaults: ImageConfig = { api:'images', request_format:'images', endpoint:'', edit_endpoint:'', responses_tool:false, qualities:['auto'], sizes:['auto','1024x1024','1024x1536','1536x1024'], custom_size:false, max_dimension:4096, max_pixels:16777216, supports_references:false, supports_transparency:false, max_batch:10, media_hosts:[], field_map:{}, fixed_parameters:{}, result_path:'' };
+function obj(value: unknown): Json { if (!value || typeof value !== 'object' || Array.isArray(value)) throw new ImageError('input'); return value as Json; }
+function keys(value: Json, allowed: string[]) { if (Object.keys(value).some(x => !allowed.includes(x))) throw new ImageError('input'); }
+function imageConfig(value: unknown): ImageConfig {
+  const raw = value == null ? {} : obj(value); keys(raw, Object.keys(defaults));
+  const c = { ...defaults, ...raw } as ImageConfig;
+  if (!['images','responses','chat','custom'].includes(c.api) || !['images','responses','chat'].includes(c.request_format) || (c.api !== 'custom' && c.api !== c.request_format)) throw new ImageError('image_config');
+  for (const k of ['responses_tool','custom_size','supports_references','supports_transparency'] as const) if (typeof c[k] !== 'boolean') throw new ImageError('image_config');
+  for (const [n, max] of [['max_dimension',4096],['max_pixels',16777216],['max_batch',10]] as const) if (!Number.isInteger(c[n]) || c[n] < 1 || c[n] > max) throw new ImageError('image_config');
+  for (const k of ['qualities','sizes'] as const) if (!Array.isArray(c[k]) || !c[k].length || c[k].length > 32 || c[k].some(x => typeof x !== 'string' || !/^[a-zA-Z0-9_-]{1,40}$/.test(x)) || new Set(c[k]).size !== c[k].length) throw new ImageError('image_config');
+  if (!Array.isArray(c.media_hosts) || c.media_hosts.length > 32 || c.media_hosts.some(x => typeof x !== 'string' || !/^(?=.{1,253}$)[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(x))) throw new ImageError('image_config');
+  for (const k of ['endpoint','edit_endpoint'] as const) if (typeof c[k] !== 'string' || c[k].length > 2048 || (c[k] && !c[k].startsWith('https://'))) throw new ImageError('image_config');
+  if (c.api === 'custom' && !c.endpoint) throw new ImageError('image_config');
+  if (typeof c.result_path !== 'string' || (c.result_path && !/^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+){0,8}$/.test(c.result_path))) throw new ImageError('image_config');
+  const map = obj(c.field_map), fixed = obj(c.fixed_parameters); keys(map, ['model','prompt','size','quality','background','n']);
+  if (Object.values(map).some(x => typeof x !== 'string' || !/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/.test(x)) || new Set(Object.values(map)).size !== Object.values(map).length || Object.keys(fixed).length > 16 || Object.entries(fixed).some(([k,v]) => !/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/.test(k) || !['string','number','boolean'].includes(typeof v) || (typeof v === 'string' && v.length > 500) || (typeof v === 'number' && !Number.isFinite(v)))) throw new ImageError('image_config');
+  if (c.api !== 'custom' && (Object.keys(map).length || Object.keys(fixed).length || c.result_path)) throw new ImageError('image_config');
+  const fields = c.request_format === 'images' ? ['model','prompt','size','quality','background','n'] :
+    c.request_format === 'responses' ? ['model','input','size','quality','background','tools','tool_choice','store'] :
+    ['model','messages','size','quality','background','stream'];
+  const effective = fields.map(k => String(map[k] || k));
+  if (new Set(effective).size !== effective.length || Object.keys(fixed).some(k => effective.includes(k) || fields.includes(k) || ['model','prompt','size','quality','background','n'].includes(k))) throw new ImageError('image_config');
+  return c;
+}
+function imageCapabilities(c: ImageConfig) { return { qualities:c.qualities, sizes:c.sizes, custom_size:c.custom_size, max_dimension:c.max_dimension, max_pixels:c.max_pixels, supports_references:c.supports_references, supports_transparency:c.supports_transparency, max_batch:c.max_batch }; }
+type ImageInput = { prompt:string; options:{size:string;quality:string;background:string}; references:Array<{name:string;data:string;media:ImageMedia}> };
+async function imageInput(payload: Json, config: ImageConfig): Promise<ImageInput> {
+  if (typeof payload.prompt !== 'string' || !payload.prompt.trim() || payload.prompt.length > 12000) throw new ImageError('input');
+  const options = obj(payload.options); keys(options, ['size','quality','background']);
+  const { size, quality, background } = options;
+  if (typeof size !== 'string' || typeof quality !== 'string' || typeof background !== 'string' || !config.qualities.includes(quality) || !['auto','opaque','transparent'].includes(background) || (background === 'transparent' && !config.supports_transparency)) throw new ImageError('input');
+  const m = /^(\d{1,4})x(\d{1,4})$/.exec(size);
+  if ((!config.sizes.includes(size) && !(config.custom_size && m)) || (m && (+m[1] < 1 || +m[2] < 1 || +m[1] > config.max_dimension || +m[2] > config.max_dimension || +m[1] * +m[2] > config.max_pixels))) throw new ImageError('input');
+  if (!Array.isArray(payload.references) || payload.references.length > 4 || (payload.references.length && !config.supports_references)) throw new ImageError('input');
+  const references = [] as ImageInput['references'];
+  for (const entry of payload.references) {
+    const r = obj(entry); keys(r, ['name','data']);
+    if (typeof r.name !== 'string' || !r.name || r.name.length > 160 || /[\x00-\x1f/\\]/.test(r.name) || typeof r.data !== 'string' || !r.data.startsWith('data:image/')) throw new ImageError('input');
+    const decoded = decodeImageBase64(r.data, 5 * 1024 * 1024);
+    const media = await inspectImage(decoded.bytes, 5 * 1024 * 1024, config.max_dimension, config.max_pixels);
+    if (decoded.declaredMime !== media.mime) throw new ImageError('image_format');
+    references.push({ name:r.name, data:r.data, media });
+  }
+  return { prompt:payload.prompt, options:{size,quality,background}, references };
+}
+async function imageFingerprint(modelId: string, input: ImageInput): Promise<string> {
+  const canonical = JSON.stringify({ model_id:modelId, prompt:input.prompt, options:input.options, references:input.references.map(r => ({ name:r.name, sha256:r.media.sha256 })) });
+  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonical)));
+  return Array.from(hash, x => x.toString(16).padStart(2,'0')).join('');
+}
+function atPath(value: unknown, path: string): unknown { for (const part of path.split('.')) { if (value === null || typeof value !== 'object') return undefined; value = (value as Json)[part]; } return value; }
+function findResult(value: unknown, config: ImageConfig): unknown {
+  if (config.result_path) return atPath(value, config.result_path);
+  const o = value as any;
+  if (config.request_format === 'images') return o?.data?.[0]?.b64_json ?? o?.data?.[0]?.url;
+  if (config.request_format === 'responses') {
+    for (const item of o?.output || []) { if (item?.type === 'image_generation_call' && item.result) return item.result; for (const part of item?.content || []) if (part?.type === 'output_image' || part?.type === 'image') return part.image_url ?? part.b64_json ?? part.url; }
+  } else {
+    const content = o?.choices?.[0]?.message?.content;
+    if (typeof content === 'string' && content.startsWith('data:image/')) return content;
+    for (const part of Array.isArray(content) ? content : []) if (['image','image_url','output_image'].includes(part?.type)) return part.image_url?.url ?? part.image_url ?? part.url ?? part.b64_json;
+    const img = o?.choices?.[0]?.message?.images?.[0]; if (img) return img.image_url?.url ?? img.url ?? img.b64_json;
+  }
+  throw new ImageError('image_upstream_format', 502);
+}
+async function generateImage(args: { config:ImageConfig; baseUrl:string; modelKey:string; input:ImageInput; headers:Headers; signal:AbortSignal; validateUrl:(value:string)=>Promise<string> }): Promise<ImageMedia> {
+  const { config:c, input, signal } = args;
+  const root = args.baseUrl.replace(/\/(?:responses|response|chat\/completions|images\/generations|images\/edits)$/i,'').replace(/\/$/,'');
+  const endpoint = input.references.length && c.request_format === 'images' ? (c.edit_endpoint || (c.api === 'custom' ? c.endpoint : `${root}/images/edits`)) : (c.endpoint || (c.request_format === 'images' ? `${root}/images/generations` : c.request_format === 'chat' ? `${root}/chat/completions` : /\/response$/i.test(args.baseUrl) ? args.baseUrl : `${root}/responses`));
+  await args.validateUrl(endpoint);
+  const fields: Json = { model:args.modelKey, prompt:input.prompt, size:input.options.size, quality:input.options.quality, background:input.options.background, n:1 };
+  let body: BodyInit; const headers = new Headers(args.headers);
+  if (c.request_format === 'images' && input.references.length) {
+    const form = new FormData();
+    for (const [key,value] of Object.entries(fields)) form.set(c.field_map[key] || key, String(value));
+    for (const [key,value] of Object.entries(c.fixed_parameters)) form.set(key,String(value));
+    for (const r of input.references) form.append('image[]', new Blob([r.media.bytes], { type:r.media.mime }), r.name);
+    body = form;
+  } else {
+    let data: Json;
+    if (c.request_format === 'images') data = fields;
+    else if (c.request_format === 'responses') data = { model:args.modelKey, input:[{ role:'user', content:[{ type:'input_text', text:input.prompt }, ...input.references.map(r => ({ type:'input_image', image_url:r.data }))] }], ...(c.responses_tool ? { tools:[{ type:'image_generation', size:input.options.size, quality:input.options.quality, background:input.options.background }], tool_choice:{ type:'image_generation' } } : { size:input.options.size, quality:input.options.quality, background:input.options.background }), store:false };
+    else data = { model:args.modelKey, messages:[{ role:'user', content:[{ type:'text', text:input.prompt }, ...input.references.map(r => ({ type:'image_url', image_url:{url:r.data} }))] }], size:input.options.size, quality:input.options.quality, background:input.options.background, stream:false };
+    if (c.api === 'custom') { const mapped: Json = {...c.fixed_parameters}; for (const [k,v] of Object.entries(data)) mapped[c.field_map[k] || k] = v; data = mapped; }
+    headers.set('content-type','application/json'); body = JSON.stringify(data);
+  }
+  const response = await fetch(endpoint, { method:'POST', headers, body, signal, redirect:'error' });
+  if (!response.ok) throw new ImageError('image_upstream', 502);
+  const bytes = await readImageResponse(response, 24 * 1024 * 1024, signal);
+  let result: unknown;
+  try { result = findResult(JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(bytes)), c); } catch (e) { if (e instanceof ImageError) throw e; throw new ImageError('image_upstream_format',502); }
+  if (typeof result !== 'string') throw new ImageError('image_upstream_format',502);
+  let imageBytes: Uint8Array; let declared: string | undefined;
+  if (/^https:\/\//i.test(result)) {
+    const u = new URL(result); if (!c.media_hosts.includes(u.hostname.toLowerCase()) || u.username || u.password || u.port || u.hash) throw new ImageError('image_media_url',502);
+    // fetch() resolves hostnames independently from validateUrl(). Until a TLS
+    // transport can pin the validated address, DNS hostnames are not safe here:
+    // a rebinding answer could send the connection to a private service.
+    // A literal IPv4 address has no second DNS lookup and is still checked by
+    // validateUrl; signed query parameters remain intact.
+    await args.validateUrl(u.origin + u.pathname);
+    if (!/^(?:\d{1,3}\.){3}\d{1,3}$/.test(u.hostname)) throw new ImageError('image_media_url',502);
+    const media = await fetch(u.href, { signal, redirect:'error', headers:{ accept:'image/png,image/jpeg,image/webp' } });
+    if (!media.ok) throw new ImageError('image_media_url',502);
+    imageBytes = await readImageResponse(media, IMAGE_BYTES, signal);
+  } else { const decoded = decodeImageBase64(result, IMAGE_BYTES); imageBytes = decoded.bytes; declared = decoded.declaredMime; }
+  const image = await inspectImage(imageBytes, IMAGE_BYTES, c.max_dimension, c.max_pixels);
+  if (declared && declared !== image.mime) throw new ImageError('image_format',502);
+  return image;
+}
+function imageOutput(image:ImageMedia) { return { b64_json:encodeImageBase64(image.bytes), mime:image.mime, width:image.width, height:image.height, sha256:image.sha256 }; }
+
 type Json = Record<string, unknown>;
 type AuthUser = { id: string; email?: string | null };
 type Provider = {
@@ -1903,6 +2087,8 @@ type Model = {
   enabled: boolean;
   visibility: 'all' | 'assigned';
   updated_at?: string;
+  purpose?: 'chat' | 'image';
+  image_config?: unknown;
 };
 
 type RequestContext = {
@@ -1935,6 +2121,7 @@ const ACTIONS = new Set([
   'assistant_catalog', 'assistant_respond', 'assistant_compact',
   'assistant_admin_get', 'assistant_admin_config_save', 'assistant_admin_document_save', 'assistant_admin_document_archive',
   'assistant_admin_publish', 'assistant_admin_rollback', 'assistant_admin_import',
+  'image_catalog', 'image_begin', 'image_generate', 'image_cancel', 'image_admin_get', 'image_admin_save', 'image_admin_resolve',
   'catalog', 'respond', 'generation_recover', 'admin_get', 'admin_save_provider', 'admin_save_model',
   'admin_delete_provider', 'admin_delete_model',
   'admin_usage', 'admin_test', 'quota', 'admin_quota_get', 'admin_quota_save',
@@ -1980,6 +2167,7 @@ function corsHeaders(request: Request): Headers {
 function json(request: Request, body: unknown, status = 200): Response {
   const headers = corsHeaders(request);
   headers.set('content-type', 'application/json; charset=utf-8');
+  headers.set('cache-control', 'private, no-store');
   return new Response(JSON.stringify(body), { status, headers });
 }
 
@@ -2278,7 +2466,7 @@ async function providers(): Promise<Provider[]> {
 }
 
 async function models(): Promise<Model[]> {
-  return await restJson<Model[]>('chat_models?deleted_at=is.null&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,claude_thinking,supports_images,supports_pdf,preserve_reasoning,enabled,visibility,updated_at&order=display_name.asc');
+  return await restJson<Model[]>('chat_models?deleted_at=is.null&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,claude_thinking,supports_images,supports_pdf,preserve_reasoning,enabled,visibility,purpose,image_config,updated_at&order=display_name.asc');
 }
 
 async function modelAccess(modelId: string, userId: string): Promise<boolean> {
@@ -2318,7 +2506,7 @@ function effectiveReasoning(model: Model, protocol: ChatProtocol) {
 async function catalogPayload(items: Model[], providerRows: Provider[], userId: string) {
   const enabledProviders = new Map(providerRows.filter(x => x.enabled).map(x => [x.id, x]));
   const visible = await visibleModelIds(items, userId);
-  return items.filter(x => x.enabled && enabledProviders.has(x.provider_id) && visible.has(x.id)).map(x => {
+  return items.filter(x => (x.purpose ?? 'chat') === 'chat' && x.enabled && enabledProviders.has(x.provider_id) && visible.has(x.id)).map(x => {
     const provider = enabledProviders.get(x.provider_id)!;
     const protocol = chatEndpoint(provider.base_url, provider.api_protocol).protocol;
     return {
@@ -2330,19 +2518,20 @@ async function catalogPayload(items: Model[], providerRows: Provider[], userId: 
   });
 }
 
-async function modelWithProvider(modelId: unknown, enabledOnly = true, userId?: string, admin = false): Promise<{ model: Model; provider: Provider }> {
+async function modelWithProvider(modelId: unknown, enabledOnly = true, userId?: string, admin = false, purpose: 'chat' | 'image' = 'chat'): Promise<{ model: Model; provider: Provider }> {
   if (!isUuid(modelId)) throw new HttpError('model', 400);
   const [modelRows, providerRows] = await Promise.all([
-    restJson<Model[]>(`chat_models?id=eq.${encodeURIComponent(modelId)}&deleted_at=is.null&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,claude_thinking,supports_images,supports_pdf,preserve_reasoning,enabled,visibility&limit=1`),
+    restJson<Model[]>(`chat_models?id=eq.${encodeURIComponent(modelId)}&deleted_at=is.null&select=id,provider_id,model_key,display_name,introduction,context_window,max_output_tokens,default_max_output_tokens,reasoning_efforts,default_reasoning_effort,claude_thinking,supports_images,supports_pdf,preserve_reasoning,enabled,visibility,purpose,image_config&limit=1`),
     providers()
   ]);
   const model = modelRows[0];
   const provider = model && providerRows.find(x => x.id === model.provider_id);
-  if (!model || !provider || (enabledOnly && (!model.enabled || !provider.enabled))) throw new HttpError('model', 400);
+  if (!model || !provider || (model.purpose ?? 'chat') !== purpose || (enabledOnly && (!model.enabled || !provider.enabled))) throw new HttpError('model', 400);
   if (!admin && userId && !(await modelAccess(model.id, userId))) throw new HttpError('model', 403);
   validateModel(model);
   provider.base_url = await publicHttpsUrl(provider.base_url);
-  validateProtocolCapabilities(chatEndpoint(provider.base_url, provider.api_protocol).protocol, model, model.claude_thinking);
+  if (purpose === 'chat') validateProtocolCapabilities(chatEndpoint(provider.base_url, provider.api_protocol).protocol, model, model.claude_thinking);
+  else imageConfig(model.image_config);
   secretName(provider.secret_name);
   return { model, provider };
 }
@@ -2370,8 +2559,8 @@ async function saveProvider(payload: Json) {
     updated_at: new Date().toISOString()
   };
   if (id) {
-    const attached = await restJson<Model[]>(`chat_models?provider_id=eq.${encodeURIComponent(String(id))}&deleted_at=is.null&select=preserve_reasoning,reasoning_efforts,default_max_output_tokens,claude_thinking`);
-    for (const model of attached) validateProtocolCapabilities(chatEndpoint(body.base_url, body.api_protocol).protocol, model, model.claude_thinking);
+    const attached = await restJson<Model[]>(`chat_models?provider_id=eq.${encodeURIComponent(String(id))}&deleted_at=is.null&select=purpose,preserve_reasoning,reasoning_efforts,default_max_output_tokens,claude_thinking`);
+    for (const model of attached.filter(x => (x.purpose ?? 'chat') === 'chat')) validateProtocolCapabilities(chatEndpoint(body.base_url, body.api_protocol).protocol, model, model.claude_thinking);
   }
   const rows = await restJson<Provider[]>('chat_providers?on_conflict=id', { method: 'POST', headers: { 'content-type': 'application/json', prefer: 'resolution=merge-duplicates,return=representation' }, body: JSON.stringify(body) });
   return rows[0] ? { id: rows[0].id, name: rows[0].name, label: rows[0].label, base_url: rows[0].base_url, api_protocol: rows[0].api_protocol, secret_name: rows[0].secret_name, auth_header: rows[0].auth_header, enabled: rows[0].enabled } : null;
@@ -2390,12 +2579,20 @@ async function saveModel(payload: Json) {
   if (!Array.isArray(efforts) || efforts.length > 12 || efforts.some(x => typeof x !== 'string' || x.length < 1 || x.length > MAX_REASONING_EFFORT)) throw new HttpError('input', 400);
   let visibility: 'all' | 'assigned' = 'all';
   let claudeThinking = payload.claude_thinking;
-  if (id && (payload.visibility === undefined || payload.claude_thinking === undefined)) {
-    const existing = await restJson<Array<{ visibility?: string; claude_thinking?: unknown }>>(`chat_models?id=eq.${encodeURIComponent(id)}&select=visibility,claude_thinking&limit=1`);
+  let purpose = payload.purpose;
+  let config = payload.image_config;
+  if (id && (payload.visibility === undefined || payload.claude_thinking === undefined || purpose === undefined || config === undefined)) {
+    const existing = await restJson<Array<{ visibility?: string; claude_thinking?: unknown; purpose?: string; image_config?: unknown }>>(`chat_models?id=eq.${encodeURIComponent(id)}&select=visibility,claude_thinking,purpose,image_config&limit=1`);
     const value = existing[0]?.visibility;
     if (value === 'all' || value === 'assigned') visibility = value;
     if (payload.claude_thinking === undefined) claudeThinking = existing[0]?.claude_thinking;
+    if (purpose === undefined) purpose = existing[0]?.purpose;
+    if (config === undefined) config = existing[0]?.image_config;
   }
+  purpose ??= 'chat';
+  if (purpose !== 'chat' && purpose !== 'image') throw new HttpError('input', 400);
+  const validatedImageConfig = imageConfig(config);
+  for (const endpoint of [validatedImageConfig.endpoint, validatedImageConfig.edit_endpoint]) if (endpoint) await publicHttpsUrl(endpoint);
   if (payload.visibility !== undefined) visibility = payload.visibility as 'all' | 'assigned';
   const body = {
     ...(id ? { id } : {}), provider_id: payload.provider_id, model_key: modelKey, display_name: displayName, introduction,
@@ -2404,7 +2601,7 @@ async function saveModel(payload: Json) {
     default_reasoning_effort: payload.default_reasoning_effort == null ? null : text(payload.default_reasoning_effort, MAX_REASONING_EFFORT, true),
     supports_images: boolean(payload.supports_images), supports_pdf: boolean(payload.supports_pdf),
     preserve_reasoning: boolean(payload.preserve_reasoning), enabled: payload.enabled === undefined ? true : boolean(payload.enabled, true),
-    visibility,
+    visibility, purpose, image_config: config ?? {},
     updated_at: new Date().toISOString()
   };
   if (body.visibility !== 'all' && body.visibility !== 'assigned') throw new HttpError('input', 400);
@@ -2413,7 +2610,7 @@ async function saveModel(payload: Json) {
   const provider = providerRows.find(x => x.id === body.provider_id);
   if (!provider) throw new HttpError('input', 400);
   const protocol = chatEndpoint(provider.base_url, provider.api_protocol).protocol;
-  validateProtocolCapabilities(protocol, body, body.claude_thinking);
+  if (purpose === 'chat') validateProtocolCapabilities(protocol, body, body.claude_thinking);
   const rows = await restJson<Model[]>('chat_models?on_conflict=id', { method: 'POST', headers: { 'content-type': 'application/json', prefer: 'resolution=merge-duplicates,return=representation' }, body: JSON.stringify(body) });
   return rows[0] || null;
 }
@@ -3120,6 +3317,118 @@ async function assistantAdmin(request: Request, action: string, payload: Json): 
   const output = json(request, result); output.headers.set('cache-control', 'no-store'); return output;
 }
 
+// Image generation is admitted by SQL before dispatch; all post-dispatch errors are
+// uncertain because the provider may already have charged or generated an image.
+async function imageRpc(name: string, body: Json, signal: AbortSignal): Promise<Json> {
+  const response = await rest(`rpc/${name}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal });
+  const result = await response.json().catch(() => null);
+  if (!response.ok || !result || typeof result !== 'object' || Array.isArray(result)) throw new HttpError('database', 503);
+  const value = result as Json;
+  if (value.allowed === false || (value.code && value.code !== 'ok')) throw new HttpError(String(value.code || 'image_unavailable'), ['conflict','request_conflict','slot_unavailable'].includes(String(value.code)) ? 409 : value.code === 'blacklisted' ? 403 : ['global_quota','user_quota'].includes(String(value.code)) ? 429 : 400);
+  return value;
+}
+async function imageArchive(request: Request, userId: string, model: Model, requestId: string, slot: number, input: Awaited<ReturnType<typeof imageInput>>, image: ImageMedia, signal: AbortSignal): Promise<boolean> {
+  const { url, anon } = requireConfig();
+  const authorization = `Bearer ${authToken(request)!}`;
+  const endpoint = `${url}/functions/v1/club-drive`;
+  async function attachment(media: ImageMedia): Promise<boolean> {
+    const ext = media.mime === 'image/jpeg' ? 'jpg' : media.mime.slice(6);
+    try {
+      const response = await fetch(`${endpoint}?action=image-attachment`, { method:'POST', signal, redirect:'error', headers: { apikey:anon, authorization, 'x-drive-action':'image-attachment', 'content-type':'application/octet-stream', 'x-chat-attachment-hash':media.sha256, 'x-chat-attachment-ext':ext, 'x-chat-attachment-type':media.mime }, body:media.bytes });
+      return response.ok;
+    } catch { return false; }
+  }
+  const referenceRows = [];
+  for (const ref of input.references) referenceRows.push({ name:ref.name, sha256:ref.media.sha256, mime:ref.media.mime, bytes:ref.media.bytes.length, archived:await attachment(ref.media) });
+  const archived = await attachment(image);
+  const record = { id:requestId, prompt:input.prompt, model_id:model.id, model_name:model.display_name, options:input.options, createdAt:new Date().toISOString(), references:referenceRows, images:[{ slot, sha256:image.sha256, mime:image.mime, bytes:image.bytes.length, width:image.width, height:image.height, archived }], status:'succeeded' };
+  try {
+    const response = await fetch(`${endpoint}?action=image-archive`, { method:'POST', signal, redirect:'error', headers:{ apikey:anon, authorization, 'x-drive-action':'image-archive', 'content-type':'application/json' }, body:JSON.stringify({ schema:'club-ai-image-archive/1', user_id:userId, record }) });
+    return response.ok && archived && referenceRows.every(x => x.archived);
+  } catch { return false; }
+}
+async function imageAction(request: Request, action: string, payload: Json): Promise<Response> {
+  const isAdmin = action.startsWith('image_admin_');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 110_000);
+  const stop = () => controller.abort();
+  request.signal.addEventListener('abort', stop, { once:true });
+  const bounded = <T>(promise: Promise<T>): Promise<T> => new Promise((resolve, reject) => {
+    const abort = () => reject(new HttpError('timeout', 504));
+    if (controller.signal.aborted) return abort();
+    controller.signal.addEventListener('abort', abort, {once:true});
+    promise.then(resolve, reject).finally(() => controller.signal.removeEventListener('abort', abort));
+  });
+  const call = (name: string, body: Json) => bounded(imageRpc(name, body, controller.signal));
+  try {
+    const ctx = await bounded(context(request, isAdmin));
+    if (isAdmin) {
+      if (action === 'image_admin_get') return json(request, await call('chat_image_admin_get', { p_actor_user_id:ctx.user.id, p_user_id:quotaUserId(payload.user_id), p_page:integer(payload.page,1,100000,1), p_page_size:integer(payload.page_size,1,100,20), p_from:payload.from ?? null, p_to:payload.to ?? null }));
+      if (action === 'image_admin_save') {
+        const settings = object(payload.settings); allowKeys(settings, ['global_daily_limit','default_user_daily_limit','user_id','user_daily_limit','reset_user_override']);
+        for (const name of ['global_daily_limit','default_user_daily_limit','user_daily_limit']) if (name in settings) quotaLimit(settings[name]);
+        if ('user_id' in settings) quotaUserId(settings.user_id);
+        if ('reset_user_override' in settings) boolean(settings.reset_user_override);
+        return json(request, await call('chat_image_admin_save', { p_actor_user_id:ctx.user.id, p_settings:settings }));
+      }
+      if (!isUuid(payload.request_id)) throw new HttpError('input',400);
+      return json(request, await call('chat_image_admin_resolve', { p_actor_user_id:ctx.user.id, p_request_id:payload.request_id, p_slot:integer(payload.slot,0,9), p_generated:integer(payload.generated,0,1), p_note:text(payload.note,500,true) }));
+    }
+    if (action === 'image_catalog') {
+      const [quota, all, providerRows] = await bounded(Promise.all([call('chat_image_quota_get', {p_user_id:ctx.user.id}), models(), providers()]));
+      if (quota.blacklisted === true) throw new HttpError('blacklisted',403);
+      const visible = await bounded(visibleModelIds(all, ctx.user.id)), enabled = new Set(providerRows.filter(x => x.enabled).map(x => x.id));
+      const items = all.filter(x => x.purpose === 'image' && x.enabled && enabled.has(x.provider_id) && visible.has(x.id)).map(x => ({ id:x.id, display_name:x.display_name, introduction:x.introduction, image_config:imageCapabilities(imageConfig(x.image_config)) }));
+      return json(request, {models:items, quota});
+    }
+    if (!isUuid(payload.request_id)) throw new HttpError('input',400);
+    if (action === 'image_cancel') return json(request, await call('chat_image_cancel', {p_user_id:ctx.user.id,p_request_id:payload.request_id}));
+    const { model, provider } = await bounded(modelWithProvider(payload.model_id, true, ctx.user.id, false, 'image'));
+    const config = imageConfig(model.image_config), input = await bounded(imageInput(payload, config));
+    const fingerprint = await bounded(imageFingerprint(model.id, input));
+    if (action === 'image_begin') {
+      const count = integer(payload.count,1,config.max_batch);
+      return json(request, await call('chat_image_begin', { p_user_id:ctx.user.id, p_request_id:payload.request_id, p_model_id:model.id, p_count:count, p_fingerprint:fingerprint, p_audit:{ member_name:ctx.profile?.member_name, username:ctx.profile?.username, provider_name:provider.label || provider.name, model_name:model.display_name, provider_id:provider.id, model_key:model.model_key, ...input.options } }));
+    }
+    const slot = integer(payload.slot,0,config.max_batch - 1);
+    await call('chat_image_claim', {p_user_id:ctx.user.id,p_request_id:payload.request_id,p_slot:slot,p_fingerprint:fingerprint});
+    await call('chat_image_dispatch', {p_user_id:ctx.user.id,p_request_id:payload.request_id,p_slot:slot});
+    let image: ImageMedia;
+    const upstream = new AbortController();
+    const upstreamTimer = setTimeout(() => upstream.abort(), 80_000);
+    const abortUpstream = () => upstream.abort(); controller.signal.addEventListener('abort', abortUpstream, {once:true});
+    try {
+      const headers = new Headers(); headers.set(provider.auth_header, provider.auth_header === 'authorization' ? `Bearer ${Deno.env.get(provider.secret_name)!}` : Deno.env.get(provider.secret_name)!);
+      const upstreamWork = generateImage({config,baseUrl:provider.base_url,modelKey:model.model_key,input,headers,signal:upstream.signal,validateUrl:publicHttpsUrl});
+      image = await new Promise<ImageMedia>((resolve, reject) => {
+        const aborted = () => reject(new HttpError('image_upstream_uncertain', 504));
+        if (upstream.signal.aborted) return aborted();
+        upstream.signal.addEventListener('abort', aborted, {once:true});
+        upstreamWork.then(resolve,reject).finally(() => upstream.signal.removeEventListener('abort', aborted));
+      });
+    } catch (error) {
+      await call('chat_image_finish', {p_user_id:ctx.user.id,p_request_id:payload.request_id,p_slot:slot,p_status:'uncertain',p_generated:0,p_error_code:'upstream_uncertain',p_archive_ok:false}).catch(() => {});
+      throw new HttpError('image_upstream_uncertain', error instanceof HttpError && error.status === 504 ? 504 : 502);
+    } finally { clearTimeout(upstreamTimer); controller.signal.removeEventListener('abort', abortUpstream); }
+    const archive = await bounded(imageArchive(request,ctx.user.id,model,payload.request_id,slot,input,image,controller.signal)).catch(() => false);
+    // Once image bytes exist, settlement must not inherit a disconnected client or
+    // the archive deadline. Exact finish retries are idempotent in SQL; a lost
+    // response may otherwise leave a successful call permanently uncertain.
+    const finishBody = {p_user_id:ctx.user.id,p_request_id:payload.request_id,p_slot:slot,p_status:'succeeded',p_generated:1,p_error_code:null,p_archive_ok:archive};
+    let finished: Json | null = null;
+    for (let attempt = 0; attempt < 2 && !finished; attempt++) {
+      const signal = AbortSignal.timeout(5_000);
+      try {
+        finished = await Promise.race([
+          imageRpc('chat_image_finish', finishBody, signal),
+          new Promise<never>((_, reject) => signal.addEventListener('abort', () => reject(new HttpError('timeout', 504)), {once:true}))
+        ]);
+      } catch { /* Leave the dispatched slot reserved for expiry/admin resolution. */ }
+    }
+    return json(request, {image:imageOutput(image),archive:{ok:archive},quota:finished?.quota ?? null,status:finished ? 'succeeded' : 'uncertain'});
+  } finally { clearTimeout(timer); request.signal.removeEventListener('abort', stop); }
+}
+
 async function main(request: Request, payload: Json): Promise<Response> {
   const action = ({ save_provider: 'admin_save_provider', save_model: 'admin_save_model', usage: 'admin_usage', test: 'admin_test' } as Record<string, string>)[String(payload.action)] || payload.action;
   if (typeof action !== 'string' || !ACTIONS.has(action)) throw new HttpError('action', 400);
@@ -3142,12 +3451,16 @@ async function main(request: Request, payload: Json): Promise<Response> {
     catalog: [], quota: [], admin_quota_get: ['user_id'],
     admin_quota_save: ['user_id', 'daily_limit', 'weekly_limit', 'monthly_limit', 'expected_version'],
     admin_user_directory: [], admin_blacklist_list: [], admin_set_blacklist: ['user_id', 'blocked', 'reason'],
+    image_catalog: [], image_begin: ['request_id','model_id','prompt','options','references','count'],
+    image_generate: ['request_id','model_id','prompt','options','references','slot'], image_cancel: ['request_id'],
+    image_admin_get: ['user_id','page','page_size','from','to'], image_admin_save: ['settings'],
+    image_admin_resolve: ['request_id','slot','generated','note'],
     admin_get: [], respond: ['model_id', 'input', 'max_output_tokens', 'reasoning_effort'],
     generation_recover: [],
     admin_test: ['model_id', 'prompt', 'max_output_tokens', 'reasoning_effort'],
     admin_usage: ['page', 'pageSize', 'limit', 'from', 'to'],
     admin_save_provider: ['id', 'name', 'label', 'base_url', 'api_protocol', 'secret_name', 'auth_header', 'enabled'],
-    admin_save_model: ['id', 'provider_id', 'model_key', 'model_id', 'display_name', 'introduction', 'context_window', 'max_output_tokens', 'default_max_output_tokens', 'reasoning_efforts', 'default_reasoning_effort', 'claude_thinking', 'supports_images', 'supports_pdf', 'preserve_reasoning', 'enabled', 'visibility'],
+    admin_save_model: ['id', 'provider_id', 'model_key', 'model_id', 'display_name', 'introduction', 'context_window', 'max_output_tokens', 'default_max_output_tokens', 'reasoning_efforts', 'default_reasoning_effort', 'claude_thinking', 'supports_images', 'supports_pdf', 'preserve_reasoning', 'enabled', 'visibility', 'purpose', 'image_config'],
     admin_delete_provider: ['id'],
     admin_delete_model: ['id', 'expected_version'],
     admin_model_access_get: ['model_id'],
@@ -3157,6 +3470,7 @@ async function main(request: Request, payload: Json): Promise<Response> {
     custom_model_delete: ['id', 'expected_version']
   };
   allowKeys(payload, ['action', ...allowed[action]]);
+  if (action.startsWith('image_')) return await imageAction(request, action, payload);
   if (action.startsWith('assistant_admin_')) return await assistantAdmin(request, action, payload);
   if (action.startsWith('assistant_')) return await assistantAction(request, action, payload);
   if (action.startsWith('admin_proxy_')) return await proxyAdmin(request, action, payload);
@@ -3230,12 +3544,14 @@ async function handle(request: Request): Promise<Response> {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(request) });
   if (request.method !== 'POST') return errorResponse(request, 'method', 405);
   try {
-    const bytes = await readChatBody(request, { maxBytes: MAX_REQUEST_BYTES, timeoutMs: 10000 });
+    const bytes = await readChatBody(request, { maxBytes: 32 * 1024 * 1024, timeoutMs: 10000 });
     let parsed: unknown;
     try { parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); } catch { throw new HttpError('input', 400); }
-    return await main(request, object(parsed));
+    const payload = object(parsed);
+    if (bytes.byteLength > MAX_REQUEST_BYTES && payload.action !== 'image_begin' && payload.action !== 'image_generate') throw new HttpError('request_too_large', 413);
+    return await main(request, payload);
   } catch (error) {
-    if (error instanceof ChatBodyError) return errorResponse(request, error.code, error.status);
+    if (error instanceof ChatBodyError || error instanceof ImageError) return errorResponse(request, error.code, error.status);
     if (error instanceof AssistantError) return errorResponse(request, error.message, error.status);
     if (error instanceof HttpError || error instanceof ProxyError || error instanceof ChatProtocolError) return errorResponse(request, error.message, error.status);
     return errorResponse(request, 'server', 500);

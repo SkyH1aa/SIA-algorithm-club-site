@@ -3,6 +3,19 @@
 // fetch('data/changelog.json') 的最新数据为准。
 window.CLUB_CHANGELOG_SNAPSHOT = Object.freeze([
   {
+    "date": "2026-11-23",
+    "title": "AIChat 在线生图工作台",
+    "enTitle": "AIChat image generation studio",
+    "items": [
+      "新增仅使用超管配置并授权模型的在线生图工作台，与普通聊天模型隔离；兼容 Images、Responses / Chat 与声明式自定义端点。",
+      "生图按张使用独立每日全站及个人额度，并提供近 90 日生成统计；提示词、参数和真实图片按账号保存在本机，同时上传社团 123 云盘留档。"
+    ],
+    "enItems": [
+      "Add an image-generation studio that uses only models configured and authorized by a super administrator, isolated from chat models. Support Images, Responses / Chat, and declarative custom endpoints.",
+      "Track image usage separately with site-wide and per-user daily limits and a rolling 90-day generation statistic. Save prompts, settings, and real image files per account locally and archive them to the club's 123 cloud drive."
+    ]
+  },
+  {
     "date": "2026-11-21",
     "title": "WordLab 默认 AI 配置",
     "enTitle": "WordLab default AI configuration",

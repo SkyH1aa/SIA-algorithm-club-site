@@ -107,8 +107,15 @@ alter table public.chat_models
   add column if not exists deleted_at timestamptz;
 alter table public.chat_models
   drop constraint if exists chat_models_provider_id_model_key_key;
-create unique index if not exists chat_models_provider_key_uidx
-  on public.chat_models (provider_id, model_key) where deleted_at is null;
+alter table public.chat_models add column if not exists purpose text not null default 'chat';
+alter table public.chat_models add column if not exists image_config jsonb not null default '{}'::jsonb;
+alter table public.chat_models drop constraint if exists chat_models_purpose_check;
+alter table public.chat_models add constraint chat_models_purpose_check check (purpose in ('chat','image'));
+alter table public.chat_models drop constraint if exists chat_models_image_config_check;
+alter table public.chat_models add constraint chat_models_image_config_check check (jsonb_typeof(image_config) = 'object');
+drop index if exists public.chat_models_provider_key_uidx;
+create unique index chat_models_provider_key_uidx
+  on public.chat_models (provider_id, model_key, purpose) where deleted_at is null;
 
 -- Model visibility is independent from the existing enabled switch. Existing
 -- models remain available to every bound member after this additive migration.
@@ -1409,7 +1416,7 @@ begin
     if jsonb_array_length(p_data->'suggestions')>8 or exists(select 1 from jsonb_array_elements(p_data->'suggestions') s
       where jsonb_typeof(s)<>'string' or length(btrim(s#>>'{}')) not between 1 and 200) then raise exception 'Invalid suggestions' using errcode='22023'; end if;
     if p_data->>'model_id' is not null and not exists(select 1 from public.chat_models m join public.chat_providers p on p.id=m.provider_id
-      where m.id=(p_data->>'model_id')::uuid and m.enabled and p.enabled and m.visibility='all' and m.deleted_at is null and p.deleted_at is null)
+      where m.id=(p_data->>'model_id')::uuid and m.enabled and p.enabled and m.visibility='all' and m.purpose='chat' and m.deleted_at is null and p.deleted_at is null)
       then return '{"code":"assistant_model"}'::jsonb; end if;
     if (p_data->>'enabled')::boolean and p_data->>'model_id' is null then return '{"code":"assistant_model"}'::jsonb; end if;
     update public.chat_assistant_config set enabled=(p_data->>'enabled')::boolean,model_id=(p_data->>'model_id')::uuid,
@@ -1451,7 +1458,7 @@ begin
   elsif p_action in ('assistant_admin_publish','assistant_admin_rollback') then
     if p_action='assistant_admin_publish' then
       if not exists(select 1 from public.chat_models m join public.chat_providers p on p.id=m.provider_id where m.id=c.model_id and m.enabled and p.enabled
-        and m.visibility='all' and m.deleted_at is null and p.deleted_at is null) then return '{"code":"assistant_model"}'::jsonb; end if;
+        and m.visibility='all' and m.purpose='chat' and m.deleted_at is null and p.deleted_at is null) then return '{"code":"assistant_model"}'::jsonb; end if;
       select coalesce(jsonb_agg(to_jsonb(x)-'archived'-'updated_by'-'updated_at' order by slug),'[]'::jsonb) into v_docs from public.chat_assistant_documents x where not archived;
       if jsonb_array_length(v_docs)=0 then return '{"code":"assistant_documents"}'::jsonb; end if;
       insert into public.chat_assistant_releases(config,documents,created_by)
@@ -1461,7 +1468,7 @@ begin
       select id into rid from public.chat_assistant_releases where id=(p_data->>'release_id')::uuid;
       if not found then return '{"code":"not_found"}'::jsonb; end if;
       if not exists(select 1 from public.chat_assistant_releases r join public.chat_models m on m.id=(r.config->>'model_id')::uuid
-        join public.chat_providers p on p.id=m.provider_id where r.id=rid and m.enabled and p.enabled and m.visibility='all' and m.deleted_at is null and p.deleted_at is null)
+        join public.chat_providers p on p.id=m.provider_id where r.id=rid and m.enabled and p.enabled and m.visibility='all' and m.purpose='chat' and m.deleted_at is null and p.deleted_at is null)
         then return '{"code":"assistant_model"}'::jsonb; end if;
     end if;
     update public.chat_assistant_config set current_release_id=rid where singleton;
@@ -1477,3 +1484,304 @@ end;
 $$;
 revoke all on function public.chat_assistant_immutable(),public.chat_assistant_runtime(),public.chat_assistant_admin(uuid,text,jsonb) from public,anon,authenticated;
 grant execute on function public.chat_assistant_runtime(),public.chat_assistant_admin(uuid,text,jsonb) to service_role;
+
+-- Independent image accounting. Rows are never pruned by the 90-day reporting window.
+create table if not exists public.chat_image_settings (
+  singleton boolean primary key default true check(singleton),
+  global_daily_limit bigint default 0 check(global_daily_limit between 0 and 1000000000000),
+  default_user_daily_limit bigint default 0 check(default_user_daily_limit between 0 and 1000000000000),
+  updated_by uuid references auth.users(id), updated_at timestamptz not null default now()
+);
+insert into public.chat_image_settings(singleton) values(true) on conflict do nothing;
+create table if not exists public.chat_image_users (
+  user_id uuid primary key references auth.users(id) on delete restrict,
+  has_override boolean not null default false,
+  daily_limit bigint check(daily_limit between 0 and 1000000000000),
+  updated_by uuid references auth.users(id), updated_at timestamptz not null default now()
+);
+create table if not exists public.chat_image_requests (
+  request_id uuid primary key, user_id uuid not null references auth.users(id) on delete restrict,
+  model_id uuid not null references public.chat_models(id) on delete restrict,
+  count integer not null check(count between 1 and 10),
+  fingerprint text not null check(length(fingerprint) between 1 and 256),
+  audit jsonb not null default '{}'::jsonb check(jsonb_typeof(audit)='object'),
+  day_start timestamptz not null, created_at timestamptz not null default clock_timestamp()
+);
+create table if not exists public.chat_image_slots (
+  request_id uuid not null references public.chat_image_requests(request_id) on delete restrict,
+  slot integer not null check(slot between 0 and 9),
+  status text not null check(status in ('queued','running','dispatched','succeeded','failed','uncertain','cancelled')),
+  generated integer not null default 0 check(generated between 0 and 1),
+  claimed_at timestamptz, dispatched_at timestamptz, finished_at timestamptz,
+  expires_at timestamptz not null,
+  error_code text, archive_ok boolean,
+  resolved_by uuid references auth.users(id), resolution_note text, resolved_at timestamptz,
+  primary key(request_id,slot),
+  check(status <> 'cancelled' or claimed_at is null),
+  check(status <> 'succeeded' or generated=1),
+  check(status = 'succeeded' or generated=0)
+);
+create index if not exists chat_image_requests_day_idx on public.chat_image_requests(day_start,user_id);
+create index if not exists chat_image_requests_created_idx on public.chat_image_requests(created_at desc,request_id);
+create index if not exists chat_image_slots_expiry_idx on public.chat_image_slots(expires_at) where status in ('queued','running','dispatched');
+alter table public.chat_image_settings enable row level security;
+alter table public.chat_image_users enable row level security;
+alter table public.chat_image_requests enable row level security;
+alter table public.chat_image_slots enable row level security;
+revoke all on public.chat_image_settings,public.chat_image_users,public.chat_image_requests,public.chat_image_slots from public,anon,authenticated;
+grant select,insert,update,delete on public.chat_image_settings,public.chat_image_users,public.chat_image_requests,public.chat_image_slots to service_role;
+
+-- Every mutating operation takes the same global then user lock. Expiry is lazy,
+-- under that lock: only never-claimed slots are refundable.
+create or replace function public.chat_image_lock(p_user_id uuid)
+returns void language plpgsql security definer set search_path=pg_catalog,public as $$
+begin
+  perform 1 from public.chat_image_settings where singleton for update;
+  if p_user_id is not null then
+    if not exists(select 1 from auth.users where id=p_user_id) then raise exception 'Unknown user' using errcode='22023'; end if;
+    insert into public.chat_image_users(user_id) values(p_user_id) on conflict do nothing;
+    perform 1 from public.chat_image_users where user_id=p_user_id for update;
+  end if;
+  update public.chat_image_slots s set
+    status=case when s.status='queued' and s.claimed_at is null then 'cancelled' else 'uncertain' end,
+    finished_at=clock_timestamp(),error_code='expired'
+    where s.status in ('queued','running','dispatched') and (s.expires_at<=clock_timestamp()
+      or (s.status='queued' and s.claimed_at is null and exists (
+        select 1 from public.chat_image_requests r where r.request_id=s.request_id
+          and r.day_start < (date_trunc('day',clock_timestamp() at time zone 'Asia/Shanghai') at time zone 'Asia/Shanghai')
+      )));
+end;
+$$;
+
+create or replace function public.chat_image_quota_get(p_user_id uuid)
+returns jsonb language plpgsql security definer set search_path=pg_catalog,public as $$
+declare cfg public.chat_image_settings; usr public.chat_image_users; start_day timestamptz; reset_day timestamptz; local_now timestamp;
+  gl bigint; ul bigint; gg bigint; ug bigint; lim bigint;
+begin
+  if p_user_id is null then raise exception 'Invalid user' using errcode='22023'; end if;
+  perform public.chat_image_lock(p_user_id);
+  select * into cfg from public.chat_image_settings where singleton;
+  select * into usr from public.chat_image_users where user_id=p_user_id;
+  local_now := clock_timestamp() at time zone 'Asia/Shanghai';
+  start_day := date_trunc('day',local_now) at time zone 'Asia/Shanghai';
+  reset_day := (date_trunc('day',local_now) + interval '1 day') at time zone 'Asia/Shanghai';
+  lim := case when usr.has_override then usr.daily_limit else cfg.default_user_daily_limit end;
+  select count(*) filter(where s.status in ('queued','running','dispatched','succeeded','uncertain')),
+    count(*) filter(where s.status='succeeded'),
+    count(*) filter(where r.user_id=p_user_id and s.status in ('queued','running','dispatched','succeeded','uncertain')),
+    count(*) filter(where r.user_id=p_user_id and s.status='succeeded')
+    into gl,gg,ul,ug from public.chat_image_requests r join public.chat_image_slots s using(request_id) where r.day_start=start_day;
+  return jsonb_build_object('global',jsonb_build_object('limit',cfg.global_daily_limit,'used',gl,'generated',gg,'reserved',gl-gg,
+    'remaining',case when cfg.global_daily_limit is null then null else greatest(0,cfg.global_daily_limit-gl) end),
+    'user',jsonb_build_object('limit',lim,'used',ul,'generated',ug,'reserved',ul-ug,
+    'remaining',case when lim is null then null else greatest(0,lim-ul) end),
+    'resets_at',reset_day,'blacklisted',exists(select 1 from public.chat_blacklist where user_id=p_user_id),
+    'default_user_limit',cfg.default_user_daily_limit);
+end;
+$$;
+
+create or replace function public.chat_image_admin_save(p_actor_user_id uuid,p_settings jsonb)
+returns jsonb language plpgsql security definer set search_path=pg_catalog,public as $$
+declare k text; uid uuid; v bigint; r boolean;
+begin
+  perform public.chat_quota_assert_admin(p_actor_user_id);
+  if p_settings is null or jsonb_typeof(p_settings)<>'object' or exists(select 1 from jsonb_object_keys(p_settings) x where x not in
+    ('global_daily_limit','default_user_daily_limit','user_id','user_daily_limit','reset_user_override')) then
+    raise exception 'Invalid settings' using errcode='22023'; end if;
+  if p_settings ? 'user_id' then
+    if jsonb_typeof(p_settings->'user_id')<>'string' then raise exception 'Invalid user' using errcode='22023'; end if;
+    uid := (p_settings->>'user_id')::uuid;
+  end if;
+  if p_settings ? 'reset_user_override' and jsonb_typeof(p_settings->'reset_user_override')<>'boolean' then raise exception 'Invalid reset' using errcode='22023'; end if;
+  r := coalesce((p_settings->>'reset_user_override')::boolean,false);
+  if (p_settings ? 'user_daily_limit' or r) and uid is null then raise exception 'User required' using errcode='22023'; end if;
+  if r and p_settings ? 'user_daily_limit' then raise exception 'Conflicting override' using errcode='22023'; end if;
+  foreach k in array array['global_daily_limit','default_user_daily_limit','user_daily_limit'] loop
+    if p_settings ? k and p_settings->k <> 'null'::jsonb then
+      if jsonb_typeof(p_settings->k)<>'number' or (p_settings->>k) !~ '^(0|[1-9][0-9]*)$'
+        or (p_settings->>k)::numeric>1000000000000 then raise exception 'Invalid limit' using errcode='22023'; end if;
+    end if;
+  end loop;
+  perform public.chat_image_lock(uid);
+  update public.chat_image_settings set
+    global_daily_limit=case when p_settings ? 'global_daily_limit' then (p_settings->>'global_daily_limit')::bigint else global_daily_limit end,
+    default_user_daily_limit=case when p_settings ? 'default_user_daily_limit' then (p_settings->>'default_user_daily_limit')::bigint else default_user_daily_limit end,
+    updated_by=p_actor_user_id,updated_at=clock_timestamp() where singleton;
+  if uid is not null and (r or p_settings ? 'user_daily_limit') then
+    update public.chat_image_users set has_override=not r,daily_limit=case when r then null else (p_settings->>'user_daily_limit')::bigint end,
+      updated_by=p_actor_user_id,updated_at=clock_timestamp() where user_id=uid;
+  end if;
+  return jsonb_build_object('settings',(select jsonb_build_object('global_daily_limit',global_daily_limit,'default_user_daily_limit',default_user_daily_limit) from public.chat_image_settings where singleton),
+    'quota',case when uid is null then null else public.chat_image_quota_get(uid) end);
+end;
+$$;
+
+create or replace function public.chat_image_begin(p_user_id uuid,p_request_id uuid,p_model_id uuid,p_count integer,p_fingerprint text,p_audit jsonb)
+returns jsonb language plpgsql security definer set search_path=pg_catalog,public as $$
+declare q jsonb; old public.chat_image_requests; k text; value jsonb; start_day timestamptz;
+begin
+  if p_user_id is null or p_request_id is null or p_model_id is null or p_count is null or p_count not between 1 and 10
+    or p_fingerprint is null or p_fingerprint !~ '^[0-9a-f]{64}$' or p_audit is null or jsonb_typeof(p_audit)<>'object' then
+    raise exception 'Invalid image request' using errcode='22023'; end if;
+  for k,value in select * from jsonb_each(p_audit) loop
+    if k not in ('member_name','username','provider_name','model_name','provider_id','model_key','size','quality','background') then
+      raise exception 'Invalid audit field' using errcode='22023'; end if;
+    if value <> 'null'::jsonb then
+      if jsonb_typeof(value)<>'string' then raise exception 'Invalid audit value' using errcode='22023'; end if;
+      if length(value#>>'{}') > (case k when 'member_name' then 200 when 'username' then 320 when 'provider_name' then 120 when 'model_name' then 120 when 'provider_id' then 36 when 'model_key' then 160 when 'size' then 40 when 'quality' then 80 else 11 end) then
+        raise exception 'Invalid audit length' using errcode='22023'; end if;
+      if k='provider_id' then perform (value#>>'{}')::uuid; end if;
+      if k='background' and value#>>'{}' not in ('auto','opaque','transparent') then raise exception 'Invalid background' using errcode='22023'; end if;
+      if k in ('size','quality') and value#>>'{}' !~ '^[A-Za-z0-9_.-]+$' then raise exception 'Invalid option' using errcode='22023'; end if;
+    end if;
+  end loop;
+  perform public.chat_image_lock(p_user_id);
+  q := public.chat_image_quota_get(p_user_id);
+  select * into old from public.chat_image_requests where request_id=p_request_id;
+  if found then
+    if old.user_id<>p_user_id or old.model_id<>p_model_id or old.count<>p_count or old.fingerprint<>p_fingerprint then
+      return jsonb_build_object('allowed',false,'code','request_conflict','quota',q); end if;
+    return jsonb_build_object('allowed',true,'quota',q);
+  end if;
+  if (q->>'blacklisted')::boolean then return jsonb_build_object('allowed',false,'code','blacklisted','quota',q); end if;
+  if not exists(select 1 from public.chat_models m join public.chat_providers p on p.id=m.provider_id
+    where m.id=p_model_id and m.purpose='image' and m.enabled and m.deleted_at is null and p.enabled and p.deleted_at is null
+    and (m.visibility='all' or exists(select 1 from public.chat_model_access a where a.model_id=m.id and a.user_id=p_user_id))) then
+    return jsonb_build_object('allowed',false,'code','model_unavailable','quota',q); end if;
+  if (q->'global'->>'remaining')::bigint < p_count then return jsonb_build_object('allowed',false,'code','global_quota','quota',q); end if;
+  if (q->'user'->>'remaining')::bigint < p_count then return jsonb_build_object('allowed',false,'code','user_quota','quota',q); end if;
+  start_day := (q->>'resets_at')::timestamptz - interval '1 day';
+  insert into public.chat_image_requests(request_id,user_id,model_id,count,fingerprint,audit,day_start)
+    values(p_request_id,p_user_id,p_model_id,p_count,p_fingerprint,p_audit,start_day);
+  insert into public.chat_image_slots(request_id,slot,status,expires_at)
+    select p_request_id,n,'queued',clock_timestamp()+interval '30 minutes' from generate_series(0,p_count-1) n;
+  return jsonb_build_object('allowed',true,'quota',public.chat_image_quota_get(p_user_id));
+end;
+$$;
+
+create or replace function public.chat_image_claim(p_user_id uuid,p_request_id uuid,p_slot integer,p_fingerprint text)
+returns jsonb language plpgsql security definer set search_path=pg_catalog,public as $$
+declare q jsonb;
+begin
+  if p_user_id is null or p_request_id is null or p_slot is null or p_slot not between 0 and 9 or p_fingerprint is null or p_fingerprint !~ '^[0-9a-f]{64}$' then raise exception 'Invalid claim' using errcode='22023'; end if;
+  perform public.chat_image_lock(p_user_id);
+  if not exists(select 1 from public.chat_image_requests where request_id=p_request_id and user_id=p_user_id and fingerprint=p_fingerprint) then
+    return jsonb_build_object('allowed',false,'code','request_conflict','quota',public.chat_image_quota_get(p_user_id)); end if;
+  if exists(select 1 from public.chat_blacklist where user_id=p_user_id) then
+    return jsonb_build_object('allowed',false,'code','blacklisted','quota',public.chat_image_quota_get(p_user_id)); end if;
+  update public.chat_image_slots s set status='running',claimed_at=clock_timestamp(),expires_at=clock_timestamp()+interval '5 minutes'
+    where s.request_id=p_request_id and s.slot=p_slot and s.status='queued' and s.claimed_at is null
+      and exists(select 1 from public.chat_image_requests r where r.request_id=s.request_id
+        and r.day_start=(date_trunc('day',clock_timestamp() at time zone 'Asia/Shanghai') at time zone 'Asia/Shanghai'));
+  if not found then return jsonb_build_object('allowed',false,'code','slot_unavailable','quota',public.chat_image_quota_get(p_user_id)); end if;
+  update public.chat_image_slots set expires_at=clock_timestamp()+interval '30 minutes'
+    where request_id=p_request_id and status='queued' and claimed_at is null;
+  return jsonb_build_object('allowed',true,'quota',public.chat_image_quota_get(p_user_id));
+end;
+$$;
+
+create or replace function public.chat_image_dispatch(p_user_id uuid,p_request_id uuid,p_slot integer)
+returns jsonb language plpgsql security definer set search_path=pg_catalog,public as $$
+begin
+  if p_user_id is null or p_request_id is null or p_slot is null or p_slot not between 0 and 9 then raise exception 'Invalid dispatch' using errcode='22023'; end if;
+  perform public.chat_image_lock(p_user_id);
+  update public.chat_image_slots s set status='dispatched',dispatched_at=clock_timestamp(),expires_at=clock_timestamp()+interval '5 minutes'
+    where s.request_id=p_request_id and s.slot=p_slot and s.status='running'
+      and exists(select 1 from public.chat_image_requests r where r.request_id=s.request_id and r.user_id=p_user_id);
+  if not found then return jsonb_build_object('allowed',false,'code','slot_unavailable','quota',public.chat_image_quota_get(p_user_id)); end if;
+  return jsonb_build_object('allowed',true,'quota',public.chat_image_quota_get(p_user_id));
+end;
+$$;
+
+create or replace function public.chat_image_finish(p_user_id uuid,p_request_id uuid,p_slot integer,p_status text,p_generated integer,p_error_code text,p_archive_ok boolean)
+returns jsonb language plpgsql security definer set search_path=pg_catalog,public as $$
+begin
+  if p_user_id is null or p_request_id is null or p_slot is null or p_slot not between 0 and 9 or p_status is null
+    or p_status not in ('succeeded','failed','uncertain') or p_generated is null
+    or (p_status='succeeded' and p_generated<>1) or (p_status<>'succeeded' and p_generated<>0)
+    or (p_error_code is not null and p_error_code !~ '^[A-Za-z0-9_.-]{1,80}$') then raise exception 'Invalid finish' using errcode='22023'; end if;
+  perform public.chat_image_lock(p_user_id);
+  update public.chat_image_slots s set status=p_status,generated=p_generated,error_code=p_error_code,
+    archive_ok=p_archive_ok,finished_at=clock_timestamp()
+    where s.request_id=p_request_id and s.slot=p_slot and s.status in ('running','dispatched')
+    and (p_status<>'succeeded' or s.status='dispatched')
+    and exists(select 1 from public.chat_image_requests r where r.request_id=s.request_id and r.user_id=p_user_id);
+  if not found then
+    -- Exact retries are harmless; a late or conflicting finish cannot overwrite uncertainty.
+    if not exists(select 1 from public.chat_image_slots s join public.chat_image_requests r using(request_id)
+      where s.request_id=p_request_id and s.slot=p_slot and r.user_id=p_user_id and s.status=p_status
+      and s.generated=p_generated and s.error_code is not distinct from p_error_code and s.archive_ok is not distinct from p_archive_ok) then
+      return jsonb_build_object('allowed',false,'code','slot_unavailable','quota',public.chat_image_quota_get(p_user_id)); end if;
+  end if;
+  return jsonb_build_object('allowed',true,'quota',public.chat_image_quota_get(p_user_id));
+end;
+$$;
+
+create or replace function public.chat_image_cancel(p_user_id uuid,p_request_id uuid)
+returns jsonb language plpgsql security definer set search_path=pg_catalog,public as $$
+begin
+  if p_user_id is null or p_request_id is null then raise exception 'Invalid cancellation' using errcode='22023'; end if;
+  perform public.chat_image_lock(p_user_id);
+  if not exists(select 1 from public.chat_image_requests where request_id=p_request_id and user_id=p_user_id) then
+    return jsonb_build_object('code','request_not_found','quota',public.chat_image_quota_get(p_user_id)); end if;
+  update public.chat_image_slots set status='cancelled',finished_at=clock_timestamp()
+    where request_id=p_request_id and status='queued' and claimed_at is null;
+  return jsonb_build_object('quota',public.chat_image_quota_get(p_user_id));
+end;
+$$;
+
+create or replace function public.chat_image_admin_resolve(p_actor_user_id uuid,p_request_id uuid,p_slot integer,p_generated integer,p_note text)
+returns jsonb language plpgsql security definer set search_path=pg_catalog,public as $$
+declare uid uuid;
+begin
+  perform public.chat_quota_assert_admin(p_actor_user_id);
+  if p_request_id is null or p_slot is null or p_slot not between 0 and 9 or p_generated is null or p_generated not in (0,1)
+    or p_note is null or length(btrim(p_note)) not between 1 and 500 then raise exception 'Invalid resolution' using errcode='22023'; end if;
+  select user_id into uid from public.chat_image_requests where request_id=p_request_id;
+  if uid is null then return jsonb_build_object('code','request_not_found'); end if;
+  perform public.chat_image_lock(uid);
+  update public.chat_image_slots set status=case when p_generated=1 then 'succeeded' else 'failed' end,generated=p_generated,
+    resolved_by=p_actor_user_id,resolution_note=btrim(p_note),resolved_at=clock_timestamp()
+    where request_id=p_request_id and slot=p_slot and status='uncertain' and resolved_at is null;
+  if not found then return jsonb_build_object('code','slot_unavailable','quota',public.chat_image_quota_get(uid)); end if;
+  return jsonb_build_object('quota',public.chat_image_quota_get(uid));
+end;
+$$;
+
+create or replace function public.chat_image_admin_get(p_actor_user_id uuid,p_user_id uuid,p_page integer,p_page_size integer,p_from timestamptz,p_to timestamptz)
+returns jsonb language plpgsql security definer set search_path=pg_catalog,public as $$
+declare lo timestamptz; hi timestamptz; n bigint; images bigint; rows jsonb; q jsonb;
+begin
+  perform public.chat_quota_assert_admin(p_actor_user_id);
+  if p_page is null or p_page not between 1 and 1000000 or p_page_size is null or p_page_size not between 1 and 100 then raise exception 'Invalid pagination' using errcode='22023'; end if;
+  lo:=coalesce(p_from,clock_timestamp()-interval '90 days'); hi:=coalesce(p_to,clock_timestamp());
+  if lo < clock_timestamp()-interval '90 days 1 minute' or hi<=lo then raise exception 'Invalid reporting window' using errcode='22023'; end if;
+  perform public.chat_image_lock(p_user_id);
+  q:=public.chat_image_quota_get(coalesce(p_user_id,p_actor_user_id));
+  select coalesce(sum(s.generated),0) into images from public.chat_image_requests r join public.chat_image_slots s using(request_id)
+    where r.created_at>=clock_timestamp()-interval '90 days' and s.status='succeeded';
+  select count(*) into n from public.chat_image_requests r join public.chat_image_slots s using(request_id)
+    where r.created_at>=lo and r.created_at<hi and (p_user_id is null or r.user_id=p_user_id);
+  select coalesce(jsonb_agg(to_jsonb(x) order by x.created_at desc,x.request_id,x.slot),'[]'::jsonb) into rows from (
+    select r.request_id,s.slot,r.user_id,r.model_id,r.audit,r.created_at,r.day_start,s.status,s.generated,s.error_code,s.archive_ok,
+      s.claimed_at,s.dispatched_at,s.finished_at,s.resolved_by,s.resolution_note,s.resolved_at
+    from public.chat_image_requests r join public.chat_image_slots s using(request_id)
+    where r.created_at>=lo and r.created_at<hi and (p_user_id is null or r.user_id=p_user_id)
+    order by r.created_at desc,r.request_id,s.slot limit p_page_size offset ((p_page::bigint-1)*p_page_size)
+  ) x;
+  return jsonb_build_object('total_images',images,'records',rows,'total',n,'page',p_page,'page_size',p_page_size,'quota',q,
+    'settings',(select jsonb_build_object('global_daily_limit',global_daily_limit,'default_user_daily_limit',default_user_daily_limit) from public.chat_image_settings where singleton),
+    'overrides',coalesce((select jsonb_agg(jsonb_build_object('user_id',user_id,'user_daily_limit',daily_limit) order by user_id) from public.chat_image_users where has_override),'[]'::jsonb));
+end;
+$$;
+
+revoke all on function public.chat_image_lock(uuid),public.chat_image_quota_get(uuid),public.chat_image_admin_save(uuid,jsonb),
+  public.chat_image_begin(uuid,uuid,uuid,integer,text,jsonb),public.chat_image_claim(uuid,uuid,integer,text),
+  public.chat_image_dispatch(uuid,uuid,integer),public.chat_image_finish(uuid,uuid,integer,text,integer,text,boolean),
+  public.chat_image_cancel(uuid,uuid),public.chat_image_admin_get(uuid,uuid,integer,integer,timestamptz,timestamptz),
+  public.chat_image_admin_resolve(uuid,uuid,integer,integer,text) from public,anon,authenticated;
+grant execute on function public.chat_image_quota_get(uuid),public.chat_image_admin_save(uuid,jsonb),
+  public.chat_image_begin(uuid,uuid,uuid,integer,text,jsonb),public.chat_image_claim(uuid,uuid,integer,text),
+  public.chat_image_dispatch(uuid,uuid,integer),public.chat_image_finish(uuid,uuid,integer,text,integer,text,boolean),
+  public.chat_image_cancel(uuid,uuid),public.chat_image_admin_get(uuid,uuid,integer,integer,timestamptz,timestamptz),
+  public.chat_image_admin_resolve(uuid,uuid,integer,integer,text) to service_role;

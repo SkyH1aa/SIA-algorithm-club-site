@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {IMAGE_LIMITS,dimensionsForRatio,validateImageOptions,inspectImage,generatedImage,imageArchiveSnapshot,imageCapabilities} from '../public/chat-images-core.js';
+
+const config={qualities:['auto','medium','high'],sizes:['auto','1024x1024','1024x1536','1536x1024'],custom_size:false,max_dimension:2048,max_pixels:4194304,supports_references:true,supports_transparency:true,max_batch:4};
+assert.deepEqual(dimensionsForRatio(1024,'16:9'),{width:1024,height:576});
+assert.deepEqual(dimensionsForRatio(1024,'9:16'),{width:576,height:1024});
+assert.throws(()=>dimensionsForRatio(2048,'0:1'),/size/);
+assert.throws(()=>validateImageOptions({size:'4096x4096',quality:'high',background:'auto'},config),/size/);
+assert.throws(()=>validateImageOptions({size:'1024x1024',quality:'ultra',background:'auto'},config),/quality/);
+assert.throws(()=>validateImageOptions({size:'1024x1024',quality:'high',background:'transparent'}, {...config,supports_transparency:false}),/background/);
+assert.equal(imageCapabilities({}).max_batch,1);
+assert.equal(IMAGE_LIMITS.references,4);
+const png=new Uint8Array(24);
+png.set([137,80,78,71,13,10,26,10],0);png.set([73,72,68,82],12);new DataView(png.buffer).setUint32(16,1024);new DataView(png.buffer).setUint32(20,768);
+assert.deepEqual(inspectImage(png),{mime:'image/png',width:1024,height:768,ext:'png'});
+const b64=Buffer.from(png).toString('base64');
+const generated=await generatedImage({b64_json:b64,mime:'image/png'});
+assert.equal(generated.bytes,24);
+assert.equal(generated.width,1024);
+assert.equal(generated.ext,'png');
+await assert.rejects(()=>generatedImage({b64_json:'PHN2Zy8+',mime:'image/svg+xml'}));
+const record={id:'30000000-0000-4000-8000-000000000001',userId:'10000000-0000-4000-8000-000000000001',prompt:'test prompt',modelId:'20000000-0000-4000-8000-000000000001',modelName:'model',options:{size:'1024x1024',quality:'high',background:'auto'},createdAt:1,count:1,references:[],images:[{slot:0,sha256:'a'.repeat(64),mime:'image/png',ext:'png',bytes:24,width:1024,height:768,archived:true}]};
+const snapshot=imageArchiveSnapshot(record);
+assert.equal(snapshot.schema,'club-ai-image-archive/1');
+assert.equal(snapshot.record.images[0].slot,0);
+assert.equal(snapshot.record.prompt,'test prompt');
+assert.equal(snapshot.record.images[0].sha256,'a'.repeat(64));
+console.log('PASS image size validation, ratios, media signatures, archive metadata, and capability defaults');
