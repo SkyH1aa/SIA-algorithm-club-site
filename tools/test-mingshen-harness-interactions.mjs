@@ -6,9 +6,25 @@ import vm from 'node:vm';
 const source = await readFile(new URL('../public/mingshen-harness-interactions.js', import.meta.url), 'utf8');
 const shell = await readFile(new URL('../public/club-shell.js', import.meta.url), 'utf8');
 const stylesheet = await readFile(new URL('../public/mingshen-harness.css', import.meta.url), 'utf8');
-const anchorRule = stylesheet.match(/:is\(#collaboration, #craft, #models, #download\)\s*\{[^}]*scroll-margin-top:\s*([\d.]+)px/);
-assert.ok(anchorRule, 'actual chapter CSS must declare a native anchor margin');
-const authoredAnchorOffset = Number(anchorRule[1]);
+const page = await readFile(new URL('../public/mingshen-harness.html', import.meta.url), 'utf8');
+// The fixture mirrors the real chapter nav instead of duplicating an index list.
+const chapterNavMarkup = page.match(/<nav[^>]*data-harness-chapters[^>]*>([\s\S]*?)<\/nav>/i)?.[1] ?? '';
+const chapterIds = [...chapterNavMarkup.matchAll(/href="#([\w-]+)"/g)].map(match => match[1]);
+assert.deepEqual(chapterIds, ['workstation', 'image-studio', 'desktop-pet', 'collaboration', 'craft', 'models', 'download'],
+  'fixture must follow the actual chapter navigation order');
+const plainCSS = stylesheet.replace(/\/\*[\s\S]*?\*\//g, '');
+const offsetRules = [...plainCSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector, body]) => ({
+  selector, offset: Number(/scroll-margin-top\s*:\s*([\d.]+)px/.exec(body)?.[1])
+})).filter(rule => Number.isFinite(rule.offset));
+const anchorRule = offsetRules.find(rule => {
+  const ids = new Set([...rule.selector.matchAll(/#([\w-]+)/g)].map(match => match[1]));
+  return chapterIds.every(id => ids.has(id));
+});
+assert.ok(anchorRule, 'actual chapter CSS must declare a native anchor margin for every chapter');
+const anchorIds = [...anchorRule.selector.matchAll(/#([\w-]+)/g)].map(match => match[1]);
+assert.deepEqual([...new Set(anchorIds)].sort(), [...chapterIds].sort(),
+  'the chapter scroll margin selector must cover exactly the seven chapter anchors');
+const authoredAnchorOffset = anchorRule.offset;
 
 function harness(options = {}) {
   const frames = new Map();
@@ -103,7 +119,9 @@ function harness(options = {}) {
   }
   document = new Element('document');
   document.documentElement = document.append(new Element('html'));
-  document.documentElement.scrollHeight = 6000;
+  // Give the synthetic document room for every chapter plus trailing space so
+  // native-anchor and progress checks are not accidentally at the bottom clamp.
+  document.documentElement.scrollHeight = 1000 + chapterIds.length * 1000 + 800;
   document.documentElement.scrollTop = 0;
   const body = document.documentElement.append(new Element('body', { class: options.otherPage ? 'other-page' : 'harness-page' }));
   document.body = options.noBody ? null : body;
@@ -117,7 +135,7 @@ function harness(options = {}) {
   const nav = body.append(new Element('nav', { 'data-harness-chapters': '' }));
   nav.rect.height = 48;
   const progress = nav.append(new Element('span', { 'data-harness-progress': '', 'aria-hidden': 'true' }));
-  const chapters = ['collaboration', 'craft', 'models', 'download'].map((id, index) => {
+  const chapters = chapterIds.map((id, index) => {
     const link = nav.append(new Element('a', { href: '#' + id }));
     const section = body.append(new Element('section', { id }));
     section.rect = { top: 1000 + index * 1000, left: 40, width: 1000, height: 800 };
@@ -125,7 +143,7 @@ function harness(options = {}) {
   });
   const outsideLink = nav.append(new Element('a', { href: 'https://example.test/' }));
   const groups = [
-    { name: 'views', states: ['overview', 'projects', 'input'] },
+    { name: 'views', states: ['overview', 'light', 'compact-dark', 'compact-light'] },
     { name: 'flow', states: ['plan', 'work', 'review'] },
     { name: 'code', states: ['context', 'diff', 'restore'] },
     { name: 'docs', states: ['read', 'compose', 'export'] }
@@ -234,7 +252,9 @@ function fraction(ui) {
   assert.equal(ui.progress.props.get('--harness-progress'), ui.nav.props.get('--harness-progress'));
   return value;
 }
-function current(ui, index) {
+function current(ui, id) {
+  const index = chapterIds.indexOf(id);
+  assert.ok(index >= 0, 'unknown chapter id: ' + id);
   ui.chapters.forEach((chapter, position) => assert.equal(chapter.link.getAttribute('aria-current'), position === index ? 'location' : null));
 }
 
@@ -246,7 +266,7 @@ assert.equal(ui.body.count('click'), 0);
 assert.equal(ui.body.count('keydown'), 0);
 ui.unchanged();
 ui.flush();
-current(ui, 0);
+current(ui, 'workstation');
 assert.equal(fraction(ui), 0);
 assert.equal(ui.frames.size, 0, 'no idle work');
 for (const group of ui.groups) {
@@ -313,25 +333,30 @@ for (let index = 0; index < 100; index += 1) ui.scroll(2200);
 assert.equal(ui.frames.size, 1);
 assert.equal(ui.chapters[0].section.reads, oldReads, 'scroll handlers do not read layout');
 ui.flush();
-current(ui, 1);
+current(ui, 'image-studio');
 assert.ok(fraction(ui) > 0 && fraction(ui) < 1);
 assert.equal(ui.queries, idleQueries, 'reading progress never rescans the DOM');
 assert.equal(ui.frames.size, 0);
-ui.scroll(-1000); ui.flush(); current(ui, 0); assert.equal(fraction(ui), 0);
-ui.scroll(10000); ui.flush(); current(ui, 3); assert.equal(fraction(ui), 1);
-ui.scroll(5100); ui.flush(); current(ui, 3); assert.equal(fraction(ui), 1);
-ui.scroll(3000); ui.flush(); current(ui, 2);
+ui.scroll(-1000); ui.flush(); current(ui, 'workstation'); assert.equal(fraction(ui), 0);
+ui.scroll(10000); ui.flush(); current(ui, 'download'); assert.equal(fraction(ui), 1);
+ui.scroll(5100); ui.flush(); current(ui, 'craft');
+assert.ok(fraction(ui) > 0 && fraction(ui) < 1);
+ui.scroll(ui.document.documentElement.scrollHeight - ui.window.innerHeight + 100);
+ui.flush(); current(ui, 'download'); assert.equal(fraction(ui), 1);
+ui.scroll(3000); ui.flush(); current(ui, 'desktop-pet');
 // Header+chapter dimensions establish the threshold (62 + 48 = 110), not a fixed desktop offset.
-ui.scroll(1891); ui.flush(); current(ui, 1);
-ui.scroll(1888); ui.flush(); current(ui, 0);
+ui.scroll(1891); ui.flush(); current(ui, 'image-studio');
+ui.scroll(1888); ui.flush(); current(ui, 'workstation');
 ui.topbar.hidden = true;
-ui.window.emit('resize'); ui.flush(); current(ui, 1); // fallback is 150px
+ui.window.emit('resize'); ui.flush(); current(ui, 'image-studio'); // fallback is 150px
 ui.topbar.hidden = false;
-const anchorEvent = ui.chapters[2].link.click();
+const modelsChapter = ui.chapters.find(chapter => chapter.link.getAttribute('href') === '#models');
+assert.ok(modelsChapter, 'fixture must include the models chapter');
+const anchorEvent = modelsChapter.link.click();
 assert.equal(anchorEvent.defaultPrevented, undefined, 'chapter anchors retain native navigation');
-assert.equal(ui.chapters[2].link.getAttribute('href'), '#models');
+assert.equal(modelsChapter.link.getAttribute('href'), '#models');
 assert.equal(ui.outsideLink.getAttribute('aria-current'), null);
-ui.activeIO().callback([{ target: ui.chapters[2].section, isIntersecting: true }]);
+ui.activeIO().callback([{ target: modelsChapter.section, isIntersecting: true }]);
 assert.equal(ui.frames.size, 1);
 ui.flush();
 
@@ -372,7 +397,7 @@ for (const options of [{ noRAF: true }, { noCancelRAF: true }, { brokenRAF: true
   fallback.scroll(3000);
   fallback.flush();
   assert.equal(fallback.groups[1].explorer.dataset.harnessActive, 'review');
-  current(fallback, 2);
+  current(fallback, 'desktop-pet');
   fraction(fallback);
   fallback.window.emit('pagehide');
   assert.equal(fallback.frames.size, 0);
@@ -400,7 +425,7 @@ for (const options of [{ otherPage: true }, { noBody: true }]) {
 }
 const hidden = harness({ hidden: true });
 assert.equal(hidden.requests, 0);
-hidden.visible(true); hidden.flush(); current(hidden, 0);
+hidden.visible(true); hidden.flush(); current(hidden, 'workstation');
 const loading = harness({ loading: true });
 assert.equal(loading.requests, 0);
 loading.document.emit('DOMContentLoaded'); loading.flush();
@@ -423,10 +448,10 @@ for (let index = 0; index < anchored.chapters.length; index += 1) {
   anchored.window.emit('hashchange');
   anchored.flush();
   assert.equal(anchored.chapters[index].section.rect.top, authoredAnchorOffset);
-  current(anchored, index);
+  current(anchored, chapterIds[index]);
   fraction(anchored);
 }
-anchored.scroll(3000 - authoredAnchorOffset - 0.5); anchored.flush(); current(anchored, 2);
+anchored.scroll(3000 - authoredAnchorOffset - 0.5); anchored.flush(); current(anchored, 'desktop-pet');
 assert.equal(anchored.frames.size, 0);
 const empty = harness({ noHooks: true });
 empty.flush();

@@ -23,7 +23,7 @@
     const topbar = page.querySelector('.topbar');
     const chapters = nav ? Array.from(nav.querySelectorAll('a[href]')).map(link => {
       const href = link.getAttribute('href');
-      if (!['#collaboration', '#craft', '#models', '#download'].includes(href)) return null;
+      if (typeof href !== 'string' || !/^#[a-z][\w-]*$/i.test(href)) return null;
       const section = document.getElementById(href.slice(1));
       return section && page.contains(section) ? { link, section } : null;
     }).filter(Boolean) : [];

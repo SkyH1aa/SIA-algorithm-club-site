@@ -93,8 +93,8 @@ assert.deepEqual(pageNodes.filter(node => node.attrs.role === 'tablist'), tablis
 assert.deepEqual(pageNodes.filter(node => has(node, 'data-harness-tabs')), tablists, 'each shared group exposes the product feedback hook');
 const groupSpecs = [
   { name: 'screenshots', label: 'viewTabs', panelClass: 'harness-view-panel',
-    tabKeys: ['viewOverview', 'viewProjects', 'viewInput'],
-    targetIds: ['harnessViewOverview', 'harnessViewProjects', 'harnessViewInput'] },
+    tabKeys: ['viewOverview', 'viewLight', 'viewCompactDark', 'viewCompactLight'],
+    targetIds: ['harnessViewOverview', 'harnessViewLight', 'harnessViewCompactDark', 'harnessViewCompactLight'] },
   { name: 'flow', label: 'flowTabs', panelClass: 'harness-demo-panel', states: ['plan', 'work', 'review'],
     tabKeys: ['flowPlan', 'flowWork', 'flowReview'],
     targetIds: ['harnessFlowPlan', 'harnessFlowWork', 'harnessFlowReview'],
@@ -128,7 +128,8 @@ const tabGroups = groupSpecs.map(spec => {
   const shellButtons = pageNodes.filter(node => within(node, tablist) &&
     (node.attrs.role === 'tab' || (node.tag === 'button' && has(node, 'data-tab-target'))));
   assert.deepEqual(shellButtons, tabs, spec.name + ': shell must not bind extra unnamed/non-tab controls');
-  assert.equal(tabs.length, 3, spec.name + ': three distinct views');
+  assert.equal(tabs.length, spec.tabKeys.length, spec.name + ': expected distinct views');
+  assert.equal(tabs.length, spec.name === 'screenshots' ? 4 : 3, spec.name + ': screenshot set grew, other explorers stay at three');
   assert.deepEqual(tabs.map(node => node.attrs['data-i18n']), spec.tabKeys.map(key => 'harness.' + key));
   assert.deepEqual(tabs.map(node => node.attrs['data-tab-target']), spec.targetIds, spec.name + ': stable actual panel targets');
   const explorers = spec.states ? pageNodes.filter(node => node.attrs['data-harness-explorer'] === spec.name) : [];
@@ -169,23 +170,31 @@ const tabGroups = groupSpecs.map(spec => {
 });
 const allTabs = tabGroups.flatMap(group => group.tabs);
 const allTargets = tabGroups.flatMap(group => group.targets);
-assert.equal(new Set(allTabs).size, 12, 'each group owns distinct controls');
-assert.equal(new Set(allTargets).size, 12, 'no panel target aliases within or across groups');
+assert.equal(new Set(allTabs).size, 13, 'each group owns distinct controls');
+assert.equal(new Set(allTargets).size, 13, 'no panel target aliases within or across groups');
 assert.deepEqual(pageNodes.filter(node => node.attrs.role === 'tab'), allTabs, 'no orphan tab controls');
 assert.deepEqual(pageNodes.filter(node => node.attrs.role === 'tabpanel'), allTargets, 'no orphan ARIA panels');
 assert.deepEqual(pageNodes.filter(node => hasClass(node, 'harness-view-panel') || hasClass(node, 'harness-demo-panel')),
   allTargets, 'every product panel is managed by exactly one shared group');
+const screenshotSources = [
+  'assets/mingshen-harness/workspace-orbit-dark.webp',
+  'assets/mingshen-harness/workspace-orbit-light.webp',
+  'assets/mingshen-harness/workspace-compact-dark.webp',
+  'assets/mingshen-harness/workspace-compact-light.webp'
+];
 const { targets } = tabGroups[0];
-for (const panel of targets) {
+for (const [index, panel] of targets.entries()) {
   const images = pageNodes.filter(node => node.tag === 'img' && within(node, panel));
-  assert.equal(images.length, 1, panel.attrs.id + ': show an actual screenshot');
+  assert.equal(images.length, 1, panel.attrs.id + ': show one actual screenshot');
   const image = images[0];
   assert.ok(image.attrs.alt?.trim(), panel.attrs.id + ': static image description');
-  assert.match(image.attrs.src, /^assets\/mingshen-harness\//, 'use the product screenshot asset');
+  assert.equal(image.attrs.src, screenshotSources[index], panel.attrs.id + ': dedicated product screenshot');
   assert.ok(Number(image.attrs.width) > 0 && Number(image.attrs.height) > 0, 'reserve screenshot geometry');
   assert.equal(image.parent.tag, 'a');
   assert.equal(image.parent.attrs.href, image.attrs.src, 'screenshot link opens the displayed original');
 }
+assert.equal(new Set(targets.map(panel => pageNodes.find(node => node.tag === 'img' && within(node, panel)).attrs.src)).size,
+  screenshotSources.length, 'four distinct screenshots, no reused crops');
 for (const group of tabGroups) {
   for (const target of [group.tablist, ...group.targets]) {
     for (let ancestor = target; ancestor; ancestor = ancestor.parent) {
@@ -206,6 +215,60 @@ for (let node = overview; node; node = node.parent) {
   assert.equal(has(node, 'data-reveal'), false, 'shared reveal must not hide the screenshot stage');
   assert.doesNotMatch(node.attrs.style ?? '', /(?:display\s*:\s*none|visibility\s*:\s*hidden|opacity\s*:\s*0(?:\s|;|$))/, 'no inline no-JS concealment');
 }
+const chapterIds = ['workstation', 'image-studio', 'desktop-pet', 'collaboration', 'craft', 'models', 'download'];
+const chapterNav = pageNodes.filter(node => has(node, 'data-harness-chapters'));
+assert.equal(chapterNav.length, 1, 'one chapter navigation');
+const chapterLinks = pageNodes.filter(node => node.tag === 'a' && within(node, chapterNav[0]) &&
+  /^#[a-z0-9-]+$/.test(node.attrs.href ?? ''));
+assert.deepEqual(chapterLinks.map(node => node.attrs.href), chapterIds.map(id => '#' + id),
+  'chapter navigation follows the documented order');
+const chapterSections = chapterIds.map(id => {
+  const section = uniqueId(id);
+  assert.equal(section.tag, 'section', id + ': chapter anchor is a real section');
+  return section;
+});
+for (let index = 1; index < chapterSections.length; index++) {
+  assert.ok(pageNodes.indexOf(chapterSections[index - 1]) < pageNodes.indexOf(chapterSections[index]),
+    'chapter sections stay in navigation order');
+}
+const showcaseSections = [
+  { id: 'workstation', src: 'assets/mingshen-harness/workstation.webp' },
+  { id: 'image-studio', src: 'assets/mingshen-harness/image-studio.webp' },
+  { id: 'desktop-pet', src: 'assets/mingshen-harness/desktop-pet.webp' }
+];
+for (const { id, src } of showcaseSections) {
+  const section = uniqueId(id);
+  for (let node = section; node; node = node.parent) {
+    assert.equal(has(node, 'hidden'), false, id + ': new section must stay visible');
+    assert.notEqual(node.attrs['aria-hidden'], 'true', id + ': new section must stay accessible');
+  }
+  assert.ok(pageNodes.some(node => /^h[1-6]$/.test(node.tag) && within(node, section) && node.text.trim()),
+    id + ': section heading');
+  const images = pageNodes.filter(node => node.tag === 'img' && within(node, section));
+  assert.equal(images.length, 1, id + ': one actual product screenshot');
+  const image = images[0];
+  assert.equal(image.attrs.src, src, id + ': exact product screenshot asset');
+  assert.ok(image.attrs.alt?.trim(), id + ': static image description');
+  assert.match(image.attrs['data-i18n-attr'] ?? '', /(?:^|,)\s*alt:harness\.[A-Za-z][A-Za-z0-9_.]*/,
+    id + ': translated alternative text');
+  assert.ok(Number.isInteger(Number(image.attrs.width)) && Number(image.attrs.width) > 0, id + ': true intrinsic width');
+  assert.ok(Number.isInteger(Number(image.attrs.height)) && Number(image.attrs.height) > 0, id + ': true intrinsic height');
+  assert.equal(image.attrs.loading, 'lazy', id + ': defer section screenshot');
+  assert.equal(image.attrs.decoding, 'async', id + ': decode off the main thread');
+  let anchor = image.parent;
+  while (anchor && anchor !== section && anchor.tag !== 'a') anchor = anchor.parent;
+  assert.equal(anchor && anchor.tag, 'a', id + ': image opens the original');
+  assert.equal(anchor.attrs.href, src, id + ': anchor points at the displayed asset');
+}
+const productImages = pageNodes.filter(node => node.tag === 'img' &&
+  (node.attrs.src ?? '').startsWith('assets/mingshen-harness/'));
+assert.deepEqual(productImages.map(node => node.attrs.src),
+  [...screenshotSources, ...showcaseSections.map(section => section.src)], 'all seven distinct product screenshots in order');
+assert.equal(productImages[0].attrs.fetchpriority, 'high', 'first overview screenshot is high priority');
+for (const image of productImages.slice(1)) {
+  assert.equal(image.attrs.loading, 'lazy', image.attrs.src + ': defer below-the-fold screenshots');
+}
+
 const stage = pageNodes.filter(node => has(node, 'data-harness-stage'));
 const screen = pageNodes.filter(node => has(node, 'data-harness-screen'));
 const flow = pageNodes.filter(node => has(node, 'data-harness-flow'));
@@ -458,7 +521,7 @@ for (const group of shellUI.groups) {
   clickTab(group, destination);
   assertIdempotent(group.name + ': setup after keyboard and visibility repair');
 }
-console.log('Harness integration: 4 independent shared tablists / 12 real panels, reciprocal ARIA and no-JS content, ordered separate scripts, CSS ownership/reduced motion, real setupTabs clicks/arrows/Home/End/focus/bubbling events/scoped idempotency passed (no browser).');
+console.log('Harness integration: 4 independent shared tablists / 13 real panels, reciprocal ARIA and no-JS content, four screenshot views plus three product sections, ordered separate scripts, CSS ownership/reduced motion, real setupTabs clicks/arrows/Home/End/focus/bubbling events/scoped idempotency passed (no browser).');
 
 const usedKeys = new Set(pageNodes.flatMap(node => Object.entries(node.attrs)
   .filter(([name]) => name.startsWith('data-i18n'))
