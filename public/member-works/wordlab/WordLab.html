@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WordLab · 多语言词库 · OCR · 闯关</title>
-<meta name="wordlab-source" content="1121-e86470c4021d4a7b">
+<meta name="wordlab-source" content="1124-ece02ca6d6a17b44">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3EW%3C/text%3E%3C/svg%3E">
 <style>
 :root{--wl-bg:transparent;--dx:0px;--dy:0px;
@@ -44452,6 +44452,741 @@ try { renderHome(); } catch (e) { }
   } catch (e) {
     OUT.error = String((e && e.message) || e);
   }
+})();
+
+/* ===== ng-portal.js ===== */
+/* ===================================================================
+ * ng-portal.js —— 登录 / 教师词库 / 学生选课（云端存 Cloudflare KV）
+ * -------------------------------------------------------------------
+ * 数据（KV key=state）：
+ *   { v:2, updated, auth:{t,s}, tree:[{n,children:[...],words:[{w,ph,pos,m,ex}]}] }
+ *   tree 是四层：学科 → 年级 → 学期 → 课程（leaf 带 words）
+ * 读：GET  https://wordlab-api.pages.dev/api/state
+ * 写：PUT  同地址（仅老师主动保存时）；读取失败回退本机，不自动上传。
+ * 登录：教师 / 学生，默认密码 0000（存在 state.auth，可在教师端改）
+ * =================================================================== */
+(function () {
+  'use strict';
+
+  var API = {
+    base: 'https://wordlab-api.pages.dev/api/state'
+  };
+  var CACHE = 'wordlab_cloud_cache';
+  var SES_KEY = 'wordlab_session';
+  var ROLE_CLS = { teacher: 'wl-role-teacher', student: 'wl-role-student' };
+
+  var STATE = null;            /* 云端/缓存的状态 */
+  var SESSION = null;          /* {role,user} */
+  var CUR = null;              /* 教师端当前选中的 lesson 节点 */
+
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, txt) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (txt != null) e.textContent = txt;
+    return e;
+  }
+  function toast_(msg) {
+    try { if (window.toast) return window.toast(msg); } catch (e) { }
+    console.log('[portal]', msg);
+  }
+  function nowISO() { return new Date().toISOString().replace(/\.\d+Z$/, 'Z'); }
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
+
+  /* ---------------- 云端 ---------------- */
+  function cloudGet(){
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, 8000);
+    return fetch(API.base + '?t=' + Date.now(), { cache: 'no-store', signal: ctrl.signal })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .catch(function(){ return null; })
+      .then(function(st){ clearTimeout(timer); return st; });
+  }
+  function cloudPut(state){
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, 15000);
+    return fetch(API.base, {
+      method: 'PUT',
+      headers: { 'content-type': 'text/plain' },
+      body: JSON.stringify(state),
+      signal: ctrl.signal
+    }).then(function(r){ return r.ok; }).catch(function(){ return false; })
+      .then(function(saved){ clearTimeout(timer); return saved; });
+  }
+
+  /* ---------------- 状态 ---------------- */
+  function blankState() {
+    return {
+      v: 2, updated: nowISO(), auth: { t: '0000', s: '0000' },
+      tree: [{ n: '英语', children: [] }]
+    };
+  }
+  /* 没有云端数据时：把本机词库按 unit 迁成「未分类/未分类/未分类/<unit>」 */
+  function migrateLocal() {
+    var st = blankState();
+    var words = [];
+    try { words = JSON.parse(lsGet('wordlab_v1') || '[]') || []; } catch (e) { words = []; }
+    var byUnit = {};
+    words.forEach(function (w) {
+      if (!w || !w.w) return;
+      var u = w.unit || '未分类';
+      (byUnit[u] = byUnit[u] || []).push({
+        w: w.w, ph: w.ph || '', pos: w.pos || '', m: w.m || '',
+        ex: w.ex || '', exZh: w.exZh || ''
+      });
+    });
+    var subj = st.tree[0];
+    var g = { n: '未分类', children: [] };
+    subj.children.push(g);
+    var t = { n: '未分类', children: [] };
+    g.children.push(t);
+    Object.keys(byUnit).forEach(function (u) {
+      t.children.push({ n: u, words: byUnit[u] });
+    });
+    return st;
+  }
+  function normalize(st) {
+    if (!st || typeof st !== 'object') return blankState();
+    if (!st.auth) st.auth = { t: '0000', s: '0000' };
+    if (!Array.isArray(st.tree) || !st.tree.length) st.tree = blankState().tree;
+    return st;
+  }
+  function saveCache() {
+    try { lsSet(CACHE, JSON.stringify(STATE)); } catch (e) { }
+  }
+  function loadState() {
+    var cached = null;
+    try { cached = JSON.parse(lsGet(CACHE) || 'null'); } catch (e) { }
+    return cloudGet().then(function (st) {
+      if (st && st.tree) { STATE = normalize(st); saveCache(); return STATE; }
+      /* 断网或云端为空：优先用上次缓存，否则仅在本机迁移；上传由教师主动保存。 */
+      STATE = normalize(cached || migrateLocal());
+      saveCache();
+      return STATE;
+    }).catch(function () {
+      STATE = normalize(cached || migrateLocal());
+      return STATE;
+    });
+  }
+
+  /* ---------------- 树工具 ---------------- */
+  function depthOf(node) { return node.__d || 0; }
+  function walk(node, d, fn) {
+    node.__d = d;
+    fn(node, d);
+    (node.children || []).forEach(function (c) { walk(c, d + 1, fn); });
+  }
+  function leaves() {
+    var out = [];
+    STATE.tree.forEach(function (s) {
+      walk(s, 0, function (n, d) {
+        if (d === 3) out.push(n);
+      });
+    });
+    return out;
+  }
+  function pathOf(leaf) {
+    var p = [];
+    STATE.tree.forEach(function (s) { walk(s, 0, function () { }); });
+    /* 简化：从叶子往上靠父子索引找，成本低（树很小） */
+    function find(node, d, trail) {
+      if (node === leaf) { p = trail.concat(node.n); return true; }
+      var kids = node.children || [];
+      for (var i = 0; i < kids.length; i++) {
+        if (find(kids[i], d + 1, trail.concat(node.n))) return true;
+      }
+      return false;
+    }
+    for (var i = 0; i < STATE.tree.length; i++) {
+      if (find(STATE.tree[i], 0, [])) break;
+    }
+    return p;
+  }
+  function allWords() {
+    var n = 0;
+    leaves().forEach(function (l) { n += (l.words || []).length; });
+    return n;
+  }
+  /* 某个节点以下的全部单词（去重：同词同义只留一份），用于「点学科/年级/学期直接用」 */
+  function subWords(node) {
+    var out = [], seen = {};
+    (function rec(n) {
+      (n.children || []).forEach(rec);
+      (n.words || []).forEach(function (w) {
+        var k = (w.w || '') + '|' + (w.pos || '') + '|' + (w.m || '');
+        if (seen[k]) return;
+        seen[k] = 1; out.push(w);
+      });
+    })(node);
+    return out;
+  }
+  function subLessons(node) {
+    var n = 0;
+    (function rec(x) {
+      if ((x.words || []).length) n++;
+      (x.children || []).forEach(rec);
+    })(node);
+    return n;
+  }
+
+  /* ---------------- 登录 ---------------- */
+  function readSession() {
+    try { SESSION = JSON.parse(sessionStorage.getItem(SES_KEY) || 'null'); } catch (e) { SESSION = null; }
+    return SESSION;
+  }
+  function writeSession(s) {
+    SESSION = s;
+    try { sessionStorage.setItem(SES_KEY, JSON.stringify(s)); } catch (e) { }
+    applyRoleClass();
+  }
+  function applyRoleClass() {
+    document.body.classList.remove(ROLE_CLS.teacher, ROLE_CLS.student);
+    if (SESSION && SESSION.role) document.body.classList.add(ROLE_CLS[SESSION.role]);
+    var b = $('wlRoleBadge');
+    if (b) {
+      b.textContent = SESSION ? (SESSION.role === 'teacher' ? '👩‍🏫 教师' : '🎒 学生') : '';
+      b.style.display = SESSION ? '' : 'none';
+    }
+  }
+
+  function buildLogin() {
+    if ($('wlLogin')) return $('wlLogin');
+    var m = el('div', 'wl-mask');
+    m.id = 'wlLogin';
+    m.innerHTML =
+      '<div class="wl-card" role="dialog" aria-modal="true">' +
+      '  <div class="wl-brand"><span class="wl-logo">W</span><div>WordLab<span class="wl-sub">登录后开始使用</span></div></div>' +
+      '  <div class="wl-role">' +
+      '    <button type="button" class="wl-rbtn on" data-role="student">🎒 学生</button>' +
+      '    <button type="button" class="wl-rbtn" data-role="teacher">👩‍🏫 教师</button>' +
+      '  </div>' +
+      '  <label class="wl-row"><span>账号</span><input id="wlUser" class="inp" value="student" autocomplete="username"></label>' +
+      '  <label class="wl-row"><span>密码</span><input id="wlPass" class="inp" type="password" value="0000" autocomplete="current-password"></label>' +
+      '  <div class="wl-err" id="wlErr"></div>' +
+      '  <button type="button" class="wl-go" id="wlGo">进入</button>' +
+      '  <div class="wl-tip">教师选课后可管理四级词库；学生进入后只会看到练习。</div>' +
+      '</div>';
+    document.body.appendChild(m);
+    var role = 'student';
+    m.querySelectorAll('.wl-rbtn').forEach(function (b) {
+      b.addEventListener('click', function () {
+        role = b.dataset.role;
+        m.querySelectorAll('.wl-rbtn').forEach(function (x) { x.classList.toggle('on', x === b); });
+        $('wlUser').value = role === 'teacher' ? 'teacher' : 'student';
+      });
+    });
+    $('wlGo').addEventListener('click', function () { doLogin(role); });
+    $('wlPass').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(role); });
+    return m;
+  }
+  function showLogin() {
+    var m = buildLogin();
+    m.style.display = 'flex';
+    setTimeout(function () { try { $('wlGo').focus(); } catch (e) { } }, 50);
+  }
+  function hideLogin() {
+    var m = $('wlLogin');
+    if (m) m.style.display = 'none';
+  }
+  function doLogin(role) {
+    var user = ($('wlUser').value || '').trim();
+    var pass = $('wlPass').value || '';
+    var need = role === 'teacher' ? STATE.auth.t : STATE.auth.s;
+    if (!user || pass !== need) {
+      $('wlErr').textContent = '账号或密码不对（默认密码 0000）';
+      return;
+    }
+    $('wlErr').textContent = '';
+    writeSession({ role: role, user: user });
+    hideLogin();
+    if (role === 'teacher') { go('teach'); }
+    else { openPicker(); }
+  }
+
+  /* ---------------- 页头：角色 + 切换 ---------------- */
+  function buildHeaderBits() {
+    var host = document.querySelector('.hdr-r') || document.querySelector('.hdr') || document.querySelector('header');
+    if (!host) return;
+    if ($('wlRoleBadge')) return;
+    var badge = el('button', 'wl-badge', '');
+    badge.id = 'wlRoleBadge';
+    badge.title = '点击切换账号';
+    badge.addEventListener('click', function () {
+      try { sessionStorage.removeItem(SES_KEY); } catch (e) { }
+      SESSION = null; applyRoleClass(); showLogin();
+    });
+    var anchor = $('aboutBtn') || $('themeBtn');
+    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(badge, anchor);
+    else host.appendChild(badge);
+    applyRoleClass();
+  }
+
+  /* ---------------- 教师页 ---------------- */
+  function ensureTeachPage() {
+    if ($('p-teach')) return;
+    var s = el('section', 'page hide');
+    s.id = 'p-teach';
+    s.innerHTML =
+      '<div class="pgback"><button class="btn" onclick="go(\'home\')">🏠 主页</button>' +
+      '<button class="btn" onclick="go(\'bank\')">📚 词库与设置</button>' +
+      '<span class="pg-now">教师 · 词库管理</span></div>' +
+      '<div class="card tc-wrap">' +
+      '  <div class="tc-head"><b>词库管理</b>' +
+      '    <span class="tc-stat" id="tcStat"></span>' +
+      '    <span class="tc-sp"></span>' +
+      '    <button class="btn" id="tcReload">⟳ 从云端重载</button>' +
+      '    <button class="btn ok" id="tcSave">💾 保存到云端</button>' +
+      '  </div>' +
+      '  <div class="tc-body">' +
+      '    <div class="tc-tree"><div class="tc-treeh">学科 → 年级 → 学期 → 课程</div><div id="tcTree"></div></div>' +
+      '    <div class="tc-main">' +
+      '      <div class="tc-empty" id="tcEmpty">左边选一个课程；没课就先「＋学科 / ＋年级 / ＋学期 / ＋课程」。</div>' +
+      '      <div id="tcLesson" style="display:none">' +
+      '        <div class="tc-lh"><b id="tcLName"></b><span class="tc-lp" id="tcLPath"></span>' +
+      '          <span class="tc-sp"></span>' +
+      '          <button class="btn" id="tcAddWord">＋ 添加单词</button>' +
+      '          <button class="btn" id="tcUpload">📄 上传文件</button>' +
+      '          <input type="file" id="tcFile" accept=".txt,.json,.csv,.md" style="display:none">' +
+      '        </div>' +
+      '        <div class="tc-imp" id="tcImp" style="display:none">' +
+      '          <textarea id="tcImpText" class="inp" rows="4" placeholder="每行一个：单词 | 音标 | 词性 | 释义　或直接粘 JSON 数组"></textarea>' +
+      '          <div class="tc-impr"><button class="btn ok" id="tcImpGo">导入</button><button class="btn" id="tcImpX">取消</button></div>' +
+      '        </div>' +
+      '        <div class="tc-words" id="tcWords"></div>' +
+      '      </div>' +
+      '    </div>' +
+      '  </div>' +
+      '</div>';
+    document.body.appendChild(s);
+
+    $('tcSave').addEventListener('click', function () { saveAll(); });
+    $('tcReload').addEventListener('click', function () { reloadCloud(); });
+    $('tcAddWord').addEventListener('click', function () { $('tcImp').style.display = ''; $('tcImpText').focus(); });
+    $('tcImpX').addEventListener('click', function () { $('tcImp').style.display = 'none'; });
+    $('tcImpGo').addEventListener('click', function () { importText($('tcImpText').value); $('tcImpText').value = ''; $('tcImp').style.display = 'none'; });
+    $('tcUpload').addEventListener('click', function () { $('tcFile').click(); });
+    $('tcFile').addEventListener('change', function (e) {
+      var f = e.target.files && e.target.files[0];
+      if (!f) return;
+      var r = new FileReader();
+      r.onload = function () { importText(String(r.result || '')); };
+      r.readAsText(f, 'utf-8');
+      e.target.value = '';
+    });
+  }
+
+  /* ---------------- 拖拽移动（教师端） ---------------- */
+  var DRAG = null;
+  function depthOfNode(target) {
+    var d = -1;
+    (function rec(list, dep) {
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] === target) { d = dep; return true; }
+        if (list[i].children && rec(list[i].children, dep + 1)) return true;
+      }
+      return false;
+    })(STATE.tree, 0);
+    return d < 0 ? 0 : d;
+  }
+  function findParent(target) {
+    var hit = null;
+    (function rec(list, parent) {
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] === target) { hit = { list: list, parent: parent, index: i }; return true; }
+        if (list[i].children && rec(list[i].children, list[i])) return true;
+      }
+      return false;
+    })(STATE.tree, null);
+    return hit;
+  }
+  function isAncestor(a, b) {
+    var yes = false;
+    (function rec(x) { if (x === b) yes = true; (x.children || []).forEach(rec); })(a);
+    return yes;
+  }
+  function canDrop(target, moved) {
+    if (!target || !moved || target === moved) return false;
+    if (isAncestor(moved, target)) return false;            /* 不能拖进自己的子树 */
+    var md = depthOfNode(moved), td = depthOfNode(target);
+    if (td === 3) return false;                              /* 不能塞进一门课里 */
+    if (md === 0 && td > 0) return false;                    /* 学科不能下沉成子节点 */
+    if (td >= md) return false;                              /* 同级/更深的位置会破坏层级，拒绝 */
+    return true;
+  }
+  /* 若目标层数不够，自动垫「未分类」补到合适深度（课程始终停在 d3） */
+  function ensureParent(target, childDepth) {
+    var cur = target, d = depthOfNode(target);
+    while (d < childDepth - 1) {
+      cur.children = cur.children || [];
+      var next = null;
+      for (var i = 0; i < cur.children.length; i++) {
+        var c = cur.children[i];
+        if (!(c.words || []).length && c.children) { next = c; break; }
+      }
+      if (!next) { next = { n: '未分类', children: [] }; cur.children.push(next); }
+      cur = next; d++;
+    }
+    return cur;
+  }
+
+  function renderTree() {
+    var box = $('tcTree'); if (!box) return;
+    box.innerHTML = '';
+    function node(node_, d) {
+      node_.__d = d;
+      var row = el('div', 'tc-row d' + d);
+      row.draggable = true;
+      row.__node = node_;
+      row.addEventListener('dragstart', function (ev) {
+        DRAG = node_;
+        try { ev.dataTransfer.setData('text/plain', node_.n || ''); ev.dataTransfer.effectAllowed = 'move'; } catch (e) { }
+        row.classList.add('draging');
+      });
+      row.addEventListener('dragend', function () {
+        DRAG = null;
+        box.querySelectorAll('.draging,.drop-ok').forEach(function (x) { x.classList.remove('draging'); x.classList.remove('drop-ok'); });
+      });
+      row.addEventListener('dragover', function (ev) {
+        if (!DRAG || !canDrop(node_, DRAG)) return;
+        ev.preventDefault();
+        try { ev.dataTransfer.dropEffect = 'move'; } catch (e) { }
+        row.classList.add('drop-ok');
+      });
+      row.addEventListener('dragleave', function () { row.classList.remove('drop-ok'); });
+      row.addEventListener('drop', function (ev) {
+        ev.preventDefault(); row.classList.remove('drop-ok');
+        if (!DRAG || !canDrop(node_, DRAG)) return;
+        var moved = DRAG; DRAG = null;
+        var src = findParent(moved);
+        if (src) src.list.splice(src.index, 1);
+        var dest = ensureParent(node_, moved.__d);
+        dest.children = dest.children || [];
+        dest.children.push(moved);
+        (function open(x) { x.__closed = false; (x.children || []).forEach(open); })(node_);
+        renderTree(); CUR = null; renderLesson(); paintStat();
+        toast_('已把「' + moved.n + '」移到「' + node_.n + '」下 · 记得点「保存到云端」');
+      });
+      var lab = el('button', 'tc-name');
+      lab.textContent = (d === 0 ? '📚 ' : d === 1 ? '🎓 ' : d === 2 ? '🗓 ' : '📄 ') + (node_.n || '未命名');
+      if (d === 3) lab.textContent += ' · ' + ((node_.words || []).length) + ' 词';
+      else lab.textContent += ' · ' + subWords(node_).length + ' 词';
+      lab.addEventListener('click', function () {
+        if (d < 3) { node_.__closed = !node_.__closed; renderTree(); return; }
+        CUR = node_; renderLesson();
+        box.querySelectorAll('.tc-name.on').forEach(function (x) { x.classList.remove('on'); });
+        lab.classList.add('on');
+      });
+      row.appendChild(lab);
+      var ops = el('span', 'tc-ops');
+      if (d < 3) {
+        var add = el('button', 'tc-mini', d === 0 ? '＋年级' : d === 1 ? '＋学期' : '＋课程');
+        add.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          var name = prompt(d === 0 ? '年级名称（如：高一）' : d === 1 ? '学期（如：上学期）' : '课程名称（如：第1课）');
+          if (!name) return;
+          node_.children = node_.children || [];
+          node_.children.push(d === 2 ? { n: name.trim(), words: [] } : { n: name.trim(), children: [] });
+          node_.__closed = false; renderTree(); paintStat();
+        });
+        ops.appendChild(add);
+      }
+      var ren = el('button', 'tc-mini', '改');
+      ren.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        var v = prompt('改名', node_.n); if (v == null) return;
+        node_.n = v.trim() || node_.n; renderTree(); renderLesson();
+      });
+      var del = el('button', 'tc-mini danger', '删');
+      del.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        if (!confirm('删除「' + node_.n + '」及其下所有内容？')) return;
+        removeNode(node_); renderTree(); renderLesson(); paintStat();
+      });
+      ops.appendChild(ren); ops.appendChild(del);
+      row.appendChild(ops);
+      box.appendChild(row);
+      if (d < 3 && !node_.__closed) (node_.children || []).forEach(function (c) { node(c, d + 1); });
+    }
+    STATE.tree.forEach(function (n) { node(n, 0); });
+    var addSub = el('button', 'btn tc-addsub', '＋ 学科');
+    addSub.addEventListener('click', function () {
+      var v = prompt('学科名称（如：英语）'); if (!v) return;
+      STATE.tree.push({ n: v.trim(), children: [], __open: true });
+      renderTree(); paintStat();
+    });
+    box.appendChild(addSub);
+    paintStat();
+  }
+  function removeNode(target) {    function del(list) {
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] === target) { list.splice(i, 1); return true; }
+        if (list[i].children && del(list[i].children)) return true;
+      }
+      return false;
+    }
+    del(STATE.tree);
+    if (CUR === target) { CUR = null; renderLesson(); }
+  }
+  function paintStat() {
+    var st = $('tcStat'); if (!st) return;
+    st.textContent = leaves().length + ' 门课 · ' + allWords() + ' 词';
+  }
+
+  function renderLesson() {
+    var box = $('tcWords');
+    if (!box) return;
+    if (!CUR) { $('tcEmpty').style.display = ''; $('tcLesson').style.display = 'none'; return; }
+    $('tcEmpty').style.display = 'none';
+    $('tcLesson').style.display = '';
+    $('tcLName').textContent = CUR.n;
+    $('tcLPath').textContent = pathOf(CUR).join(' / ');
+    var ws = CUR.words || (CUR.words = []);
+    box.innerHTML = '';
+    if (!ws.length) {
+      box.appendChild(el('div', 'tc-empty2', '这门课还没有单词 —— 点「＋ 添加单词」或「📄 上传文件」。'));
+      return;
+    }
+    var tb = el('table', 'tc-tbl');
+    tb.innerHTML = '<thead><tr><th>#</th><th>单词</th><th>音标</th><th>词性</th><th>释义</th><th></th></tr></thead>';
+    var body = el('tbody');
+    ws.forEach(function (w, i) {
+      var tr = el('tr');
+      tr.innerHTML = '<td>' + (i + 1) + '</td>' +
+        '<td><b>' + esc(w.w) + '</b></td><td>' + esc(w.ph || '') + '</td>' +
+        '<td>' + esc(w.pos || '') + '</td><td>' + esc(w.m || '') + '</td><td></td>';
+      var ops = tr.lastElementChild;
+      var e1 = el('button', 'tc-mini', '改');
+      e1.addEventListener('click', function () {
+        var v = prompt('单词', w.w); if (v == null) return;
+        var p = prompt('音标', w.ph || ''); var s = prompt('词性', w.pos || '');
+        var m = prompt('释义', w.m || '');
+        w.w = v; w.ph = p || ''; w.pos = s || ''; w.m = m || '';
+        renderLesson();
+      });
+      var e2 = el('button', 'tc-mini danger', '删');
+      e2.addEventListener('click', function () {
+        ws.splice(i, 1); renderLesson(); paintStat();
+      });
+      ops.appendChild(e1); ops.appendChild(e2);
+      body.appendChild(tr);
+    });
+    tb.appendChild(body);
+    box.appendChild(tb);
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+
+  function parseWords(text) {
+    var out = [];
+    var t = (text || '').trim();
+    if (!t) return out;
+    if (t[0] === '[' || t[0] === '{') {
+      try {
+        var j = JSON.parse(t);
+        var arr = Array.isArray(j) ? j : (j.words || []);
+        arr.forEach(function (x) {
+          if (!x) return;
+          var w = x.w || x.word || x.en;
+          if (!w) return;
+          out.push({ w: String(w).trim(), ph: x.ph || x.phonetic || '', pos: x.pos || '', m: x.m || x.mean || x.zh || '', ex: x.ex || '', exZh: x.exZh || '' });
+        });
+        return out;
+      } catch (e) { /* 落到按行解析 */ }
+    }
+    t.split(/\r?\n/).forEach(function (line) {
+      line = line.trim();
+      if (!line) return;
+      var parts = line.split(/\s*[|\t,，]\s*/);
+      var w = parts[0];
+      if (!w) return;
+      out.push({ w: w, ph: parts[1] || '', pos: parts[2] || '', m: parts.slice(3).join(' ') || '' });
+    });
+    return out;
+  }
+  function importText(text) {
+    if (!CUR) return;
+    var list = parseWords(text);
+    if (!list.length) { toast_('没解析到单词'); return; }
+    CUR.words = (CUR.words || []).concat(list);
+    renderLesson(); paintStat();
+    toast_('已加入 ' + list.length + ' 个单词（记得保存）');
+  }
+
+  function saveAll() {
+    if (!SESSION || SESSION.role !== 'teacher') return;
+    STATE.updated = nowISO();
+    return cloudPut(STATE).then(function (saved) {
+      if (!saved) throw new Error('请检查网络或课程服务');
+      saveCache();
+      toast_('已保存到云端 · ' + leaves().length + ' 门课 / ' + allWords() + ' 词');
+      return true;
+    }).catch(function (e) {
+      saveCache();
+      toast_('云端保存失败：' + e.message + '（已存本地缓存）');
+      return false;
+    });
+  }
+  function reloadCloud() {
+    cloudGet().then(function (st) {
+      if (!st || !st.tree) { toast_('云端还没有数据'); return; }
+      STATE = normalize(st); saveCache(); CUR = null;
+      renderTree(); renderLesson();
+      toast_('已从云端重载');
+    }).catch(function (e) { toast_('重载失败：' + e.message); });
+  }
+
+  /* ---------------- 学生：选课（任意层级都能直接用） ---------------- */
+  function openPicker() {
+    var m = $('wlPick');
+    if (!m) {
+      m = el('div', 'wl-mask');
+      m.id = 'wlPick';
+      m.innerHTML = '<div class="wl-card wide"><div class="wl-brand"><span class="wl-logo">W</span>' +
+        '<div>选一课开始<span class="wl-sub">学科 → 年级 → 学期 → 课程</span></div>' +
+        '<span class="tc-sp"></span></div><div class="wl-tree wl-picklist" id="wlPickTree"></div>' +
+        '<div class="wl-tip">点课程 = 只用这一课；点学科 / 年级 / 学期 = 用这一层下面全部的词。选完换课点头像旁的角色按钮。</div></div>';
+      document.body.appendChild(m);
+    }
+    m.style.display = 'flex';
+    var box = $('wlPickTree');
+    box.innerHTML = '';
+    var ICON = ['📚', '🎓', '🗓', '📄'];
+    function row(node, d) {
+      var words = subWords(node);
+      var b = el('button', 'wl-pick-row wl-d' + d);
+      if ((node.words || []).length) b.className += ' wl-leaf';
+      var meta = d === 3 ? (words.length + ' 词')
+        : (subLessons(node) + ' 课 · ' + words.length + ' 词');
+      b.innerHTML = '<span class="wl-pick-i">' + ICON[d] + '</span>' +
+        '<b>' + esc(node.n || '未命名') + '</b>' +
+        '<i>' + meta + '</i>' +
+        (d < 3 ? '<em>整层使用</em>' : '');
+      b.addEventListener('click', function () {
+        if (!words.length) { toast_('「' + node.n + '」下面还没有单词'); return; }
+        m.style.display = 'none';
+        applyStudentScope(node, words);
+        go('home');
+        toast_('已进入：' + pathOf(node).join(' / ') + '（' + words.length + ' 词）');
+      });
+      box.appendChild(b);
+      if (d < 3) (node.children || []).forEach(function (c) { row(c, d + 1); });
+    }
+    STATE.tree.forEach(function (n) { row(n, 0); });
+    if (!box.children.length) box.appendChild(el('div', 'tc-empty2', '老师还没建课，先联系老师。'));
+  }
+  function applyStudentScope(node, list) {
+    var words = (list || subWords(node)).map(function (w) {
+      return {
+        w: w.w, ph: w.ph || '', pos: w.pos || '', m: w.m || '',
+        ex: w.ex || '', exZh: w.exZh || '', defEn: '', au: '', auC: '',
+        box: 0, c: 0, wrong: 0, lang: 'en', unit: node.n
+      };
+    });
+    if (!lsGet('wordlab_v1_full')) lsSet('wordlab_v1_full', lsGet('wordlab_v1') || '[]');
+    lsSet('wordlab_v1', JSON.stringify(words));
+    lsSet('wordlab_curScope', 'all');
+    lsSet('wordlab_scope_path', pathOf(node).join(' / '));
+    try { location.reload(); } catch (e) { }
+  }
+
+  /* ---------------- 样式注入 ---------------- */
+  function injectCss() {
+    if ($('wlPortalCss')) return;
+    var st = el('style'); st.id = 'wlPortalCss';
+    st.textContent = [
+      '.wl-mask{position:fixed;inset:0;z-index:9800;display:none;align-items:center;justify-content:center;',
+      'background:rgba(15,18,25,.45);backdrop-filter:blur(8px);padding:16px}',
+      '.wl-card{width:min(420px,100%);max-height:88vh;overflow:auto;background:var(--panel,#fff);border-radius:18px;',
+      'padding:22px;box-shadow:0 24px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:12px}',
+      '.wl-card.wide{width:min(760px,100%)}',
+      '.wl-brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px}',
+      '.wl-logo{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:#fff;',
+      'background:linear-gradient(135deg,#5b6cff,#22c1a4);font-weight:900}',
+      '.wl-sub{display:block;font-weight:500;font-size:12px;color:var(--sub,#6b7280)}',
+      '.wl-role{display:flex;gap:8px}', '.wl-rbtn{flex:1;padding:10px;border-radius:12px;border:1px solid var(--line,#e5e7eb);',
+      'background:transparent;font-weight:700;cursor:pointer}',
+      '.wl-rbtn.on{background:linear-gradient(135deg,#5b6cff,#7c5cff);color:#fff;border-color:transparent}',
+      '.wl-row{display:flex;align-items:center;gap:10px;font-size:14px}', '.wl-row>span{width:44px;color:var(--sub,#6b7280)}',
+      '.wl-row .inp{flex:1}', '.wl-err{color:#e5484d;font-size:13px;min-height:18px}',
+      '.wl-go{padding:12px;border:0;border-radius:12px;color:#fff;font-weight:800;cursor:pointer;',
+      'background:linear-gradient(135deg,#5b6cff,#7c5cff)}',
+      '.wl-tip{font-size:12px;color:var(--sub,#6b7280);line-height:1.5}',
+      '.wl-tree{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;max-height:52vh;overflow:auto}',
+      '.wl-lesson{text-align:left;padding:10px 12px;border-radius:12px;border:1px solid var(--line,#e5e7eb);',
+      'background:transparent;cursor:pointer;display:flex;flex-direction:column;gap:2px}',
+      '.wl-lesson:hover{border-color:#5b6cff}',
+      '.wl-lesson b{font-size:14px}', '.wl-lesson span{font-size:11px;color:var(--sub,#6b7280)}',
+      '.wl-lesson i{font-size:11px;color:#5b6cff;font-style:normal}',
+      '.wl-badge{padding:4px 10px;border-radius:999px;border:1px solid var(--line,#e5e7eb);background:transparent;',
+      'font-size:12px;font-weight:700;cursor:pointer}',
+      /* 学生选课：任意层级可点 */
+      '.wl-picklist{display:flex;flex-direction:column;gap:4px;max-height:56vh;overflow:auto}',
+      '.wl-pick-row{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:8px 10px;',
+      'border-radius:10px;border:1px solid transparent;background:transparent;cursor:pointer;font-size:13px}',
+      '.wl-pick-row:hover{background:rgba(91,108,255,.10);border-color:rgba(91,108,255,.35)}',
+      '.wl-pick-row.wl-d0{font-size:14px;font-weight:800;margin-top:4px}',
+      '.wl-pick-row.wl-d1{padding-left:24px}', '.wl-pick-row.wl-d2{padding-left:42px}', '.wl-pick-row.wl-d3{padding-left:60px}',
+      '.wl-pick-row.wl-leaf{background:rgba(91,108,255,.05)}',
+      '.wl-pick-i{width:18px;text-align:center}', '.wl-pick-row b{font-weight:700}',
+      '.wl-pick-row i{font-style:normal;color:#5b6cff;font-size:12px;margin-left:auto}',
+      '.wl-pick-row em{font-style:normal;font-size:11px;color:var(--sub,#6b7280);border:1px dashed var(--line,#e5e7eb);',
+      'padding:1px 6px;border-radius:999px;margin-left:8px}',
+      '.tc-row.draging{opacity:.45}', '.tc-row.drop-ok{outline:2px dashed #5b6cff;outline-offset:-2px;border-radius:8px;background:rgba(91,108,255,.10)}',
+      /* 教师页 */
+      '.tc-wrap{padding:14px}', '.tc-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}',
+      '.tc-stat{font-size:12px;color:var(--sub,#6b7280)}', '.tc-sp{flex:1}',
+      '.tc-body{display:grid;grid-template-columns:300px 1fr;gap:14px}',
+      '@media(max-width:820px){.tc-body{grid-template-columns:1fr}}',
+      '.tc-tree{border:1px solid var(--line,#e5e7eb);border-radius:12px;padding:8px;max-height:62vh;overflow:auto}',
+      '.tc-treeh{font-size:12px;color:var(--sub,#6b7280);padding:4px 6px}',
+      '.tc-row{display:flex;align-items:center;gap:4px}', '.tc-row.d1{padding-left:14px}', '.tc-row.d2{padding-left:28px}',
+      '.tc-row.d3{padding-left:42px}', '.tc-name{flex:1;text-align:left;background:transparent;border:0;padding:5px 6px;',
+      'border-radius:8px;cursor:pointer;font-size:13px}',
+      '.tc-name:hover{background:rgba(91,108,255,.08)}', '.tc-name.on{background:rgba(91,108,255,.16);font-weight:800}',
+      '.tc-ops{display:flex;gap:2px}', '.tc-mini{border:1px solid var(--line,#e5e7eb);background:transparent;border-radius:6px;',
+      'font-size:11px;padding:2px 5px;cursor:pointer}', '.tc-mini.danger{color:#e5484d}',
+      '.tc-addsub{margin-top:8px;width:100%}', '.tc-empty,.tc-empty2{color:var(--sub,#6b7280);font-size:13px;padding:10px}',
+      '.tc-lh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}', '.tc-lp{font-size:12px;color:var(--sub,#6b7280)}',
+      '.tc-imp{margin-bottom:8px}', '.tc-imp .inp{width:100%;box-sizing:border-box}',
+      '.tc-impr{display:flex;gap:6px;margin-top:6px}',
+      '.tc-tbl{width:100%;border-collapse:collapse;font-size:13px}', '.tc-tbl th,.tc-tbl td{border-bottom:1px solid var(--line,#eef0f3);',
+      'padding:6px 8px;text-align:left}', '.tc-tbl th{color:var(--sub,#6b7280);font-weight:600;font-size:12px}',
+      /* 学生模式隐藏不该看到的入口 */
+      'body.wl-role-student [data-p="bank"]{display:none!important}',
+      'body.wl-role-student #glScopeBar{display:none!important}',
+      'body.wl-role-student #p-teach{display:none!important}'
+    ].join('');
+    document.head.appendChild(st);
+  }
+
+  /* ---------------- 启动 ---------------- */
+  function boot() {
+    injectCss();
+    loadState().then(function () {
+      readSession();
+      buildHeaderBits();
+      ensureTeachPage();
+      renderTree();
+      if (!SESSION) showLogin();
+      else if (SESSION.role === 'teacher') { hideLogin(); }
+      else { hideLogin(); }
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+
+  window.PORTAL = {
+    debugDrag: function(){ return { drag: DRAG ? DRAG.n : null, d: DRAG ? depthOfNode(DRAG) : null }; },
+    state: function () { return STATE; },
+    session: function () { return SESSION; },
+    login: showLogin, picker: openPicker,
+    save: saveAll, reload: reloadCloud,
+    parseWords: parseWords,
+    setAuth: function (t, s) {
+      STATE.auth = { t: t || '0000', s: s || '0000' };
+      toast_('密码已改（记得保存）');
+    }
+  };
 })();
 
 </script>

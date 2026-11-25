@@ -31,7 +31,7 @@ assert.ok(scripts >= 2, 'compile the original inline application without executi
 
 const defaultsSource = page.slice(page.indexOf('/* ===== ng-defaults.js ===== */'), page.indexOf('/* ===== ng-sitecfg.js ===== */'));
 assert.ok(defaultsSource.length > 0, 'updated member defaults are present');
-assert.ok(/<meta name="wordlab-source" content="1121-e86470c4021d4a7b">/.test(page));
+assert.ok(/<meta name="wordlab-source" content="1124-ece02ca6d6a17b44">/.test(page));
 assert.ok(!/(?:["']wordlab_aiKey["']|\bwordlab_aiKey)\s*:\s*["'][^"']+/.test(defaultsSource), 'factory settings contain no default AI key');
 function defaults(initial = {}, session = new Map()) {
   const data = new Map(Object.entries(initial)), reloads = [];
@@ -98,9 +98,9 @@ assert.equal(restored.reloads.length, 0, 'completed migration does not reload ag
 const updated = defaults({
   ...Object.fromEntries(migrated.data), wordlab_pwdhash: 'existing-password-hash'
 });
-assert.equal(updated.data.get('wordlab_v1'), migrated.data.get('wordlab_v1'), '1121 retains the existing vocabulary migration marker');
-assert.equal(updated.data.get('wordlab_pwdhash'), 'existing-password-hash', '1121 does not repeat factory password clearing');
-assert.equal(updated.reloads.length, 0, '1121 does not require a new defaults reload');
+assert.equal(updated.data.get('wordlab_v1'), migrated.data.get('wordlab_v1'), '1124 retains the existing vocabulary migration marker');
+assert.equal(updated.data.get('wordlab_pwdhash'), 'existing-password-hash', '1124 does not repeat factory password clearing');
+assert.equal(updated.reloads.length, 0, '1124 does not require a new defaults reload');
 const corrupt = defaults({ wordlab_v1: '{incomplete', wordlab_log: prior.wordlab_log });
 assert.equal(corrupt.data.get('wordlab_v1'), '{incomplete', 'invalid existing vocabulary remains recoverable');
 assert.equal(corrupt.data.get('wordlab_log'), prior.wordlab_log);
@@ -280,10 +280,10 @@ function worker(source, scope, cacheNames, offline = false) {
 const scope = 'https://example.test/SIA-algorithm-club-site/public/member-works/wordlab/';
 const prefix = `wordlab-${scope}-`;
 const wordlabSource = await read('public/member-works/wordlab/sw.js');
-const cacheNames = ['club-shell-old', 'club-runtime-old', 'unrelated-app', 'wordlab-v2', `${prefix}v1`, `${prefix}v2`, `${prefix}v3`, `${prefix}v4`];
+const cacheNames = ['club-shell-old', 'club-runtime-old', 'unrelated-app', 'wordlab-v2', `${prefix}v1`, `${prefix}v2`, `${prefix}v3`, `${prefix}v4`, `${prefix}v5`];
 const app = worker(wordlabSource, scope, cacheNames);
 await app.activate();
-assert.deepEqual(app.deleted, [`${prefix}v1`, `${prefix}v2`, `${prefix}v3`], 'WordLab deletes only its own obsolete caches');
+assert.deepEqual(app.deleted, [`${prefix}v1`, `${prefix}v2`, `${prefix}v3`, `${prefix}v4`], 'WordLab deletes only its own obsolete caches');
 for (const file of ['WordLab.html', 'manifest.webmanifest', 'pwa/icon-192.png', 'pwa/icon-512.png']) {
   assert.equal(await (await app.request(scope + file)).text(), 'online');
 }
@@ -310,4 +310,277 @@ const club = worker(clubSource, 'https://example.test/SIA-algorithm-club-site/',
 await club.activate();
 assert.deepEqual(club.deleted, ['club-shell-old', 'club-runtime-old'], 'club updates retain member-work caches');
 
-console.log(`WordLab: links, ${scripts} inline scripts compiled, 1269-word migration, default/personal AI isolation and offline requests, credential-free remote config, assets and v4 scoped cache lifecycle passed.`);
+// The 1124 page appends the author's course portal to the final inline script. Execute only
+// that module in a fake browser with a fake fetch: no network, credentials or real storage.
+const portalStart = page.indexOf('/* ===== ng-portal.js ===== */');
+const portalEnd = page.lastIndexOf('</script>');
+assert.ok(portalStart >= 0 && portalEnd > portalStart, 'WordLab 1124 course portal is appended to the final script');
+const portalSource = page.slice(portalStart, portalEnd);
+assert.ok(/function cloudGet\(\)/.test(portalSource) && /function cloudPut\(state\)/.test(portalSource), 'portal cloud helpers are present');
+assert.ok(!/api\.cloudflare\.com|\/accounts\/|\/namespaces?\/|\/tokens?\b/i.test(portalSource), 'portal has no Cloudflare account/namespace/token endpoint');
+const portalClose = portalSource.lastIndexOf('})();');
+assert.ok(portalClose > 0 && portalSource.slice(portalClose).trim() === '})();', 'portal IIFE boundary is present at the end of the module');
+const portalSeam = [
+  '  window.__wordlabPortalTest = {',
+  '    cloudGet: cloudGet, cloudPut: cloudPut, loadState: loadState, saveAll: saveAll,',
+  '    parseWords: parseWords, state: function () { return STATE; },',
+  '    setState: function (s) { STATE = s; }, setSession: function (s) { SESSION = s; }',
+  '  };'
+].join('\n');
+const portalExecutable = `${portalSource.slice(0, portalClose)}${portalSeam}\n${portalSource.slice(portalClose)}`;
+const portalRequests = [];
+const isPut = request => Boolean(request.options && request.options.method === 'PUT');
+function portalHarness(initial = {}) {
+  const data = new Map(Object.entries(initial)), session = new Map();
+  const requests = [], toasts = [], timers = new Map(), cleared = [];
+  let nextTimer = 0;
+  let respond = () => Promise.resolve({ ok: true, json: async () => null });
+  const storage = map => ({
+    get length() { return map.size; },
+    key: index => [...map.keys()][index] ?? null,
+    getItem: key => map.get(key) ?? null,
+    setItem: (key, value) => map.set(key, String(value)),
+    removeItem: key => map.delete(key),
+    clear: () => map.clear()
+  });
+  const classList = { add() {}, remove() {}, toggle() {}, contains: () => false };
+  const document = {
+    readyState: 'loading',
+    addEventListener() {},
+    getElementById() { return null; },
+    querySelector() { return null; },
+    createElement() { return { style: {}, classList, appendChild() {} }; },
+    body: { classList, appendChild() {} },
+    head: { appendChild() {} }
+  };
+  const context = {
+    localStorage: storage(data), sessionStorage: storage(session), document,
+    AbortController, console: { log() {}, warn() {}, error() {} },
+    location: { href: 'https://example.test/club/public/member-works/wordlab/WordLab.html', reload() {} },
+    fetch(url, options) {
+      const request = { url, options };
+      requests.push(request);
+      portalRequests.push(request);
+      return respond(request);
+    },
+    setTimeout(fn, delay) { const id = ++nextTimer; timers.set(id, { id, fn, delay }); return id; },
+    clearTimeout(id) { cleared.push(id); timers.delete(id); },
+    toast(message) { toasts.push(String(message)); },
+    esc(value) { return String(value); }
+  };
+  context.window = context;
+  vm.createContext(context);
+  try {
+    vm.runInContext(portalExecutable, context, { filename: 'WordLab-portal' });
+  } catch {
+    throw new Error('WordLab portal test fixture failed to initialize');
+  }
+  const test = context.__wordlabPortalTest;
+  assert.ok(test && typeof test.cloudGet === 'function' && typeof test.saveAll === 'function', 'portal test seam is available');
+  return {
+    data, requests, toasts, timers, cleared, test,
+    respond(fn) { respond = fn; },
+    cached() {
+      const value = data.get('wordlab_cloud_cache');
+      return value == null ? null : JSON.parse(value);
+    },
+    state() { return JSON.parse(JSON.stringify(test.state())); }
+  };
+}
+function deferred() {
+  let resolve, reject;
+  const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
+}
+const okJSON = value => ({ ok: true, json: async () => value });
+const cloudCourse = {
+  v: 2, updated: '2026-01-02T03:04:05Z', auth: { t: '1111', s: '2222' },
+  tree: [{ n: '英语', children: [{ n: '高一', children: [{ n: '上学期', children: [
+    { n: '第1课', words: [{ w: 'cloud', ph: '', pos: 'n.', m: '云', ex: '', exZh: '' }] }
+  ] }] }] }]
+};
+
+// Reads: 8 second abort, no-store, failure tolerated as empty.
+const cloudRead = portalHarness();
+const readDeferred = deferred();
+cloudRead.respond(() => readDeferred.promise);
+const readPromise = cloudRead.test.cloudGet();
+assert.equal(cloudRead.requests.length, 1, 'cloud read issues one GET');
+const readRequest = cloudRead.requests[0];
+assert.ok(readRequest.url.startsWith('https://wordlab-api.pages.dev/api/state?t='), 'cloud read uses the course API');
+assert.ok(!readRequest.options.method || readRequest.options.method === 'GET');
+assert.equal(readRequest.options.cache, 'no-store');
+const readTimer = [...cloudRead.timers.values()].find(timer => timer.delay === 8000);
+assert.ok(readTimer, 'cloud read uses an 8s abort timer');
+assert.equal(readRequest.options.signal.aborted, false);
+readTimer.fn();
+assert.equal(readRequest.options.signal.aborted, true, 'cloud read aborts at 8s');
+readDeferred.resolve(okJSON(cloudCourse));
+assert.equal((await readPromise).tree[0].n, '英语');
+assert.ok(cloudRead.cleared.includes(readTimer.id), 'cloud read clears its abort timer');
+const readFailure = portalHarness();
+readFailure.respond(() => Promise.reject(new Error('offline')));
+const readFailurePromise = readFailure.test.cloudGet();
+const readFailureTimer = [...readFailure.timers.values()].find(timer => timer.delay === 8000);
+assert.ok(readFailureTimer, 'failed cloud read starts an 8s abort timer');
+assert.equal(await readFailurePromise, null, 'cloud read failure resolves empty');
+assert.ok(readFailure.cleared.includes(readFailureTimer.id), 'failed cloud read clears its abort timer');
+const readHTTPError = portalHarness();
+readHTTPError.respond(() => Promise.resolve({ ok: false }));
+assert.equal(await readHTTPError.test.cloudGet(), null, 'cloud read HTTP error resolves empty');
+
+// Writes: 15 second abort and a plain-text JSON body.
+const cloudWrite = portalHarness();
+const writeDeferred = deferred();
+cloudWrite.respond(() => writeDeferred.promise);
+const writePromise = cloudWrite.test.cloudPut({ v: 2, auth: { t: '0000', s: '0000' }, tree: [] });
+const writeRequest = cloudWrite.requests[0];
+assert.equal(writeRequest.options.method, 'PUT');
+assert.equal(writeRequest.options.headers['content-type'], 'text/plain');
+assert.equal(JSON.parse(writeRequest.options.body).v, 2);
+const writeTimer = [...cloudWrite.timers.values()].find(timer => timer.delay === 15000);
+assert.ok(writeTimer, 'cloud write uses a 15s abort timer');
+writeTimer.fn();
+assert.equal(writeRequest.options.signal.aborted, true, 'cloud write aborts at 15s');
+writeDeferred.resolve({ ok: true });
+assert.equal(await writePromise, true);
+assert.ok(cloudWrite.cleared.includes(writeTimer.id), 'cloud write clears its abort timer');
+
+// Startup: valid cloud state loads; failure or empty cloud prefers cached courses; no cache
+// migrates the local vocabulary; a teacher startup still never writes.
+const cloudLoad = portalHarness();
+cloudLoad.test.setSession({ role: 'teacher', user: 'teacher' });
+cloudLoad.respond(() => Promise.resolve(okJSON(cloudCourse)));
+await cloudLoad.test.loadState();
+assert.deepEqual(cloudLoad.state(), cloudCourse, 'valid cloud courses load unchanged');
+assert.deepEqual(cloudLoad.cached(), cloudCourse, 'loaded cloud courses are cached locally');
+assert.equal(cloudLoad.requests.filter(isPut).length, 0, 'teacher startup reads but never writes the cloud');
+
+const cachedCourses = {
+  v: 2, updated: '2025-12-31T00:00:00Z', auth: { t: 'aaaa', s: 'bbbb' },
+  tree: [{ n: '英语', children: [{ n: '高二', children: [{ n: '下学期', children: [
+    { n: '缓存课', words: [{ w: 'cached', ph: '', pos: '', m: '缓存', ex: '', exZh: '' }] }
+  ] }] }] }]
+};
+const cacheFallback = portalHarness({ wordlab_cloud_cache: JSON.stringify(cachedCourses) });
+cacheFallback.respond(() => Promise.reject(new Error('offline')));
+await cacheFallback.test.loadState();
+assert.deepEqual(cacheFallback.state(), cachedCourses, 'cloud read failure prefers cached courses');
+assert.equal(cacheFallback.requests.filter(isPut).length, 0, 'cached fallback never uploads on startup');
+const emptyFallback = portalHarness({ wordlab_cloud_cache: JSON.stringify(cachedCourses) });
+emptyFallback.respond(() => Promise.resolve(okJSON(null)));
+await emptyFallback.test.loadState();
+assert.deepEqual(emptyFallback.state(), cachedCourses, 'empty cloud state prefers cached courses');
+assert.equal(emptyFallback.requests.filter(isPut).length, 0, 'empty fallback never uploads on startup');
+
+const localWords = [
+  { w: 'apple', ph: '/a/', pos: 'n.', m: '苹果', ex: 'An apple.', exZh: '一个苹果。', unit: 'Unit 1', box: 4 },
+  { w: 'banana', ph: '', pos: 'n.', m: '香蕉', unit: 'Unit 1' },
+  { w: 'cherry', m: '樱桃' }
+];
+const migrate = portalHarness({ wordlab_v1: JSON.stringify(localWords) });
+migrate.respond(() => Promise.reject(new Error('offline')));
+await migrate.test.loadState();
+const migratedCourses = migrate.state();
+assert.equal(migratedCourses.v, 2);
+const migratedUnits = migratedCourses.tree[0].children[0].children[0].children;
+assert.deepEqual(migratedUnits.map(unit => unit.n).sort(), ['Unit 1', '未分类']);
+assert.deepEqual(migratedUnits.find(unit => unit.n === 'Unit 1').words, [
+  { w: 'apple', ph: '/a/', pos: 'n.', m: '苹果', ex: 'An apple.', exZh: '一个苹果。' },
+  { w: 'banana', ph: '', pos: 'n.', m: '香蕉', ex: '', exZh: '' }
+]);
+assert.deepEqual(migratedUnits.find(unit => unit.n === '未分类').words, [
+  { w: 'cherry', ph: '', pos: '', m: '樱桃', ex: '', exZh: '' }
+]);
+assert.deepEqual(migrate.cached(), migratedCourses, 'local migration is cached for offline use');
+assert.equal(migrate.data.get('wordlab_v1'), JSON.stringify(localWords), 'migration does not rewrite the practice vocabulary');
+assert.equal(migrate.requests.filter(isPut).length, 0, 'local migration never uploads on startup');
+
+// Saving: students cannot write; teachers explicitly save. HTTP and network failures must
+// return false, show a failure toast, never a success toast, and keep the local cache.
+const student = portalHarness();
+student.test.setState({ v: 2, updated: '2026-01-01T00:00:00Z', auth: { t: '0000', s: '0000' }, tree: [{ n: '英语', children: [] }] });
+student.test.setSession({ role: 'student', user: 'student' });
+const studentBefore = student.requests.length;
+assert.equal(await student.test.saveAll(), undefined, 'students cannot save');
+assert.equal(student.requests.length, studentBefore, 'student save makes no request');
+assert.deepEqual(student.toasts, [], 'student save shows no toast');
+
+const teacherState = {
+  v: 2, updated: '2026-01-01T00:00:00Z', auth: { t: 'teacher-pass', s: 'student-pass' },
+  tree: [{ n: '英语', children: [{ n: '高一', children: [{ n: '上学期', children: [
+    { n: '第1课', words: [{ w: 'one', ph: '', pos: '', m: '一', ex: '', exZh: '' }] }
+  ] }] }] }]
+};
+const teacherUpload = JSON.parse(JSON.stringify(teacherState));
+const teacher = portalHarness();
+teacher.test.setState(teacherState);
+teacher.test.setSession({ role: 'teacher', user: 'teacher' });
+teacher.respond(request => {
+  assert.equal(request.options.method, 'PUT');
+  return Promise.resolve({ ok: true });
+});
+const teacherBefore = teacher.requests.length;
+const teacherSave = teacher.test.saveAll();
+const teacherTimer = [...teacher.timers.values()].find(timer => timer.delay === 15000);
+assert.ok(teacherTimer, 'teacher save uses a 15s write timer');
+assert.equal(await teacherSave, true, 'teacher explicit save succeeds');
+assert.equal(teacher.requests.length, teacherBefore + 1);
+const teacherRequest = teacher.requests[teacherBefore];
+assert.equal(teacherRequest.options.method, 'PUT');
+const teacherBody = JSON.parse(teacherRequest.options.body);
+assert.deepEqual(teacherBody.tree, teacherUpload.tree, 'save uploads the current course tree');
+assert.ok(/^\d{4}-\d{2}-\d{2}T/.test(teacherBody.updated), 'save updates the timestamp');
+assert.deepEqual(teacher.cached(), teacherBody, 'successful save caches the uploaded courses');
+assert.ok(teacher.toasts.some(message => message.includes('已保存到云端')), 'successful save shows the success toast');
+assert.ok(!teacher.toasts.some(message => message.includes('云端保存失败')), 'successful save has no failure toast');
+assert.ok(teacher.cleared.includes(teacherTimer.id), 'teacher save clears its write timer');
+
+function teacherSaveFailure(respond) {
+  const harness = portalHarness();
+  harness.test.setState({
+    v: 2, updated: '2026-01-01T00:00:00Z', auth: { t: '0000', s: '0000' },
+    tree: [{ n: '英语', children: [{ n: '高一', children: [{ n: '上学期', children: [
+      { n: '第1课', words: [{ w: 'kept' }] }
+    ] }] }] }]
+  });
+  harness.test.setSession({ role: 'teacher', user: 'teacher' });
+  harness.respond(respond);
+  return harness;
+}
+const rejectedSave = teacherSaveFailure(() => Promise.resolve({ ok: false }));
+assert.equal(await rejectedSave.test.saveAll(), false, 'HTTP failure is reported as failure');
+assert.ok(rejectedSave.toasts.some(message => message.includes('云端保存失败')), 'HTTP failure shows the failure toast');
+assert.ok(!rejectedSave.toasts.some(message => message.includes('已保存到云端')), 'HTTP failure shows no success toast');
+assert.deepEqual(rejectedSave.cached(), rejectedSave.state(), 'HTTP failure keeps the current courses cached');
+const offlineSave = teacherSaveFailure(() => Promise.reject(new Error('offline')));
+assert.equal(await offlineSave.test.saveAll(), false, 'network failure is reported as failure');
+assert.ok(offlineSave.toasts.some(message => message.includes('云端保存失败')), 'network failure shows the failure toast');
+assert.ok(!offlineSave.toasts.some(message => message.includes('已保存到云端')), 'network failure shows no success toast');
+assert.deepEqual(offlineSave.cached(), offlineSave.state(), 'network failure keeps the current courses cached');
+
+// All portal traffic stays on the course API; no Cloudflare account/namespace/token request.
+assert.ok(portalRequests.length >= 8, 'portal cloud requests were exercised');
+for (const request of portalRequests) {
+  const url = new URL(request.url);
+  assert.equal(url.origin, 'https://wordlab-api.pages.dev', 'portal stays on the course API host');
+  assert.equal(url.pathname, '/api/state', 'portal stays on the course API path');
+  const queryKeys = [...url.searchParams.keys()];
+  assert.ok(!queryKeys.length || (queryKeys.length === 1 && queryKeys[0] === 't'), 'only the cache-busting timestamp query is used');
+  assert.ok(!/cloudflare|account|namespace|token/i.test(request.url), 'no Cloudflare account/namespace/token request');
+  const headers = request.options.headers || {};
+  assert.ok(Object.keys(headers).every(key => key.toLowerCase() === 'content-type'), 'writes carry only a content type');
+}
+
+// The portal accepts the existing wordlab_v1 JSON and the author's wrapped word array.
+const parseHarness = portalHarness();
+const existingWord = { w: 'apple', ph: '/ˈæpəl/', pos: 'n.', m: '苹果', ex: 'An apple.', exZh: '一个苹果。' };
+const parsedExisting = JSON.parse(JSON.stringify(parseHarness.test.parseWords(JSON.stringify([existingWord]))));
+assert.deepEqual(parsedExisting, [existingWord], 'portal parseWords accepts the existing wordlab_v1 JSON array');
+const parsedWrapped = JSON.parse(JSON.stringify(parseHarness.test.parseWords(JSON.stringify({ words: [{ word: 'banana', phonetic: '/b/', mean: '香蕉' }] }))));
+assert.deepEqual(parsedWrapped, [{ w: 'banana', ph: '/b/', pos: '', m: '香蕉', ex: '', exZh: '' }], 'portal parseWords accepts a wrapped words array');
+const [parsedBundled] = JSON.parse(JSON.stringify(parseHarness.test.parseWords(JSON.stringify([bundledWords[0]]))));
+assert.equal(parsedBundled.w, bundledWords[0].w, 'existing bundled vocabulary parses through the portal');
+assert.equal(parsedBundled.m, bundledWords[0].m || '', 'bundled vocabulary meanings are retained');
+
+console.log(`WordLab: links, ${scripts} inline scripts compiled, 1269-word migration, default/personal AI isolation and offline requests, credential-free remote config, assets and v5 scoped cache lifecycle, portal read/cache/migration/save regression passed.`);
