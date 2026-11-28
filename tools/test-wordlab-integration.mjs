@@ -12,6 +12,7 @@ assert.match(features, /href="member-works\/wordlab\/WordLab\.html"/);
 // Never pass the page or credential-bearing values to assertions: failures must not print them.
 assert.ok(/href="\.\.\/\.\.\/\.\.\/index\.html"[^>]*>← 返回社团主页<\/a>/.test(page));
 assert.ok(!/<(?:script|link)\b[^>]*(?:src|href)="[^"\n]*(?:club-shell|club-ui|theme\.js|i18n\.js)/.test(page));
+assert.ok(page.includes('body.wl-role-teacher #quickbar a[href="../../../index.html"]{display:inline-flex!important}'), 'teacher role restrictions retain the club homepage link');
 assert.ok(!/var KEYB = '[A-Za-z0-9+/=]{20,}'/.test(page));
 assert.equal(manifest.start_url, './WordLab.html');
 assert.equal(manifest.scope, './');
@@ -31,7 +32,7 @@ assert.ok(scripts >= 2, 'compile the original inline application without executi
 
 const defaultsSource = page.slice(page.indexOf('/* ===== ng-defaults.js ===== */'), page.indexOf('/* ===== ng-sitecfg.js ===== */'));
 assert.ok(defaultsSource.length > 0, 'updated member defaults are present');
-assert.ok(/<meta name="wordlab-source" content="1124-ece02ca6d6a17b44">/.test(page));
+assert.ok(/<meta name="wordlab-source" content="1128-3f7162c9f237caf4">/.test(page));
 assert.ok(!/(?:["']wordlab_aiKey["']|\bwordlab_aiKey)\s*:\s*["'][^"']+/.test(defaultsSource), 'factory settings contain no default AI key');
 function defaults(initial = {}, session = new Map()) {
   const data = new Map(Object.entries(initial)), reloads = [];
@@ -98,9 +99,9 @@ assert.equal(restored.reloads.length, 0, 'completed migration does not reload ag
 const updated = defaults({
   ...Object.fromEntries(migrated.data), wordlab_pwdhash: 'existing-password-hash'
 });
-assert.equal(updated.data.get('wordlab_v1'), migrated.data.get('wordlab_v1'), '1124 retains the existing vocabulary migration marker');
-assert.equal(updated.data.get('wordlab_pwdhash'), 'existing-password-hash', '1124 does not repeat factory password clearing');
-assert.equal(updated.reloads.length, 0, '1124 does not require a new defaults reload');
+assert.equal(updated.data.get('wordlab_v1'), migrated.data.get('wordlab_v1'), '1128 retains the existing vocabulary migration marker');
+assert.equal(updated.data.get('wordlab_pwdhash'), 'existing-password-hash', '1128 does not repeat factory password clearing');
+assert.equal(updated.reloads.length, 0, '1128 does not require a new defaults reload');
 const corrupt = defaults({ wordlab_v1: '{incomplete', wordlab_log: prior.wordlab_log });
 assert.equal(corrupt.data.get('wordlab_v1'), '{incomplete', 'invalid existing vocabulary remains recoverable');
 assert.equal(corrupt.data.get('wordlab_log'), prior.wordlab_log);
@@ -280,10 +281,10 @@ function worker(source, scope, cacheNames, offline = false) {
 const scope = 'https://example.test/SIA-algorithm-club-site/public/member-works/wordlab/';
 const prefix = `wordlab-${scope}-`;
 const wordlabSource = await read('public/member-works/wordlab/sw.js');
-const cacheNames = ['club-shell-old', 'club-runtime-old', 'unrelated-app', 'wordlab-v2', `${prefix}v1`, `${prefix}v2`, `${prefix}v3`, `${prefix}v4`, `${prefix}v5`];
+const cacheNames = ['club-shell-old', 'club-runtime-old', 'unrelated-app', 'wordlab-v2', `${prefix}v1`, `${prefix}v2`, `${prefix}v3`, `${prefix}v4`, `${prefix}v5`, `${prefix}v6`];
 const app = worker(wordlabSource, scope, cacheNames);
 await app.activate();
-assert.deepEqual(app.deleted, [`${prefix}v1`, `${prefix}v2`, `${prefix}v3`, `${prefix}v4`], 'WordLab deletes only its own obsolete caches');
+assert.deepEqual(app.deleted, [`${prefix}v1`, `${prefix}v2`, `${prefix}v3`, `${prefix}v4`, `${prefix}v5`], 'WordLab deletes only its own obsolete caches');
 for (const file of ['WordLab.html', 'manifest.webmanifest', 'pwa/icon-192.png', 'pwa/icon-512.png']) {
   assert.equal(await (await app.request(scope + file)).text(), 'online');
 }
@@ -310,11 +311,11 @@ const club = worker(clubSource, 'https://example.test/SIA-algorithm-club-site/',
 await club.activate();
 assert.deepEqual(club.deleted, ['club-shell-old', 'club-runtime-old'], 'club updates retain member-work caches');
 
-// The 1124 page appends the author's course portal to the final inline script. Execute only
-// that module in a fake browser with a fake fetch: no network, credentials or real storage.
+// The portal is followed by the 1128 admin and log modules. Execute only its own IIFE
+// in a fake browser with a fake fetch: no network, credentials or real storage.
 const portalStart = page.indexOf('/* ===== ng-portal.js ===== */');
-const portalEnd = page.lastIndexOf('</script>');
-assert.ok(portalStart >= 0 && portalEnd > portalStart, 'WordLab 1124 course portal is appended to the final script');
+const portalEnd = page.indexOf('/* ===== ng-admin.js ===== */', portalStart);
+assert.ok(portalStart >= 0 && portalEnd > portalStart, 'WordLab 1128 portal and admin module boundaries are present');
 const portalSource = page.slice(portalStart, portalEnd);
 assert.ok(/function cloudGet\(\)/.test(portalSource) && /function cloudPut\(state\)/.test(portalSource), 'portal cloud helpers are present');
 assert.ok(!/api\.cloudflare\.com|\/accounts\/|\/namespaces?\/|\/tokens?\b/i.test(portalSource), 'portal has no Cloudflare account/namespace/token endpoint');
@@ -324,7 +325,10 @@ const portalSeam = [
   '  window.__wordlabPortalTest = {',
   '    cloudGet: cloudGet, cloudPut: cloudPut, loadState: loadState, saveAll: saveAll,',
   '    parseWords: parseWords, state: function () { return STATE; },',
-  '    setState: function (s) { STATE = s; }, setSession: function (s) { SESSION = s; }',
+  '    setState: function (s) { STATE = s; }, setSession: function (s) { SESSION = s; },',
+  '    setCurrent: function (node) { CUR = node; }, canDrop: canDrop, doMove: doMove,',
+  '    subWords: subWords, subWordsRaw: subWordsRaw, guardGo: guardGo,',
+  '    toStudent: toStudent, toTeacher: toTeacher, importToTarget: importToTarget, aiTarget: aiTargetNode',
   '  };'
 ].join('\n');
 const portalExecutable = `${portalSource.slice(0, portalClose)}${portalSeam}\n${portalSource.slice(portalClose)}`;
@@ -332,7 +336,7 @@ const portalRequests = [];
 const isPut = request => Boolean(request.options && request.options.method === 'PUT');
 function portalHarness(initial = {}) {
   const data = new Map(Object.entries(initial)), session = new Map();
-  const requests = [], toasts = [], timers = new Map(), cleared = [];
+  const requests = [], toasts = [], timers = new Map(), cleared = [], routes = [];
   let nextTimer = 0;
   let respond = () => Promise.resolve({ ok: true, json: async () => null });
   const storage = map => ({
@@ -366,6 +370,7 @@ function portalHarness(initial = {}) {
     setTimeout(fn, delay) { const id = ++nextTimer; timers.set(id, { id, fn, delay }); return id; },
     clearTimeout(id) { cleared.push(id); timers.delete(id); },
     toast(message) { toasts.push(String(message)); },
+    go(page) { routes.push(page); return page; },
     esc(value) { return String(value); }
   };
   context.window = context;
@@ -378,7 +383,7 @@ function portalHarness(initial = {}) {
   const test = context.__wordlabPortalTest;
   assert.ok(test && typeof test.cloudGet === 'function' && typeof test.saveAll === 'function', 'portal test seam is available');
   return {
-    data, requests, toasts, timers, cleared, test,
+    data, requests, toasts, timers, cleared, routes, test, context,
     respond(fn) { respond = fn; },
     cached() {
       const value = data.get('wordlab_cloud_cache');
@@ -583,4 +588,218 @@ const [parsedBundled] = JSON.parse(JSON.stringify(parseHarness.test.parseWords(J
 assert.equal(parsedBundled.w, bundledWords[0].w, 'existing bundled vocabulary parses through the portal');
 assert.equal(parsedBundled.m, bundledWords[0].m || '', 'bundled vocabulary meanings are retained');
 
-console.log(`WordLab: links, ${scripts} inline scripts compiled, 1269-word migration, default/personal AI isolation and offline requests, credential-free remote config, assets and v5 scoped cache lifecycle, portal read/cache/migration/save regression passed.`);
+// An empty/malformed tree never authorizes a startup upload or replaces usable cached courses.
+for (const tree of [[], {}, 'invalid']) {
+  const fallback = portalHarness({ wordlab_cloud_cache: JSON.stringify(cachedCourses) });
+  fallback.respond(() => Promise.resolve(okJSON({ tree })));
+  await fallback.test.loadState();
+  assert.deepEqual(fallback.state(), cachedCourses, 'invalid or empty cloud tree retains cached courses');
+  assert.deepEqual(fallback.cached(), cachedCourses);
+  assert.equal(fallback.requests.filter(isPut).length, 0, 'empty cloud tree never triggers an automatic seed upload');
+}
+
+// 1128: AI imports target only a selected teacher course, deduplicate case-insensitively,
+// leave the practice vocabulary untouched, and remain local until an explicit save.
+const courseImport = portalHarness({ wordlab_v1: JSON.stringify(localWords) });
+const importState = JSON.parse(JSON.stringify(teacherState));
+const targetCourse = importState.tree[0].children[0].children[0].children[0];
+courseImport.test.setState(importState);
+courseImport.test.setCurrent(targetCourse);
+courseImport.test.setSession({ role: 'student', user: 'student' });
+assert.equal(courseImport.test.aiTarget(), null, 'students have no teacher AI import target');
+assert.equal(courseImport.test.importToTarget([{ w: 'two' }]).ok, false);
+courseImport.test.setSession({ role: 'teacher', user: 'teacher' });
+assert.equal(courseImport.test.aiTarget(), targetCourse);
+const imported = JSON.parse(JSON.stringify(courseImport.test.importToTarget([
+  { w: 'ONE', m: '重复' }, { w: 'two', m: '二', ex: 'Two words.', lang: 'en' },
+  { w: 'TWO', m: '重复' }, { w: 'constructor', m: '构造者' }, null, { m: '无词形' }
+])));
+assert.equal(imported.ok, true);
+assert.equal(imported.add, 2);
+assert.equal(imported.skip, 2);
+assert.equal(imported.name, targetCourse.n);
+assert.equal(imported.path, '英语 / 高一 / 上学期 / 第1课');
+assert.deepEqual(targetCourse.words.map(word => word.w), ['one', 'two', 'constructor']);
+assert.equal(targetCourse.words[1].m, '二');
+assert.equal(targetCourse.words[1].ex, 'Two words.');
+assert.equal(courseImport.data.get('wordlab_v1'), JSON.stringify(localWords), 'course import does not replace existing practice progress');
+assert.equal(courseImport.requests.length, 0, 'course import does not write to the cloud');
+courseImport.test.setCurrent(importState.tree[0]);
+assert.equal(courseImport.test.aiTarget(), null, 'a subject cannot be used as a leaf course target');
+courseImport.test.setCurrent(null);
+assert.equal(courseImport.test.importToTarget([{ w: 'three' }]).ok, false, 'no selected course means no teacher import');
+
+// Role restrictions and quick switching never write courses or replace learning data.
+const roles = portalHarness({ wordlab_v1: JSON.stringify(localWords) });
+roles.test.setState(JSON.parse(JSON.stringify(teacherState)));
+roles.test.guardGo();
+roles.test.setSession({ role: 'student', user: 'learner' });
+assert.equal(roles.context.go('bank'), 'home', 'student navigation cannot open the teacher bank');
+assert.equal(roles.context.go('flash'), 'flash', 'student practice remains accessible');
+roles.test.setSession({ role: 'teacher', user: 'teacher' });
+assert.equal(roles.context.go('flash'), 'bank', 'teacher navigation stays in the course editor');
+assert.equal(roles.context.go('acct'), 'acct', 'teacher account route is retained');
+roles.test.toStudent();
+assert.equal(roles.context.PORTAL.session().role, 'student');
+assert.equal(roles.routes.at(-1), 'home');
+roles.test.toTeacher();
+assert.equal(roles.context.PORTAL.session().role, 'teacher');
+assert.equal(roles.routes.at(-1), 'bank');
+assert.equal(roles.data.get('wordlab_v1'), JSON.stringify(localWords), 'role switching retains the active vocabulary');
+assert.equal(roles.requests.length, 0, 'role switching is local');
+
+// Point-and-click moves share the drag operation, preserve the four-level hierarchy,
+// refuse cycles/same-depth destinations, and never silently persist remotely.
+const moving = portalHarness();
+const movedLesson = { n: '待移动课程', words: [{ w: 'shared', m: '相同' }, { w: 'shared', m: '相同' }] };
+const retainedLesson = { n: '保留课程', words: [{ w: 'other', m: '其它' }] };
+const movingState = { tree: [
+  { n: '原学科', children: [{ n: '原年级', children: [{ n: '原学期', children: [movedLesson, retainedLesson] }] }] },
+  { n: '目标学科', children: [] }
+] };
+(function stamp(nodes, depth) {
+  for (const node of nodes) { node.__d = depth; stamp(node.children || [], depth + 1); }
+})(movingState.tree, 0);
+moving.test.setState(movingState);
+const sourceSubject = movingState.tree[0], destination = movingState.tree[1];
+assert.equal(moving.test.subWordsRaw(sourceSubject), 3, 'tree labels retain the raw word count');
+assert.equal(moving.test.subWords(sourceSubject).length, 2, 'practice can still deduplicate identical words');
+assert.equal(moving.test.canDrop(sourceSubject, sourceSubject), false);
+assert.equal(moving.test.canDrop(movedLesson, sourceSubject), false, 'cannot move an ancestor into its descendant');
+assert.equal(moving.test.canDrop(retainedLesson, movedLesson), false, 'a course cannot contain another course');
+assert.equal(moving.test.canDrop(destination, sourceSubject), false, 'subjects cannot be nested');
+assert.equal(moving.test.canDrop(destination, movedLesson), true);
+assert.equal(moving.test.doMove(movedLesson, destination), true);
+assert.deepEqual(sourceSubject.children[0].children[0].children, [retainedLesson]);
+assert.equal(destination.children[0].children[0].children[0], movedLesson, 'moving across subjects fills missing grade/term levels');
+assert.equal(moving.test.subWordsRaw(destination), 2);
+assert.equal(moving.requests.length, 0, 'moving courses requires a separate explicit cloud save');
+
+// 1128 admin/log regression: all network operations stay inside this offline VM.
+const adminSource = between('/* ===== ng-admin.js ===== */', '/* ===== ng-log.js ===== */');
+const logSource = page.slice(page.indexOf('/* ===== ng-log.js ===== */'), page.lastIndexOf('</script>'));
+assert.ok(!/\/api\/balance|function aiKey\(|getItem\(['"]wordlab_aiKey/.test(adminSource), 'admin never forwards API credentials to the course service');
+assert.ok(!/API \+ '\/api\/log/.test(adminSource), 'admin log URLs are not nested under the state endpoint');
+assert.ok(/var API_LOG = 'https:\/\/wordlab-api\.pages\.dev\/api\/log'/.test(adminSource));
+const adminClose = adminSource.lastIndexOf('})();');
+const adminSeam = 'window.__adminTest = { pullCfg: pullCfg, pushCfg: pushCfg, hookCloudSave: hookCloudSave, countTree: countTree };\n';
+function adminLogHarness(initial = {}) {
+  class Storage {
+    constructor(values = {}) { this.data = new Map(Object.entries(values)); }
+    getItem(key) { return this.data.get(key) ?? null; }
+    setItem(key, value) { this.data.set(key, String(value)); }
+    removeItem(key) { this.data.delete(key); }
+  }
+  const localStorage = new Storage(initial), sessionStorage = new Storage();
+  const requests = [], beacons = [], intervals = [], timeouts = [], routes = [];
+  const events = new Map(), docEvents = new Map();
+  let respond = () => Promise.resolve(okJSON(null));
+  let saveResult = true;
+  const listen = (map, name, fn) => map.set(name, [...(map.get(name) || []), fn]);
+  const context = {
+    Storage, localStorage, sessionStorage, Blob, console: { log() {}, warn() {}, error() {} },
+    document: {
+      readyState: 'loading', visibilityState: 'visible', hidden: false,
+      getElementById() { return null; }, querySelector() { return null; }, querySelectorAll() { return []; },
+      addEventListener(name, fn) { listen(docEvents, name, fn); }
+    },
+    navigator: {
+      userAgent: 'SyntheticBrowser', platform: 'SyntheticOS', language: 'zh-CN',
+      onLine: true, hardwareConcurrency: 2, connection: { effectiveType: '4g', downlink: 1, rtt: 20 },
+      sendBeacon(url, body) { beacons.push({ url, body }); return true; }
+    },
+    screen: { width: 1280, height: 720 }, devicePixelRatio: 1,
+    location: { pathname: '/club/public/member-works/wordlab/WordLab.html' },
+    matchMedia() { return { matches: false }; },
+    go(route) { routes.push(route); return route; },
+    addEventListener(name, fn) { listen(events, name, fn); },
+    setInterval(fn, delay) { intervals.push({ fn, delay }); return intervals.length; },
+    clearInterval() {}, setTimeout(fn, delay) { timeouts.push({ fn, delay }); return timeouts.length; }, clearTimeout() {},
+    fetch(url, options = {}) { const request = { url, options }; requests.push(request); return respond(request); },
+    PORTAL: { state: () => teacherState, save: () => saveResult === undefined ? undefined : Promise.resolve(saveResult), importToTarget: () => ({ ok: true, name: '课', path: '学科 / 年级 / 学期 / 课', add: 1, skip: 0 }) }
+  };
+  context.window = context;
+  vm.createContext(context);
+  try {
+    vm.runInContext(adminSource.slice(0, adminClose) + adminSeam + adminSource.slice(adminClose), context, { filename: 'WordLab-admin' });
+    vm.runInContext(logSource, context, { filename: 'WordLab-log' });
+  } catch {
+    throw new Error('WordLab admin/log fixture failed to initialize');
+  }
+  return {
+    context, requests, beacons, intervals, timeouts, routes, storage: localStorage,
+    log: context.WLLOG, admin: context.__adminTest,
+    respond(fn) { respond = fn; }, setSaveResult(value) { saveResult = value; },
+    boot() { for (const fn of docEvents.get('DOMContentLoaded') || []) fn(); },
+    emit(name) { for (const fn of events.get(name) || []) fn(); },
+    hide() { context.document.hidden = true; context.document.visibilityState = 'hidden'; for (const fn of docEvents.get('visibilitychange') || []) fn(); }
+  };
+}
+const queuedPrivate = JSON.stringify([{ t: 1, k: 'ai', n: 'synthetic-private-message' }]);
+const logs = adminLogHarness({ wordlab_logq: queuedPrivate, wordlab_aiHist: '[{"role":"user","text":"synthetic-private-history"}]' });
+logs.boot();
+assert.equal(logs.log.cfg().on, false, 'new logs are disabled by default');
+assert.equal(logs.storage.getItem('wordlab_device'), null, 'disabled logging does not create a device identifier');
+assert.equal(logs.storage.getItem('wordlab_logq'), queuedPrivate, 'disabled startup preserves but does not send a pending queue');
+assert.equal(logs.log.add('ai', 'not collected'), false);
+assert.equal(await logs.log.flush(true), false);
+assert.equal(logs.log.beacon(), false);
+logs.hide(); logs.emit('pagehide');
+for (const timer of logs.timeouts.filter(timer => timer.delay === 8000)) await timer.fn();
+for (const timer of logs.intervals.filter(timer => timer.delay === 60000)) await timer.fn();
+assert.equal(logs.beacons.length, 0, 'disabled logs never send a beacon on exit');
+assert.equal(logs.requests.filter(request => request.options.method && request.options.method !== 'GET').length, 0, 'disabled startup and timers never write remotely');
+
+// A cloud recording switch cannot provide local consent.
+logs.respond(() => Promise.resolve(okJSON({ pwd: 'a'.repeat(64), t: Date.now() + 10000, disabled: [], log: { on: true, items: { ai: true } } })));
+await logs.admin.pullCfg();
+assert.equal(logs.log.cfg().on, false, 'remote configuration cannot opt this device in');
+assert.equal(await logs.log.flush(true), false);
+assert.equal(logs.storage.getItem('wordlab_log_consent_v1'), null);
+
+// A deliberate local opt-in permits selected summaries, not disabled AI/device/network fields.
+logs.log.setCfg({ on: true, items: { ai: false, device: false, net: false } });
+assert.equal(logs.log.cfg().on, true);
+assert.equal(logs.storage.getItem('wordlab_log_consent_v1'), 'yes');
+assert.equal(logs.log.add('ai', 'synthetic-private-message'), false);
+assert.equal(logs.log.add('word', 'synthetic course import', { add: 1 }), true);
+logs.respond(() => Promise.resolve(okJSON({ ok: true })));
+assert.equal(await logs.log.flush(true), true);
+const logPost = logs.requests.find(request => request.options.method === 'POST');
+assert.ok(logPost && logPost.url === 'https://wordlab-api.pages.dev/api/log');
+const sentLog = JSON.parse(logPost.options.body);
+assert.deepEqual(Object.keys(sentLog.device).sort(), ['first', 'id'], 'disabled device/network metadata is omitted');
+assert.ok(!logPost.options.body.includes('synthetic-private'), 'disabled AI entries do not leave the pending queue');
+assert.deepEqual(sentLog.entries.map(entry => entry.k), ['word']);
+assert.equal(logs.log.queue().length, 0, 'successful upload clears only the allowed queue');
+logs.log.add('word', 'retryable synthetic import');
+logs.respond(() => Promise.resolve({ ok: false }));
+assert.equal(await logs.log.flush(true), false);
+assert.equal(logs.log.queue().length, 1, 'failed upload retains queued summaries');
+logs.log.setCfg({ on: false });
+const offRequests = logs.requests.length;
+assert.equal(await logs.log.flush(true), false);
+assert.equal(logs.log.beacon(), false);
+assert.equal(logs.requests.length, offRequests, 'turning off logging blocks queued uploads as well as collection');
+
+// Cloud-save summaries follow the real asynchronous result; student no-ops add no summary.
+const summaries = adminLogHarness();
+summaries.admin.hookCloudSave();
+assert.deepEqual(JSON.parse(JSON.stringify(summaries.admin.countTree(teacherState.tree))), { roots: 1, lessons: 1, words: 1 });
+for (const result of [false, true]) {
+  summaries.setSaveResult(result);
+  assert.equal(await summaries.context.PORTAL.save(), result);
+  const saved = JSON.parse(summaries.storage.getItem('wordlab_cloud_log'));
+  assert.equal(saved.at(-1).ok, result, 'save summary matches the actual PUT result');
+  assert.equal(saved.at(-1).lessons, 1);
+}
+summaries.setSaveResult(undefined);
+const summaryBefore = summaries.storage.getItem('wordlab_cloud_log');
+assert.equal(summaries.context.PORTAL.save(), undefined);
+assert.equal(summaries.storage.getItem('wordlab_cloud_log'), summaryBefore, 'student save does not add a success summary');
+for (const request of [...logs.requests, ...summaries.requests]) {
+  assert.equal(new URL(request.url).origin, 'https://wordlab-api.pages.dev');
+  assert.ok(!request.url.includes('/api/state/api/') && !request.url.includes('/balance'));
+}
+
+console.log(`WordLab: links, ${scripts} inline scripts compiled, 1269-word migration, default/personal AI isolation and offline requests, credential-free remote config, assets and v6 scoped cache lifecycle, portal read/cache/migration/save, 1128 role switching/course moves/AI imports, admin summaries and opt-in-only logging passed.`);

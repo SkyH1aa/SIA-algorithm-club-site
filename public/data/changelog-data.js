@@ -3,6 +3,19 @@
 // fetch('data/changelog.json') 的最新数据为准。
 window.CLUB_CHANGELOG_SNAPSHOT = Object.freeze([
   {
+    "date": "2026-11-28",
+    "title": "WordLab 1128：课程管理与后台工具",
+    "enTitle": "WordLab 1128: course management and admin tools",
+    "items": [
+      "接入 WordLab 1128 版，新增教师／学生快捷切换、课程点选移动、AI 生成词导入当前课程，以及作品后台与使用统计。",
+      "保留现有默认 API Key、个人配置和学习记录；日志默认关闭且须本机明确开启，余额查询不向课程服务转发 Key，云端保存与摘要按真实结果反馈；独立离线缓存升级到 v6。"
+    ],
+    "enItems": [
+      "Integrate WordLab 1128 with quick teacher/student switching, point-and-click course moves, AI vocabulary imports into the selected course, and project admin tools with local usage statistics.",
+      "Preserve the existing default API key, personal settings and learning records. Keep logging off until this device explicitly opts in, never forward keys to the course service for balance checks, report actual cloud-save results and summaries, and update the isolated offline cache to v6."
+    ]
+  },
+  {
     "date": "2026-11-25",
     "title": "WordLab 1124：教师与学生课程门户",
     "enTitle": "WordLab 1124: teacher and student course portal",
